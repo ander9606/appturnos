@@ -3,6 +3,7 @@
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
+const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
 
 /** Resuelve el trabajador vinculado al usuario autenticado. */
@@ -50,7 +51,10 @@ const OfertasService = {
     return OfertasModel.obtenerPorId(empresaId, id);
   },
 
-  /** Cancela la oferta (idempotente si ya estaba cancelada). */
+  /**
+   * Cancela la oferta (idempotente si ya estaba cancelada), cancela sus
+   * asignaciones vigentes y notifica a los trabajadores asignados.
+   */
   async cancelar(empresaId, id) {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
@@ -58,9 +62,18 @@ const OfertasService = {
     if (oferta.estado === 'completada') {
       throw new AppError('No se puede cancelar una oferta completada', 409);
     }
-    await OfertasModel.cambiarEstado(empresaId, id, 'cancelada');
-    // Nota: la notificación a los trabajadores asignados queda pendiente
-    // del módulo de notificaciones.
+
+    // Se captura a quién notificar antes de cancelar las asignaciones.
+    const destinatarios = await AsignacionesModel.listarUsuariosAsignados(empresaId, id);
+    await OfertasModel.cancelar(empresaId, id);
+
+    await NotificacionesService.notificarVarios(destinatarios, {
+      empresaId,
+      tipo: 'oferta.cancelada',
+      titulo: 'Turno cancelado',
+      mensaje: `El turno "${oferta.titulo}" del ${oferta.fecha} fue cancelado.`,
+      data: { oferta_id: id },
+    });
   },
 
   /** Postula al trabajador autenticado a la oferta. */

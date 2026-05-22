@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../../config/database');
+const ContratosModel = require('../../contratos/contratos.model');
 
 /**
  * Acceso a datos de asignaciones de turno (tabla asignaciones_turno).
@@ -56,6 +57,22 @@ const AsignacionesModel = {
   },
 
   /**
+   * usuario_id de los trabajadores asignados a una oferta (no cancelados)
+   * que tienen cuenta de usuario. Sirve para notificarlos.
+   */
+  async listarUsuariosAsignados(empresaId, ofertaId) {
+    const [filas] = await pool.query(
+      `SELECT DISTINCT t.usuario_id
+       FROM asignaciones_turno a
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.empresa_id = ? AND a.oferta_id = ?
+         AND a.estado <> 'cancelado' AND t.usuario_id IS NOT NULL`,
+      [empresaId, ofertaId]
+    );
+    return filas.map((f) => f.usuario_id);
+  },
+
+  /**
    * Confirma una asignación pendiente y suma una plaza cubierta a la oferta,
    * todo dentro de una transacción con bloqueo de fila.
    * @returns {Promise<{ok:boolean, motivo?:string}>}
@@ -99,6 +116,21 @@ const AsignacionesModel = {
         'UPDATE ofertas_turno SET plazas_cubiertas = plazas_cubiertas + 1 WHERE id = ?',
         [asig.oferta_id]
       );
+
+      // El contrato diario se genera de forma atómica al confirmar:
+      // si falla, toda la confirmación se revierte.
+      await ContratosModel.crear(
+        empresaId,
+        {
+          asignacionId: id,
+          anio: String(oferta.fecha).slice(0, 4),
+          fecha: oferta.fecha,
+          descripcionLabor: oferta.descripcion || oferta.titulo,
+          valorDia: oferta.tarifa_dia,
+        },
+        conn
+      );
+
       await conn.commit();
       return { ok: true };
     } catch (err) {

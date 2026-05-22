@@ -108,12 +108,31 @@ const OfertasModel = {
     return res.affectedRows;
   },
 
-  async cambiarEstado(empresaId, id, estado) {
-    const [res] = await pool.query(
-      'UPDATE ofertas_turno SET estado = ? WHERE id = ? AND empresa_id = ?',
-      [estado, id, empresaId]
-    );
-    return res.affectedRows;
+  /**
+   * Cancela la oferta y, en la misma transacción, cancela sus asignaciones
+   * que aún no estén completadas ni canceladas.
+   */
+  async cancelar(empresaId, id) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(
+        "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+        [id, empresaId]
+      );
+      await conn.query(
+        `UPDATE asignaciones_turno SET estado = 'cancelado'
+         WHERE oferta_id = ? AND empresa_id = ?
+           AND estado NOT IN ('completado', 'cancelado')`,
+        [id, empresaId]
+      );
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 };
 

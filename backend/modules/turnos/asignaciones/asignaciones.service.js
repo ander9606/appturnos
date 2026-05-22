@@ -2,6 +2,7 @@
 
 const AsignacionesModel = require('./asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
+const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
 
 /** Resuelve el trabajador vinculado al usuario autenticado. */
@@ -38,7 +39,21 @@ const AsignacionesService = {
       const [mensaje, codigo] = errores[res.motivo];
       throw new AppError(mensaje, codigo);
     }
-    return AsignacionesModel.obtenerPorId(empresaId, id);
+
+    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+
+    // Notifica al trabajador que su postulación fue confirmada (best-effort).
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
+    await NotificacionesService.notificar({
+      empresaId,
+      usuarioId: trabajador?.usuario_id,
+      tipo: 'postulacion.confirmada',
+      titulo: 'Postulación confirmada',
+      mensaje: 'Tu postulación a un turno fue confirmada. Revisa los detalles en la app.',
+      data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
+    });
+
+    return asignacion;
   },
 
   async marcarIngreso(empresaId, id, usuarioId, { latitud, longitud }) {
