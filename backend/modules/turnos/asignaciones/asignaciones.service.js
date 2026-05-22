@@ -3,6 +3,7 @@
 const AsignacionesModel = require('./asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const IntegracionService = require('../../integracion/integracion.service');
 const AppError = require('../../../utils/AppError');
 
 /** Resuelve el trabajador vinculado al usuario autenticado. */
@@ -69,6 +70,13 @@ const AsignacionesService = {
     }
 
     await AsignacionesModel.registrarIngreso(empresaId, id, latitud, longitud);
+    await IntegracionService.emitir(empresaId, 'trabajador.ingreso', {
+      asignacion_id: id,
+      oferta_id: asignacion.oferta_id,
+      trabajador_id: asignacion.trabajador_id,
+      latitud,
+      longitud,
+    });
     return AsignacionesModel.obtenerPorId(empresaId, id);
   },
 
@@ -85,6 +93,11 @@ const AsignacionesService = {
     }
 
     await AsignacionesModel.registrarEgreso(empresaId, id, firma_b64);
+    await IntegracionService.emitir(empresaId, 'trabajador.egreso', {
+      asignacion_id: id,
+      oferta_id: asignacion.oferta_id,
+      trabajador_id: asignacion.trabajador_id,
+    });
     return AsignacionesModel.obtenerPorId(empresaId, id);
   },
 

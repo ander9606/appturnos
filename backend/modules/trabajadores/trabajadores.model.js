@@ -77,6 +77,16 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
+  /** Trabajador por referencia externa (sincronización con logiq360). */
+  async obtenerPorExternalRef(empresaId, externalRef) {
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS} FROM trabajadores
+       WHERE external_ref = ? AND empresa_id = ? LIMIT 1`,
+      [externalRef, empresaId]
+    );
+    return filas[0] || null;
+  },
+
   /** Inserta un trabajador y devuelve su id. */
   async crear(empresaId, datos) {
     const [res] = await pool.query(

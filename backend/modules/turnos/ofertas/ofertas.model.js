@@ -64,6 +64,23 @@ const OfertasModel = {
     return filas[0] || null;
   },
 
+  /** Oferta por referencia externa (sincronización con órdenes de logiq360). */
+  async obtenerPorExternalRef(empresaId, externalRef) {
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS} FROM ofertas_turno WHERE external_ref = ? AND empresa_id = ? LIMIT 1`,
+      [externalRef, empresaId]
+    );
+    return filas[0] || null;
+  },
+
+  async cambiarEstado(empresaId, id, estado) {
+    const [res] = await pool.query(
+      'UPDATE ofertas_turno SET estado = ? WHERE id = ? AND empresa_id = ?',
+      [estado, id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
   async crear(empresaId, datos, creadoPor) {
     const [res] = await pool.query(
       `INSERT INTO ofertas_turno

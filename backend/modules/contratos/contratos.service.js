@@ -1,6 +1,7 @@
 'use strict';
 
 const ContratosModel = require('./contratos.model');
+const IntegracionService = require('../integracion/integracion.service');
 const AppError = require('../../utils/AppError');
 const { ROLES } = require('../../config/constants');
 
@@ -35,6 +36,11 @@ const ContratosService = {
       throw new AppError('El contrato ya está firmado', 409);
     }
     await ContratosModel.firmar(empresaId, id, firmaB64);
+    await IntegracionService.emitir(empresaId, 'contrato.completado', {
+      contrato_id: id,
+      asignacion_id: contrato.asignacion_id,
+      numero_contrato: contrato.numero_contrato,
+    });
     return ContratosModel.obtenerPorId(empresaId, id);
   },
 };
