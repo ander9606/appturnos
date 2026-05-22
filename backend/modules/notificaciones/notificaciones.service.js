@@ -1,6 +1,7 @@
 'use strict';
 
 const NotificacionesModel = require('./notificaciones.model');
+const PushService = require('./push/push.service');
 const AppError = require('../../utils/AppError');
 const logger = require('../../utils/logger');
 
@@ -17,6 +18,8 @@ const NotificacionesService = {
     } catch (err) {
       logger.error('[notificaciones] no se pudo crear la notificación:', err.message);
     }
+    // Entrega push, independiente del registro in-app (PushService es best-effort).
+    await PushService.enviar(empresaId, usuarioId, { tipo, titulo, mensaje, data });
   },
 
   async notificarVarios(usuarioIds, base) {

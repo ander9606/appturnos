@@ -44,6 +44,7 @@ app.use('/api/trabajadores', require('./modules/trabajadores/trabajadores.routes
 app.use('/api/turnos', require('./modules/turnos/turnos.routes'));
 app.use('/api/contratos', require('./modules/contratos/contratos.routes'));
 app.use('/api/notificaciones', require('./modules/notificaciones/notificaciones.routes'));
+app.use('/api/push', require('./modules/notificaciones/push/push.routes'));
 
 // Se montan aquí a medida que se implementan los módulos:
 //   app.use('/api/nomina', require('./modules/nomina/nomina.routes'));
