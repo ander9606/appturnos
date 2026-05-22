@@ -47,9 +47,7 @@ app.use('/api/contratos', require('./modules/contratos/contratos.routes'));
 app.use('/api/notificaciones', require('./modules/notificaciones/notificaciones.routes'));
 app.use('/api/push', require('./modules/notificaciones/push/push.routes'));
 app.use('/api/integracion', require('./modules/integracion/integracion.routes'));
-
-// Se montan aquí a medida que se implementan los módulos:
-//   app.use('/api/reportes', require('./modules/reportes/reportes.routes'));
+app.use('/api/reportes', require('./modules/reportes/reportes.routes'));
 
 // ─── Manejo de errores ────────────────────────────────────────
 app.use(noEncontrado);
