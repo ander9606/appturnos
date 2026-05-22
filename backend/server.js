@@ -40,9 +40,9 @@ app.get('/api/health', (_req, res) => {
 
 // ─── Rutas de módulos ─────────────────────────────────────────
 app.use('/api/auth', require('./modules/auth/auth.routes'));
+app.use('/api/trabajadores', require('./modules/trabajadores/trabajadores.routes'));
 
 // Se montan aquí a medida que se implementan los módulos:
-//   app.use('/api/trabajadores', require('./modules/trabajadores/trabajadores.routes'));
 //   app.use('/api/nomina', require('./modules/nomina/nomina.routes'));
 //   app.use('/api/turnos', require('./modules/turnos/turnos.routes'));
 //   app.use('/api/contratos', require('./modules/contratos/contratos.routes'));

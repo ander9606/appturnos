@@ -1,0 +1,81 @@
+'use strict';
+
+const express = require('express');
+const { body, param, query } = require('express-validator');
+
+const { validar } = require('../../middleware/validator');
+const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const { ROLES } = require('../../config/constants');
+const ctrl = require('./trabajadores.controller');
+
+const router = express.Router();
+
+// Permisos según la matriz de 06-AUTH.md.
+const PUEDEN_VER = [
+  ROLES.ADMIN_EMPRESA,
+  ROLES.JEFE_TURNOS,
+  ROLES.JEFE_NOMINA,
+  ROLES.NOMINA,
+];
+const SOLO_ADMIN = [ROLES.ADMIN_EMPRESA];
+
+const TIPOS = ['nomina', 'turnos', 'ambos'];
+
+// Reglas reutilizables. En crear los campos clave son obligatorios;
+// en actualizar todos son opcionales (PUT parcial).
+function reglasTrabajador({ parcial }) {
+  const texto = (campo) =>
+    parcial
+      ? body(campo).optional().trim().notEmpty().withMessage(`${campo} no puede ir vacío`)
+      : body(campo).trim().notEmpty().withMessage(`El campo ${campo} es obligatorio`);
+  return [
+    texto('nombre'),
+    texto('apellido'),
+    body('tipo').optional().isIn(TIPOS).withMessage('Tipo inválido (nomina | turnos | ambos)'),
+    body('email').optional({ values: 'falsy' }).isEmail().withMessage('Email inválido'),
+    body('tarifa_hora').optional({ values: 'falsy' }).isFloat({ min: 0 }).withMessage('tarifa_hora inválida'),
+    body('salario_base').optional({ values: 'falsy' }).isFloat({ min: 0 }).withMessage('salario_base inválido'),
+    body('cedula').optional({ values: 'falsy' }).isString().trim(),
+    body('telefono').optional({ values: 'falsy' }).isString().trim(),
+    body('cargo').optional({ values: 'falsy' }).isString().trim(),
+    body('external_ref').optional({ values: 'falsy' }).isString().trim(),
+  ];
+}
+
+const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
+
+// Todas las rutas requieren autenticación.
+router.use(verificarToken);
+
+// GET /api/trabajadores
+router.get(
+  '/',
+  verificarRol(PUEDEN_VER),
+  [
+    query('tipo').optional().isIn(TIPOS).withMessage('Tipo inválido'),
+    query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
+  ],
+  validar,
+  ctrl.listar
+);
+
+// GET /api/trabajadores/:id
+router.get('/:id', verificarRol(PUEDEN_VER), [idParam], validar, ctrl.obtener);
+
+// POST /api/trabajadores
+router.post('/', verificarRol(SOLO_ADMIN), reglasTrabajador({ parcial: false }), validar, ctrl.crear);
+
+// PUT /api/trabajadores/:id
+router.put(
+  '/:id',
+  verificarRol(SOLO_ADMIN),
+  [idParam, ...reglasTrabajador({ parcial: true })],
+  validar,
+  ctrl.actualizar
+);
+
+// DELETE /api/trabajadores/:id  (soft delete)
+router.delete('/:id', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.eliminar);
+
+module.exports = router;
