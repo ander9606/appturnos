@@ -67,6 +67,16 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
+  /** Trabajador activo vinculado a una cuenta de usuario (para acciones del propio trabajador). */
+  async obtenerPorUsuarioId(empresaId, usuarioId) {
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS} FROM trabajadores
+       WHERE usuario_id = ? AND empresa_id = ? AND activo = 1 LIMIT 1`,
+      [usuarioId, empresaId]
+    );
+    return filas[0] || null;
+  },
+
   /** Inserta un trabajador y devuelve su id. */
   async crear(empresaId, datos) {
     const [res] = await pool.query(
