@@ -1,0 +1,160 @@
+'use strict';
+
+const { pool } = require('../../config/database');
+
+/**
+ * Acceso a datos del módulo de autenticación.
+ * Toca las tablas: usuarios, refresh_tokens, intentos_login y trabajadores.
+ */
+const AuthModel = {
+  // ─── Usuarios ───────────────────────────────────────────────
+
+  /** Usuario por email, con password_hash (uso interno de login). */
+  async buscarUsuarioPorEmail(email) {
+    const [filas] = await pool.query(
+      'SELECT * FROM usuarios WHERE email = ? LIMIT 1',
+      [email]
+    );
+    return filas[0] || null;
+  },
+
+  /** Perfil público del usuario por id (sin password_hash). */
+  async buscarUsuarioPorId(id) {
+    const [filas] = await pool.query(
+      `SELECT id, empresa_id, nombre, apellido, email, rol, activo, created_at
+       FROM usuarios WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    return filas[0] || null;
+  },
+
+  // ─── Refresh tokens ─────────────────────────────────────────
+
+  async guardarRefreshToken({ usuario_id, token, expira_at }) {
+    await pool.query(
+      'INSERT INTO refresh_tokens (usuario_id, token, expira_at) VALUES (?, ?, ?)',
+      [usuario_id, token, expira_at]
+    );
+  },
+
+  /**
+   * Busca un refresh token y trae datos del usuario asociado.
+   * Devuelve flags `revocado` y `expirado` calculados en SQL para evitar
+   * comparaciones de fecha en JS.
+   */
+  async buscarRefreshToken(token) {
+    const [filas] = await pool.query(
+      `SELECT rt.id, rt.usuario_id, rt.revocado,
+              (rt.expira_at <= NOW()) AS expirado,
+              u.empresa_id, u.rol, u.nombre, u.activo AS usuario_activo
+       FROM refresh_tokens rt
+       INNER JOIN usuarios u ON u.id = rt.usuario_id
+       WHERE rt.token = ? LIMIT 1`,
+      [token]
+    );
+    return filas[0] || null;
+  },
+
+  async revocarRefreshToken(token) {
+    await pool.query(
+      'UPDATE refresh_tokens SET revocado = 1 WHERE token = ?',
+      [token]
+    );
+  },
+
+  /** Revoca todos los refresh tokens vigentes de un usuario. */
+  async revocarRefreshTokensDeUsuario(usuarioId) {
+    await pool.query(
+      'UPDATE refresh_tokens SET revocado = 1 WHERE usuario_id = ? AND revocado = 0',
+      [usuarioId]
+    );
+  },
+
+  // ─── Lockout (intentos_login) ───────────────────────────────
+
+  async obtenerIntentos(usuarioId) {
+    const [filas] = await pool.query(
+      `SELECT usuario_id, intentos, bloqueado_hasta,
+              (bloqueado_hasta IS NOT NULL AND bloqueado_hasta > NOW()) AS bloqueado
+       FROM intentos_login WHERE usuario_id = ? LIMIT 1`,
+      [usuarioId]
+    );
+    return filas[0] || null;
+  },
+
+  /** Suma un intento fallido (crea la fila si no existe). */
+  async registrarIntentoFallido(usuarioId) {
+    await pool.query(
+      `INSERT INTO intentos_login (usuario_id, intentos, ultimo_intento)
+       VALUES (?, 1, NOW())
+       ON DUPLICATE KEY UPDATE intentos = intentos + 1, ultimo_intento = NOW()`,
+      [usuarioId]
+    );
+  },
+
+  /** Bloquea la cuenta durante `minutos` a partir de ahora. */
+  async establecerBloqueo(usuarioId, minutos) {
+    await pool.query(
+      `UPDATE intentos_login
+       SET bloqueado_hasta = DATE_ADD(NOW(), INTERVAL ? MINUTE)
+       WHERE usuario_id = ?`,
+      [minutos, usuarioId]
+    );
+  },
+
+  /** Reinicia el contador de intentos y levanta cualquier bloqueo. */
+  async limpiarIntentos(usuarioId) {
+    await pool.query(
+      'UPDATE intentos_login SET intentos = 0, bloqueado_hasta = NULL WHERE usuario_id = ?',
+      [usuarioId]
+    );
+  },
+
+  // ─── Activación de cuenta (trabajadores) ────────────────────
+
+  /** Trabajadores activos con una cédula dada (puede haber más de uno). */
+  async buscarTrabajadoresPorCedula(cedula) {
+    const [filas] = await pool.query(
+      'SELECT * FROM trabajadores WHERE cedula = ? AND activo = 1',
+      [cedula]
+    );
+    return filas;
+  },
+
+  /**
+   * Crea el usuario y lo vincula al trabajador en una sola transacción.
+   * @returns {Promise<number>} id del usuario creado.
+   */
+  async activarCuentaTrabajador({
+    trabajadorId,
+    empresa_id,
+    nombre,
+    apellido,
+    email,
+    password_hash,
+    rol,
+  }) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [res] = await conn.query(
+        `INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [empresa_id, nombre, apellido, email, password_hash, rol]
+      );
+      await conn.query('UPDATE trabajadores SET usuario_id = ? WHERE id = ?', [
+        res.insertId,
+        trabajadorId,
+      ]);
+      await conn.commit();
+      return res.insertId;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+};
+
+module.exports = AuthModel;
