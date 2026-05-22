@@ -52,6 +52,10 @@ const JORNADA_ORDINARIA_HORAS = 8;
 const HORA_INICIO_NOCTURNO = 21; // 21:00
 const HORA_FIN_NOCTURNO = 6; // 06:00
 
+// Divisor para convertir el salario mensual en valor de la hora ordinaria
+// (convención laboral colombiana: 30 días × 8 h).
+const HORAS_MES_NOMINA = 240;
+
 // Seguridad de login
 const LOGIN = {
   MAX_INTENTOS: 5,
@@ -69,5 +73,6 @@ module.exports = {
   JORNADA_ORDINARIA_HORAS,
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
+  HORAS_MES_NOMINA,
   LOGIN,
 };
