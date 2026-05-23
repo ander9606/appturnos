@@ -58,6 +58,8 @@ Asignaciones
 ├── Tablero kanban: Confirmados | En progreso | Completados | No presentados
 ├── Filtros: fecha, oferta, trabajador
 └── Detalle asignación: GPS ingreso, horas, contrato firmado
+    └── Si estado=completado y aún sin calificar:
+        modal [Calificar 1-5 ⭐ + comentario opcional]
 ```
 
 ### Flujo Trabajador Turnos (Mobile-first)
@@ -66,7 +68,12 @@ Asignaciones
 Home
 ├── Mis turnos próximos (próximas 48h)
 ├── Ofertas disponibles cercanas
+├── Mi ranking ⭐ (promedio + total de calificaciones)
 └── Notificación: [Hay 3 nuevas ofertas]
+
+Nota: las ofertas se publican con retraso según el ranking del trabajador
+(rank ≥ 4.5 ⭐ las ve al instante; rangos menores esperan 15/30/60 min).
+Los nuevos sin calificación esperan 15 min. Ver `03-API-ENDPOINTS.md §Ranking`.
 
 Explorar Ofertas
 ├── Lista / Mapa
@@ -128,3 +135,4 @@ Usar Web Push API (navegador) + FCM (móvil futuro).
 | Oferta cancelada | asignados | "El turno de mañana fue cancelado" |
 | Recordatorio 1h antes | trabajador | "Tu turno empieza en 1 hora. Ver ruta" |
 | Trabajador no marcó llegada | jefe_turnos | "Juan Pérez no ha marcado llegada (30 min tarde)" |
+| Turno calificado (`calificacion.recibida`) | trabajador | "Tu turno fue calificado con 4/5 ⭐" |

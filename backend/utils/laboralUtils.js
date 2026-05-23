@@ -21,6 +21,8 @@ const {
   JORNADA_ORDINARIA_HORAS,
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
+  HORAS_MES_NOMINA,
+  RECARGOS,
 } = require('../config/constants');
 
 const MIN_POR_DIA = 24 * 60;
@@ -232,10 +234,47 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo } = {}) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────
+// Pago de nómina
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Valor de la hora ordinaria de un trabajador.
+ * Usa `tarifa_hora` si está definida; si no, lo deriva del salario mensual.
+ */
+function valorHora(trabajador) {
+  if (trabajador.tarifa_hora != null) return Number(trabajador.tarifa_hora);
+  if (trabajador.salario_base != null) {
+    return Number(trabajador.salario_base) / HORAS_MES_NOMINA;
+  }
+  return 0;
+}
+
+/**
+ * Pago total de un desglose de horas aplicando los recargos de ley.
+ * Las horas ordinarias se pagan a 1.0; el resto aplica su recargo.
+ * @param {object} desglose  Campos horas_ordinarias, horas_extra_diurnas,
+ *                           horas_extra_nocturnas, horas_nocturnas, horas_festivo.
+ * @param {number} valorHoraTrabajador
+ */
+function calcularPagoNomina(desglose, valorHoraTrabajador) {
+  const n = (v) => Number(v) || 0;
+  return (
+    valorHoraTrabajador *
+    (n(desglose.horas_ordinarias) +
+      RECARGOS.NOCTURNA * n(desglose.horas_nocturnas) +
+      RECARGOS.EXTRA_DIURNA * n(desglose.horas_extra_diurnas) +
+      RECARGOS.EXTRA_NOCTURNA * n(desglose.horas_extra_nocturnas) +
+      RECARGOS.FESTIVO_DIURNO * n(desglose.horas_festivo))
+  );
+}
+
 module.exports = {
   calcularPascua,
   festivosDeAnio,
   esDiaFestivo,
   calcularHoras,
   horaAMinutos,
+  valorHora,
+  calcularPagoNomina,
 };

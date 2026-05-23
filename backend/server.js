@@ -40,14 +40,14 @@ app.get('/api/health', (_req, res) => {
 
 // ─── Rutas de módulos ─────────────────────────────────────────
 app.use('/api/auth', require('./modules/auth/auth.routes'));
-
-// Se montan aquí a medida que se implementan los módulos:
-//   app.use('/api/trabajadores', require('./modules/trabajadores/trabajadores.routes'));
-//   app.use('/api/nomina', require('./modules/nomina/nomina.routes'));
-//   app.use('/api/turnos', require('./modules/turnos/turnos.routes'));
-//   app.use('/api/contratos', require('./modules/contratos/contratos.routes'));
-//   app.use('/api/integracion', require('./modules/integracion/integracion.routes'));
-//   app.use('/api/reportes', require('./modules/reportes/reportes.routes'));
+app.use('/api/trabajadores', require('./modules/trabajadores/trabajadores.routes'));
+app.use('/api/turnos', require('./modules/turnos/turnos.routes'));
+app.use('/api/nomina', require('./modules/nomina/nomina.routes'));
+app.use('/api/contratos', require('./modules/contratos/contratos.routes'));
+app.use('/api/notificaciones', require('./modules/notificaciones/notificaciones.routes'));
+app.use('/api/push', require('./modules/notificaciones/push/push.routes'));
+app.use('/api/integracion', require('./modules/integracion/integracion.routes'));
+app.use('/api/reportes', require('./modules/reportes/reportes.routes'));
 
 // ─── Manejo de errores ────────────────────────────────────────
 app.use(noEncontrado);
@@ -65,6 +65,9 @@ async function iniciar() {
   const servidor = app.listen(PORT, () => {
     logger.info(`App Turnos API escuchando en el puerto ${PORT}`);
   });
+
+  // Worker que despacha la cola de webhooks salientes hacia logiq360.
+  require('./modules/integracion/integracion.worker').iniciarWorker();
 
   const apagar = (senal) => {
     logger.info(`${senal} recibido, cerrando servidor...`);
