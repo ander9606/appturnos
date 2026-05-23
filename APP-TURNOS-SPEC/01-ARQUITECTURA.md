@@ -10,8 +10,7 @@ App Turnos es un sistema **independiente** de logiq360. Funciona sin conexión a
 |------|-----------|--------------|
 | Backend | Node.js + Express 5.x | Misma base que logiq360, facilita portabilidad de patrones |
 | Base de datos | MySQL 8.x | Misma engine, consultas SQL optimizadas |
-| Frontend web | React 19 + Vite + TailwindCSS | Consistencia de stack |
-| App móvil (futuro) | React Native | Reutiliza lógica de negocio |
+| Frontend | Expo (React Native) + TypeScript + NativeWind | Mobile-first real (el trabajador en campo es el caso de uso crítico), Expo Web cubre el backoffice si hace falta. Ver `07-FRONTEND.md`. |
 | Auth | JWT access (15m) + refresh (7d DB) | Mismo patrón que logiq360 |
 | Queue | tabla `jobs` en MySQL (no Redis en v1) | Sin dependencias externas |
 

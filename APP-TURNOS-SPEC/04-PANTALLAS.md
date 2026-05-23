@@ -1,5 +1,13 @@
 # App Turnos — Pantallas y Flujos de Usuario
 
+> **Diseño visual:** los wireframes y mockups vivos están en Figma (link pendiente). Este documento describe **flujos y datos**, no layout pixel-perfect.
+>
+> **Estados transversales obligatorios en toda pantalla:**
+> - `loading` — esqueleto o spinner mientras llega data
+> - `error` — mensaje + acción de reintentar
+> - `empty` — copy + CTA cuando la lista está vacía
+> - `offline` — banner persistente + comportamiento degradado (lectura del último caché)
+
 ## Track Nómina
 
 ### Flujo Jefe Nómina
@@ -107,10 +115,11 @@ Historial
 
 ### `IndicadorProximidad`
 Muestra en tiempo real la distancia entre el trabajador y el punto de encuentro.
-- GPS watch continuo (`navigator.geolocation.watchPosition`)
+- GPS continuo con `expo-location` (`watchPositionAsync`)
 - Haversine para distancia
-- Color: rojo >500m, amarillo 100-500m, verde <100m
-- Activa botón "Marcar Llegada" solo cuando distancia < `radio_geofence`
+- Color: rojo >500m, amarillo 100-500m, verde <`radio_geofence`
+- Activa botón "Marcar Llegada" solo cuando distancia < `radio_geofence` (default 100m)
+- **Defensa en profundidad**: el botón se bloquea en cliente y el backend revalida lat/lng al recibir `/ingreso` y `/egreso`. Ver `07-FRONTEND.md §Geofence`.
 
 ### `FirmaDigital`
 - Canvas táctil con soporte multi-touch
@@ -126,7 +135,7 @@ Muestra en tiempo real la distancia entre el trabajador y el punto de encuentro.
 
 ## Notificaciones push
 
-Usar Web Push API (navegador) + FCM (móvil futuro).
+Tokens nativos vía Expo Push (FCM en Android, APNs en iOS). Expo Web sigue usando Web Push VAPID. Ver `07-FRONTEND.md §Push`.
 
 | Evento | Destino | Mensaje |
 |--------|---------|---------|
