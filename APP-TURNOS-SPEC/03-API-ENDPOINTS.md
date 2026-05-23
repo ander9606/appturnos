@@ -58,8 +58,34 @@ Autenticación: `Authorization: Bearer <jwt>` en todos los endpoints excepto `/a
 | POST | `/api/turnos/asignaciones/:id/confirmar` | jefe_turnos | Confirmar trabajador |
 | POST | `/api/turnos/asignaciones/:id/ingreso` | trabajador_turnos | Marcar llegada (GPS) |
 | POST | `/api/turnos/asignaciones/:id/egreso` | trabajador_turnos | Marcar salida + firma |
+| POST | `/api/turnos/asignaciones/:id/calificar` | jefe_turnos, admin | Calificar turno completado (1-5 ⭐, ver §Ranking) |
 | GET | `/api/turnos/asignaciones` | jefe_turnos, admin | Ver todas las asignaciones |
 | GET | `/api/turnos/mis-turnos` | trabajador_turnos | Mis turnos y postulaciones |
+
+### Ranking y visibilidad escalonada de ofertas
+
+Cuando una asignación está en estado `completado`, el jefe la califica via
+`POST /api/turnos/asignaciones/:id/calificar` con
+`{ calificacion: 1..5, comentario?: string≤500 }`. Cada asignación se
+califica una sola vez (HTTP 409 si se reintenta) y el promedio se almacena
+en `trabajadores.ranking`.
+
+El ranking determina la **antigüedad mínima** que una oferta debe tener
+para que el `trabajador_turnos` la vea en `GET /ofertas`,
+`GET /ofertas/:id` y `POST /ofertas/:id/aplicar`:
+
+| Ranking del trabajador | Espera para ver una oferta nueva |
+|---|---|
+| ≥ 4.5 ⭐                  | 0 min (al instante) |
+| 3.5 – 4.49 ⭐             | 15 min |
+| 2.5 – 3.49 ⭐             | 30 min |
+| < 2.5 ⭐                  | 60 min |
+| Sin calificación (nuevo) | 15 min |
+
+`admin_empresa` y `jefe_turnos` no tienen retraso. El filtro se aplica en
+SQL (`TIMESTAMPDIFF(MINUTE, created_at, NOW())`) por lo que paginación,
+total y detalle reflejan exactamente lo visible para cada usuario; las
+ofertas aún no visibles devuelven 404.
 
 ---
 

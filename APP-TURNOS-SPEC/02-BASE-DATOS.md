@@ -50,10 +50,14 @@ CREATE TABLE trabajadores (
   activo TINYINT DEFAULT 1,
   -- Referencia externa si logiq360 lo envió
   external_ref VARCHAR(100),    -- ej: "logiq360:empleado:47"
+  -- Ranking (track Turnos): promedio de calificaciones por turno
+  ranking DECIMAL(3,2) NULL,             -- 0.00 a 5.00, NULL si aún no tiene
+  total_calificaciones INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (empresa_id) REFERENCES empresas(id),
   INDEX idx_trabajadores_empresa (empresa_id, activo),
-  INDEX idx_trabajadores_external (external_ref)
+  INDEX idx_trabajadores_external (external_ref),
+  INDEX idx_trabajadores_ranking (empresa_id, ranking)
 );
 ```
 
@@ -150,6 +154,30 @@ CREATE TABLE asignaciones_turno (
   FOREIGN KEY (trabajador_id) REFERENCES trabajadores(id)
 );
 ```
+
+### `calificaciones_turno` (track Turnos — calificación del jefe al terminar el turno)
+```sql
+CREATE TABLE calificaciones_turno (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  empresa_id INT NOT NULL,
+  asignacion_id INT NOT NULL,        -- una calificación por asignación (UNIQUE)
+  trabajador_id INT NOT NULL,
+  calificacion TINYINT NOT NULL,     -- 1 a 5 estrellas
+  comentario VARCHAR(500) NULL,
+  calificado_por INT NOT NULL,       -- usuario_id del jefe
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_calificacion_asignacion (asignacion_id),
+  FOREIGN KEY (empresa_id) REFERENCES empresas(id),
+  FOREIGN KEY (asignacion_id) REFERENCES asignaciones_turno(id) ON DELETE CASCADE,
+  FOREIGN KEY (trabajador_id) REFERENCES trabajadores(id),
+  INDEX idx_calif_trabajador (trabajador_id, created_at)
+);
+```
+
+Cada vez que se inserta una fila, el backend recomputa
+`trabajadores.ranking = AVG(calificacion)` y `total_calificaciones = COUNT(*)`
+del trabajador, en la misma transacción. El ranking se usa para escalonar
+la visibilidad de ofertas (ver `03-API-ENDPOINTS.md`).
 
 ### `contratos_diarios` (documento legal por asignación)
 ```sql
