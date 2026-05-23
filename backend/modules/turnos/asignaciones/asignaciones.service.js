@@ -105,6 +105,51 @@ const AsignacionesService = {
     const trabajador = await resolverTrabajador(empresaId, usuarioId);
     return AsignacionesModel.listarPorTrabajador(empresaId, trabajador.id);
   },
+
+  /**
+   * Califica una asignación completada (1–5 estrellas). Actualiza el
+   * ranking del trabajador y notifica al trabajador (best-effort).
+   * Una asignación solo puede calificarse una vez.
+   */
+  async calificar(empresaId, id, usuario, { calificacion, comentario }) {
+    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    if (asignacion.estado !== 'completado') {
+      throw new AppError('Solo se puede calificar una asignación completada', 409);
+    }
+
+    let resultado;
+    try {
+      resultado = await AsignacionesModel.calificar(empresaId, id, {
+        trabajadorId: asignacion.trabajador_id,
+        calificacion,
+        comentario: comentario || null,
+        calificadoPor: usuario.sub,
+      });
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('Esta asignación ya fue calificada', 409);
+      }
+      throw err;
+    }
+
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
+    await NotificacionesService.notificar({
+      empresaId,
+      usuarioId: trabajador?.usuario_id,
+      tipo: 'calificacion.recibida',
+      titulo: 'Recibiste una calificación',
+      mensaje: `Tu turno fue calificado con ${calificacion}/5 estrellas.`,
+      data: { asignacion_id: id, calificacion },
+    });
+
+    return {
+      asignacion_id: id,
+      trabajador_id: asignacion.trabajador_id,
+      ranking: resultado.ranking,
+      total_calificaciones: resultado.total,
+    };
+  },
 };
 
 module.exports = AsignacionesService;

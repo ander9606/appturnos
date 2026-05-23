@@ -7,7 +7,7 @@ async function listar(req, res) {
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const disponibles = req.query.disponibles === 'true' || req.query.disponibles === '1';
 
-  const { data, pagination } = await OfertasService.listar(req.empresa_id, {
+  const { data, pagination } = await OfertasService.listar(req.empresa_id, req.usuario, {
     fecha: req.query.fecha || undefined,
     estado: req.query.estado || undefined,
     disponibles,
@@ -18,7 +18,7 @@ async function listar(req, res) {
 }
 
 async function obtener(req, res) {
-  const data = await OfertasService.obtener(req.empresa_id, Number(req.params.id));
+  const data = await OfertasService.obtener(req.empresa_id, Number(req.params.id), req.usuario);
   res.json({ success: true, data, message: 'Detalle de la oferta' });
 }
 

@@ -46,4 +46,14 @@ async function misTurnos(req, res) {
   res.json({ success: true, data, message: 'Mis turnos y postulaciones' });
 }
 
-module.exports = { listar, confirmar, ingreso, egreso, misTurnos };
+async function calificar(req, res) {
+  const data = await AsignacionesService.calificar(
+    req.empresa_id,
+    Number(req.params.id),
+    req.usuario,
+    req.body
+  );
+  res.status(201).json({ success: true, data, message: 'Calificación registrada' });
+}
+
+module.exports = { listar, confirmar, ingreso, egreso, misTurnos, calificar };

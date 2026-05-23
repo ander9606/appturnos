@@ -9,7 +9,8 @@ const { pool } = require('../../config/database');
 
 // Columnas que se devuelven al cliente (se omite cualquier dato sensible).
 const COLUMNAS = `id, empresa_id, usuario_id, nombre, apellido, cedula, telefono,
-  email, tipo, cargo, tarifa_hora, salario_base, activo, external_ref, created_at`;
+  email, tipo, cargo, tarifa_hora, salario_base, activo, external_ref,
+  ranking, total_calificaciones, created_at`;
 
 // Allowlist de columnas modificables vía PUT. Es una lista fija de código,
 // no claves de entrada del usuario, por lo que es seguro interpolarla en SQL.

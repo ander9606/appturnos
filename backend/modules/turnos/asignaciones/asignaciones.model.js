@@ -211,6 +211,42 @@ const AsignacionesModel = {
     return { data: filas, total };
   },
 
+  /**
+   * Registra una calificación de la asignación y recomputa el ranking del
+   * trabajador (promedio + conteo), todo dentro de una transacción.
+   * Lanza ER_DUP_ENTRY si la asignación ya tenía calificación.
+   */
+  async calificar(empresaId, asignacionId, { trabajadorId, calificacion, comentario, calificadoPor }) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(
+        `INSERT INTO calificaciones_turno
+           (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [empresaId, asignacionId, trabajadorId, calificacion, comentario, calificadoPor]
+      );
+      const [[stats]] = await conn.query(
+        `SELECT AVG(calificacion) AS promedio, COUNT(*) AS total
+         FROM calificaciones_turno
+         WHERE empresa_id = ? AND trabajador_id = ?`,
+        [empresaId, trabajadorId]
+      );
+      await conn.query(
+        `UPDATE trabajadores SET ranking = ?, total_calificaciones = ?
+         WHERE id = ? AND empresa_id = ?`,
+        [Number(stats.promedio).toFixed(2), stats.total, trabajadorId, empresaId]
+      );
+      await conn.commit();
+      return { ranking: Number(Number(stats.promedio).toFixed(2)), total: stats.total };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
   /** Turnos y postulaciones de un trabajador (vista "mis-turnos"). */
   async listarPorTrabajador(empresaId, trabajadorId) {
     const [filas] = await pool.query(

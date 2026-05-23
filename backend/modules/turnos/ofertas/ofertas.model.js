@@ -26,7 +26,7 @@ const CAMPOS_EDITABLES = [
 ];
 
 const OfertasModel = {
-  async listar(empresaId, { fecha, estado, disponibles, limit, offset }) {
+  async listar(empresaId, { fecha, estado, disponibles, antiguedadMinMin, limit, offset }) {
     const where = ['empresa_id = ?'];
     const params = [empresaId];
     if (fecha) {
@@ -39,6 +39,12 @@ const OfertasModel = {
     }
     if (disponibles) {
       where.push("estado = 'abierta' AND plazas_cubiertas < plazas_disponibles");
+    }
+    // Visibilidad escalonada por ranking: la oferta solo es visible si ya
+    // pasaron `antiguedadMinMin` minutos desde su creación.
+    if (antiguedadMinMin && antiguedadMinMin > 0) {
+      where.push('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= ?');
+      params.push(antiguedadMinMin);
     }
     const whereSql = where.join(' AND ');
 
@@ -56,10 +62,16 @@ const OfertasModel = {
     return { data: filas, total };
   },
 
-  async obtenerPorId(empresaId, id) {
+  async obtenerPorId(empresaId, id, antiguedadMinMin = 0) {
+    const params = [id, empresaId];
+    let extra = '';
+    if (antiguedadMinMin > 0) {
+      extra = ' AND TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= ?';
+      params.push(antiguedadMinMin);
+    }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS} FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1`,
-      [id, empresaId]
+      `SELECT ${COLUMNAS} FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
+      params
     );
     return filas[0] || null;
   },

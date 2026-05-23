@@ -60,4 +60,19 @@ router.post(
   ctrl.egreso
 );
 
+// POST /api/turnos/asignaciones/:id/calificar  (jefe/admin califica el turno)
+router.post(
+  '/:id/calificar',
+  verificarRol(GESTIONAR),
+  [
+    idParam,
+    body('calificacion')
+      .isInt({ min: 1, max: 5 })
+      .withMessage('calificacion debe ser un entero entre 1 y 5'),
+    body('comentario').optional({ values: 'falsy' }).isString().isLength({ max: 500 }),
+  ],
+  validar,
+  ctrl.calificar
+);
+
 module.exports = router;

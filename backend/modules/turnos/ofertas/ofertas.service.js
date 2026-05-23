@@ -5,6 +5,7 @@ const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
+const { ROLES } = require('../../../config/constants');
 
 /** Resuelve el trabajador vinculado al usuario autenticado. */
 async function resolverTrabajador(empresaId, usuarioId) {
@@ -15,13 +16,39 @@ async function resolverTrabajador(empresaId, usuarioId) {
   return trabajador;
 }
 
+/**
+ * Visibilidad escalonada: minutos que el trabajador debe esperar antes de
+ * ver una oferta nueva, según su ranking (0–5 estrellas). Los mejor
+ * calificados ven al instante; los nuevos sin calificación esperan un poco.
+ */
+function delayPorRanking(ranking) {
+  if (ranking == null) return 15; // trabajador nuevo, sin calificaciones
+  const r = Number(ranking);
+  if (r >= 4.5) return 0;
+  if (r >= 3.5) return 15;
+  if (r >= 2.5) return 30;
+  return 60;
+}
+
+/**
+ * Devuelve la antigüedad mínima (en minutos) que debe tener una oferta
+ * para ser visible para este usuario. 0 para admin y jefe_turnos.
+ */
+async function antiguedadMinima(empresaId, usuario) {
+  if (usuario.rol !== ROLES.TRABAJADOR_TURNOS) return 0;
+  const trabajador = await resolverTrabajador(empresaId, usuario.sub);
+  return delayPorRanking(trabajador.ranking);
+}
+
 const OfertasService = {
-  async listar(empresaId, { fecha, estado, disponibles, page, limit }) {
+  async listar(empresaId, usuario, { fecha, estado, disponibles, page, limit }) {
     const offset = (page - 1) * limit;
+    const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
     const { data, total } = await OfertasModel.listar(empresaId, {
       fecha,
       estado,
       disponibles,
+      antiguedadMinMin,
       limit,
       offset,
     });
@@ -29,8 +56,9 @@ const OfertasService = {
   },
 
   /** Detalle de la oferta junto con sus asignaciones. */
-  async obtener(empresaId, id) {
-    const oferta = await OfertasModel.obtenerPorId(empresaId, id);
+  async obtener(empresaId, id, usuario) {
+    const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
+    const oferta = await OfertasModel.obtenerPorId(empresaId, id, antiguedadMinMin);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     const asignaciones = await AsignacionesModel.listarPorOferta(empresaId, id);
     return { ...oferta, asignaciones };
@@ -78,8 +106,15 @@ const OfertasService = {
 
   /** Postula al trabajador autenticado a la oferta. */
   async aplicar(empresaId, ofertaId, usuarioId) {
-    const oferta = await OfertasModel.obtenerPorId(empresaId, ofertaId);
-    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    // Se resuelve primero el trabajador para aplicar la visibilidad por ranking:
+    // un trabajador no puede postularse a una oferta que aún no le es visible.
+    const trabajador = await resolverTrabajador(empresaId, usuarioId);
+    const oferta = await OfertasModel.obtenerPorId(
+      empresaId,
+      ofertaId,
+      delayPorRanking(trabajador.ranking)
+    );
+    if (!oferta) throw new AppError('Oferta no encontrada o aún no disponible', 404);
     if (oferta.estado !== 'abierta') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
     }
@@ -87,7 +122,6 @@ const OfertasService = {
       throw new AppError('La oferta ya no tiene plazas disponibles', 409);
     }
 
-    const trabajador = await resolverTrabajador(empresaId, usuarioId);
     const existente = await AsignacionesModel.obtenerPorOfertaYTrabajador(
       ofertaId,
       trabajador.id
