@@ -159,6 +159,68 @@ const IntegracionService = {
       }
     }
   },
+
+  // ─── Endpoints públicos pull (logiq360 → App Turnos) ──────────────────────
+  /**
+   * Estado de una oferta y sus contratos a partir del external_ref.
+   * GET /api/integracion/public/estado/:external_ref
+   * Ref: docs/INTEGRACION-LOGIQ360-APP-TURNOS.md
+   */
+  async publicEstado(empresaId, externalRef) {
+    const OfertasModel = require('../turnos/ofertas/ofertas.model');
+    const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
+
+    const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, externalRef);
+    if (!oferta) {
+      return { encontrado: false, external_ref: externalRef };
+    }
+
+    const asignaciones = await AsignacionesModel.listarPorOferta(empresaId, oferta.id);
+
+    return {
+      encontrado: true,
+      external_ref: externalRef,
+      oferta_id: oferta.id,
+      estado: oferta.estado,
+      cupos_requeridos: oferta.plazas_disponibles,
+      cupos_cubiertos: asignaciones.filter((a) => a.estado === 'confirmado').length,
+      contratos: asignaciones.map((a) => ({
+        trabajador_ref: a.external_ref || null,
+        trabajador_nombre: `${a.trabajador_nombre} ${a.trabajador_apellido || ''}`.trim(),
+        estado: a.estado,
+        hora_ingreso: a.hora_ingreso || null,
+        hora_egreso: a.hora_egreso || null,
+      })),
+    };
+  },
+
+  /**
+   * Quién está actualmente en campo (ingreso marcado, sin egreso).
+   * GET /api/integracion/public/en-sitio/:external_ref
+   */
+  async publicEnSitio(empresaId, externalRef) {
+    const OfertasModel = require('../turnos/ofertas/ofertas.model');
+    const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
+
+    const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, externalRef);
+    if (!oferta) {
+      return { encontrado: false, external_ref: externalRef, en_sitio: [], total: 0 };
+    }
+
+    const asignaciones = await AsignacionesModel.listarPorOferta(empresaId, oferta.id);
+    const enSitio = asignaciones.filter((a) => a.hora_ingreso && !a.hora_egreso);
+
+    return {
+      encontrado: true,
+      external_ref: externalRef,
+      en_sitio: enSitio.map((a) => ({
+        trabajador_nombre: `${a.trabajador_nombre} ${a.trabajador_apellido || ''}`.trim(),
+        hora_ingreso: a.hora_ingreso,
+        dentro_zona: a.ingreso_dentro_zona ?? null,
+      })),
+      total: enSitio.length,
+    };
+  },
 };
 
 module.exports = IntegracionService;

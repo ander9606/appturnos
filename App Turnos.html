@@ -1,0 +1,3471 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>App Turnos · Prototipo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&display=swap" rel="stylesheet">
+
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #F4EFE7;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  button { font-family: inherit; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  /* Stage scaling for any viewport */
+  #root { width: 100%; height: 100vh; display: grid; place-items: center; overflow: hidden;
+    background:
+      radial-gradient(1200px 800px at 30% 10%, #FFF1E5 0%, transparent 60%),
+      radial-gradient(900px 600px at 80% 90%, #FFE9DD 0%, transparent 60%),
+      #F4EFE7;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.25); opacity: 0.55; }
+  }
+  @keyframes pop-in {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes screen-in {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes screen-in-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!-- ═══════════════════════════════════════════════════════
+     1. Design tokens + UI primitives
+     (NativeWind token mapping: CN = nómina emerald, C = turnos orange)
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/babel">
+// ui-kit.jsx — App Turnos design primitives (warm gig-economy)
+
+const C = {
+  primary: '#FF5A3C',
+  primaryDark: '#E64829',
+  primaryDeep: '#B8341A',
+  primaryTint: '#FFEDE6',
+  primarySoft: '#FFF6F1',
+  bg: '#FFFBF6',
+  card: '#FFFFFF',
+  text: '#1A1410',
+  textDim: '#56463B',
+  muted: '#8F8478',
+  mutedLight: '#C9BFB4',
+  border: '#EFE7DC',
+  borderDim: '#F7F0E6',
+  success: '#10B981',
+  successTint: '#E8FBF3',
+  warning: '#F5A623',
+  warningTint: '#FFF4DD',
+  danger: '#EF4444',
+  dangerTint: '#FFE8E6',
+  star: '#FFB800',
+  ink: '#0B0907',
+  night: '#241B14',
+};
+
+
+// ── Track nómina colors (emerald green — distinguishes from turnos orange) ─────
+const CN = {
+  primary: '#059669',
+  primaryDark: '#047857',
+  primaryDeep: '#065f46',
+  primaryTint: '#d1fae5',
+  primarySoft: '#ecfdf5',
+};
+const fontDisplay = '"Bricolage Grotesque", "Plus Jakarta Sans", system-ui, sans-serif';
+const fontBody = '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif';
+
+// ── Currency / format helpers ──────────────────────────────────────
+const fmtCOP = (n) => {
+  if (n == null) return '';
+  return '$' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+const fmtDist = (m) => {
+  if (m < 1000) return Math.round(m) + ' m';
+  return (m / 1000).toFixed(m < 10000 ? 1 : 0) + ' km';
+};
+
+// ── Card ───────────────────────────────────────────────────────────
+function Card({ children, style, onClick, padding = 16, radius = 20, elevated = false }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        background: C.card,
+        borderRadius: radius,
+        padding,
+        border: elevated ? 'none' : `1px solid ${C.border}`,
+        boxShadow: elevated
+          ? '0 1px 3px rgba(60,40,30,0.04), 0 8px 24px rgba(60,40,30,0.06)'
+          : '0 1px 0 rgba(60,40,30,0.02)',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ── Buttons ────────────────────────────────────────────────────────
+function PrimaryButton({ children, onClick, disabled, icon, full = true, tone = 'primary' }) {
+  const bg = disabled
+    ? '#E8E1D7'
+    : tone === 'primary' ? C.primary
+    : tone === 'success' ? C.success
+    : tone === 'danger' ? C.danger
+    : tone === 'dark' ? C.ink
+    : C.primary;
+  const color = disabled ? '#A89E92' : '#fff';
+  return (
+    <button
+      onClick={disabled ? undefined : onClick}
+      style={{
+        width: full ? '100%' : 'auto',
+        height: 56,
+        borderRadius: 18,
+        border: 'none',
+        background: bg,
+        color,
+        fontFamily: fontBody,
+        fontSize: 17,
+        fontWeight: 700,
+        letterSpacing: -0.2,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        boxShadow: disabled ? 'none' : '0 8px 20px rgba(255,90,60,0.25), inset 0 -2px 0 rgba(0,0,0,0.08)',
+        transition: 'transform 0.1s ease',
+      }}
+      onPointerDown={(e) => !disabled && (e.currentTarget.style.transform = 'scale(0.98)')}
+      onPointerUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+      onPointerLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function GhostButton({ children, onClick, full = true }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: full ? '100%' : 'auto',
+        height: 52,
+        borderRadius: 16,
+        border: `1.5px solid ${C.border}`,
+        background: 'transparent',
+        color: C.text,
+        fontFamily: fontBody,
+        fontSize: 16,
+        fontWeight: 600,
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TextButton({ children, onClick, color }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        color: color || C.primary,
+        fontFamily: fontBody,
+        fontSize: 15,
+        fontWeight: 600,
+        cursor: 'pointer',
+        padding: '8px 4px',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ── Input ──────────────────────────────────────────────────────────
+function Field({ label, value, onChange, type = 'text', placeholder, autoFocus, hint }) {
+  const [focus, setFocus] = React.useState(false);
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{
+        fontFamily: fontBody, fontSize: 13, fontWeight: 600,
+        color: C.textDim, letterSpacing: 0.1,
+      }}>{label}</label>
+      <input
+        autoFocus={autoFocus}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setFocus(false)}
+        style={{
+          height: 56,
+          borderRadius: 16,
+          border: `1.5px solid ${focus ? C.primary : C.border}`,
+          background: focus ? '#fff' : '#FBF7F1',
+          padding: '0 18px',
+          fontFamily: fontBody,
+          fontSize: 17,
+          fontWeight: 500,
+          color: C.text,
+          outline: 'none',
+          transition: 'all 0.15s',
+        }}
+      />
+      {hint && (
+        <span style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, marginLeft: 4 }}>
+          {hint}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ── Header (back + title + right) ──────────────────────────────────
+function ScreenHeader({ title, onBack, right, big = false, subtitle }) {
+  return (
+    <div style={{ padding: '8px 20px 4px', display: 'flex', flexDirection: 'column', gap: big ? 14 : 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 40 }}>
+        {onBack ? (
+          <button onClick={onBack} style={{
+            width: 40, height: 40, borderRadius: 14, border: `1px solid ${C.border}`,
+            background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', padding: 0,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M12 4l-6 6 6 6" stroke={C.text} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        ) : <div style={{ width: 40 }} />}
+        {!big && (
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 17, fontWeight: 700, color: C.text,
+          }}>{title}</div>
+        )}
+        <div style={{ minWidth: 40, display: 'flex', justifyContent: 'flex-end' }}>{right}</div>
+      </div>
+      {big && (
+        <div>
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 32, fontWeight: 700, color: C.text, lineHeight: 1.1, letterSpacing: -0.8,
+          }}>{title}</div>
+          {subtitle && <div style={{ fontFamily: fontBody, fontSize: 15, color: C.muted, marginTop: 6 }}>{subtitle}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Badge / Chip ───────────────────────────────────────────────────
+function Badge({ children, tone = 'neutral', size = 'md', icon }) {
+  const tones = {
+    neutral: { bg: '#F4EEE6', fg: C.textDim },
+    primary: { bg: C.primaryTint, fg: C.primaryDeep },
+    success: { bg: C.successTint, fg: '#0A7A52' },
+    warning: { bg: C.warningTint, fg: '#A56400' },
+    danger: { bg: C.dangerTint, fg: '#B91C1C' },
+    dark: { bg: C.ink, fg: '#fff' },
+    star: { bg: '#FFF5DC', fg: '#8A6500' },
+  };
+  const t = tones[tone] || tones.neutral;
+  const sz = size === 'sm' ? { fs: 11, py: 3, px: 8, r: 8 } : { fs: 12, py: 5, px: 10, r: 10 };
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      background: t.bg, color: t.fg,
+      padding: `${sz.py}px ${sz.px}px`,
+      borderRadius: sz.r,
+      fontFamily: fontBody, fontSize: sz.fs, fontWeight: 700, letterSpacing: 0.2,
+      whiteSpace: 'nowrap',
+    }}>
+      {icon}
+      {children}
+    </span>
+  );
+}
+
+function Chip({ children, active, onClick, icon }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      height: 38, padding: '0 16px', borderRadius: 999,
+      background: active ? C.ink : '#fff',
+      color: active ? '#fff' : C.text,
+      border: `1.5px solid ${active ? C.ink : C.border}`,
+      fontFamily: fontBody, fontSize: 14, fontWeight: 600,
+      whiteSpace: 'nowrap', cursor: 'pointer', flexShrink: 0,
+    }}>
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+// ── Stars ──────────────────────────────────────────────────────────
+function Stars({ value = 0, size = 14, full = true }) {
+  const v = Math.max(0, Math.min(5, value));
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+      {[1, 2, 3, 4, 5].map((i) => {
+        const fill = v >= i ? 1 : v >= i - 0.5 ? 0.5 : 0;
+        return (
+          <svg key={i} width={size} height={size} viewBox="0 0 16 16" style={{ flexShrink: 0 }}>
+            <defs>
+              <linearGradient id={`g${i}-${size}`}>
+                <stop offset={`${fill * 100}%`} stopColor={C.star} />
+                <stop offset={`${fill * 100}%`} stopColor="#E8DFD3" />
+              </linearGradient>
+            </defs>
+            <path d="M8 1.2l2.06 4.18 4.61.67-3.34 3.26.79 4.6L8 11.7l-4.12 2.17.79-4.6L1.33 6.05l4.61-.67L8 1.2z"
+              fill={`url(#g${i}-${size})`} />
+          </svg>
+        );
+      })}
+      {full && <span style={{ fontFamily: fontBody, fontSize: size - 1, fontWeight: 700, color: C.text, marginLeft: 4 }}>
+        {v.toFixed(1)}
+      </span>}
+    </span>
+  );
+}
+
+// ── TabBar ─────────────────────────────────────────────────────────
+function TabBar({ current, onChange }) {
+  const tabs = [
+    { id: 'home', label: 'Inicio', icon: 'home' },
+    { id: 'ofertas', label: 'Ofertas', icon: 'search' },
+    { id: 'hoy', label: 'Hoy', icon: 'pin' },
+    { id: 'nomina', label: 'Nómina', icon: 'clock' },
+  ];
+  return (
+    <div style={{
+      position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 30,
+      background: 'rgba(255,251,246,0.95)',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+      borderTop: `2px solid ${current === 'nomina' ? CN.primary : C.borderDim}`,
+      paddingBottom: 28,
+      paddingTop: 8,
+      display: 'flex',
+      justifyContent: 'space-around',
+    }}>
+      {tabs.map((t) => {
+        const active = current === t.id;
+        return (
+          <button key={t.id} onClick={() => onChange(t.id)} style={{
+            flex: 1, background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+            padding: '4px 0',
+          }}>
+            <TabIcon name={t.icon} active={active} activeColor={current === 'nomina' ? CN.primary : C.primary} />
+            <span style={{
+              fontFamily: fontBody, fontSize: 11, fontWeight: 700,
+              color: active ? (current === 'nomina' ? CN.primary : C.primary) : C.muted,
+              letterSpacing: 0.2,
+            }}>{t.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function TabIcon({ name, active, activeColor }) {
+  const c = active ? (activeColor || C.primary) : C.mutedLight;
+  const s = active ? 2.4 : 2;
+  switch (name) {
+    case 'home':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1v-9.5z"
+            stroke={c} strokeWidth={s} strokeLinejoin="round"
+            fill={active ? `${C.primary}22` : 'none'} />
+        </svg>
+      );
+    case 'search':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="6.5" stroke={c} strokeWidth={s} fill={active ? `${C.primary}22` : 'none'} />
+          <path d="M16 16l4 4" stroke={c} strokeWidth={s} strokeLinecap="round" />
+        </svg>
+      );
+    case 'pin':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 21s-7-7-7-12a7 7 0 0114 0c0 5-7 12-7 12z"
+            stroke={c} strokeWidth={s} strokeLinejoin="round"
+            fill={active ? `${C.primary}22` : 'none'} />
+          <circle cx="12" cy="9" r="2.5" fill={c} />
+        </svg>
+      );
+    case 'clock':
+      return (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="8.5" stroke={c} strokeWidth={s} fill={active ? `${C.primary}22` : 'none'} />
+          <path d="M12 7v5l3.5 2" stroke={c} strokeWidth={s} strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+  }
+}
+
+// ── Avatar ─────────────────────────────────────────────────────────
+function Avatar({ initials = 'AS', size = 44, tone = 'primary' }) {
+  const palettes = {
+    primary: { bg: C.primaryTint, fg: C.primaryDeep },
+    blue: { bg: '#E0EBFF', fg: '#1E40AF' },
+    green: { bg: C.successTint, fg: '#0A7A52' },
+    purple: { bg: '#EFE5FF', fg: '#5B21B6' },
+    yellow: { bg: '#FFF5DC', fg: '#8A6500' },
+  };
+  const p = palettes[tone] || palettes.primary;
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size / 2,
+      background: p.bg, color: p.fg,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: fontDisplay, fontWeight: 700, fontSize: size * 0.38,
+      letterSpacing: 0.2, flexShrink: 0,
+    }}>{initials}</div>
+  );
+}
+
+// ── Section title ──────────────────────────────────────────────────
+function SectionTitle({ children, action, onAction }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      padding: '0 4px',
+    }}>
+      <div style={{
+        fontFamily: fontDisplay, fontSize: 19, fontWeight: 700,
+        color: C.text, letterSpacing: -0.3,
+      }}>{children}</div>
+      {action && (
+        <button onClick={onAction} style={{
+          background: 'none', border: 'none', color: C.primary,
+          fontFamily: fontBody, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+        }}>{action}</button>
+      )}
+    </div>
+  );
+}
+
+// ── Mini icons (used in screens) ───────────────────────────────────
+function Icon({ name, size = 18, color = C.muted, strokeWidth = 2 }) {
+  const p = { stroke: color, strokeWidth, fill: 'none', strokeLinecap: 'round', strokeLinejoin: 'round' };
+  switch (name) {
+    case 'clock':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" {...p} /><path d="M12 7v5l3 2" {...p} /></svg>;
+    case 'pin':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M12 21s-7-7-7-12a7 7 0 0114 0c0 5-7 12-7 12z" {...p} /><circle cx="12" cy="9" r="2.5" stroke={color} strokeWidth={strokeWidth} fill="none" /></svg>;
+    case 'cash':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2" {...p} /><circle cx="12" cy="12" r="3" {...p} /></svg>;
+    case 'users':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" {...p} /><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6" {...p} /><circle cx="17" cy="9" r="2.5" {...p} /><path d="M15 15a5 5 0 016 5" {...p} /></svg>;
+    case 'calendar':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" {...p} /><path d="M3 10h18M8 3v4M16 3v4" {...p} /></svg>;
+    case 'arrow':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7" {...p} /></svg>;
+    case 'check':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" {...p} /></svg>;
+    case 'star':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M12 2l3.1 6.3 7 1-5 4.9 1.2 6.9L12 17.8 5.7 21l1.2-6.9L2 9.3l7-1L12 2z" fill={color} stroke="none" /></svg>;
+    case 'bell':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8zM9 21a3 3 0 006 0" {...p} /></svg>;
+    case 'lock':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2" {...p} /><path d="M8 11V8a4 4 0 018 0v3" {...p} /></svg>;
+    case 'gps':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" {...p} /><circle cx="12" cy="12" r="8" {...p} /><path d="M12 2v2M12 20v2M2 12h2M20 12h2" {...p} /></svg>;
+    case 'route':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5" {...p} /><circle cx="18" cy="18" r="2.5" {...p} /><path d="M8 6h7a3 3 0 010 6H9a3 3 0 000 6h7" {...p} /></svg>;
+    case 'shield':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M12 2l8 3v7c0 5-4 9-8 10-4-1-8-5-8-10V5l8-3z" {...p} /></svg>;
+    case 'chevron':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" {...p} /></svg>;
+    case 'plus':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" {...p} /></svg>;
+    case 'sliders':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0" {...p} /><circle cx="16" cy="6" r="2" {...p} /><circle cx="8" cy="12" r="2" {...p} /><circle cx="18" cy="18" r="2" {...p} /></svg>;
+    case 'walk':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><circle cx="13" cy="4" r="2" {...p} /><path d="M9 22l2-7-3-3 2-5 4 3 3 1M12 14l3 8" {...p} /></svg>;
+    case 'flame':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M12 3s4 4 4 8a4 4 0 11-8 0c0-1 1-2 1-2-2 1-4 3-4 6a7 7 0 0014 0c0-6-7-12-7-12z" {...p} /></svg>;
+    case 'wifi':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M5 12a10 10 0 0114 0M8.5 15.5a5 5 0 017 0" {...p} /><circle cx="12" cy="19" r="1" fill={color} stroke="none" /></svg>;
+    case 'logout':
+      return <svg width={size} height={size} viewBox="0 0 24 24"><path d="M15 3h4a1 1 0 011 1v16a1 1 0 01-1 1h-4M10 17l5-5-5-5M15 12H3" {...p} /></svg>;
+  }
+  return null;
+}
+
+// Expose to global scope so other Babel scripts can use these
+Object.assign(window, {
+  C, CN, fontDisplay, fontBody, fmtCOP, fmtDist,
+  Card, PrimaryButton, GhostButton, TextButton, Field,
+  ScreenHeader, Badge, Chip, Stars, TabBar, Avatar, SectionTitle, Icon,
+});
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     2. iOS 26 device frame + status bar
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/babel">
+
+// iOS.jsx — Simplified iOS 26 (Liquid Glass) device frame
+// Based on the iOS 26 UI Kit + Figma status bar spec. No assets, no deps.
+// Exports: IOSDevice, IOSStatusBar, IOSNavBar, IOSGlassPill, IOSList, IOSListRow, IOSKeyboard
+
+// ─────────────────────────────────────────────────────────────
+// Status bar
+// ─────────────────────────────────────────────────────────────
+function IOSStatusBar({ dark = false, time = '9:41' }) {
+  const c = dark ? '#fff' : '#000';
+  return (
+    <div style={{
+      display: 'flex', gap: 154, alignItems: 'center', justifyContent: 'center',
+      padding: '21px 24px 19px', boxSizing: 'border-box',
+      position: 'relative', zIndex: 20, width: '100%',
+    }}>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 1.5 }}>
+        <span style={{
+          fontFamily: '-apple-system, "SF Pro", system-ui', fontWeight: 590,
+          fontSize: 17, lineHeight: '22px', color: c,
+        }}>{time}</span>
+      </div>
+      <div style={{ flex: 1, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, paddingTop: 1, paddingRight: 1 }}>
+        <svg width="19" height="12" viewBox="0 0 19 12">
+          <rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7" fill={c}/>
+          <rect x="4.8" y="5" width="3.2" height="7" rx="0.7" fill={c}/>
+          <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill={c}/>
+          <rect x="14.4" y="0" width="3.2" height="12" rx="0.7" fill={c}/>
+        </svg>
+        <svg width="17" height="12" viewBox="0 0 17 12">
+          <path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill={c}/>
+          <path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill={c}/>
+          <circle cx="8.5" cy="10.5" r="1.5" fill={c}/>
+        </svg>
+        <svg width="27" height="13" viewBox="0 0 27 13">
+          <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke={c} strokeOpacity="0.35" fill="none"/>
+          <rect x="2" y="2" width="20" height="9" rx="2" fill={c}/>
+          <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill={c} fillOpacity="0.4"/>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Liquid glass pill — blur + tint + shine
+// ─────────────────────────────────────────────────────────────
+function IOSGlassPill({ children, dark = false, style = {} }) {
+  return (
+    <div style={{
+      height: 44, minWidth: 44, borderRadius: 9999,
+      position: 'relative', overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: dark
+        ? '0 2px 6px rgba(0,0,0,0.35), 0 6px 16px rgba(0,0,0,0.2)'
+        : '0 1px 3px rgba(0,0,0,0.07), 0 3px 10px rgba(0,0,0,0.06)',
+      ...style,
+    }}>
+      {/* blur + tint */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 9999,
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        background: dark ? 'rgba(120,120,128,0.28)' : 'rgba(255,255,255,0.5)',
+      }} />
+      {/* shine */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 9999,
+        boxShadow: dark
+          ? 'inset 1.5px 1.5px 1px rgba(255,255,255,0.15), inset -1px -1px 1px rgba(255,255,255,0.08)'
+          : 'inset 1.5px 1.5px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(255,255,255,0.4)',
+        border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.06)',
+      }} />
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', padding: '0 4px' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Navigation bar — glass pills + large title
+// ─────────────────────────────────────────────────────────────
+function IOSNavBar({ title = 'Title', dark = false, trailingIcon = true }) {
+  const muted = dark ? 'rgba(255,255,255,0.6)' : '#404040';
+  const text = dark ? '#fff' : '#000';
+  const pillIcon = (content) => (
+    <IOSGlassPill dark={dark}>
+      <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {content}
+      </div>
+    </IOSGlassPill>
+  );
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 10,
+      paddingTop: 62, paddingBottom: 10, position: 'relative', zIndex: 5,
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 16px',
+      }}>
+        {/* back chevron */}
+        {pillIcon(
+          <svg width="12" height="20" viewBox="0 0 12 20" fill="none" style={{ marginLeft: -1 }}>
+            <path d="M10 2L2 10l8 8" stroke={muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+        {/* trailing ellipsis */}
+        {trailingIcon && pillIcon(
+          <svg width="22" height="6" viewBox="0 0 22 6">
+            <circle cx="3" cy="3" r="2.5" fill={muted}/>
+            <circle cx="11" cy="3" r="2.5" fill={muted}/>
+            <circle cx="19" cy="3" r="2.5" fill={muted}/>
+          </svg>
+        )}
+      </div>
+      {/* large title */}
+      <div style={{
+        padding: '0 16px',
+        fontFamily: '-apple-system, system-ui',
+        fontSize: 34, fontWeight: 700, lineHeight: '41px',
+        color: text, letterSpacing: 0.4,
+      }}>{title}</div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Grouped list (inset card, r:26) + row (52px)
+// ─────────────────────────────────────────────────────────────
+function IOSListRow({ title, detail, icon, chevron = true, isLast = false, dark = false }) {
+  const text = dark ? '#fff' : '#000';
+  const sec = dark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const ter = dark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)';
+  const sep = dark ? 'rgba(84,84,88,0.65)' : 'rgba(60,60,67,0.12)';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', minHeight: 52,
+      padding: '0 16px', position: 'relative',
+      fontFamily: '-apple-system, system-ui', fontSize: 17,
+      letterSpacing: -0.43,
+    }}>
+      {icon && (
+        <div style={{
+          width: 30, height: 30, borderRadius: 7, background: icon,
+          marginRight: 12, flexShrink: 0,
+        }} />
+      )}
+      <div style={{ flex: 1, color: text }}>{title}</div>
+      {detail && <span style={{ color: sec, marginRight: 6 }}>{detail}</span>}
+      {chevron && (
+        <svg width="8" height="14" viewBox="0 0 8 14" style={{ flexShrink: 0 }}>
+          <path d="M1 1l6 6-6 6" stroke={ter} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )}
+      {!isLast && (
+        <div style={{
+          position: 'absolute', bottom: 0, right: 0,
+          left: icon ? 58 : 16, height: 0.5, background: sep,
+        }} />
+      )}
+    </div>
+  );
+}
+
+function IOSList({ header, children, dark = false }) {
+  const hc = dark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const bg = dark ? '#1C1C1E' : '#fff';
+  return (
+    <div>
+      {header && (
+        <div style={{
+          fontFamily: '-apple-system, system-ui', fontSize: 13,
+          color: hc, textTransform: 'uppercase',
+          padding: '8px 36px 6px', letterSpacing: -0.08,
+        }}>{header}</div>
+      )}
+      <div style={{
+        background: bg, borderRadius: 26,
+        margin: '0 16px', overflow: 'hidden',
+      }}>{children}</div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Device frame
+// ─────────────────────────────────────────────────────────────
+function IOSDevice({
+  children, width = 402, height = 874, dark = false,
+  title, keyboard = false,
+}) {
+  return (
+    <div style={{
+      width, height, borderRadius: 48, overflow: 'hidden',
+      position: 'relative', background: dark ? '#000' : '#F2F2F7',
+      boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+      fontFamily: '-apple-system, system-ui, sans-serif',
+      WebkitFontSmoothing: 'antialiased',
+    }}>
+      {/* dynamic island */}
+      <div style={{
+        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
+        width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
+      }} />
+      {/* status bar (absolute) */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }}>
+        <IOSStatusBar dark={dark} />
+      </div>
+      {/* nav + content */}
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {title !== undefined && <IOSNavBar title={title} dark={dark} />}
+        <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+        {keyboard && <IOSKeyboard dark={dark} />}
+      </div>
+      {/* home indicator — always on top */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
+        height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
+        paddingBottom: 8, pointerEvents: 'none',
+      }}>
+        <div style={{
+          width: 139, height: 5, borderRadius: 100,
+          background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)',
+        }} />
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Keyboard — iOS 26 liquid glass
+// ─────────────────────────────────────────────────────────────
+function IOSKeyboard({ dark = false }) {
+  const glyph = dark ? 'rgba(255,255,255,0.7)' : '#595959';
+  const sugg = dark ? 'rgba(255,255,255,0.6)' : '#333';
+  const keyBg = dark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.85)';
+
+  // special-key icons
+  const icons = {
+    shift: <svg width="19" height="17" viewBox="0 0 19 17"><path d="M9.5 1L1 9.5h4.5V16h8V9.5H18L9.5 1z" fill={glyph}/></svg>,
+    del: <svg width="23" height="17" viewBox="0 0 23 17"><path d="M7 1h13a2 2 0 012 2v11a2 2 0 01-2 2H7l-6-7.5L7 1z" fill="none" stroke={glyph} strokeWidth="1.6" strokeLinejoin="round"/><path d="M10 5l7 7M17 5l-7 7" stroke={glyph} strokeWidth="1.6" strokeLinecap="round"/></svg>,
+    ret: <svg width="20" height="14" viewBox="0 0 20 14"><path d="M18 1v6H4m0 0l4-4M4 7l4 4" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  };
+
+  const key = (content, { w, flex, ret, fs = 25, k } = {}) => (
+    <div key={k} style={{
+      height: 42, borderRadius: 8.5,
+      flex: flex ? 1 : undefined, width: w, minWidth: 0,
+      background: ret ? '#08f' : keyBg,
+      boxShadow: '0 1px 0 rgba(0,0,0,0.075)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: '-apple-system, "SF Compact", system-ui',
+      fontSize: fs, fontWeight: 458, color: ret ? '#fff' : glyph,
+    }}>{content}</div>
+  );
+
+  const row = (keys, pad = 0) => (
+    <div style={{ display: 'flex', gap: 6.5, justifyContent: 'center', padding: `0 ${pad}px` }}>
+      {keys.map(l => key(l, { flex: true, k: l }))}
+    </div>
+  );
+
+  return (
+    <div style={{
+      position: 'relative', zIndex: 15, borderRadius: 27, overflow: 'hidden',
+      padding: '11px 0 2px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      boxShadow: dark
+        ? '0 -2px 20px rgba(0,0,0,0.09)'
+        : '0 -1px 6px rgba(0,0,0,0.018), 0 -3px 20px rgba(0,0,0,0.012)',
+    }}>
+      {/* liquid glass bg — same recipe as nav pills */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 27,
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        background: dark ? 'rgba(120,120,128,0.14)' : 'rgba(255,255,255,0.25)',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: 27,
+        boxShadow: dark
+          ? 'inset 1.5px 1.5px 1px rgba(255,255,255,0.15)'
+          : 'inset 1.5px 1.5px 1px rgba(255,255,255,0.7), inset -1px -1px 1px rgba(255,255,255,0.4)',
+        border: dark ? '0.5px solid rgba(255,255,255,0.15)' : '0.5px solid rgba(0,0,0,0.06)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* autocorrect bar */}
+      <div style={{
+        display: 'flex', gap: 20, alignItems: 'center',
+        padding: '8px 22px 13px', width: '100%', boxSizing: 'border-box',
+        position: 'relative',
+      }}>
+        {['"The"', 'the', 'to'].map((w, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <div style={{ width: 1, height: 25, background: '#ccc', opacity: 0.3 }} />}
+            <div style={{
+              flex: 1, textAlign: 'center',
+              fontFamily: '-apple-system, system-ui', fontSize: 17,
+              color: sugg, letterSpacing: -0.43, lineHeight: '22px',
+            }}>{w}</div>
+          </React.Fragment>
+        ))}
+      </div>
+
+      {/* key layout */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 13,
+        padding: '0 6.5px', width: '100%', boxSizing: 'border-box',
+        position: 'relative',
+      }}>
+        {row(['q','w','e','r','t','y','u','i','o','p'])}
+        {row(['a','s','d','f','g','h','j','k','l'], 20)}
+        <div style={{ display: 'flex', gap: 14.25, alignItems: 'center' }}>
+          {key(icons.shift, { w: 45, k: 'shift' })}
+          <div style={{ display: 'flex', gap: 6.5, flex: 1 }}>
+            {['z','x','c','v','b','n','m'].map(l => key(l, { flex: true, k: l }))}
+          </div>
+          {key(icons.del, { w: 45, k: 'del' })}
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {key('ABC', { w: 92.25, fs: 18, k: 'abc' })}
+          {key('', { flex: true, k: 'space' })}
+          {key(icons.ret, { w: 92.25, ret: true, k: 'ret' })}
+        </div>
+      </div>
+
+      {/* bottom spacer (emoji+mic area, icons omitted) */}
+      <div style={{ height: 56, width: '100%', position: 'relative' }} />
+    </div>
+  );
+}
+
+Object.assign(window, {
+  IOSDevice, IOSStatusBar, IOSNavBar, IOSGlassPill, IOSList, IOSListRow, IOSKeyboard,
+});
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     3. Tweaks panel (design-time controls)
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/babel">
+
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "palette": ["#D97757", "#29261b", "#f6f4ef"],
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        options={['#D97757', '#2A6FDB', '#1F8A5B', '#7A5AE0']}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakColor  label="Palette" value={t.palette}
+//                        options={[['#D97757', '#29261b', '#f6f4ef'],
+//                                  ['#475569', '#0f172a', '#f1f5f9']]}
+//                        onChange={(v) => setTweak('palette', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    // Same-window signal so in-page listeners (deck-stage rail thumbnails)
+    // can react — the parent message only reaches the host, not peers.
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-omelette-chrome=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  // Segments wrap mid-word once per-segment width runs out. The track is
+  // ~248px (280 panel − 28 body pad − 4 seg pad), each button loses 12px
+  // to its own padding, and 11.5px system-ui averages ~6.3px/char — so 2
+  // options fit ~16 chars each, 3 fit ~10. Past that (or >3 options), fall
+  // back to a dropdown rather than wrap.
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+  if (!fitsAsSegments) {
+    // <select> emits strings — map back to the original option value so the
+    // fallback stays type-preserving (numbers, booleans) like the segment path.
+    const resolve = (s) => {
+      const m = options.find((o) => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return <TweakSelect label={label} value={value} options={options}
+                        onChange={(s) => onChange(resolve(s))} />;
+  }
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+// Relative-luminance contrast pick — checkmarks drawn over a swatch need to
+// read on both #111 and #fafafa without per-option configuration. Hex input
+// only (#rgb / #rrggbb); named or rgb()/hsl() colors fall through to "light".
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+// TweakColor — curated color/palette picker. Each option is either a single
+// hex string or an array of 1-5 hex strings; the card adapts — a lone color
+// renders solid, a palette renders colors[0] as the hero (left ~2/3) with the
+// rest stacked in a sharp column on the right. onChange emits the
+// option in the shape it was passed (string stays string, array stays array).
+// Without options it falls back to the native color input for back-compat.
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  // Native <input type=color> emits lowercase hex per the HTML spec, so
+  // compare case-insensitively. String() guards JSON.stringify(undefined),
+  // which returns the primitive undefined (no .toLowerCase).
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    aria-label={colors.join(', ')} title={colors.join(' · ')}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>
+                  {sup.map((c, j) => <i key={j} style={{ background: c }} />)}
+                </span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     4. Auth screens: Login | Activar cuenta | Permisos
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/babel">
+// screens-auth.jsx — Login, Activar cuenta, Permisos onboarding
+
+function LogoMark({ size = 56 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.32,
+      background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDeep} 100%)`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 8px 24px rgba(255,90,60,0.35)',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      {/* shine */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(140deg, rgba(255,255,255,0.35) 0%, transparent 45%)',
+      }} />
+      <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" style={{ position: 'relative' }}>
+        <circle cx="12" cy="12" r="9.5" stroke="#fff" strokeWidth="2.2" />
+        <path d="M12 6.5V12l3.5 2.2" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin, onActivar }) {
+  const [email, setEmail] = React.useState('andres.salgado@correo.co');
+  const [pass, setPass] = React.useState('••••••••');
+
+  return (
+    <div style={{
+      minHeight: '100%', display: 'flex', flexDirection: 'column',
+      padding: '70px 24px 32px', background: C.bg,
+    }}>
+      {/* Logo + brand */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 18, marginBottom: 36 }}>
+        <LogoMark size={64} />
+        <div>
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 36, fontWeight: 800,
+            color: C.text, letterSpacing: -1.2, lineHeight: 1,
+          }}>Turnos</div>
+          <div style={{ fontFamily: fontBody, fontSize: 15, color: C.muted, marginTop: 6 }}>
+            Tu próximo día de trabajo, a un toque.
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+        <Field label="Correo electrónico" value={email} onChange={setEmail} type="email" />
+        <Field label="Contraseña" value={pass} onChange={setPass} type="password" />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4 }}>
+          <TextButton color={C.textDim}>¿Olvidaste tu contraseña?</TextButton>
+        </div>
+      </div>
+
+      <PrimaryButton onClick={onLogin}>Iniciar sesión</PrimaryButton>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12, margin: '28px 0',
+        color: C.muted, fontFamily: fontBody, fontSize: 12, fontWeight: 600,
+      }}>
+        <div style={{ flex: 1, height: 1, background: C.border }} />
+        <span>O</span>
+        <div style={{ flex: 1, height: 1, background: C.border }} />
+      </div>
+
+      <GhostButton onClick={onActivar}>Activar mi cuenta de trabajador</GhostButton>
+
+      <div style={{ flex: 1 }} />
+
+      <div style={{
+        fontFamily: fontBody, fontSize: 12, color: C.muted, textAlign: 'center', lineHeight: 1.5,
+        padding: '0 16px',
+      }}>
+        Al continuar aceptas los <span style={{ color: C.text, fontWeight: 600 }}>Términos</span> y la <span style={{ color: C.text, fontWeight: 600 }}>Política de privacidad</span>.
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+function ActivarScreen({ onBack, onNext }) {
+  const [cedula, setCedula] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [pass, setPass] = React.useState('');
+  const valid = cedula.length >= 6 && email.includes('@') && pass.length >= 6;
+
+  return (
+    <div style={{ minHeight: '100%', background: C.bg, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ paddingTop: 56 }}>
+        <ScreenHeader onBack={onBack} title="" />
+      </div>
+
+      <div style={{ padding: '12px 24px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <div>
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 30, fontWeight: 800,
+            color: C.text, letterSpacing: -0.8, lineHeight: 1.1,
+          }}>Activa tu cuenta</div>
+          <div style={{
+            fontFamily: fontBody, fontSize: 15, color: C.muted, marginTop: 10, lineHeight: 1.5,
+          }}>
+            Si tu empresa ya te registró, ingresa los datos para entrar a la app.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Field
+            label="Cédula"
+            value={cedula}
+            onChange={(v) => setCedula(v.replace(/\D/g, '').slice(0, 12))}
+            placeholder="1.020.345.678"
+            type="tel"
+            autoFocus
+          />
+          <Field
+            label="Correo electrónico"
+            value={email}
+            onChange={setEmail}
+            placeholder="tu@correo.co"
+            type="email"
+          />
+          <Field
+            label="Crea tu contraseña"
+            value={pass}
+            onChange={setPass}
+            placeholder="Mínimo 6 caracteres"
+            type="password"
+            hint="Te servirá para entrar a la app desde cualquier dispositivo."
+          />
+        </div>
+      </div>
+
+      <div style={{ flex: 1 }} />
+
+      <div style={{ padding: '16px 24px 36px' }}>
+        <PrimaryButton onClick={onNext} disabled={!valid}>
+          Crear cuenta
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+function PermisosScreen({ onContinue }) {
+  const [gps, setGps] = React.useState(null); // null | 'allowed' | 'denied'
+  const [push, setPush] = React.useState(null);
+
+  return (
+    <div style={{
+      minHeight: '100%', background: C.bg, display: 'flex', flexDirection: 'column',
+      padding: '76px 24px 32px',
+    }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 18, background: C.primaryTint,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 18,
+        }}>
+          <Icon name="shield" size={28} color={C.primary} strokeWidth={2.2} />
+        </div>
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 30, fontWeight: 800,
+          color: C.text, letterSpacing: -0.8, lineHeight: 1.1,
+        }}>Dos permisos para empezar</div>
+        <div style={{
+          fontFamily: fontBody, fontSize: 15, color: C.muted, marginTop: 10, lineHeight: 1.5,
+        }}>
+          Los necesitamos para que puedas marcar llegada y recibir tus ofertas.
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <PermisoCard
+          icon="gps"
+          tone="green"
+          title="Ubicación en uso"
+          desc="Para validar tu llegada al punto de encuentro con GPS."
+          state={gps}
+          onAllow={() => setGps('allowed')}
+        />
+        <PermisoCard
+          icon="bell"
+          tone="purple"
+          title="Notificaciones"
+          desc="Te avisamos cuando hay nuevas ofertas o cambios en tu turno."
+          state={push}
+          onAllow={() => setPush('allowed')}
+        />
+      </div>
+
+      <div style={{ flex: 1 }} />
+
+      <PrimaryButton onClick={onContinue} disabled={!gps}>
+        {gps ? 'Continuar' : 'Permite la ubicación para seguir'}
+      </PrimaryButton>
+      <div style={{ textAlign: 'center', marginTop: 12 }}>
+        <TextButton color={C.muted} onClick={onContinue}>Ahora no</TextButton>
+      </div>
+    </div>
+  );
+}
+
+function PermisoCard({ icon, tone, title, desc, state, onAllow }) {
+  const allowed = state === 'allowed';
+  const palettes = {
+    green: { bg: C.successTint, fg: '#0A7A52' },
+    purple: { bg: '#EFE5FF', fg: '#5B21B6' },
+  };
+  const p = palettes[tone];
+  return (
+    <Card padding={18} radius={22}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 14, background: p.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        }}>
+          <Icon name={icon} size={24} color={p.fg} strokeWidth={2.2} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 4,
+          }}>{title}</div>
+          <div style={{ fontFamily: fontBody, fontSize: 14, color: C.muted, lineHeight: 1.45 }}>
+            {desc}
+          </div>
+        </div>
+      </div>
+      <div style={{ marginTop: 14 }}>
+        {allowed ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            height: 44, borderRadius: 14, background: C.successTint, color: '#0A7A52',
+            fontFamily: fontBody, fontSize: 14, fontWeight: 700,
+          }}>
+            <Icon name="check" size={18} color="#0A7A52" strokeWidth={2.6} />
+            Permiso concedido
+          </div>
+        ) : (
+          <button onClick={onAllow} style={{
+            width: '100%', height: 44, borderRadius: 14, background: C.ink, color: '#fff',
+            border: 'none', fontFamily: fontBody, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+          }}>
+            Permitir
+          </button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+Object.assign(window, { LoginScreen, ActivarScreen, PermisosScreen, LogoMark });
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     5. Track TURNOS screens: Home | Ofertas | Detalle oferta
+     TabBar: orange when turnos tabs active (home/ofertas/hoy)
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/babel">
+// screens-turnos.jsx — Home, Ofertas, Detalle, Mi Turno, Firma, Done
+
+// ─────── Mock data ─────────────────────────────────────────────
+const MOCK_OFERTAS = [
+  {
+    id: 1, titulo: 'Montaje stand expo', empresa: 'Eventos Andinos',
+    fecha: 'Hoy', fechaSub: '15 nov', horaInicio: '08:00', horaFin: '17:00',
+    lugar: 'Corferias · Pab. 3', direccion: 'Cra. 37 #24-67, Bogotá',
+    distancia: 320, tarifa: 145000, plazas: 8, cubiertas: 5,
+    tipo: 'Montaje', tag: 'urgente',
+    desc: 'Armado de stand modular de 6×3m. Se requiere experiencia básica con estructuras de aluminio. Aporta tus propias EPP.',
+    creada: 'hace 12 min',
+  },
+  {
+    id: 2, titulo: 'Logística entrada concierto', empresa: 'LiveMov Producciones',
+    fecha: 'Sáb 16 nov', fechaSub: 'mañana', horaInicio: '16:00', horaFin: '00:00',
+    lugar: 'Movistar Arena', direccion: 'Cra. 30 #57-49, Bogotá',
+    distancia: 1850, tarifa: 165000, plazas: 25, cubiertas: 18,
+    tipo: 'Logística', tag: null,
+    desc: 'Control de filas, escaneo de boletas y orientación al público. Camiseta del staff incluida.',
+    creada: 'hace 2 h',
+  },
+  {
+    id: 3, titulo: 'Atención cafetería corporativa', empresa: 'Sabor & Co.',
+    fecha: 'Lun 18 nov', fechaSub: 'esta semana', horaInicio: '07:00', horaFin: '15:00',
+    lugar: 'Torre Bavaria · Piso 12', direccion: 'Cl. 26 #69-49, Bogotá',
+    distancia: 780, tarifa: 98000, plazas: 4, cubiertas: 1,
+    tipo: 'Atención', tag: null,
+    desc: 'Apoyo en barra y servicio. Indispensable buena presentación.',
+    creada: 'hace 4 h',
+  },
+  {
+    id: 4, titulo: 'Inventario fin de mes', empresa: 'Distri Norte',
+    fecha: 'Dom 17 nov', fechaSub: 'fin de semana', horaInicio: '06:00', horaFin: '14:00',
+    lugar: 'Bodega Fontibón', direccion: 'Cl. 13 #110-22, Bogotá',
+    distancia: 4200, tarifa: 115000, plazas: 12, cubiertas: 4,
+    tipo: 'Bodega', tag: 'recargo dominical',
+    desc: 'Conteo físico de mercancía. Trabajo de pie. Hidratación e hora de almuerzo cubiertas.',
+    creada: 'hace 30 min',
+  },
+];
+
+const MI_PROXIMO_TURNO = MOCK_OFERTAS[0];
+
+// ─────── Home ─────────────────────────────────────────────────
+function HomeScreen({ onOpenOferta, onOpenHoy, ranking = 4.8, totalCalif = 47 }) {
+  return (
+    <div style={{ paddingTop: 56, paddingBottom: 24, background: C.bg, minHeight: '100%' }}>
+      {/* Greeting */}
+      <div style={{ padding: '8px 20px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: fontBody, fontSize: 14, color: C.muted, fontWeight: 500 }}>
+            Viernes, 15 nov
+          </div>
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 28, fontWeight: 800,
+            color: C.text, letterSpacing: -0.6, marginTop: 2,
+          }}>Hola, Andrés <span style={{ display: 'inline-block', transform: 'translateY(-2px)' }}>👋</span></div>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <button style={{
+            width: 44, height: 44, borderRadius: 14, background: '#fff',
+            border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', padding: 0,
+          }}>
+            <Icon name="bell" size={20} color={C.text} strokeWidth={2.2} />
+          </button>
+          <div style={{
+            position: 'absolute', top: 8, right: 8, width: 10, height: 10, borderRadius: 5,
+            background: C.primary, border: '2px solid #fff',
+          }} />
+        </div>
+      </div>
+
+      {/* Ranking + stats card */}
+      <div style={{ padding: '0 20px' }}>
+        <div style={{
+          background: `linear-gradient(135deg, ${C.ink} 0%, ${C.night} 100%)`,
+          borderRadius: 24, padding: 18, color: '#fff', position: 'relative', overflow: 'hidden',
+        }}>
+          {/* decorative blob */}
+          <div style={{
+            position: 'absolute', right: -30, top: -40, width: 140, height: 140, borderRadius: '50%',
+            background: `radial-gradient(circle, ${C.primary}44 0%, transparent 70%)`,
+          }} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
+            <div>
+              <div style={{ fontFamily: fontBody, fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                Tu ranking
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+                <span style={{
+                  fontFamily: fontDisplay, fontSize: 42, fontWeight: 800, color: '#fff', letterSpacing: -1.5, lineHeight: 1,
+                }}>{ranking.toFixed(1)}</span>
+                <Icon name="star" size={22} color={C.star} />
+              </div>
+              <div style={{ fontFamily: fontBody, fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>
+                {totalCalif} turnos calificados
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+              <Badge tone="dark" size="sm" icon={<Icon name="flame" size={11} color="#FF8A6B" strokeWidth={2.5} />}>
+                <span style={{ color: '#FFD9CC' }}>Top 10% Bogotá</span>
+              </Badge>
+              <div style={{
+                fontFamily: fontBody, fontSize: 11, color: 'rgba(255,255,255,0.6)',
+                textAlign: 'right', maxWidth: 110, lineHeight: 1.3,
+              }}>Ves ofertas nuevas al instante</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Próximo turno */}
+      <div style={{ padding: '24px 20px 8px' }}>
+        <SectionTitle>Tu próximo turno</SectionTitle>
+      </div>
+      <div style={{ padding: '12px 20px 0' }}>
+        <ProximoTurnoCard turno={MI_PROXIMO_TURNO} onClick={onOpenHoy} />
+      </div>
+
+      {/* Ofertas cercanas */}
+      <div style={{ padding: '24px 20px 8px' }}>
+        <SectionTitle action="Ver todas" onAction={onOpenOferta}>Ofertas para ti</SectionTitle>
+      </div>
+      <div style={{ padding: '12px 0 0' }}>
+        <div style={{
+          display: 'flex', gap: 12, overflowX: 'auto', padding: '0 20px 8px',
+          scrollSnapType: 'x mandatory',
+        }}>
+          {MOCK_OFERTAS.slice(1, 4).map((o) => (
+            <div key={o.id} style={{ width: 260, flexShrink: 0, scrollSnapAlign: 'start' }}>
+              <OfertaCardCompact oferta={o} onClick={() => onOpenOferta(o.id)} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* This month */}
+      <div style={{ padding: '24px 20px 0' }}>
+        <SectionTitle>Este mes</SectionTitle>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+          <StatCard label="Ganado" value="$1.247.000" tone="primary" />
+          <StatCard label="Días trabajados" value="9" sub="de 22 hábiles" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub, tone }) {
+  const isPrimary = tone === 'primary';
+  return (
+    <div style={{
+      background: isPrimary ? C.primaryTint : '#fff',
+      borderRadius: 18, padding: 14,
+      border: `1px solid ${isPrimary ? 'transparent' : C.border}`,
+    }}>
+      <div style={{
+        fontFamily: fontBody, fontSize: 12, fontWeight: 600,
+        color: isPrimary ? C.primaryDeep : C.muted, letterSpacing: 0.2,
+      }}>{label}</div>
+      <div style={{
+        fontFamily: fontDisplay, fontSize: 22, fontWeight: 800,
+        color: isPrimary ? C.primaryDeep : C.text, letterSpacing: -0.5, marginTop: 4,
+      }}>{value}</div>
+      {sub && <div style={{ fontFamily: fontBody, fontSize: 11, color: C.muted, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function ProximoTurnoCard({ turno, onClick }) {
+  return (
+    <Card padding={0} radius={22} elevated onClick={onClick}>
+      <div style={{
+        padding: '16px 18px 14px',
+        background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+        borderRadius: '22px 22px 0 0',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', right: -20, top: -30, width: 140, height: 140, borderRadius: '50%',
+          background: 'rgba(255,255,255,0.12)',
+        }} />
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'rgba(255,255,255,0.22)', backdropFilter: 'blur(8px)',
+          padding: '4px 10px', borderRadius: 8,
+          color: '#fff', fontFamily: fontBody, fontSize: 11, fontWeight: 800, letterSpacing: 0.4,
+          textTransform: 'uppercase',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: 3, background: '#fff' }} />
+          HOY · {turno.horaInicio}
+        </div>
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 22, fontWeight: 800, color: '#fff',
+          marginTop: 10, letterSpacing: -0.4, lineHeight: 1.15,
+        }}>{turno.titulo}</div>
+        <div style={{
+          fontFamily: fontBody, fontSize: 13, color: 'rgba(255,255,255,0.85)',
+          marginTop: 4, fontWeight: 500,
+        }}>{turno.empresa}</div>
+      </div>
+      <div style={{ padding: 16 }}>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
+          <InfoRow icon="pin" label="Lugar" value={turno.lugar} />
+          <InfoRow icon="route" label="A" value={fmtDist(turno.distancia)} />
+        </div>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 14px', borderRadius: 14, background: C.primarySoft,
+          marginTop: 4,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="cash" size={18} color={C.primary} strokeWidth={2.4} />
+            <div style={{ fontFamily: fontDisplay, fontSize: 20, fontWeight: 800, color: C.primaryDeep, letterSpacing: -0.3 }}>
+              {fmtCOP(turno.tarifa)}
+            </div>
+            <span style={{ fontFamily: fontBody, fontSize: 12, color: C.textDim, fontWeight: 600 }}>/ día</span>
+          </div>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            color: C.primary, fontFamily: fontBody, fontSize: 14, fontWeight: 700,
+          }}>
+            Ver detalle <Icon name="chevron" size={14} color={C.primary} strokeWidth={2.6} />
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function InfoRow({ icon, label, value }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+        <Icon name={icon} size={13} color={C.muted} />
+        <span style={{ fontFamily: fontBody, fontSize: 11, color: C.muted, fontWeight: 600, letterSpacing: 0.2, textTransform: 'uppercase' }}>{label}</span>
+      </div>
+      <div style={{
+        fontFamily: fontBody, fontSize: 14, fontWeight: 700, color: C.text,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>{value}</div>
+    </div>
+  );
+}
+
+// ─────── Oferta cards ─────────────────────────────────────────
+function OfertaCardCompact({ oferta, onClick }) {
+  return (
+    <Card padding={0} radius={20} elevated onClick={onClick}>
+      <div style={{ padding: '14px 14px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <Badge tone="primary" size="sm">{oferta.fecha.toUpperCase()}</Badge>
+          {oferta.tag === 'urgente' && <Badge tone="warning" size="sm" icon={<Icon name="flame" size={10} color="#A56400" strokeWidth={2.4} />}>Urgente</Badge>}
+          {oferta.tag === 'recargo dominical' && <Badge tone="star" size="sm">+75% domingo</Badge>}
+        </div>
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 16, fontWeight: 700, color: C.text,
+          letterSpacing: -0.2, lineHeight: 1.2, marginBottom: 4,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          minHeight: 38,
+        }}>{oferta.titulo}</div>
+        <div style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, fontWeight: 500 }}>
+          {oferta.empresa}
+        </div>
+        <div style={{ height: 1, background: C.borderDim, margin: '12px 0' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontFamily: fontDisplay, fontSize: 18, fontWeight: 800, color: C.text, letterSpacing: -0.3 }}>
+              {fmtCOP(oferta.tarifa)}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <Icon name="walk" size={12} color={C.muted} />
+              <span style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, fontWeight: 600 }}>
+                {fmtDist(oferta.distancia)} · {oferta.horaInicio}
+              </span>
+            </div>
+          </div>
+          <PlazasGauge total={oferta.plazas} cubiertas={oferta.cubiertas} />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function PlazasGauge({ total, cubiertas }) {
+  const pct = cubiertas / total;
+  const remaining = total - cubiertas;
+  const tone = remaining <= 2 ? C.danger : remaining <= 4 ? C.warning : C.success;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+      <div style={{ fontFamily: fontBody, fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: 0.2, textTransform: 'uppercase' }}>
+        Plazas
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ width: 36, height: 6, borderRadius: 3, background: '#F0E9DF', overflow: 'hidden' }}>
+          <div style={{ width: `${pct * 100}%`, height: '100%', background: tone, transition: 'width 0.3s' }} />
+        </div>
+        <span style={{ fontFamily: fontBody, fontSize: 12, fontWeight: 700, color: C.text }}>
+          {cubiertas}/{total}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function OfertaCardWide({ oferta, onClick }) {
+  return (
+    <Card padding={16} radius={22} elevated onClick={onClick}>
+      <div style={{ display: 'flex', gap: 14 }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 16,
+          background: tipoColor(oferta.tipo).bg,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <div style={{
+            fontFamily: fontBody, fontSize: 9, fontWeight: 700,
+            color: tipoColor(oferta.tipo).fg, textTransform: 'uppercase', letterSpacing: 0.4,
+          }}>{oferta.fechaSub.split(' ')[0]}</div>
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 22, fontWeight: 800,
+            color: tipoColor(oferta.tipo).fg, lineHeight: 1, letterSpacing: -0.4,
+          }}>{oferta.fecha.startsWith('Hoy') ? 'HOY' : oferta.fecha.split(' ')[1] || oferta.fecha}</div>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <Badge size="sm" tone="neutral">{oferta.tipo}</Badge>
+            {oferta.tag === 'urgente' && <Badge tone="warning" size="sm" icon={<Icon name="flame" size={10} color="#A56400" strokeWidth={2.4} />}>Urgente</Badge>}
+          </div>
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 17, fontWeight: 700, color: C.text,
+            letterSpacing: -0.2, lineHeight: 1.2, marginBottom: 2,
+            display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>{oferta.titulo}</div>
+          <div style={{ fontFamily: fontBody, fontSize: 13, color: C.muted, fontWeight: 500 }}>
+            {oferta.lugar}
+          </div>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 14, borderTop: `1px dashed ${C.border}` }}>
+        <div style={{ display: 'flex', gap: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Icon name="clock" size={14} color={C.textDim} />
+            <span style={{ fontFamily: fontBody, fontSize: 13, color: C.textDim, fontWeight: 600 }}>
+              {oferta.horaInicio}–{oferta.horaFin}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Icon name="walk" size={14} color={C.textDim} />
+            <span style={{ fontFamily: fontBody, fontSize: 13, color: C.textDim, fontWeight: 600 }}>
+              {fmtDist(oferta.distancia)}
+            </span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+          <span style={{
+            fontFamily: fontDisplay, fontSize: 18, fontWeight: 800, color: C.primaryDeep, letterSpacing: -0.3,
+          }}>{fmtCOP(oferta.tarifa)}</span>
+          <span style={{ fontFamily: fontBody, fontSize: 11, color: C.muted, fontWeight: 600 }}>/día</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function tipoColor(tipo) {
+  const map = {
+    Montaje:   { bg: C.primaryTint, fg: C.primaryDeep },
+    Logística: { bg: '#E0EBFF', fg: '#1E40AF' },
+    Atención:  { bg: '#EFE5FF', fg: '#5B21B6' },
+    Bodega:    { bg: '#FFF5DC', fg: '#8A6500' },
+  };
+  return map[tipo] || { bg: '#F4EEE6', fg: C.textDim };
+}
+
+// ─────── Ofertas ──────────────────────────────────────────────
+function OfertasScreen({ onOpenOferta }) {
+  const [filter, setFilter] = React.useState('todas');
+  const filters = [
+    { id: 'todas', label: 'Todas' },
+    { id: 'hoy', label: 'Hoy' },
+    { id: 'semana', label: 'Esta semana' },
+    { id: 'cerca', label: 'Cerca de mí' },
+    { id: 'finde', label: 'Fin de semana' },
+  ];
+
+  const filtered = MOCK_OFERTAS.filter((o) => {
+    if (filter === 'hoy') return o.fecha === 'Hoy';
+    if (filter === 'semana') return o.fechaSub === 'esta semana' || o.fechaSub === 'mañana' || o.fecha === 'Hoy';
+    if (filter === 'cerca') return o.distancia < 1500;
+    if (filter === 'finde') return o.fechaSub === 'fin de semana';
+    return true;
+  });
+
+  return (
+    <div style={{ paddingTop: 56, paddingBottom: 24, background: C.bg, minHeight: '100%' }}>
+      <ScreenHeader title="Ofertas" subtitle={`${MOCK_OFERTAS.length} disponibles cerca de ti`} big
+        right={
+          <button style={{
+            width: 40, height: 40, borderRadius: 14, background: '#fff',
+            border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}>
+            <Icon name="sliders" size={20} color={C.text} strokeWidth={2.2} />
+          </button>
+        } />
+
+      <div style={{ padding: '14px 0 12px' }}>
+        <div style={{
+          display: 'flex', gap: 8, overflowX: 'auto', padding: '0 20px',
+        }}>
+          {filters.map((f) => (
+            <Chip key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
+              {f.label}
+            </Chip>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {filtered.map((o) => (
+          <OfertaCardWide key={o.id} oferta={o} onClick={() => onOpenOferta(o.id)} />
+        ))}
+        {filtered.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
+            <div style={{ fontFamily: fontDisplay, fontSize: 18, fontWeight: 700, color: C.text }}>
+              Aún no hay ofertas con ese filtro
+            </div>
+            <div style={{ fontFamily: fontBody, fontSize: 14, marginTop: 6 }}>
+              Te avisamos cuando aparezca algo nuevo.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────── Detalle oferta ───────────────────────────────────────
+function OfertaDetalleScreen({ oferta, onBack, onPostular, postulado }) {
+  return (
+    <div style={{ paddingBottom: 120, background: C.bg, minHeight: '100%' }}>
+      <div style={{ paddingTop: 56 }}>
+        <ScreenHeader onBack={onBack} title="Oferta" />
+      </div>
+
+      <div style={{ padding: '8px 20px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <Badge tone="primary">{oferta.fecha.toUpperCase()} · {oferta.horaInicio}</Badge>
+          {oferta.tag === 'urgente' && <Badge tone="warning" icon={<Icon name="flame" size={12} color="#A56400" strokeWidth={2.4} />}>Urgente</Badge>}
+        </div>
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 28, fontWeight: 800,
+          color: C.text, letterSpacing: -0.7, lineHeight: 1.1,
+        }}>{oferta.titulo}</div>
+        <div style={{ fontFamily: fontBody, fontSize: 15, color: C.textDim, marginTop: 8, fontWeight: 500 }}>
+          {oferta.empresa} · {oferta.creada}
+        </div>
+      </div>
+
+      {/* Map preview */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ position: 'relative', borderRadius: 22, overflow: 'hidden', height: 160, background: '#F0EADF' }}>
+          <MiniMap distancia={oferta.distancia} />
+          <div style={{
+            position: 'absolute', left: 14, bottom: 14,
+            background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(8px)',
+            padding: '8px 12px', borderRadius: 12,
+            fontFamily: fontBody, fontSize: 13, fontWeight: 700, color: C.text,
+            display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          }}>
+            <Icon name="walk" size={14} color={C.text} strokeWidth={2.4} />
+            {fmtDist(oferta.distancia)} de ti
+          </div>
+        </div>
+      </div>
+
+      {/* Pago hero */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <div style={{
+          background: C.primaryTint, borderRadius: 22, padding: 18,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <div style={{ fontFamily: fontBody, fontSize: 12, color: C.primaryDeep, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+              Pago total del día
+            </div>
+            <div style={{ fontFamily: fontDisplay, fontSize: 34, fontWeight: 800, color: C.primaryDeep, letterSpacing: -1, marginTop: 2 }}>
+              {fmtCOP(oferta.tarifa)}
+            </div>
+            <div style={{ fontFamily: fontBody, fontSize: 12, color: C.textDim, fontWeight: 600, marginTop: 2 }}>
+              ≈ {fmtCOP(oferta.tarifa / 9)} / hora · jornada de 9h
+            </div>
+          </div>
+          <div style={{
+            width: 56, height: 56, borderRadius: 16, background: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Icon name="cash" size={28} color={C.primary} strokeWidth={2.2} />
+          </div>
+        </div>
+      </div>
+
+      {/* Detail rows */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <Card padding={0} radius={20}>
+          <DetailRow icon="calendar" label="Fecha" value={`${oferta.fecha} · ${oferta.horaInicio}–${oferta.horaFin}`} />
+          <DetailRow icon="pin" label="Lugar" value={oferta.lugar} sub={oferta.direccion} />
+          <DetailRow icon="users" label="Plazas" value={`${oferta.cubiertas}/${oferta.plazas} cubiertas`}
+            right={<PlazasGauge total={oferta.plazas} cubiertas={oferta.cubiertas} />} />
+          <DetailRow icon="shield" label="Contrato diario" value="Firmas al llegar al sitio" last />
+        </Card>
+      </div>
+
+      {/* Descripción */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <SectionTitle>Sobre el turno</SectionTitle>
+        <div style={{
+          fontFamily: fontBody, fontSize: 15, color: C.textDim, lineHeight: 1.55, marginTop: 8,
+        }}>{oferta.desc}</div>
+      </div>
+
+      {/* Sticky CTA */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 20,
+        padding: '14px 20px 36px',
+        background: 'linear-gradient(to top, rgba(255,251,246,1) 75%, rgba(255,251,246,0))',
+      }}>
+        {postulado ? (
+          <PrimaryButton tone="success" disabled={false} icon={<Icon name="check" size={20} color="#fff" strokeWidth={2.6} />}>
+            Postulación enviada
+          </PrimaryButton>
+        ) : (
+          <PrimaryButton onClick={onPostular}>
+            Postularme · {fmtCOP(oferta.tarifa)}
+          </PrimaryButton>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ icon, label, value, sub, right, last }) {
+  return (
+    <div style={{
+      padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+      borderBottom: last ? 'none' : `1px solid ${C.borderDim}`,
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: 11, background: C.primarySoft,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <Icon name={icon} size={18} color={C.primary} strokeWidth={2.2} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: fontBody, fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+          {label}
+        </div>
+        <div style={{ fontFamily: fontBody, fontSize: 15, fontWeight: 700, color: C.text, marginTop: 1 }}>
+          {value}
+        </div>
+        {sub && <div style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+// MiniMap (just preview)
+function MiniMap({ distancia }) {
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 360 160" preserveAspectRatio="xMidYMid slice">
+      <rect width="360" height="160" fill="#EEE5D6" />
+      {/* parks */}
+      <rect x="40" y="20" width="60" height="40" rx="6" fill="#D4E4C0" />
+      <rect x="240" y="100" width="80" height="50" rx="6" fill="#D4E4C0" />
+      {/* roads */}
+      <path d="M-20 80 L380 100" stroke="#FFF" strokeWidth="14" />
+      <path d="M-20 80 L380 100" stroke="#F2E6CF" strokeWidth="1" strokeDasharray="6 6" />
+      <path d="M180 -20 L160 180" stroke="#FFF" strokeWidth="10" />
+      <path d="M80 -20 L70 180" stroke="#FFF" strokeWidth="8" />
+      <path d="M280 -20 L270 180" stroke="#FFF" strokeWidth="8" />
+      {/* blocks */}
+      <rect x="110" y="20" width="50" height="40" rx="3" fill="#E5DAC4" />
+      <rect x="200" y="20" width="50" height="40" rx="3" fill="#E5DAC4" />
+      <rect x="110" y="110" width="50" height="40" rx="3" fill="#E5DAC4" />
+      <rect x="200" y="110" width="40" height="40" rx="3" fill="#E5DAC4" />
+      {/* meeting pin */}
+      <g transform="translate(220, 75)">
+        <circle cx="0" cy="0" r="14" fill={C.primary} opacity="0.2" />
+        <circle cx="0" cy="0" r="9" fill={C.primary} stroke="#fff" strokeWidth="2.5" />
+      </g>
+      {/* user dot */}
+      <g transform="translate(110, 95)">
+        <circle cx="0" cy="0" r="10" fill="#3B82F6" opacity="0.2" />
+        <circle cx="0" cy="0" r="5" fill="#3B82F6" stroke="#fff" strokeWidth="2" />
+      </g>
+      {/* route line */}
+      <path d="M110 95 Q160 70 220 75" stroke={C.primary} strokeWidth="2.5" strokeDasharray="5 5" fill="none" opacity="0.7" />
+    </svg>
+  );
+}
+
+// ─────── Postulación success modal ────────────────────────────
+function PostuladoModal({ oferta, onClose }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 100,
+      background: 'rgba(15,10,5,0.5)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'flex-end',
+      animation: 'fade-in 0.2s ease',
+    }}>
+      <div style={{
+        width: '100%', background: '#fff', borderRadius: '28px 28px 0 0',
+        padding: '14px 24px 36px', animation: 'slide-up 0.3s cubic-bezier(0.2, 0.8, 0.3, 1)',
+      }}>
+        <div style={{
+          width: 40, height: 5, borderRadius: 3, background: C.border,
+          margin: '0 auto 22px',
+        }} />
+        <div style={{
+          width: 72, height: 72, borderRadius: 24,
+          background: C.successTint, color: '#0A7A52',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          margin: '0 auto 18px',
+        }}>
+          <Icon name="check" size={36} color="#0A7A52" strokeWidth={2.8} />
+        </div>
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 26, fontWeight: 800, color: C.text,
+          textAlign: 'center', letterSpacing: -0.5, lineHeight: 1.15,
+        }}>¡Postulación enviada!</div>
+        <div style={{
+          fontFamily: fontBody, fontSize: 15, color: C.muted, textAlign: 'center',
+          marginTop: 10, lineHeight: 1.5, padding: '0 8px',
+        }}>
+          Te avisamos por notificación cuando el jefe de turnos confirme.
+        </div>
+        <div style={{
+          background: C.primarySoft, borderRadius: 16, padding: 14, marginTop: 22,
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12, background: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <Icon name="clock" size={20} color={C.primary} strokeWidth={2.2} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: fontBody, fontSize: 13, fontWeight: 700, color: C.text }}>
+              {oferta.titulo}
+            </div>
+            <div style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, marginTop: 1 }}>
+              {oferta.fecha} · {oferta.horaInicio} · {oferta.lugar}
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 22 }}>
+          <PrimaryButton onClick={onClose}>Listo</PrimaryButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, {
+  HomeScreen, OfertasScreen, OfertaDetalleScreen, PostuladoModal,
+  MOCK_OFERTAS, MI_PROXIMO_TURNO, OfertaCardCompact, OfertaCardWide,
+  tipoColor, PlazasGauge, MiniMap,
+});
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     6. Track TURNOS: Mi turno hoy | Firma | Done
+     Track NÓMINA: Mi registro semanal
+     NominaScreen / DiaRow: emerald green (CN.*) for nómina identity
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/babel">
+// screens-turno-hoy.jsx — Mi turno hoy + Firma + Done
+
+const RADIO_GEOFENCE = 100; // meters, default per spec
+const MAP_RANGE_M = 600; // meters covered by the map view (full width)
+
+// State machine for "Hoy":
+//   not-started → en-camino → en-zona → llegada-marcada (cronometro) → marcar-salida → firma → done
+
+// ────────────────────────────────────────────────────────────
+// Big stylized map of meeting point + user with geofence
+// distance: meters from user to meeting point
+function MiTurnoMap({ distance, arrived, dark }) {
+  // Meeting point upper-right; user approaches from lower-left
+  const MX = 250, MY = 78;
+  const pxPerM = 360 / MAP_RANGE_M; // 0.6 px per meter
+  const geofenceR = RADIO_GEOFENCE * pxPerM;
+  // Direction from pin → user: south-west
+  const dirX = -0.78; // west
+  const dirY =  0.62; // south
+  // Max display distance: limited by available room from pin to map edges along this vector
+  const maxX_m = (MX - 8) / 0.78 / pxPerM;   // ~516 m
+  const maxY_m = (260 - 14 - MY) / 0.62 / pxPerM; // ~452 m
+  const maxDispM = Math.min(maxX_m, maxY_m);
+  const dispM = Math.min(distance, maxDispM);
+  const ux = MX + dirX * dispM * pxPerM;
+  const uy = MY + dirY * dispM * pxPerM;
+  const clamped = distance > maxDispM + 2;
+
+  return (
+    <div style={{ position: 'relative', height: 260, width: '100%', overflow: 'hidden', borderRadius: 24 }}>
+      <svg width="100%" height="100%" viewBox="0 0 360 260" preserveAspectRatio="xMidYMid slice"
+        style={{ display: 'block' }}>
+        <defs>
+          <radialGradient id="map-vignette" cx="50%" cy="50%" r="70%">
+            <stop offset="60%" stopColor="rgba(0,0,0,0)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
+          </radialGradient>
+          <pattern id="bgnoise" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+            <rect width="4" height="4" fill="#EEE5D6" />
+            <circle cx="1" cy="1" r="0.4" fill="#E0D6C2" />
+          </pattern>
+        </defs>
+        {/* base */}
+        <rect width="360" height="260" fill="url(#bgnoise)" />
+        {/* parks */}
+        <path d="M-10 -10 L80 -10 L100 60 L40 90 L-10 70 Z" fill="#D8E6BD" opacity="0.85" />
+        <rect x="280" y="180" width="100" height="100" rx="10" fill="#D8E6BD" opacity="0.85" />
+        <circle cx="320" cy="50" r="36" fill="#D8E6BD" opacity="0.85" />
+        {/* major roads */}
+        <path d="M-20 200 L380 180" stroke="#FFF8EE" strokeWidth="22" />
+        <path d="M-20 200 L380 180" stroke="#F0E4CC" strokeWidth="1.5" strokeDasharray="8 8" />
+        <path d="M180 -20 L160 280" stroke="#FFF8EE" strokeWidth="16" />
+        <path d="M-20 60 L380 80" stroke="#FFF8EE" strokeWidth="10" />
+        <path d="M70 -20 L60 280" stroke="#FFF8EE" strokeWidth="8" />
+        <path d="M280 -20 L290 280" stroke="#FFF8EE" strokeWidth="8" />
+        {/* small streets */}
+        <path d="M-20 140 L380 150" stroke="#FFFCF6" strokeWidth="4" />
+        <path d="M120 -20 L115 280" stroke="#FFFCF6" strokeWidth="4" />
+        <path d="M230 -20 L225 280" stroke="#FFFCF6" strokeWidth="4" />
+        {/* blocks */}
+        <rect x="80" y="90" width="38" height="44" rx="2" fill="#E5DAC0" />
+        <rect x="125" y="90" width="32" height="44" rx="2" fill="#E5DAC0" />
+        <rect x="195" y="90" width="32" height="44" rx="2" fill="#E5DAC0" />
+        <rect x="235" y="90" width="42" height="44" rx="2" fill="#E5DAC0" />
+        <rect x="80" y="160" width="38" height="14" rx="2" fill="#E5DAC0" />
+        <rect x="125" y="160" width="32" height="14" rx="2" fill="#E5DAC0" />
+        <rect x="195" y="220" width="28" height="34" rx="2" fill="#E5DAC0" />
+        {/* highlighted building (venue) */}
+        <rect x="232" y="58" width="42" height="32" rx="3" fill={C.primary} opacity="0.18" />
+        <rect x="232" y="58" width="42" height="32" rx="3" fill="none" stroke={C.primary} strokeWidth="1.5" strokeDasharray="3 3" />
+
+        {/* GEOFENCE */}
+        <circle cx={MX} cy={MY} r={geofenceR} fill={C.success} opacity={arrived || distance < RADIO_GEOFENCE ? 0.18 : 0.08} />
+        <circle cx={MX} cy={MY} r={geofenceR} fill="none" stroke={C.success}
+          strokeWidth="2" strokeDasharray="6 4" opacity="0.85" />
+
+        {/* route line */}
+        {!arrived && distance > 5 && (
+          <path
+            d={`M${ux} ${uy} Q ${(ux + MX) / 2} ${(uy + MY) / 2 - 25} ${MX} ${MY}`}
+            stroke={C.primary} strokeWidth="3" strokeDasharray="6 6" fill="none" opacity="0.85"
+          />
+        )}
+
+        {/* MEETING PIN */}
+        <g transform={`translate(${MX}, ${MY})`}>
+          <ellipse cx="0" cy="8" rx="9" ry="3" fill="rgba(0,0,0,0.15)" />
+          <path d="M0 -28 C-9 -28 -16 -21 -16 -12 C-16 -2 0 8 0 8 C0 8 16 -2 16 -12 C16 -21 9 -28 0 -28 Z"
+            fill={C.primary} stroke="#fff" strokeWidth="2.5" />
+          <circle cx="0" cy="-13" r="5" fill="#fff" />
+        </g>
+
+        {/* USER DOT (with pulse) */}
+        {!arrived && (
+          <g transform={`translate(${ux}, ${uy})`}>
+            <circle cx="0" cy="0" r="16" fill="#3B82F6" opacity="0.18">
+              <animate attributeName="r" from="9" to="20" dur="1.6s" repeatCount="indefinite" />
+              <animate attributeName="opacity" from="0.35" to="0" dur="1.6s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="0" cy="0" r="9" fill="#3B82F6" stroke="#fff" strokeWidth="3" />
+            {clamped && (
+              <g transform="rotate(52)">
+                <path d="M0 -18 L5 -10 L-5 -10 Z" fill="#3B82F6" stroke="#fff" strokeWidth="1.5" />
+              </g>
+            )}
+          </g>
+        )}
+        {arrived && (
+          <g transform={`translate(${MX - 4}, ${MY + 14})`}>
+            <circle cx="0" cy="0" r="11" fill="#3B82F6" stroke="#fff" strokeWidth="3" />
+            <path d="M-4 0 L-1 3 L4 -3" stroke="#fff" strokeWidth="2.4" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </g>
+        )}
+
+        <rect width="360" height="260" fill="url(#map-vignette)" />
+      </svg>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// Proximity indicator: big circular distance meter
+function IndicadorProximidad({ distance, arrived }) {
+  const inZone = distance <= RADIO_GEOFENCE;
+  // Visual band: red >500, amber 100-500, green <100
+  const band = inZone ? 'green' : distance < 500 ? 'amber' : 'red';
+  const palette = {
+    red:   { fg: C.danger,  bg: C.dangerTint,  text: 'Aún estás lejos', label: '+500 m del punto' },
+    amber: { fg: C.warning, bg: C.warningTint, text: 'Casi llegas',     label: 'Acércate más' },
+    green: { fg: C.success, bg: C.successTint, text: '¡Ya estás en el sitio!', label: 'Puedes marcar llegada' },
+  };
+  const p = palette[band];
+
+  // Arc: progress to 0m. Full circle = 600m (visualization)
+  const max = 600;
+  const pct = Math.max(0, 1 - Math.min(distance, max) / max);
+  const r = 56;
+  const circ = 2 * Math.PI * r;
+
+  return (
+    <div style={{
+      background: '#fff',
+      borderRadius: 22,
+      padding: 18,
+      border: `1px solid ${C.border}`,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 16,
+    }}>
+      <div style={{ position: 'relative', width: 132, height: 132, flexShrink: 0 }}>
+        <svg width="132" height="132" viewBox="0 0 132 132" style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx="66" cy="66" r={r} fill="none" stroke="#F0E9DF" strokeWidth="10" />
+          <circle cx="66" cy="66" r={r} fill="none" stroke={p.fg} strokeWidth="10"
+            strokeDasharray={`${pct * circ} ${circ}`} strokeLinecap={pct > 0.01 ? 'round' : 'butt'}
+            style={{ transition: 'stroke-dasharray 0.4s ease, stroke 0.3s ease' }} />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            fontFamily: fontDisplay, fontSize: 30, fontWeight: 800,
+            color: p.fg, letterSpacing: -1, lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}>{Math.round(distance)}</div>
+          <div style={{
+            fontFamily: fontBody, fontSize: 12, fontWeight: 700, color: C.muted,
+            marginTop: 4, letterSpacing: 0.4, textTransform: 'uppercase',
+          }}>metros</div>
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: p.bg, color: p.fg,
+          padding: '5px 10px', borderRadius: 999,
+          fontFamily: fontBody, fontSize: 11, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+        }}>
+          <span style={{
+            width: 7, height: 7, borderRadius: 4, background: p.fg,
+            animation: !inZone ? 'pulse-dot 1.4s ease-in-out infinite' : 'none',
+          }} />
+          {p.label}
+        </div>
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 20, fontWeight: 700,
+          color: C.text, letterSpacing: -0.4, lineHeight: 1.2, marginTop: 10,
+        }}>{p.text}</div>
+        <div style={{
+          fontFamily: fontBody, fontSize: 13, color: C.muted, marginTop: 6, lineHeight: 1.4,
+        }}>
+          Zona de marcaje: <span style={{ color: C.text, fontWeight: 700 }}>{RADIO_GEOFENCE} m</span> alrededor del punto.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// MI TURNO HOY
+function MiTurnoHoyScreen({ distance, arrived, onArrive, onLeave, onBack, elapsedSec, turno = MI_PROXIMO_TURNO }) {
+  const inZone = distance <= RADIO_GEOFENCE;
+  return (
+    <div style={{ paddingBottom: 130, background: C.bg, minHeight: '100%' }}>
+      <div style={{ paddingTop: 56 }}>
+        <ScreenHeader onBack={onBack} title="Mi turno hoy" />
+      </div>
+
+      {/* Hero card */}
+      <div style={{ padding: '8px 20px 0' }}>
+        <Card padding={16} radius={20} elevated>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14,
+              background: C.primaryTint, color: C.primaryDeep,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <div style={{ fontFamily: fontBody, fontSize: 9, fontWeight: 800, letterSpacing: 0.4 }}>NOV</div>
+              <div style={{ fontFamily: fontDisplay, fontSize: 22, fontWeight: 800, lineHeight: 1 }}>15</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontFamily: fontDisplay, fontSize: 18, fontWeight: 800, color: C.text,
+                letterSpacing: -0.3, lineHeight: 1.15,
+                overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box',
+                WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+              }}>{turno.titulo}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="clock" size={13} color={C.muted} />
+                  <span style={{ fontFamily: fontBody, fontSize: 13, color: C.textDim, fontWeight: 600 }}>
+                    {turno.horaInicio}–{turno.horaFin}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="pin" size={13} color={C.muted} />
+                  <span style={{ fontFamily: fontBody, fontSize: 13, color: C.textDim, fontWeight: 600,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 140 }}>
+                    {turno.lugar}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Map */}
+      <div style={{ padding: '16px 20px 0' }}>
+        <MiTurnoMap distance={distance} arrived={arrived} />
+      </div>
+
+      {/* Cronómetro (only when arrived) */}
+      {arrived && (
+        <div style={{ padding: '16px 20px 0' }}>
+          <div style={{
+            background: `linear-gradient(135deg, ${C.success} 0%, #0A7A52 100%)`,
+            borderRadius: 22, padding: 18, color: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{
+              position: 'absolute', right: -20, top: -30, width: 140, height: 140, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.1)',
+            }} />
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'rgba(255,255,255,0.22)', padding: '3px 9px', borderRadius: 8,
+                fontFamily: fontBody, fontSize: 10, fontWeight: 800, letterSpacing: 0.4, textTransform: 'uppercase',
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: 3, background: '#fff',
+                  animation: 'pulse-dot 1.4s ease-in-out infinite',
+                }} />
+                Turno en curso
+              </div>
+              <div style={{
+                fontFamily: fontDisplay, fontSize: 40, fontWeight: 800, letterSpacing: -1.4,
+                marginTop: 6, lineHeight: 1, fontVariantNumeric: 'tabular-nums',
+              }}>{fmtElapsed(elapsedSec)}</div>
+              <div style={{ fontFamily: fontBody, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 6, fontWeight: 500 }}>
+                Llegaste a las {arrivalTime(elapsedSec)} · acumulando pago
+              </div>
+            </div>
+            <div style={{
+              fontFamily: fontDisplay, fontSize: 26, fontWeight: 800, color: '#fff',
+              letterSpacing: -0.5, textAlign: 'right', position: 'relative',
+            }}>
+              <div style={{ fontFamily: fontBody, fontSize: 11, fontWeight: 700, opacity: 0.7, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                Llevas
+              </div>
+              <div>{fmtCOP(turno.tarifa * Math.min(elapsedSec / (9 * 3600), 1))}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Indicador de proximidad — only before arrival */}
+      {!arrived && (
+        <div style={{ padding: '16px 20px 0' }}>
+          <IndicadorProximidad distance={distance} arrived={arrived} />
+        </div>
+      )}
+
+      {/* Helper / checklist */}
+      <div style={{ padding: '16px 20px 0' }}>
+        <Card padding={0} radius={18}>
+          <ChecklistRow done label="Postulación confirmada" />
+          <ChecklistRow done={arrived} label="Llegada al sitio" sub={arrived ? `Marcada a las ${arrivalTime(elapsedSec)}` : 'Activa cuando estés dentro de la zona'} />
+          <ChecklistRow done={false} label="Marcar salida y firmar contrato" last />
+        </Card>
+      </div>
+
+      {/* Sticky CTA */}
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 20,
+        padding: '14px 20px 36px',
+        background: 'linear-gradient(to top, rgba(255,251,246,1) 75%, rgba(255,251,246,0))',
+      }}>
+        {!arrived ? (
+          <PrimaryButton
+            onClick={onArrive}
+            disabled={!inZone}
+            tone="success"
+            icon={inZone
+              ? <Icon name="check" size={20} color="#fff" strokeWidth={2.6} />
+              : <Icon name="lock" size={18} color="#A89E92" strokeWidth={2.4} />}
+          >
+            {inZone ? 'Marcar llegada' : `Acércate ${Math.max(0, Math.round(distance - RADIO_GEOFENCE))} m más`}
+          </PrimaryButton>
+        ) : (
+          <PrimaryButton onClick={onLeave} tone="dark" icon={<Icon name="check" size={20} color="#fff" strokeWidth={2.6} />}>
+            Marcar salida y firmar
+          </PrimaryButton>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChecklistRow({ done, label, sub, last }) {
+  return (
+    <div style={{
+      padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+      borderBottom: last ? 'none' : `1px solid ${C.borderDim}`,
+    }}>
+      <div style={{
+        width: 24, height: 24, borderRadius: 12, flexShrink: 0,
+        background: done ? C.success : '#fff',
+        border: done ? 'none' : `1.5px dashed ${C.mutedLight}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {done && <Icon name="check" size={14} color="#fff" strokeWidth={3} />}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{
+          fontFamily: fontBody, fontSize: 14, fontWeight: 700,
+          color: done ? C.text : C.textDim,
+          textDecoration: done ? 'none' : 'none',
+        }}>{label}</div>
+        {sub && <div style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>}
+      </div>
+    </div>
+  );
+}
+
+function fmtElapsed(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function arrivalTime(elapsedSec) {
+  // Assume current time minus elapsed; fake to 08:05
+  const base = 8 * 60 + 5; // 08:05
+  return `${Math.floor(base/60)}:${String(base%60).padStart(2,'0')}`;
+}
+
+// ────────────────────────────────────────────────────────────
+// FIRMA
+function FirmaScreen({ onBack, onConfirm, turno = MI_PROXIMO_TURNO }) {
+  const canvasRef = React.useRef(null);
+  const [hasSigned, setHasSigned] = React.useState(false);
+  const drawing = React.useRef(false);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    // Set internal size for crispness
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2;
+    canvas.height = rect.height * 2;
+    ctx.scale(2, 2);
+    ctx.strokeStyle = C.ink;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }, []);
+
+  const pos = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+  };
+
+  const start = (e) => {
+    e.preventDefault();
+    drawing.current = true;
+    const p = pos(e);
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    setHasSigned(true);
+  };
+  const move = (e) => {
+    if (!drawing.current) return;
+    e.preventDefault();
+    const p = pos(e);
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  };
+  const end = () => { drawing.current = false; };
+  const clear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSigned(false);
+  };
+
+  return (
+    <div style={{ paddingBottom: 130, background: C.bg, minHeight: '100%' }}>
+      <div style={{ paddingTop: 56 }}>
+        <ScreenHeader onBack={onBack} title="Firma del contrato" />
+      </div>
+
+      <div style={{ padding: '8px 20px 0' }}>
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 26, fontWeight: 800, color: C.text,
+          letterSpacing: -0.7, lineHeight: 1.15,
+        }}>Firma para cerrar tu día</div>
+        <div style={{ fontFamily: fontBody, fontSize: 15, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
+          Es tu contrato diario. Una vez firmado, se libera tu pago.
+        </div>
+      </div>
+
+      {/* Contrato summary */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <Card padding={16} radius={20}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontFamily: fontBody, fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                Contrato # AT-2025-{turno.id.toString().padStart(4,'0')}
+              </div>
+              <div style={{ fontFamily: fontDisplay, fontSize: 17, fontWeight: 700, color: C.text, marginTop: 2 }}>
+                {turno.titulo}
+              </div>
+            </div>
+            <Badge tone="success" size="md" icon={<Icon name="check" size={12} color="#0A7A52" strokeWidth={2.6} />}>
+              Listo
+            </Badge>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <ContratoStat label="Horas trabajadas" value="9h 02m" />
+            <ContratoStat label="Pago del día" value={fmtCOP(turno.tarifa)} accent />
+            <ContratoStat label="Empresa" value={turno.empresa} />
+            <ContratoStat label="Fecha" value="15 nov 2024" />
+          </div>
+        </Card>
+      </div>
+
+      {/* Signature area */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8,
+        }}>
+          <div style={{ fontFamily: fontDisplay, fontSize: 16, fontWeight: 700, color: C.text }}>
+            Firma con tu dedo
+          </div>
+          {hasSigned && (
+            <button onClick={clear} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: C.muted, fontFamily: fontBody, fontSize: 13, fontWeight: 700,
+              textDecoration: 'underline',
+            }}>Borrar</button>
+          )}
+        </div>
+        <div style={{
+          position: 'relative', background: '#fff', borderRadius: 20,
+          border: `1.5px dashed ${hasSigned ? C.primary : C.mutedLight}`,
+          height: 200, overflow: 'hidden', transition: 'border-color 0.2s',
+        }}>
+          <canvas ref={canvasRef}
+            style={{ width: '100%', height: '100%', display: 'block', touchAction: 'none', cursor: 'crosshair' }}
+            onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
+            onTouchStart={start} onTouchMove={move} onTouchEnd={end}
+          />
+          {!hasSigned && (
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+              color: C.mutedLight,
+            }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                <path d="M3 17l6-6 4 4 8-8M15 7h6v6" stroke={C.mutedLight} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <div style={{ fontFamily: fontBody, fontSize: 14, fontWeight: 600, marginTop: 8 }}>
+                Desliza para firmar
+              </div>
+            </div>
+          )}
+          <div style={{
+            position: 'absolute', bottom: 12, left: 12, right: 12,
+            display: 'flex', alignItems: 'center', gap: 8,
+            color: C.mutedLight, pointerEvents: 'none',
+          }}>
+            <div style={{ flex: 1, height: 1, background: C.border }} />
+            <span style={{ fontFamily: fontBody, fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+              Andrés Salgado · CC 1.020.345.678
+            </span>
+            <div style={{ flex: 1, height: 1, background: C.border }} />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: '16px 20px 0' }}>
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          padding: 12, borderRadius: 14, background: C.primarySoft,
+        }}>
+          <Icon name="shield" size={18} color={C.primary} strokeWidth={2.2} />
+          <div style={{ fontFamily: fontBody, fontSize: 12, color: C.textDim, lineHeight: 1.5, flex: 1 }}>
+            Tu firma queda asociada a este contrato y se guarda con la huella GPS de tu salida.
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 20,
+        padding: '14px 20px 36px',
+        background: 'linear-gradient(to top, rgba(255,251,246,1) 75%, rgba(255,251,246,0))',
+      }}>
+        <PrimaryButton onClick={onConfirm} disabled={!hasSigned}>
+          {hasSigned ? 'Confirmar firma' : 'Firma para continuar'}
+        </PrimaryButton>
+      </div>
+    </div>
+  );
+}
+
+function ContratoStat({ label, value, accent }) {
+  return (
+    <div style={{
+      padding: 10, borderRadius: 12,
+      background: accent ? C.primarySoft : '#FBF7F1',
+    }}>
+      <div style={{ fontFamily: fontBody, fontSize: 10, fontWeight: 700, color: C.muted, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+        {label}
+      </div>
+      <div style={{
+        fontFamily: fontDisplay, fontSize: 15, fontWeight: 800,
+        color: accent ? C.primaryDeep : C.text, letterSpacing: -0.2, marginTop: 2,
+      }}>{value}</div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// DONE
+function TurnoDoneScreen({ onHome, turno = MI_PROXIMO_TURNO }) {
+  return (
+    <div style={{
+      minHeight: '100%', background: C.bg, display: 'flex', flexDirection: 'column',
+      padding: '76px 24px 32px',
+    }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+        <div style={{
+          width: 96, height: 96, borderRadius: 32,
+          background: `linear-gradient(135deg, ${C.success} 0%, #0A7A52 100%)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 16px 36px rgba(16,185,129,0.35)',
+          animation: 'pop-in 0.5s cubic-bezier(0.2, 1.2, 0.4, 1)',
+        }}>
+          <Icon name="check" size={48} color="#fff" strokeWidth={3} />
+        </div>
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 32, fontWeight: 800, color: C.text,
+          letterSpacing: -1, lineHeight: 1.1, marginTop: 28,
+        }}>¡Turno completado!</div>
+        <div style={{
+          fontFamily: fontBody, fontSize: 15, color: C.muted, lineHeight: 1.5, marginTop: 10, maxWidth: 280,
+        }}>
+          El pago entra en proceso y verás el ingreso en tu historial.
+        </div>
+
+        <div style={{
+          background: '#fff', borderRadius: 22, padding: 18, marginTop: 30, width: '100%',
+          border: `1px solid ${C.border}`,
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            paddingBottom: 14, borderBottom: `1px dashed ${C.border}`,
+          }}>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontFamily: fontBody, fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                Pago del día
+              </div>
+              <div style={{ fontFamily: fontDisplay, fontSize: 28, fontWeight: 800, color: C.primaryDeep, letterSpacing: -0.8, marginTop: 2 }}>
+                {fmtCOP(turno.tarifa)}
+              </div>
+            </div>
+            <Badge tone="warning">En proceso · 2-3 días</Badge>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, paddingTop: 14 }}>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontFamily: fontBody, fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                Horas
+              </div>
+              <div style={{ fontFamily: fontDisplay, fontSize: 18, fontWeight: 800, color: C.text, marginTop: 2 }}>
+                9h 02m
+              </div>
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontFamily: fontBody, fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                Calificación
+              </div>
+              <div style={{ fontFamily: fontBody, fontSize: 13, color: C.textDim, marginTop: 4, fontWeight: 600 }}>
+                Pendiente del jefe
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <PrimaryButton onClick={onHome}>Volver al inicio</PrimaryButton>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
+// NOMINA — Mi registro semanal
+function NominaScreen() {
+  const dias = [
+    { dia: 'Lun', fecha: '11', entrada: '07:02', salida: '17:08', horas: 9.1, novedad: null },
+    { dia: 'Mar', fecha: '12', entrada: '07:00', salida: '17:30', horas: 9.5, novedad: 'extra' },
+    { dia: 'Mié', fecha: '13', entrada: '06:55', salida: '17:00', horas: 9.1, novedad: null },
+    { dia: 'Jue', fecha: '14', entrada: '—',     salida: '—',     horas: 0,   novedad: 'permiso' },
+    { dia: 'Vie', fecha: '15', entrada: 'En curso', salida: '—', horas: 0,   novedad: 'today' },
+    { dia: 'Sáb', fecha: '16', entrada: '—',     salida: '—',     horas: 0,   novedad: null, future: true },
+    { dia: 'Dom', fecha: '17', entrada: '—',     salida: '—',     horas: 0,   novedad: null, future: true },
+  ];
+  const totalH = dias.reduce((s, d) => s + d.horas, 0);
+  return (
+    <div style={{ paddingTop: 56, paddingBottom: 24, background: C.bg, minHeight: '100%' }}>
+      <ScreenHeader title="Mi nómina" big subtitle="Semana del 11 al 17 nov" />
+
+      {/* Summary card */}
+      <div style={{ padding: '14px 20px 0' }}>
+        <div style={{
+          background: `linear-gradient(135deg, ${C.ink} 0%, ${C.night} 100%)`,
+          borderRadius: 22, padding: 18, color: '#fff', position: 'relative', overflow: 'hidden',
+        }}>
+          <div style={{
+            position: 'absolute', right: -30, top: -30, width: 120, height: 120, borderRadius: '50%',
+            background: `radial-gradient(circle, ${C.success}55 0%, transparent 70%)`,
+          }} />
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', position: 'relative' }}>
+            <div>
+              <div style={{ fontFamily: fontBody, fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase' }}>
+                Acumulado esta semana
+              </div>
+              <div style={{ fontFamily: fontDisplay, fontSize: 36, fontWeight: 800, color: '#fff', letterSpacing: -1, lineHeight: 1, marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
+                {totalH.toFixed(1)}h
+              </div>
+              <div style={{ fontFamily: fontBody, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>
+                + 0.5h extras · período quincenal abierto
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: fontBody, fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>
+                Estimado
+              </div>
+              <div style={{ fontFamily: fontDisplay, fontSize: 22, fontWeight: 800, color: C.star, letterSpacing: -0.4, marginTop: 4 }}>
+                {fmtCOP(totalH * 14500)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky punch button card */}
+      <div style={{ padding: '14px 20px 0' }}>
+        <Card padding={14} radius={18}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 12, background: C.successTint,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'relative',
+              }}>
+                <Icon name="gps" size={20} color="#0A7A52" strokeWidth={2.2} />
+                <span style={{
+                  position: 'absolute', top: 4, right: 4, width: 7, height: 7, borderRadius: 4,
+                  background: C.success, border: '1.5px solid #fff',
+                  animation: 'pulse-dot 1.4s ease-in-out infinite',
+                }} />
+              </div>
+              <div>
+                <div style={{ fontFamily: fontBody, fontSize: 14, fontWeight: 700, color: C.text }}>
+                  Estás en obra
+                </div>
+                <div style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, marginTop: 1 }}>
+                  Entrada registrada · 07:02
+                </div>
+              </div>
+            </div>
+            <button style={{
+              height: 40, padding: '0 16px', borderRadius: 12, border: 'none',
+              background: C.ink, color: '#fff',
+              fontFamily: fontBody, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}>
+              Marcar salida
+            </button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Day list */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <SectionTitle action="Reportar novedad" onAction={() => {}}>Tu semana</SectionTitle>
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {dias.map((d) => <DiaRow key={d.fecha} d={d} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DiaRow({ d }) {
+  const today = d.novedad === 'today';
+  const isPermiso = d.novedad === 'permiso';
+  const isExtra = d.novedad === 'extra';
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 14,
+      background: today ? CN.primarySoft : '#fff',
+      border: `1px solid ${today ? CN.primaryTint : C.border}`,
+      borderRadius: 16, padding: '12px 14px',
+      opacity: d.future ? 0.5 : 1,
+    }}>
+      <div style={{
+        width: 40, height: 40, borderRadius: 12,
+        background: today ? CN.primary : isPermiso ? C.warningTint : isExtra ? C.successTint : '#FBF7F1',
+        color: today ? '#fff' : isPermiso ? '#A56400' : isExtra ? '#0A7A52' : C.text,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}>
+        <div style={{ fontFamily: fontBody, fontSize: 9, fontWeight: 800, letterSpacing: 0.3 }}>
+          {d.dia.toUpperCase()}
+        </div>
+        <div style={{ fontFamily: fontDisplay, fontSize: 17, fontWeight: 800, lineHeight: 1 }}>
+          {d.fecha}
+        </div>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {today ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontFamily: fontBody, fontSize: 14, fontWeight: 800, color: CN.primaryDeep }}>HOY</span>
+              <span style={{
+                display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: CN.primary,
+                animation: 'pulse-dot 1.4s ease-in-out infinite',
+              }} />
+            </div>
+            <div style={{ fontFamily: fontBody, fontSize: 12, color: C.textDim, marginTop: 2, fontWeight: 600 }}>
+              Entrada 07:02 · acumulando…
+            </div>
+          </>
+        ) : isPermiso ? (
+          <>
+            <div style={{ fontFamily: fontBody, fontSize: 14, fontWeight: 700, color: C.text }}>
+              Permiso médico
+            </div>
+            <div style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, marginTop: 2 }}>
+              Aprobado por J. Ramírez
+            </div>
+          </>
+        ) : d.entrada === '—' ? (
+          <div style={{ fontFamily: fontBody, fontSize: 13, color: C.muted, fontWeight: 600 }}>
+            Sin registro
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: fontBody, fontSize: 14, fontWeight: 700, color: C.text, fontVariantNumeric: 'tabular-nums' }}>
+                {d.entrada} → {d.salida}
+              </span>
+              {isExtra && <Badge tone="success" size="sm">+0.5h extra</Badge>}
+            </div>
+            <div style={{ fontFamily: fontBody, fontSize: 12, color: C.muted, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              {d.horas}h trabajadas
+            </div>
+          </>
+        )}
+      </div>
+      {!d.future && d.entrada !== '—' && (
+        <div style={{
+          fontFamily: fontDisplay, fontSize: 16, fontWeight: 800,
+          color: today ? CN.primaryDeep : C.text, letterSpacing: -0.2,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {d.horas > 0 ? `${d.horas}h` : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+Object.assign(window, {
+  MiTurnoHoyScreen, FirmaScreen, TurnoDoneScreen, NominaScreen,
+  IndicadorProximidad, MiTurnoMap, RADIO_GEOFENCE,
+});
+
+</script>
+
+<!-- ═══════════════════════════════════════════════════════
+     7. App root + state machine
+     ═══════════════════════════════════════════════════════ -->
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ──────────────────────────────────────────────────────────────
+// Tweak defaults
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "distancia": 1200,
+  "estadoTurno": "en-camino"
+}/*EDITMODE-END*/;
+
+// ──────────────────────────────────────────────────────────────
+// Auto-fit the phone into any viewport
+function useFit(designW, designH) {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const fit = () => {
+      const margin = 32;
+      const sw = window.innerWidth - margin;
+      const sh = window.innerHeight - margin;
+      setScale(Math.min(1, sw / designW, sh / designH));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [designW, designH]);
+  return scale;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Main App
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  // Auth state machine: login → activar → permisos → app
+  const [authStep, setAuthStep] = useState('login'); // 'login' | 'activar' | 'permisos' | 'in'
+  // Tab inside app
+  const [tab, setTab] = useState('home');
+  // Stack screen above tab content
+  const [stack, setStack] = useState([]); // {screen, props}
+  // Selected oferta + postulación state
+  const [selectedOfertaId, setSelectedOfertaId] = useState(null);
+  const [postuladaIds, setPostuladaIds] = useState(new Set());
+  const [showPostuladoModal, setShowPostuladoModal] = useState(false);
+
+  // Mi turno state machine (driven by tweaks AND user actions)
+  // 'en-camino' (default) → user marks arrival → 'en-curso' → user marks salida → 'firma' → 'done'
+  // The tweak "estadoTurno" can jump to any state directly.
+  const [turnoState, setTurnoState] = useState(t.estadoTurno);
+  // Cronómetro from arrival
+  const [elapsed, setElapsed] = useState(8 * 3600 + 35 * 60 + 12); // 8h 35m
+
+  // Sync tweak → turno state
+  useEffect(() => {
+    setTurnoState(t.estadoTurno);
+  }, [t.estadoTurno]);
+
+  // Tick the cronómetro when en-curso
+  useEffect(() => {
+    if (turnoState !== 'en-curso') return;
+    const id = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(id);
+  }, [turnoState]);
+
+  // ── Auth handlers
+  const goActivar = () => setAuthStep('activar');
+  const goPermisos = () => setAuthStep('permisos');
+  const goIntoApp = () => { setAuthStep('in'); setTab('home'); };
+  const logout = () => { setAuthStep('login'); setStack([]); };
+
+  // ── Stack helpers
+  const push = (screen, props = {}) => setStack((s) => [...s, { screen, props }]);
+  const pop = () => setStack((s) => s.slice(0, -1));
+  const reset = () => setStack([]);
+
+  // ── Oferta handlers
+  const openOferta = (id) => {
+    setSelectedOfertaId(id);
+    push('oferta-detalle');
+  };
+  const postular = () => {
+    setPostuladaIds((p) => new Set([...p, selectedOfertaId]));
+    setShowPostuladoModal(true);
+  };
+  const closePostuladoModal = () => {
+    setShowPostuladoModal(false);
+    pop();
+  };
+
+  // ── Mi turno handlers (only meaningful when on "hoy" tab or via push)
+  const onArrive = () => { setTurnoState('en-curso'); setElapsed(0); setTweak('estadoTurno', 'en-curso'); };
+  const onLeave = () => { setTurnoState('firma'); setTweak('estadoTurno', 'firma'); };
+  const onConfirmFirma = () => { setTurnoState('done'); setTweak('estadoTurno', 'done'); };
+  const onTurnoHome = () => {
+    setTurnoState('en-camino'); setTweak('estadoTurno', 'en-camino');
+    setElapsed(8 * 3600 + 35 * 60 + 12);
+    setTab('home');
+  };
+
+  // ── Selected oferta
+  const oferta = MOCK_OFERTAS.find((o) => o.id === selectedOfertaId) || MOCK_OFERTAS[0];
+
+  // ──────────────────────────────────────────────────────────
+  // Screen renderer
+  let content;
+  if (authStep === 'login') {
+    content = <LoginScreen onLogin={goIntoApp} onActivar={goActivar} />;
+  } else if (authStep === 'activar') {
+    content = <ActivarScreen onBack={() => setAuthStep('login')} onNext={goPermisos} />;
+  } else if (authStep === 'permisos') {
+    content = <PermisosScreen onContinue={goIntoApp} />;
+  } else {
+    // In-app
+    const top = stack[stack.length - 1];
+
+    let inner;
+    if (top?.screen === 'oferta-detalle') {
+      inner = (
+        <OfertaDetalleScreen
+          oferta={oferta}
+          onBack={pop}
+          onPostular={postular}
+          postulado={postuladaIds.has(oferta.id)}
+        />
+      );
+    } else if (tab === 'home') {
+      inner = (
+        <HomeScreen
+          onOpenOferta={(id) => {
+            if (id) openOferta(id);
+            else setTab('ofertas');
+          }}
+          onOpenHoy={() => setTab('hoy')}
+        />
+      );
+    } else if (tab === 'ofertas') {
+      inner = <OfertasScreen onOpenOferta={openOferta} />;
+    } else if (tab === 'hoy') {
+      if (turnoState === 'en-camino') {
+        inner = (
+          <MiTurnoHoyScreen
+            distance={t.distancia}
+            arrived={false}
+            elapsedSec={elapsed}
+            onArrive={onArrive}
+            onBack={() => setTab('home')}
+          />
+        );
+      } else if (turnoState === 'en-curso') {
+        inner = (
+          <MiTurnoHoyScreen
+            distance={Math.min(t.distancia, RADIO_GEOFENCE - 5)}
+            arrived={true}
+            elapsedSec={elapsed}
+            onLeave={onLeave}
+            onBack={() => setTab('home')}
+          />
+        );
+      } else if (turnoState === 'firma') {
+        inner = (
+          <FirmaScreen
+            onBack={() => setTurnoState('en-curso')}
+            onConfirm={onConfirmFirma}
+          />
+        );
+      } else if (turnoState === 'done') {
+        inner = <TurnoDoneScreen onHome={onTurnoHome} />;
+      }
+    } else if (tab === 'nomina') {
+      inner = <NominaScreen />;
+    }
+
+    // Wrap with tab bar (hide on full-bleed states like firma/done)
+    const hideTabBar = top?.screen === 'oferta-detalle'
+      || (tab === 'hoy' && (turnoState === 'firma' || turnoState === 'done'));
+
+    content = (
+      <div style={{ position: 'relative', height: '100%' }}>
+        <div key={`${tab}-${turnoState}-${top?.screen || ''}`}
+          style={{
+            height: '100%', overflowY: 'auto', overflowX: 'hidden',
+            animation: 'screen-in-up 0.32s cubic-bezier(0.2, 0.8, 0.3, 1)',
+          }}>
+          {inner}
+        </div>
+        {!hideTabBar && <TabBar current={tab} onChange={(id) => { reset(); setTab(id); }} />}
+        {showPostuladoModal && (
+          <PostuladoModal oferta={oferta} onClose={closePostuladoModal} />
+        )}
+      </div>
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────
+  // Layout: iPhone frame + tweaks panel
+  const designW = 402, designH = 874;
+  const scale = useFit(designW + 32, designH + 64);
+
+  return (
+    <div style={{
+      transform: `scale(${scale})`,
+      transformOrigin: 'center center',
+    }}>
+      <IOSDevice width={designW} height={designH}>
+        <div style={{ position: 'relative', height: '100%', background: C.bg }}>
+          {content}
+        </div>
+      </IOSDevice>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Distancia al punto de encuentro"
+          hint="Mueve el dot del usuario en el mapa de Mi turno y cambia el color del indicador." />
+        <TweakSlider
+          label="Distancia"
+          value={t.distancia}
+          min={0} max={1500} step={5} unit=" m"
+          onChange={(v) => setTweak('distancia', v)}
+        />
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4,
+          padding: '2px 8px 6px',
+        }}>
+          <SnapButton label="En zona" sub="20 m" onClick={() => setTweak('distancia', 20)} active={t.distancia <= RADIO_GEOFENCE} />
+          <SnapButton label="Cerca" sub="280 m" onClick={() => setTweak('distancia', 280)} active={t.distancia > RADIO_GEOFENCE && t.distancia < 500} />
+          <SnapButton label="Lejos" sub="1.2 km" onClick={() => setTweak('distancia', 1200)} active={t.distancia >= 500} />
+        </div>
+
+        <TweakSection label="Flujo del turno" />
+        <TweakRadio
+          label="Estado del turno"
+          value={t.estadoTurno}
+          options={['en-camino', 'en-curso', 'firma', 'done']}
+          onChange={(v) => setTweak('estadoTurno', v)}
+        />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+// Small custom snap-distance button
+function SnapButton({ label, sub, onClick, active }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: '6px 4px',
+      border: `1px solid ${active ? '#29261b' : 'rgba(0,0,0,0.1)'}`,
+      borderRadius: 8,
+      background: active ? '#29261b' : 'rgba(255,255,255,0.6)',
+      color: active ? '#fff' : '#29261b',
+      cursor: 'pointer',
+      fontFamily: 'inherit',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+      lineHeight: 1.2, whiteSpace: 'nowrap',
+    }}>
+      <span style={{ fontSize: 10.5, fontWeight: 700 }}>{label}</span>
+      <span style={{ fontSize: 9, opacity: 0.7 }}>{sub}</span>
+    </button>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>

@@ -12,27 +12,68 @@ const logger = require('../../utils/logger');
 
 async function ordenCreada(empresaId, data) {
   const existente = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
-  if (existente) return; // ya creada
+  if (existente) return; // ya creada — idempotente
+
+  // Construir descripción combinando notas para el operario + resumen de productos.
+  // El jefe de turnos puede enriquecerla desde la app antes de publicar.
+  const partesDesc = [];
+  if (data.notas_para_operario) partesDesc.push(data.notas_para_operario);
+  if (Array.isArray(data.productos_resumen) && data.productos_resumen.length) {
+    partesDesc.push(
+      'Productos: ' + data.productos_resumen.map((p) => `${p.cantidad}× ${p.nombre}`).join(', ')
+    );
+  }
 
   await OfertasModel.crear(
     empresaId,
     {
-      titulo: data.tipo ? `Orden: ${data.tipo}` : 'Orden de trabajo',
-      descripcion: null,
-      fecha: data.fecha_programada,
+      // El payload v1.0 (05-INTEGRACION.md) incluye 'titulo' directamente.
+      // Fallback al campo 'tipo' del payload anterior por compatibilidad.
+      titulo: data.titulo || (data.tipo ? `Orden: ${data.tipo}` : 'Orden de trabajo'),
+      descripcion: partesDesc.join('\n\n') || null,
+      // 'fecha' es el campo del payload v1.0; 'fecha_programada' era la versión anterior.
+      fecha: data.fecha || data.fecha_programada || null,
       hora_inicio: data.hora_inicio || '08:00:00',
-      hora_fin_estimada: null,
-      lugar: [data.direccion, data.ciudad].filter(Boolean).join(', ') || null,
-      latitud: null,
-      longitud: null,
+      hora_fin_estimada: data.hora_fin || null,
+      // 'ubicacion' es el campo nuevo (string); fallback al par direccion+ciudad anterior.
+      lugar: data.ubicacion || [data.direccion, data.ciudad].filter(Boolean).join(', ') || null,
+      latitud: data.latitud || null,
+      longitud: data.longitud || null,
+      // cupos_sugeridos es una sugerencia; el jefe confirma antes de publicar.
       plazas_disponibles:
-        Array.isArray(data.equipo) && data.equipo.length ? data.equipo.length : 1,
-      // La tarifa no viene en el webhook; el jefe de turnos la define al revisar.
-      tarifa_dia: 0,
+        data.cupos_sugeridos ||
+        (Array.isArray(data.equipo) && data.equipo.length ? data.equipo.length : 1),
+      // valor_dia_sugerido puede llegar como hint; el jefe lo confirma/ajusta.
+      // Tarifa sugerida por logiq360 (puede ser 0 si no la informan); el jefe confirma.
+      tarifa_dia: data.valor_dia_sugerido || 0,
+      // Oferta comienza en 'borrador': el jefe de turnos la revisa y publica.
+      estado: 'borrador',
       external_ref: data.external_ref,
+      alquiler_ref: data.alquiler_ref || null,
+      // Notas_para_operario guardadas en columna dedicada para no mezclar con descripción.
+      externo_notas: data.notas_para_operario || null,
     },
     null
   );
+}
+
+/**
+ * orden.publicada — logiq360 inicia la ejecución de la orden.
+ * Si la oferta está en borrador, se publica automáticamente para notificar al pool.
+ * Si ya está publicada/completada no hace nada (idempotente).
+ */
+async function ordenPublicada(empresaId, data) {
+  const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
+  if (!oferta) {
+    // Puede suceder si orden.creada llegó tarde; lo ignoramos con warning.
+    logger.warn(
+      `[integracion] orden.publicada: no existe oferta con external_ref=${data.external_ref}`
+    );
+    return;
+  }
+  if (oferta.estado === 'borrador') {
+    await OfertasModel.cambiarEstado(empresaId, oferta.id, 'publicada');
+  }
 }
 
 async function ordenCancelada(empresaId, data) {
@@ -88,10 +129,25 @@ async function empleadoDesactivado(empresaId, data) {
   }
 }
 
+// También necesitamos manejar fecha_cambiada con el campo nuevo 'fecha' (vs 'fecha_programada')
+async function ordenFechaCambiadaV2(empresaId, data) {
+  const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
+  if (!oferta) return;
+  const cambios = {};
+  // Payload v1.0 usa 'fecha_nueva'; payload anterior usaba 'fecha_programada'
+  if (data.fecha_nueva) cambios.fecha = data.fecha_nueva;
+  else if (data.fecha_programada) cambios.fecha = data.fecha_programada;
+  if (data.hora_inicio) cambios.hora_inicio = data.hora_inicio;
+  if (Object.keys(cambios).length) {
+    await OfertasModel.actualizar(empresaId, oferta.id, cambios);
+  }
+}
+
 const HANDLERS = {
   'orden.creada': ordenCreada,
+  'orden.publicada': ordenPublicada,   // ← nuevo en payload v1.0
   'orden.cancelada': ordenCancelada,
-  'orden.fecha_cambiada': ordenFechaCambiada,
+  'orden.fecha_cambiada': ordenFechaCambiadaV2,
   'orden.completada': ordenCompletada,
   'empleado.creado': empleadoCreado,
   'empleado.desactivado': empleadoDesactivado,

@@ -9,7 +9,7 @@ const { pool } = require('../../../config/database');
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
   lugar, latitud, longitud, plazas_disponibles, plazas_cubiertas, tarifa_dia, estado,
-  external_ref, creado_por, created_at`;
+  external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
 // Allowlist de columnas modificables vía PUT (lista fija de código).
 const CAMPOS_EDITABLES = [
@@ -97,8 +97,9 @@ const OfertasModel = {
     const [res] = await pool.query(
       `INSERT INTO ofertas_turno
          (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-          lugar, latitud, longitud, plazas_disponibles, tarifa_dia, creado_por)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          lugar, latitud, longitud, plazas_disponibles, tarifa_dia,
+          estado, external_ref, alquiler_ref, externo_notas, creado_por)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresaId,
         datos.titulo,
@@ -111,6 +112,11 @@ const OfertasModel = {
         datos.longitud ?? null,
         datos.plazas_disponibles ?? 1,
         datos.tarifa_dia,
+        // ofertas desde logiq360 arrancan en 'borrador'; las manuales en 'abierta' (default)
+        datos.estado ?? 'abierta',
+        datos.external_ref ?? null,
+        datos.alquiler_ref ?? null,
+        datos.externo_notas ?? null,
         creadoPor,
       ]
     );
