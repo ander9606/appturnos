@@ -189,6 +189,16 @@ Body:
 |--------|------|-----|-------------|
 | `POST` | `/api/auth/registro` | Público | Registro libre para `trabajador_turnos`. Body: `{ nombre, apellido?, email, password }`. Devuelve tokens + perfil. |
 
+## Auth — OAuth (Google, etc.)
+
+Ver `06-AUTH.md §OAuth` para el diseño completo y las decisiones de auto-vinculación.
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `POST` | `/api/auth/oauth/:provider` | Público | Login/registro con provider OAuth (`google`). Body: `{ token }` (id_token del provider). Devuelve `{ access_token, refresh_token, usuario, tipo }` donde `tipo ∈ login\|vinculacion\|registro`. |
+| `GET` | `/api/auth/oauth/vinculos` | Autenticado | Lista los providers vinculados a la cuenta. |
+| `DELETE` | `/api/auth/oauth/:provider` | Autenticado | Desvincular un provider de la cuenta. |
+
 ---
 
 ## Webhook payload de App Turnos → logiq360

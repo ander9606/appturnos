@@ -74,4 +74,7 @@ router.post(
   ctrl.registrar
 );
 
+// Sub-router OAuth — POST /api/auth/oauth/:provider, etc.
+router.use('/oauth', require('./oauth/oauth.routes'));
+
 module.exports = router;
