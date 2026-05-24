@@ -2,10 +2,16 @@
 
 const jwt = require('jsonwebtoken');
 const AppError = require('../utils/AppError');
+const { pool } = require('../config/database');
+const { ROLES } = require('../config/constants');
 
 /**
  * Verifica el access token JWT y expone el payload en `req.usuario`.
  * Espera el header `Authorization: Bearer <jwt>`.
+ *
+ * Para TRABAJADOR_TURNOS: `req.empresa_id` puede ser null (multi-empresa).
+ * El middleware `resolverEmpresasActivas` resuelve la lista completa
+ * de empresas activas para esos usuarios cuando sea necesario.
  */
 function verificarToken(req, _res, next) {
   const header = req.headers.authorization;
@@ -16,7 +22,7 @@ function verificarToken(req, _res, next) {
   try {
     const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
     req.usuario = payload;
-    req.empresa_id = payload.empresa_id;
+    req.empresa_id = payload.empresa_id ?? null;
     next();
   } catch {
     next(new AppError('Token inválido o expirado', 401));
@@ -59,4 +65,28 @@ function resolverEmpresa(req, _res, next) {
   return next(new AppError('No se pudo determinar la empresa', 400));
 }
 
-module.exports = { verificarToken, verificarRol, resolverEmpresa };
+/**
+ * Para TRABAJADOR_TURNOS: resuelve la lista de empresas activas y la inyecta
+ * en `req.empresasActivas` (array de IDs).
+ * Para otros roles: no-op (sus endpoints usan `req.empresa_id` directamente).
+ *
+ * Usa una única query por request; el resultado no se cachea entre requests.
+ */
+async function resolverEmpresasActivas(req, _res, next) {
+  if (req.usuario?.rol !== ROLES.TRABAJADOR_TURNOS) {
+    return next();
+  }
+  try {
+    const [filas] = await pool.query(
+      `SELECT empresa_id FROM trabajador_empresa
+       WHERE usuario_id = ? AND estado = 'activo'`,
+      [req.usuario.sub]
+    );
+    req.empresasActivas = filas.map((f) => f.empresa_id);
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { verificarToken, verificarRol, resolverEmpresa, resolverEmpresasActivas };

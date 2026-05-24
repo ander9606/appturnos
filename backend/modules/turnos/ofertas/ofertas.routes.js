@@ -4,7 +4,7 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../../middleware/validator');
-const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
+const { verificarToken, verificarRol, resolverEmpresasActivas } = require('../../../middleware/authMiddleware');
 const { ROLES, ESTADOS_OFERTA } = require('../../../config/constants');
 const ctrl = require('./ofertas.controller');
 
@@ -51,6 +51,8 @@ function reglasOferta({ parcial }) {
 }
 
 router.use(verificarToken);
+// Para TRABAJADOR_TURNOS: resuelve la lista de empresas activas una vez por request.
+router.use(resolverEmpresasActivas);
 
 // GET /api/turnos/ofertas
 router.get(

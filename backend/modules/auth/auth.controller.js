@@ -35,4 +35,11 @@ async function activarCuenta(req, res) {
   res.status(201).json({ success: true, data, message: 'Cuenta activada' });
 }
 
-module.exports = { login, refresh, logout, me, activarCuenta };
+/** Registro libre para trabajador_turnos (modelo marketplace). */
+async function registrar(req, res) {
+  const { nombre, apellido, email, password } = req.body;
+  const data = await AuthService.registrarLibre({ nombre, apellido, email, password });
+  res.status(201).json({ success: true, data, message: 'Cuenta creada. ¡Bienvenido!' });
+}
+
+module.exports = { login, refresh, logout, me, activarCuenta, registrar };

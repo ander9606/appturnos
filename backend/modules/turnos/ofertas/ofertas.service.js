@@ -3,15 +3,19 @@
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
+const TrabajadorEmpresaModel = require('../../trabajador-empresa/trabajador-empresa.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
 const { ROLES } = require('../../../config/constants');
 
-/** Resuelve el trabajador vinculado al usuario autenticado. */
+/**
+ * Resuelve el trabajador vinculado al usuario autenticado en una empresa concreta.
+ * Para TRABAJADOR_TURNOS multi-empresa se debe pasar la empresaId de la oferta.
+ */
 async function resolverTrabajador(empresaId, usuarioId) {
   const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuarioId);
   if (!trabajador) {
-    throw new AppError('Tu usuario no está vinculado a un trabajador activo', 403);
+    throw new AppError('Tu usuario no está vinculado a un trabajador activo en esta empresa', 403);
   }
   return trabajador;
 }
@@ -33,6 +37,7 @@ function delayPorRanking(ranking) {
 /**
  * Devuelve la antigüedad mínima (en minutos) que debe tener una oferta
  * para ser visible para este usuario. 0 para admin y jefe_turnos.
+ * Solo aplica al path de empresa única (TRABAJADOR_TURNOS con un solo tenant).
  */
 async function antiguedadMinima(empresaId, usuario) {
   if (usuario.rol !== ROLES.TRABAJADOR_TURNOS) return 0;
@@ -41,8 +46,34 @@ async function antiguedadMinima(empresaId, usuario) {
 }
 
 const OfertasService = {
-  async listar(empresaId, usuario, { fecha, estado, disponibles, page, limit }) {
+  /**
+   * Lista ofertas con paginación.
+   * - Para TRABAJADOR_TURNOS: ruta multi-empresa — obtiene todas las empresas
+   *   activas del trabajador y aplica delay de visibilidad POR empresa via JOIN.
+   * - Para otros roles: ruta clásica de empresa única.
+   *
+   * `empresasActivas` es el array inyectado por `resolverEmpresasActivas`.
+   */
+  async listar(empresaId, usuario, { fecha, estado, disponibles, page, limit }, empresasActivas) {
     const offset = (page - 1) * limit;
+
+    if (usuario.rol === ROLES.TRABAJADOR_TURNOS) {
+      // Multi-empresa: el delay se aplica dentro del modelo via JOIN.
+      const ids = empresasActivas && empresasActivas.length
+        ? empresasActivas
+        : await TrabajadorEmpresaModel.listarEmpresaIds(usuario.sub);
+
+      const { data, total } = await OfertasModel.listarMultiEmpresa(usuario.sub, ids, {
+        fecha,
+        estado,
+        disponibles,
+        limit,
+        offset,
+      });
+      return { data, pagination: { page, limit, total } };
+    }
+
+    // Ruta clásica: empresa única desde el JWT.
     const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
     const { data, total } = await OfertasModel.listar(empresaId, {
       fecha,
@@ -55,8 +86,34 @@ const OfertasService = {
     return { data, pagination: { page, limit, total } };
   },
 
-  /** Detalle de la oferta junto con sus asignaciones. */
-  async obtener(empresaId, id, usuario) {
+  /**
+   * Detalle de la oferta junto con sus asignaciones.
+   * Para TRABAJADOR_TURNOS: la empresa de la oferta debe estar en sus activas.
+   */
+  async obtener(empresaId, id, usuario, empresasActivas) {
+    if (usuario.rol === ROLES.TRABAJADOR_TURNOS) {
+      // Obtener la oferta directamente por id sin filtrar por empresa_id.
+      // Luego validar que la empresa de la oferta es una de las activas del trabajador.
+      const oferta = await OfertasModel.obtenerPorId(empresaId, id, 0);
+      if (!oferta) throw new AppError('Oferta no encontrada', 404);
+
+      const ids = empresasActivas && empresasActivas.length
+        ? empresasActivas
+        : await TrabajadorEmpresaModel.listarEmpresaIds(usuario.sub);
+
+      if (!ids.includes(oferta.empresa_id)) {
+        throw new AppError('Oferta no encontrada', 404);
+      }
+      // Validar delay de visibilidad para esta empresa.
+      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(oferta.empresa_id, usuario.sub);
+      const delay = delayPorRanking(trabajador?.ranking);
+      const ofertaConDelay = await OfertasModel.obtenerPorId(oferta.empresa_id, id, delay);
+      if (!ofertaConDelay) throw new AppError('Oferta aún no disponible para tu nivel de ranking', 403);
+
+      const asignaciones = await AsignacionesModel.listarPorOferta(oferta.empresa_id, id);
+      return { ...ofertaConDelay, asignaciones };
+    }
+
     const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
     const oferta = await OfertasModel.obtenerPorId(empresaId, id, antiguedadMinMin);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
@@ -104,18 +161,45 @@ const OfertasService = {
     });
   },
 
-  /** Postula al trabajador autenticado a la oferta. */
-  async aplicar(empresaId, ofertaId, usuarioId) {
+  /**
+   * Postula al trabajador autenticado a la oferta.
+   * Para TRABAJADOR_TURNOS multi-empresa: la empresa de la oferta se resuelve
+   * desde la oferta misma (el trabajador puede estar en varias empresas).
+   */
+  async aplicar(empresaId, ofertaId, usuarioId, empresasActivas) {
+    // Resolver la empresa real de la oferta (para TRABAJADOR_TURNOS el
+    // empresaId del JWT es null; lo sacamos de la oferta directamente).
+    let empresaOfertaId = empresaId;
+
+    if (!empresaId) {
+      // Buscar la oferta sin filtro de empresa para obtener su empresa_id.
+      const { pool } = require('../../../config/database');
+      const [[ofertaBase]] = await pool.query(
+        'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
+        [ofertaId]
+      );
+      if (!ofertaBase) throw new AppError('Oferta no encontrada', 404);
+      empresaOfertaId = ofertaBase.empresa_id;
+
+      // Validar que la empresa de la oferta es una de las activas del trabajador.
+      const ids = empresasActivas && empresasActivas.length
+        ? empresasActivas
+        : await TrabajadorEmpresaModel.listarEmpresaIds(usuarioId);
+      if (!ids.includes(empresaOfertaId)) {
+        throw new AppError('Oferta no encontrada', 404);
+      }
+    }
+
     // Se resuelve primero el trabajador para aplicar la visibilidad por ranking:
     // un trabajador no puede postularse a una oferta que aún no le es visible.
-    const trabajador = await resolverTrabajador(empresaId, usuarioId);
+    const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);
     const oferta = await OfertasModel.obtenerPorId(
-      empresaId,
+      empresaOfertaId,
       ofertaId,
       delayPorRanking(trabajador.ranking)
     );
     if (!oferta) throw new AppError('Oferta no encontrada o aún no disponible', 404);
-    if (oferta.estado !== 'abierta') {
+    if (oferta.estado !== 'abierta' && oferta.estado !== 'publicada') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
     }
     if (oferta.plazas_cubiertas >= oferta.plazas_disponibles) {
@@ -128,13 +212,25 @@ const OfertasService = {
     );
     if (existente) throw new AppError('Ya estás postulado a esta oferta', 409);
 
-    const id = await AsignacionesModel.crear(empresaId, ofertaId, trabajador.id);
-    return AsignacionesModel.obtenerPorId(empresaId, id);
+    const id = await AsignacionesModel.crear(empresaOfertaId, ofertaId, trabajador.id);
+    return AsignacionesModel.obtenerPorId(empresaOfertaId, id);
   },
 
   /** Retira la postulación del trabajador autenticado (solo si sigue pendiente). */
-  async retirar(empresaId, ofertaId, usuarioId) {
-    const trabajador = await resolverTrabajador(empresaId, usuarioId);
+  async retirar(empresaId, ofertaId, usuarioId, empresasActivas) {
+    // Resolver empresa de la oferta para multi-empresa.
+    let empresaOfertaId = empresaId;
+    if (!empresaId) {
+      const { pool } = require('../../../config/database');
+      const [[ofertaBase]] = await pool.query(
+        'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
+        [ofertaId]
+      );
+      if (!ofertaBase) throw new AppError('No estás postulado a esta oferta', 404);
+      empresaOfertaId = ofertaBase.empresa_id;
+    }
+
+    const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);
     const asignacion = await AsignacionesModel.obtenerPorOfertaYTrabajador(
       ofertaId,
       trabajador.id
@@ -146,7 +242,7 @@ const OfertasService = {
         409
       );
     }
-    await AsignacionesModel.eliminar(empresaId, asignacion.id);
+    await AsignacionesModel.eliminar(empresaOfertaId, asignacion.id);
   },
 };
 

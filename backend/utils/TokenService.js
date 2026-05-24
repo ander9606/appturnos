@@ -16,13 +16,17 @@ const REFRESH_DIAS = Number(process.env.JWT_REFRESH_DIAS) || 7;
 class TokenService {
   /**
    * Firma un access token JWT.
-   * @param {{id:number, empresa_id:number, rol:string, nombre:string}} usuario
+   * @param {{id:number, empresa_id:number|null, rol:string, nombre:string}} usuario
+   *
+   * Para TRABAJADOR_TURNOS el claim `empresa_id` puede ser null: el usuario
+   * puede pertenecer a varias empresas (modelo marketplace). La lista de
+   * empresas activas se resuelve en runtime via `trabajador_empresa`.
    */
   static generarAccessToken(usuario) {
     return jwt.sign(
       {
         sub: usuario.id,
-        empresa_id: usuario.empresa_id,
+        empresa_id: usuario.empresa_id ?? null,
         rol: usuario.rol,
         nombre: usuario.nombre,
       },

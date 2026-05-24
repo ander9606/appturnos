@@ -62,6 +62,15 @@ const LOGIN = {
   LOCKOUT_MINUTOS: 15,
 };
 
+/** Estados del vínculo trabajador ↔ empresa (tabla trabajador_empresa). */
+const ESTADOS_TRABAJADOR_EMPRESA = {
+  SOLICITADO_POR_TRABAJADOR: 'solicitado_por_trabajador',
+  SOLICITADO_POR_EMPRESA: 'solicitado_por_empresa',
+  ACTIVO: 'activo',
+  RECHAZADO: 'rechazado',
+  ARCHIVADO: 'archivado',
+};
+
 module.exports = {
   ROLES,
   ROLES_VALIDOS,
@@ -75,4 +84,5 @@ module.exports = {
   HORA_FIN_NOCTURNO,
   HORAS_MES_NOMINA,
   LOGIN,
+  ESTADOS_TRABAJADOR_EMPRESA,
 };

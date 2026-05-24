@@ -57,4 +57,21 @@ router.post(
   ctrl.activarCuenta
 );
 
+// POST /api/auth/registro — registro libre para trabajador_turnos (marketplace).
+// No requiere cédula ni empresa preexistente.
+router.post(
+  '/registro',
+  [
+    body('nombre').isString().trim().notEmpty().withMessage('Nombre requerido'),
+    body('apellido').optional().isString().trim(),
+    emailSanitizado,
+    body('password')
+      .isString()
+      .isLength({ min: 8 })
+      .withMessage('La contraseña debe tener al menos 8 caracteres'),
+  ],
+  validar,
+  ctrl.registrar
+);
+
 module.exports = router;
