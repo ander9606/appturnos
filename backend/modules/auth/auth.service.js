@@ -162,6 +162,46 @@ const AuthService = {
 
     return { usuario_id: usuarioId, email, rol };
   },
+
+  /**
+   * Registro libre para trabajador_turnos (modelo marketplace).
+   * No requiere cédula ni empresa preexistente: cualquier persona puede
+   * registrarse y luego solicitar vinculación a empresas desde el directorio.
+   */
+  async registrarLibre({ nombre, apellido, email, password }) {
+    const emailEnUso = await AuthModel.buscarUsuarioPorEmail(email);
+    if (emailEnUso) {
+      throw new AppError('El email ya está registrado', 409);
+    }
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const usuarioId = await AuthModel.registrarTrabajadorLibre({
+      nombre,
+      apellido: apellido || null,
+      email,
+      password_hash: passwordHash,
+    });
+
+    // Construir el objeto mínimo necesario para emitir tokens.
+    const usuario = {
+      id: usuarioId,
+      empresa_id: null,
+      rol: ROLES.TRABAJADOR_TURNOS,
+      nombre,
+    };
+    const tokens = await emitirTokens(usuario);
+    return {
+      ...tokens,
+      usuario: {
+        id: usuarioId,
+        empresa_id: null,
+        nombre,
+        apellido: apellido || null,
+        email,
+        rol: ROLES.TRABAJADOR_TURNOS,
+      },
+    };
+  },
 };
 
 module.exports = AuthService;

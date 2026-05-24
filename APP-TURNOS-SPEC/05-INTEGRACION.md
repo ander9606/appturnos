@@ -384,6 +384,22 @@ logiq360 → App Turnos:
 
 **Qué hace logiq360:** Actualiza `costo_mano_obra` en la orden de trabajo.
 
+**Implementación (App Turnos):**
+- Trigger: al ejecutarse `marcarEgreso()` en `asignaciones.service.js`, se invoca
+  `CostoLaborService.verificarYEmitir(empresaId, ofertaId)`
+  (`backend/modules/integracion/costo-labor.service.js`).
+- Condiciones para emitir:
+  1. La oferta tiene `external_ref` (origen logiq360).
+  2. La oferta NO está ya en estado `completada` (idempotencia).
+  3. Todas las asignaciones no-`pendiente` están en estado terminal
+     (`completado`, `cancelado`, `no_presentado`).
+  4. Al menos una asignación está en `completado`.
+- En App Turnos no existe un paso de "aprobación" separado: el egreso
+  con firma digital es la aprobación implícita.
+- Tras emitir, la oferta se marca como `completada` para garantizar la idempotencia.
+- El campo `resumen[].empleado_nombre` se incluye como extensión para
+  debugging; logiq360 puede ignorarlo.
+
 ---
 
 ### `novedad.reportada`

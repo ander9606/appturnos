@@ -48,6 +48,9 @@ app.use('/api/notificaciones', require('./modules/notificaciones/notificaciones.
 app.use('/api/push', require('./modules/notificaciones/push/push.routes'));
 app.use('/api/integracion', require('./modules/integracion/integracion.routes'));
 app.use('/api/reportes', require('./modules/reportes/reportes.routes'));
+// Multi-empresa: directorio de empleadores + vínculos trabajador ↔ empresa.
+app.use('/api/empresas', require('./modules/empresas/empresas.routes'));
+app.use('/api/trabajador-empresa', require('./modules/trabajador-empresa/trabajador-empresa.routes'));
 
 // ─── Manejo de errores ────────────────────────────────────────
 app.use(noEncontrado);

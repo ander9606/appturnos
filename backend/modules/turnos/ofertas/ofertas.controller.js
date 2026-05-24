@@ -7,18 +7,22 @@ async function listar(req, res) {
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const disponibles = req.query.disponibles === 'true' || req.query.disponibles === '1';
 
-  const { data, pagination } = await OfertasService.listar(req.empresa_id, req.usuario, {
-    fecha: req.query.fecha || undefined,
-    estado: req.query.estado || undefined,
-    disponibles,
-    page,
-    limit,
-  });
+  const { data, pagination } = await OfertasService.listar(
+    req.empresa_id,
+    req.usuario,
+    { fecha: req.query.fecha || undefined, estado: req.query.estado || undefined, disponibles, page, limit },
+    req.empresasActivas   // ← inyectado por resolverEmpresasActivas para TRABAJADOR_TURNOS
+  );
   res.json({ success: true, data, pagination });
 }
 
 async function obtener(req, res) {
-  const data = await OfertasService.obtener(req.empresa_id, Number(req.params.id), req.usuario);
+  const data = await OfertasService.obtener(
+    req.empresa_id,
+    Number(req.params.id),
+    req.usuario,
+    req.empresasActivas
+  );
   res.json({ success: true, data, message: 'Detalle de la oferta' });
 }
 
@@ -38,12 +42,22 @@ async function cancelar(req, res) {
 }
 
 async function aplicar(req, res) {
-  const data = await OfertasService.aplicar(req.empresa_id, Number(req.params.id), req.usuario.sub);
+  const data = await OfertasService.aplicar(
+    req.empresa_id,
+    Number(req.params.id),
+    req.usuario.sub,
+    req.empresasActivas
+  );
   res.status(201).json({ success: true, data, message: 'Postulación registrada' });
 }
 
 async function retirar(req, res) {
-  await OfertasService.retirar(req.empresa_id, Number(req.params.id), req.usuario.sub);
+  await OfertasService.retirar(
+    req.empresa_id,
+    Number(req.params.id),
+    req.usuario.sub,
+    req.empresasActivas
+  );
   res.json({ success: true, data: null, message: 'Postulación retirada' });
 }
 

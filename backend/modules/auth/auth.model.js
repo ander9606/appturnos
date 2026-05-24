@@ -155,6 +155,22 @@ const AuthModel = {
       conn.release();
     }
   },
+
+  // ─── Registro libre (trabajador_turnos marketplace) ──────────
+
+  /**
+   * Crea un usuario TRABAJADOR_TURNOS sin empresa_id (modelo marketplace).
+   * Sin transacción: no hay tabla secundaria que actualizar.
+   * @returns {Promise<number>} id del usuario creado.
+   */
+  async registrarTrabajadorLibre({ nombre, apellido, email, password_hash }) {
+    const [res] = await pool.query(
+      `INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol)
+       VALUES (NULL, ?, ?, ?, ?, 'trabajador_turnos')`,
+      [nombre, apellido || null, email, password_hash]
+    );
+    return res.insertId;
+  },
 };
 
 module.exports = AuthModel;

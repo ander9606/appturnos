@@ -163,6 +163,34 @@ Body:
 }
 ```
 
+## Módulo Empresas (directorio público)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `GET` | `/api/empresas/directorio` | `trabajador_turnos` | Lista empresas con `acepta_postulaciones=true`. Query params: `busqueda`, `ciudad`, `page`, `limit`. |
+| `GET` | `/api/empresas/:id` | `trabajador_turnos` | Detalle público de una empresa. |
+
+## Módulo Trabajador-Empresa (doble opt-in)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `GET` | `/api/trabajador-empresa/mis-empresas` | `trabajador_turnos` | Lista los vínculos del trabajador agrupados: `activas`, `pendientes`, `invitaciones`, `archivadas`. |
+| `GET` | `/api/trabajador-empresa/solicitudes` | `jefe_turnos`, `admin_empresa` | Lista solicitudes pendientes de la empresa. Query param `estado` opcional. |
+| `POST` | `/api/trabajador-empresa/solicitar` | `trabajador_turnos` | Body `{ empresa_id }`. Crea vínculo en estado `solicitado_por_trabajador`. |
+| `POST` | `/api/trabajador-empresa/invitar` | `jefe_turnos`, `admin_empresa` | Body `{ cedula }`. Crea invitación en estado `solicitado_por_empresa`. |
+| `POST` | `/api/trabajador-empresa/:id/aprobar` | `jefe_turnos`, `admin_empresa` | Aprueba solicitud del trabajador → pasa a `activo`. |
+| `POST` | `/api/trabajador-empresa/:id/aceptar` | `trabajador_turnos` | Acepta invitación de la empresa → pasa a `activo`. |
+| `POST` | `/api/trabajador-empresa/:id/rechazar` | Ambos | Body opcional `{ motivo }`. |
+| `POST` | `/api/trabajador-empresa/:id/archivar` | Ambos | Solo desde estado `activo`. |
+
+## Auth — Registro libre
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `POST` | `/api/auth/registro` | Público | Registro libre para `trabajador_turnos`. Body: `{ nombre, apellido?, email, password }`. Devuelve tokens + perfil. |
+
+---
+
 ## Webhook payload de App Turnos → logiq360
 
 ```json

@@ -4,6 +4,7 @@ const AsignacionesModel = require('./asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const IntegracionService = require('../../integracion/integracion.service');
+const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
 
 /** Resuelve el trabajador vinculado al usuario autenticado. */
@@ -98,6 +99,9 @@ const AsignacionesService = {
       oferta_id: asignacion.oferta_id,
       trabajador_id: asignacion.trabajador_id,
     });
+    // Si este egreso completó la oferta entera, emite costo_labor.calculado
+    // a logiq360 y marca la oferta como completada (best-effort).
+    await CostoLaborService.verificarYEmitir(empresaId, asignacion.oferta_id);
     return AsignacionesModel.obtenerPorId(empresaId, id);
   },
 
