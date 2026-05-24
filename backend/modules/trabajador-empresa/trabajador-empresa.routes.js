@@ -7,6 +7,7 @@ const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./trabajador-empresa.controller');
+const cargosCtrl = require('../cargos/cargos.controller');
 
 const router = express.Router();
 
@@ -90,6 +91,45 @@ router.get(
   [query('estado').optional().isString()],
   validar,
   ctrl.solicitudes
+);
+
+// ---- Cargos certificados por la empresa a este trabajador ----
+// Ref: APP-TURNOS-SPEC/06-AUTH.md y migración 012_cargos.
+
+// GET /api/trabajador-empresa/:id/cargos — cargos del trabajador en mi empresa
+router.get(
+  '/:id/cargos',
+  verificarToken,
+  verificarRol(SOLO_JEFE),
+  [param('id').isInt({ min: 1 }).toInt()],
+  validar,
+  cargosCtrl.listarCargosDeVinculo
+);
+
+// POST /api/trabajador-empresa/:id/cargos — asignar un cargo al trabajador
+router.post(
+  '/:id/cargos',
+  verificarToken,
+  verificarRol(SOLO_JEFE),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('cargo_id').isInt({ min: 1 }).withMessage('cargo_id requerido'),
+  ],
+  validar,
+  cargosCtrl.asignarCargoAVinculo
+);
+
+// DELETE /api/trabajador-empresa/:id/cargos/:cargoId — quitar un cargo
+router.delete(
+  '/:id/cargos/:cargoId',
+  verificarToken,
+  verificarRol(SOLO_JEFE),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    param('cargoId').isInt({ min: 1 }).toInt(),
+  ],
+  validar,
+  cargosCtrl.desasignarCargoDeVinculo
 );
 
 module.exports = router;

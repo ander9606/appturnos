@@ -199,6 +199,27 @@ Ver `06-AUTH.md §OAuth` para el diseño completo y las decisiones de auto-vincu
 | `GET` | `/api/auth/oauth/vinculos` | Autenticado | Lista los providers vinculados a la cuenta. |
 | `DELETE` | `/api/auth/oauth/:provider` | Autenticado | Desvincular un provider de la cuenta. |
 
+## Cargos — Catálogo y asignación a trabajadores
+
+Ver `02-BASE-DATOS.md §Migración 012` para el modelo y reglas. Catálogo híbrido: cargos del sistema (auxiliar, jefe_montaje, conductor) + cargos custom por empresa.
+
+### Catálogo
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `GET` | `/api/cargos` | Autenticado | Lista catálogo visible (sistema + custom de mi empresa, `activo=1`). |
+| `POST` | `/api/cargos` | jefe_turnos / admin_empresa | Crear cargo custom. Body: `{ nombre, codigo?, descripcion? }`. Si no se da `codigo`, se autogenera del nombre. |
+| `PATCH` | `/api/cargos/:id` | jefe_turnos / admin_empresa | Editar `nombre`, `descripcion` o `activo`. Solo cargos de mi empresa. |
+| `DELETE` | `/api/cargos/:id` | jefe_turnos / admin_empresa | Hard delete si nadie lo usa; soft delete (`activo=0`) si está asignado. Respuesta indica cuál sucedió. |
+
+### Asignación a trabajadores (cuelga del vínculo)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `GET` | `/api/trabajador-empresa/:id/cargos` | jefe_turnos / admin_empresa | Cargos certificados a ese trabajador en mi empresa. |
+| `POST` | `/api/trabajador-empresa/:id/cargos` | jefe_turnos / admin_empresa | Asignar un cargo. Body: `{ cargo_id }`. El vínculo debe estar `activo`. |
+| `DELETE` | `/api/trabajador-empresa/:id/cargos/:cargoId` | jefe_turnos / admin_empresa | Quitar un cargo. |
+
 ---
 
 ## Webhook payload de App Turnos → logiq360

@@ -286,3 +286,68 @@ descripcion          TEXT NULL
 Por cada usuario `trabajador_turnos` existente con `empresa_id` asignado:
 1. Se inserta una fila en `trabajador_empresa` con estado `activo` y `trabajador_id` vinculado si corresponde.
 2. Se pone `usuarios.empresa_id = NULL`.
+
+---
+
+## Migración 012 — Catálogo de cargos y cargos por trabajador
+
+Soporta distintos perfiles operativos de trabajador (auxiliar, jefe de montaje, conductor, …) con tarifas diferenciadas a futuro. Una persona puede tener varios cargos a la vez, y cada cargo es **reconocido por una empresa específica**: ser jefe de montaje en empresa A no te hace jefe en empresa B.
+
+### Nueva tabla `cargos` (catálogo híbrido)
+
+```sql
+CREATE TABLE cargos (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  empresa_id  INT NULL,                -- NULL = sistema, !NULL = custom de esa empresa
+  codigo      VARCHAR(50) NOT NULL,    -- 'auxiliar', 'jefe_montaje', 'conductor'
+  nombre      VARCHAR(100) NOT NULL,
+  descripcion VARCHAR(255) NULL,
+  activo      TINYINT NOT NULL DEFAULT 1,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_empresa_codigo (empresa_id, codigo),
+  FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
+);
+```
+
+**Seed inicial del sistema:**
+
+| codigo | nombre | descripcion |
+|--------|--------|-------------|
+| `auxiliar` | Auxiliar | Personal de apoyo general en montajes y operaciones |
+| `jefe_montaje` | Jefe de montaje | Coordina y supervisa el equipo de montaje en sitio |
+| `conductor` | Conductor | Operador de vehículos para transporte de personal o equipos |
+
+**Nota sobre UNIQUE**: MySQL trata `NULL` como distinto en `UNIQUE`, por lo que la unicidad de cargos del sistema (`empresa_id IS NULL`, `codigo`) se garantiza por control de migraciones, no por la DB. Los endpoints no permiten crear cargos del sistema; solo migraciones revisadas.
+
+### Nueva tabla `trabajador_cargos`
+
+```sql
+CREATE TABLE trabajador_cargos (
+  id                    INT AUTO_INCREMENT PRIMARY KEY,
+  trabajador_empresa_id INT NOT NULL,    -- FK al vínculo, no al usuario
+  cargo_id              INT NOT NULL,
+  asignado_por          INT NOT NULL,    -- usuario_id del jefe/admin que asignó
+  asignado_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_te_cargo (trabajador_empresa_id, cargo_id),
+  FOREIGN KEY (trabajador_empresa_id) REFERENCES trabajador_empresa(id) ON DELETE CASCADE,
+  FOREIGN KEY (cargo_id)              REFERENCES cargos(id),
+  FOREIGN KEY (asignado_por)          REFERENCES usuarios(id)
+);
+```
+
+Cuelga de `trabajador_empresa.id`, no de `usuarios.id`. Eso garantiza que un mismo trabajador puede tener cargos distintos en empresas distintas, y que al desvincularse de una empresa se borran sus cargos en esa empresa (cascade) sin afectar los demás.
+
+### Reglas de negocio
+
+| Acción | Quién | Detalle |
+|--------|-------|---------|
+| Ver catálogo | Cualquier usuario autenticado | Devuelve cargos del sistema + custom de su empresa, todos `activo=1`. |
+| Crear cargo custom | `jefe_turnos` / `admin_empresa` | Código se autogenera del nombre si no se provee; choca con cargos del sistema. |
+| Editar cargo custom | `jefe_turnos` / `admin_empresa` | Solo cargos de su propia empresa. Cargos del sistema son inmutables. |
+| Eliminar cargo custom | `jefe_turnos` / `admin_empresa` | Hard delete si nadie lo usa; soft delete (`activo=0`) si está asignado. |
+| Asignar cargo a trabajador | `jefe_turnos` / `admin_empresa` | El vínculo debe estar `activo`. El cargo debe ser del sistema o de su empresa. |
+| Auto-declaración por el trabajador | **No permitida** | Solo la empresa certifica los cargos. |
+
+### Implicación para ofertas y postulaciones (PR-B, próxima migración 013)
+
+En la siguiente migración, `ofertas_turno` deja de tener `tarifa_dia` y `plazas_*` directos; esos campos pasan a una tabla `oferta_puestos` con un puesto por cargo (cargo + tarifa + plazas). Un trabajador solo puede postular a un puesto cuyo `cargo_id` esté en sus `trabajador_cargos` para esa empresa.
