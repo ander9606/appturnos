@@ -138,3 +138,73 @@ Ranking ≥ 2.5 → delay 30 min
 Sin ranking    → delay 15 min  (trabajador nuevo en esa empresa)
 Ranking < 2.5  → delay 60 min
 ```
+
+---
+
+## OAuth — Login con proveedores externos
+
+Permite iniciar sesión / registrarse con un proveedor OAuth. **Google es el único proveedor del MVP**; la arquitectura es modular (`backend/modules/auth/oauth/providers/`), agregar Apple o Facebook implica solo un archivo nuevo + un entry en el registry.
+
+### Endpoint
+
+```
+POST /api/auth/oauth/:provider
+Body: { token: "<id_token o credential del provider>" }
+```
+
+El cliente NO envía email/password — envía el `id_token` que recibió del proveedor (`expo-auth-session` en mobile, `@react-oauth/google` en web). El backend lo verifica contra las claves públicas del provider.
+
+### Decisiones de diseño
+
+| Decisión | Valor |
+|----------|-------|
+| Proveedores soportados | `google` (MVP). Apple/Facebook se enchufan agregando un provider sin tocar service/controller. |
+| ¿Quién puede registrarse vía OAuth? | Solo `TRABAJADOR_TURNOS` (marketplace). Jefes/admins deben venir por invitación de empresa. |
+| ¿Quién puede hacer login con OAuth? | **Cualquier rol**, siempre que la cuenta ya exista y se logre vincular. |
+| Auto-vinculación por email | Sí, **solo si el provider verificó el email** (`email_verified=true`). Esto previene takeover (alguien que crea cuenta Google con un email ajeno no puede capturar la cuenta de App Turnos asociada). |
+| Password de OAuth-only | Random bcrypt hash. Cumple el `NOT NULL` del schema y garantiza que el login por password nunca funcione hasta que el usuario set una password real (feature futura). |
+
+### Flujo del backend (`OAuthService.loginConProvider`)
+
+```
+1. Verifica id_token contra el provider → {provider_user_id, email, email_verified, nombre, …}
+2. ¿Existe vínculo (provider, provider_user_id) en `usuarios_oauth`?
+   └─ Sí → emit tokens del usuario vinculado.   tipo='login'
+3. ¿Existe usuario con ese email?
+   ├─ Sí + email_verified → crear link, emit tokens.   tipo='vinculacion'
+   └─ Sí + NO email_verified → 403 (anti-takeover)
+4. Usuario nuevo + email_verified → registro libre como TRABAJADOR_TURNOS,
+   crear link, emit tokens.   tipo='registro'
+```
+
+### Tabla `usuarios_oauth` (migración 011)
+
+```sql
+CREATE TABLE usuarios_oauth (
+  id                  INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id          INT NOT NULL,
+  provider            VARCHAR(32) NOT NULL,        -- 'google', 'apple', …
+  provider_user_id    VARCHAR(255) NOT NULL,       -- sub del id_token
+  email               VARCHAR(200) NULL,
+  email_verified      TINYINT NOT NULL DEFAULT 0,
+  avatar_url          VARCHAR(500) NULL,
+  created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ultima_sesion       TIMESTAMP NULL,
+  UNIQUE KEY uk_provider_user (provider, provider_user_id),
+  UNIQUE KEY uk_usuario_provider (usuario_id, provider),
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+```
+
+### Endpoints adicionales
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `GET` | `/api/auth/oauth/vinculos` | Autenticado | Lista los providers vinculados a mi cuenta |
+| `DELETE` | `/api/auth/oauth/:provider` | Autenticado | Desvincular un provider de mi cuenta |
+
+### Configuración
+
+Variable de entorno: `GOOGLE_CLIENT_ID` (uno o varios separados por coma para soportar iOS + Android + Web).
+
+Sin esta variable, los endpoints OAuth devuelven 500 al recibir requests. El resto del backend funciona normal.
