@@ -36,4 +36,31 @@ async function actualizarConfig(req, res) {
   res.json({ success: true, data, message: 'Configuración actualizada' });
 }
 
-module.exports = { recibirEventos, estado, obtenerConfig, actualizarConfig };
+/**
+ * GET /api/integracion/public/estado/:external_ref
+ * Permite que logiq360 consulte el estado de una oferta y sus contratos a partir
+ * del external_ref que él mismo generó (ej: "logiq360:orden:47").
+ * Auth: X-API-Key header que coincide con `incoming_secret` de integracion_config.
+ */
+async function publicEstado(req, res) {
+  const { external_ref } = req.params;
+  const data = await IntegracionService.publicEstado(req.empresa_id, external_ref);
+  res.json({ success: true, data });
+}
+
+/**
+ * GET /api/integracion/public/en-sitio/:external_ref
+ * Retorna qué trabajadores están actualmente en campo (ingreso marcado, sin egreso)
+ * para la oferta vinculada al external_ref dado.
+ * Auth: X-API-Key header (mismo mecanismo que publicEstado).
+ */
+async function publicEnSitio(req, res) {
+  const { external_ref } = req.params;
+  const data = await IntegracionService.publicEnSitio(req.empresa_id, external_ref);
+  res.json({ success: true, data });
+}
+
+module.exports = {
+  recibirEventos, estado, obtenerConfig, actualizarConfig,
+  publicEstado, publicEnSitio,
+};

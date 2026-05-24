@@ -6,6 +6,7 @@ const { body } = require('express-validator');
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { verificarFirmaLogiq360 } = require('../../middleware/verificarFirmaLogiq360');
+const { verificarApiKeyLogiq360 } = require('../../middleware/verificarApiKeyLogiq360');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./integracion.controller');
 
@@ -50,6 +51,21 @@ router.put(
   ],
   validar,
   ctrl.actualizarConfig
+);
+
+// ── Endpoints pull que logiq360 consulta con X-API-Key ───────────────────────
+// GET /api/integracion/public/estado/:external_ref — estado de oferta y contratos
+router.get(
+  '/public/estado/:external_ref',
+  verificarApiKeyLogiq360,
+  ctrl.publicEstado
+);
+
+// GET /api/integracion/public/en-sitio/:external_ref — quién está en campo ahora
+router.get(
+  '/public/en-sitio/:external_ref',
+  verificarApiKeyLogiq360,
+  ctrl.publicEnSitio
 );
 
 module.exports = router;
