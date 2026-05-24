@@ -48,6 +48,26 @@ const AsignacionesModel = {
     return filas;
   },
 
+  /**
+   * Asignaciones de una oferta con el external_ref del trabajador.
+   * Usado por costo-labor.service para construir el payload del evento
+   * `costo_labor.calculado` que se emite a logiq360.
+   */
+  async listarConTrabajadorRef(empresaId, ofertaId) {
+    const [filas] = await pool.query(
+      `SELECT a.id, a.estado, a.horas_trabajadas, a.pago_total,
+              a.hora_ingreso_real, a.hora_egreso_real,
+              t.external_ref AS trabajador_external_ref,
+              t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido
+       FROM asignaciones_turno a
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.empresa_id = ? AND a.oferta_id = ?
+       ORDER BY a.created_at`,
+      [empresaId, ofertaId]
+    );
+    return filas;
+  },
+
   async eliminar(empresaId, id) {
     const [res] = await pool.query(
       'DELETE FROM asignaciones_turno WHERE id = ? AND empresa_id = ?',
