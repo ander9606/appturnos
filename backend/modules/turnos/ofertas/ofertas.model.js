@@ -4,12 +4,38 @@ const { pool } = require('../../../config/database');
 
 /**
  * Acceso a datos de ofertas de turno (tabla ofertas_turno).
- * Todas las consultas se aíslan por empresa_id.
+ * Las plazas y tarifas viven en `oferta_puestos` desde la migración 013;
+ * `ofertas_turno` solo lleva los datos generales del evento.
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-  lugar, latitud, longitud, plazas_disponibles, plazas_cubiertas, tarifa_dia, estado,
+  lugar, latitud, longitud, estado,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
+
+// Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
+// al listar/obtener. mysql2 devuelve esto como string si es resultado de
+// expresión (no columna JSON), así que el modelo se encarga de parsear.
+const PUESTOS_JSON = `(
+  SELECT JSON_ARRAYAGG(JSON_OBJECT(
+    'id', p.id,
+    'cargo_id', p.cargo_id,
+    'cargo_codigo', c.codigo,
+    'cargo_nombre', c.nombre,
+    'plazas', p.plazas,
+    'plazas_cubiertas', p.plazas_cubiertas,
+    'tarifa_dia', p.tarifa_dia,
+    'notas', p.notas
+  ))
+  FROM oferta_puestos p
+  INNER JOIN cargos c ON c.id = p.cargo_id
+  WHERE p.oferta_id = ofertas_turno.id
+) AS puestos_json`;
+
+// Variantes alias-prefijadas para JOINs (cuando ofertas_turno se alias como `o`).
+const PUESTOS_JSON_ALIAS = PUESTOS_JSON.replace(
+  'p.oferta_id = ofertas_turno.id',
+  'p.oferta_id = o.id'
+);
 
 // Allowlist de columnas modificables vía PUT (lista fija de código).
 const CAMPOS_EDITABLES = [
@@ -21,27 +47,31 @@ const CAMPOS_EDITABLES = [
   'lugar',
   'latitud',
   'longitud',
-  'plazas_disponibles',
-  'tarifa_dia',
 ];
+
+/** Convierte la columna `puestos_json` (string) en array de objetos. */
+function parsearPuestos(fila) {
+  if (!fila) return fila;
+  const { puestos_json, ...resto } = fila;
+  let puestos = [];
+  if (puestos_json) {
+    puestos = typeof puestos_json === 'string' ? JSON.parse(puestos_json) : puestos_json;
+  }
+  return { ...resto, puestos };
+}
 
 const OfertasModel = {
   async listar(empresaId, { fecha, estado, disponibles, antiguedadMinMin, limit, offset }) {
     const where = ['empresa_id = ?'];
     const params = [empresaId];
-    if (fecha) {
-      where.push('fecha = ?');
-      params.push(fecha);
-    }
-    if (estado) {
-      where.push('estado = ?');
-      params.push(estado);
-    }
+    if (fecha) { where.push('fecha = ?'); params.push(fecha); }
+    if (estado) { where.push('estado = ?'); params.push(estado); }
     if (disponibles) {
-      where.push("estado = 'abierta' AND plazas_cubiertas < plazas_disponibles");
+      where.push(`estado = 'abierta' AND EXISTS (
+        SELECT 1 FROM oferta_puestos p
+        WHERE p.oferta_id = ofertas_turno.id AND p.plazas_cubiertas < p.plazas
+      )`);
     }
-    // Visibilidad escalonada por ranking: la oferta solo es visible si ya
-    // pasaron `antiguedadMinMin` minutos desde su creación.
     if (antiguedadMinMin && antiguedadMinMin > 0) {
       where.push('TIMESTAMPDIFF(MINUTE, created_at, NOW()) >= ?');
       params.push(antiguedadMinMin);
@@ -49,7 +79,8 @@ const OfertasModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS} FROM ofertas_turno
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}
+       FROM ofertas_turno
        WHERE ${whereSql}
        ORDER BY fecha DESC, hora_inicio
        LIMIT ? OFFSET ?`,
@@ -59,17 +90,15 @@ const OfertasModel = {
       `SELECT COUNT(*) AS total FROM ofertas_turno WHERE ${whereSql}`,
       params
     );
-    return { data: filas, total };
+    return { data: filas.map(parsearPuestos), total };
   },
 
   /**
    * Lista ofertas para un TRABAJADOR_TURNOS multi-empresa.
-   * Aplica el delay de visibilidad POR empresa según el ranking del
-   * trabajador en cada una (JOIN con trabajador_empresa + trabajadores).
-   *
-   * @param {number}   usuarioId  — id del usuario autenticado
-   * @param {number[]} empresaIds — empresas activas del trabajador
-   * @param {object}   filtros    — fecha, estado, disponibles, limit, offset
+   * Aplica:
+   *   - Delay de visibilidad por ranking (POR empresa).
+   *   - Filtro por cargos: solo ofertas con al menos un puesto cuyo cargo
+   *     el trabajador tiene certificado en esa empresa.
    */
   async listarMultiEmpresa(usuarioId, empresaIds, { fecha, estado, disponibles, limit, offset }) {
     if (!empresaIds || empresaIds.length === 0) {
@@ -79,31 +108,40 @@ const OfertasModel = {
     const where = ['o.empresa_id IN (?)'];
     const params = [empresaIds];
 
-    if (fecha) {
-      where.push('o.fecha = ?');
-      params.push(fecha);
-    }
-    if (estado) {
-      where.push('o.estado = ?');
-      params.push(estado);
-    }
+    if (fecha) { where.push('o.fecha = ?'); params.push(fecha); }
+    if (estado) { where.push('o.estado = ?'); params.push(estado); }
     if (disponibles) {
-      where.push("o.estado = 'abierta' AND o.plazas_cubiertas < o.plazas_disponibles");
+      where.push(`o.estado = 'abierta' AND EXISTS (
+        SELECT 1 FROM oferta_puestos p
+        WHERE p.oferta_id = o.id AND p.plazas_cubiertas < p.plazas
+      )`);
     }
 
-    // Visibilidad escalonada por ranking POR empresa:
-    // el delay se calcula comparando el ranking del trabajador en la empresa
-    // de cada oferta. Si no hay ficha de trabajador, se aplica el delay de 15m.
+    // Visibilidad escalonada por ranking POR empresa.
     where.push(`
       TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) >=
         CASE
-          WHEN t.ranking IS NULL    THEN 15
-          WHEN t.ranking >= 4.5     THEN 0
-          WHEN t.ranking >= 3.5     THEN 15
-          WHEN t.ranking >= 2.5     THEN 30
-          ELSE                           60
+          WHEN t.ranking IS NULL THEN 15
+          WHEN t.ranking >= 4.5  THEN 0
+          WHEN t.ranking >= 3.5  THEN 15
+          WHEN t.ranking >= 2.5  THEN 30
+          ELSE                        60
         END
     `);
+
+    // Filtro por cargos certificados: existe al menos un puesto en la oferta
+    // cuyo cargo está en `trabajador_cargos` del vínculo activo del trabajador
+    // con la empresa de la oferta.
+    where.push(`EXISTS (
+      SELECT 1
+      FROM oferta_puestos p
+      JOIN trabajador_empresa te
+        ON te.usuario_id = ? AND te.empresa_id = o.empresa_id AND te.estado = 'activo'
+      JOIN trabajador_cargos tc
+        ON tc.trabajador_empresa_id = te.id AND tc.cargo_id = p.cargo_id
+      WHERE p.oferta_id = o.id
+    )`);
+    params.push(usuarioId);  // (segundo bind del usuario_id en este predicate)
 
     const whereSql = where.join(' AND ');
     const joinSql = `
@@ -113,12 +151,10 @@ const OfertasModel = {
        AND te.estado = 'activo'
       LEFT JOIN trabajadores t ON t.id = te.trabajador_id AND t.activo = 1
     `;
-
-    // Prefija cada columna con alias 'o.' para evitar ambigüedad con el JOIN.
     const colsAliased = COLUMNAS.split(',').map((c) => `o.${c.trim()}`).join(', ');
 
     const [filas] = await pool.query(
-      `SELECT ${colsAliased}
+      `SELECT ${colsAliased}, ${PUESTOS_JSON_ALIAS}
        FROM ofertas_turno o
        ${joinSql}
        WHERE ${whereSql}
@@ -135,7 +171,7 @@ const OfertasModel = {
       [usuarioId, ...params]
     );
 
-    return { data: filas, total };
+    return { data: filas.map(parsearPuestos), total };
   },
 
   async obtenerPorId(empresaId, id, antiguedadMinMin = 0) {
@@ -146,19 +182,20 @@ const OfertasModel = {
       params.push(antiguedadMinMin);
     }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS} FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}
+       FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
       params
     );
-    return filas[0] || null;
+    return parsearPuestos(filas[0]) || null;
   },
 
-  /** Oferta por referencia externa (sincronización con órdenes de logiq360). */
   async obtenerPorExternalRef(empresaId, externalRef) {
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS} FROM ofertas_turno WHERE external_ref = ? AND empresa_id = ? LIMIT 1`,
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}
+       FROM ofertas_turno WHERE external_ref = ? AND empresa_id = ? LIMIT 1`,
       [externalRef, empresaId]
     );
-    return filas[0] || null;
+    return parsearPuestos(filas[0]) || null;
   },
 
   async cambiarEstado(empresaId, id, estado) {
@@ -169,37 +206,65 @@ const OfertasModel = {
     return res.affectedRows;
   },
 
+  /**
+   * Crea oferta + puestos en una transacción.
+   * @param datos.puestos — array `[{ cargo_id, plazas, tarifa_dia, notas? }]`.
+   *                       Si viene vacío, la oferta queda sin puestos (el jefe
+   *                       los agrega después via /puestos). Esto se permite
+   *                       para que ordenes externas (logiq360) puedan llegar
+   *                       en estado 'borrador' sin tarifas decididas.
+   */
   async crear(empresaId, datos, creadoPor) {
-    const [res] = await pool.query(
-      `INSERT INTO ofertas_turno
-         (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-          lugar, latitud, longitud, plazas_disponibles, tarifa_dia,
-          estado, external_ref, alquiler_ref, externo_notas, creado_por)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        empresaId,
-        datos.titulo,
-        datos.descripcion ?? null,
-        datos.fecha,
-        datos.hora_inicio,
-        datos.hora_fin_estimada ?? null,
-        datos.lugar ?? null,
-        datos.latitud ?? null,
-        datos.longitud ?? null,
-        datos.plazas_disponibles ?? 1,
-        datos.tarifa_dia,
-        // ofertas desde logiq360 arrancan en 'borrador'; las manuales en 'abierta' (default)
-        datos.estado ?? 'abierta',
-        datos.external_ref ?? null,
-        datos.alquiler_ref ?? null,
-        datos.externo_notas ?? null,
-        creadoPor,
-      ]
-    );
-    return res.insertId;
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [res] = await conn.query(
+        `INSERT INTO ofertas_turno
+           (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
+            lugar, latitud, longitud,
+            estado, external_ref, alquiler_ref, externo_notas, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          empresaId,
+          datos.titulo,
+          datos.descripcion ?? null,
+          datos.fecha,
+          datos.hora_inicio,
+          datos.hora_fin_estimada ?? null,
+          datos.lugar ?? null,
+          datos.latitud ?? null,
+          datos.longitud ?? null,
+          datos.estado ?? 'abierta',
+          datos.external_ref ?? null,
+          datos.alquiler_ref ?? null,
+          datos.externo_notas ?? null,
+          creadoPor,
+        ]
+      );
+      const ofertaId = res.insertId;
+
+      // Insertar puestos en la misma transacción.
+      if (Array.isArray(datos.puestos)) {
+        for (const p of datos.puestos) {
+          await conn.query(
+            `INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas)
+             VALUES (?, ?, ?, ?, ?)`,
+            [ofertaId, p.cargo_id, p.plazas ?? 1, p.tarifa_dia, p.notas ?? null]
+          );
+        }
+      }
+
+      await conn.commit();
+      return ofertaId;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 
-  /** Actualiza solo los campos presentes (PUT parcial). */
   async actualizar(empresaId, id, datos) {
     const sets = [];
     const params = [];
@@ -219,10 +284,6 @@ const OfertasModel = {
     return res.affectedRows;
   },
 
-  /**
-   * Cancela la oferta y, en la misma transacción, cancela sus asignaciones
-   * que aún no estén completadas ni canceladas.
-   */
   async cancelar(empresaId, id) {
     const conn = await pool.getConnection();
     try {

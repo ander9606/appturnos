@@ -50,11 +50,15 @@ Autenticación: `Authorization: Bearer <jwt>` en todos los endpoints excepto `/a
 |--------|------|-------|-------------|
 | GET | `/api/turnos/ofertas` | todos | Listar ofertas (filtros: fecha, estado, disponibles=true) |
 | GET | `/api/turnos/ofertas/:id` | todos | Detalle con asignaciones |
-| POST | `/api/turnos/ofertas` | jefe_turnos, admin | Crear oferta |
-| PUT | `/api/turnos/ofertas/:id` | jefe_turnos | Actualizar (mientras abierta) |
+| POST | `/api/turnos/ofertas` | jefe_turnos, admin | Crear oferta. Body incluye `puestos: [{cargo_id, plazas, tarifa_dia, notas?}]` (ver §Migración 013) |
+| PUT | `/api/turnos/ofertas/:id` | jefe_turnos | Actualizar campos generales (titulo, fecha, lugar…). Para editar puestos, ver endpoints `/puestos` |
 | DELETE | `/api/turnos/ofertas/:id` | jefe_turnos | Cancelar oferta |
-| POST | `/api/turnos/ofertas/:id/aplicar` | trabajador_turnos | Postularse a oferta |
-| DELETE | `/api/turnos/ofertas/:id/aplicar` | trabajador_turnos | Retirar postulación |
+| GET | `/api/turnos/ofertas/:id/puestos` | jefe_turnos, admin | Listar puestos de la oferta |
+| POST | `/api/turnos/ofertas/:id/puestos` | jefe_turnos, admin | Agregar puesto a oferta existente |
+| PATCH | `/api/turnos/ofertas/:id/puestos/:puestoId` | jefe_turnos, admin | Editar `plazas`, `tarifa_dia` o `notas` de un puesto |
+| DELETE | `/api/turnos/ofertas/:id/puestos/:puestoId` | jefe_turnos, admin | Eliminar puesto (solo si no tiene asignaciones) |
+| POST | `/api/turnos/ofertas/:id/aplicar` | trabajador_turnos | Postularse a un puesto. Body: `{ puesto_id }`. 403 si el trabajador no tiene el cargo certificado por la empresa |
+| DELETE | `/api/turnos/ofertas/:id/aplicar` | trabajador_turnos | Retirar postulación de un puesto. Body: `{ puesto_id }` |
 | POST | `/api/turnos/asignaciones/:id/confirmar` | jefe_turnos | Confirmar trabajador |
 | POST | `/api/turnos/asignaciones/:id/ingreso` | trabajador_turnos | Marcar llegada (GPS) |
 | POST | `/api/turnos/asignaciones/:id/egreso` | trabajador_turnos | Marcar salida + firma |
