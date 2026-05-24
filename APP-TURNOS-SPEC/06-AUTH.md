@@ -92,3 +92,49 @@ POST /api/auth/activar-cuenta
 }
 ```
 Crea `usuario` vinculado al `trabajador` con rol `trabajador_turnos` o `trabajador_nomina` según `trabajador.tipo`.
+
+---
+
+## Registro libre (trabajador_turnos marketplace)
+
+`POST /api/auth/registro`
+
+No requiere cédula ni empresa preexistente. Cualquier persona puede crear una cuenta con:
+- `nombre` (obligatorio)
+- `apellido` (opcional)
+- `email` (obligatorio, único)
+- `password` (mínimo 8 caracteres)
+
+El usuario se crea con `rol = 'trabajador_turnos'` y `empresa_id = NULL`. Devuelve par de tokens + perfil.
+
+Flujo post-registro:
+1. El trabajador ve la pantalla "Aún no estás en ninguna empresa" con CTA "Explorar empresas".
+2. Solicita vinculación desde `GET /api/empresas/directorio` → `POST /api/trabajador-empresa/solicitar`.
+3. Al aprobarse, comienza a recibir ofertas de esa empresa.
+
+## JWT para trabajador_turnos multi-empresa
+
+El claim `empresa_id` en el JWT es `null` para `trabajador_turnos`:
+
+```json
+{
+  "sub": 42,
+  "empresa_id": null,
+  "rol": "trabajador_turnos",
+  "nombre": "Carlos"
+}
+```
+
+La lista de empresas activas se resuelve en runtime via el middleware `resolverEmpresasActivas` que hace una query a `trabajador_empresa WHERE usuario_id = ? AND estado = 'activo'`. El resultado se inyecta como `req.empresasActivas` (array de IDs).
+
+## Visibilidad de ofertas multi-empresa
+
+Para `trabajador_turnos`, las ofertas de todas sus empresas activas se mezclan en una sola lista. El delay de visibilidad se aplica **por empresa**: cada oferta se filtra según el ranking del trabajador en la empresa que la publicó, usando un JOIN contra `trabajador_empresa` + `trabajadores`.
+
+```
+Ranking ≥ 4.5 → delay 0 min   (ve al instante)
+Ranking ≥ 3.5 → delay 15 min
+Ranking ≥ 2.5 → delay 30 min
+Sin ranking    → delay 15 min  (trabajador nuevo en esa empresa)
+Ranking < 2.5  → delay 60 min
+```
