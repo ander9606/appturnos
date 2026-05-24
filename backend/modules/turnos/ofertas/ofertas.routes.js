@@ -7,10 +7,10 @@ const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol, resolverEmpresasActivas } = require('../../../middleware/authMiddleware');
 const { ROLES, ESTADOS_OFERTA } = require('../../../config/constants');
 const ctrl = require('./ofertas.controller');
+const puestosRouter = require('./puestos/puestos.routes');
 
 const router = express.Router();
 
-// Permisos según la matriz de 06-AUTH.md.
 const PUEDEN_VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.TRABAJADOR_TURNOS];
 const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
 const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS];
@@ -19,7 +19,8 @@ const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
 // Reglas de oferta. En crear los campos clave son obligatorios; en
-// actualizar todos son opcionales (PUT parcial).
+// actualizar todos son opcionales (PUT parcial). Los puestos van en su
+// propio array y se validan adicionalmente en el service.
 function reglasOferta({ parcial }) {
   const obligatorio = (regla) => (parcial ? regla.optional() : regla);
   return [
@@ -28,15 +29,10 @@ function reglasOferta({ parcial }) {
     obligatorio(
       body('hora_inicio').matches(RE_HORA).withMessage('hora_inicio inválida (HH:MM)')
     ),
-    obligatorio(body('tarifa_dia').isFloat({ min: 0 }).withMessage('tarifa_dia inválida')),
     body('hora_fin_estimada')
       .optional({ values: 'falsy' })
       .matches(RE_HORA)
       .withMessage('hora_fin_estimada inválida (HH:MM)'),
-    body('plazas_disponibles')
-      .optional()
-      .isInt({ min: 1 })
-      .withMessage('plazas_disponibles debe ser un entero ≥ 1'),
     body('descripcion').optional({ values: 'falsy' }).isString(),
     body('lugar').optional({ values: 'falsy' }).isString(),
     body('latitud')
@@ -47,11 +43,23 @@ function reglasOferta({ parcial }) {
       .optional({ values: 'falsy' })
       .isFloat({ min: -180, max: 180 })
       .withMessage('longitud inválida'),
+    // Puestos solo se aceptan en crear (no en PUT de actualizar).
+    ...(parcial
+      ? []
+      : [
+          body('puestos')
+            .optional()
+            .isArray()
+            .withMessage('puestos debe ser un array'),
+          body('puestos.*.cargo_id').isInt({ min: 1 }).withMessage('cargo_id requerido'),
+          body('puestos.*.plazas').optional().isInt({ min: 1 }),
+          body('puestos.*.tarifa_dia').isFloat({ min: 0 }).withMessage('tarifa_dia inválida'),
+          body('puestos.*.notas').optional().isString().trim().isLength({ max: 255 }),
+        ]),
   ];
 }
 
 router.use(verificarToken);
-// Para TRABAJADOR_TURNOS: resuelve la lista de empresas activas una vez por request.
 router.use(resolverEmpresasActivas);
 
 // GET /api/turnos/ofertas
@@ -86,10 +94,25 @@ router.put(
 // DELETE /api/turnos/ofertas/:id  (cancelar)
 router.delete('/:id', verificarRol(GESTIONAR), [idParam], validar, ctrl.cancelar);
 
-// POST /api/turnos/ofertas/:id/aplicar
-router.post('/:id/aplicar', verificarRol(TRABAJADOR), [idParam], validar, ctrl.aplicar);
+// POST /api/turnos/ofertas/:id/aplicar  — body: { puesto_id }
+router.post(
+  '/:id/aplicar',
+  verificarRol(TRABAJADOR),
+  [idParam, body('puesto_id').isInt({ min: 1 }).withMessage('puesto_id requerido')],
+  validar,
+  ctrl.aplicar
+);
 
-// DELETE /api/turnos/ofertas/:id/aplicar
-router.delete('/:id/aplicar', verificarRol(TRABAJADOR), [idParam], validar, ctrl.retirar);
+// DELETE /api/turnos/ofertas/:id/aplicar  — body: { puesto_id }
+router.delete(
+  '/:id/aplicar',
+  verificarRol(TRABAJADOR),
+  [idParam, body('puesto_id').isInt({ min: 1 }).withMessage('puesto_id requerido')],
+  validar,
+  ctrl.retirar
+);
+
+// Sub-router de puestos: /api/turnos/ofertas/:id/puestos/...
+router.use('/:id/puestos', puestosRouter);
 
 module.exports = router;

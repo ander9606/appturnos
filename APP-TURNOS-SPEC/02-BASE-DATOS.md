@@ -105,6 +105,9 @@ CREATE TABLE registros_diarios (
 ```
 
 ### `ofertas_turno` (track Turnos — oferta de día de trabajo)
+
+> **Importante**: desde la migración 013, las columnas `plazas_disponibles`, `plazas_cubiertas` y `tarifa_dia` se eliminan; viven en la nueva tabla `oferta_puestos` (un puesto = un cargo + plazas + tarifa propios). Ver §Migración 013 más abajo.
+
 ```sql
 CREATE TABLE ofertas_turno (
   id INT PRIMARY KEY AUTO_INCREMENT,
@@ -117,11 +120,8 @@ CREATE TABLE ofertas_turno (
   lugar VARCHAR(300),
   latitud DECIMAL(10,8),
   longitud DECIMAL(11,8),
-  plazas_disponibles INT NOT NULL DEFAULT 1,
-  plazas_cubiertas INT DEFAULT 0,
-  tarifa_dia DECIMAL(10,2) NOT NULL,
+  -- plazas_disponibles, plazas_cubiertas, tarifa_dia → eliminados en migración 013
   estado ENUM('abierta','en_proceso','completada','cancelada') DEFAULT 'abierta',
-  -- Referencia a orden de trabajo de logiq360 (si aplica)
   external_ref VARCHAR(100),    -- ej: "logiq360:orden:33"
   creado_por INT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -131,18 +131,22 @@ CREATE TABLE ofertas_turno (
 ```
 
 ### `asignaciones_turno` (quién aceptó qué oferta)
+
+> **Importante**: desde la migración 013, cada asignación apunta a un **puesto específico** (`puesto_id`), no solo a una oferta. Un trabajador puede postularse a varios puestos distintos de la misma oferta.
+
 ```sql
 CREATE TABLE asignaciones_turno (
   id INT PRIMARY KEY AUTO_INCREMENT,
   empresa_id INT NOT NULL,
   oferta_id INT NOT NULL,
+  puesto_id INT NOT NULL,             -- agregado en migración 013
   trabajador_id INT NOT NULL,
   estado ENUM('pendiente','confirmado','en_progreso','completado','no_presentado','cancelado') DEFAULT 'pendiente',
   hora_ingreso_real TIMESTAMP NULL,
   hora_egreso_real TIMESTAMP NULL,
   latitud_ingreso DECIMAL(10,8),
   longitud_ingreso DECIMAL(11,8),
-  firma_digital TEXT NULL,         -- base64 del canvas
+  firma_digital TEXT NULL,
   contrato_pdf_url VARCHAR(500),
   horas_trabajadas DECIMAL(5,2),
   pago_total DECIMAL(10,2),
@@ -151,6 +155,7 @@ CREATE TABLE asignaciones_turno (
   UNIQUE KEY uk_asignacion (oferta_id, trabajador_id),
   FOREIGN KEY (empresa_id) REFERENCES empresas(id),
   FOREIGN KEY (oferta_id) REFERENCES ofertas_turno(id),
+  FOREIGN KEY (puesto_id) REFERENCES oferta_puestos(id),
   FOREIGN KEY (trabajador_id) REFERENCES trabajadores(id)
 );
 ```
@@ -348,6 +353,60 @@ Cuelga de `trabajador_empresa.id`, no de `usuarios.id`. Eso garantiza que un mis
 | Asignar cargo a trabajador | `jefe_turnos` / `admin_empresa` | El vínculo debe estar `activo`. El cargo debe ser del sistema o de su empresa. |
 | Auto-declaración por el trabajador | **No permitida** | Solo la empresa certifica los cargos. |
 
-### Implicación para ofertas y postulaciones (PR-B, próxima migración 013)
+### Implicación para ofertas y postulaciones
 
-En la siguiente migración, `ofertas_turno` deja de tener `tarifa_dia` y `plazas_*` directos; esos campos pasan a una tabla `oferta_puestos` con un puesto por cargo (cargo + tarifa + plazas). Un trabajador solo puede postular a un puesto cuyo `cargo_id` esté en sus `trabajador_cargos` para esa empresa.
+Materializada en la migración 013 — ver §Migración 013 a continuación.
+
+---
+
+## Migración 013 — Puestos por oferta
+
+Una oferta deja de tener un único `plazas + tarifa` global. Pasa a componerse de **puestos** — cada uno con su propio cargo, plazas y tarifa. Esto permite ofertar en el mismo evento, por ejemplo, 10 plazas @auxiliar $80k + 2 @jefe_montaje $150k + 1 @conductor $120k.
+
+### Nueva tabla `oferta_puestos`
+
+```sql
+CREATE TABLE oferta_puestos (
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  oferta_id        INT NOT NULL,
+  cargo_id         INT NOT NULL,
+  plazas           INT NOT NULL DEFAULT 1,
+  plazas_cubiertas INT NOT NULL DEFAULT 0,
+  tarifa_dia       DECIMAL(10,2) NOT NULL,
+  notas            VARCHAR(255) NULL,
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_oferta_cargo (oferta_id, cargo_id),
+  FOREIGN KEY (oferta_id) REFERENCES ofertas_turno(id) ON DELETE CASCADE,
+  FOREIGN KEY (cargo_id)  REFERENCES cargos(id)
+);
+```
+
+### Cambios en `asignaciones_turno`
+
+- Nueva columna `puesto_id INT NOT NULL` + FK a `oferta_puestos.id`.
+- Cada postulación apunta a un puesto concreto, no solo a la oferta.
+
+### Cambios en `ofertas_turno`
+
+- Eliminadas: `plazas_disponibles`, `plazas_cubiertas`, `tarifa_dia`.
+- Los agregados ahora se calculan con `SUM(oferta_puestos.*)`.
+
+### Backfill (parte de la propia migración)
+
+1. Por cada oferta existente, se inserta un único puesto con `cargo_id = (auxiliar del sistema)`, `plazas = ofertas_turno.plazas_disponibles`, `plazas_cubiertas = ofertas_turno.plazas_cubiertas`, `tarifa_dia = ofertas_turno.tarifa_dia`.
+2. Cada `asignaciones_turno` se enlaza al único puesto de su oferta vía UPDATE join.
+3. Solo entonces se hacen `NOT NULL` la nueva FK y se eliminan las columnas obsoletas.
+
+### Reglas de negocio
+
+| Regla | Quién valida |
+|-------|--------------|
+| Postular a un puesto requiere tener el cargo certificado por la empresa | `OfertasService.aplicar` (cruza con `trabajador_cargos`) |
+| Una oferta no puede tener dos puestos del mismo cargo | UNIQUE `(oferta_id, cargo_id)` |
+| No se reduce `plazas` por debajo de `plazas_cubiertas` actuales | `PuestosService.actualizar` |
+| No se elimina un puesto con plazas cubiertas | `PuestosService.eliminar` |
+| Las ofertas creadas vía logiq360 entran con un único puesto auxiliar (borrador) | `entrantes.handlers.ordenCreada` — el jefe puede dividir antes de publicar |
+
+### Filtrado del feed para trabajadores
+
+El listado multi-empresa de ofertas se filtra para que el trabajador solo vea ofertas con al menos un puesto cuyo cargo esté en `trabajador_cargos` de su vínculo activo con la empresa de la oferta. Así, un auxiliar puro no ve ofertas que solo tengan puestos de conductor o jefe.
