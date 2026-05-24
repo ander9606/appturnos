@@ -222,3 +222,67 @@ Festivos Colombia 2025:
 ```
 
 Ver `utils/laboralUtils.js` para la implementación.
+
+---
+
+## Migración 010 — Multi-empresa del trabajador_turnos
+
+### Nueva tabla `trabajador_empresa`
+
+Vínculo N:N entre `usuarios` (rol `trabajador_turnos`) y `empresas`. Implementa el doble opt-in.
+
+```sql
+CREATE TABLE trabajador_empresa (
+  id                  INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id          INT NOT NULL,           -- FK usuarios.id (trabajador_turnos)
+  empresa_id          INT NOT NULL,           -- FK empresas.id
+  trabajador_id       INT NULL,               -- FK trabajadores.id (se asigna al aprobar)
+  estado              ENUM(
+                        'solicitado_por_trabajador',
+                        'solicitado_por_empresa',
+                        'activo',
+                        'rechazado',
+                        'archivado'
+                      ) NOT NULL,
+  iniciado_por        ENUM('trabajador', 'empresa') NOT NULL,
+  fecha_solicitud     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_resuelto      DATETIME NULL,
+  motivo_rechazo      VARCHAR(255) NULL,
+  UNIQUE KEY uk_usuario_empresa (usuario_id, empresa_id),
+  KEY idx_empresa_estado (empresa_id, estado),
+  KEY idx_usuario_estado  (usuario_id, estado)
+);
+```
+
+**Estados del ciclo de vida:**
+
+| Estado | Iniciado por | Descripción |
+|--------|-------------|-------------|
+| `solicitado_por_trabajador` | Trabajador | El trabajador pidió sumarse; la empresa aprueba o rechaza |
+| `solicitado_por_empresa` | Empresa | La empresa invitó (por cédula); el trabajador acepta o rechaza |
+| `activo` | Ambos | Vínculo activo — el trabajador recibe ofertas y puede postularse |
+| `rechazado` | Ambos | Terminal — no vuelve a notificar |
+| `archivado` | Ambos | Cierre después de `activo` (renuncia o desvinculación) |
+
+Al pasar a `activo`, si no existe una fila en `trabajadores` con esa cédula+empresa, se crea automáticamente y se asigna a `trabajador_id`.
+
+### Cambios en tabla `usuarios`
+
+- `empresa_id` pasa de `NOT NULL` a `NULL` **solo para `rol = 'trabajador_turnos'`**.
+- Para todos los demás roles sigue siendo `NOT NULL` por validación de aplicación.
+
+### Cambios en tabla `empresas`
+
+Nuevas columnas para el directorio público:
+
+```sql
+acepta_postulaciones TINYINT NOT NULL DEFAULT 1,
+logo_url             VARCHAR(500) NULL,
+descripcion          TEXT NULL
+```
+
+### Backfill
+
+Por cada usuario `trabajador_turnos` existente con `empresa_id` asignado:
+1. Se inserta una fila en `trabajador_empresa` con estado `activo` y `trabajador_id` vinculado si corresponde.
+2. Se pone `usuarios.empresa_id = NULL`.
