@@ -51,6 +51,8 @@ app.use('/api/reportes', require('./modules/reportes/reportes.routes'));
 // Multi-empresa: directorio de empleadores + vínculos trabajador ↔ empresa.
 app.use('/api/empresas', require('./modules/empresas/empresas.routes'));
 app.use('/api/trabajador-empresa', require('./modules/trabajador-empresa/trabajador-empresa.routes'));
+// Catálogo de cargos (sistema + custom por empresa). Ref: 012_cargos.
+app.use('/api/cargos', require('./modules/cargos/cargos.routes'));
 
 // ─── Manejo de errores ────────────────────────────────────────
 app.use(noEncontrado);

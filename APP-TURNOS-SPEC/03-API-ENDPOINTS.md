@@ -50,11 +50,15 @@ Autenticación: `Authorization: Bearer <jwt>` en todos los endpoints excepto `/a
 |--------|------|-------|-------------|
 | GET | `/api/turnos/ofertas` | todos | Listar ofertas (filtros: fecha, estado, disponibles=true) |
 | GET | `/api/turnos/ofertas/:id` | todos | Detalle con asignaciones |
-| POST | `/api/turnos/ofertas` | jefe_turnos, admin | Crear oferta |
-| PUT | `/api/turnos/ofertas/:id` | jefe_turnos | Actualizar (mientras abierta) |
+| POST | `/api/turnos/ofertas` | jefe_turnos, admin | Crear oferta. Body incluye `puestos: [{cargo_id, plazas, tarifa_dia, notas?}]` (ver §Migración 013) |
+| PUT | `/api/turnos/ofertas/:id` | jefe_turnos | Actualizar campos generales (titulo, fecha, lugar…). Para editar puestos, ver endpoints `/puestos` |
 | DELETE | `/api/turnos/ofertas/:id` | jefe_turnos | Cancelar oferta |
-| POST | `/api/turnos/ofertas/:id/aplicar` | trabajador_turnos | Postularse a oferta |
-| DELETE | `/api/turnos/ofertas/:id/aplicar` | trabajador_turnos | Retirar postulación |
+| GET | `/api/turnos/ofertas/:id/puestos` | jefe_turnos, admin | Listar puestos de la oferta |
+| POST | `/api/turnos/ofertas/:id/puestos` | jefe_turnos, admin | Agregar puesto a oferta existente |
+| PATCH | `/api/turnos/ofertas/:id/puestos/:puestoId` | jefe_turnos, admin | Editar `plazas`, `tarifa_dia` o `notas` de un puesto |
+| DELETE | `/api/turnos/ofertas/:id/puestos/:puestoId` | jefe_turnos, admin | Eliminar puesto (solo si no tiene asignaciones) |
+| POST | `/api/turnos/ofertas/:id/aplicar` | trabajador_turnos | Postularse a un puesto. Body: `{ puesto_id }`. 403 si el trabajador no tiene el cargo certificado por la empresa |
+| DELETE | `/api/turnos/ofertas/:id/aplicar` | trabajador_turnos | Retirar postulación de un puesto. Body: `{ puesto_id }` |
 | POST | `/api/turnos/asignaciones/:id/confirmar` | jefe_turnos | Confirmar trabajador |
 | POST | `/api/turnos/asignaciones/:id/ingreso` | trabajador_turnos | Marcar llegada (GPS) |
 | POST | `/api/turnos/asignaciones/:id/egreso` | trabajador_turnos | Marcar salida + firma |
@@ -198,6 +202,27 @@ Ver `06-AUTH.md §OAuth` para el diseño completo y las decisiones de auto-vincu
 | `POST` | `/api/auth/oauth/:provider` | Público | Login/registro con provider OAuth (`google`). Body: `{ token }` (id_token del provider). Devuelve `{ access_token, refresh_token, usuario, tipo }` donde `tipo ∈ login\|vinculacion\|registro`. |
 | `GET` | `/api/auth/oauth/vinculos` | Autenticado | Lista los providers vinculados a la cuenta. |
 | `DELETE` | `/api/auth/oauth/:provider` | Autenticado | Desvincular un provider de la cuenta. |
+
+## Cargos — Catálogo y asignación a trabajadores
+
+Ver `02-BASE-DATOS.md §Migración 012` para el modelo y reglas. Catálogo híbrido: cargos del sistema (auxiliar, jefe_montaje, conductor) + cargos custom por empresa.
+
+### Catálogo
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `GET` | `/api/cargos` | Autenticado | Lista catálogo visible (sistema + custom de mi empresa, `activo=1`). |
+| `POST` | `/api/cargos` | jefe_turnos / admin_empresa | Crear cargo custom. Body: `{ nombre, codigo?, descripcion? }`. Si no se da `codigo`, se autogenera del nombre. |
+| `PATCH` | `/api/cargos/:id` | jefe_turnos / admin_empresa | Editar `nombre`, `descripcion` o `activo`. Solo cargos de mi empresa. |
+| `DELETE` | `/api/cargos/:id` | jefe_turnos / admin_empresa | Hard delete si nadie lo usa; soft delete (`activo=0`) si está asignado. Respuesta indica cuál sucedió. |
+
+### Asignación a trabajadores (cuelga del vínculo)
+
+| Método | Ruta | Rol | Descripción |
+|--------|------|-----|-------------|
+| `GET` | `/api/trabajador-empresa/:id/cargos` | jefe_turnos / admin_empresa | Cargos certificados a ese trabajador en mi empresa. |
+| `POST` | `/api/trabajador-empresa/:id/cargos` | jefe_turnos / admin_empresa | Asignar un cargo. Body: `{ cargo_id }`. El vínculo debe estar `activo`. |
+| `DELETE` | `/api/trabajador-empresa/:id/cargos/:cargoId` | jefe_turnos / admin_empresa | Quitar un cargo. |
 
 ---
 

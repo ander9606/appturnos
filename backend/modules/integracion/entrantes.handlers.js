@@ -1,8 +1,27 @@
 'use strict';
 
+const { pool } = require('../../config/database');
 const OfertasModel = require('../turnos/ofertas/ofertas.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const logger = require('../../utils/logger');
+
+/**
+ * Resuelve el id del cargo "auxiliar" del sistema (seed de migración 012).
+ * Se cachea en memoria del proceso porque no cambia: el seed se inserta una
+ * sola vez y no hay endpoint que modifique cargos del sistema.
+ */
+let _cargoAuxiliarId = null;
+async function cargoAuxiliarId() {
+  if (_cargoAuxiliarId) return _cargoAuxiliarId;
+  const [[row]] = await pool.query(
+    "SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo = 'auxiliar' LIMIT 1"
+  );
+  if (!row) {
+    throw new Error("Cargo de sistema 'auxiliar' no encontrado (¿faltó migración 012?)");
+  }
+  _cargoAuxiliarId = row.id;
+  return _cargoAuxiliarId;
+}
 
 /**
  * Handlers de eventos entrantes de logiq360 → App Turnos (ver 05-INTEGRACION.md).
@@ -24,34 +43,37 @@ async function ordenCreada(empresaId, data) {
     );
   }
 
+  // Plazas y tarifa sugeridos por logiq360 se materializan como un único
+  // puesto "auxiliar" en estado borrador. El jefe puede dividir luego en
+  // varios puestos por cargo antes de publicar.
+  const plazasSugeridas =
+    data.cupos_sugeridos ||
+    (Array.isArray(data.equipo) && data.equipo.length ? data.equipo.length : 1);
+  const tarifaSugerida = data.valor_dia_sugerido || 0;
+
   await OfertasModel.crear(
     empresaId,
     {
-      // El payload v1.0 (05-INTEGRACION.md) incluye 'titulo' directamente.
-      // Fallback al campo 'tipo' del payload anterior por compatibilidad.
       titulo: data.titulo || (data.tipo ? `Orden: ${data.tipo}` : 'Orden de trabajo'),
       descripcion: partesDesc.join('\n\n') || null,
-      // 'fecha' es el campo del payload v1.0; 'fecha_programada' era la versión anterior.
       fecha: data.fecha || data.fecha_programada || null,
       hora_inicio: data.hora_inicio || '08:00:00',
       hora_fin_estimada: data.hora_fin || null,
-      // 'ubicacion' es el campo nuevo (string); fallback al par direccion+ciudad anterior.
       lugar: data.ubicacion || [data.direccion, data.ciudad].filter(Boolean).join(', ') || null,
       latitud: data.latitud || null,
       longitud: data.longitud || null,
-      // cupos_sugeridos es una sugerencia; el jefe confirma antes de publicar.
-      plazas_disponibles:
-        data.cupos_sugeridos ||
-        (Array.isArray(data.equipo) && data.equipo.length ? data.equipo.length : 1),
-      // valor_dia_sugerido puede llegar como hint; el jefe lo confirma/ajusta.
-      // Tarifa sugerida por logiq360 (puede ser 0 si no la informan); el jefe confirma.
-      tarifa_dia: data.valor_dia_sugerido || 0,
-      // Oferta comienza en 'borrador': el jefe de turnos la revisa y publica.
       estado: 'borrador',
       external_ref: data.external_ref,
       alquiler_ref: data.alquiler_ref || null,
-      // Notas_para_operario guardadas en columna dedicada para no mezclar con descripción.
       externo_notas: data.notas_para_operario || null,
+      puestos: [
+        {
+          cargo_id: await cargoAuxiliarId(),
+          plazas: plazasSugeridas,
+          tarifa_dia: tarifaSugerida,
+          notas: 'Puesto generado por logiq360 — el jefe puede dividirlo por cargo',
+        },
+      ],
     },
     null
   );

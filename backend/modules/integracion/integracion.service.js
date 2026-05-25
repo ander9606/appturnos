@@ -177,13 +177,24 @@ const IntegracionService = {
 
     const asignaciones = await AsignacionesModel.listarPorOferta(empresaId, oferta.id);
 
+    // Desde migración 013, las plazas viven en los puestos: sumar todos.
+    const puestos = Array.isArray(oferta.puestos) ? oferta.puestos : [];
+    const cuposRequeridos = puestos.reduce((acc, p) => acc + Number(p.plazas || 0), 0);
+    const cuposCubiertos = puestos.reduce((acc, p) => acc + Number(p.plazas_cubiertas || 0), 0);
+
     return {
       encontrado: true,
       external_ref: externalRef,
       oferta_id: oferta.id,
       estado: oferta.estado,
-      cupos_requeridos: oferta.plazas_disponibles,
-      cupos_cubiertos: asignaciones.filter((a) => a.estado === 'confirmado').length,
+      cupos_requeridos: cuposRequeridos,
+      cupos_cubiertos: cuposCubiertos,
+      puestos: puestos.map((p) => ({
+        cargo: p.cargo_codigo,
+        plazas: p.plazas,
+        plazas_cubiertas: p.plazas_cubiertas,
+        tarifa_dia: p.tarifa_dia,
+      })),
       contratos: asignaciones.map((a) => ({
         trabajador_ref: a.external_ref || null,
         trabajador_nombre: `${a.trabajador_nombre} ${a.trabajador_apellido || ''}`.trim(),

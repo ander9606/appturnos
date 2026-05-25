@@ -1,16 +1,18 @@
 'use strict';
 
+const { pool } = require('../../../config/database');
 const OfertasModel = require('./ofertas.model');
+const PuestosModel = require('./puestos/puestos.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const TrabajadorEmpresaModel = require('../../trabajador-empresa/trabajador-empresa.model');
+const CargosModel = require('../../cargos/cargos.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
 const { ROLES } = require('../../../config/constants');
 
 /**
  * Resuelve el trabajador vinculado al usuario autenticado en una empresa concreta.
- * Para TRABAJADOR_TURNOS multi-empresa se debe pasar la empresaId de la oferta.
  */
 async function resolverTrabajador(empresaId, usuarioId) {
   const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuarioId);
@@ -22,11 +24,10 @@ async function resolverTrabajador(empresaId, usuarioId) {
 
 /**
  * Visibilidad escalonada: minutos que el trabajador debe esperar antes de
- * ver una oferta nueva, según su ranking (0–5 estrellas). Los mejor
- * calificados ven al instante; los nuevos sin calificación esperan un poco.
+ * ver una oferta nueva, según su ranking (0–5 estrellas).
  */
 function delayPorRanking(ranking) {
-  if (ranking == null) return 15; // trabajador nuevo, sin calificaciones
+  if (ranking == null) return 15;
   const r = Number(ranking);
   if (r >= 4.5) return 0;
   if (r >= 3.5) return 15;
@@ -34,66 +35,55 @@ function delayPorRanking(ranking) {
   return 60;
 }
 
-/**
- * Devuelve la antigüedad mínima (en minutos) que debe tener una oferta
- * para ser visible para este usuario. 0 para admin y jefe_turnos.
- * Solo aplica al path de empresa única (TRABAJADOR_TURNOS con un solo tenant).
- */
 async function antiguedadMinima(empresaId, usuario) {
   if (usuario.rol !== ROLES.TRABAJADOR_TURNOS) return 0;
   const trabajador = await resolverTrabajador(empresaId, usuario.sub);
   return delayPorRanking(trabajador.ranking);
 }
 
+/** Valida que cada puesto del array tiene un cargo válido para la empresa. */
+async function validarPuestosParaEmpresa(empresaId, puestos) {
+  if (!Array.isArray(puestos) || puestos.length === 0) return;
+  const ids = [...new Set(puestos.map((p) => Number(p.cargo_id)))];
+  for (const id of ids) {
+    const cargo = await CargosModel.obtenerPorId(id);
+    if (!cargo) throw new AppError(`Cargo ${id} no encontrado`, 404);
+    if (!cargo.activo) throw new AppError(`Cargo "${cargo.nombre}" está desactivado`, 409);
+    if (cargo.empresa_id !== null && cargo.empresa_id !== empresaId) {
+      throw new AppError(`Cargo "${cargo.nombre}" no pertenece a tu empresa`, 403);
+    }
+  }
+  // Detectar duplicados (la UNIQUE (oferta_id, cargo_id) los rechazaría también,
+  // pero damos un mensaje claro antes de la transacción).
+  if (ids.length !== puestos.length) {
+    throw new AppError('No puede haber dos puestos con el mismo cargo en una oferta', 400);
+  }
+}
+
 const OfertasService = {
-  /**
-   * Lista ofertas con paginación.
-   * - Para TRABAJADOR_TURNOS: ruta multi-empresa — obtiene todas las empresas
-   *   activas del trabajador y aplica delay de visibilidad POR empresa via JOIN.
-   * - Para otros roles: ruta clásica de empresa única.
-   *
-   * `empresasActivas` es el array inyectado por `resolverEmpresasActivas`.
-   */
   async listar(empresaId, usuario, { fecha, estado, disponibles, page, limit }, empresasActivas) {
     const offset = (page - 1) * limit;
 
     if (usuario.rol === ROLES.TRABAJADOR_TURNOS) {
-      // Multi-empresa: el delay se aplica dentro del modelo via JOIN.
       const ids = empresasActivas && empresasActivas.length
         ? empresasActivas
         : await TrabajadorEmpresaModel.listarEmpresaIds(usuario.sub);
 
       const { data, total } = await OfertasModel.listarMultiEmpresa(usuario.sub, ids, {
-        fecha,
-        estado,
-        disponibles,
-        limit,
-        offset,
+        fecha, estado, disponibles, limit, offset,
       });
       return { data, pagination: { page, limit, total } };
     }
 
-    // Ruta clásica: empresa única desde el JWT.
     const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
     const { data, total } = await OfertasModel.listar(empresaId, {
-      fecha,
-      estado,
-      disponibles,
-      antiguedadMinMin,
-      limit,
-      offset,
+      fecha, estado, disponibles, antiguedadMinMin, limit, offset,
     });
     return { data, pagination: { page, limit, total } };
   },
 
-  /**
-   * Detalle de la oferta junto con sus asignaciones.
-   * Para TRABAJADOR_TURNOS: la empresa de la oferta debe estar en sus activas.
-   */
   async obtener(empresaId, id, usuario, empresasActivas) {
     if (usuario.rol === ROLES.TRABAJADOR_TURNOS) {
-      // Obtener la oferta directamente por id sin filtrar por empresa_id.
-      // Luego validar que la empresa de la oferta es una de las activas del trabajador.
       const oferta = await OfertasModel.obtenerPorId(empresaId, id, 0);
       if (!oferta) throw new AppError('Oferta no encontrada', 404);
 
@@ -104,11 +94,12 @@ const OfertasService = {
       if (!ids.includes(oferta.empresa_id)) {
         throw new AppError('Oferta no encontrada', 404);
       }
-      // Validar delay de visibilidad para esta empresa.
       const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(oferta.empresa_id, usuario.sub);
       const delay = delayPorRanking(trabajador?.ranking);
       const ofertaConDelay = await OfertasModel.obtenerPorId(oferta.empresa_id, id, delay);
-      if (!ofertaConDelay) throw new AppError('Oferta aún no disponible para tu nivel de ranking', 403);
+      if (!ofertaConDelay) {
+        throw new AppError('Oferta aún no disponible para tu nivel de ranking', 403);
+      }
 
       const asignaciones = await AsignacionesModel.listarPorOferta(oferta.empresa_id, id);
       return { ...ofertaConDelay, asignaciones };
@@ -121,7 +112,14 @@ const OfertasService = {
     return { ...oferta, asignaciones };
   },
 
+  /**
+   * Crea oferta + puestos en una sola transacción. El body recibe
+   * `puestos: [{ cargo_id, plazas, tarifa_dia, notas? }]`. Si la oferta
+   * viene de un canal externo (logiq360) puede llegar sin puestos —
+   * el jefe los agrega antes de publicar.
+   */
   async crear(empresaId, datos, creadoPor) {
+    await validarPuestosParaEmpresa(empresaId, datos.puestos);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
     return OfertasModel.obtenerPorId(empresaId, id);
   },
@@ -129,17 +127,13 @@ const OfertasService = {
   async actualizar(empresaId, id, datos) {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
-    if (oferta.estado !== 'abierta') {
-      throw new AppError('Solo se puede editar una oferta mientras está abierta', 409);
+    if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {
+      throw new AppError('Solo se puede editar una oferta en borrador o abierta', 409);
     }
     await OfertasModel.actualizar(empresaId, id, datos);
     return OfertasModel.obtenerPorId(empresaId, id);
   },
 
-  /**
-   * Cancela la oferta (idempotente si ya estaba cancelada), cancela sus
-   * asignaciones vigentes y notifica a los trabajadores asignados.
-   */
   async cancelar(empresaId, id) {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
@@ -148,7 +142,6 @@ const OfertasService = {
       throw new AppError('No se puede cancelar una oferta completada', 409);
     }
 
-    // Se captura a quién notificar antes de cancelar las asignaciones.
     const destinatarios = await AsignacionesModel.listarUsuariosAsignados(empresaId, id);
     await OfertasModel.cancelar(empresaId, id);
 
@@ -162,18 +155,20 @@ const OfertasService = {
   },
 
   /**
-   * Postula al trabajador autenticado a la oferta.
-   * Para TRABAJADOR_TURNOS multi-empresa: la empresa de la oferta se resuelve
-   * desde la oferta misma (el trabajador puede estar en varias empresas).
+   * Postular al trabajador autenticado a un PUESTO específico de la oferta.
+   * Valida que:
+   *   - El puesto pertenece a la oferta y la empresa coincide.
+   *   - La oferta es visible para este trabajador (ranking).
+   *   - La oferta está abierta y el puesto aún tiene plazas.
+   *   - El trabajador tiene el cargo del puesto CERTIFICADO por la empresa.
+   *   - El trabajador no está ya postulado a ese puesto.
    */
-  async aplicar(empresaId, ofertaId, usuarioId, empresasActivas) {
-    // Resolver la empresa real de la oferta (para TRABAJADOR_TURNOS el
-    // empresaId del JWT es null; lo sacamos de la oferta directamente).
-    let empresaOfertaId = empresaId;
+  async aplicar(empresaId, ofertaId, puestoId, usuarioId, empresasActivas) {
+    if (!puestoId) throw new AppError('puesto_id requerido para postular', 400);
 
+    // Resolver empresa real de la oferta (multi-empresa para TRABAJADOR_TURNOS).
+    let empresaOfertaId = empresaId;
     if (!empresaId) {
-      // Buscar la oferta sin filtro de empresa para obtener su empresa_id.
-      const { pool } = require('../../../config/database');
       const [[ofertaBase]] = await pool.query(
         'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
         [ofertaId]
@@ -181,7 +176,6 @@ const OfertasService = {
       if (!ofertaBase) throw new AppError('Oferta no encontrada', 404);
       empresaOfertaId = ofertaBase.empresa_id;
 
-      // Validar que la empresa de la oferta es una de las activas del trabajador.
       const ids = empresasActivas && empresasActivas.length
         ? empresasActivas
         : await TrabajadorEmpresaModel.listarEmpresaIds(usuarioId);
@@ -190,8 +184,7 @@ const OfertasService = {
       }
     }
 
-    // Se resuelve primero el trabajador para aplicar la visibilidad por ranking:
-    // un trabajador no puede postularse a una oferta que aún no le es visible.
+    // Visibilidad (ranking) + apertura.
     const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);
     const oferta = await OfertasModel.obtenerPorId(
       empresaOfertaId,
@@ -202,26 +195,52 @@ const OfertasService = {
     if (oferta.estado !== 'abierta' && oferta.estado !== 'publicada') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
     }
-    if (oferta.plazas_cubiertas >= oferta.plazas_disponibles) {
-      throw new AppError('La oferta ya no tiene plazas disponibles', 409);
+
+    // Puesto existe y pertenece a la oferta.
+    const puesto = oferta.puestos.find((p) => p.id === Number(puestoId));
+    if (!puesto) throw new AppError('Puesto no encontrado en esta oferta', 404);
+    if (puesto.plazas_cubiertas >= puesto.plazas) {
+      throw new AppError('Este puesto ya no tiene plazas disponibles', 409);
     }
 
-    const existente = await AsignacionesModel.obtenerPorOfertaYTrabajador(
-      ofertaId,
+    // Cargo certificado por la empresa.
+    const vinculo = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(
+      usuarioId,
+      empresaOfertaId
+    );
+    if (!vinculo || vinculo.estado !== 'activo') {
+      throw new AppError('No tienes vínculo activo con esta empresa', 403);
+    }
+    const tieneCargo = await CargosModel.tieneAsignacion(vinculo.id, puesto.cargo_id);
+    if (!tieneCargo) {
+      throw new AppError(
+        `No tienes el cargo "${puesto.cargo_nombre}" certificado por esta empresa`,
+        403
+      );
+    }
+
+    // Duplicado de postulación al MISMO puesto.
+    const existente = await AsignacionesModel.obtenerPorPuestoYTrabajador(
+      Number(puestoId),
       trabajador.id
     );
-    if (existente) throw new AppError('Ya estás postulado a esta oferta', 409);
+    if (existente) throw new AppError('Ya estás postulado a este puesto', 409);
 
-    const id = await AsignacionesModel.crear(empresaOfertaId, ofertaId, trabajador.id);
+    const id = await AsignacionesModel.crear(
+      empresaOfertaId,
+      ofertaId,
+      Number(puestoId),
+      trabajador.id
+    );
     return AsignacionesModel.obtenerPorId(empresaOfertaId, id);
   },
 
-  /** Retira la postulación del trabajador autenticado (solo si sigue pendiente). */
-  async retirar(empresaId, ofertaId, usuarioId, empresasActivas) {
-    // Resolver empresa de la oferta para multi-empresa.
+  /** Retira la postulación del trabajador autenticado de un puesto (si sigue pendiente). */
+  async retirar(empresaId, ofertaId, puestoId, usuarioId, empresasActivas) {
+    if (!puestoId) throw new AppError('puesto_id requerido', 400);
+
     let empresaOfertaId = empresaId;
     if (!empresaId) {
-      const { pool } = require('../../../config/database');
       const [[ofertaBase]] = await pool.query(
         'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
         [ofertaId]
@@ -231,11 +250,11 @@ const OfertasService = {
     }
 
     const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);
-    const asignacion = await AsignacionesModel.obtenerPorOfertaYTrabajador(
-      ofertaId,
+    const asignacion = await AsignacionesModel.obtenerPorPuestoYTrabajador(
+      Number(puestoId),
       trabajador.id
     );
-    if (!asignacion) throw new AppError('No estás postulado a esta oferta', 404);
+    if (!asignacion) throw new AppError('No estás postulado a este puesto', 404);
     if (asignacion.estado !== 'pendiente') {
       throw new AppError(
         'No puedes retirar una postulación ya confirmada o en curso',

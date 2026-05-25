@@ -45,6 +45,7 @@ async function aplicar(req, res) {
   const data = await OfertasService.aplicar(
     req.empresa_id,
     Number(req.params.id),
+    Number(req.body.puesto_id),
     req.usuario.sub,
     req.empresasActivas
   );
@@ -55,6 +56,7 @@ async function retirar(req, res) {
   await OfertasService.retirar(
     req.empresa_id,
     Number(req.params.id),
+    Number(req.body.puesto_id),
     req.usuario.sub,
     req.empresasActivas
   );

@@ -9,12 +9,12 @@ const ContratosModel = require('../../contratos/contratos.model');
  * plazas_cubiertas de forma atómica.
  */
 const AsignacionesModel = {
-  /** Crea una postulación en estado 'pendiente'. */
-  async crear(empresaId, ofertaId, trabajadorId) {
+  /** Crea una postulación en estado 'pendiente' apuntada a un puesto concreto. */
+  async crear(empresaId, ofertaId, puestoId, trabajadorId) {
     const [res] = await pool.query(
-      `INSERT INTO asignaciones_turno (empresa_id, oferta_id, trabajador_id, estado)
-       VALUES (?, ?, ?, 'pendiente')`,
-      [empresaId, ofertaId, trabajadorId]
+      `INSERT INTO asignaciones_turno (empresa_id, oferta_id, puesto_id, trabajador_id, estado)
+       VALUES (?, ?, ?, ?, 'pendiente')`,
+      [empresaId, ofertaId, puestoId, trabajadorId]
     );
     return res.insertId;
   },
@@ -27,10 +27,14 @@ const AsignacionesModel = {
     return filas[0] || null;
   },
 
-  async obtenerPorOfertaYTrabajador(ofertaId, trabajadorId) {
+  /**
+   * Una postulación es única por (puesto, trabajador): el trabajador puede
+   * postularse a varios puestos distintos de la misma oferta.
+   */
+  async obtenerPorPuestoYTrabajador(puestoId, trabajadorId) {
     const [filas] = await pool.query(
-      'SELECT * FROM asignaciones_turno WHERE oferta_id = ? AND trabajador_id = ? LIMIT 1',
-      [ofertaId, trabajadorId]
+      'SELECT * FROM asignaciones_turno WHERE puesto_id = ? AND trabajador_id = ? LIMIT 1',
+      [puestoId, trabajadorId]
     );
     return filas[0] || null;
   },
@@ -93,8 +97,9 @@ const AsignacionesModel = {
   },
 
   /**
-   * Confirma una asignación pendiente y suma una plaza cubierta a la oferta,
-   * todo dentro de una transacción con bloqueo de fila.
+   * Confirma una asignación pendiente y suma una plaza cubierta al PUESTO
+   * (no a la oferta — la oferta ya no lleva ese contador desde mig 013).
+   * Todo en una transacción con bloqueo de fila.
    * @returns {Promise<{ok:boolean, motivo?:string}>}
    */
   async confirmar(empresaId, id) {
@@ -123,7 +128,16 @@ const AsignacionesModel = {
         await conn.rollback();
         return { ok: false, motivo: 'oferta' };
       }
-      if (oferta.plazas_cubiertas >= oferta.plazas_disponibles) {
+
+      const [[puesto]] = await conn.query(
+        'SELECT * FROM oferta_puestos WHERE id = ? FOR UPDATE',
+        [asig.puesto_id]
+      );
+      if (!puesto) {
+        await conn.rollback();
+        return { ok: false, motivo: 'puesto' };
+      }
+      if (puesto.plazas_cubiertas >= puesto.plazas) {
         await conn.rollback();
         return { ok: false, motivo: 'lleno' };
       }
@@ -133,12 +147,11 @@ const AsignacionesModel = {
         [id]
       );
       await conn.query(
-        'UPDATE ofertas_turno SET plazas_cubiertas = plazas_cubiertas + 1 WHERE id = ?',
-        [asig.oferta_id]
+        'UPDATE oferta_puestos SET plazas_cubiertas = plazas_cubiertas + 1 WHERE id = ?',
+        [asig.puesto_id]
       );
 
-      // El contrato diario se genera de forma atómica al confirmar:
-      // si falla, toda la confirmación se revierte.
+      // Contrato diario atómico al confirmar. Tarifa la fija el PUESTO.
       await ContratosModel.crear(
         empresaId,
         {
@@ -146,7 +159,7 @@ const AsignacionesModel = {
           anio: String(oferta.fecha).slice(0, 4),
           fecha: oferta.fecha,
           descripcionLabor: oferta.descripcion || oferta.titulo,
-          valorDia: oferta.tarifa_dia,
+          valorDia: puesto.tarifa_dia,
         },
         conn
       );
@@ -175,17 +188,18 @@ const AsignacionesModel = {
 
   /**
    * Marca la salida, guarda la firma y calcula horas y pago.
-   * pago_total toma la tarifa diaria de la oferta vinculada.
+   * `pago_total` toma la tarifa del PUESTO al que postuló el trabajador
+   * (no la oferta — desde la migración 013 la tarifa vive por puesto).
    */
   async registrarEgreso(empresaId, id, firmaB64) {
     const [res] = await pool.query(
       `UPDATE asignaciones_turno a
-       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN oferta_puestos p ON p.id = a.puesto_id
        SET a.hora_egreso_real = NOW(),
            a.firma_digital = ?,
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, NOW()) / 60,
-           a.pago_total = o.tarifa_dia
+           a.pago_total = p.tarifa_dia
        WHERE a.id = ? AND a.empresa_id = ?`,
       [firmaB64, id, empresaId]
     );
@@ -270,11 +284,16 @@ const AsignacionesModel = {
   /** Turnos y postulaciones de un trabajador (vista "mis-turnos"). */
   async listarPorTrabajador(empresaId, trabajadorId) {
     const [filas] = await pool.query(
-      `SELECT a.*, o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+      `SELECT a.*,
+              o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
-              o.lugar, o.latitud, o.longitud, o.tarifa_dia
+              o.lugar, o.latitud, o.longitud,
+              p.tarifa_dia, p.cargo_id,
+              c.codigo AS cargo_codigo, c.nombre AS cargo_nombre
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN oferta_puestos p ON p.id = a.puesto_id
+       JOIN cargos c ON c.id = p.cargo_id
        WHERE a.empresa_id = ? AND a.trabajador_id = ?
        ORDER BY o.fecha DESC, o.hora_inicio`,
       [empresaId, trabajadorId]
