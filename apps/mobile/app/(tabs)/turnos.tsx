@@ -1,0 +1,307 @@
+/**
+ * Turnos — Tab "Mis Turnos"
+ *
+ * Secciones:
+ *   1. WeekStrip  — navega semana, filtra por día
+ *   2. Tabs       — "Mis Turnos" / "Disponibles"
+ *   3. Lista      — ShiftCards filtradas por día seleccionado
+ *
+ * Estados cubiertos: loading · error · empty · datos
+ */
+import React, { useState, useMemo, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { useRouter } from 'expo-router';
+import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurnos';
+import { WeekStrip }  from '@/features/turnos/WeekStrip';
+import { ShiftCard }  from '@/features/turnos/ShiftCard';
+import { getWeekDays, toISODate } from '@/features/turnos/turnosUtils';
+import { Badge }   from '@/components/ui/Badge';
+import { Button }  from '@/components/ui/Button';
+import type { Asignacion, Oferta } from '@api-client';
+
+// ── Constants ─────────────────────────────────────────────────────────────
+
+type ActiveTab = 'mis_turnos' | 'disponibles';
+
+// ── Screen ────────────────────────────────────────────────────────────────
+
+export default function TurnosScreen() {
+  const today      = useMemo(() => toISODate(new Date()), []);
+  const weekDays   = useMemo(() => getWeekDays(), []);
+
+  const [selectedDate, setSelectedDate] = useState<string>(today);
+  const [activeTab,    setActiveTab]    = useState<ActiveTab>('mis_turnos');
+
+  // ── Data ──────────────────────────────────────────────────────────────
+  const {
+    data: misTurnos,
+    isLoading: loadingMios,
+    isError: errorMios,
+    refetch: refetchMios,
+    isRefetching: refetchingMios,
+  } = useMisTurnos();
+
+  const {
+    data: ofertasResp,
+    isLoading: loadingOfertas,
+    refetch: refetchOfertas,
+    isRefetching: refetchingOfertas,
+  } = useOfertas({ estado: 'abierta' });
+
+  const router = useRouter();
+  const aplicarMutation = useAplicar();
+
+  // ── Derived ───────────────────────────────────────────────────────────
+
+  /** Días del trabajador que tienen al menos una asignación */
+  const datesWithShifts = useMemo(() => {
+    const set = new Set<string>();
+    misTurnos?.forEach((a) => set.add(a.oferta_fecha));
+    return set;
+  }, [misTurnos]);
+
+  /** Asignaciones del día seleccionado */
+  const turnosDelDia = useMemo(() => {
+    if (!misTurnos) return [];
+    return misTurnos.filter((a) => a.oferta_fecha === selectedDate);
+  }, [misTurnos, selectedDate]);
+
+  /** IDs de ofertas a las que ya está postulado */
+  const aplicadosIds = useMemo(() => {
+    const set = new Set<number>();
+    misTurnos?.forEach((a) => set.add(a.oferta_id));
+    return set;
+  }, [misTurnos]);
+
+  const ofertas = ofertasResp?.data ?? [];
+
+  const isRefreshing = refetchingMios || refetchingOfertas;
+
+  const onRefresh = useCallback(() => {
+    refetchMios();
+    refetchOfertas();
+  }, []);
+
+  // ── Render helpers ────────────────────────────────────────────────────
+
+  const renderShiftCard = useCallback(({ item }: { item: Asignacion }) => (
+    <ShiftCard
+      asignacion={item}
+      showDate={false}
+      onPress={() => router.push(`/turno/${item.id}`)}
+    />
+  ), []);
+
+  const renderOfertaCard = useCallback(({ item }: { item: Oferta }) => {
+    const yaAplicado = aplicadosIds.has(item.id);
+    const plazasLibres = item.plazas_disponibles - item.plazas_cubiertas;
+
+    return (
+      <View
+        className="bg-card rounded-2xl overflow-hidden flex-row"
+        style={{
+          elevation: 2,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+        }}
+      >
+        {/* Accent bar */}
+        <View className="w-1.5 bg-primary-400" />
+
+        <View className="flex-1 px-4 py-4 gap-2">
+          <View className="flex-row items-start justify-between gap-2">
+            <Text className="text-base font-semibold text-foreground flex-1" numberOfLines={1}>
+              {item.titulo}
+            </Text>
+            {plazasLibres <= 2 && plazasLibres > 0 && (
+              <Badge label={`${plazasLibres} plaza${plazasLibres > 1 ? 's' : ''}`} variant="warning" size="sm" />
+            )}
+          </View>
+
+          <View className="flex-row gap-3 flex-wrap">
+            <Text className="text-sm text-muted-foreground">
+              📅 {formatShortDate(item.fecha)}
+            </Text>
+            <Text className="text-sm text-muted-foreground">
+              🕐 {fmtRangeSimple(item.hora_inicio, item.hora_fin_estimada)}
+            </Text>
+            {item.lugar && (
+              <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+                📍 {item.lugar}
+              </Text>
+            )}
+          </View>
+
+          <View className="flex-row items-center justify-between mt-1">
+            <Text className="text-sm font-semibold text-success">
+              ${item.tarifa_dia.toLocaleString('es-CO')} / día
+            </Text>
+            {yaAplicado ? (
+              <Badge label="Ya postulado" variant="info" size="sm" />
+            ) : (
+              <Button
+                label={aplicarMutation.isPending ? 'Aplicando…' : 'Aplicar'}
+                variant="primary"
+                size="sm"
+                loading={aplicarMutation.isPending}
+                onPress={() => aplicarMutation.mutate(item.id)}
+              />
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }, [aplicadosIds, aplicarMutation]);
+
+  // ── Empty states ──────────────────────────────────────────────────────
+
+  const EmptyMiosTurnos = () => (
+    <View className="flex-1 items-center justify-center py-16 gap-3">
+      <Text className="text-4xl">📅</Text>
+      <Text className="text-base font-semibold text-foreground">Sin turnos este día</Text>
+      <Text className="text-sm text-muted-foreground text-center px-8">
+        No tienes turnos asignados el{' '}
+        {formatShortDate(selectedDate)}.
+      </Text>
+    </View>
+  );
+
+  const EmptyOfertas = () => (
+    <View className="flex-1 items-center justify-center py-16 gap-3">
+      <Text className="text-4xl">🔍</Text>
+      <Text className="text-base font-semibold text-foreground">Sin ofertas disponibles</Text>
+      <Text className="text-sm text-muted-foreground text-center px-8">
+        No hay turnos disponibles en este momento. Vuelve más tarde.
+      </Text>
+    </View>
+  );
+
+  // ── Main render ───────────────────────────────────────────────────────
+
+  return (
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
+        <Text className="text-xl font-bold text-foreground">Mis Turnos</Text>
+        <TouchableOpacity
+          className="w-9 h-9 bg-primary-500 rounded-xl items-center justify-center"
+          accessibilityLabel="Nuevo turno"
+        >
+          <Text className="text-white text-xl font-bold">+</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Week strip ─────────────────────────────────────────────── */}
+      <WeekStrip
+        days={weekDays}
+        selectedDate={selectedDate}
+        datesWithShifts={datesWithShifts}
+        onSelectDate={setSelectedDate}
+      />
+
+      {/* ── Tab selector ───────────────────────────────────────────── */}
+      <View className="bg-card flex-row border-b border-border px-6">
+        {(['mis_turnos', 'disponibles'] as ActiveTab[]).map((tab) => {
+          const label = tab === 'mis_turnos' ? 'Mis Turnos' : 'Disponibles';
+          const isActive = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+            >
+              <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* ── List ───────────────────────────────────────────────────── */}
+      {activeTab === 'mis_turnos' ? (
+        loadingMios ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#FF5A3C" />
+          </View>
+        ) : errorMios ? (
+          <View className="flex-1 items-center justify-center gap-3 px-6">
+            <Text className="text-4xl">⚠️</Text>
+            <Text className="text-base font-semibold text-foreground">Error al cargar turnos</Text>
+            <Button label="Reintentar" onPress={() => refetchMios()} variant="secondary" />
+          </View>
+        ) : (
+          <FlatList
+            data={turnosDelDia}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderShiftCard}
+            contentContainerClassName="px-5 py-4 gap-3"
+            ListEmptyComponent={<EmptyMiosTurnos />}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                tintColor="#FF5A3C"
+                colors={['#FF5A3C']}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        )
+      ) : (
+        loadingOfertas ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#FF5A3C" />
+          </View>
+        ) : (
+          <FlatList
+            data={ofertas}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderOfertaCard}
+            contentContainerClassName="px-5 py-4 gap-3"
+            ListEmptyComponent={<EmptyOfertas />}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                tintColor="#FF5A3C"
+                colors={['#FF5A3C']}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        )
+      )}
+    </SafeAreaView>
+  );
+}
+
+// ── Local helpers ─────────────────────────────────────────────────────────
+
+const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function formatShortDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
+}
+
+function fmtRangeSimple(start: string, end: string | null): string {
+  const s = start.slice(0, 5).replace(/^0/, '');
+  if (!end) return s;
+  return `${s} – ${end.slice(0, 5).replace(/^0/, '')}`;
+}
