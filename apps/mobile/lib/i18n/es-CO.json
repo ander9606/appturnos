@@ -59,6 +59,27 @@
     "nomina":  "Nómina",
     "equipo":  "Equipo"
   },
+  "turnos": {
+    "title":            "Mis Turnos",
+    "tabMios":          "Mis Turnos",
+    "tabDisponibles":   "Disponibles",
+    "emptyDay":         "Sin turnos este día",
+    "emptyDaySub":      "No tienes turnos asignados el {{date}}.",
+    "emptyOfertas":     "Sin ofertas disponibles",
+    "emptyOfertasSub":  "No hay turnos disponibles en este momento. Vuelve más tarde.",
+    "apply":            "Aplicar",
+    "applying":         "Aplicando…",
+    "applied":          "Ya postulado",
+    "perDay":           "/ día",
+    "estados": {
+      "pendiente":     "Pendiente",
+      "confirmado":    "Confirmado",
+      "en_progreso":   "En curso",
+      "completado":    "Completado",
+      "no_presentado": "No presentado",
+      "cancelado":     "Cancelado"
+    }
+  },
   "dashboard": {
     "greeting":       "Buenos días",
     "greetingEvening":"Buenas tardes",
