@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "AppTurnos",
+    "slug": "appturnos",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "appturnos",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF5A3C"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.appturnos.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "AppTurnos necesita tu ubicación para verificar que estás en el punto de trabajo al marcar entrada/salida.",
+        "NSFaceIDUsageDescription": "Usa Face ID para acceder rápidamente a AppTurnos."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FF5A3C"
+      },
+      "package": "com.appturnos.mobile",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "USE_FINGERPRINT", "USE_BIOMETRIC"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      ["expo-notifications", { "icon": "./assets/notification-icon.png", "color": "#FF5A3C" }],
+      "expo-local-authentication"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

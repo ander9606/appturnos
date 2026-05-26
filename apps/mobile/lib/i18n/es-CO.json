@@ -1,0 +1,77 @@
+{
+  "common": {
+    "loading": "Cargando…",
+    "error":   "Algo salió mal",
+    "retry":   "Reintentar",
+    "save":    "Guardar",
+    "cancel":  "Cancelar",
+    "confirm": "Confirmar",
+    "back":    "Volver",
+    "next":    "Siguiente",
+    "yes":     "Sí",
+    "no":      "No"
+  },
+  "auth": {
+    "login": {
+      "title":           "Bienvenido",
+      "subtitle":        "Inicia sesión para continuar",
+      "email":           "Correo electrónico",
+      "emailPlaceholder":"tucorreo@empresa.com",
+      "password":        "Contraseña",
+      "passwordPlaceholder": "Mínimo 8 caracteres",
+      "submit":          "Iniciar sesión",
+      "submitting":      "Entrando…",
+      "forgotPassword":  "¿Olvidaste tu contraseña?",
+      "noAccount":       "¿Primera vez aquí?",
+      "activateLink":    "Activa tu cuenta"
+    },
+    "activar": {
+      "title":            "Activa tu cuenta",
+      "subtitle":         "Ingresa tus datos para crear tu acceso",
+      "cedula":           "Cédula / Documento",
+      "cedulaPlaceholder":"Tu número de documento",
+      "email":            "Correo electrónico",
+      "emailPlaceholder": "tucorreo@ejemplo.com",
+      "password":         "Contraseña",
+      "passwordPlaceholder": "Mínimo 8 caracteres",
+      "confirmPassword":  "Confirmar contraseña",
+      "confirmPlaceholder":"Repite tu contraseña",
+      "submit":           "Activar cuenta",
+      "submitting":       "Activando…",
+      "alreadyAccount":   "¿Ya tienes cuenta?",
+      "loginLink":        "Inicia sesión",
+      "successTitle":     "¡Cuenta activada!",
+      "successMessage":   "Ya puedes iniciar sesión con tu correo y contraseña."
+    },
+    "errors": {
+      "invalidCredentials": "Correo o contraseña incorrectos",
+      "accountLocked":      "Cuenta bloqueada por intentos fallidos. Intenta más tarde.",
+      "inactiveUser":       "Tu cuenta está inactiva. Contacta a tu empleador.",
+      "cedulaNotFound":     "No encontramos un trabajador con esa cédula.",
+      "emailInUse":         "Ese correo ya está registrado.",
+      "alreadyActivated":   "Este trabajador ya tiene una cuenta activa.",
+      "generic":            "Ocurrió un error. Intenta de nuevo."
+    }
+  },
+  "tabs": {
+    "home":    "Inicio",
+    "turnos":  "Turnos",
+    "nomina":  "Nómina",
+    "equipo":  "Equipo"
+  },
+  "dashboard": {
+    "greeting":       "Buenos días",
+    "greetingEvening":"Buenas tardes",
+    "greetingNight":  "Buenas noches",
+    "activeShift":    "Turno activo",
+    "inProgress":     "En curso",
+    "upcomingShifts": "Próximos turnos",
+    "seeAll":         "Ver todos",
+    "quickActions":   "Acciones rápidas",
+    "statShiftsToday":"Turnos hoy",
+    "statEmployees":  "Empleados",
+    "statRequests":   "Solicitudes",
+    "hoursLeft":      "{{h}}h restantes",
+    "completed":      "{{pct}}% completado"
+  }
+}
