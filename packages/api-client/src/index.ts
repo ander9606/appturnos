@@ -6,7 +6,16 @@ export { initApiClient } from './client';
 export type { TokenStore } from './client';
 
 // API modules
-export { authApi } from './auth';
+export { nominaApi, calcularResumenHoras } from './nomina';
+export type {
+  PeriodoNomina,
+  RegistroDiario,
+  LiquidacionResumen,
+  LiquidacionLinea,
+  EstadoPeriodo,
+  TipoPeriodo,
+  ResumenHoras,
+} from './nomina';
 export { turnosApi } from './turnos';
 export type {
   Asignacion,
