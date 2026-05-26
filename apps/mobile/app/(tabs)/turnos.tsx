@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useRouter } from 'expo-router';
 import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurnos';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
@@ -56,6 +57,7 @@ export default function TurnosScreen() {
     isRefetching: refetchingOfertas,
   } = useOfertas({ estado: 'abierta' });
 
+  const router = useRouter();
   const aplicarMutation = useAplicar();
 
   // ── Derived ───────────────────────────────────────────────────────────
@@ -95,7 +97,7 @@ export default function TurnosScreen() {
     <ShiftCard
       asignacion={item}
       showDate={false}
-      onPress={() => {/* TODO: navigate to detail */}}
+      onPress={() => router.push(`/turno/${item.id}`)}
     />
   ), []);
 

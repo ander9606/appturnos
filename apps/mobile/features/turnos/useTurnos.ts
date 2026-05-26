@@ -29,6 +29,21 @@ export function useOfertas(params?: Parameters<typeof turnosApi.listarOfertas>[0
   });
 }
 
+/**
+ * Obtiene una asignación concreta del caché de misTurnos.
+ * Reactivo: se actualiza automáticamente cuando cambia el estado
+ * (ej: tras marcar ingreso/egreso).
+ */
+export function useAsignacion(id: number | null) {
+  return useQuery({
+    queryKey: QUERY_KEYS.misTurnos,
+    queryFn:  () => turnosApi.misTurnos(),
+    select:   (data) => data.find((a) => a.id === id) ?? null,
+    staleTime: 30_000,
+    enabled: id !== null,
+  });
+}
+
 /** Detalle de una oferta. */
 export function useOferta(id: number | null) {
   return useQuery({

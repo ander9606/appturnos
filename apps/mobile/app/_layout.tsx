@@ -69,6 +69,14 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
+            {/* Detail screens — full-screen push over the tab bar */}
+            <Stack.Screen
+              name="turno/[id]"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_right',
+              }}
+            />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>
