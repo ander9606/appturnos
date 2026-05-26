@@ -551,19 +551,49 @@ GET /api/v1/public/ordenes/{external_ref}/productos
 GET /api/v1/public/estado/{external_ref}
 Header: X-API-Key: at_live_xxxxx
 
-Response:
+Response (v1.1+):
 {
   "success": true,
   "data": {
     "external_ref": "logiq360:orden:47",
     "oferta_id": 201,
-    "oferta_estado": "publicada",
-    "cupos_requeridos": 5,
-    "cupos_aceptados": 4,
-    "porcentaje_cobertura": 80
+    "estado": "abierta",
+    "cupos_requeridos": 13,        // suma de puestos[].plazas
+    "cupos_cubiertos": 4,          // suma de puestos[].plazas_cubiertas
+    "puestos": [                   // ← agregado en v1.1
+      {
+        "cargo": "auxiliar",
+        "plazas": 10,
+        "plazas_cubiertas": 3,
+        "tarifa_dia": 80000
+      },
+      {
+        "cargo": "jefe_montaje",
+        "plazas": 2,
+        "plazas_cubiertas": 1,
+        "tarifa_dia": 150000
+      },
+      {
+        "cargo": "conductor",
+        "plazas": 1,
+        "plazas_cubiertas": 0,
+        "tarifa_dia": 120000
+      }
+    ],
+    "contratos": [
+      {
+        "trabajador_ref": "logiq360:empleado:15",
+        "trabajador_nombre": "Pedro Gómez",
+        "estado": "confirmado",
+        "hora_ingreso": null,
+        "hora_egreso": null
+      }
+    ]
   }
 }
 ```
+
+> **Cambio v1.1 (no breaking)**: se agregó el array `puestos[]` y los campos `cupos_*` ahora son sumas sobre puestos. Las ofertas creadas antes del refactor se materializan como 1 puesto único de cargo `auxiliar` con los valores originales. Si logiq360 ignora `puestos[]`, el comportamiento previo se conserva (`cupos_requeridos` / `cupos_cubiertos` siguen reflejando el total).
 
 ```
 GET /api/v1/public/en-sitio/{external_ref}
@@ -916,6 +946,43 @@ App Turnos NUNCA envía a logiq360:
 ├── Firmas digitales (se quedan en App Turnos)
 └── Datos de otros clientes de App Turnos
 ```
+
+---
+
+## CHANGELOG
+
+### v1.1 — Puestos por oferta (cargo + tarifa + plazas)
+
+Una oferta de turno ahora se compone de **N puestos**, cada uno con su cargo, plazas y tarifa propios. Ej: un mismo montaje puede ofrecer 10 plazas @auxiliar $80k + 2 @jefe_montaje $150k + 1 @conductor $120k.
+
+**Para logiq360, este cambio NO rompe el contrato existente.** Solo agrega campos.
+
+#### Lo que cambia
+
+| Endpoint / evento | Cambio | Acción de logiq360 |
+|---|---|---|
+| `GET /public/estado/{ref}` | Devuelve nuevo array `puestos[]` con desglose por cargo. Los campos `cupos_requeridos` y `cupos_cubiertos` siguen presentes y ahora son sumas sobre puestos. | Opcional: leer `puestos[]` si quieres mostrar el desglose. Si no, todo sigue igual. |
+| `GET /public/en-sitio/{ref}` | Sin cambios. | Ninguna. |
+| Webhooks salientes hacia logiq360 (`costo_labor.calculado`, `trabajador.ingreso/egreso`, `contrato.completado`) | Sin cambios en payload. `pago_total` por trabajador ahora se calcula desde la tarifa del puesto (no de la oferta), pero el valor sigue siendo el correcto. | Ninguna. |
+| Webhooks entrantes (`orden.creada`, `orden.cancelada`, etc.) | Sin cambios. Sigue aceptando `cupos_sugeridos` + `valor_dia_sugerido`. App Turnos los materializa internamente como un único puesto "auxiliar" en borrador; el jefe puede dividirlo por cargo antes de publicar. | Ninguna. |
+
+#### Migración de datos en App Turnos (transparente)
+
+Todas las ofertas creadas antes de v1.1 se migraron automáticamente a "1 puesto de cargo `auxiliar`" con sus plazas y tarifa originales. Las asignaciones quedaron vinculadas al único puesto. Los pulls a `/public/estado/{ref}` de órdenes antiguas siguen devolviendo los mismos `cupos_*`, ahora también con `puestos[]` de un solo elemento.
+
+#### Extensión opcional (futura, no implementada)
+
+Si logiq360 quiere mandar el desglose por cargo desde el inicio (en vez de que el jefe lo divida manualmente), podemos extender el payload de `orden.creada` con:
+
+```json
+"puestos_sugeridos": [
+  { "cargo": "auxiliar",     "cantidad": 10, "valor_dia_sugerido": 80000 },
+  { "cargo": "jefe_montaje", "cantidad": 2,  "valor_dia_sugerido": 150000 },
+  { "cargo": "conductor",    "cantidad": 1,  "valor_dia_sugerido": 120000 }
+]
+```
+
+Esto requiere coordinación bilateral: avisar y enviar PR.
 
 ---
 
