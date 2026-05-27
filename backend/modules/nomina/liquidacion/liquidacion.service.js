@@ -29,7 +29,11 @@ const LiquidacionService = {
         horas_nocturnas: Number(f.horas_nocturnas) || 0,
         horas_festivo: Number(f.horas_festivo) || 0,
       };
-      const vh = valorHora(f);
+      // Use snapshot frozen at period-close time (Option A).
+      // Fallback to live salary only for open periods (backwards compatible).
+      const vh = f.valor_hora_snapshot != null
+        ? Number(f.valor_hora_snapshot)
+        : valorHora(f);
       const total = redondear(calcularPagoNomina(desglose, vh));
       totalGeneral += total;
 

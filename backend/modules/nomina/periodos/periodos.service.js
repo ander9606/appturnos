@@ -33,7 +33,10 @@ const PeriodosService = {
     if (periodo.estado !== 'abierto') {
       throw new AppError('Solo se puede cerrar un período abierto', 409);
     }
-    await PeriodosModel.cerrar(empresaId, id, usuarioId);
+    // cerrarConSnapshot es atómico: cambia estado + congela valor_hora
+    // en un solo commit, evitando que modificaciones de sueldo posteriores
+    // afecten la liquidación de este período.
+    await PeriodosModel.cerrarConSnapshot(empresaId, id, usuarioId);
     return PeriodosModel.obtenerPorId(empresaId, id);
   },
 

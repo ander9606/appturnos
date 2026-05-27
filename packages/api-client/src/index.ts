@@ -26,3 +26,11 @@ export type {
   EstadoOferta,
   PaginatedResponse,
 } from './turnos';
+export { trabajadoresApi } from './trabajadores';
+export type {
+  Trabajador,
+  TrabajadoresListParams,
+  TrabajadoresListResponse,
+  CrearTrabajadorPayload,
+  ActualizarTrabajadorPayload,
+} from './trabajadores';
