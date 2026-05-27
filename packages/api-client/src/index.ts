@@ -35,3 +35,13 @@ export type {
   CrearTrabajadorPayload,
   ActualizarTrabajadorPayload,
 } from './trabajadores';
+export { adminApi } from './admin';
+export type {
+  EmpresaAdmin,
+  EmpresasListResponse,
+  EmpresasListParams,
+  CrearEmpresaPayload,
+  ActualizarEmpresaPayload,
+  ReportesGlobales,
+  PlanEmpresa,
+} from './admin';

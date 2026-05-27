@@ -111,6 +111,66 @@
       "cancelado":     "Cancelado"
     }
   },
+  "admin": {
+    "dashboard": {
+      "title":          "Panel de administración",
+      "sectionEmpresas": "Empresas",
+      "sectionActividad": "Actividad",
+      "sectionNomina":   "Nómina",
+      "sectionPlanes":   "Distribución por plan",
+      "quickActions":    "Acciones rápidas"
+    },
+    "empresas": {
+      "title":           "Empresas",
+      "search":          "Buscar por nombre, slug o NIT…",
+      "sinResultados":   "Sin resultados",
+      "sinResultadosSub":"No se encontraron empresas con los filtros actuales.",
+      "nueva":           "Nueva empresa",
+      "estados": {
+        "todas":     "Todas",
+        "activas":   "Activas",
+        "inactivas": "Inactivas"
+      },
+      "planes": {
+        "todas":        "Todos los planes",
+        "basico":       "Básico",
+        "profesional":  "Pro",
+        "empresarial":  "Emp."
+      }
+    },
+    "empresa": {
+      "metricas":              "Métricas",
+      "informacion":           "Información",
+      "editando":              "Editando empresa",
+      "guardar":               "Guardar cambios",
+      "guardando":             "Guardando…",
+      "zonaRiesgo":            "Zona de riesgo",
+      "activar":               "Activar empresa",
+      "desactivar":            "Desactivar empresa",
+      "aceptaPostulaciones":   "Acepta postulaciones",
+      "aceptaPostulacionesSub":"Aparece en el directorio de empleadores"
+    },
+    "nuevaEmpresa": {
+      "title":        "Nueva empresa",
+      "subtitle":     "Crear tenant en el sistema",
+      "datosBasicos": "Datos básicos",
+      "planTitle":    "Plan",
+      "crear":        "Crear empresa",
+      "creando":      "Creando…",
+      "slugHint":     "Solo letras minúsculas, números y guiones. Único e inmutable.",
+      "planBasico":       "Para equipos pequeños",
+      "planProfesional":  "Más funcionalidades",
+      "planEmpresarial":  "Sin límites"
+    },
+    "reportes": {
+      "title":         "Reportes",
+      "subtitle":      "Métricas globales del sistema",
+      "secEmpresas":   "Empresas",
+      "secPersonas":   "Personas",
+      "secActividad":  "Actividad",
+      "secPlanes":     "Distribución por plan"
+    }
+  },
   "dashboard": {
     "greeting":       "Buenos días",
     "greetingEvening":"Buenas tardes",

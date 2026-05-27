@@ -53,6 +53,8 @@ app.use('/api/empresas', require('./modules/empresas/empresas.routes'));
 app.use('/api/trabajador-empresa', require('./modules/trabajador-empresa/trabajador-empresa.routes'));
 // Catálogo de cargos (sistema + custom por empresa). Ref: 012_cargos.
 app.use('/api/cargos', require('./modules/cargos/cargos.routes'));
+// Panel de super_admin: gestión cross-tenant de empresas y reportes globales.
+app.use('/api/admin', require('./modules/admin/admin.routes'));
 
 // ─── Manejo de errores ────────────────────────────────────────
 app.use(noEncontrado);
