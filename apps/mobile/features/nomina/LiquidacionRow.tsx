@@ -1,0 +1,101 @@
+/**
+ * LiquidacionRow — fila de trabajador en la vista de liquidación (jefe/admin)
+ */
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import type { LiquidacionLinea } from '@api-client';
+
+function getInitials(n: string, a: string) {
+  return `${n.charAt(0)}${a.charAt(0)}`.toUpperCase();
+}
+
+const AVATAR_COLORS = ['#FF5A3C','#3B82F6','#059669','#8B5CF6','#F59E0B','#EF4444'];
+function avatarColor(id: number) {
+  return AVATAR_COLORS[id % AVATAR_COLORS.length];
+}
+
+interface LiquidacionRowProps {
+  linea: LiquidacionLinea;
+}
+
+export function LiquidacionRow({ linea }: LiquidacionRowProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const totalHoras =
+    linea.horas_ordinarias + linea.horas_extra_diurnas +
+    linea.horas_extra_nocturnas + linea.horas_nocturnas + linea.horas_festivo;
+
+  const hasExtras =
+    linea.horas_extra_diurnas > 0 || linea.horas_extra_nocturnas > 0 ||
+    linea.horas_nocturnas > 0 || linea.horas_festivo > 0;
+
+  return (
+    <TouchableOpacity
+      onPress={() => setExpanded((v) => !v)}
+      activeOpacity={0.8}
+      className="bg-card rounded-2xl overflow-hidden"
+      style={{ elevation: 1, shadowColor:'#000', shadowOpacity:0.05, shadowRadius:6 }}
+    >
+      {/* ── Main row ─────────────────────────────────────────── */}
+      <View className="flex-row items-center px-4 py-4 gap-3">
+        {/* Avatar */}
+        <View
+          className="w-10 h-10 rounded-full items-center justify-center"
+          style={{ backgroundColor: avatarColor(linea.trabajador_id) }}
+        >
+          <Text className="text-sm font-bold text-white">
+            {getInitials(linea.nombre, linea.apellido)}
+          </Text>
+        </View>
+
+        {/* Name + days */}
+        <View className="flex-1 gap-0.5">
+          <Text className="text-sm font-semibold text-foreground">
+            {linea.nombre} {linea.apellido}
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            {linea.dias_registrados} días · {totalHoras.toFixed(1)}h totales
+          </Text>
+        </View>
+
+        {/* Total pay */}
+        <View className="items-end gap-1">
+          <Text className="text-base font-bold text-success">
+            ${linea.total.toLocaleString('es-CO')}
+          </Text>
+          {hasExtras && (
+            <Text className="text-xs text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
+          )}
+        </View>
+      </View>
+
+      {/* ── Expanded: hour breakdown ──────────────────────────── */}
+      {expanded && (
+        <View className="px-4 pb-4 border-t border-border">
+          <View className="flex-row flex-wrap gap-x-4 gap-y-2 mt-3">
+            {[
+              { l: 'Ordinarias',   v: linea.horas_ordinarias,     c: 'text-foreground' },
+              { l: 'Extra diurna', v: linea.horas_extra_diurnas,  c: 'text-primary-500' },
+              { l: 'Extra noct.',  v: linea.horas_extra_nocturnas,c: 'text-primary-600' },
+              { l: 'Nocturnas',    v: linea.horas_nocturnas,      c: 'text-info' },
+              { l: 'Festivo',      v: linea.horas_festivo,        c: 'text-danger' },
+            ].filter(item => item.v > 0).map((item) => (
+              <View key={item.l} className="gap-0.5 min-w-[80px]">
+                <Text className="text-[10px] text-muted-foreground">{item.l}</Text>
+                <Text className={`text-sm font-semibold ${item.c}`}>
+                  {item.v.toFixed(1)}h
+                </Text>
+              </View>
+            ))}
+            <View className="gap-0.5 min-w-[80px]">
+              <Text className="text-[10px] text-muted-foreground">Valor/hora</Text>
+              <Text className="text-sm font-semibold text-muted-foreground">
+                ${linea.valor_hora.toLocaleString('es-CO')}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}

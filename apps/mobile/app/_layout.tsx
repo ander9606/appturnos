@@ -77,6 +77,20 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
               }}
             />
+            <Stack.Screen
+              name="trabajador/[id]"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_right',
+              }}
+            />
+            <Stack.Screen
+              name="trabajador/nuevo"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_right',
+              }}
+            />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

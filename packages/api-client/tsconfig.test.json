@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "noEmit": true,
+    "rootDir": "../..",
+    "strict": true,
+    "paths": {
+      "@api-client": ["./src/index.ts"],
+      "@/*": ["../../apps/mobile/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "__tests__/**/*",
+    "../../apps/mobile/lib/**/*",
+    "../../apps/mobile/features/turnos/turnosUtils.ts"
+  ]
+}

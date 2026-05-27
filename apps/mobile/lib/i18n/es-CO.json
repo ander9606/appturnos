@@ -59,6 +59,37 @@
     "nomina":  "Nómina",
     "equipo":  "Equipo"
   },
+  "nomina": {
+    "title":             "Nómina",
+    "miNomina":          "Mi Nómina",
+    "totalHoras":        "Total horas",
+    "ordinarias":        "Ordinarias",
+    "diasRegistrados":   "Días regist.",
+    "horasConRecargo":   "Horas con recargo",
+    "extraDiurna":       "Extra diurna",
+    "extraNocturna":     "Extra noct.",
+    "nocturnas":         "Nocturnas",
+    "festivo":           "Festivo",
+    "registros":         "Registros del período",
+    "sinPeriodo":        "Sin período activo",
+    "sinPeriodoSub":     "Tu responsable aún no ha abierto un período de nómina.",
+    "sinRegistros":      "Sin registros aún",
+    "sinRegistrosSub":   "No hay registros en este período todavía.",
+    "totalBruto":        "Total bruto",
+    "empleados":         "empleados",
+    "detalleEmpleado":   "Detalle por empleado",
+    "cerrarPeriodo":     "Cerrar período",
+    "cerrando":          "Cerrando…",
+    "liquidarPeriodo":   "Liquidar período",
+    "liquidando":        "Liquidando…",
+    "periodoCerrado":    "Período cerrado",
+    "periodoLiquidado":  "Período liquidado",
+    "estados": {
+      "abierto":   "Abierto",
+      "cerrado":   "Cerrado",
+      "liquidado": "Liquidado"
+    }
+  },
   "turnos": {
     "title":            "Mis Turnos",
     "tabMios":          "Mis Turnos",

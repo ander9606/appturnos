@@ -58,6 +58,54 @@ const PeriodosModel = {
     return res.affectedRows;
   },
 
+  /**
+   * Cierra el período Y congela el valor_hora de cada trabajador
+   * en todos sus registros_diarios del período, en una sola transacción.
+   *
+   * Prioridad del sueldo (igual que laboralUtils.valorHora):
+   *   1. tarifa_hora      — tarifa directa por hora
+   *   2. salario_base/240 — derivada del mensual (30 días × 8 h)
+   *   3. 0               — trabajador sin sueldo configurado
+   *
+   * Usar este método en lugar de `cerrar` garantiza que cualquier
+   * modificación de sueldo posterior no afecte períodos ya cerrados.
+   */
+  async cerrarConSnapshot(empresaId, periodoId, cerradoPor) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // 1. Cambiar estado del período
+      await conn.query(
+        `UPDATE periodos_nomina
+         SET estado = 'cerrado', cerrado_por = ?, cerrado_at = NOW()
+         WHERE id = ? AND empresa_id = ?`,
+        [cerradoPor, periodoId, empresaId],
+      );
+
+      // 2. Congelar valor_hora en todos los registros del período.
+      //    240 = HORAS_MES_NOMINA (30 días × 8 h, ley laboral colombiana).
+      await conn.query(
+        `UPDATE registros_diarios r
+         JOIN  trabajadores t ON t.id = r.trabajador_id
+         SET   r.valor_hora_snapshot = CASE
+                 WHEN t.tarifa_hora  IS NOT NULL THEN t.tarifa_hora
+                 WHEN t.salario_base IS NOT NULL THEN t.salario_base / 240
+                 ELSE 0
+               END
+         WHERE r.periodo_id = ? AND r.empresa_id = ?`,
+        [periodoId, empresaId],
+      );
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
   async liquidar(empresaId, id) {
     const [res] = await pool.query(
       "UPDATE periodos_nomina SET estado = 'liquidado' WHERE id = ? AND empresa_id = ?",

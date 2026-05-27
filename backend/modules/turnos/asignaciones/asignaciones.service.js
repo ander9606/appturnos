@@ -17,6 +17,12 @@ async function resolverTrabajador(empresaId, usuarioId) {
 }
 
 const AsignacionesService = {
+  async obtener(empresaId, id) {
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    return asignacion;
+  },
+
   async listar(empresaId, { fecha, oferta_id, trabajador_id, page, limit }) {
     const offset = (page - 1) * limit;
     const { data, total } = await AsignacionesModel.listar(empresaId, {
