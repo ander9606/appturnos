@@ -35,7 +35,12 @@ export interface Asignacion {
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
+  // Joined from oferta_puestos
   tarifa_dia: number;
+  puesto_id?: number;
+  cargo_id?: number;
+  cargo_codigo?: string;
+  cargo_nombre?: string;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;

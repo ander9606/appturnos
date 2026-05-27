@@ -1,4 +1,4 @@
-import { apiRequest } from './client';
+import { api } from './client';
 import type { TipoTrabajador } from './types';
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -60,34 +60,18 @@ export const trabajadoresApi = {
     if (params.page !== undefined) qs.set('page', String(params.page));
     if (params.limit !== undefined) qs.set('limit', String(params.limit));
     const suffix = qs.toString() ? `?${qs}` : '';
-    const res = await apiRequest<TrabajadoresListResponse>(`/api/trabajadores${suffix}`, {
-      method: 'GET',
-    });
-    return res.data;
+    return api.get<TrabajadoresListResponse>(`/api/trabajadores${suffix}`);
   },
 
-  async obtener(id: number): Promise<Trabajador> {
-    const res = await apiRequest<Trabajador>(`/api/trabajadores/${id}`, { method: 'GET' });
-    return res.data;
-  },
+  obtener: (id: number): Promise<Trabajador> =>
+    api.get<Trabajador>(`/api/trabajadores/${id}`),
 
-  async crear(payload: CrearTrabajadorPayload): Promise<Trabajador> {
-    const res = await apiRequest<Trabajador>('/api/trabajadores', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-    return res.data;
-  },
+  crear: (payload: CrearTrabajadorPayload): Promise<Trabajador> =>
+    api.post<Trabajador>('/api/trabajadores', payload),
 
-  async actualizar(id: number, payload: ActualizarTrabajadorPayload): Promise<Trabajador> {
-    const res = await apiRequest<Trabajador>(`/api/trabajadores/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
-    return res.data;
-  },
+  actualizar: (id: number, payload: ActualizarTrabajadorPayload): Promise<Trabajador> =>
+    api.put<Trabajador>(`/api/trabajadores/${id}`, payload),
 
-  async desactivar(id: number): Promise<void> {
-    await apiRequest<void>(`/api/trabajadores/${id}`, { method: 'DELETE' });
-  },
+  desactivar: (id: number): Promise<void> =>
+    api.delete<void>(`/api/trabajadores/${id}`),
 };
