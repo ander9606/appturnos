@@ -3,7 +3,11 @@
  *
  * Visibilidad:
  *  - admin_empresa / jefe_turnos / jefe_nomina / nomina → pueden ver y filtrar
- *  - trabajador_turnos / trabajador_nomina → acceso denegado (pantalla vacía de cortesía)
+ *  - trabajador_turnos / trabajador_nomina → acceso denegado (pantalla de cortesía)
+ *
+ * Solo admin_empresa:
+ *  - FAB "+" para crear nuevo trabajador
+ *  - Navegar al detalle con opciones de editar / desactivar
  */
 import React, { useState } from 'react';
 import {
@@ -13,12 +17,12 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { useTrabajadores, useDesactivarTrabajador } from '@/features/equipo/useEquipo';
+import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
 
@@ -29,28 +33,28 @@ const MANAGE_ROLES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
 type Filtro = 'todos' | TipoTrabajador;
 
 const FILTROS: { key: Filtro; label: string }[] = [
-  { key: 'todos',  label: 'Todos'   },
-  { key: 'turnos', label: 'Turnos'  },
-  { key: 'nomina', label: 'Nómina'  },
-  { key: 'ambos',  label: 'Ambos'   },
+  { key: 'todos',  label: 'Todos'  },
+  { key: 'turnos', label: 'Turnos' },
+  { key: 'nomina', label: 'Nómina' },
+  { key: 'ambos',  label: 'Ambos'  },
 ];
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function EquipoScreen() {
+  const router  = useRouter();
   const usuario = useAuthStore((s) => s.usuario);
   const canManage = usuario != null && MANAGE_ROLES.includes(usuario.rol);
   const isAdmin   = usuario?.rol === 'admin_empresa';
 
-  const [filtro, setFiltro]   = useState<Filtro>('todos');
-  const [search, setSearch]   = useState('');
+  const [filtro, setFiltro] = useState<Filtro>('todos');
+  const [search, setSearch] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
 
   const { data, isLoading, isError, refetch } = useTrabajadores({
     tipo:   filtro !== 'todos' ? filtro : undefined,
-    activo: true,
+    activo: showInactive ? undefined : true,
   });
-
-  const desactivar = useDesactivarTrabajador();
 
   // ── Acceso denegado ────────────────────────────────────────────────────
 
@@ -85,54 +89,37 @@ export default function EquipoScreen() {
     );
   });
 
-  // ── Handlers ──────────────────────────────────────────────────────────
-
-  function handleCardPress(t: Trabajador) {
-    if (!isAdmin) return;
-    Alert.alert(
-      `${t.nombre} ${t.apellido}`,
-      t.email ?? 'Sin correo',
-      [
-        {
-          text: 'Desactivar',
-          style: 'destructive',
-          onPress: () =>
-            Alert.alert(
-              '¿Desactivar trabajador?',
-              'El trabajador no podrá iniciar sesión ni recibir turnos.',
-              [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Desactivar',
-                  style: 'destructive',
-                  onPress: () =>
-                    desactivar.mutate(t.id, {
-                      onError: () =>
-                        Alert.alert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
-                    }),
-                },
-              ],
-            ),
-        },
-        { text: 'Cerrar', style: 'cancel' },
-      ],
-    );
-  }
+  const total = data?.pagination?.total ?? 0;
 
   // ── Render ─────────────────────────────────────────────────────────────
-
-  const total = data?.pagination?.total ?? 0;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* Header */}
-      <View className="px-4 pt-4 pb-2">
-        <Text className="text-2xl font-bold text-foreground">Equipo</Text>
-        {!isLoading && (
-          <Text className="text-sm text-muted-foreground">
-            {total} {total === 1 ? 'trabajador' : 'trabajadores'}
+      <View className="px-4 pt-4 pb-2 flex-row items-start justify-between">
+        <View>
+          <Text className="text-2xl font-bold text-foreground">Equipo</Text>
+          {!isLoading && (
+            <Text className="text-sm text-muted-foreground">
+              {total} {total === 1 ? 'trabajador' : 'trabajadores'}
+            </Text>
+          )}
+        </View>
+        {/* Toggle inactivos */}
+        <Pressable
+          onPress={() => setShowInactive((v) => !v)}
+          className={`rounded-full px-3 py-1.5 border mt-1 ${
+            showInactive ? 'bg-danger/10 border-danger' : 'bg-card border-border'
+          }`}
+        >
+          <Text
+            className={`text-xs font-semibold ${
+              showInactive ? 'text-danger' : 'text-muted-foreground'
+            }`}
+          >
+            {showInactive ? 'Mostrando inactivos' : 'Solo activos'}
           </Text>
-        )}
+        </Pressable>
       </View>
 
       {/* Search bar */}
@@ -141,7 +128,7 @@ export default function EquipoScreen() {
           <Text className="text-muted-foreground mr-2">🔍</Text>
           <TextInput
             className="flex-1 text-sm text-foreground"
-            placeholder="Buscar por nombre, cédula, cargo…"
+            placeholder="Nombre, cédula, cargo…"
             placeholderTextColor="#94A3B8"
             value={search}
             onChangeText={setSearch}
@@ -164,9 +151,7 @@ export default function EquipoScreen() {
               key={key}
               onPress={() => setFiltro(key)}
               className={`rounded-full px-3 py-1.5 border ${
-                active
-                  ? 'bg-primary border-primary'
-                  : 'bg-card border-border'
+                active ? 'bg-primary border-primary' : 'bg-card border-border'
               }`}
             >
               <Text
@@ -181,7 +166,7 @@ export default function EquipoScreen() {
         })}
       </View>
 
-      {/* Content */}
+      {/* List */}
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#FF5A3C" />
@@ -198,11 +183,11 @@ export default function EquipoScreen() {
         <FlatList
           data={trabajadores}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
-          renderItem={({ item }) => (
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+          renderItem={({ item }: { item: Trabajador }) => (
             <TrabajadorCard
               trabajador={item}
-              onPress={isAdmin ? handleCardPress : undefined}
+              onPress={(t) => router.push(`/trabajador/${t.id}`)}
             />
           )}
           ListEmptyComponent={
@@ -220,6 +205,23 @@ export default function EquipoScreen() {
           }
           showsVerticalScrollIndicator={false}
         />
+      )}
+
+      {/* FAB — solo admin */}
+      {isAdmin && (
+        <Pressable
+          onPress={() => router.push('/trabajador/nuevo')}
+          className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-lg active:bg-primary/80"
+          style={{
+            shadowColor: '#FF5A3C',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+        >
+          <Text className="text-white text-2xl font-bold">+</Text>
+        </Pressable>
       )}
     </SafeAreaView>
   );
