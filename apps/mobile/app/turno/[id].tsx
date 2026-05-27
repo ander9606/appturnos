@@ -24,6 +24,7 @@ import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
 import { TurnoTimeline }       from '@/features/turnos/TurnoTimeline';
+import { StarRating }          from '@/features/turnos/StarRating';
 import { Badge }               from '@/components/ui/Badge';
 import { Button }              from '@/components/ui/Button';
 import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
@@ -144,7 +145,8 @@ export default function TurnoDetailScreen() {
 
   const { estado, oferta_titulo, oferta_fecha, hora_inicio, hora_fin_estimada,
           lugar, tarifa_dia, hora_ingreso_real, hora_egreso_real,
-          horas_trabajadas, pago_total } = asignacion;
+          horas_trabajadas, pago_total,
+          calificacion, calificacion_comentario } = asignacion;
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -213,41 +215,65 @@ export default function TurnoDetailScreen() {
 
           {/* ── Completado: resumen ────────────────────────────── */}
           {estado === 'completado' && (
-            <View className="bg-success-light rounded-2xl px-5 py-5 gap-3">
-              <View className="flex-row items-center gap-2">
-                <Text className="text-2xl">🎉</Text>
-                <Text className="text-base font-bold text-success">¡Turno completado!</Text>
+            <>
+              <View className="bg-success-light rounded-2xl px-5 py-5 gap-3">
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-2xl">🎉</Text>
+                  <Text className="text-base font-bold text-success">¡Turno completado!</Text>
+                </View>
+                <View className="flex-row gap-4">
+                  {horas_trabajadas != null && (
+                    <View className="flex-1 bg-white/60 rounded-xl px-4 py-3">
+                      <Text className="text-xs text-success/70">Horas trabajadas</Text>
+                      <Text className="text-lg font-bold text-success">
+                        {Number(horas_trabajadas).toFixed(1)}h
+                      </Text>
+                    </View>
+                  )}
+                  {pago_total != null && (
+                    <View className="flex-1 bg-white/60 rounded-xl px-4 py-3">
+                      <Text className="text-xs text-success/70">Pago total</Text>
+                      <Text className="text-lg font-bold text-success">
+                        ${Number(pago_total).toLocaleString('es-CO')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-xs text-success/80">Entrada:</Text>
+                  <Text className="text-xs font-medium text-success">
+                    {hora_ingreso_real ? fmtTime(hora_ingreso_real.slice(11, 19)) : '—'}
+                  </Text>
+                  <Text className="text-xs text-success/60 mx-1">·</Text>
+                  <Text className="text-xs text-success/80">Salida:</Text>
+                  <Text className="text-xs font-medium text-success">
+                    {hora_egreso_real ? fmtTime(hora_egreso_real.slice(11, 19)) : '—'}
+                  </Text>
+                </View>
               </View>
-              <View className="flex-row gap-4">
-                {horas_trabajadas != null && (
-                  <View className="flex-1 bg-white/60 rounded-xl px-4 py-3">
-                    <Text className="text-xs text-success/70">Horas trabajadas</Text>
-                    <Text className="text-lg font-bold text-success">
-                      {Number(horas_trabajadas).toFixed(1)}h
-                    </Text>
+
+              {/* Calificación recibida */}
+              <View className="bg-card rounded-2xl px-5 py-4 border border-border">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  Calificación recibida
+                </Text>
+                {calificacion != null ? (
+                  <View className="gap-2">
+                    <StarRating mode="display" value={calificacion} size="lg" />
+                    {calificacion_comentario != null && (
+                      <Text className="text-sm text-foreground italic mt-1">
+                        "{calificacion_comentario}"
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <View className="flex-row items-center gap-2">
+                    <StarRating mode="display" value={null} showEmpty size="md" />
+                    <Text className="text-sm text-muted-foreground">Pendiente de calificación</Text>
                   </View>
                 )}
-                {pago_total != null && (
-                  <View className="flex-1 bg-white/60 rounded-xl px-4 py-3">
-                    <Text className="text-xs text-success/70">Pago total</Text>
-                    <Text className="text-lg font-bold text-success">
-                      ${Number(pago_total).toLocaleString('es-CO')}
-                    </Text>
-                  </View>
-                )}
               </View>
-              <View className="flex-row items-center gap-2">
-                <Text className="text-xs text-success/80">Entrada:</Text>
-                <Text className="text-xs font-medium text-success">
-                  {hora_ingreso_real ? fmtTime(hora_ingreso_real.slice(11, 19)) : '—'}
-                </Text>
-                <Text className="text-xs text-success/60 mx-1">·</Text>
-                <Text className="text-xs text-success/80">Salida:</Text>
-                <Text className="text-xs font-medium text-success">
-                  {hora_egreso_real ? fmtTime(hora_egreso_real.slice(11, 19)) : '—'}
-                </Text>
-              </View>
-            </View>
+            </>
           )}
 
           {/* ── CTA: Marcar Ingreso (estado: confirmado) ────────── */}

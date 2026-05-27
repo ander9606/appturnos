@@ -2,6 +2,11 @@
 
 const AsignacionesService = require('./asignaciones.service');
 
+async function obtener(req, res) {
+  const data = await AsignacionesService.obtener(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data });
+}
+
 async function listar(req, res) {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
@@ -56,4 +61,4 @@ async function calificar(req, res) {
   res.status(201).json({ success: true, data, message: 'Calificación registrada' });
 }
 
-module.exports = { listar, confirmar, ingreso, egreso, misTurnos, calificar };
+module.exports = { listar, obtener, confirmar, ingreso, egreso, misTurnos, calificar };

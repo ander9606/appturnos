@@ -19,6 +19,7 @@ export type {
 export { turnosApi } from './turnos';
 export type {
   Asignacion,
+  CalificacionResponse,
   Oferta,
   OfertaDetalle,
   AsignacionResumen,

@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi } from '@api-client';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 
 // ── Query keys ────────────────────────────────────────────────────────────
 
 export const QUERY_KEYS = {
-  misTurnos: ['misTurnos'] as const,
-  ofertas:   (params?: object) => ['ofertas', params] as const,
-  oferta:    (id: number) => ['oferta', id] as const,
+  misTurnos:   ['misTurnos'] as const,
+  ofertas:     (params?: object) => ['ofertas', params] as const,
+  oferta:      (id: number) => ['oferta', id] as const,
+  asignacion:  (id: number) => ['asignacion', id] as const,
+  asignaciones:(params: object) => ['asignaciones', params] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
@@ -30,17 +33,48 @@ export function useOfertas(params?: Parameters<typeof turnosApi.listarOfertas>[0
 }
 
 /**
- * Obtiene una asignación concreta del caché de misTurnos.
- * Reactivo: se actualiza automáticamente cuando cambia el estado
- * (ej: tras marcar ingreso/egreso).
+ * Obtiene una asignación concreta.
+ * - Trabajadores: busca en el caché de misTurnos (sin fetch extra).
+ * - Gestores/Admin: llama al endpoint GET /asignaciones/:id directamente.
  */
 export function useAsignacion(id: number | null) {
-  return useQuery({
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  const isWorker = rol === 'trabajador_turnos' || rol === 'trabajador_nomina';
+
+  // Vista trabajador — reutiliza el caché de misTurnos
+  const workerQuery = useQuery({
     queryKey: QUERY_KEYS.misTurnos,
     queryFn:  () => turnosApi.misTurnos(),
     select:   (data) => data.find((a) => a.id === id) ?? null,
     staleTime: 30_000,
-    enabled: id !== null,
+    enabled: id !== null && isWorker,
+  });
+
+  // Vista gestor — fetches individualmente con datos de trabajador y calificación
+  const gestorQuery = useQuery({
+    queryKey: QUERY_KEYS.asignacion(id!),
+    queryFn:  () => turnosApi.obtenerAsignacion(id!),
+    staleTime: 30_000,
+    enabled: id !== null && !isWorker,
+  });
+
+  return isWorker ? workerQuery : gestorQuery;
+}
+
+/** Asignaciones de un trabajador concreto (gestores/admin). */
+export function useAsignacionesTrabajador(
+  trabajadorId: number | null,
+  params?: { limit?: number },
+) {
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ trabajadorId, ...params }),
+    queryFn:  () =>
+      turnosApi.listarAsignaciones({
+        trabajador_id: trabajadorId!,
+        limit: params?.limit ?? 20,
+      }),
+    enabled:  trabajadorId !== null,
+    staleTime: 60_000,
   });
 }
 
@@ -101,6 +135,31 @@ export function useMarcarEgreso() {
       turnosApi.marcarEgreso(id, firma),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+    },
+  });
+}
+
+/**
+ * Calificar una asignación completada (gestores/admin).
+ * Invalida el detalle de la asignación y el perfil del trabajador (ranking).
+ */
+export function useCalificar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      calificacion,
+      comentario,
+    }: {
+      id: number;
+      calificacion: number;
+      comentario?: string;
+    }) => turnosApi.calificar(id, calificacion, comentario),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: ['trabajadores'] }); // ranking update
     },
   });
 }

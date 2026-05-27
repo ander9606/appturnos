@@ -2,8 +2,9 @@
  * Detalle del trabajador — vista + edición (admin) + desactivar (admin).
  *
  * Roles:
- *   admin_empresa → puede editar y desactivar
- *   jefe_turnos / jefe_nomina / nomina → solo lectura
+ *   admin_empresa → puede editar, desactivar y calificar turnos
+ *   jefe_turnos   → puede calificar turnos (solo lectura para datos del trabajador)
+ *   jefe_nomina / nomina → solo lectura
  */
 import React, { useState } from 'react';
 import {
@@ -11,6 +12,7 @@ import {
   Text,
   ScrollView,
   Pressable,
+  TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
@@ -23,8 +25,14 @@ import {
   useActualizarTrabajador,
   useDesactivarTrabajador,
 } from '@/features/equipo/useEquipo';
-import { TrabajadorForm } from '@/features/equipo/TrabajadorForm';
+import {
+  useAsignacionesTrabajador,
+  useCalificar,
+} from '@/features/turnos/useTurnos';
+import { StarRating }      from '@/features/turnos/StarRating';
+import { TrabajadorForm }  from '@/features/equipo/TrabajadorForm';
 import type { TrabajadorFormValues } from '@/features/equipo/schemas';
+import type { Asignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -66,13 +74,29 @@ export default function TrabajadorDetailScreen() {
   const numId   = Number(id);
   const router  = useRouter();
   const usuario = useAuthStore((s) => s.usuario);
-  const isAdmin = usuario?.rol === 'admin_empresa';
+  const isAdmin  = usuario?.rol === 'admin_empresa';
+  const canRate  = usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos';
 
   const [editing, setEditing] = useState(false);
+  // Calificación inline: id de la asignación que se está calificando
+  const [ratingId,       setRatingId]       = useState<number | null>(null);
+  const [ratingStars,    setRatingStars]    = useState(5);
+  const [ratingComment,  setRatingComment]  = useState('');
 
   const { data: t, isLoading, isError, refetch } = useTrabajador(numId);
   const actualizar  = useActualizarTrabajador(numId);
   const desactivar  = useDesactivarTrabajador();
+  const calificar   = useCalificar();
+
+  // Turnos recientes del trabajador (solo para roles que pueden ver asignaciones)
+  const showTurnos = canRate || isAdmin;
+  const { data: asignacionesData } = useAsignacionesTrabajador(
+    showTurnos ? numId : null,
+    { limit: 10 },
+  );
+  const turnosRecientes = (asignacionesData?.data ?? [])
+    .filter((a) => a.estado === 'completado' || a.estado === 'no_presentado')
+    .slice(0, 5);
 
   // ── Header right button (edit toggle) ────────────────────────────────
 
@@ -114,6 +138,29 @@ export default function TrabajadorDetailScreen() {
           : 'Ocurrió un error al guardar.';
       Alert.alert('Error', msg);
       throw err;
+    }
+  }
+
+  // ── Calificar ─────────────────────────────────────────────────────────
+
+  async function handleCalificar() {
+    if (!ratingId) return;
+    try {
+      await calificar.mutateAsync({
+        id: ratingId,
+        calificacion: ratingStars,
+        comentario: ratingComment.trim() || undefined,
+      });
+      setRatingId(null);
+      setRatingComment('');
+      setRatingStars(5);
+      Alert.alert('✓ Calificado', `Turno calificado con ${ratingStars}/5 estrellas.`);
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: string }).message)
+          : 'No se pudo guardar la calificación.';
+      Alert.alert('Error', msg);
     }
   }
 
@@ -267,19 +314,117 @@ export default function TrabajadorDetailScreen() {
           />
         </View>
 
-        {/* Ranking card (if any ratings) */}
-        {t.total_calificaciones > 0 && (
-          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4 py-4 flex-row items-center justify-between">
-            <Text className="text-sm text-muted-foreground">Calificación promedio</Text>
-            <View className="flex-row items-center gap-1">
-              <Text className="text-warning text-base">★</Text>
-              <Text className="text-base font-bold text-foreground">
-                {Number(t.ranking).toFixed(1)}
-              </Text>
-              <Text className="text-sm text-muted-foreground">
-                ({t.total_calificaciones})
+        {/* Ranking card */}
+        <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4 py-4 flex-row items-center justify-between">
+          <Text className="text-sm text-muted-foreground">Calificación promedio</Text>
+          {t.total_calificaciones > 0 ? (
+            <View className="flex-row items-center gap-2">
+              <StarRating mode="display" value={Number(t.ranking)} size="sm" />
+              <Text className="text-xs text-muted-foreground">
+                ({t.total_calificaciones} {t.total_calificaciones === 1 ? 'turno' : 'turnos'})
               </Text>
             </View>
+          ) : (
+            <Text className="text-sm text-muted-foreground italic">Sin calificaciones aún</Text>
+          )}
+        </View>
+
+        {/* Turnos recientes — visible para gestores que pueden calificar */}
+        {showTurnos && turnosRecientes.length > 0 && (
+          <View className="mx-4 mt-3">
+            <Text className="text-sm font-semibold text-foreground mb-2">
+              Turnos recientes
+            </Text>
+
+            {turnosRecientes.map((a: Asignacion) => {
+              const yaCalificado = a.calificacion != null;
+              const isOpen       = ratingId === a.id;
+
+              return (
+                <View
+                  key={a.id}
+                  className="bg-card rounded-2xl border border-border mb-2 overflow-hidden"
+                >
+                  {/* Header row */}
+                  <View className="px-4 py-3 flex-row items-center justify-between">
+                    <View className="flex-1 mr-3">
+                      <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
+                        {(a as any).oferta_titulo ?? `Turno #${a.id}`}
+                      </Text>
+                      <Text className="text-xs text-muted-foreground">
+                        {(a as any).oferta_fecha ?? ''}
+                        {a.estado === 'no_presentado' ? '  ·  No presentado' : ''}
+                      </Text>
+                    </View>
+
+                    {a.estado === 'completado' && (
+                      yaCalificado ? (
+                        <StarRating mode="display" value={a.calificacion} size="sm" />
+                      ) : canRate ? (
+                        <Pressable
+                          onPress={() => {
+                            setRatingId(isOpen ? null : a.id);
+                            setRatingStars(5);
+                            setRatingComment('');
+                          }}
+                          className="bg-warning/10 rounded-full px-3 py-1 active:opacity-70"
+                        >
+                          <Text className="text-warning text-xs font-semibold">
+                            {isOpen ? 'Cancelar' : 'Calificar ★'}
+                          </Text>
+                        </Pressable>
+                      ) : (
+                        <Text className="text-xs text-muted-foreground italic">Sin calificar</Text>
+                      )
+                    )}
+                  </View>
+
+                  {/* Inline rating form */}
+                  {isOpen && (
+                    <View className="border-t border-border px-4 pb-4 pt-3 gap-3">
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-xs font-semibold text-muted-foreground">
+                          CALIFICACIÓN
+                        </Text>
+                        <StarRating
+                          mode="input"
+                          value={ratingStars}
+                          onChange={setRatingStars}
+                          size="lg"
+                        />
+                      </View>
+
+                      <TextInput
+                        className="bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground"
+                        placeholder="Comentario opcional…"
+                        placeholderTextColor="#94A3B8"
+                        value={ratingComment}
+                        onChangeText={setRatingComment}
+                        maxLength={500}
+                        multiline
+                        numberOfLines={2}
+                      />
+
+                      <Pressable
+                        onPress={handleCalificar}
+                        disabled={calificar.isPending}
+                        className={`h-10 rounded-xl items-center justify-center ${
+                          calificar.isPending ? 'bg-primary/50' : 'bg-primary active:bg-primary/80'
+                        }`}
+                      >
+                        {calificar.isPending ? (
+                          <ActivityIndicator color="white" size="small" />
+                        ) : (
+                          <Text className="text-white font-bold text-sm">
+                            Confirmar calificación
+                          </Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 

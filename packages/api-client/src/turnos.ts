@@ -36,6 +36,20 @@ export interface Asignacion {
   latitud: number | null;
   longitud: number | null;
   tarifa_dia: number;
+  // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
+  calificacion: number | null;
+  calificacion_comentario: string | null;
+  // Joined from trabajadores (only in gestor detail view)
+  trabajador_nombre?: string;
+  trabajador_apellido?: string;
+  trabajador_cargo?: string;
+}
+
+export interface CalificacionResponse {
+  asignacion_id: number;
+  trabajador_id: number;
+  ranking: number;
+  total_calificaciones: number;
 }
 
 export interface Oferta {
@@ -138,5 +152,48 @@ export const turnosApi = {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/egreso`, {
       firma_b64: firmaB64,
     });
+  },
+
+  /**
+   * Detalle completo de una asignación (gestores/admin).
+   * Incluye datos de oferta, trabajador y calificación.
+   */
+  obtenerAsignacion(id: number): Promise<Asignacion> {
+    return api.get<Asignacion>(`/api/turnos/asignaciones/${id}`);
+  },
+
+  /**
+   * Listar asignaciones con filtros (gestores/admin).
+   */
+  listarAsignaciones(params?: {
+    trabajador_id?: number;
+    oferta_id?: number;
+    fecha?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<Asignacion>> {
+    const qs = new URLSearchParams();
+    if (params?.trabajador_id) qs.set('trabajador_id', String(params.trabajador_id));
+    if (params?.oferta_id)     qs.set('oferta_id',     String(params.oferta_id));
+    if (params?.fecha)          qs.set('fecha',          params.fecha);
+    if (params?.page)           qs.set('page',           String(params.page));
+    if (params?.limit)          qs.set('limit',          String(params.limit));
+    const query = qs.toString() ? `?${qs}` : '';
+    return api.get<PaginatedResponse<Asignacion>>(`/api/turnos/asignaciones${query}`);
+  },
+
+  /**
+   * Califica una asignación completada (1–5 ⭐). Solo gestores/admin.
+   * Una asignación solo puede calificarse una vez.
+   */
+  calificar(
+    asignacionId: number,
+    calificacion: number,
+    comentario?: string,
+  ): Promise<CalificacionResponse> {
+    return api.post<CalificacionResponse>(
+      `/api/turnos/asignaciones/${asignacionId}/calificar`,
+      { calificacion, comentario: comentario || undefined },
+    );
   },
 };

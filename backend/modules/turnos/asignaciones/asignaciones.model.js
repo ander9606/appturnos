@@ -281,7 +281,7 @@ const AsignacionesModel = {
     }
   },
 
-  /** Turnos y postulaciones de un trabajador (vista "mis-turnos"). */
+  /** Turnos y postulaciones de un trabajador (vista "mis-turnos"). Incluye calificación. */
   async listarPorTrabajador(empresaId, trabajadorId) {
     const [filas] = await pool.query(
       `SELECT a.*,
@@ -289,16 +289,41 @@ const AsignacionesModel = {
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
               o.lugar, o.latitud, o.longitud,
               p.tarifa_dia, p.cargo_id,
-              c.codigo AS cargo_codigo, c.nombre AS cargo_nombre
+              carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
+              cal.calificacion, cal.comentario AS calificacion_comentario
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
-       JOIN cargos c ON c.id = p.cargo_id
+       JOIN cargos carg ON carg.id = p.cargo_id
+       LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
        WHERE a.empresa_id = ? AND a.trabajador_id = ?
        ORDER BY o.fecha DESC, o.hora_inicio`,
       [empresaId, trabajadorId]
     );
     return filas;
+  },
+
+  /**
+   * Asignación completa con datos de oferta, trabajador y calificación.
+   * Usada por gestores al acceder al detalle de una asignación concreta.
+   */
+  async obtenerConDetalles(empresaId, id) {
+    const [filas] = await pool.query(
+      `SELECT a.*,
+              o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
+              o.lugar, o.latitud, o.longitud, o.tarifa_dia,
+              t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+              t.cargo AS trabajador_cargo,
+              c.calificacion, c.comentario AS calificacion_comentario
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       LEFT JOIN calificaciones_turno c ON c.asignacion_id = a.id
+       WHERE a.id = ? AND a.empresa_id = ? LIMIT 1`,
+      [id, empresaId]
+    );
+    return filas[0] || null;
   },
 };
 

@@ -8,7 +8,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "node migrations/migrate.js",
-    "generar-vapid": "node scripts/generar-vapid.js"
+    "generar-vapid": "node scripts/generar-vapid.js",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "engines": {
     "node": ">=20"
@@ -28,6 +30,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "jest": "^30.4.2",
     "nodemon": "^3.1.7"
   }
 }
