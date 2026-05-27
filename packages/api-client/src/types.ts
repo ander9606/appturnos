@@ -15,7 +15,7 @@ export type TipoTrabajador = 'turnos' | 'nomina' | 'ambos';
 
 export interface UsuarioPerfil {
   id: number;
-  empresa_id: number;
+  empresa_id: number | null; // null para super_admin (cross-tenant)
   nombre: string;
   apellido: string;
   email: string;

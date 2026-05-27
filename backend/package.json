@@ -9,6 +9,7 @@
     "dev": "nodemon server.js",
     "migrate": "node migrations/migrate.js",
     "generar-vapid": "node scripts/generar-vapid.js",
+    "crear-super-admin": "node scripts/crear-super-admin.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },
