@@ -15,13 +15,13 @@
 -- ── 1. Columnas nuevas en empresas ──────────────────────────────────────────
 
 ALTER TABLE empresas
-  ADD COLUMN IF NOT EXISTS acepta_postulaciones TINYINT NOT NULL DEFAULT 1
+  ADD COLUMN acepta_postulaciones TINYINT NOT NULL DEFAULT 1
     COMMENT '1 = aparece en el directorio público para trabajadores turnos'
     AFTER plan,
-  ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500) NULL
+  ADD COLUMN logo_url VARCHAR(500) NULL
     COMMENT 'URL pública del logo de la empresa'
     AFTER acepta_postulaciones,
-  ADD COLUMN IF NOT EXISTS descripcion TEXT NULL
+  ADD COLUMN descripcion TEXT NULL
     COMMENT 'Texto libre de presentación para el directorio'
     AFTER logo_url;
 
@@ -70,40 +70,27 @@ CREATE TABLE IF NOT EXISTS trabajador_empresa (
 --      trabajador si su usuario_id ya está seteado en la tabla trabajadores.
 --   b) Poner empresa_id = NULL en usuarios.
 --
--- IMPORTANTE: se usa un procedimiento temporal para hacer la migración
--- sin depender de cursores en versiones antiguas de MySQL.
+-- Nota: ejecutar como INSERTs directos (compatible con multipleStatements).
 
-DROP PROCEDURE IF EXISTS _backfill_trabajador_empresa;
-DELIMITER $$
-CREATE PROCEDURE _backfill_trabajador_empresa()
-BEGIN
-  -- Insertar relaciones activas para trabajador_turnos con empresa_id actual.
-  INSERT INTO trabajador_empresa
-    (usuario_id, empresa_id, trabajador_id, estado, iniciado_por, fecha_resuelto)
-  SELECT
-    u.id                 AS usuario_id,
-    u.empresa_id         AS empresa_id,
-    t.id                 AS trabajador_id,   -- NULL si aún no está vinculado
-    'activo'             AS estado,
-    'empresa'            AS iniciado_por,    -- histórico: la empresa los creó
-    u.created_at         AS fecha_resuelto
-  FROM usuarios u
-  LEFT JOIN trabajadores t
-    ON t.usuario_id = u.id AND t.empresa_id = u.empresa_id AND t.activo = 1
-  WHERE u.rol = 'trabajador_turnos'
-    AND u.empresa_id IS NOT NULL
-  ON DUPLICATE KEY UPDATE estado = VALUES(estado);  -- idempotente
+INSERT IGNORE INTO trabajador_empresa
+  (usuario_id, empresa_id, trabajador_id, estado, iniciado_por, fecha_resuelto)
+SELECT
+  u.id                 AS usuario_id,
+  u.empresa_id         AS empresa_id,
+  t.id                 AS trabajador_id,
+  'activo'             AS estado,
+  'empresa'            AS iniciado_por,
+  u.created_at         AS fecha_resuelto
+FROM usuarios u
+LEFT JOIN trabajadores t
+  ON t.usuario_id = u.id AND t.empresa_id = u.empresa_id AND t.activo = 1
+WHERE u.rol = 'trabajador_turnos'
+  AND u.empresa_id IS NOT NULL;
 
-  -- Desligar empresa_id de los usuarios ya migrados.
-  UPDATE usuarios
-  SET empresa_id = NULL
-  WHERE rol = 'trabajador_turnos'
-    AND empresa_id IS NOT NULL
-    AND id IN (
-      SELECT usuario_id FROM trabajador_empresa WHERE estado = 'activo'
-    );
-END$$
-DELIMITER ;
-
-CALL _backfill_trabajador_empresa();
-DROP PROCEDURE IF EXISTS _backfill_trabajador_empresa;
+UPDATE usuarios
+SET empresa_id = NULL
+WHERE rol = 'trabajador_turnos'
+  AND empresa_id IS NOT NULL
+  AND id IN (
+    SELECT usuario_id FROM trabajador_empresa WHERE estado = 'activo'
+  );

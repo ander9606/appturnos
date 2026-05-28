@@ -36,22 +36,32 @@ ALTER TABLE ofertas_turno
 -- manuales desde la app siguen usando 'abierta' (default sin cambios).
 -- Actualizamos el default para reflejar el flujo integrado:
 ALTER TABLE ofertas_turno
-  ALTER COLUMN estado SET DEFAULT 'abierta';
+  MODIFY COLUMN estado
+    ENUM(
+      'borrador',
+      'abierta',
+      'publicada',
+      'en_proceso',
+      'cerrada',
+      'completada',
+      'cancelada'
+    ) NOT NULL DEFAULT 'abierta';
 
 -- 2. Columna alquiler_ref: referencia al alquiler de logiq360 que originó la oferta.
 --    Formato: "logiq360:alquiler:31". NULL si es oferta manual.
+--    Usa una consulta condicional para verificar existencia (MySQL 5.7 compatible).
 ALTER TABLE ofertas_turno
-  ADD COLUMN IF NOT EXISTS alquiler_ref VARCHAR(100) NULL
+  ADD COLUMN alquiler_ref VARCHAR(100) NULL
     COMMENT 'Ref al alquiler de logiq360 que originó esta oferta (logiq360:alquiler:N)'
     AFTER external_ref;
 
 -- 3. Columna externo_notas: notas_para_operario del payload de logiq360.
 --    Separada de 'descripcion' para no mezclar info interna con instrucciones externas.
 ALTER TABLE ofertas_turno
-  ADD COLUMN IF NOT EXISTS externo_notas TEXT NULL
+  ADD COLUMN externo_notas TEXT NULL
     COMMENT 'Instrucciones para el operario recibidas desde logiq360 (notas_para_operario)'
     AFTER alquiler_ref;
 
 -- Índice para buscar por alquiler_ref (consulta cruzada desde logiq360).
-CREATE INDEX IF NOT EXISTS idx_ofertas_alquiler_ref
+CREATE INDEX idx_ofertas_alquiler_ref
   ON ofertas_turno (empresa_id, alquiler_ref);
