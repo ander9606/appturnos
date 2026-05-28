@@ -47,10 +47,23 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (status === 'unknown') return; // still loading
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const inAuthGroup  = segments[0] === '(auth)';
+    const inAdminGroup = segments[0] === '(admin)';
 
-    if (status === 'authenticated' && inAuthGroup) {
-      router.replace('/(tabs)');
+    const rol = useAuthStore.getState().usuario?.rol;
+    const isSuperAdmin = rol === 'super_admin';
+
+    if (status === 'authenticated') {
+      if (isSuperAdmin && !inAdminGroup) {
+        // Super admin siempre va al panel de administración.
+        router.replace('/(admin)');
+      } else if (!isSuperAdmin && inAuthGroup) {
+        // Usuarios normales autenticados salen del grupo auth.
+        router.replace('/(tabs)');
+      } else if (!isSuperAdmin && inAdminGroup) {
+        // Un usuario no-super que llega al admin (no debería ocurrir) → tabs.
+        router.replace('/(tabs)');
+      }
     } else if (status === 'unauthenticated' && !inAuthGroup) {
       router.replace('/(auth)/login');
     }
@@ -69,6 +82,8 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
+            {/* Panel de super_admin */}
+            <Stack.Screen name="(admin)" />
             {/* Detail screens — full-screen push over the tab bar */}
             <Stack.Screen
               name="turno/[id]"
@@ -90,6 +105,15 @@ export default function RootLayout() {
                 headerShown: true,
                 animation: 'slide_from_right',
               }}
+            />
+            {/* Admin: detalle y creación de empresa */}
+            <Stack.Screen
+              name="(admin)/empresa/[id]"
+              options={{ headerShown: false, animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+              name="(admin)/empresa/nueva"
+              options={{ headerShown: false, animation: 'slide_from_right' }}
             />
           </Stack>
         </AuthGuard>
