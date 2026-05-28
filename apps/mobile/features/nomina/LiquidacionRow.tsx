@@ -4,15 +4,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import type { LiquidacionLinea } from '@api-client';
-
-function getInitials(n: string, a: string) {
-  return `${n.charAt(0)}${a.charAt(0)}`.toUpperCase();
-}
-
-const AVATAR_COLORS = ['#FF5A3C','#3B82F6','#059669','#8B5CF6','#F59E0B','#EF4444'];
-function avatarColor(id: number) {
-  return AVATAR_COLORS[id % AVATAR_COLORS.length];
-}
+import { getInitials } from '@/lib/formatters';
+import { avatarColorForId } from '@/lib/designTokens';
 
 interface LiquidacionRowProps {
   linea: LiquidacionLinea;
@@ -41,7 +34,7 @@ export function LiquidacionRow({ linea }: LiquidacionRowProps) {
         {/* Avatar */}
         <View
           className="w-10 h-10 rounded-full items-center justify-center"
-          style={{ backgroundColor: avatarColor(linea.trabajador_id) }}
+          style={{ backgroundColor: avatarColorForId(linea.trabajador_id) }}
         >
           <Text className="text-sm font-bold text-white">
             {getInitials(linea.nombre, linea.apellido)}

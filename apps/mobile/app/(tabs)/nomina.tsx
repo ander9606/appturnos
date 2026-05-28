@@ -435,7 +435,12 @@ function NominaGestorView() {
 
 // ── Primitivos locales ────────────────────────────────────────────────────
 
-function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
+type ColorToken =
+  | 'text-foreground' | 'text-muted-foreground'
+  | 'text-primary' | 'text-primary-500' | 'text-primary-600'
+  | 'text-info' | 'text-success' | 'text-warning' | 'text-danger';
+
+function StatCard({ label, value, color }: { label: string; value: string; color: ColorToken }) {
   return (
     <View className="flex-1 bg-card rounded-2xl px-3 py-3 gap-0.5"
       style={{ elevation: 1, shadowColor:'#000', shadowOpacity:0.04, shadowRadius:6 }}>
@@ -445,7 +450,7 @@ function StatCard({ label, value, color }: { label: string; value: string; color
   );
 }
 
-function HoraChip({ label, value, color }: { label: string; value: number; color: string }) {
+function HoraChip({ label, value, color }: { label: string; value: number; color: ColorToken }) {
   return (
     <View className="gap-0.5">
       <Text className={`text-sm font-bold ${color}`}>{value.toFixed(1)}h</Text>
