@@ -1,6 +1,6 @@
 'use strict';
 
-const pool = require('../config/db');
+const pool = require('../config/database');
 const AppError = require('../utils/AppError');
 
 /**
