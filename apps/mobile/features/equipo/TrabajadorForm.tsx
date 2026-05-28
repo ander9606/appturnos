@@ -6,7 +6,6 @@ import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   ScrollView,
   ActivityIndicator,
@@ -16,58 +15,7 @@ import {
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { trabajadorSchema, TIPO_OPTIONS, type TrabajadorFormValues } from './schemas';
-
-// ── Sub-components ────────────────────────────────────────────────────────
-
-interface FieldProps {
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-  hint?: string;
-}
-function Field({ label, error, hint, children }: FieldProps) {
-  return (
-    <View className="mb-4">
-      <Text className="text-sm font-semibold text-foreground mb-1">{label}</Text>
-      {children}
-      {hint && !error && (
-        <Text className="text-xs text-muted-foreground mt-1">{hint}</Text>
-      )}
-      {error && (
-        <Text className="text-xs text-danger mt-1">{error}</Text>
-      )}
-    </View>
-  );
-}
-
-interface InputProps {
-  value: string;
-  onChangeText: (v: string) => void;
-  onBlur: () => void;
-  placeholder?: string;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-  hasError?: boolean;
-}
-function StyledInput({
-  value, onChangeText, onBlur, placeholder,
-  keyboardType = 'default', autoCapitalize = 'sentences', hasError,
-}: InputProps) {
-  return (
-    <TextInput
-      value={value}
-      onChangeText={onChangeText}
-      onBlur={onBlur}
-      placeholder={placeholder}
-      placeholderTextColor="#94A3B8"
-      keyboardType={keyboardType}
-      autoCapitalize={autoCapitalize}
-      className={`bg-card border rounded-xl px-4 h-11 text-sm text-foreground ${
-        hasError ? 'border-danger' : 'border-border'
-      }`}
-    />
-  );
-}
+import { Input } from '@/components/ui/Input';
 
 // ── Props ─────────────────────────────────────────────────────────────────
 
@@ -110,43 +58,46 @@ export function TrabajadorForm({
         showsVerticalScrollIndicator={false}
       >
         {/* Nombre */}
-        <Field label="Nombre *" error={errors.nombre?.message}>
+        <View className="mb-4">
           <Controller
             control={control}
             name="nombre"
             render={({ field }) => (
-              <StyledInput
+              <Input
+                label="Nombre *"
+                error={errors.nombre?.message}
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder="Ej. Juan"
                 autoCapitalize="words"
-                hasError={!!errors.nombre}
               />
             )}
           />
-        </Field>
+        </View>
 
         {/* Apellido */}
-        <Field label="Apellido *" error={errors.apellido?.message}>
+        <View className="mb-4">
           <Controller
             control={control}
             name="apellido"
             render={({ field }) => (
-              <StyledInput
+              <Input
+                label="Apellido *"
+                error={errors.apellido?.message}
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder="Ej. Pérez"
                 autoCapitalize="words"
-                hasError={!!errors.apellido}
               />
             )}
           />
-        </Field>
+        </View>
 
         {/* Tipo (pill selector) */}
-        <Field label="Tipo *" error={errors.tipo?.message}>
+        <View className="mb-4">
+          <Text className="text-sm font-semibold text-foreground mb-1">Tipo *</Text>
           <Controller
             control={control}
             name="tipo"
@@ -177,82 +128,89 @@ export function TrabajadorForm({
               </View>
             )}
           />
-        </Field>
+          {errors.tipo && (
+            <Text className="text-xs text-danger mt-1">{errors.tipo.message}</Text>
+          )}
+        </View>
 
         {/* Cédula */}
-        <Field label="Cédula / Documento" error={errors.cedula?.message}>
+        <View className="mb-4">
           <Controller
             control={control}
             name="cedula"
             render={({ field }) => (
-              <StyledInput
+              <Input
+                label="Cédula / Documento"
+                error={errors.cedula?.message}
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder="Número de documento"
                 keyboardType="numeric"
                 autoCapitalize="none"
-                hasError={!!errors.cedula}
               />
             )}
           />
-        </Field>
+        </View>
 
         {/* Email */}
-        <Field label="Correo electrónico" error={errors.email?.message}>
+        <View className="mb-4">
           <Controller
             control={control}
             name="email"
             render={({ field }) => (
-              <StyledInput
+              <Input
+                label="Correo electrónico"
+                error={errors.email?.message}
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder="trabajador@empresa.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                hasError={!!errors.email}
               />
             )}
           />
-        </Field>
+        </View>
 
         {/* Teléfono */}
-        <Field label="Teléfono" error={errors.telefono?.message}>
+        <View className="mb-4">
           <Controller
             control={control}
             name="telefono"
             render={({ field }) => (
-              <StyledInput
+              <Input
+                label="Teléfono"
+                error={errors.telefono?.message}
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder="+57 300 000 0000"
                 keyboardType="phone-pad"
                 autoCapitalize="none"
-                hasError={!!errors.telefono}
               />
             )}
           />
-        </Field>
+        </View>
 
         {/* Cargo */}
-        <Field label="Cargo" error={errors.cargo?.message}>
+        <View className="mb-4">
           <Controller
             control={control}
             name="cargo"
             render={({ field }) => (
-              <StyledInput
+              <Input
+                label="Cargo"
+                error={errors.cargo?.message}
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder="Ej. Operario, Conductor…"
                 autoCapitalize="sentences"
-                hasError={!!errors.cargo}
               />
             )}
           />
-        </Field>
+        </View>
 
         {/* Salario — divider */}
         <View className="mb-4 mt-1">
@@ -267,49 +225,45 @@ export function TrabajadorForm({
         </View>
 
         {/* Tarifa hora */}
-        <Field
-          label="Tarifa por hora (COP)"
-          error={errors.tarifa_hora?.message}
-        >
+        <View className="mb-4">
           <Controller
             control={control}
             name="tarifa_hora"
             render={({ field }) => (
-              <StyledInput
+              <Input
+                label="Tarifa por hora (COP)"
+                error={errors.tarifa_hora?.message}
                 value={field.value != null ? String(field.value) : ''}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder="Ej. 8500"
                 keyboardType="numeric"
                 autoCapitalize="none"
-                hasError={!!errors.tarifa_hora}
               />
             )}
           />
-        </Field>
+        </View>
 
         {/* Salario base */}
-        <Field
-          label="Salario base mensual (COP)"
-          error={errors.salario_base?.message}
-          hint="Se divide entre 240 para obtener el valor/hora."
-        >
+        <View className="mb-4">
           <Controller
             control={control}
             name="salario_base"
             render={({ field }) => (
-              <StyledInput
+              <Input
+                label="Salario base mensual (COP)"
+                error={errors.salario_base?.message}
+                hint="Se divide entre 240 para obtener el valor/hora."
                 value={field.value != null ? String(field.value) : ''}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
                 placeholder="Ej. 1300000"
                 keyboardType="numeric"
                 autoCapitalize="none"
-                hasError={!!errors.salario_base}
               />
             )}
           />
-        </Field>
+        </View>
 
         {/* Submit */}
         <Pressable

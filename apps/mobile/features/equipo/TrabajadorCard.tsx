@@ -1,25 +1,8 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import type { Trabajador } from '@api-client';
-
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function initials(nombre: string, apellido: string): string {
-  return `${nombre[0] ?? ''}${apellido[0] ?? ''}`.toUpperCase();
-}
-
-const AVATAR_COLORS = [
-  'bg-primary',
-  'bg-info',
-  'bg-success',
-  'bg-warning',
-  'bg-purple-500',
-  'bg-pink-500',
-];
-
-function avatarColor(id: number): string {
-  return AVATAR_COLORS[id % AVATAR_COLORS.length];
-}
+import { getInitials } from '@/lib/formatters';
+import { avatarColorForId } from '@/lib/designTokens';
 
 const TIPO_LABELS: Record<string, string> = {
   turnos:  'Turnos',
@@ -50,10 +33,11 @@ export function TrabajadorCard({ trabajador: t, onPress }: Props) {
     >
       {/* Avatar */}
       <View
-        className={`w-12 h-12 rounded-full items-center justify-center mr-3 ${avatarColor(id)}`}
+        className="w-12 h-12 rounded-full items-center justify-center mr-3"
+        style={{ backgroundColor: avatarColorForId(id) }}
       >
         <Text className="text-white font-bold text-base">
-          {initials(nombre, apellido)}
+          {getInitials(nombre, apellido)}
         </Text>
       </View>
 

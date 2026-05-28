@@ -23,6 +23,7 @@ import { useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
+import { COLORS } from '@/lib/designTokens';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
 
@@ -129,7 +130,7 @@ export default function EquipoScreen() {
           <TextInput
             className="flex-1 text-sm text-foreground"
             placeholder="Nombre, cédula, cargo…"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             value={search}
             onChangeText={setSearch}
             autoCorrect={false}

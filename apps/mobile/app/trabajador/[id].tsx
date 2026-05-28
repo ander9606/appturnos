@@ -33,21 +33,8 @@ import { StarRating }      from '@/features/turnos/StarRating';
 import { TrabajadorForm }  from '@/features/equipo/TrabajadorForm';
 import type { TrabajadorFormValues } from '@/features/equipo/schemas';
 import type { Asignacion } from '@api-client';
-
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function initials(nombre: string, apellido: string): string {
-  return `${nombre[0] ?? ''}${apellido[0] ?? ''}`.toUpperCase();
-}
-
-const AVATAR_COLORS = [
-  '#FF5A3C', // primary
-  '#3B82F6', // info
-  '#059669', // success
-  '#F59E0B', // warning
-  '#8B5CF6', // purple
-  '#EC4899', // pink
-];
+import { getInitials }       from '@/lib/formatters';
+import { avatarColorForId, COLORS } from '@/lib/designTokens';
 
 const TIPO_LABELS: Record<string, string> = {
   turnos: 'Turnos',
@@ -246,7 +233,7 @@ export default function TrabajadorDetailScreen() {
 
   // ── Detail view ───────────────────────────────────────────────────────
 
-  const avatarBg = AVATAR_COLORS[t.id % AVATAR_COLORS.length];
+  const avatarBg = avatarColorForId(t.id);
 
   const salarioLabel = t.tarifa_hora != null
     ? `$${Number(t.tarifa_hora).toLocaleString('es-CO')} / hora`
@@ -277,7 +264,7 @@ export default function TrabajadorDetailScreen() {
             style={{ backgroundColor: avatarBg }}
           >
             <Text className="text-white font-bold text-2xl">
-              {initials(t.nombre, t.apellido)}
+              {getInitials(t.nombre, t.apellido)}
             </Text>
           </View>
           <Text className="text-xl font-bold text-foreground">
@@ -397,7 +384,7 @@ export default function TrabajadorDetailScreen() {
                       <TextInput
                         className="bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground"
                         placeholder="Comentario opcional…"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={COLORS.placeholder}
                         value={ratingComment}
                         onChangeText={setRatingComment}
                         maxLength={500}
