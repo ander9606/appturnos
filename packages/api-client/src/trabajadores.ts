@@ -63,19 +63,15 @@ export const trabajadoresApi = {
     return api.get<TrabajadoresListResponse>(`/api/trabajadores${suffix}`);
   },
 
-  async obtener(id: number): Promise<Trabajador> {
-    return api.get<Trabajador>(`/api/trabajadores/${id}`);
-  },
+  obtener: (id: number): Promise<Trabajador> =>
+    api.get<Trabajador>(`/api/trabajadores/${id}`),
 
-  async crear(payload: CrearTrabajadorPayload): Promise<Trabajador> {
-    return api.post<Trabajador>('/api/trabajadores', payload);
-  },
+  crear: (payload: CrearTrabajadorPayload): Promise<Trabajador> =>
+    api.post<Trabajador>('/api/trabajadores', payload),
 
-  async actualizar(id: number, payload: ActualizarTrabajadorPayload): Promise<Trabajador> {
-    return api.put<Trabajador>(`/api/trabajadores/${id}`, payload);
-  },
+  actualizar: (id: number, payload: ActualizarTrabajadorPayload): Promise<Trabajador> =>
+    api.put<Trabajador>(`/api/trabajadores/${id}`, payload),
 
-  async desactivar(id: number): Promise<void> {
-    return api.delete<void>(`/api/trabajadores/${id}`);
-  },
+  desactivar: (id: number): Promise<void> =>
+    api.delete<void>(`/api/trabajadores/${id}`),
 };
