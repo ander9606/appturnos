@@ -67,7 +67,7 @@ const OfertasModel = {
     if (fecha) { where.push('fecha = ?'); params.push(fecha); }
     if (estado) { where.push('estado = ?'); params.push(estado); }
     if (disponibles) {
-      where.push(`estado = 'abierta' AND EXISTS (
+      where.push(`estado IN ('abierta', 'publicada') AND EXISTS (
         SELECT 1 FROM oferta_puestos p
         WHERE p.oferta_id = ofertas_turno.id AND p.plazas_cubiertas < p.plazas
       )`);
@@ -111,7 +111,7 @@ const OfertasModel = {
     if (fecha) { where.push('o.fecha = ?'); params.push(fecha); }
     if (estado) { where.push('o.estado = ?'); params.push(estado); }
     if (disponibles) {
-      where.push(`o.estado = 'abierta' AND EXISTS (
+      where.push(`o.estado IN ('abierta', 'publicada') AND EXISTS (
         SELECT 1 FROM oferta_puestos p
         WHERE p.oferta_id = o.id AND p.plazas_cubiertas < p.plazas
       )`);

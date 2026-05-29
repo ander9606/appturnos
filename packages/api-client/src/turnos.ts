@@ -10,7 +10,14 @@ export type EstadoAsignacion =
   | 'no_presentado'
   | 'cancelado';
 
-export type EstadoOferta = 'abierta' | 'en_proceso' | 'completada' | 'cancelada';
+export type EstadoOferta =
+  | 'borrador'
+  | 'abierta'
+  | 'publicada'
+  | 'en_proceso'
+  | 'cerrada'
+  | 'completada'
+  | 'cancelada';
 
 export interface Asignacion {
   id: number;
@@ -108,12 +115,14 @@ export const turnosApi = {
   /** Lista de ofertas con filtros opcionales. */
   listarOfertas(params?: {
     estado?: EstadoOferta;
+    disponibles?: boolean;
     fecha?: string;
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Oferta>> {
     const qs = new URLSearchParams();
     if (params?.estado) qs.set('estado', params.estado);
+    if (params?.disponibles) qs.set('disponibles', '1');
     if (params?.fecha) qs.set('fecha', params.fecha);
     if (params?.page)  qs.set('page',  String(params.page));
     if (params?.limit) qs.set('limit', String(params.limit));
