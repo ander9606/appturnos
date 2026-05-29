@@ -112,7 +112,7 @@ function ActiveShiftCard({
       <View className="h-1.5 bg-white/30 rounded-full overflow-hidden">
         <View
           className="h-full bg-white rounded-full"
-          style={{ width: `${pct.toFixed(0)}%` }}
+          style={{ width: `${Math.round(pct)}%` }}
         />
       </View>
 

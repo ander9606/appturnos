@@ -6,6 +6,12 @@ export { initApiClient } from './client';
 export type { TokenStore } from './client';
 
 // API modules
+export { authApi } from './auth';
+export type {
+  LoginResponse,
+  ActivarCuentaResponse,
+  UsuarioPerfil,
+} from './types';
 export { nominaApi, calcularResumenHoras } from './nomina';
 export type {
   PeriodoNomina,

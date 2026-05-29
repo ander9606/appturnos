@@ -6,6 +6,8 @@
  * 2. Rehidratar la sesión desde SecureStore
  * 3. Redirigir a (auth) o (tabs) según el estado de autenticación
  */
+import '../global.css';
+
 import React, { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
