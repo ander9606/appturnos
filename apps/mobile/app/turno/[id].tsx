@@ -19,6 +19,8 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { useAsignacion, useMarcarIngreso, useMarcarEgreso } from '@/features/turnos/useTurnos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
@@ -30,13 +32,15 @@ import { Button }              from '@/components/ui/Button';
 import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
 import { ApiError }            from '@api-client';
 
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+function InfoRow({ icon, label, value }: { icon: IoniconsName; label: string; value: string }) {
   return (
     <View className="flex-row items-start gap-3 py-3 border-b border-border last:border-0">
       <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
-        <Text className="text-base">{icon}</Text>
+        <Ionicons name={icon} size={16} color="#64748B" />
       </View>
       <View className="flex-1 gap-0.5">
         <Text className="text-xs text-muted-foreground">{label}</Text>
@@ -134,7 +138,7 @@ export default function TurnoDetailScreen() {
   if (!asignacion) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Text className="text-4xl">🔍</Text>
+        <Ionicons name="search-outline" size={48} color="#94A3B8" />
         <Text className="text-base font-semibold text-foreground text-center">
           Turno no encontrado
         </Text>
@@ -193,10 +197,10 @@ export default function TurnoDetailScreen() {
 
               {/* Info rows */}
               <View className="mt-3">
-                <InfoRow icon="📅" label="Fecha"  value={fmtDate(oferta_fecha)} />
-                <InfoRow icon="🕐" label="Horario" value={fmtRange(hora_inicio, hora_fin_estimada)} />
-                {lugar && <InfoRow icon="📍" label="Lugar"  value={lugar} />}
-                <InfoRow icon="💰" label="Tarifa" value={`$${tarifa_dia.toLocaleString('es-CO')} / día`} />
+                <InfoRow icon="calendar-outline" label="Fecha"   value={fmtDate(oferta_fecha)} />
+                <InfoRow icon="time-outline"     label="Horario" value={fmtRange(hora_inicio, hora_fin_estimada)} />
+                {lugar && <InfoRow icon="location-outline" label="Lugar" value={lugar} />}
+                <InfoRow icon="cash-outline"     label="Tarifa"  value={`$${tarifa_dia.toLocaleString('es-CO')} / día`} />
               </View>
             </View>
           </View>
@@ -218,7 +222,7 @@ export default function TurnoDetailScreen() {
             <>
               <View className="bg-success-light rounded-2xl px-5 py-5 gap-3">
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-2xl">🎉</Text>
+                  <Ionicons name="checkmark-circle" size={26} color="#059669" />
                   <Text className="text-base font-bold text-success">¡Turno completado!</Text>
                 </View>
                 <View className="flex-row gap-4">
@@ -337,7 +341,7 @@ export default function TurnoDetailScreen() {
           {/* ── Pendiente: informativo ───────────────────────────── */}
           {estado === 'pendiente' && (
             <View className="bg-warning-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
-              <Text className="text-2xl">⏳</Text>
+              <Ionicons name="hourglass-outline" size={26} color="#D97706" />
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-amber-700">
                   Esperando confirmación

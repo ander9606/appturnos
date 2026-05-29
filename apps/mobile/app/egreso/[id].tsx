@@ -17,6 +17,8 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { useAsignacion, useMarcarEgreso } from '@/features/turnos/useTurnos';
 import { SignaturePad }  from '@/features/turnos/SignaturePad';
 import { Button }        from '@/components/ui/Button';
@@ -90,7 +92,7 @@ export default function EgresoScreen() {
   if (!asignacion) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Text className="text-4xl">🔍</Text>
+        <Ionicons name="search-outline" size={48} color="#94A3B8" />
         <Text className="text-base font-semibold text-foreground text-center">Turno no encontrado</Text>
         <Button label="Volver" onPress={() => router.back()} variant="secondary" />
       </SafeAreaView>
@@ -100,7 +102,7 @@ export default function EgresoScreen() {
   if (asignacion.estado !== 'en_progreso') {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Text className="text-5xl">⚠️</Text>
+        <Ionicons name="warning-outline" size={52} color="#F59E0B" />
         <Text className="text-base font-semibold text-foreground text-center">
           Debes registrar el ingreso antes de marcar la salida
         </Text>
@@ -158,7 +160,7 @@ export default function EgresoScreen() {
               </View>
               {asignacion.lugar && (
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-base">📍</Text>
+                  <Ionicons name="location-outline" size={16} color="#64748B" />
                   <Text className="text-sm text-muted-foreground flex-1" numberOfLines={1}>
                     {asignacion.lugar}
                   </Text>
@@ -211,7 +213,7 @@ export default function EgresoScreen() {
             <Text className="text-sm text-muted-foreground">{t('egreso.firmaHint')}</Text>
 
             <View className="flex-row items-center gap-2 bg-info/10 rounded-xl px-4 py-3">
-              <Text className="text-base">🔒</Text>
+              <Ionicons name="lock-closed-outline" size={16} color="#3B82F6" />
               <Text className="text-xs text-info flex-1">
                 La firma digital confirma que has completado tu jornada laboral.
               </Text>

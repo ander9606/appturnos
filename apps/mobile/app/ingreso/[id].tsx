@@ -17,6 +17,8 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { useAsignacion, useMarcarIngreso } from '@/features/turnos/useTurnos';
 import { useGeofence }       from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
@@ -84,7 +86,7 @@ export default function IngresoScreen() {
   if (!asignacion) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Text className="text-4xl">🔍</Text>
+        <Ionicons name="search-outline" size={48} color="#94A3B8" />
         <Text className="text-base font-semibold text-foreground text-center">Turno no encontrado</Text>
         <Button label="Volver" onPress={() => router.back()} variant="secondary" />
       </SafeAreaView>
@@ -94,7 +96,7 @@ export default function IngresoScreen() {
   if (asignacion.estado !== 'confirmado') {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Text className="text-5xl">⚠️</Text>
+        <Ionicons name="warning-outline" size={52} color="#F59E0B" />
         <Text className="text-base font-semibold text-foreground text-center">
           Este turno no está disponible para registrar ingreso
         </Text>
@@ -154,7 +156,7 @@ export default function IngresoScreen() {
 
               {asignacion.lugar && (
                 <View className="flex-row items-center gap-2">
-                  <Text className="text-base">📍</Text>
+                  <Ionicons name="location-outline" size={16} color="#64748B" />
                   <Text className="text-sm text-muted-foreground flex-1" numberOfLines={2}>
                     {asignacion.lugar}
                   </Text>
@@ -162,7 +164,7 @@ export default function IngresoScreen() {
               )}
 
               <View className="flex-row items-center gap-2">
-                <Text className="text-base">💰</Text>
+                <Ionicons name="cash-outline" size={16} color="#059669" />
                 <Text className="text-sm font-semibold text-success">
                   ${asignacion.tarifa_dia.toLocaleString('es-CO')} / día
                 </Text>

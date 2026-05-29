@@ -19,7 +19,8 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { authApi } from '@api-client';
@@ -74,7 +75,7 @@ function CardRow({
       <Text className="text-sm font-medium text-foreground flex-1 text-right" numberOfLines={1}>
         {value}
       </Text>
-      {onPress && <Text className="text-muted-foreground ml-2">›</Text>}
+      {onPress && <Ionicons name="chevron-forward" size={16} color="#94A3B8" style={{ marginLeft: 4 }} />}
     </Pressable>
   );
 }
@@ -353,6 +354,7 @@ export default function PerfilScreen() {
                 onPress={() => setEditingDatos(true)}
                 className="border-t border-border px-5 py-3 flex-row items-center justify-center gap-2 active:opacity-70"
               >
+                <Ionicons name="pencil-outline" size={14} color="#FF5A3C" />
                 <Text className="text-sm font-semibold text-primary">{t('perfil.editarDatos')}</Text>
               </Pressable>
             </View>
@@ -375,10 +377,13 @@ export default function PerfilScreen() {
                 onPress={() => setEditingPassword(true)}
                 className="px-5 py-4 flex-row items-center justify-between active:opacity-70"
               >
-                <Text className="text-sm font-medium text-foreground">
-                  {t('perfil.cambiarPassword')}
-                </Text>
-                <Text className="text-muted-foreground">›</Text>
+                <View className="flex-row items-center gap-3">
+                  <Ionicons name="key-outline" size={16} color="#64748B" />
+                  <Text className="text-sm font-medium text-foreground">
+                    {t('perfil.cambiarPassword')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
               </Pressable>
             </View>
           )}

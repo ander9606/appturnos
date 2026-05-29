@@ -3,11 +3,17 @@
  * Tabs: Dashboard, Empresas, Reportes.
  */
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
   return (
-    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
+    <Ionicons
+      name={focused ? name.replace('-outline', '') as IoniconsName : name}
+      size={22}
+      color={focused ? '#6366F1' : '#94A3B8'}
+    />
   );
 }
 
@@ -16,7 +22,7 @@ export default function AdminLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#6366F1',   // índigo — color distintivo del panel admin
+        tabBarActiveTintColor: '#6366F1',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
@@ -36,21 +42,21 @@ export default function AdminLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="grid-outline" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="empresas"
         options={{
           title: 'Empresas',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏢" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="business-outline" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="reportes"
         options={{
           title: 'Reportes',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📈" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="bar-chart-outline" focused={focused} />,
         }}
       />
     </Tabs>

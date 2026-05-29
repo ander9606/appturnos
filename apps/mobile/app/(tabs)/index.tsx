@@ -16,6 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
@@ -23,6 +25,8 @@ import { usePeriodos } from '@/features/nomina/useNomina';
 import { toISODate, fmtTime, fmtRange, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';
 import type { Asignacion } from '@api-client';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -187,8 +191,10 @@ function NextShiftCard({
 /** Estado vacío — sin turno activo hoy */
 function NoShiftCard() {
   return (
-    <View className="mx-4 mt-4 bg-card rounded-2xl p-5 border border-border items-center gap-2">
-      <Text className="text-3xl">📭</Text>
+    <View className="mx-4 mt-4 bg-card rounded-2xl p-5 border border-border items-center gap-3">
+      <View className="w-14 h-14 rounded-full bg-muted items-center justify-center">
+        <Ionicons name="calendar-clear-outline" size={28} color="#94A3B8" />
+      </View>
       <Text className="text-base font-semibold text-foreground">Sin turno activo hoy</Text>
       <Text className="text-sm text-muted-foreground text-center">
         No tienes turnos programados para hoy.
@@ -332,19 +338,19 @@ export default function DashboardScreen() {
 
   // ── Quick actions ────────────────────────────────────────────────────────
 
-  type Action = { icon: string; label: string; onPress: () => void };
+  type Action = { icon: IoniconsName; label: string; onPress: () => void };
 
   const actions: Action[] = isWorker
     ? [
-        { icon: '📅', label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
-        { icon: '💰', label: 'Mi Nómina',  onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'calendar-outline',  label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
+        { icon: 'wallet-outline',    label: 'Mi Nómina',  onPress: () => router.push('/(tabs)/nomina') },
       ]
     : [
-        { icon: '📅', label: 'Turnos',     onPress: () => router.push('/(tabs)/turnos') },
-        { icon: '💰', label: 'Nómina',     onPress: () => router.push('/(tabs)/nomina') },
-        { icon: '👥', label: 'Equipo',     onPress: () => router.push('/(tabs)/equipo') },
+        { icon: 'calendar-outline',      label: 'Turnos',     onPress: () => router.push('/(tabs)/turnos') },
+        { icon: 'wallet-outline',        label: 'Nómina',     onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'people-outline',        label: 'Equipo',     onPress: () => router.push('/(tabs)/equipo') },
         ...(isAdmin
-          ? [{ icon: '➕', label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') }]
+          ? [{ icon: 'person-add-outline' as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') }]
           : []),
       ];
 
@@ -375,7 +381,7 @@ export default function DashboardScreen() {
               {usuario?.nombre ?? '…'}
             </Text>
             <View className="w-10 h-10 rounded-xl bg-white/20 items-center justify-center">
-              <Text className="text-lg">🔔</Text>
+              <Ionicons name="notifications-outline" size={20} color="white" />
             </View>
           </View>
           <Text className="text-white/60 text-xs capitalize">
@@ -408,7 +414,7 @@ export default function DashboardScreen() {
             onPress={() => router.push('/(tabs)/nomina')}
             className="mx-4 mt-4 flex-row items-center gap-3 bg-success/10 border border-success/30 rounded-2xl px-4 py-3 active:opacity-80"
           >
-            <Text className="text-xl">📂</Text>
+            <Ionicons name="folder-open-outline" size={22} color="#059669" />
             <View className="flex-1">
               <Text className="text-success text-sm font-semibold">Período abierto</Text>
               <Text className="text-success/80 text-xs">
@@ -446,7 +452,7 @@ export default function DashboardScreen() {
                 style={{ width: actions.length <= 2 ? '47%' : '22%' }}
               >
                 <View className="w-10 h-10 bg-primary/10 rounded-xl items-center justify-center">
-                  <Text className="text-xl">{a.icon}</Text>
+                  <Ionicons name={a.icon} size={20} color="#FF5A3C" />
                 </View>
                 <Text className="text-[10px] font-semibold text-foreground text-center">
                   {a.label}
