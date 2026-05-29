@@ -11,6 +11,8 @@ export type {
   LoginResponse,
   ActivarCuentaResponse,
   UsuarioPerfil,
+  UpdateProfileParams,
+  ChangePasswordParams,
 } from './types';
 export { nominaApi, calcularResumenHoras } from './nomina';
 export type {

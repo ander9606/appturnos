@@ -110,6 +110,34 @@ const AuthModel = {
     );
   },
 
+  // ─── Actualización de perfil ────────────────────────────────
+
+  async actualizarPerfil(id, { nombre, apellido, email }) {
+    const updates = [];
+    const params = [];
+    if (nombre !== undefined) { updates.push('nombre = ?'); params.push(nombre); }
+    if (apellido !== undefined) { updates.push('apellido = ?'); params.push(apellido); }
+    if (email !== undefined) { updates.push('email = ?'); params.push(email); }
+    if (updates.length === 0) return;
+    params.push(id);
+    await pool.query(`UPDATE usuarios SET ${updates.join(', ')} WHERE id = ?`, params);
+  },
+
+  async obtenerPasswordHash(id) {
+    const [filas] = await pool.query(
+      'SELECT password_hash FROM usuarios WHERE id = ? LIMIT 1',
+      [id]
+    );
+    return filas[0]?.password_hash || null;
+  },
+
+  async actualizarPassword(id, passwordHash) {
+    await pool.query(
+      'UPDATE usuarios SET password_hash = ? WHERE id = ?',
+      [passwordHash, id]
+    );
+  },
+
   // ─── Activación de cuenta (trabajadores) ────────────────────
 
   /** Trabajadores activos con una cédula dada (puede haber más de uno). */

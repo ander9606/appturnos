@@ -42,4 +42,16 @@ async function registrar(req, res) {
   res.status(201).json({ success: true, data, message: 'Cuenta creada. ¡Bienvenido!' });
 }
 
-module.exports = { login, refresh, logout, me, activarCuenta, registrar };
+async function actualizarPerfil(req, res) {
+  const { nombre, apellido, email } = req.body;
+  const data = await AuthService.actualizarPerfil(req.usuario.sub, { nombre, apellido, email });
+  res.json({ success: true, data, message: 'Perfil actualizado' });
+}
+
+async function cambiarPassword(req, res) {
+  const { password_actual, password_nueva } = req.body;
+  await AuthService.cambiarPassword(req.usuario.sub, password_actual, password_nueva);
+  res.json({ success: true, data: null, message: 'Contraseña actualizada. Inicia sesión de nuevo.' });
+}
+
+module.exports = { login, refresh, logout, me, activarCuenta, registrar, actualizarPerfil, cambiarPassword };

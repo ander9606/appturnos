@@ -164,6 +164,35 @@ const AuthService = {
   },
 
   /**
+   * Actualiza nombre, apellido y/o email del usuario autenticado.
+   */
+  async actualizarPerfil(usuarioId, datos) {
+    if (datos.email) {
+      const existente = await AuthModel.buscarUsuarioPorEmail(datos.email);
+      if (existente && existente.id !== usuarioId) {
+        throw new AppError('El email ya está registrado', 409);
+      }
+    }
+    await AuthModel.actualizarPerfil(usuarioId, datos);
+    return AuthService.perfil(usuarioId);
+  },
+
+  /**
+   * Cambia la contraseña verificando la contraseña actual primero.
+   */
+  async cambiarPassword(usuarioId, passwordActual, passwordNueva) {
+    const hash = await AuthModel.obtenerPasswordHash(usuarioId);
+    if (!hash) throw new AppError('Usuario no encontrado', 404);
+
+    const ok = await bcrypt.compare(passwordActual, hash);
+    if (!ok) throw new AppError('La contraseña actual es incorrecta', 400);
+
+    const nuevoHash = await bcrypt.hash(passwordNueva, BCRYPT_ROUNDS);
+    await AuthModel.actualizarPassword(usuarioId, nuevoHash);
+    await AuthModel.revocarRefreshTokensDeUsuario(usuarioId);
+  },
+
+  /**
    * Registro libre para trabajador_turnos (modelo marketplace).
    * No requiere cédula ni empresa preexistente: cualquier persona puede
    * registrarse y luego solicitar vinculación a empresas desde el directorio.

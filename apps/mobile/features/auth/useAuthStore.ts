@@ -38,6 +38,9 @@ interface AuthState {
     password: string;
   }): Promise<void>;
 
+  /** Actualiza el usuario en memoria y en SecureStore (tras edición de perfil) */
+  setUsuario(usuario: UsuarioPerfil): Promise<void>;
+
   /** Cierra sesión: revoca refresh token + limpia store */
   logout(): Promise<void>;
 }
@@ -104,6 +107,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // After success we do a regular login so the user lands logged in.
     await authApi.activarCuenta({ cedula, email, password });
     await get().login(email, password);
+  },
+
+  // ── setUsuario ────────────────────────────────────────────────────────
+  async setUsuario(usuario: UsuarioPerfil) {
+    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    set({ usuario });
   },
 
   // ── logout ────────────────────────────────────────────────────────────

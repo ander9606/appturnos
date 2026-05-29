@@ -108,6 +108,21 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
               }}
             />
+            {/* Marcar ingreso / egreso — pantallas dedicadas */}
+            <Stack.Screen
+              name="ingreso/[id]"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_bottom',
+              }}
+            />
+            <Stack.Screen
+              name="egreso/[id]"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_bottom',
+              }}
+            />
             {/* Admin: detalle y creación de empresa */}
             <Stack.Screen
               name="(admin)/empresa/[id]"

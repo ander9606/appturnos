@@ -64,9 +64,11 @@ function hoursLabel(mins: number): string {
 function ActiveShiftCard({
   turno,
   onPress,
+  onEgreso,
 }: {
   turno: Asignacion;
   onPress: () => void;
+  onEgreso: () => void;
 }) {
   const [pct, setPct] = useState(() =>
     calcProgress(turno.hora_inicio, turno.hora_fin_estimada),
@@ -121,6 +123,14 @@ function ActiveShiftCard({
         {'  ·  '}
         {pct.toFixed(0)}% completado
       </Text>
+
+      {/* CTA rápida */}
+      <Pressable
+        onPress={(e) => { e.stopPropagation(); onEgreso(); }}
+        className="bg-white/20 rounded-xl py-2.5 items-center active:bg-white/30 mt-1"
+      >
+        <Text className="text-white text-sm font-semibold">Marcar Salida →</Text>
+      </Pressable>
     </Pressable>
   );
 }
@@ -129,9 +139,11 @@ function ActiveShiftCard({
 function NextShiftCard({
   turno,
   onPress,
+  onIngreso,
 }: {
   turno: Asignacion;
   onPress: () => void;
+  onIngreso: () => void;
 }) {
   return (
     <Pressable
@@ -154,7 +166,20 @@ function NextShiftCard({
         {turno.hora_fin_estimada ? ` – ${fmtTime(turno.hora_fin_estimada)}` : ''}
         {turno.lugar ? `  ·  ${turno.lugar}` : ''}
       </Text>
-      <Text className="text-primary text-xs font-semibold mt-1">Ver detalle →</Text>
+      <View className="flex-row gap-2 mt-1">
+        <Pressable
+          onPress={(e) => { e.stopPropagation(); onIngreso(); }}
+          className="flex-1 bg-primary/10 rounded-xl py-2 items-center active:opacity-70"
+        >
+          <Text className="text-primary text-xs font-semibold">Marcar Entrada</Text>
+        </Pressable>
+        <Pressable
+          onPress={onPress}
+          className="flex-1 border border-border rounded-xl py-2 items-center active:opacity-70"
+        >
+          <Text className="text-muted-foreground text-xs font-semibold">Ver detalle →</Text>
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
@@ -195,7 +220,6 @@ function StatCard({
 export default function DashboardScreen() {
   const router  = useRouter();
   const usuario = useAuthStore((s) => s.usuario);
-  const logout  = useAuthStore((s) => s.logout);
 
   const isWorker  = WORKER_ROLES.includes(usuario?.rol ?? '');
   const isManager = MANAGE_ROLES.includes(usuario?.rol ?? '');
@@ -365,11 +389,13 @@ export default function DashboardScreen() {
             <ActiveShiftCard
               turno={turnoActivo}
               onPress={() => router.push(`/turno/${turnoActivo.id}`)}
+              onEgreso={() => router.push(`/egreso/${turnoActivo.id}`)}
             />
           ) : proximoHoy ? (
             <NextShiftCard
               turno={proximoHoy}
               onPress={() => router.push(`/turno/${proximoHoy.id}`)}
+              onIngreso={() => router.push(`/ingreso/${proximoHoy.id}`)}
             />
           ) : (
             <NoShiftCard />
@@ -477,13 +503,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* ── Logout (shortcut de dev) ─────────────────────────────────── */}
-        <Pressable
-          onPress={logout}
-          className="mx-4 mt-8 h-11 rounded-xl items-center justify-center border border-border active:opacity-70"
-        >
-          <Text className="text-sm text-muted-foreground">Cerrar sesión</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

@@ -59,6 +59,13 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="👥" focused={focused} />,
         }}
       />
+      <Tabs.Screen
+        name="perfil"
+        options={{
+          title: t('tabs.perfil'),
+          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+        }}
+      />
     </Tabs>
   );
 }
