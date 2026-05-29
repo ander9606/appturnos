@@ -55,7 +55,7 @@ export default function TurnosScreen() {
     isLoading: loadingOfertas,
     refetch: refetchOfertas,
     isRefetching: refetchingOfertas,
-  } = useOfertas({ estado: 'abierta' });
+  } = useOfertas({ disponibles: true });
 
   const router = useRouter();
   const aplicarMutation = useAplicar();

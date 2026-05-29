@@ -4,18 +4,5 @@ module.exports = function (api) {
     presets: [
       ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
     ],
-    plugins: [
-      [
-        'module-resolver',
-        {
-          root: ['./'],
-          extensions: ['.ts', '.tsx', '.js', '.jsx'],
-          alias: {
-            '@': './',
-            '@api-client': '../../packages/api-client/src/index.ts',
-          },
-        },
-      ],
-    ],
   };
 };

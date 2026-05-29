@@ -123,15 +123,6 @@ export default function RootLayout() {
                 animation: 'slide_from_bottom',
               }}
             />
-            {/* Admin: detalle y creación de empresa */}
-            <Stack.Screen
-              name="(admin)/empresa/[id]"
-              options={{ headerShown: false, animation: 'slide_from_right' }}
-            />
-            <Stack.Screen
-              name="(admin)/empresa/nueva"
-              options={{ headerShown: false, animation: 'slide_from_right' }}
-            />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>
