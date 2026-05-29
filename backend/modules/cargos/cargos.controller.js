@@ -12,24 +12,28 @@ async function listar(req, res) {
 /** POST /api/cargos — crear cargo custom de mi empresa. */
 async function crear(req, res) {
   const empresaId = req.empresa_id;
-  const { codigo, nombre, descripcion } = req.body;
+  const { codigo, nombre, descripcion, tipo_geofence, punto_marcaje_id } = req.body;
   const data = await CargosService.crearParaEmpresa(empresaId, {
     codigo,
     nombre,
     descripcion,
+    tipo_geofence,
+    punto_marcaje_id,
   });
   res.status(201).json({ success: true, data, message: 'Cargo creado' });
 }
 
-/** PATCH /api/cargos/:id — editar nombre/descripcion/activo de un cargo custom. */
+/** PATCH /api/cargos/:id — editar nombre/descripcion/activo/geofence de un cargo custom. */
 async function actualizar(req, res) {
   const empresaId = req.empresa_id;
   const cargoId = Number(req.params.id);
-  const { nombre, descripcion, activo } = req.body;
+  const { nombre, descripcion, activo, tipo_geofence, punto_marcaje_id } = req.body;
   const data = await CargosService.actualizar(empresaId, cargoId, {
     nombre,
     descripcion,
     activo,
+    tipo_geofence,
+    punto_marcaje_id,
   });
   res.json({ success: true, data, message: 'Cargo actualizado' });
 }

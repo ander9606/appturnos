@@ -19,6 +19,14 @@ export type EstadoOferta =
   | 'completada'
   | 'cancelada';
 
+export type TipoGeofence = 'oferta' | 'fijo' | 'zonal' | 'libre';
+
+export type GeofenceInfo =
+  | { tipo: 'oferta'; nombre: string | null; latitud: number | null; longitud: number | null; radio_metros: number }
+  | { tipo: 'fijo';   nombre: string;        latitud: number;        longitud: number;        radio_metros: number }
+  | { tipo: 'zonal' }
+  | { tipo: 'libre' };
+
 export interface Asignacion {
   id: number;
   empresa_id: number;
@@ -48,6 +56,9 @@ export interface Asignacion {
   cargo_id?: number;
   cargo_codigo?: string;
   cargo_nombre?: string;
+  tipo_geofence?: TipoGeofence;
+  // Constructed by model (only on obtenerConDetalles)
+  geofence_info?: GeofenceInfo;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;

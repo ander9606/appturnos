@@ -315,6 +315,10 @@ const AsignacionesModel = {
               o.lugar, o.latitud, o.longitud,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
+              carg.tipo_geofence,
+              pm.id   AS punto_id,      pm.nombre AS punto_nombre,
+              pm.latitud AS punto_latitud, pm.longitud AS punto_longitud,
+              pm.radio_metros AS punto_radio,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cargo AS trabajador_cargo,
               cal.calificacion, cal.comentario AS calificacion_comentario
@@ -323,11 +327,39 @@ const AsignacionesModel = {
        JOIN oferta_puestos p   ON p.id   = a.puesto_id
        JOIN cargos carg        ON carg.id = p.cargo_id
        JOIN trabajadores t     ON t.id   = a.trabajador_id
+       LEFT JOIN puntos_marcaje pm ON pm.id = carg.punto_marcaje_id
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
        WHERE a.id = ? AND a.empresa_id = ? LIMIT 1`,
       [id, empresaId]
     );
-    return filas[0] || null;
+    const row = filas[0];
+    if (!row) return null;
+
+    // Construye geofence_info según tipo_geofence del cargo
+    const tipo = row.tipo_geofence ?? 'oferta';
+    if (tipo === 'fijo' && row.punto_latitud != null) {
+      row.geofence_info = {
+        tipo: 'fijo',
+        nombre: row.punto_nombre,
+        latitud: Number(row.punto_latitud),
+        longitud: Number(row.punto_longitud),
+        radio_metros: row.punto_radio ?? 100,
+      };
+    } else if (tipo === 'libre') {
+      row.geofence_info = { tipo: 'libre' };
+    } else if (tipo === 'zonal') {
+      row.geofence_info = { tipo: 'zonal' };
+    } else {
+      row.geofence_info = {
+        tipo: 'oferta',
+        nombre: row.lugar,
+        latitud: row.latitud != null ? Number(row.latitud) : null,
+        longitud: row.longitud != null ? Number(row.longitud) : null,
+        radio_metros: 100,
+      };
+    }
+
+    return row;
   },
 };
 

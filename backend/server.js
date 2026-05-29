@@ -53,6 +53,8 @@ app.use('/api/empresas', require('./modules/empresas/empresas.routes'));
 app.use('/api/trabajador-empresa', require('./modules/trabajador-empresa/trabajador-empresa.routes'));
 // Catálogo de cargos (sistema + custom por empresa). Ref: 012_cargos.
 app.use('/api/cargos', require('./modules/cargos/cargos.routes'));
+// Puntos de marcaje GPS por empresa. Ref: 015_puntos_marcaje.
+app.use('/api/puntos-marcaje', require('./modules/puntos-marcaje/puntos-marcaje.routes'));
 // Panel de super_admin: gestión cross-tenant de empresas y reportes globales.
 app.use('/api/admin', require('./modules/admin/admin.routes'));
 

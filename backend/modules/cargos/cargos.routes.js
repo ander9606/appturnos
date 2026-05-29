@@ -32,6 +32,8 @@ router.post(
     codigoOpcional,
     body('nombre').isString().trim().isLength({ min: 2, max: 100 }),
     body('descripcion').optional().isString().trim().isLength({ max: 255 }),
+    body('tipo_geofence').optional().isIn(['oferta', 'fijo', 'zonal', 'libre']),
+    body('punto_marcaje_id').optional({ nullable: true }).isInt({ min: 1 }),
   ],
   validar,
   ctrl.crear
@@ -47,6 +49,8 @@ router.patch(
     body('nombre').optional().isString().trim().isLength({ min: 2, max: 100 }),
     body('descripcion').optional({ nullable: true }).isString().trim().isLength({ max: 255 }),
     body('activo').optional().isBoolean(),
+    body('tipo_geofence').optional().isIn(['oferta', 'fijo', 'zonal', 'libre']),
+    body('punto_marcaje_id').optional({ nullable: true }).isInt({ min: 1 }),
   ],
   validar,
   ctrl.actualizar

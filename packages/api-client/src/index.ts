@@ -33,8 +33,17 @@ export type {
   AsignacionResumen,
   EstadoAsignacion,
   EstadoOferta,
+  TipoGeofence,
+  GeofenceInfo,
   PaginatedResponse,
 } from './turnos';
+export { puntosMarcajeApi } from './puntos-marcaje';
+export type {
+  PuntoMarcaje,
+  TipoPunto,
+  CrearPuntoMarcajePayload,
+  ActualizarPuntoMarcajePayload,
+} from './puntos-marcaje';
 export { trabajadoresApi } from './trabajadores';
 export type {
   Trabajador,
