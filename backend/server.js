@@ -5,9 +5,10 @@ require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const logger = require('./utils/logger');
-const { verificarConexion } = require('./config/database');
+const { pool, verificarConexion } = require('./config/database');
 const { errorHandler, noEncontrado } = require('./middleware/errorHandler');
 
 const app = express();
@@ -15,7 +16,32 @@ const PORT = Number(process.env.PORT) || 3001;
 
 // ─── Middleware base ──────────────────────────────────────────
 app.use(helmet());
-app.use(cors());
+
+// CORS: en producción solo los orígenes explícitos de CORS_ORIGINS (CSV).
+// En desarrollo acepta cualquier origen para facilitar pruebas locales.
+const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim());
+app.use(cors(corsOrigins?.length ? { origin: corsOrigins, credentials: true } : {}));
+
+// ─── Rate limiting ────────────────────────────────────────────
+// Límite general: 200 req / 15 min por IP (protege todos los endpoints).
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Demasiadas solicitudes, intenta más tarde' },
+}));
+
+// Límite estricto en auth: 10 intentos / 15 min (brute-force protection).
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Demasiados intentos, espera 15 minutos' },
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/refresh', authLimiter);
 
 // Captura el body crudo: necesario para verificar la firma HMAC de los
 // webhooks entrantes de logiq360 (ver 05-INTEGRACION.md).
@@ -30,11 +56,20 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Health check ─────────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.json({
-    success: true,
-    data: { status: 'ok', uptime: process.uptime() },
-    message: 'App Turnos API operativa',
+app.get('/api/health', async (_req, res) => {
+  let dbStatus = 'ok';
+  try {
+    const conn = await pool.getConnection();
+    await conn.ping();
+    conn.release();
+  } catch {
+    dbStatus = 'error';
+  }
+  const status = dbStatus === 'ok' ? 'ok' : 'degraded';
+  res.status(dbStatus === 'ok' ? 200 : 503).json({
+    success: dbStatus === 'ok',
+    data: { status, uptime: process.uptime(), db: dbStatus },
+    message: 'App Turnos API ' + status,
   });
 });
 
@@ -64,6 +99,11 @@ app.use(errorHandler);
 
 // ─── Arranque ─────────────────────────────────────────────────
 async function iniciar() {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'cambiar-por-un-secreto-largo-y-aleatorio') {
+    logger.error('JWT_SECRET no configurado o usa el valor por defecto. Configura un secreto seguro antes de iniciar.');
+    process.exit(1);
+  }
+
   try {
     await verificarConexion();
   } catch (err) {
