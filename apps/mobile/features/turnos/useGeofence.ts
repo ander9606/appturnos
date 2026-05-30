@@ -2,16 +2,17 @@
  * useGeofence — hook de proximidad GPS
  *
  * Solicita permiso de ubicación, vigila la posición en tiempo real y
- * calcula la distancia al punto de trabajo de la oferta.
+ * calcula la distancia al punto (o al más cercano de varios puntos).
  *
  * Retorna:
- *  - distanceM:   distancia en metros (null = no disponible)
+ *  - distanceM:   distancia en metros al punto más cercano (null = no disponible)
  *  - status:      'inside' | 'near' | 'outside' | 'unknown'
- *  - canMark:     true si está dentro del radio o si la oferta no tiene coords
+ *  - canMark:     true si está dentro del radio de algún punto, o si no hay geofence
  *  - permissionDenied: true si el usuario rechazó el permiso
  */
 import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
+import type { LocationObject } from 'expo-location';
 
 import {
   haversineMeters,
@@ -20,13 +21,20 @@ import {
   type GeofenceStatus,
 } from '@/lib/geo';
 
-interface UseGeofenceOptions {
-  /** Latitud del punto de trabajo. null = sin geofence. */
-  targetLat: number | null;
-  /** Longitud del punto de trabajo. */
-  targetLng: number | null;
-  /** Radio en metros (default 100). */
+export interface GeofenceTarget {
+  lat: number;
+  lng: number;
   radiusM?: number;
+}
+
+interface UseGeofenceOptions {
+  /**
+   * Lista de puntos de marcaje válidos.
+   * - null / [] = sin geofence (tipo 'libre' o sin coords) → siempre canMark.
+   * - Un único elemento → geofence simple (tipo 'oferta' o 'fijo').
+   * - Varios elementos → geofence zonal: válido si está dentro de CUALQUIERA.
+   */
+  targets: GeofenceTarget[] | null;
   /** Activar la vigilancia de posición (default true). */
   enabled?: boolean;
 }
@@ -40,9 +48,7 @@ interface GeofenceResult {
 }
 
 export function useGeofence({
-  targetLat,
-  targetLng,
-  radiusM = DEFAULT_GEOFENCE_RADIUS,
+  targets,
   enabled = true,
 }: UseGeofenceOptions): GeofenceResult {
   const [distanceM, setDistanceM]         = useState<number | null>(null);
@@ -51,11 +57,10 @@ export function useGeofence({
 
   const subRef = useRef<Location.LocationSubscription | null>(null);
 
-  // No coords on offer → no geofence, always allow
-  const hasTarget = targetLat !== null && targetLng !== null;
+  const hasTargets = targets !== null && targets.length > 0;
 
   useEffect(() => {
-    if (!enabled || !hasTarget) {
+    if (!enabled || !hasTargets) {
       setDistanceM(null);
       return;
     }
@@ -76,15 +81,21 @@ export function useGeofence({
       subRef.current = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          distanceInterval: 5,   // update every 5 m movement
-          timeInterval: 5_000,   // or every 5 s
+          distanceInterval: 5,
+          timeInterval: 5_000,
         },
-        (loc) => {
+        (loc: LocationObject) => {
           if (cancelled) return;
           const { latitude: lat, longitude: lng } = loc.coords;
           setLocation({ lat, lng });
-          const dist = haversineMeters(lat, lng, targetLat!, targetLng!);
-          setDistanceM(dist);
+
+          // Find minimum distance across all valid targets
+          let minDist = Infinity;
+          for (const t of targets!) {
+            const d = haversineMeters(lat, lng, t.lat, t.lng);
+            if (d < minDist) minDist = d;
+          }
+          setDistanceM(minDist === Infinity ? null : minDist);
         },
       );
     })();
@@ -94,12 +105,30 @@ export function useGeofence({
       subRef.current?.remove();
       subRef.current = null;
     };
-  }, [enabled, hasTarget, targetLat, targetLng]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, hasTargets]);
 
-  const status = hasTarget ? getGeofenceStatus(distanceM, radiusM) : 'unknown';
+  // Determine status against the nearest target's radius
+  const nearestRadius = (() => {
+    if (!hasTargets || distanceM === null) return DEFAULT_GEOFENCE_RADIUS;
+    // Find the target that is closest to current location
+    let minDist = Infinity;
+    let radius = DEFAULT_GEOFENCE_RADIUS;
+    if (currentLocation && targets) {
+      for (const t of targets) {
+        const d = haversineMeters(currentLocation.lat, currentLocation.lng, t.lat, t.lng);
+        if (d < minDist) { minDist = d; radius = t.radiusM ?? DEFAULT_GEOFENCE_RADIUS; }
+      }
+    }
+    return radius;
+  })();
 
-  // canMark: inside geofence, OR the offer has no GPS coordinates
-  const canMark = !hasTarget || status === 'inside' || status === 'near';
+  const status: GeofenceStatus = hasTargets
+    ? getGeofenceStatus(distanceM, nearestRadius)
+    : 'unknown';
+
+  // canMark: inside/near geofence of any target, OR no geofence required
+  const canMark = !hasTargets || status === 'inside' || status === 'near';
 
   return { distanceM, status, canMark, permissionDenied, currentLocation };
 }

@@ -2,10 +2,12 @@
 
 const AsignacionesModel = require('./asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
+const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const IntegracionService = require('../../integracion/integracion.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
+const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 
 /** Resuelve el trabajador vinculado al usuario autenticado. */
 async function resolverTrabajador(empresaId, usuarioId) {
@@ -65,7 +67,7 @@ const AsignacionesService = {
   },
 
   async marcarIngreso(empresaId, id, usuarioId, { latitud, longitud }) {
-    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
 
     const trabajador = await resolverTrabajador(empresaId, usuarioId);
@@ -75,6 +77,42 @@ const AsignacionesService = {
     if (asignacion.estado !== 'confirmado') {
       throw new AppError('Solo puedes marcar ingreso en un turno confirmado', 409);
     }
+
+    // Validación de geofence según tipo_geofence del cargo
+    const gf = asignacion.geofence_info;
+    if (gf.tipo === 'fijo' && gf.latitud != null) {
+      const { ok } = estaEnAlgunPunto(latitud, longitud, [{
+        latitud: gf.latitud, longitud: gf.longitud, radio_metros: gf.radio_metros,
+      }]);
+      if (!ok) {
+        throw new AppError(
+          `Debes estar en "${gf.nombre}" para registrar el ingreso`,
+          422
+        );
+      }
+    } else if (gf.tipo === 'zonal') {
+      const puntos = await PuntosMarcajeModel.listarZonales(empresaId);
+      if (puntos.length > 0) {
+        const { ok } = estaEnAlgunPunto(latitud, longitud, puntos);
+        if (!ok) {
+          throw new AppError(
+            'Debes estar en uno de los puntos zonales autorizados para registrar el ingreso',
+            422
+          );
+        }
+      }
+    } else if (gf.tipo === 'oferta' && gf.latitud != null) {
+      const { ok } = estaEnAlgunPunto(latitud, longitud, [{
+        latitud: gf.latitud, longitud: gf.longitud, radio_metros: gf.radio_metros,
+      }]);
+      if (!ok) {
+        throw new AppError(
+          'Estás fuera del área de trabajo del turno',
+          422
+        );
+      }
+    }
+    // tipo 'libre' → sin validación
 
     await AsignacionesModel.registrarIngreso(empresaId, id, latitud, longitud);
     await IntegracionService.emitir(empresaId, 'trabajador.ingreso', {

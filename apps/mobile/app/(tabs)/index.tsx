@@ -16,6 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
@@ -23,6 +25,8 @@ import { usePeriodos } from '@/features/nomina/useNomina';
 import { toISODate, fmtTime, fmtRange, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';
 import type { Asignacion } from '@api-client';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -64,9 +68,11 @@ function hoursLabel(mins: number): string {
 function ActiveShiftCard({
   turno,
   onPress,
+  onEgreso,
 }: {
   turno: Asignacion;
   onPress: () => void;
+  onEgreso: () => void;
 }) {
   const [pct, setPct] = useState(() =>
     calcProgress(turno.hora_inicio, turno.hora_fin_estimada),
@@ -121,6 +127,14 @@ function ActiveShiftCard({
         {'  ·  '}
         {pct.toFixed(0)}% completado
       </Text>
+
+      {/* CTA rápida */}
+      <Pressable
+        onPress={(e) => { e.stopPropagation(); onEgreso(); }}
+        className="bg-white/20 rounded-xl py-2.5 items-center active:bg-white/30 mt-1"
+      >
+        <Text className="text-white text-sm font-semibold">Marcar Salida →</Text>
+      </Pressable>
     </Pressable>
   );
 }
@@ -129,9 +143,11 @@ function ActiveShiftCard({
 function NextShiftCard({
   turno,
   onPress,
+  onIngreso,
 }: {
   turno: Asignacion;
   onPress: () => void;
+  onIngreso: () => void;
 }) {
   return (
     <Pressable
@@ -154,7 +170,20 @@ function NextShiftCard({
         {turno.hora_fin_estimada ? ` – ${fmtTime(turno.hora_fin_estimada)}` : ''}
         {turno.lugar ? `  ·  ${turno.lugar}` : ''}
       </Text>
-      <Text className="text-primary text-xs font-semibold mt-1">Ver detalle →</Text>
+      <View className="flex-row gap-2 mt-1">
+        <Pressable
+          onPress={(e) => { e.stopPropagation(); onIngreso(); }}
+          className="flex-1 bg-primary/10 rounded-xl py-2 items-center active:opacity-70"
+        >
+          <Text className="text-primary text-xs font-semibold">Marcar Entrada</Text>
+        </Pressable>
+        <Pressable
+          onPress={onPress}
+          className="flex-1 border border-border rounded-xl py-2 items-center active:opacity-70"
+        >
+          <Text className="text-muted-foreground text-xs font-semibold">Ver detalle →</Text>
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
@@ -162,8 +191,10 @@ function NextShiftCard({
 /** Estado vacío — sin turno activo hoy */
 function NoShiftCard() {
   return (
-    <View className="mx-4 mt-4 bg-card rounded-2xl p-5 border border-border items-center gap-2">
-      <Text className="text-3xl">📭</Text>
+    <View className="mx-4 mt-4 bg-card rounded-2xl p-5 border border-border items-center gap-3">
+      <View className="w-14 h-14 rounded-full bg-muted items-center justify-center">
+        <Ionicons name="calendar-clear-outline" size={28} color="#94A3B8" />
+      </View>
       <Text className="text-base font-semibold text-foreground">Sin turno activo hoy</Text>
       <Text className="text-sm text-muted-foreground text-center">
         No tienes turnos programados para hoy.
@@ -195,7 +226,6 @@ function StatCard({
 export default function DashboardScreen() {
   const router  = useRouter();
   const usuario = useAuthStore((s) => s.usuario);
-  const logout  = useAuthStore((s) => s.logout);
 
   const isWorker  = WORKER_ROLES.includes(usuario?.rol ?? '');
   const isManager = MANAGE_ROLES.includes(usuario?.rol ?? '');
@@ -308,19 +338,19 @@ export default function DashboardScreen() {
 
   // ── Quick actions ────────────────────────────────────────────────────────
 
-  type Action = { icon: string; label: string; onPress: () => void };
+  type Action = { icon: IoniconsName; label: string; onPress: () => void };
 
   const actions: Action[] = isWorker
     ? [
-        { icon: '📅', label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
-        { icon: '💰', label: 'Mi Nómina',  onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'calendar-outline',  label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
+        { icon: 'wallet-outline',    label: 'Mi Nómina',  onPress: () => router.push('/(tabs)/nomina') },
       ]
     : [
-        { icon: '📅', label: 'Turnos',     onPress: () => router.push('/(tabs)/turnos') },
-        { icon: '💰', label: 'Nómina',     onPress: () => router.push('/(tabs)/nomina') },
-        { icon: '👥', label: 'Equipo',     onPress: () => router.push('/(tabs)/equipo') },
+        { icon: 'calendar-outline',      label: 'Turnos',     onPress: () => router.push('/(tabs)/turnos') },
+        { icon: 'wallet-outline',        label: 'Nómina',     onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'people-outline',        label: 'Equipo',     onPress: () => router.push('/(tabs)/equipo') },
         ...(isAdmin
-          ? [{ icon: '➕', label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') }]
+          ? [{ icon: 'person-add-outline' as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') }]
           : []),
       ];
 
@@ -351,7 +381,7 @@ export default function DashboardScreen() {
               {usuario?.nombre ?? '…'}
             </Text>
             <View className="w-10 h-10 rounded-xl bg-white/20 items-center justify-center">
-              <Text className="text-lg">🔔</Text>
+              <Ionicons name="notifications-outline" size={20} color="white" />
             </View>
           </View>
           <Text className="text-white/60 text-xs capitalize">
@@ -365,11 +395,13 @@ export default function DashboardScreen() {
             <ActiveShiftCard
               turno={turnoActivo}
               onPress={() => router.push(`/turno/${turnoActivo.id}`)}
+              onEgreso={() => router.push(`/egreso/${turnoActivo.id}`)}
             />
           ) : proximoHoy ? (
             <NextShiftCard
               turno={proximoHoy}
               onPress={() => router.push(`/turno/${proximoHoy.id}`)}
+              onIngreso={() => router.push(`/ingreso/${proximoHoy.id}`)}
             />
           ) : (
             <NoShiftCard />
@@ -382,7 +414,7 @@ export default function DashboardScreen() {
             onPress={() => router.push('/(tabs)/nomina')}
             className="mx-4 mt-4 flex-row items-center gap-3 bg-success/10 border border-success/30 rounded-2xl px-4 py-3 active:opacity-80"
           >
-            <Text className="text-xl">📂</Text>
+            <Ionicons name="folder-open-outline" size={22} color="#059669" />
             <View className="flex-1">
               <Text className="text-success text-sm font-semibold">Período abierto</Text>
               <Text className="text-success/80 text-xs">
@@ -420,7 +452,7 @@ export default function DashboardScreen() {
                 style={{ width: actions.length <= 2 ? '47%' : '22%' }}
               >
                 <View className="w-10 h-10 bg-primary/10 rounded-xl items-center justify-center">
-                  <Text className="text-xl">{a.icon}</Text>
+                  <Ionicons name={a.icon} size={20} color="#FF5A3C" />
                 </View>
                 <Text className="text-[10px] font-semibold text-foreground text-center">
                   {a.label}
@@ -477,13 +509,6 @@ export default function DashboardScreen() {
           </View>
         )}
 
-        {/* ── Logout (shortcut de dev) ─────────────────────────────────── */}
-        <Pressable
-          onPress={logout}
-          className="mx-4 mt-8 h-11 rounded-xl items-center justify-center border border-border active:opacity-70"
-        >
-          <Text className="text-sm text-muted-foreground">Cerrar sesión</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

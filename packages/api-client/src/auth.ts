@@ -4,6 +4,8 @@ import {
   ActivarCuentaResponse,
   UsuarioPerfil,
   TokenPair,
+  UpdateProfileParams,
+  ChangePasswordParams,
 } from './types';
 
 export const authApi = {
@@ -49,6 +51,21 @@ export const authApi = {
    */
   me(): Promise<UsuarioPerfil> {
     return api.get<UsuarioPerfil>('/api/auth/me');
+  },
+
+  /**
+   * Actualiza nombre, apellido y/o email del usuario autenticado.
+   */
+  updateProfile(params: UpdateProfileParams): Promise<UsuarioPerfil> {
+    return api.patch<UsuarioPerfil>('/api/auth/me', params);
+  },
+
+  /**
+   * Cambia la contraseña del usuario autenticado.
+   * Revoca todas las sesiones existentes al completarse.
+   */
+  changePassword(params: ChangePasswordParams): Promise<null> {
+    return api.patch<null>('/api/auth/me/password', params);
   },
 
   /**

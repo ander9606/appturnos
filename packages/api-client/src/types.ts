@@ -37,6 +37,17 @@ export interface ActivarCuentaResponse {
   rol: Rol;
 }
 
+export interface UpdateProfileParams {
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+}
+
+export interface ChangePasswordParams {
+  password_actual: string;
+  password_nueva: string;
+}
+
 // ── API wrapper ───────────────────────────────────────────────────────────
 
 export interface ApiResponse<T> {

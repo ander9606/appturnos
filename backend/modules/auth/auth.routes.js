@@ -74,6 +74,37 @@ router.post(
   ctrl.registrar
 );
 
+// PATCH /api/auth/me — actualizar nombre / apellido / email
+router.patch(
+  '/me',
+  verificarToken,
+  [
+    body('nombre').optional().isString().trim().notEmpty().withMessage('Nombre inválido'),
+    body('apellido').optional().isString().trim(),
+    body('email')
+      .optional()
+      .isEmail().withMessage('Email inválido').bail()
+      .customSanitizer((v) => v.trim().toLowerCase()),
+  ],
+  validar,
+  ctrl.actualizarPerfil
+);
+
+// PATCH /api/auth/me/password — cambiar contraseña
+router.patch(
+  '/me/password',
+  verificarToken,
+  [
+    body('password_actual').notEmpty().withMessage('Contraseña actual requerida'),
+    body('password_nueva')
+      .isString()
+      .isLength({ min: 8 })
+      .withMessage('La nueva contraseña debe tener al menos 8 caracteres'),
+  ],
+  validar,
+  ctrl.cambiarPassword
+);
+
 // Sub-router OAuth — POST /api/auth/oauth/:provider, etc.
 router.use('/oauth', require('./oauth/oauth.routes'));
 

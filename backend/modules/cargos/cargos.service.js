@@ -39,7 +39,7 @@ const CargosService = {
    * Crea un cargo custom para la empresa del usuario. El código se
    * autogenera desde el nombre si no se provee.
    */
-  async crearParaEmpresa(empresaId, { codigo, nombre, descripcion }) {
+  async crearParaEmpresa(empresaId, { codigo, nombre, descripcion, tipo_geofence: tipoGeofence, punto_marcaje_id: puntoMarcajeId }) {
     if (!nombre || !nombre.trim()) {
       throw new AppError('Nombre del cargo requerido', 400);
     }
@@ -67,6 +67,8 @@ const CargosService = {
       codigo: codigoFinal,
       nombre: nombre.trim(),
       descripcion: descripcion ? descripcion.trim() : null,
+      tipoGeofence: tipoGeofence || 'oferta',
+      puntoMarcajeId: puntoMarcajeId || null,
     });
     return CargosModel.obtenerPorId(id);
   },
@@ -82,7 +84,12 @@ const CargosService = {
       throw new AppError('Este cargo no pertenece a tu empresa', 403);
     }
 
-    const afectadas = await CargosModel.actualizar(cargoId, cambios);
+    const { tipo_geofence, punto_marcaje_id, ...resto } = cambios;
+    const afectadas = await CargosModel.actualizar(cargoId, {
+      ...resto,
+      ...(tipo_geofence !== undefined && { tipoGeofence: tipo_geofence }),
+      ...(punto_marcaje_id !== undefined && { puntoMarcajeId: punto_marcaje_id }),
+    });
     if (afectadas === 0) {
       throw new AppError('Nada que actualizar', 400);
     }

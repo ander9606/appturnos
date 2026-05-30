@@ -11,6 +11,8 @@ export type {
   LoginResponse,
   ActivarCuentaResponse,
   UsuarioPerfil,
+  UpdateProfileParams,
+  ChangePasswordParams,
 } from './types';
 export { nominaApi, calcularResumenHoras } from './nomina';
 export type {
@@ -31,8 +33,17 @@ export type {
   AsignacionResumen,
   EstadoAsignacion,
   EstadoOferta,
+  TipoGeofence,
+  GeofenceInfo,
   PaginatedResponse,
 } from './turnos';
+export { puntosMarcajeApi } from './puntos-marcaje';
+export type {
+  PuntoMarcaje,
+  TipoPunto,
+  CrearPuntoMarcajePayload,
+  ActualizarPuntoMarcajePayload,
+} from './puntos-marcaje';
 export { trabajadoresApi } from './trabajadores';
 export type {
   Trabajador,

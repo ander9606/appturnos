@@ -11,7 +11,8 @@ const { pool } = require('../../config/database');
  *   - trabajador_cargos cuelga de trabajador_empresa.id (vínculo), no de usuario.
  */
 
-const COLUMNAS = `c.id, c.empresa_id, c.codigo, c.nombre, c.descripcion, c.activo, c.created_at`;
+const COLUMNAS = `c.id, c.empresa_id, c.codigo, c.nombre, c.descripcion,
+                  c.tipo_geofence, c.punto_marcaje_id, c.activo, c.created_at`;
 
 const CargosModel = {
   /**
@@ -51,21 +52,23 @@ const CargosModel = {
     return filas[0] || null;
   },
 
-  async crear({ empresaId, codigo, nombre, descripcion }) {
+  async crear({ empresaId, codigo, nombre, descripcion, tipoGeofence, puntoMarcajeId }) {
     const [res] = await pool.query(
-      `INSERT INTO cargos (empresa_id, codigo, nombre, descripcion)
-       VALUES (?, ?, ?, ?)`,
-      [empresaId, codigo, nombre, descripcion || null]
+      `INSERT INTO cargos (empresa_id, codigo, nombre, descripcion, tipo_geofence, punto_marcaje_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [empresaId, codigo, nombre, descripcion || null, tipoGeofence || 'oferta', puntoMarcajeId || null]
     );
     return res.insertId;
   },
 
-  async actualizar(id, { nombre, descripcion, activo }) {
+  async actualizar(id, { nombre, descripcion, activo, tipoGeofence, puntoMarcajeId }) {
     const sets = [];
     const params = [];
     if (nombre !== undefined) { sets.push('nombre = ?'); params.push(nombre); }
     if (descripcion !== undefined) { sets.push('descripcion = ?'); params.push(descripcion); }
     if (activo !== undefined) { sets.push('activo = ?'); params.push(activo ? 1 : 0); }
+    if (tipoGeofence !== undefined) { sets.push('tipo_geofence = ?'); params.push(tipoGeofence); }
+    if (puntoMarcajeId !== undefined) { sets.push('punto_marcaje_id = ?'); params.push(puntoMarcajeId || null); }
     if (sets.length === 0) return 0;
     params.push(id);
     const [res] = await pool.query(
