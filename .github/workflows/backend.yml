@@ -1,0 +1,75 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+jobs:
+  # ── Checks (corre en PR y en push a main) ─────────────────────
+  ci:
+    name: Lint & Security
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Auditoría de seguridad
+        # Falla si hay vulnerabilidades altas o críticas
+        run: npm audit --audit-level=high
+
+  # ── Deploy (solo en push a main, solo si CI pasó) ─────────────
+  deploy:
+    name: Deploy al VPS
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy vía SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            cd /srv/appturnos
+
+            echo "→ Actualizando código..."
+            git pull origin main
+
+            echo "→ Construyendo imagen..."
+            docker compose build api
+
+            echo "→ Aplicando migraciones..."
+            # Levanta la DB si no está corriendo y corre las migraciones
+            docker compose run --rm api npm run migrate
+
+            echo "→ Reiniciando API..."
+            docker compose up -d api
+
+            echo "→ Verificando health..."
+            sleep 5
+            curl -sf http://localhost:3001/api/health || (echo "Health check falló" && exit 1)
+
+            echo "✅ Deploy completado"
