@@ -73,7 +73,7 @@ export default function IngresoScreen() {
         return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
 
       case 'oferta':
-        if (gf.latitud == null) return null;
+        if (gf.latitud == null || gf.longitud == null) return null;
         return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
 
       case 'zonal':

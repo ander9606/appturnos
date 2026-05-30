@@ -74,8 +74,9 @@ export default function TurnoDetailScreen() {
 
   // ── Geofence ──────────────────────────────────────────────────────────
   const { distanceM, status: geoStatus, canMark, permissionDenied } = useGeofence({
-    targetLat: asignacion?.latitud ?? null,
-    targetLng: asignacion?.longitud ?? null,
+    targets: asignacion?.latitud != null && asignacion?.longitud != null
+      ? [{ lat: asignacion.latitud, lng: asignacion.longitud }]
+      : null,
     enabled: asignacion?.estado === 'confirmado',
   });
 
