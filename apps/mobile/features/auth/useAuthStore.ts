@@ -15,7 +15,10 @@ import { secureTokenStore } from '@/lib/secureStore';
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const KEY_USUARIO = 'appturnos.usuario';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+if (!API_BASE_URL) {
+  throw new Error('EXPO_PUBLIC_API_URL no está configurado. Crea apps/mobile/.env con EXPO_PUBLIC_API_URL=http://...');
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
