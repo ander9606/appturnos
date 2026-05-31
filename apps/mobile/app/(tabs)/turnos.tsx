@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurnos';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
@@ -38,7 +39,8 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 export default function TurnosScreen() {
   const today      = useMemo(() => toISODate(new Date()), []);
   const weekDays   = useMemo(() => getWeekDays(), []);
-  const rol        = useAuthStore((s) => s.usuario?.rol);
+  const rol             = useAuthStore((s) => s.usuario?.rol);
+  const theme           = useTheme();
   const showMarketplace = rol === 'trabajador_turnos';
 
   const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -212,6 +214,7 @@ export default function TurnosScreen() {
         selectedDate={selectedDate}
         datesWithShifts={datesWithShifts}
         onSelectDate={setSelectedDate}
+        primaryColor={theme.primary}
       />
 
       {/* ── Tab selector (solo para trabajador_turnos) ─────────────── */}
@@ -241,7 +244,7 @@ export default function TurnosScreen() {
       {(!showMarketplace || activeTab === 'mis_turnos') ? (
         loadingMios ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#FF5A3C" />
+            <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : errorMios ? (
           <View className="flex-1 items-center justify-center gap-3 px-6">
@@ -260,8 +263,8 @@ export default function TurnosScreen() {
               <RefreshControl
                 refreshing={isRefreshing}
                 onRefresh={onRefresh}
-                tintColor="#FF5A3C"
-                colors={['#FF5A3C']}
+                tintColor={theme.primary}
+                colors={[theme.primary]}
               />
             }
             showsVerticalScrollIndicator={false}
@@ -270,7 +273,7 @@ export default function TurnosScreen() {
       ) : showMarketplace ? (
         loadingOfertas ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#FF5A3C" />
+            <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : (
           <FlatList
@@ -283,8 +286,8 @@ export default function TurnosScreen() {
               <RefreshControl
                 refreshing={isRefreshing}
                 onRefresh={onRefresh}
-                tintColor="#FF5A3C"
-                colors={['#FF5A3C']}
+                tintColor={theme.primary}
+                colors={[theme.primary]}
               />
             }
             showsVerticalScrollIndicator={false}

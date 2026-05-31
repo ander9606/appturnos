@@ -4,6 +4,8 @@
  * Diseño dual:
  *  - Trabajador  → turno activo/próximo, mis stats del período, próximos turnos
  *  - Gestor/Admin → stats del equipo, período abierto, acciones rápidas
+ *
+ * Colores: naranja (trabajador_turnos), verde (trabajador_nomina), azul (gestores).
  */
 import React, { useEffect, useState } from 'react';
 import {
@@ -19,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useTheme }     from '@/lib/theme';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { usePeriodos } from '@/features/nomina/useNomina';
@@ -35,7 +38,6 @@ const MANAGE_ROLES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-/** Calcula el progreso del turno activo (0-100). */
 function calcProgress(inicio: string, fin: string | null): number {
   if (!fin) return 0;
   const now   = new Date();
@@ -64,15 +66,16 @@ function hoursLabel(mins: number): string {
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
-/** Tarjeta del turno activo (en_progreso) */
 function ActiveShiftCard({
   turno,
   onPress,
   onEgreso,
+  primaryColor,
 }: {
   turno: Asignacion;
   onPress: () => void;
   onEgreso: () => void;
+  primaryColor: string;
 }) {
   const [pct, setPct] = useState(() =>
     calcProgress(turno.hora_inicio, turno.hora_fin_estimada),
@@ -81,7 +84,6 @@ function ActiveShiftCard({
     turno.hora_fin_estimada ? minutesLeft(turno.hora_fin_estimada) : null,
   );
 
-  // Tick each minute
   useEffect(() => {
     const id = setInterval(() => {
       setPct(calcProgress(turno.hora_inicio, turno.hora_fin_estimada));
@@ -93,7 +95,8 @@ function ActiveShiftCard({
   return (
     <Pressable
       onPress={onPress}
-      className="mx-4 mt-4 bg-primary rounded-2xl p-5 gap-3 active:opacity-90"
+      className="mx-4 mt-4 rounded-2xl p-5 gap-3 active:opacity-90"
+      style={{ backgroundColor: primaryColor }}
     >
       <View className="flex-row items-center justify-between">
         <Text className="text-white/80 text-xs font-semibold uppercase tracking-wide">
@@ -114,7 +117,6 @@ function ActiveShiftCard({
         {turno.lugar ? `  ·  ${turno.lugar}` : ''}
       </Text>
 
-      {/* Progress bar */}
       <View className="h-1.5 bg-white/30 rounded-full overflow-hidden">
         <View
           className="h-full bg-white rounded-full"
@@ -128,7 +130,6 @@ function ActiveShiftCard({
         {pct.toFixed(0)}% completado
       </Text>
 
-      {/* CTA rápida */}
       <Pressable
         onPress={(e) => { e.stopPropagation(); onEgreso(); }}
         className="bg-white/20 rounded-xl py-2.5 items-center active:bg-white/30 mt-1"
@@ -139,15 +140,16 @@ function ActiveShiftCard({
   );
 }
 
-/** Tarjeta del próximo turno confirmado hoy */
 function NextShiftCard({
   turno,
   onPress,
   onIngreso,
+  primaryColor,
 }: {
   turno: Asignacion;
   onPress: () => void;
   onIngreso: () => void;
+  primaryColor: string;
 }) {
   return (
     <Pressable
@@ -173,9 +175,12 @@ function NextShiftCard({
       <View className="flex-row gap-2 mt-1">
         <Pressable
           onPress={(e) => { e.stopPropagation(); onIngreso(); }}
-          className="flex-1 bg-primary/10 rounded-xl py-2 items-center active:opacity-70"
+          className="flex-1 rounded-xl py-2 items-center active:opacity-70"
+          style={{ backgroundColor: primaryColor + '1A' }}
         >
-          <Text className="text-primary text-xs font-semibold">Marcar Entrada</Text>
+          <Text className="text-xs font-semibold" style={{ color: primaryColor }}>
+            Marcar Entrada
+          </Text>
         </Pressable>
         <Pressable
           onPress={onPress}
@@ -188,7 +193,6 @@ function NextShiftCard({
   );
 }
 
-/** Estado vacío — sin turno activo hoy */
 function NoShiftCard() {
   return (
     <View className="mx-4 mt-4 bg-card rounded-2xl p-5 border border-border items-center gap-3">
@@ -203,7 +207,6 @@ function NoShiftCard() {
   );
 }
 
-/** Stat card individual */
 function StatCard({
   value,
   label,
@@ -226,12 +229,13 @@ function StatCard({
 export default function DashboardScreen() {
   const router  = useRouter();
   const usuario = useAuthStore((s) => s.usuario);
+  const theme   = useTheme();
 
   const isWorker  = WORKER_ROLES.includes(usuario?.rol ?? '');
   const isManager = MANAGE_ROLES.includes(usuario?.rol ?? '');
   const isAdmin   = usuario?.rol === 'admin_empresa';
+  const isNomina  = usuario?.rol === 'trabajador_nomina';
 
-  // ── Greeting ────────────────────────────────────────────────────────────
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? t('dashboard.greeting')
@@ -250,7 +254,6 @@ export default function DashboardScreen() {
     data: equipoData,
     refetch: refetchEquipo,
   } = useTrabajadores({ activo: true, enabled: isManager });
-  // Only use equipo data for managers
   const totalEquipo = isManager ? (equipoData?.pagination?.total ?? null) : null;
 
   const {
@@ -280,7 +283,6 @@ export default function DashboardScreen() {
         .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio))[0] ?? null)
     : null;
 
-  // Turnos de hoy (cualquier estado no-cancelado)
   const turnosHoy = turnos.filter(
     (a) =>
       a.oferta_fecha === today &&
@@ -288,7 +290,6 @@ export default function DashboardScreen() {
       a.estado !== 'no_presentado',
   );
 
-  // Próximos 7 días (sin hoy)
   const proximos = turnos
     .filter(
       (a) =>
@@ -302,49 +303,32 @@ export default function DashboardScreen() {
 
   const stats: { value: string | number; label: string; color: string }[] = isWorker
     ? [
-        {
-          value: turnosHoy.length,
-          label: 'Turnos hoy',
-          color: 'text-primary',
-        },
-        {
-          value: proximos.length,
-          label: 'Próximos',
-          color: 'text-info',
-        },
-        {
-          value: turnos.filter((a) => a.estado === 'completado').length,
-          label: 'Completados',
-          color: 'text-success',
-        },
+        { value: turnosHoy.length,                               label: 'Turnos hoy',  color: 'text-foreground' },
+        { value: proximos.length,                                label: 'Próximos',    color: 'text-info' },
+        { value: turnos.filter((a) => a.estado === 'completado').length, label: 'Completados', color: 'text-success' },
       ]
     : [
-        {
-          value: totalEquipo ?? '…',
-          label: t('dashboard.statEmployees'),
-          color: 'text-primary',
-        },
-        {
-          value: turnosHoy.length > 0 ? turnosHoy.length : '—',
-          label: t('dashboard.statShiftsToday'),
-          color: 'text-info',
-        },
-        {
-          value: periodoAbierto ? '1' : '0',
-          label: 'Período abierto',
-          color: periodoAbierto ? 'text-success' : 'text-muted-foreground',
-        },
+        { value: totalEquipo ?? '…',                                   label: t('dashboard.statEmployees'),  color: 'text-info' },
+        { value: turnosHoy.length > 0 ? turnosHoy.length : '—',       label: t('dashboard.statShiftsToday'), color: 'text-foreground' },
+        { value: periodoAbierto ? '1' : '0',                           label: 'Período abierto', color: periodoAbierto ? 'text-success' : 'text-muted-foreground' },
       ];
 
   // ── Quick actions ────────────────────────────────────────────────────────
 
   type Action = { icon: IoniconsName; label: string; onPress: () => void };
 
-  const actions: Action[] = isWorker
+  const workerActions: Action[] = isNomina
     ? [
-        { icon: 'calendar-outline',  label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
-        { icon: 'wallet-outline',    label: 'Mi Nómina',  onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'wallet-outline',   label: 'Mi Nómina',  onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'calendar-outline', label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
       ]
+    : [
+        { icon: 'calendar-outline', label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
+        { icon: 'wallet-outline',   label: 'Quincena',   onPress: () => router.push('/(tabs)/nomina') },
+      ];
+
+  const actions: Action[] = isWorker
+    ? workerActions
     : [
         { icon: 'calendar-outline',      label: 'Turnos',     onPress: () => router.push('/(tabs)/turnos') },
         { icon: 'wallet-outline',        label: 'Nómina',     onPress: () => router.push('/(tabs)/nomina') },
@@ -365,15 +349,15 @@ export default function DashboardScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#FF5A3C"
-            colors={['#FF5A3C']}
+            tintColor={theme.primary}
+            colors={[theme.primary]}
           />
         }
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View
           className="pt-4 pb-8 px-6 rounded-b-[32px] gap-1"
-          style={{ backgroundColor: '#FF5A3C' }}
+          style={{ backgroundColor: theme.primary }}
         >
           <Text className="text-white/80 text-sm font-medium">{greeting} 👋</Text>
           <View className="flex-row items-center justify-between">
@@ -394,12 +378,14 @@ export default function DashboardScreen() {
           turnoActivo ? (
             <ActiveShiftCard
               turno={turnoActivo}
+              primaryColor={theme.primary}
               onPress={() => router.push(`/turno/${turnoActivo.id}`)}
               onEgreso={() => router.push(`/egreso/${turnoActivo.id}`)}
             />
           ) : proximoHoy ? (
             <NextShiftCard
               turno={proximoHoy}
+              primaryColor={theme.primary}
               onPress={() => router.push(`/turno/${proximoHoy.id}`)}
               onIngreso={() => router.push(`/ingreso/${proximoHoy.id}`)}
             />
@@ -412,12 +398,18 @@ export default function DashboardScreen() {
         {isManager && periodoAbierto && (
           <Pressable
             onPress={() => router.push('/(tabs)/nomina')}
-            className="mx-4 mt-4 flex-row items-center gap-3 bg-success/10 border border-success/30 rounded-2xl px-4 py-3 active:opacity-80"
+            className="mx-4 mt-4 flex-row items-center gap-3 rounded-2xl px-4 py-3 active:opacity-80 border"
+            style={{
+              backgroundColor: theme.primaryLight,
+              borderColor: theme.primary + '4D',
+            }}
           >
-            <Ionicons name="folder-open-outline" size={22} color="#059669" />
+            <Ionicons name="folder-open-outline" size={22} color={theme.primary} />
             <View className="flex-1">
-              <Text className="text-success text-sm font-semibold">Período abierto</Text>
-              <Text className="text-success/80 text-xs">
+              <Text className="text-sm font-semibold" style={{ color: theme.primary }}>
+                Período abierto
+              </Text>
+              <Text className="text-xs" style={{ color: theme.primary + 'CC' }}>
                 {new Date(periodoAbierto.fecha_inicio).toLocaleDateString('es-CO', {
                   day: 'numeric', month: 'short',
                 })}
@@ -451,8 +443,11 @@ export default function DashboardScreen() {
                 className="bg-card border border-border rounded-2xl p-4 items-center gap-2 active:opacity-70"
                 style={{ width: actions.length <= 2 ? '47%' : '22%' }}
               >
-                <View className="w-10 h-10 bg-primary/10 rounded-xl items-center justify-center">
-                  <Ionicons name={a.icon} size={20} color="#FF5A3C" />
+                <View
+                  className="w-10 h-10 rounded-xl items-center justify-center"
+                  style={{ backgroundColor: theme.primary + '1A' }}
+                >
+                  <Ionicons name={a.icon} size={20} color={theme.primary} />
                 </View>
                 <Text className="text-[10px] font-semibold text-foreground text-center">
                   {a.label}
@@ -470,7 +465,7 @@ export default function DashboardScreen() {
                 {t('dashboard.upcomingShifts')}
               </Text>
               <Pressable onPress={() => router.push('/(tabs)/turnos')}>
-                <Text className="text-sm text-primary font-semibold">
+                <Text className="text-sm font-semibold" style={{ color: theme.primary }}>
                   {t('dashboard.seeAll')}
                 </Text>
               </Pressable>
@@ -484,7 +479,6 @@ export default function DashboardScreen() {
                   onPress={() => router.push(`/turno/${turno.id}`)}
                   className="bg-card border border-border rounded-2xl px-4 py-3 flex-row items-center gap-3 active:opacity-80"
                 >
-                  {/* Accent dot */}
                   <View
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: cfg.accentColor }}
