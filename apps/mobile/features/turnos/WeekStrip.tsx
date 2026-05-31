@@ -12,15 +12,39 @@ interface WeekStripProps {
   selectedDate: string;          // YYYY-MM-DD
   datesWithShifts: Set<string>;  // YYYY-MM-DD
   onSelectDate: (iso: string) => void;
+  weekLabel: string;
+  onPrevWeek: () => void;
+  onNextWeek: () => void;
 }
 
-export function WeekStrip({ days, selectedDate, datesWithShifts, onSelectDate }: WeekStripProps) {
+export function WeekStrip({ days, selectedDate, datesWithShifts, onSelectDate, weekLabel, onPrevWeek, onNextWeek }: WeekStripProps) {
   return (
     <View className="bg-card border-b border-border">
+      {/* Week navigation header */}
+      <View className="flex-row items-center justify-between px-4 pt-3 pb-1">
+        <TouchableOpacity
+          onPress={onPrevWeek}
+          className="w-8 h-8 items-center justify-center rounded-full"
+          accessibilityLabel="Semana anterior"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text className="text-lg font-semibold text-primary-500">‹</Text>
+        </TouchableOpacity>
+        <Text className="text-sm font-semibold text-foreground capitalize">{weekLabel}</Text>
+        <TouchableOpacity
+          onPress={onNextWeek}
+          className="w-8 h-8 items-center justify-center rounded-full"
+          accessibilityLabel="Semana siguiente"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text className="text-lg font-semibold text-primary-500">›</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerClassName="flex-row px-4 py-3 gap-1"
+        contentContainerClassName="flex-row px-4 pb-3 gap-1"
       >
         {days.map((day) => {
           const isSelected = day.isoDate === selectedDate;

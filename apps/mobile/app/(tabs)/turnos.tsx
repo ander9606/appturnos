@@ -36,10 +36,35 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 
 export default function TurnosScreen() {
   const today      = useMemo(() => toISODate(new Date()), []);
-  const weekDays   = useMemo(() => getWeekDays(), []);
 
+  const [weekRef,      setWeekRef]      = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab,    setActiveTab]    = useState<ActiveTab>('mis_turnos');
+
+  const weekDays  = useMemo(() => getWeekDays(weekRef), [weekRef]);
+  const weekLabel = useMemo(() => buildWeekLabel(weekDays), [weekDays]);
+
+  const goToPrevWeek = useCallback(() => {
+    setWeekRef((prev: Date) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 7);
+      const days = getWeekDays(d);
+      const todayDay = days.find(day => day.isoDate === today);
+      setSelectedDate(todayDay ? today : days[0].isoDate);
+      return d;
+    });
+  }, [today]);
+
+  const goToNextWeek = useCallback(() => {
+    setWeekRef((prev: Date) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 7);
+      const days = getWeekDays(d);
+      const todayDay = days.find(day => day.isoDate === today);
+      setSelectedDate(todayDay ? today : days[0].isoDate);
+      return d;
+    });
+  }, [today]);
 
   // ── Data ──────────────────────────────────────────────────────────────
   const {
@@ -209,6 +234,9 @@ export default function TurnosScreen() {
         selectedDate={selectedDate}
         datesWithShifts={datesWithShifts}
         onSelectDate={setSelectedDate}
+        weekLabel={weekLabel}
+        onPrevWeek={goToPrevWeek}
+        onNextWeek={goToNextWeek}
       />
 
       {/* ── Tab selector ───────────────────────────────────────────── */}
@@ -294,6 +322,22 @@ export default function TurnosScreen() {
 
 const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const FULL_MONTHS  = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+import type { WeekDay } from '@/features/turnos/turnosUtils';
+
+function buildWeekLabel(days: WeekDay[]): string {
+  const first = days[0];
+  const last  = days[6];
+  const year  = first.date.getFullYear();
+  const thisYear = new Date().getFullYear();
+  const yearSuffix = year !== thisYear ? ` ${year}` : '';
+
+  if (first.date.getMonth() === last.date.getMonth()) {
+    return `${FULL_MONTHS[first.date.getMonth()]}${yearSuffix}`;
+  }
+  return `${first.dayNum} ${SHORT_MONTHS[first.date.getMonth()]} – ${last.dayNum} ${SHORT_MONTHS[last.date.getMonth()]}${yearSuffix}`;
+}
 
 function formatShortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
