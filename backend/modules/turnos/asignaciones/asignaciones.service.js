@@ -19,9 +19,16 @@ async function resolverTrabajador(empresaId, usuarioId) {
 }
 
 const AsignacionesService = {
-  async obtener(empresaId, id) {
+  async obtener(empresaId, id, usuario) {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    // Workers can only view their own asignaciones
+    if (usuario?.rol === 'trabajador_turnos') {
+      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuario.sub);
+      if (!trabajador || asignacion.trabajador_id !== trabajador.id) {
+        throw new AppError('Asignación no encontrada', 404);
+      }
+    }
     return asignacion;
   },
 

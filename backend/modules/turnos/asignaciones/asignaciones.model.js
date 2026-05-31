@@ -331,8 +331,8 @@ const AsignacionesModel = {
        JOIN trabajadores t     ON t.id   = a.trabajador_id
        LEFT JOIN puntos_marcaje pm ON pm.id = carg.punto_marcaje_id
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
-       WHERE a.id = ? AND a.empresa_id = ? LIMIT 1`,
-      [id, empresaId]
+       WHERE a.id = ?${empresaId != null ? ' AND a.empresa_id = ?' : ''} LIMIT 1`,
+      empresaId != null ? [id, empresaId] : [id]
     );
     const row = filas[0];
     if (!row) return null;

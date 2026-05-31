@@ -75,6 +75,17 @@ export interface CalificacionResponse {
   total_calificaciones: number;
 }
 
+export interface OfertaPuesto {
+  id: number;
+  cargo_id: number;
+  cargo_codigo: string;
+  cargo_nombre: string;
+  plazas: number;
+  plazas_cubiertas: number;
+  tarifa_dia: number;
+  notas: string | null;
+}
+
 export interface Oferta {
   id: number;
   empresa_id: number;
@@ -86,12 +97,10 @@ export interface Oferta {
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
-  tarifa_dia: number;
-  plazas_disponibles: number;
-  plazas_cubiertas: number;
   estado: EstadoOferta;
   creado_por: number;
   created_at: string;
+  puestos: OfertaPuesto[];
 }
 
 export interface OfertaDetalle extends Oferta {

@@ -39,8 +39,8 @@ router.get(
   ctrl.listar
 );
 
-// GET /api/turnos/asignaciones/:id
-router.get('/:id', verificarRol(GESTIONAR), [idParam], validar, ctrl.obtener);
+// GET /api/turnos/asignaciones/:id  (gestores ven cualquiera; trabajador solo las propias)
+router.get('/:id', verificarRol([...GESTIONAR, ...TRABAJADOR]), [idParam], validar, ctrl.obtener);
 
 // POST /api/turnos/asignaciones/:id/confirmar
 router.post('/:id/confirmar', verificarRol(GESTIONAR), [idParam], validar, ctrl.confirmar);

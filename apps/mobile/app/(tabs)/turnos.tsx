@@ -128,7 +128,9 @@ export default function TurnosScreen() {
 
   const renderOfertaCard = useCallback(({ item }: { item: Oferta }) => {
     const yaAplicado = aplicadosIds.has(item.id);
-    const plazasLibres = item.plazas_disponibles - item.plazas_cubiertas;
+    const plazasLibres = item.puestos?.reduce((s, p) => s + (p.plazas - p.plazas_cubiertas), 0) ?? 0;
+    const tarifaMin = item.puestos?.length > 0 ? Math.min(...item.puestos.map(p => p.tarifa_dia)) : 0;
+    const hayVariasTarifas = item.puestos?.length > 1 && item.puestos.some(p => p.tarifa_dia !== tarifaMin);
 
     return (
       <View
@@ -170,7 +172,7 @@ export default function TurnosScreen() {
 
           <View className="flex-row items-center justify-between mt-1">
             <Text className="text-sm font-semibold text-success">
-              ${item.tarifa_dia.toLocaleString('es-CO')} / día
+              {hayVariasTarifas ? 'Desde ' : ''}${tarifaMin.toLocaleString('es-CO')} / día
             </Text>
             {yaAplicado ? (
               <Badge label="Ya postulado" variant="info" size="sm" />
