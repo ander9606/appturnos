@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurnos';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
@@ -35,11 +36,13 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function TurnosScreen() {
+  const rol        = useAuthStore((s) => s.usuario?.rol);
+  const isWorker   = rol === 'trabajador_turnos';
   const today      = useMemo(() => toISODate(new Date()), []);
 
   const [weekRef,      setWeekRef]      = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string>(today);
-  const [activeTab,    setActiveTab]    = useState<ActiveTab>('mis_turnos');
+  const [activeTab,    setActiveTab]    = useState<ActiveTab>(() => isWorker ? 'mis_turnos' : 'disponibles');
 
   const weekDays  = useMemo(() => getWeekDays(weekRef), [weekRef]);
   const weekLabel = useMemo(() => buildWeekLabel(weekDays), [weekDays]);
@@ -73,7 +76,7 @@ export default function TurnosScreen() {
     isError: errorMios,
     refetch: refetchMios,
     isRefetching: refetchingMios,
-  } = useMisTurnos();
+  } = useMisTurnos({ enabled: isWorker });
 
   const {
     data: ofertasResp,
@@ -245,7 +248,9 @@ export default function TurnosScreen() {
 
       {/* ── Tab selector ───────────────────────────────────────────── */}
       <View className="bg-card flex-row border-b border-border px-6">
-        {(['mis_turnos', 'disponibles'] as ActiveTab[]).map((tab) => {
+        {(['mis_turnos', 'disponibles'] as ActiveTab[])
+          .filter((tab) => isWorker || tab !== 'mis_turnos')
+          .map((tab) => {
           const label = tab === 'mis_turnos' ? 'Mis Turnos' : 'Disponibles';
           const isActive = activeTab === tab;
           return (

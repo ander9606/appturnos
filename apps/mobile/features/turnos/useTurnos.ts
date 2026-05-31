@@ -15,11 +15,12 @@ export const QUERY_KEYS = {
 // ── Queries ───────────────────────────────────────────────────────────────
 
 /** Turnos y postulaciones del trabajador autenticado. */
-export function useMisTurnos() {
+export function useMisTurnos(opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: QUERY_KEYS.misTurnos,
     queryFn:  () => turnosApi.misTurnos(),
     staleTime: 30_000,
+    enabled:  opts.enabled ?? true,
   });
 }
 
