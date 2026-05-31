@@ -150,6 +150,11 @@ const AsignacionesService = {
   },
 
   async misTurnos(empresaId, usuarioId) {
+    // trabajador_turnos tiene empresa_id = null en el JWT (multi-empresa).
+    // Se localiza por usuario_id a través de trabajador_empresa.
+    if (!empresaId) {
+      return AsignacionesModel.listarPorUsuario(usuarioId);
+    }
     const trabajador = await resolverTrabajador(empresaId, usuarioId);
     return AsignacionesModel.listarPorTrabajador(empresaId, trabajador.id);
   },

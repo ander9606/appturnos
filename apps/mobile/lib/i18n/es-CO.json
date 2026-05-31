@@ -54,11 +54,12 @@
     }
   },
   "tabs": {
-    "home":    "Inicio",
-    "turnos":  "Turnos",
-    "nomina":  "Nómina",
-    "equipo":  "Equipo",
-    "perfil":  "Perfil"
+    "home":     "Inicio",
+    "turnos":   "Turnos",
+    "nomina":   "Nómina",
+    "quincena": "Quincena",
+    "equipo":   "Equipo",
+    "perfil":   "Perfil"
   },
   "perfil": {
     "title":              "Mi Perfil",

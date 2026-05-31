@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurnos';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
@@ -37,6 +38,8 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 export default function TurnosScreen() {
   const today      = useMemo(() => toISODate(new Date()), []);
   const weekDays   = useMemo(() => getWeekDays(), []);
+  const rol        = useAuthStore((s) => s.usuario?.rol);
+  const showMarketplace = rol === 'trabajador_turnos';
 
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab,    setActiveTab]    = useState<ActiveTab>('mis_turnos');
@@ -211,29 +214,31 @@ export default function TurnosScreen() {
         onSelectDate={setSelectedDate}
       />
 
-      {/* ── Tab selector ───────────────────────────────────────────── */}
-      <View className="bg-card flex-row border-b border-border px-6">
-        {(['mis_turnos', 'disponibles'] as ActiveTab[]).map((tab) => {
-          const label = tab === 'mis_turnos' ? 'Mis Turnos' : 'Disponibles';
-          const isActive = activeTab === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-            >
-              <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      {/* ── Tab selector (solo para trabajador_turnos) ─────────────── */}
+      {showMarketplace && (
+        <View className="bg-card flex-row border-b border-border px-6">
+          {(['mis_turnos', 'disponibles'] as ActiveTab[]).map((tab) => {
+            const label = tab === 'mis_turnos' ? 'Mis Turnos' : 'Disponibles';
+            const isActive = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
 
       {/* ── List ───────────────────────────────────────────────────── */}
-      {activeTab === 'mis_turnos' ? (
+      {(!showMarketplace || activeTab === 'mis_turnos') ? (
         loadingMios ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#FF5A3C" />
@@ -262,7 +267,7 @@ export default function TurnosScreen() {
             showsVerticalScrollIndicator={false}
           />
         )
-      ) : (
+      ) : showMarketplace ? (
         loadingOfertas ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#FF5A3C" />
@@ -285,7 +290,7 @@ export default function TurnosScreen() {
             showsVerticalScrollIndicator={false}
           />
         )
-      )}
+      ) : null}
     </SafeAreaView>
   );
 }
