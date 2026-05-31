@@ -79,6 +79,15 @@ export function useAsignacionesTrabajador(
   });
 }
 
+/** Todas las asignaciones de la empresa (gestores de turnos). */
+export function useAsignacionesGestor() {
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ gestor: true }),
+    queryFn:  () => turnosApi.listarAsignaciones({ limit: 200 }),
+    staleTime: 30_000,
+  });
+}
+
 /** Detalle de una oferta. */
 export function useOferta(id: number | null) {
   return useQuery({
@@ -89,6 +98,20 @@ export function useOferta(id: number | null) {
 }
 
 // ── Mutations ─────────────────────────────────────────────────────────────
+
+/** Confirmar una postulación pendiente (gestores/admin). */
+export function useConfirmar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId }: { asignacionId: number; ofertaId: number }) =>
+      turnosApi.confirmar(asignacionId),
+    onSuccess: (_, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+      qc.invalidateQueries({ queryKey: ['ofertas'] });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+    },
+  });
+}
 
 /** Postular a una oferta. Invalida misTurnos y la oferta en cuestión. */
 export function useAplicar() {

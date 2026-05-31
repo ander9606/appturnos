@@ -1,13 +1,3 @@
-/**
- * Turnos — Tab "Mis Turnos"
- *
- * Secciones:
- *   1. WeekStrip  — navega semana, filtra por día
- *   2. Tabs       — "Mis Turnos" / "Disponibles"
- *   3. Lista      — ShiftCards filtradas por día seleccionado
- *
- * Estados cubiertos: loading · error · empty · datos
- */
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -25,6 +15,7 @@ import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurnos';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
+import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
 import { getWeekDays, toISODate } from '@/features/turnos/turnosUtils';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
@@ -39,6 +30,7 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 export default function TurnosScreen() {
   const rol      = useAuthStore((s) => s.usuario?.rol);
   const isWorker = rol === 'trabajador_turnos';
+  const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
   const theme    = useTheme();
   const today    = useMemo(() => toISODate(new Date()), []);
 
@@ -228,7 +220,9 @@ export default function TurnosScreen() {
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
-        <Text className="text-xl font-bold text-foreground">Mis Turnos</Text>
+        <Text className="text-xl font-bold text-foreground">
+          {isGestor ? 'Gestión de Turnos' : 'Mis Turnos'}
+        </Text>
         <TouchableOpacity
           className="w-9 h-9 bg-primary-500 rounded-xl items-center justify-center"
           accessibilityLabel="Nuevo turno"
@@ -249,82 +243,89 @@ export default function TurnosScreen() {
         primaryColor={theme.primary}
       />
 
-      {/* ── Tab selector ───────────────────────────────────────────── */}
-      <View className="bg-card flex-row border-b border-border px-6">
-        {(['mis_turnos', 'disponibles'] as ActiveTab[])
-          .filter((tab) => isWorker || tab !== 'mis_turnos')
-          .map((tab) => {
-          const label = tab === 'mis_turnos' ? 'Mis Turnos' : 'Disponibles';
-          const isActive = activeTab === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: isActive }}
-            >
-              <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* ── List ───────────────────────────────────────────────────── */}
-      {activeTab === 'mis_turnos' ? (
-        loadingMios ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={theme.primary} />
-          </View>
-        ) : errorMios ? (
-          <View className="flex-1 items-center justify-center gap-3 px-6">
-            <Text className="text-4xl">⚠️</Text>
-            <Text className="text-base font-semibold text-foreground">Error al cargar turnos</Text>
-            <Button label="Reintentar" onPress={() => refetchMios()} variant="secondary" />
-          </View>
-        ) : (
-          <FlatList
-            data={turnosDelDia}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderShiftCard}
-            contentContainerClassName="px-5 py-4 gap-3"
-            ListEmptyComponent={<EmptyMiosTurnos />}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-                tintColor={theme.primary}
-                colors={[theme.primary]}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        )
+      {/* ── Gestor view ────────────────────────────────────────────── */}
+      {isGestor ? (
+        <GestorTurnosView selectedDate={selectedDate} />
       ) : (
-        loadingOfertas ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={theme.primary} />
-          </View>
-        ) : (
-          <FlatList
-            data={ofertas}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderOfertaCard}
-            contentContainerClassName="px-5 py-4 gap-3"
-            ListEmptyComponent={<EmptyOfertas />}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-                tintColor={theme.primary}
-                colors={[theme.primary]}
+        <>
+          {/* ── Tab selector ─────────────────────────────────────── */}
+          {isWorker && (
+            <View className="bg-card flex-row border-b border-border px-6">
+              {(['mis_turnos', 'disponibles'] as ActiveTab[]).map((tab) => {
+                const label = tab === 'mis_turnos' ? 'Mis Turnos' : 'Disponibles';
+                const isActive = activeTab === tab;
+                return (
+                  <TouchableOpacity
+                    key={tab}
+                    onPress={() => setActiveTab(tab)}
+                    className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
+          {/* ── Worker list ──────────────────────────────────────── */}
+          {activeTab === 'mis_turnos' ? (
+            loadingMios ? (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" color={theme.primary} />
+              </View>
+            ) : errorMios ? (
+              <View className="flex-1 items-center justify-center gap-3 px-6">
+                <Text className="text-4xl">⚠️</Text>
+                <Text className="text-base font-semibold text-foreground">Error al cargar turnos</Text>
+                <Button label="Reintentar" onPress={() => refetchMios()} variant="secondary" />
+              </View>
+            ) : (
+              <FlatList
+                data={turnosDelDia}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderShiftCard}
+                contentContainerClassName="px-5 py-4 gap-3"
+                ListEmptyComponent={<EmptyMiosTurnos />}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={isRefreshing}
+                    onRefresh={onRefresh}
+                    tintColor={theme.primary}
+                    colors={[theme.primary]}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
               />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        )
+            )
+          ) : (
+            loadingOfertas ? (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" color={theme.primary} />
+              </View>
+            ) : (
+              <FlatList
+                data={ofertas}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderOfertaCard}
+                contentContainerClassName="px-5 py-4 gap-3"
+                ListEmptyComponent={<EmptyOfertas />}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={isRefreshing}
+                    onRefresh={onRefresh}
+                    tintColor={theme.primary}
+                    colors={[theme.primary]}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
+              />
+            )
+          )}
+        </>
       )}
     </SafeAreaView>
   );

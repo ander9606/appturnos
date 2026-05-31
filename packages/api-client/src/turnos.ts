@@ -217,6 +217,13 @@ export const turnosApi = {
   },
 
   /**
+   * Confirma una postulación pendiente (pendiente → confirmado). Solo gestores/admin.
+   */
+  confirmar(asignacionId: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/confirmar`, {});
+  },
+
+  /**
    * Califica una asignación completada (1–5 ⭐). Solo gestores/admin.
    * Una asignación solo puede calificarse una vez.
    */
