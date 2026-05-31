@@ -155,14 +155,14 @@ export const turnosApi = {
     return api.get<OfertaDetalle>(`/api/turnos/ofertas/${id}`);
   },
 
-  /** Postular al turno. */
-  aplicar(ofertaId: number): Promise<Asignacion> {
-    return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`);
+  /** Postular al turno en un puesto concreto. */
+  aplicar(ofertaId: number, puestoId: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });
   },
 
-  /** Retirar postulación (solo cuando estado === 'pendiente'). */
-  retirar(ofertaId: number): Promise<null> {
-    return api.delete<null>(`/api/turnos/ofertas/${ofertaId}/aplicar`);
+  /** Retirar postulación de un puesto (solo cuando estado === 'pendiente'). */
+  retirar(ofertaId: number, puestoId: number): Promise<null> {
+    return api.delete<null>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });
   },
 
   // ── Asignaciones ──────────────────────────────────────────────────────

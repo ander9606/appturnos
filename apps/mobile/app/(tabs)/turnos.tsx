@@ -131,6 +131,7 @@ export default function TurnosScreen() {
     const plazasLibres = item.puestos?.reduce((s, p) => s + (p.plazas - p.plazas_cubiertas), 0) ?? 0;
     const tarifaMin = item.puestos?.length > 0 ? Math.min(...item.puestos.map(p => p.tarifa_dia)) : 0;
     const hayVariasTarifas = item.puestos?.length > 1 && item.puestos.some(p => p.tarifa_dia !== tarifaMin);
+    const firstAvailablePuesto = item.puestos?.find(p => p.plazas_cubiertas < p.plazas);
 
     return (
       <View
@@ -182,7 +183,8 @@ export default function TurnosScreen() {
                 variant="primary"
                 size="sm"
                 loading={aplicarMutation.isPending}
-                onPress={() => aplicarMutation.mutate(item.id)}
+                disabled={!firstAvailablePuesto}
+                onPress={() => firstAvailablePuesto && aplicarMutation.mutate({ ofertaId: item.id, puestoId: firstAvailablePuesto.id })}
               />
             )}
           </View>

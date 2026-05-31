@@ -18,7 +18,7 @@ async function listar(req, res) {
     page,
     limit,
   });
-  res.json({ success: true, data, pagination });
+  res.json({ success: true, data: { data, pagination } });
 }
 
 async function confirmar(req, res) {
