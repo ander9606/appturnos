@@ -2,31 +2,33 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { t } from '@/lib/i18n';
+import { useAuthStore } from '@/features/auth/useAuthStore';
+import { THEME_COLORS } from '@/lib/designTokens';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-function TabIcon({
-  name,
-  focused,
-}: {
-  name: IoniconsName;
-  focused: boolean;
-}) {
+function TabIcon({ name, focused, color }: { name: IoniconsName; focused: boolean; color: string }) {
   return (
     <Ionicons
       name={focused ? name.replace('-outline', '') as IoniconsName : name}
       size={22}
-      color={focused ? '#FF5A3C' : '#94A3B8'}
+      color={color}
     />
   );
 }
 
 export default function TabsLayout() {
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  const primaryColor = rol === 'trabajador_nomina'
+    ? THEME_COLORS.nomina.primary
+    : THEME_COLORS.turnos.primary;
+  const nominaLabel = rol === 'trabajador_turnos' ? t('tabs.quincena') : t('tabs.nomina');
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#FF5A3C',
+        tabBarActiveTintColor: primaryColor,
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
@@ -46,35 +48,35 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: t('tabs.home'),
-          tabBarIcon: ({ focused }) => <TabIcon name="home-outline" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => <TabIcon name="home-outline" focused={focused} color={color} />,
         }}
       />
       <Tabs.Screen
         name="turnos"
         options={{
           title: t('tabs.turnos'),
-          tabBarIcon: ({ focused }) => <TabIcon name="calendar-outline" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => <TabIcon name="calendar-outline" focused={focused} color={color} />,
         }}
       />
       <Tabs.Screen
         name="nomina"
         options={{
-          title: t('tabs.nomina'),
-          tabBarIcon: ({ focused }) => <TabIcon name="wallet-outline" focused={focused} />,
+          title: nominaLabel,
+          tabBarIcon: ({ focused, color }) => <TabIcon name="wallet-outline" focused={focused} color={color} />,
         }}
       />
       <Tabs.Screen
         name="equipo"
         options={{
           title: t('tabs.equipo'),
-          tabBarIcon: ({ focused }) => <TabIcon name="people-outline" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => <TabIcon name="people-outline" focused={focused} color={color} />,
         }}
       />
       <Tabs.Screen
         name="perfil"
         options={{
           title: t('tabs.perfil'),
-          tabBarIcon: ({ focused }) => <TabIcon name="person-outline" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => <TabIcon name="person-outline" focused={focused} color={color} />,
         }}
       />
     </Tabs>

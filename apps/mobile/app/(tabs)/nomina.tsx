@@ -18,9 +18,11 @@ import { usePeriodos, useRegistros, useLiquidacion,
 import { PeriodoBadge }        from '@/features/nomina/PeriodoBadge';
 import { RegistroCard }        from '@/features/nomina/RegistroCard';
 import { LiquidacionRow }      from '@/features/nomina/LiquidacionRow';
+import { NominaTurnosView }    from '@/features/nomina/NominaTurnosView';
 import { calcularResumenHoras } from '@api-client';
 import { ApiError }            from '@api-client';
 import type { PeriodoNomina }  from '@api-client';
+import { useTheme }            from '@/lib/theme';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -45,11 +47,9 @@ export default function NominaScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const rol     = usuario?.rol ?? 'trabajador_nomina';
 
-  const isGestor = GESTORES.includes(rol as RolGestor);
-
-  return isGestor
-    ? <NominaGestorView />
-    : <NominaTrabajadorView />;
+  if (GESTORES.includes(rol as RolGestor)) return <NominaGestorView />;
+  if (rol === 'trabajador_turnos')         return <NominaTurnosView />;
+  return <NominaTrabajadorView />;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -57,6 +57,8 @@ export default function NominaScreen() {
 // ══════════════════════════════════════════════════════════════════════════
 
 function NominaTrabajadorView() {
+  const theme = useTheme();
+
   // Fetch all periods, pick the first open one (most recent)
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos('abierto');
@@ -79,6 +81,20 @@ function NominaTrabajadorView() {
 
   const resumen = useMemo(() => calcularResumenHoras(registros), [registros]);
 
+  // Horas de la semana actual (lunes → hoy)
+  const resumenSemana = useMemo(() => {
+    const hoy = new Date();
+    const lunes = new Date(hoy);
+    const diaSemana = hoy.getDay();
+    lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
+    lunes.setHours(0, 0, 0, 0);
+    const semanaRegistros = registros.filter((r) => {
+      const fecha = new Date(`${r.fecha}T00:00:00`);
+      return fecha >= lunes;
+    });
+    return calcularResumenHoras(semanaRegistros);
+  }, [registros]);
+
   const onRefresh = useCallback(() => {
     refetchPeriodos();
     refetchRegistros();
@@ -87,7 +103,7 @@ function NominaTrabajadorView() {
   if (loadingPeriodos) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color="#FF5A3C" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -116,19 +132,46 @@ function NominaTrabajadorView() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={onRefresh}
-            tintColor="#FF5A3C" colors={['#FF5A3C']} />
+            tintColor={theme.primary} colors={[theme.primary]} />
         }
         ListHeaderComponent={
           <View className="gap-4 pb-2">
             {/* ── Header ─────────────────────────────────────── */}
-            <View className="bg-primary-500 pt-4 pb-6 px-6 rounded-b-[28px] gap-1">
-              <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
-                Mi Nómina
-              </Text>
-              <Text className="text-white text-xl font-bold">
-                {activePeriodo ? fmtPeriodo(activePeriodo) : '—'}
-              </Text>
-              {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
+            <View className="pt-4 pb-6 px-6 rounded-b-[28px] gap-3"
+              style={{ backgroundColor: theme.primary }}>
+              <View className="gap-1">
+                <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
+                  Mi Nómina
+                </Text>
+                <Text className="text-white text-xl font-bold">
+                  {activePeriodo ? fmtPeriodo(activePeriodo) : '—'}
+                </Text>
+                {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
+              </View>
+
+              {/* Card "Esta semana" */}
+              <View className="bg-white/15 rounded-2xl px-4 py-3 flex-row gap-4">
+                <View className="gap-0.5 flex-1">
+                  <Text className="text-white text-base font-extrabold">
+                    {resumenSemana.totalHoras.toFixed(1)}h
+                  </Text>
+                  <Text className="text-white/70 text-[10px]">Esta semana</Text>
+                </View>
+                {(resumenSemana.extraDiurnas + resumenSemana.extraNocturnas) > 0 && (
+                  <View className="gap-0.5 flex-1">
+                    <Text className="text-white text-base font-extrabold">
+                      {(resumenSemana.extraDiurnas + resumenSemana.extraNocturnas).toFixed(1)}h
+                    </Text>
+                    <Text className="text-white/70 text-[10px]">Horas extra</Text>
+                  </View>
+                )}
+                <View className="gap-0.5 flex-1">
+                  <Text className="text-white text-base font-extrabold">
+                    {resumenSemana.diasRegistrados}d
+                  </Text>
+                  <Text className="text-white/70 text-[10px]">Días sem.</Text>
+                </View>
+              </View>
             </View>
 
             {/* ── Resumen horas ───────────────────────────────── */}
@@ -194,7 +237,7 @@ function NominaTrabajadorView() {
         ListEmptyComponent={
           loadingRegistros ? (
             <View className="py-12 items-center">
-              <ActivityIndicator color="#FF5A3C" />
+              <ActivityIndicator color={theme.primary} />
             </View>
           ) : (
             <View className="py-12 items-center gap-3 px-8">
@@ -221,6 +264,8 @@ function NominaTrabajadorView() {
 // ══════════════════════════════════════════════════════════════════════════
 
 function NominaGestorView() {
+  const theme = useTheme();
+
   // All periods (latest first)
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos();
@@ -296,7 +341,7 @@ function NominaGestorView() {
   if (loadingPeriodos) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color="#FF5A3C" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -314,7 +359,7 @@ function NominaGestorView() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={onRefresh}
-            tintColor="#FF5A3C" colors={['#FF5A3C']} />
+            tintColor={theme.primary} colors={[theme.primary]} />
         }
         ListHeaderComponent={
           <View className="gap-4 pb-2">
@@ -415,7 +460,7 @@ function NominaGestorView() {
         ListEmptyComponent={
           loadingLiq ? (
             <View className="py-12 items-center">
-              <ActivityIndicator color="#FF5A3C" />
+              <ActivityIndicator color={theme.primary} />
             </View>
           ) : (
             <View className="py-12 items-center gap-3 px-8">

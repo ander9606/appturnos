@@ -35,3 +35,11 @@ export const AVATAR_COLORS = [
 export function avatarColorForId(id: number): string {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
 }
+
+// Paleta por tipo de trabajador: naranja para turnos, verde para nómina.
+export const THEME_COLORS = {
+  turnos: { primary: '#FF5A3C', primaryLight: '#FFF1EE' },
+  nomina: { primary: '#059669', primaryLight: '#ECFDF5' },
+} as const;
+
+export type ThemeKey = keyof typeof THEME_COLORS;

@@ -306,6 +306,35 @@ const AsignacionesModel = {
   },
 
   /**
+   * Mis-turnos para trabajador_turnos (empresa_id = null en JWT).
+   * Localiza todos los trabajador_id del usuario vía trabajador_empresa
+   * y devuelve sus asignaciones de todas las empresas vinculadas.
+   */
+  async listarPorUsuario(usuarioId) {
+    const [filas] = await pool.query(
+      `SELECT a.*,
+              o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
+              o.lugar, o.latitud, o.longitud,
+              emp.nombre AS empresa_nombre,
+              p.tarifa_dia, p.cargo_id,
+              carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
+              cal.calificacion, cal.comentario AS calificacion_comentario
+       FROM asignaciones_turno a
+       JOIN trabajador_empresa te ON te.trabajador_id = a.trabajador_id
+       JOIN ofertas_turno o       ON o.id = a.oferta_id
+       JOIN empresas emp          ON emp.id = a.empresa_id
+       JOIN oferta_puestos p      ON p.id = a.puesto_id
+       JOIN cargos carg           ON carg.id = p.cargo_id
+       LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
+       WHERE te.usuario_id = ? AND te.estado = 'activo'
+       ORDER BY o.fecha DESC, o.hora_inicio`,
+      [usuarioId]
+    );
+    return filas;
+  },
+
+  /**
    * Asignación completa con datos de oferta, trabajador y calificación.
    * Usada por gestores al acceder al detalle de una asignación concreta.
    */
