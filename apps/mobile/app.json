@@ -2,6 +2,7 @@
   "expo": {
     "name": "AppTurnos",
     "slug": "appturnos",
+    "owner": "anderson960616",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

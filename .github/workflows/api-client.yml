@@ -1,0 +1,35 @@
+name: API Client CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/api-client/**'
+      - '.github/workflows/api-client.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/api-client/**'
+
+jobs:
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/api-client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/api-client/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
