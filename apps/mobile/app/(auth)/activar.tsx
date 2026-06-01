@@ -22,6 +22,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { StatusBar } from 'expo-status-bar';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { activarCuentaSchema, type ActivarCuentaFormData } from '@/features/auth/schemas';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Button } from '@/components/ui/Button';
@@ -80,7 +82,7 @@ export default function ActivarCuentaScreen() {
         {/* ── Header ───────────────────────────────────────────────────── */}
         <View className="items-center justify-end bg-primary-600 pt-16 pb-10 rounded-b-[40px]">
           <View className="w-20 h-20 rounded-2xl bg-white/20 items-center justify-center mb-4">
-            <Text className="text-4xl">🔑</Text>
+            <Ionicons name="key-outline" size={40} color="white" />
           </View>
           <Text className="text-2xl font-bold text-white">{t('auth.activar.title')}</Text>
           <Text className="text-sm text-white/80 mt-1 px-8 text-center">

@@ -26,6 +26,7 @@ import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurno
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { getWeekDays, toISODate } from '@/features/turnos/turnosUtils';
+import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
 import type { Asignacion, Oferta } from '@api-client';
@@ -135,16 +136,25 @@ export default function TurnosScreen() {
           </View>
 
           <View className="flex-row gap-3 flex-wrap">
-            <Text className="text-sm text-muted-foreground">
-              📅 {formatShortDate(item.fecha)}
-            </Text>
-            <Text className="text-sm text-muted-foreground">
-              🕐 {fmtRangeSimple(item.hora_inicio, item.hora_fin_estimada)}
-            </Text>
-            {item.lugar && (
-              <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                📍 {item.lugar}
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="calendar-outline" size={13} color="#64748B" />
+              <Text className="text-sm text-muted-foreground">
+                {formatShortDate(item.fecha)}
               </Text>
+            </View>
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="time-outline" size={13} color="#64748B" />
+              <Text className="text-sm text-muted-foreground">
+                {fmtRangeSimple(item.hora_inicio, item.hora_fin_estimada)}
+              </Text>
+            </View>
+            {item.lugar && (
+              <View className="flex-row items-center gap-1 flex-1">
+                <Ionicons name="location-outline" size={13} color="#64748B" />
+                <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+                  {item.lugar}
+                </Text>
+              </View>
             )}
           </View>
 
@@ -173,7 +183,7 @@ export default function TurnosScreen() {
 
   const EmptyMiosTurnos = () => (
     <View className="flex-1 items-center justify-center py-16 gap-3">
-      <Text className="text-4xl">📅</Text>
+      <Ionicons name="calendar-outline" size={48} color="#94A3B8" />
       <Text className="text-base font-semibold text-foreground">Sin turnos este día</Text>
       <Text className="text-sm text-muted-foreground text-center px-8">
         No tienes turnos asignados el{' '}
@@ -184,7 +194,7 @@ export default function TurnosScreen() {
 
   const EmptyOfertas = () => (
     <View className="flex-1 items-center justify-center py-16 gap-3">
-      <Text className="text-4xl">🔍</Text>
+      <Ionicons name="search-outline" size={48} color="#94A3B8" />
       <Text className="text-base font-semibold text-foreground">Sin ofertas disponibles</Text>
       <Text className="text-sm text-muted-foreground text-center px-8">
         No hay turnos disponibles en este momento. Vuelve más tarde.
@@ -248,7 +258,7 @@ export default function TurnosScreen() {
           </View>
         ) : errorMios ? (
           <View className="flex-1 items-center justify-center gap-3 px-6">
-            <Text className="text-4xl">⚠️</Text>
+            <Ionicons name="warning-outline" size={48} color="#94A3B8" />
             <Text className="text-base font-semibold text-foreground">Error al cargar turnos</Text>
             <Button label="Reintentar" onPress={() => refetchMios()} variant="secondary" />
           </View>

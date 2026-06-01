@@ -8,6 +8,7 @@
  */
 import React from 'react';
 import { View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { formatDistance, type GeofenceStatus } from '@/lib/geo';
 
@@ -36,7 +37,7 @@ export function GeoFenceIndicator({
   if (permissionDenied) {
     return (
       <View className="bg-warning-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
-        <Text className="text-lg">⚠️</Text>
+        <Ionicons name="warning-outline" size={20} color="#92400E" />
         <View className="flex-1">
           <Text className="text-sm font-semibold text-amber-700">Permiso de ubicación requerido</Text>
           <Text className="text-xs text-amber-600 mt-0.5">

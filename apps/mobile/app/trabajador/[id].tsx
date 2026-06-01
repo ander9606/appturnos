@@ -17,6 +17,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
@@ -188,7 +189,7 @@ export default function TrabajadorDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-8" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Trabajador', headerShown: true }} />
-        <Text className="text-4xl mb-3">⚠️</Text>
+        <Ionicons name="warning-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
         <Text className="text-base font-semibold text-foreground">No se pudo cargar</Text>
         <Pressable onPress={() => refetch()} className="mt-4">
           <Text className="text-primary font-semibold">Reintentar</Text>

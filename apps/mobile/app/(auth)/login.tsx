@@ -22,6 +22,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { StatusBar } from 'expo-status-bar';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { loginSchema, type LoginFormData } from '@/features/auth/schemas';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Button } from '@/components/ui/Button';
@@ -74,7 +76,7 @@ export default function LoginScreen() {
         <View className="items-center justify-end bg-primary-500 pt-16 pb-10 rounded-b-[40px]">
           {/* Logo placeholder — replace with <Image> when asset is ready */}
           <View className="w-20 h-20 rounded-2xl bg-white/20 items-center justify-center mb-4">
-            <Text className="text-4xl">📅</Text>
+            <Ionicons name="calendar-outline" size={40} color="white" />
           </View>
           <Text className="text-2xl font-bold text-white">AppTurnos</Text>
           <Text className="text-sm text-white/80 mt-1">Gestión de turnos y nómina</Text>
@@ -84,7 +86,7 @@ export default function LoginScreen() {
         <View className="flex-1 px-6 pt-8 pb-6 gap-5">
           <View className="gap-1">
             <Text className="text-2xl font-bold text-foreground">
-              {t('auth.login.title')} 👋
+              {t('auth.login.title')}
             </Text>
             <Text className="text-base text-muted-foreground">
               {t('auth.login.subtitle')}
