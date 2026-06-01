@@ -19,7 +19,8 @@ import { usePeriodos, useRegistros, useLiquidacion,
 import { PeriodoBadge }        from '@/features/nomina/PeriodoBadge';
 import { RegistroCard }        from '@/features/nomina/RegistroCard';
 import { LiquidacionRow }      from '@/features/nomina/LiquidacionRow';
-import { NominaTurnosView }    from '@/features/nomina/NominaTurnosView';
+import { NominaTurnosView }       from '@/features/nomina/NominaTurnosView';
+import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView';
 import { calcularResumenHoras } from '@api-client';
 import { ApiError }            from '@api-client';
 import type { PeriodoNomina }  from '@api-client';
@@ -50,6 +51,7 @@ export default function NominaScreen() {
 
   if (GESTORES.includes(rol as RolGestor)) return <NominaGestorView />;
   if (rol === 'trabajador_turnos')         return <NominaTurnosView />;
+  if (rol === 'jefe_turnos')               return <NominaGestorTurnosView />;
   return <NominaTrabajadorView />;
 }
 

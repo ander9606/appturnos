@@ -75,6 +75,17 @@ export interface CalificacionResponse {
   total_calificaciones: number;
 }
 
+export interface OfertaPuesto {
+  id: number;
+  cargo_id: number;
+  cargo_codigo: string;
+  cargo_nombre: string;
+  plazas: number;
+  plazas_cubiertas: number;
+  tarifa_dia: number;
+  notas: string | null;
+}
+
 export interface Oferta {
   id: number;
   empresa_id: number;
@@ -86,12 +97,10 @@ export interface Oferta {
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
-  tarifa_dia: number;
-  plazas_disponibles: number;
-  plazas_cubiertas: number;
   estado: EstadoOferta;
   creado_por: number;
   created_at: string;
+  puestos: OfertaPuesto[];
 }
 
 export interface OfertaDetalle extends Oferta {
@@ -146,14 +155,14 @@ export const turnosApi = {
     return api.get<OfertaDetalle>(`/api/turnos/ofertas/${id}`);
   },
 
-  /** Postular al turno. */
-  aplicar(ofertaId: number): Promise<Asignacion> {
-    return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`);
+  /** Postular al turno en un puesto concreto. */
+  aplicar(ofertaId: number, puestoId: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });
   },
 
-  /** Retirar postulación (solo cuando estado === 'pendiente'). */
-  retirar(ofertaId: number): Promise<null> {
-    return api.delete<null>(`/api/turnos/ofertas/${ofertaId}/aplicar`);
+  /** Retirar postulación de un puesto (solo cuando estado === 'pendiente'). */
+  retirar(ofertaId: number, puestoId: number): Promise<null> {
+    return api.delete<null>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });
   },
 
   // ── Asignaciones ──────────────────────────────────────────────────────
@@ -205,6 +214,13 @@ export const turnosApi = {
     if (params?.limit)          qs.set('limit',          String(params.limit));
     const query = qs.toString() ? `?${qs}` : '';
     return api.get<PaginatedResponse<Asignacion>>(`/api/turnos/asignaciones${query}`);
+  },
+
+  /**
+   * Confirma una postulación pendiente (pendiente → confirmado). Solo gestores/admin.
+   */
+  confirmar(asignacionId: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/confirmar`, {});
   },
 
   /**

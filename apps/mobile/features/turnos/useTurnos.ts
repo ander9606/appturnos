@@ -15,11 +15,12 @@ export const QUERY_KEYS = {
 // ── Queries ───────────────────────────────────────────────────────────────
 
 /** Turnos y postulaciones del trabajador autenticado. */
-export function useMisTurnos() {
+export function useMisTurnos(opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: QUERY_KEYS.misTurnos,
     queryFn:  () => turnosApi.misTurnos(),
     staleTime: 30_000,
+    enabled:  opts.enabled ?? true,
   });
 }
 
@@ -78,6 +79,15 @@ export function useAsignacionesTrabajador(
   });
 }
 
+/** Todas las asignaciones de la empresa (gestores de turnos). */
+export function useAsignacionesGestor() {
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ gestor: true }),
+    queryFn:  () => turnosApi.listarAsignaciones({ limit: 200 }),
+    staleTime: 30_000,
+  });
+}
+
 /** Detalle de una oferta. */
 export function useOferta(id: number | null) {
   return useQuery({
@@ -89,12 +99,27 @@ export function useOferta(id: number | null) {
 
 // ── Mutations ─────────────────────────────────────────────────────────────
 
+/** Confirmar una postulación pendiente (gestores/admin). */
+export function useConfirmar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId }: { asignacionId: number; ofertaId: number }) =>
+      turnosApi.confirmar(asignacionId),
+    onSuccess: (_, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+      qc.invalidateQueries({ queryKey: ['ofertas'] });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+    },
+  });
+}
+
 /** Postular a una oferta. Invalida misTurnos y la oferta en cuestión. */
 export function useAplicar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ofertaId: number) => turnosApi.aplicar(ofertaId),
-    onSuccess: (_, ofertaId) => {
+    mutationFn: ({ ofertaId, puestoId }: { ofertaId: number; puestoId: number }) =>
+      turnosApi.aplicar(ofertaId, puestoId),
+    onSuccess: (_, { ofertaId }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
       qc.invalidateQueries({ queryKey: ['ofertas'] });
@@ -106,8 +131,9 @@ export function useAplicar() {
 export function useRetirar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ofertaId: number) => turnosApi.retirar(ofertaId),
-    onSuccess: (_, ofertaId) => {
+    mutationFn: ({ ofertaId, puestoId }: { ofertaId: number; puestoId: number }) =>
+      turnosApi.retirar(ofertaId, puestoId),
+    onSuccess: (_, { ofertaId }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
       qc.invalidateQueries({ queryKey: ['ofertas'] });

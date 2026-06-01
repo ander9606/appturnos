@@ -70,11 +70,19 @@ const TrabajadoresModel = {
 
   /** Trabajador activo vinculado a una cuenta de usuario (para acciones del propio trabajador). */
   async obtenerPorUsuarioId(empresaId, usuarioId) {
-    const [filas] = await pool.query(
-      `SELECT ${COLUMNAS} FROM trabajadores
-       WHERE usuario_id = ? AND empresa_id = ? AND activo = 1 LIMIT 1`,
-      [usuarioId, empresaId]
-    );
+    // Workers marketplace (logiq360) tienen empresa_id=null en el JWT.
+    // En ese caso buscamos solo por usuario_id sin filtrar empresa.
+    const [filas] = empresaId != null
+      ? await pool.query(
+          `SELECT ${COLUMNAS} FROM trabajadores
+           WHERE usuario_id = ? AND empresa_id = ? AND activo = 1 LIMIT 1`,
+          [usuarioId, empresaId]
+        )
+      : await pool.query(
+          `SELECT ${COLUMNAS} FROM trabajadores
+           WHERE usuario_id = ? AND activo = 1 LIMIT 1`,
+          [usuarioId]
+        );
     return filas[0] || null;
   },
 

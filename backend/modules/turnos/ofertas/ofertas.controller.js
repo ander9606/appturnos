@@ -13,7 +13,7 @@ async function listar(req, res) {
     { fecha: req.query.fecha || undefined, estado: req.query.estado || undefined, disponibles, page, limit },
     req.empresasActivas   // ← inyectado por resolverEmpresasActivas para TRABAJADOR_TURNOS
   );
-  res.json({ success: true, data, pagination });
+  res.json({ success: true, data: { data, pagination } });
 }
 
 async function obtener(req, res) {

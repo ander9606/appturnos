@@ -55,6 +55,8 @@ export default function LoginScreen() {
         else if (err.status === 429) setServerError(t('auth.errors.accountLocked'));
         else if (err.status === 403) setServerError(t('auth.errors.inactiveUser'));
         else setServerError(err.message);
+      } else if (err instanceof TypeError) {
+        setServerError('No se pudo conectar al servidor. Verifica que el backend esté activo y que EXPO_PUBLIC_API_URL tenga la IP correcta.');
       } else {
         setServerError(t('auth.errors.generic'));
       }

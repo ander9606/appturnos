@@ -283,6 +283,8 @@ const AsignacionesModel = {
 
   /** Turnos y postulaciones de un trabajador (vista "mis-turnos"). Incluye calificación. */
   async listarPorTrabajador(empresaId, trabajadorId) {
+    const whereEmpresa = empresaId != null ? 'a.empresa_id = ? AND ' : '';
+    const params = empresaId != null ? [empresaId, trabajadorId] : [trabajadorId];
     const [filas] = await pool.query(
       `SELECT a.*,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
@@ -296,9 +298,9 @@ const AsignacionesModel = {
        JOIN oferta_puestos p ON p.id = a.puesto_id
        JOIN cargos carg ON carg.id = p.cargo_id
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
-       WHERE a.empresa_id = ? AND a.trabajador_id = ?
+       WHERE ${whereEmpresa}a.trabajador_id = ?
        ORDER BY o.fecha DESC, o.hora_inicio`,
-      [empresaId, trabajadorId]
+      params
     );
     return filas;
   },
@@ -358,8 +360,8 @@ const AsignacionesModel = {
        JOIN trabajadores t     ON t.id   = a.trabajador_id
        LEFT JOIN puntos_marcaje pm ON pm.id = carg.punto_marcaje_id
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
-       WHERE a.id = ? AND a.empresa_id = ? LIMIT 1`,
-      [id, empresaId]
+       WHERE a.id = ?${empresaId != null ? ' AND a.empresa_id = ?' : ''} LIMIT 1`,
+      empresaId != null ? [id, empresaId] : [id]
     );
     const row = filas[0];
     if (!row) return null;

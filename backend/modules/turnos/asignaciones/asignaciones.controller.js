@@ -3,7 +3,7 @@
 const AsignacionesService = require('./asignaciones.service');
 
 async function obtener(req, res) {
-  const data = await AsignacionesService.obtener(req.empresa_id, Number(req.params.id));
+  const data = await AsignacionesService.obtener(req.empresa_id, Number(req.params.id), req.usuario);
   res.json({ success: true, data });
 }
 
@@ -18,7 +18,7 @@ async function listar(req, res) {
     page,
     limit,
   });
-  res.json({ success: true, data, pagination });
+  res.json({ success: true, data: { data, pagination } });
 }
 
 async function confirmar(req, res) {

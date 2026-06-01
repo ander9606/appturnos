@@ -1,13 +1,3 @@
-/**
- * Turnos — Tab "Mis Turnos"
- *
- * Secciones:
- *   1. WeekStrip  — navega semana, filtra por día
- *   2. Tabs       — "Mis Turnos" / "Disponibles"
- *   3. Lista      — ShiftCards filtradas por día seleccionado
- *
- * Estados cubiertos: loading · error · empty · datos
- */
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -25,6 +15,7 @@ import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurnos';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
+import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
 import { getWeekDays, toISODate } from '@/features/turnos/turnosUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
@@ -38,14 +29,40 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function TurnosScreen() {
-  const today      = useMemo(() => toISODate(new Date()), []);
-  const weekDays   = useMemo(() => getWeekDays(), []);
-  const rol             = useAuthStore((s) => s.usuario?.rol);
-  const theme           = useTheme();
-  const showMarketplace = rol === 'trabajador_turnos';
+  const rol      = useAuthStore((s) => s.usuario?.rol);
+  const isWorker = rol === 'trabajador_turnos';
+  const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
+  const theme    = useTheme();
+  const today    = useMemo(() => toISODate(new Date()), []);
 
+  const [weekRef,      setWeekRef]      = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string>(today);
-  const [activeTab,    setActiveTab]    = useState<ActiveTab>('mis_turnos');
+  const [activeTab,    setActiveTab]    = useState<ActiveTab>(() => isWorker ? 'mis_turnos' : 'disponibles');
+
+  const weekDays  = useMemo(() => getWeekDays(weekRef), [weekRef]);
+  const weekLabel = useMemo(() => buildWeekLabel(weekDays), [weekDays]);
+
+  const goToPrevWeek = useCallback(() => {
+    setWeekRef((prev: Date) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 7);
+      const days = getWeekDays(d);
+      const todayDay = days.find(day => day.isoDate === today);
+      setSelectedDate(todayDay ? today : days[0].isoDate);
+      return d;
+    });
+  }, [today]);
+
+  const goToNextWeek = useCallback(() => {
+    setWeekRef((prev: Date) => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 7);
+      const days = getWeekDays(d);
+      const todayDay = days.find(day => day.isoDate === today);
+      setSelectedDate(todayDay ? today : days[0].isoDate);
+      return d;
+    });
+  }, [today]);
 
   // ── Data ──────────────────────────────────────────────────────────────
   const {
@@ -54,7 +71,7 @@ export default function TurnosScreen() {
     isError: errorMios,
     refetch: refetchMios,
     isRefetching: refetchingMios,
-  } = useMisTurnos();
+  } = useMisTurnos({ enabled: isWorker });
 
   const {
     data: ofertasResp,
@@ -109,7 +126,10 @@ export default function TurnosScreen() {
 
   const renderOfertaCard = useCallback(({ item }: { item: Oferta }) => {
     const yaAplicado = aplicadosIds.has(item.id);
-    const plazasLibres = item.plazas_disponibles - item.plazas_cubiertas;
+    const plazasLibres = item.puestos?.reduce((s, p) => s + (p.plazas - p.plazas_cubiertas), 0) ?? 0;
+    const tarifaMin = item.puestos?.length > 0 ? Math.min(...item.puestos.map(p => p.tarifa_dia)) : 0;
+    const hayVariasTarifas = item.puestos?.length > 1 && item.puestos.some(p => p.tarifa_dia !== tarifaMin);
+    const firstAvailablePuesto = item.puestos?.find(p => p.plazas_cubiertas < p.plazas);
 
     return (
       <View
@@ -160,7 +180,7 @@ export default function TurnosScreen() {
 
           <View className="flex-row items-center justify-between mt-1">
             <Text className="text-sm font-semibold text-success">
-              ${item.tarifa_dia.toLocaleString('es-CO')} / día
+              {hayVariasTarifas ? 'Desde ' : ''}${tarifaMin.toLocaleString('es-CO')} / día
             </Text>
             {yaAplicado ? (
               <Badge label="Ya postulado" variant="info" size="sm" />
@@ -170,7 +190,8 @@ export default function TurnosScreen() {
                 variant="primary"
                 size="sm"
                 loading={aplicarMutation.isPending}
-                onPress={() => aplicarMutation.mutate(item.id)}
+                disabled={!firstAvailablePuesto}
+                onPress={() => firstAvailablePuesto && aplicarMutation.mutate({ ofertaId: item.id, puestoId: firstAvailablePuesto.id })}
               />
             )}
           </View>
@@ -209,7 +230,9 @@ export default function TurnosScreen() {
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
-        <Text className="text-xl font-bold text-foreground">Mis Turnos</Text>
+        <Text className="text-xl font-bold text-foreground">
+          {isGestor ? 'Gestión de Turnos' : 'Mis Turnos'}
+        </Text>
         <TouchableOpacity
           className="w-9 h-9 bg-primary-500 rounded-xl items-center justify-center"
           accessibilityLabel="Nuevo turno"
@@ -224,86 +247,96 @@ export default function TurnosScreen() {
         selectedDate={selectedDate}
         datesWithShifts={datesWithShifts}
         onSelectDate={setSelectedDate}
+        weekLabel={weekLabel}
+        onPrevWeek={goToPrevWeek}
+        onNextWeek={goToNextWeek}
         primaryColor={theme.primary}
       />
 
-      {/* ── Tab selector (solo para trabajador_turnos) ─────────────── */}
-      {showMarketplace && (
-        <View className="bg-card flex-row border-b border-border px-6">
-          {(['mis_turnos', 'disponibles'] as ActiveTab[]).map((tab) => {
-            const label = tab === 'mis_turnos' ? 'Mis Turnos' : 'Disponibles';
-            const isActive = activeTab === tab;
-            return (
-              <TouchableOpacity
-                key={tab}
-                onPress={() => setActiveTab(tab)}
-                className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: isActive }}
-              >
-                <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
+      {/* ── Gestor view ────────────────────────────────────────────── */}
+      {isGestor ? (
+        <GestorTurnosView selectedDate={selectedDate} />
+      ) : (
+        <>
+          {/* ── Tab selector ─────────────────────────────────────── */}
+          {isWorker && (
+            <View className="bg-card flex-row border-b border-border px-6">
+              {(['mis_turnos', 'disponibles'] as ActiveTab[]).map((tab) => {
+                const label = tab === 'mis_turnos' ? 'Mis Turnos' : 'Disponibles';
+                const isActive = activeTab === tab;
+                return (
+                  <TouchableOpacity
+                    key={tab}
+                    onPress={() => setActiveTab(tab)}
+                    className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
-      {/* ── List ───────────────────────────────────────────────────── */}
-      {(!showMarketplace || activeTab === 'mis_turnos') ? (
-        loadingMios ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={theme.primary} />
-          </View>
-        ) : errorMios ? (
-          <View className="flex-1 items-center justify-center gap-3 px-6">
-            <Ionicons name="warning-outline" size={48} color="#94A3B8" />
-            <Text className="text-base font-semibold text-foreground">Error al cargar turnos</Text>
-            <Button label="Reintentar" onPress={() => refetchMios()} variant="secondary" />
-          </View>
-        ) : (
-          <FlatList
-            data={turnosDelDia}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderShiftCard}
-            contentContainerClassName="px-5 py-4 gap-3"
-            ListEmptyComponent={<EmptyMiosTurnos />}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-                tintColor={theme.primary}
-                colors={[theme.primary]}
+          {/* ── Worker list ──────────────────────────────────────── */}
+          {(!isWorker || activeTab === 'mis_turnos') ? (
+            loadingMios ? (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" color={theme.primary} />
+              </View>
+            ) : errorMios ? (
+              <View className="flex-1 items-center justify-center gap-3 px-6">
+                <Ionicons name="warning-outline" size={48} color="#94A3B8" />
+                <Text className="text-base font-semibold text-foreground">Error al cargar turnos</Text>
+                <Button label="Reintentar" onPress={() => refetchMios()} variant="secondary" />
+              </View>
+            ) : (
+              <FlatList
+                data={turnosDelDia}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderShiftCard}
+                contentContainerClassName="px-5 py-4 gap-3"
+                ListEmptyComponent={<EmptyMiosTurnos />}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={isRefreshing}
+                    onRefresh={onRefresh}
+                    tintColor={theme.primary}
+                    colors={[theme.primary]}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
               />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        )
-      ) : showMarketplace ? (
-        loadingOfertas ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={theme.primary} />
-          </View>
-        ) : (
-          <FlatList
-            data={ofertas}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderOfertaCard}
-            contentContainerClassName="px-5 py-4 gap-3"
-            ListEmptyComponent={<EmptyOfertas />}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-                tintColor={theme.primary}
-                colors={[theme.primary]}
+            )
+          ) : (
+            loadingOfertas ? (
+              <View className="flex-1 items-center justify-center">
+                <ActivityIndicator size="large" color={theme.primary} />
+              </View>
+            ) : (
+              <FlatList
+                data={ofertas}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={renderOfertaCard}
+                contentContainerClassName="px-5 py-4 gap-3"
+                ListEmptyComponent={<EmptyOfertas />}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={isRefreshing}
+                    onRefresh={onRefresh}
+                    tintColor={theme.primary}
+                    colors={[theme.primary]}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
               />
-            }
-            showsVerticalScrollIndicator={false}
-          />
-        )
-      ) : null}
+            )
+          )}
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -312,6 +345,22 @@ export default function TurnosScreen() {
 
 const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const FULL_MONTHS  = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+import type { WeekDay } from '@/features/turnos/turnosUtils';
+
+function buildWeekLabel(days: WeekDay[]): string {
+  const first = days[0];
+  const last  = days[6];
+  const year  = first.date.getFullYear();
+  const thisYear = new Date().getFullYear();
+  const yearSuffix = year !== thisYear ? ` ${year}` : '';
+
+  if (first.date.getMonth() === last.date.getMonth()) {
+    return `${FULL_MONTHS[first.date.getMonth()]}${yearSuffix}`;
+  }
+  return `${first.dayNum} ${SHORT_MONTHS[first.date.getMonth()]} – ${last.dayNum} ${SHORT_MONTHS[last.date.getMonth()]}${yearSuffix}`;
+}
 
 function formatShortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
