@@ -3,24 +3,27 @@
  *
  * CTA contextual por estado:
  *   confirmado  → GPS indicator + "Marcar Ingreso" (bloqueado si fuera de geofence)
- *   en_progreso → tiempo transcurrido + "Marcar Egreso" → abre SignaturePad
+ *   en_progreso → tiempo transcurrido en vivo + "Marcar Egreso" → abre SignaturePad
  *   completado  → resumen de horas y pago
  *   cancelado / no_presentado / pendiente → informativo
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-
 import { Ionicons } from '@expo/vector-icons';
 
+import { useTheme }            from '@/lib/theme';
 import { useAsignacion, useMarcarIngreso, useMarcarEgreso } from '@/features/turnos/useTurnos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
@@ -63,8 +66,10 @@ export default function TurnoDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string }>();
   const id = idParam ? parseInt(idParam, 10) : null;
   const router = useRouter();
+  const theme  = useTheme();
 
   const [signatureVisible, setSignatureVisible] = useState(false);
+  const [now, setNow] = useState(Date.now());
 
   // ── Data ──────────────────────────────────────────────────────────────
   const { data: asignacion, isLoading } = useAsignacion(id);
@@ -72,11 +77,26 @@ export default function TurnoDetailScreen() {
   const ingresoMutation = useMarcarIngreso();
   const egresoMutation  = useMarcarEgreso();
 
-  // ── Geofence ──────────────────────────────────────────────────────────
-  const { distanceM, status: geoStatus, canMark, permissionDenied } = useGeofence({
-    targets: asignacion?.latitud != null && asignacion?.longitud != null
-      ? [{ lat: asignacion.latitud, lng: asignacion.longitud }]
-      : null,
+  // ── Live elapsed timer ────────────────────────────────────────────────
+  useEffect(() => {
+    if (asignacion?.estado !== 'en_progreso') return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [asignacion?.estado]);
+
+  // ── Geofence targets from geofence_info ───────────────────────────────
+  const geofenceTargets = useMemo(() => {
+    const gf = asignacion?.geofence_info;
+    if (!gf) return null;
+    if (gf.tipo === 'libre' || gf.tipo === 'zonal') return null;
+    if (gf.latitud != null && gf.longitud != null) {
+      return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+    }
+    return null;
+  }, [asignacion?.geofence_info]);
+
+  const { distanceM, status: geoStatus, canMark, permissionDenied, currentLocation } = useGeofence({
+    targets: geofenceTargets,
     enabled: asignacion?.estado === 'confirmado',
   });
 
@@ -89,24 +109,27 @@ export default function TurnoDetailScreen() {
   const elapsedLabel = useMemo(() => {
     if (!asignacion?.hora_ingreso_real) return null;
     const ingreso = new Date(asignacion.hora_ingreso_real).getTime();
-    const diffMin = Math.floor((Date.now() - ingreso) / 60_000);
-    const h = Math.floor(diffMin / 60);
-    const m = diffMin % 60;
-    return h > 0 ? `${h}h ${m}m en curso` : `${m}m en curso`;
-  }, [asignacion?.hora_ingreso_real]);
+    const totalSec = Math.floor((now - ingreso) / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  }, [asignacion?.hora_ingreso_real, now]);
 
   // ── Actions ───────────────────────────────────────────────────────────
 
   const handleIngreso = async () => {
     if (!asignacion || !canMark) return;
-
-    const lat = asignacion.latitud ?? 0;
-    const lng = asignacion.longitud ?? 0;
+    // Send worker's actual GPS position, not the shift's location
+    const lat = currentLocation?.lat ?? 0;
+    const lng = currentLocation?.lng ?? 0;
 
     try {
       await ingresoMutation.mutateAsync({ id: asignacion.id, lat, lng });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('✅ Ingreso registrado', 'Tu llegada ha sido confirmada.');
+      Alert.alert('Ingreso registrado', 'Tu llegada ha sido confirmada.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar el ingreso.';
       Alert.alert('Error', msg);
@@ -119,19 +142,33 @@ export default function TurnoDetailScreen() {
       await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64 });
       setSignatureVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('✅ Salida registrada', '¡Turno completado! Buen trabajo.');
+      Alert.alert('Salida registrada', '¡Turno completado! Buen trabajo.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
       Alert.alert('Error', msg);
     }
   };
 
+  const openInMaps = useCallback(() => {
+    const lat = asignacion?.latitud;
+    const lng = asignacion?.longitud;
+    if (lat == null || lng == null) return;
+    const label = encodeURIComponent(asignacion?.lugar ?? 'Turno');
+    const url = Platform.select({
+      ios:     `maps://app?q=${label}&ll=${lat},${lng}`,
+      android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
+    }) ?? `https://maps.google.com/?q=${lat},${lng}`;
+    Linking.openURL(url).catch(() =>
+      Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`)
+    );
+  }, [asignacion?.latitud, asignacion?.longitud, asignacion?.lugar]);
+
   // ── Loading / not found ───────────────────────────────────────────────
 
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color="#FF5A3C" />
+        <ActivityIndicator size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -153,18 +190,19 @@ export default function TurnoDetailScreen() {
           horas_trabajadas, pago_total,
           calificacion, calificacion_comentario } = asignacion;
 
+  const hasMapCoords = asignacion.latitud != null && asignacion.longitud != null;
+
   // ── Render ────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* Configure back button title via Stack */}
       <Stack.Screen
         options={{
           headerShown: true,
           headerTitle: oferta_titulo,
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerBackTitle: 'Turnos',
-          headerTintColor: '#FF5A3C',
+          headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,
         }}
@@ -180,7 +218,6 @@ export default function TurnoDetailScreen() {
             className="bg-card rounded-3xl overflow-hidden"
             style={{ elevation: 3, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
           >
-            {/* Accent header */}
             <View
               className="h-2"
               style={{ backgroundColor: estadoConfig?.accentColor ?? '#E2E8F0' }}
@@ -196,18 +233,42 @@ export default function TurnoDetailScreen() {
                 )}
               </View>
 
-              {/* Info rows */}
               <View className="mt-3">
                 <InfoRow icon="calendar-outline" label="Fecha"   value={fmtDate(oferta_fecha)} />
                 <InfoRow icon="time-outline"     label="Horario" value={fmtRange(hora_inicio, hora_fin_estimada)} />
-                {lugar && <InfoRow icon="location-outline" label="Lugar" value={lugar} />}
-                <InfoRow icon="cash-outline"     label="Tarifa"  value={`$${tarifa_dia.toLocaleString('es-CO')} / día`} />
+
+                {/* Location row with Google Maps button */}
+                {lugar && (
+                  <View className="flex-row items-start gap-3 py-3 border-b border-border">
+                    <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
+                      <Ionicons name="location-outline" size={16} color="#64748B" />
+                    </View>
+                    <View className="flex-1 gap-0.5">
+                      <Text className="text-xs text-muted-foreground">Lugar</Text>
+                      <Text className="text-sm font-medium text-foreground">{lugar}</Text>
+                    </View>
+                    {hasMapCoords && (
+                      <TouchableOpacity
+                        onPress={openInMaps}
+                        className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted mt-0.5"
+                        accessibilityLabel="Ver en Google Maps"
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="map-outline" size={14} color="#3B82F6" />
+                        <Text className="text-xs font-semibold text-info">Mapa</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                <InfoRow icon="cash-outline" label="Tarifa" value={`$${tarifa_dia.toLocaleString('es-CO')} / día`} />
               </View>
             </View>
           </View>
 
           {/* ── Timeline ──────────────────────────────────────── */}
-          <View className="bg-card rounded-2xl px-5 py-5"
+          <View
+            className="bg-card rounded-2xl px-5 py-5"
             style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
           >
             <Text className="text-sm font-semibold text-foreground mb-4">Progreso del turno</Text>
@@ -281,9 +342,14 @@ export default function TurnoDetailScreen() {
             </>
           )}
 
-          {/* ── CTA: Marcar Ingreso (estado: confirmado) ────────── */}
+          {/* ── CTA: Marcar Ingreso (estado: confirmado) ─────────────────── */}
           {estado === 'confirmado' && (
-            <View className="gap-3">
+            <View
+              className="bg-card rounded-2xl px-5 py-5 gap-4"
+              style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
+            >
+              <Text className="text-sm font-semibold text-foreground">Marcar llegada</Text>
+
               <GeoFenceIndicator
                 distanceM={distanceM}
                 status={geoStatus}
@@ -291,9 +357,12 @@ export default function TurnoDetailScreen() {
               />
 
               {!canMark && distanceM !== null && (
-                <Text className="text-xs text-center text-muted-foreground px-4">
-                  Acércate al punto de trabajo para habilitar el marcaje de entrada.
-                </Text>
+                <View className="flex-row items-start gap-2">
+                  <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
+                  <Text className="flex-1 text-xs text-muted-foreground">
+                    Acércate al punto de trabajo para habilitar el marcaje de entrada.
+                  </Text>
+                </View>
               )}
 
               <Button
@@ -308,23 +377,31 @@ export default function TurnoDetailScreen() {
             </View>
           )}
 
-          {/* ── CTA: En progreso → Marcar Egreso ────────────────── */}
+          {/* ── CTA: En progreso → Marcar Egreso ────────────────────────── */}
           {estado === 'en_progreso' && (
-            <View className="gap-3">
-              {/* Elapsed time */}
-              {elapsedLabel && (
-                <View className="bg-success-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
-                  <View className="w-2.5 h-2.5 rounded-full bg-success" />
-                  <View>
-                    <Text className="text-sm font-semibold text-success">{elapsedLabel}</Text>
-                    {hora_ingreso_real && (
-                      <Text className="text-xs text-success/70 mt-0.5">
-                        Ingreso registrado a las {fmtTime(hora_ingreso_real.slice(11, 19))}
-                      </Text>
-                    )}
-                  </View>
+            <View
+              className="bg-card rounded-2xl px-5 py-5 gap-4"
+              style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
+            >
+              <Text className="text-sm font-semibold text-foreground">Turno en curso</Text>
+
+              {/* Live elapsed time */}
+              <View className="bg-success-light rounded-2xl px-4 py-4 items-center gap-1">
+                <View className="flex-row items-center gap-2 mb-1">
+                  <View className="w-2 h-2 rounded-full bg-success" />
+                  <Text className="text-xs font-medium text-success uppercase tracking-wide">
+                    Tiempo transcurrido
+                  </Text>
                 </View>
-              )}
+                <Text className="text-3xl font-bold text-success tabular-nums">
+                  {elapsedLabel ?? '—'}
+                </Text>
+                {hora_ingreso_real && (
+                  <Text className="text-xs text-success/70 mt-1">
+                    Ingreso registrado a las {fmtTime(hora_ingreso_real.slice(11, 19))}
+                  </Text>
+                )}
+              </View>
 
               <Button
                 label="Marcar Salida"

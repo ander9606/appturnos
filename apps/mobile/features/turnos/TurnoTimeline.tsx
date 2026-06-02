@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import { View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { EstadoAsignacion } from '@api-client';
 
 interface TimelineStep {
@@ -41,7 +42,7 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
   if (estado === 'cancelado') {
     return (
       <View className="bg-danger-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
-        <Text className="text-2xl">🚫</Text>
+        <Ionicons name="close-circle-outline" size={26} color="#EF4444" />
         <View>
           <Text className="text-sm font-semibold text-danger">Turno cancelado</Text>
           <Text className="text-xs text-danger/70 mt-0.5">
@@ -55,7 +56,7 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
   if (estado === 'no_presentado') {
     return (
       <View className="bg-warning-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
-        <Text className="text-2xl">⏰</Text>
+        <Ionicons name="alarm-outline" size={26} color="#D97706" />
         <View>
           <Text className="text-sm font-semibold text-amber-700">No presentaste asistencia</Text>
           <Text className="text-xs text-amber-600 mt-0.5">
@@ -74,7 +75,6 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
         const isCurrent = currentOrder === stepOrder;
         const isFuture  = currentOrder < stepOrder;
 
-        // Extra sublabel for done steps with time
         let extraLabel = step.sublabel;
         if (step.key === 'en_progreso' && ingresoTime) {
           extraLabel = `Ingreso: ${ingresoTime.slice(11, 16)}`;
@@ -87,7 +87,6 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
           <View key={step.key} className="flex-row gap-3">
             {/* ── Left column: dot + line ─────────────────────── */}
             <View className="items-center" style={{ width: 32 }}>
-              {/* Dot */}
               <View
                 className={[
                   'w-7 h-7 rounded-full items-center justify-center z-10',
@@ -96,11 +95,10 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
                   isFuture  ? 'bg-muted border-2 border-border' : '',
                 ].join(' ')}
               >
-                {isDone && <Text className="text-xs text-white font-bold">✓</Text>}
+                {isDone && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
                 {isCurrent && <View className="w-2.5 h-2.5 bg-white rounded-full" />}
               </View>
 
-              {/* Connector line (not after last) */}
               {idx < STEPS.length - 1 && (
                 <View
                   className={`w-0.5 flex-1 my-0.5 ${isDone ? 'bg-success' : 'bg-border'}`}

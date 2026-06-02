@@ -19,8 +19,8 @@ export function haversineMeters(
   return EARTH_RADIUS_M * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/** Default geofence radius in meters (matches backend default). */
-export const DEFAULT_GEOFENCE_RADIUS = 100;
+/** Default geofence radius in meters (matches backend default — 1 km for rural tolerance). */
+export const DEFAULT_GEOFENCE_RADIUS = 1000;
 
 /** Human-readable distance string. */
 export function formatDistance(meters: number): string {
