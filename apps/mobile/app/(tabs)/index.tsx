@@ -359,7 +359,7 @@ export default function DashboardScreen() {
           className="pt-4 pb-8 px-6 rounded-b-[32px] gap-1"
           style={{ backgroundColor: theme.primary }}
         >
-          <Text className="text-white/80 text-sm font-medium">{greeting} 👋</Text>
+          <Text className="text-white/80 text-sm font-medium">{greeting}</Text>
           <View className="flex-row items-center justify-between">
             <Text className="text-white text-2xl font-bold">
               {usuario?.nombre ?? '…'}

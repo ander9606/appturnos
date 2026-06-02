@@ -11,6 +11,7 @@ import {
   ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { usePeriodos, useRegistros, useLiquidacion,
@@ -113,7 +114,7 @@ function NominaTrabajadorView() {
   if (periodos.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-8" edges={['top']}>
-        <Text className="text-4xl">📋</Text>
+        <Ionicons name="clipboard-outline" size={48} color="#94A3B8" />
         <Text className="text-base font-semibold text-foreground text-center">
           Sin período activo
         </Text>
@@ -243,7 +244,7 @@ function NominaTrabajadorView() {
             </View>
           ) : (
             <View className="py-12 items-center gap-3 px-8">
-              <Text className="text-4xl">📋</Text>
+              <Ionicons name="clipboard-outline" size={48} color="#94A3B8" />
               <Text className="text-base font-semibold text-foreground text-center">
                 Sin registros aún
               </Text>
@@ -466,7 +467,7 @@ function NominaGestorView() {
             </View>
           ) : (
             <View className="py-12 items-center gap-3 px-8">
-              <Text className="text-4xl">📊</Text>
+              <Ionicons name="bar-chart-outline" size={48} color="#94A3B8" />
               <Text className="text-base font-semibold text-foreground text-center">
                 Sin registros en este período
               </Text>

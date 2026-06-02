@@ -6,6 +6,7 @@
  */
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { Asignacion } from '@api-client';
 import { Badge } from '@/components/ui/Badge';
 import { getEstadoConfig, fmtRange, fmtTime } from './turnosUtils';
@@ -63,7 +64,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
         {/* Meta row: time range + lugar */}
         <View className="flex-row items-center gap-3">
           <View className="flex-row items-center gap-1">
-            <Text className="text-[11px] text-muted-foreground">🕐</Text>
+            <Ionicons name="time-outline" size={12} color="#64748B" />
             <Text className="text-sm text-muted-foreground">
               {fmtRange(asignacion.hora_inicio, asignacion.hora_fin_estimada)}
             </Text>
@@ -71,7 +72,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
 
           {asignacion.lugar && (
             <View className="flex-row items-center gap-1 flex-1">
-              <Text className="text-[11px] text-muted-foreground">📍</Text>
+              <Ionicons name="location-outline" size={12} color="#64748B" />
               <Text className="text-sm text-muted-foreground" numberOfLines={1}>
                 {asignacion.lugar}
               </Text>

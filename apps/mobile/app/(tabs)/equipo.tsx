@@ -21,6 +21,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { COLORS } from '@/lib/designTokens';
@@ -65,7 +67,7 @@ export default function EquipoScreen() {
         className="flex-1 bg-background items-center justify-center px-8"
         edges={['top']}
       >
-        <Text className="text-4xl mb-4">🔒</Text>
+        <Ionicons name="lock-closed-outline" size={48} color="#94A3B8" style={{ marginBottom: 16 }} />
         <Text className="text-xl font-bold text-foreground text-center">
           Acceso restringido
         </Text>
@@ -126,7 +128,7 @@ export default function EquipoScreen() {
       {/* Search bar */}
       <View className="px-4 pb-3">
         <View className="flex-row items-center bg-card border border-border rounded-xl px-3 h-10">
-          <Text className="text-muted-foreground mr-2">🔍</Text>
+          <Ionicons name="search-outline" size={16} color="#64748B" style={{ marginRight: 8 }} />
           <TextInput
             className="flex-1 text-sm text-foreground"
             placeholder="Nombre, cédula, cargo…"
@@ -174,7 +176,7 @@ export default function EquipoScreen() {
         </View>
       ) : isError ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-4xl mb-3">⚠️</Text>
+          <Ionicons name="warning-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
           <Text className="text-base font-semibold text-foreground">Error al cargar</Text>
           <Pressable onPress={() => refetch()} className="mt-4">
             <Text className="text-primary font-semibold">Reintentar</Text>
@@ -193,7 +195,7 @@ export default function EquipoScreen() {
           )}
           ListEmptyComponent={
             <View className="items-center justify-center py-16">
-              <Text className="text-4xl mb-3">👥</Text>
+              <Ionicons name="people-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
               <Text className="text-base font-semibold text-foreground">
                 {term ? 'Sin resultados' : 'Sin trabajadores'}
               </Text>

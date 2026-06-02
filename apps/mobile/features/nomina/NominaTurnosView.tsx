@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { Ionicons } from '@expo/vector-icons';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
 import type { Asignacion } from '@api-client';
@@ -138,16 +139,25 @@ export function NominaTurnosView() {
         </View>
 
         <View className="flex-row items-center gap-3 flex-wrap">
-          <Text className="text-xs text-muted-foreground">
-            📅 {fmtFecha(item.oferta_fecha)}
-          </Text>
-          <Text className="text-xs text-muted-foreground">
-            🕐 {fmtHora(item.hora_inicio)} – {fmtHora(item.hora_egreso_real?.slice(11, 19) ?? null)}
-          </Text>
-          {item.horas_trabajadas != null && (
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="calendar-outline" size={11} color="#64748B" />
             <Text className="text-xs text-muted-foreground">
-              ⏱ {item.horas_trabajadas.toFixed(1)}h
+              {fmtFecha(item.oferta_fecha)}
             </Text>
+          </View>
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="time-outline" size={11} color="#64748B" />
+            <Text className="text-xs text-muted-foreground">
+              {fmtHora(item.hora_inicio)} – {fmtHora(item.hora_egreso_real?.slice(11, 19) ?? null)}
+            </Text>
+          </View>
+          {item.horas_trabajadas != null && (
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="stopwatch-outline" size={11} color="#64748B" />
+              <Text className="text-xs text-muted-foreground">
+                {item.horas_trabajadas.toFixed(1)}h
+              </Text>
+            </View>
           )}
         </View>
 
@@ -244,7 +254,7 @@ export function NominaTurnosView() {
         }
         ListEmptyComponent={
           <View className="py-16 items-center gap-3 px-8">
-            <Text className="text-4xl">📋</Text>
+            <Ionicons name="clipboard-outline" size={48} color="#94A3B8" />
             <Text className="text-base font-semibold text-foreground text-center">
               Sin turnos completados
             </Text>
