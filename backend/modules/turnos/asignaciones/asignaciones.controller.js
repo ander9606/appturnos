@@ -9,12 +9,13 @@ async function obtener(req, res) {
 
 async function listar(req, res) {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 20));
 
   const { data, pagination } = await AsignacionesService.listar(req.empresa_id, {
     fecha: req.query.fecha || undefined,
     oferta_id: req.query.oferta_id ? Number(req.query.oferta_id) : undefined,
     trabajador_id: req.query.trabajador_id ? Number(req.query.trabajador_id) : undefined,
+    estado: req.query.estado || undefined,
     page,
     limit,
   });
@@ -24,6 +25,16 @@ async function listar(req, res) {
 async function confirmar(req, res) {
   const data = await AsignacionesService.confirmar(req.empresa_id, Number(req.params.id));
   res.json({ success: true, data, message: 'Asignación confirmada' });
+}
+
+async function cancelar(req, res) {
+  const data = await AsignacionesService.cancelar(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data, message: 'Asignación cancelada' });
+}
+
+async function rechazar(req, res) {
+  const data = await AsignacionesService.rechazar(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data, message: 'Postulación rechazada' });
 }
 
 async function ingreso(req, res) {
@@ -69,4 +80,4 @@ async function liquidacion(req, res) {
   res.json({ success: true, data });
 }
 
-module.exports = { listar, obtener, confirmar, ingreso, egreso, misTurnos, calificar, liquidacion };
+module.exports = { listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, calificar, liquidacion };

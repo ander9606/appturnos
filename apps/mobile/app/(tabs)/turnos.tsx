@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
-import { useMisTurnos, useOfertas, useAplicar } from '@/features/turnos/useTurnos';
+import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes } from '@/features/turnos/useTurnos';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
@@ -72,6 +72,9 @@ export default function TurnosScreen() {
     refetch: refetchMios,
     isRefetching: refetchingMios,
   } = useMisTurnos({ enabled: isWorker });
+
+  const { data: pendientesResp } = usePostulacionesPendientes({ enabled: isGestor });
+  const pendientesCount = pendientesResp?.data?.length ?? 0;
 
   const {
     data: ofertasResp,
@@ -266,7 +269,54 @@ export default function TurnosScreen() {
 
       {/* ── Gestor view ────────────────────────────────────────────── */}
       {isGestor ? (
-        <GestorTurnosView selectedDate={selectedDate} />
+        <View className="flex-1">
+          <GestorTurnosView selectedDate={selectedDate} />
+
+          {/* FAB — acceso a todas las postulaciones */}
+          <TouchableOpacity
+            onPress={() => router.push('/postulaciones')}
+            activeOpacity={0.85}
+            style={{
+              position: 'absolute',
+              bottom: 24,
+              right: 20,
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: theme.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              elevation: 6,
+              shadowColor: theme.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.35,
+              shadowRadius: 8,
+            }}
+            accessibilityLabel="Ver postulaciones"
+          >
+            <Ionicons name="people" size={24} color="#fff" />
+            {pendientesCount > 0 && (
+              <View style={{
+                position: 'absolute',
+                top: -4,
+                right: -4,
+                minWidth: 20,
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: '#EF4444',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingHorizontal: 4,
+                borderWidth: 2,
+                borderColor: '#fff',
+              }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700', lineHeight: 13 }}>
+                  {pendientesCount > 99 ? '99+' : pendientesCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       ) : (
         <>
           {/* ── Tab selector ─────────────────────────────────────── */}

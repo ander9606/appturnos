@@ -99,8 +99,8 @@ export function NominaTurnosView() {
     turnosQuincena.reduce(
       (acc, a) => ({
         count: acc.count + 1,
-        horas: acc.horas + (a.horas_trabajadas ?? 0),
-        pago:  acc.pago  + (a.pago_total ?? 0),
+        horas: acc.horas + (Number(a.horas_trabajadas) || 0),
+        pago:  acc.pago  + (Number(a.pago_total) || 0),
       }),
       { count: 0, horas: 0, pago: 0 }
     ),
@@ -155,7 +155,7 @@ export function NominaTurnosView() {
             <View className="flex-row items-center gap-1">
               <Ionicons name="stopwatch-outline" size={11} color="#64748B" />
               <Text className="text-xs text-muted-foreground">
-                {item.horas_trabajadas.toFixed(1)}h
+                {Number(item.horas_trabajadas).toFixed(1)}h
               </Text>
             </View>
           )}
@@ -163,7 +163,7 @@ export function NominaTurnosView() {
 
         <View className="flex-row items-center justify-between mt-1">
           <Text className="text-sm font-bold" style={{ color: theme.primary }}>
-            ${(item.pago_total ?? 0).toLocaleString('es-CO')}
+            ${(Number(item.pago_total) || 0).toLocaleString('es-CO')}
           </Text>
           {extendido && (
             <Text className="text-xs text-amber-600">Turno extendido</Text>

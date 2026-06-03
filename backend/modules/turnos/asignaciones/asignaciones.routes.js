@@ -45,8 +45,9 @@ router.get(
     query('fecha').optional().isISO8601().withMessage('fecha inválida'),
     query('oferta_id').optional().isInt({ min: 1 }).withMessage('oferta_id inválido'),
     query('trabajador_id').optional().isInt({ min: 1 }).withMessage('trabajador_id inválido'),
+    query('estado').optional().isIn(['pendiente','confirmado','en_progreso','completado','no_presentado','cancelado']).withMessage('estado inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
+    query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('limit inválido'),
   ],
   validar,
   ctrl.listar
@@ -57,6 +58,12 @@ router.get('/:id', verificarRol([...GESTIONAR, ...TRABAJADOR]), [idParam], valid
 
 // POST /api/turnos/asignaciones/:id/confirmar
 router.post('/:id/confirmar', verificarRol(GESTIONAR), [idParam], validar, ctrl.confirmar);
+
+// POST /api/turnos/asignaciones/:id/rechazar
+router.post('/:id/rechazar', verificarRol(GESTIONAR), [idParam], validar, ctrl.rechazar);
+
+// POST /api/turnos/asignaciones/:id/cancelar  (confirmado → cancelado, devuelve plaza)
+router.post('/:id/cancelar', verificarRol(GESTIONAR), [idParam], validar, ctrl.cancelar);
 
 // POST /api/turnos/asignaciones/:id/ingreso
 router.post(

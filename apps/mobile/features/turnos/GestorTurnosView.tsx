@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
-import { useOfertas, useOferta, useConfirmar } from '@/features/turnos/useTurnos';
+import { Ionicons } from '@expo/vector-icons';
+import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar } from '@/features/turnos/useTurnos';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
@@ -44,39 +46,89 @@ function PostulanteRow({
   asignacion,
   ofertaId,
   confirmarMutation,
+  rechazarMutation,
+  cancelarMutation,
 }: {
   asignacion: AsignacionResumen;
   ofertaId: number;
   confirmarMutation: ReturnType<typeof useConfirmar>;
+  rechazarMutation:  ReturnType<typeof useRechazar>;
+  cancelarMutation:  ReturnType<typeof useCancelar>;
 }) {
-  const cfg = ESTADO_CONFIG[asignacion.estado];
-  const isPending = asignacion.estado === 'pendiente';
+  const isPending   = asignacion.estado === 'pendiente';
+  const isConfirmed = asignacion.estado === 'confirmado';
+  const cfg         = ESTADO_CONFIG[asignacion.estado];
+
   const isConfirming =
     confirmarMutation.isPending &&
     (confirmarMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
 
+  const isRejecting =
+    rechazarMutation.isPending &&
+    (rechazarMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
+
+  const isCancelling =
+    cancelarMutation.isPending &&
+    (cancelarMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
+
+  const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending;
+
+  function handleRechazar() {
+    Alert.alert(
+      'Rechazar postulación',
+      `¿Rechazar la postulación de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Rechazar', style: 'destructive',
+          onPress: () => rechazarMutation.mutate({ asignacionId: asignacion.id, ofertaId }) },
+      ]
+    );
+  }
+
+  function handleCancelar() {
+    Alert.alert(
+      'Cancelar asignación',
+      `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
+      [
+        { text: 'Volver', style: 'cancel' },
+        { text: 'Cancelar turno', style: 'destructive',
+          onPress: () => cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId }) },
+      ]
+    );
+  }
+
   return (
-    <View className="flex-row items-center justify-between py-2.5 border-b border-border last:border-b-0">
-      <View className="flex-1 mr-3">
-        <Text className="text-sm font-medium text-foreground">
+    <View className="py-2.5 border-b border-border gap-2">
+      {/* Nombre + estado */}
+      <View className="flex-row items-center justify-between">
+        <Text className="text-sm font-medium text-foreground flex-1 mr-3" numberOfLines={1}>
           {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
         </Text>
-      </View>
-      <View className="flex-row items-center gap-2">
         <Badge label={cfg.label} variant={cfg.variant} size="sm" />
-        {isPending && (
-          <Button
-            label={isConfirming ? '…' : 'Confirmar'}
-            variant="primary"
-            size="sm"
-            loading={isConfirming}
-            disabled={confirmarMutation.isPending}
-            onPress={() =>
-              confirmarMutation.mutate({ asignacionId: asignacion.id, ofertaId })
-            }
-          />
-        )}
       </View>
+
+      {/* Pendiente → Rechazar + Confirmar */}
+      {isPending && (
+        <View className="flex-row gap-2">
+          <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
+            loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
+          <Button label={isConfirming ? '…' : 'Confirmar'} variant="success" size="sm"
+            loading={isConfirming} disabled={isBusy}
+            onPress={() => confirmarMutation.mutate({ asignacionId: asignacion.id, ofertaId })} />
+        </View>
+      )}
+
+      {/* Confirmado → chip Aceptado + botón Cancelar */}
+      {isConfirmed && (
+        <View className="flex-row items-center gap-2">
+          <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
+            <Ionicons name="checkmark-circle" size={14} color="#059669" />
+            <Text className="text-xs font-semibold text-success">Aceptado</Text>
+          </View>
+          <Button label={isCancelling ? '…' : 'Cancelar turno'} variant="danger" size="sm"
+            loading={isCancelling} disabled={isBusy} onPress={handleCancelar} />
+        </View>
+      )}
     </View>
   );
 }
@@ -86,9 +138,13 @@ function PostulanteRow({
 function GestorOfertaItem({
   oferta,
   confirmarMutation,
+  rechazarMutation,
+  cancelarMutation,
 }: {
   oferta: Oferta;
   confirmarMutation: ReturnType<typeof useConfirmar>;
+  rechazarMutation:  ReturnType<typeof useRechazar>;
+  cancelarMutation:  ReturnType<typeof useCancelar>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { data: detalle, isLoading: loadingDetalle } = useOferta(expanded ? oferta.id : null);
@@ -181,6 +237,8 @@ function GestorOfertaItem({
                 asignacion={a}
                 ofertaId={oferta.id}
                 confirmarMutation={confirmarMutation}
+                rechazarMutation={rechazarMutation}
+                cancelarMutation={cancelarMutation}
               />
             ))
           )}
@@ -206,6 +264,8 @@ export function GestorTurnosView({ selectedDate }: Props) {
   } = useOfertas({ fecha: selectedDate, limit: 50 });
 
   const confirmarMutation = useConfirmar();
+  const rechazarMutation  = useRechazar();
+  const cancelarMutation  = useCancelar();
   const ofertas = resp?.data ?? [];
 
   if (isLoading) {
@@ -231,7 +291,7 @@ export function GestorTurnosView({ selectedDate }: Props) {
       data={ofertas}
       keyExtractor={(item) => String(item.id)}
       renderItem={({ item }) => (
-        <GestorOfertaItem oferta={item} confirmarMutation={confirmarMutation} />
+        <GestorOfertaItem oferta={item} confirmarMutation={confirmarMutation} rechazarMutation={rechazarMutation} cancelarMutation={cancelarMutation} />
       )}
       contentContainerClassName="px-5 py-4 gap-3"
       ListEmptyComponent={

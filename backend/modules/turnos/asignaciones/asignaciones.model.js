@@ -124,7 +124,7 @@ const AsignacionesModel = {
         'SELECT * FROM ofertas_turno WHERE id = ? AND empresa_id = ? FOR UPDATE',
         [asig.oferta_id, empresaId]
       );
-      if (!oferta || oferta.estado !== 'abierta') {
+      if (!oferta || !['abierta', 'publicada'].includes(oferta.estado)) {
         await conn.rollback();
         return { ok: false, motivo: 'oferta' };
       }
@@ -174,6 +174,68 @@ const AsignacionesModel = {
     }
   },
 
+  /**
+   * Cancela una asignación confirmada (confirmado → cancelado).
+   * Devuelve la plaza al puesto dentro de una transacción.
+   * @returns {Promise<{ok:boolean, motivo?:string}>}
+   */
+  async cancelar(empresaId, id) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [[asig]] = await conn.query(
+        'SELECT * FROM asignaciones_turno WHERE id = ? AND empresa_id = ? FOR UPDATE',
+        [id, empresaId]
+      );
+      if (!asig) {
+        await conn.rollback();
+        return { ok: false, motivo: 'no_existe' };
+      }
+      if (asig.estado !== 'confirmado') {
+        await conn.rollback();
+        return { ok: false, motivo: 'estado' };
+      }
+
+      await conn.query(
+        "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE id = ?",
+        [id]
+      );
+      await conn.query(
+        'UPDATE oferta_puestos SET plazas_cubiertas = GREATEST(0, plazas_cubiertas - 1) WHERE id = ?',
+        [asig.puesto_id]
+      );
+
+      await conn.commit();
+      return { ok: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
+  /**
+   * Rechaza una postulación pendiente (pendiente → cancelado).
+   * No requiere transacción: plazas_cubiertas no fue incrementado aún.
+   * @returns {Promise<{ok:boolean, motivo?:string}>}
+   */
+  async rechazar(empresaId, id) {
+    const [[asig]] = await pool.query(
+      'SELECT estado FROM asignaciones_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
+      [id, empresaId]
+    );
+    if (!asig) return { ok: false, motivo: 'no_existe' };
+    if (asig.estado !== 'pendiente') return { ok: false, motivo: 'estado' };
+
+    await pool.query(
+      "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE id = ? AND empresa_id = ?",
+      [id, empresaId]
+    );
+    return { ok: true };
+  },
+
   /** Marca la llegada del trabajador con coordenadas GPS. */
   async registrarIngreso(empresaId, id, latitud, longitud) {
     const [res] = await pool.query(
@@ -207,7 +269,7 @@ const AsignacionesModel = {
   },
 
   /** Listado para jefes/admin, con datos de oferta y trabajador. */
-  async listar(empresaId, { fecha, ofertaId, trabajadorId, limit, offset }) {
+  async listar(empresaId, { fecha, ofertaId, trabajadorId, estado, limit, offset }) {
     const where = ['a.empresa_id = ?'];
     const params = [empresaId];
     if (ofertaId) {
@@ -221,6 +283,10 @@ const AsignacionesModel = {
     if (fecha) {
       where.push('o.fecha = ?');
       params.push(fecha);
+    }
+    if (estado) {
+      where.push('a.estado = ?');
+      params.push(estado);
     }
     const whereSql = where.join(' AND ');
 

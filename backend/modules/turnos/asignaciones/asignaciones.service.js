@@ -10,6 +10,15 @@ const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 
+const DIAS   = ['dom','lun','mar','mié','jue','vie','sáb'];
+const MESES  = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+/** Formatea "YYYY-MM-DD" → "lun 5 jun" */
+function fmtFechaCorta(isoDate) {
+  const d = new Date(`${isoDate}T00:00:00`);
+  return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
+}
+
 /** Resuelve el trabajador vinculado al usuario autenticado. */
 async function resolverTrabajador(empresaId, usuarioId) {
   const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuarioId);
@@ -33,12 +42,13 @@ const AsignacionesService = {
     return asignacion;
   },
 
-  async listar(empresaId, { fecha, oferta_id, trabajador_id, page, limit }) {
+  async listar(empresaId, { fecha, oferta_id, trabajador_id, estado, page, limit }) {
     const offset = (page - 1) * limit;
     const { data, total } = await AsignacionesModel.listar(empresaId, {
       fecha,
       ofertaId: oferta_id,
       trabajadorId: trabajador_id,
+      estado,
       limit,
       offset,
     });
@@ -51,25 +61,94 @@ const AsignacionesService = {
       const errores = {
         no_existe: ['Asignación no encontrada', 404],
         estado: ['La asignación no está pendiente de confirmación', 409],
-        oferta: ['La oferta asociada no está abierta', 409],
+        oferta: ['La oferta ya no está disponible para confirmar', 409],
         lleno: ['La oferta ya no tiene plazas disponibles', 409],
       };
       const [mensaje, codigo] = errores[res.motivo];
       throw new AppError(mensaje, codigo);
     }
 
+    // Retorno simple — siempre funciona
     const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
 
-    // Notifica al trabajador que su postulación fue confirmada (best-effort).
+    // Detalles para la notificación (JOINs opcionales — best-effort)
+    const detalles  = await AsignacionesModel.obtenerConDetalles(empresaId, id).catch(() => null);
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
-    await NotificacionesService.notificar({
-      empresaId,
-      usuarioId: trabajador?.usuario_id,
-      tipo: 'postulacion.confirmada',
-      titulo: 'Postulación confirmada',
-      mensaje: 'Tu postulación a un turno fue confirmada. Revisa los detalles en la app.',
-      data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
-    });
+
+    if (detalles) {
+      const fecha = fmtFechaCorta(detalles.oferta_fecha);
+      const hora  = detalles.hora_inicio?.slice(0, 5) ?? '';
+      const lugar = detalles.lugar ? ` · ${detalles.lugar}` : '';
+      const cargo = detalles.cargo_nombre ? ` como ${detalles.cargo_nombre}` : '';
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajador?.usuario_id,
+        tipo: 'postulacion.confirmada',
+        titulo: 'Turno confirmado',
+        mensaje: `Quedaste confirmado${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`,
+        data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
+      });
+    }
+
+    return asignacion;
+  },
+
+  async cancelar(empresaId, id) {
+    const res = await AsignacionesModel.cancelar(empresaId, id);
+    if (!res.ok) {
+      const errores = {
+        no_existe: ['Asignación no encontrada', 404],
+        estado: ['Solo se pueden cancelar asignaciones confirmadas', 409],
+      };
+      const [mensaje, codigo] = errores[res.motivo];
+      throw new AppError(mensaje, codigo);
+    }
+
+    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+    const detalles   = await AsignacionesModel.obtenerConDetalles(empresaId, id).catch(() => null);
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
+
+    if (detalles) {
+      const fecha = fmtFechaCorta(detalles.oferta_fecha);
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajador?.usuario_id,
+        tipo: 'asignacion.cancelada',
+        titulo: 'Turno cancelado',
+        mensaje: `Tu turno "${detalles.oferta_titulo}" el ${fecha} fue cancelado por la empresa. Revisa otras ofertas disponibles.`,
+        data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
+      });
+    }
+
+    return asignacion;
+  },
+
+  async rechazar(empresaId, id) {
+    const res = await AsignacionesModel.rechazar(empresaId, id);
+    if (!res.ok) {
+      const errores = {
+        no_existe: ['Asignación no encontrada', 404],
+        estado: ['Solo se pueden rechazar postulaciones pendientes', 409],
+      };
+      const [mensaje, codigo] = errores[res.motivo];
+      throw new AppError(mensaje, codigo);
+    }
+
+    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+    const detalles   = await AsignacionesModel.obtenerConDetalles(empresaId, id).catch(() => null);
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
+
+    if (detalles) {
+      const fecha = fmtFechaCorta(detalles.oferta_fecha);
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajador?.usuario_id,
+        tipo: 'postulacion.rechazada',
+        titulo: 'Postulación no aceptada',
+        mensaje: `Tu postulación para "${detalles.oferta_titulo}" el ${fecha} no fue aceptada. Revisa otras ofertas disponibles.`,
+        data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
+      });
+    }
 
     return asignacion;
   },

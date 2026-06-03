@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi } from '@api-client';
-import type { LiquidacionTurnosTrabajador } from '@api-client';
+import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 
 // ── Query keys ────────────────────────────────────────────────────────────
@@ -90,6 +90,17 @@ export function useAsignacionesGestor() {
   });
 }
 
+/** Postulaciones pendientes de toda la empresa — para el inbox del gestor. */
+export function usePostulacionesPendientes(opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ estado: 'pendiente' }),
+    queryFn:  () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 200 }),
+    staleTime: 15_000,
+    refetchOnMount: true,
+    enabled:  opts.enabled ?? true,
+  });
+}
+
 /** Detalle de una oferta. */
 export function useOferta(id: number | null) {
   return useQuery({
@@ -97,6 +108,34 @@ export function useOferta(id: number | null) {
     queryFn:  () => turnosApi.obtenerOferta(id!),
     enabled: id !== null,
   });
+}
+
+// ── Cache helpers ─────────────────────────────────────────────────────────
+
+function aplicarEstadoEnCache(
+  qc: ReturnType<typeof useQueryClient>,
+  asignacion: Asignacion,
+  ofertaId: number,
+) {
+  qc.setQueryData<OfertaDetalle>(QUERY_KEYS.oferta(ofertaId), (old) => {
+    if (!old) return old;
+    return {
+      ...old,
+      asignaciones: old.asignaciones.map((a) =>
+        a.id === asignacion.id ? { ...a, estado: asignacion.estado } : a
+      ),
+    };
+  });
+  qc.setQueryData<PaginatedResponse<Asignacion>>(
+    QUERY_KEYS.asignaciones({ gestor: true }),
+    (old) => {
+      if (!old) return old;
+      return { ...old, data: old.data.map((a) => a.id === asignacion.id ? { ...a, estado: asignacion.estado } : a) };
+    },
+  );
+  qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+  qc.invalidateQueries({ queryKey: ['ofertas'] });
+  qc.invalidateQueries({ queryKey: ['asignaciones'] });
 }
 
 // ── Mutations ─────────────────────────────────────────────────────────────
@@ -107,11 +146,7 @@ export function useConfirmar() {
   return useMutation({
     mutationFn: ({ asignacionId }: { asignacionId: number; ofertaId: number }) =>
       turnosApi.confirmar(asignacionId),
-    onSuccess: (_, { ofertaId }) => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
-      qc.invalidateQueries({ queryKey: ['ofertas'] });
-      qc.invalidateQueries({ queryKey: ['asignaciones'] });
-    },
+    onSuccess: (data, { ofertaId }) => aplicarEstadoEnCache(qc, data, ofertaId),
   });
 }
 
@@ -140,6 +175,26 @@ export function useRetirar() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
       qc.invalidateQueries({ queryKey: ['ofertas'] });
     },
+  });
+}
+
+/** Cancelar una asignación confirmada, devuelve la plaza (gestores/admin). */
+export function useCancelar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId }: { asignacionId: number; ofertaId: number }) =>
+      turnosApi.cancelar(asignacionId),
+    onSuccess: (data, { ofertaId }) => aplicarEstadoEnCache(qc, data, ofertaId),
+  });
+}
+
+/** Rechazar una postulación pendiente (gestores/admin). */
+export function useRechazar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId }: { asignacionId: number; ofertaId: number }) =>
+      turnosApi.rechazar(asignacionId),
+    onSuccess: (data, { ofertaId }) => aplicarEstadoEnCache(qc, data, ofertaId),
   });
 }
 

@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
 type Size    = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<TouchableOpacityProps, 'onPress'> {
@@ -26,6 +26,7 @@ const VARIANT_STYLES: Record<Variant, { container: string; text: string }> = {
   secondary: { container: 'bg-primary-50 border border-primary-300', text: 'text-primary-600 font-semibold' },
   ghost:     { container: 'bg-transparent',          text: 'text-primary-500 font-medium' },
   danger:    { container: 'bg-danger',               text: 'text-white font-semibold' },
+  success:   { container: 'bg-success',              text: 'text-white font-semibold' },
 };
 
 const SIZE_STYLES: Record<Size, { container: string; text: string }> = {
@@ -73,7 +74,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' || variant === 'danger' ? '#fff' : '#FF5A3C'}
+          color={variant === 'primary' || variant === 'danger' || variant === 'success' ? '#fff' : '#FF5A3C'}
         />
       ) : (
         <Text className={[v.text, s.text].join(' ')}>{label}</Text>
