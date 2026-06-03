@@ -121,7 +121,39 @@ const OfertasService = {
   async crear(empresaId, datos, creadoPor) {
     await validarPuestosParaEmpresa(empresaId, datos.puestos);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
-    return OfertasModel.obtenerPorId(empresaId, id);
+    const oferta = await OfertasModel.obtenerPorId(empresaId, id);
+
+    // Notificar a trabajadores con los cargos solicitados (best-effort).
+    if (oferta.puestos && oferta.puestos.length > 0) {
+      for (const puesto of oferta.puestos) {
+        const [destinatarios] = await pool.query(
+          `SELECT DISTINCT u.id AS usuario_id
+           FROM trabajador_cargos tc
+           JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
+           JOIN trabajadores t        ON t.id  = te.trabajador_id
+           JOIN usuarios u            ON u.id  = t.usuario_id
+           WHERE te.empresa_id = ?
+             AND tc.cargo_id   = ?
+             AND te.estado     = 'activo'
+             AND u.activo      = 1`,
+          [empresaId, puesto.cargo_id]
+        );
+        if (destinatarios.length > 0) {
+          await NotificacionesService.notificarVarios(
+            destinatarios.map((d) => d.usuario_id),
+            {
+              empresaId,
+              tipo: 'oferta.nueva',
+              titulo: `Nueva oferta: ${puesto.cargo_nombre}`,
+              mensaje: `${oferta.titulo} — ${oferta.fecha} — $${Number(puesto.tarifa_dia).toLocaleString('es-CO')}`,
+              data: { oferta_id: id, puesto_id: puesto.id },
+            }
+          );
+        }
+      }
+    }
+
+    return oferta;
   },
 
   async actualizar(empresaId, id, datos) {
@@ -130,7 +162,25 @@ const OfertasService = {
     if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {
       throw new AppError('Solo se puede editar una oferta en borrador o abierta', 409);
     }
+
+    const camposCriticos = ['fecha', 'hora_inicio', 'hora_fin_estimada', 'lugar'];
+    const hayCambioRelevante = camposCriticos.some(
+      (k) => datos[k] !== undefined && String(datos[k] ?? '') !== String(oferta[k] ?? '')
+    );
+
     await OfertasModel.actualizar(empresaId, id, datos);
+
+    if (hayCambioRelevante) {
+      const destinatarios = await AsignacionesModel.listarUsuariosAsignados(empresaId, id);
+      await NotificacionesService.notificarVarios(destinatarios, {
+        empresaId,
+        tipo: 'oferta.modificada',
+        titulo: 'Turno modificado',
+        mensaje: `"${oferta.titulo}" fue actualizado. Revisa los cambios y confirma tu participación o cancela.`,
+        data: { oferta_id: id },
+      });
+    }
+
     return OfertasModel.obtenerPorId(empresaId, id);
   },
 

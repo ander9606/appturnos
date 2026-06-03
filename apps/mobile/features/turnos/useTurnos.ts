@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { turnosApi } from '@api-client';
-import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion } from '@api-client';
+import { turnosApi, cargosApi } from '@api-client';
+import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 
 // ── Query keys ────────────────────────────────────────────────────────────
@@ -12,6 +12,7 @@ export const QUERY_KEYS = {
   asignacion:   (id: number) => ['asignacion', id] as const,
   asignaciones: (params: object) => ['asignaciones', params] as const,
   liquidacion:  (params?: object) => ['liquidacion-turnos', params] as const,
+  cargos:       ['cargos'] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
@@ -254,6 +255,26 @@ export function useCalificar() {
       qc.invalidateQueries({ queryKey: ['asignaciones'] });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: ['trabajadores'] }); // ranking update
+    },
+  });
+}
+
+/** Catálogo de cargos (sistema + custom de la empresa). */
+export function useCargos() {
+  return useQuery({
+    queryKey: QUERY_KEYS.cargos,
+    queryFn:  () => cargosApi.listar(),
+    staleTime: 5 * 60_000, // cargos cambian poco
+  });
+}
+
+/** Crea una nueva oferta de turno con sus puestos. */
+export function useCrearOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CrearOfertaPayload) => turnosApi.crearOferta(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
     },
   });
 }

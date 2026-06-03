@@ -95,6 +95,14 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="turno/nuevo"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_bottom',
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen
               name="trabajador/[id]"
               options={{
                 headerShown: true,

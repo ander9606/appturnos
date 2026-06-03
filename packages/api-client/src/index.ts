@@ -30,6 +30,7 @@ export { turnosApi } from './turnos';
 export type {
   Asignacion,
   CalificacionResponse,
+  CrearOfertaPayload,
   Oferta,
   OfertaDetalle,
   AsignacionResumen,
@@ -41,6 +42,8 @@ export type {
   LiquidacionTurnoLinea,
   LiquidacionTurnosTrabajador,
 } from './turnos';
+export { cargosApi } from './cargos';
+export type { Cargo } from './cargos';
 export { puntosMarcajeApi } from './puntos-marcaje';
 export type {
   PuntoMarcaje,
