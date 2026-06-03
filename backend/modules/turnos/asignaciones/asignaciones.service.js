@@ -166,6 +166,13 @@ const AsignacionesService = {
     return AsignacionesModel.listarPorTrabajador(empresaId, trabajador.id);
   },
 
+  async liquidacion(empresaId, { fecha_inicio, fecha_fin }) {
+    return AsignacionesModel.liquidacion(empresaId, {
+      fechaInicio: fecha_inicio,
+      fechaFin:    fecha_fin,
+    });
+  },
+
   /**
    * Califica una asignación completada (1–5 estrellas). Actualiza el
    * ranking del trabajador y notifica al trabajador (best-effort).

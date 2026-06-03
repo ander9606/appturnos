@@ -61,4 +61,12 @@ async function calificar(req, res) {
   res.status(201).json({ success: true, data, message: 'Calificación registrada' });
 }
 
-module.exports = { listar, obtener, confirmar, ingreso, egreso, misTurnos, calificar };
+async function liquidacion(req, res) {
+  const data = await AsignacionesService.liquidacion(req.empresa_id, {
+    fecha_inicio: req.query.fecha_inicio || undefined,
+    fecha_fin:    req.query.fecha_fin    || undefined,
+  });
+  res.json({ success: true, data });
+}
+
+module.exports = { listar, obtener, confirmar, ingreso, egreso, misTurnos, calificar, liquidacion };

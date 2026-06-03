@@ -2,7 +2,7 @@
  * Nómina — Tab "Nómina"
  *
  * Vista bifurcada según rol:
- *   trabajador_nomina → mis registros del período + resumen de horas
+ *   trabajador_nomina → marcaje entrada/salida + salario + horas del período
  *   jefe_nomina / admin_empresa / nomina → liquidación completa + gestión
  */
 import React, { useState, useMemo, useCallback } from 'react';
@@ -15,20 +15,23 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { usePeriodos, useRegistros, useLiquidacion,
-         useCerrarPeriodo, useLiquidarPeriodo }  from '@/features/nomina/useNomina';
+         useCerrarPeriodo, useLiquidarPeriodo,
+         useNominaPerfil, useMarcarEntrada, useMarcarSalida } from '@/features/nomina/useNomina';
 import { PeriodoBadge }        from '@/features/nomina/PeriodoBadge';
 import { RegistroCard }        from '@/features/nomina/RegistroCard';
 import { LiquidacionRow }      from '@/features/nomina/LiquidacionRow';
 import { NominaTurnosView }       from '@/features/nomina/NominaTurnosView';
 import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView';
+import { useGeofence }         from '@/features/turnos/useGeofence';
 import { calcularResumenHoras } from '@api-client';
 import { ApiError }            from '@api-client';
-import type { PeriodoNomina }  from '@api-client';
+import type { PeriodoNomina, RegistroDiario } from '@api-client';
 import { useTheme }            from '@/lib/theme';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
 function fmtPeriodo(p: PeriodoNomina): string {
   const [, ms, ds] = p.fecha_inicio.split('-');
@@ -38,6 +41,36 @@ function fmtPeriodo(p: PeriodoNomina): string {
   if (mi === mf)
     return `${Number(ds)}–${Number(de)} ${SHORT_MONTHS[mi]}`;
   return `${Number(ds)} ${SHORT_MONTHS[mi]} – ${Number(de)} ${SHORT_MONTHS[mf]}`;
+}
+
+function fmtHora(t: string | null | undefined): string {
+  if (!t) return '—';
+  return t.slice(0, 5);
+}
+
+function calcElapsedLabel(horaEntrada: string): string {
+  const [hh, mm] = horaEntrada.split(':').map(Number);
+  const now = new Date();
+  const entradaMs = (hh * 60 + mm) * 60_000;
+  const ahoraMs   = (now.getHours() * 60 + now.getMinutes()) * 60_000;
+  let diffMs = ahoraMs - entradaMs;
+  if (diffMs < 0) diffMs += 24 * 3_600_000;
+  const totalMin = Math.floor(diffMs / 60_000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+function totalHorasRegistro(r: RegistroDiario): number {
+  return (
+    Number(r.horas_ordinarias) +
+    Number(r.horas_extra_diurnas) +
+    Number(r.horas_extra_nocturnas) +
+    Number(r.horas_nocturnas) +
+    Number(r.horas_festivo)
+  );
 }
 
 const GESTORES = ['admin_empresa', 'jefe_nomina', 'nomina'] as const;
@@ -56,20 +89,32 @@ export default function NominaScreen() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// Vista del TRABAJADOR
+// Vista del TRABAJADOR DE NÓMINA
 // ══════════════════════════════════════════════════════════════════════════
 
 function NominaTrabajadorView() {
   const theme = useTheme();
 
-  // Fetch all periods, pick the first open one (most recent)
+  // Perfil del trabajador (salario, tipo_marcacion, punto_marcaje)
+  const { data: perfil } = useNominaPerfil();
+  const tipoMarcacion = perfil?.tipo_marcacion ?? 'libre';
+  const puntoMarcaje  = perfil?.punto_marcaje ?? null;
+
+  const geofenceTargets = tipoMarcacion === 'fijo' && puntoMarcaje
+    ? [{ lat: puntoMarcaje.latitud, lng: puntoMarcaje.longitud, radiusM: puntoMarcaje.radio_metros }]
+    : null;
+
+  const { status: geoStatus, canMark, currentLocation, permissionDenied } = useGeofence({
+    targets: geofenceTargets,
+    enabled: tipoMarcacion === 'fijo',
+  });
+
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos('abierto');
 
   const periodos = periodosResp?.data ?? [];
   const [periodoId, setPeriodoId] = useState<number | undefined>(undefined);
 
-  // Once loaded, default to first (most recent) period
   const activePeriodoId = periodoId ?? periodos[0]?.id;
   const activePeriodo   = periodos.find((p) => p.id === activePeriodoId) ?? periodos[0];
 
@@ -84,7 +129,6 @@ function NominaTrabajadorView() {
 
   const resumen = useMemo(() => calcularResumenHoras(registros), [registros]);
 
-  // Horas de la semana actual (lunes → hoy)
   const resumenSemana = useMemo(() => {
     const hoy = new Date();
     const lunes = new Date(hoy);
@@ -98,10 +142,68 @@ function NominaTrabajadorView() {
     return calcularResumenHoras(semanaRegistros);
   }, [registros]);
 
+  // Estado del día actual
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const registroHoy = useMemo(
+    () => registros.find((r) => r.fecha === todayIso) ?? null,
+    [registros, todayIso]
+  );
+
+  type EstadoHoy = 'sin_entrada' | 'en_turno' | 'completado';
+  const estadoHoy: EstadoHoy = useMemo(() => {
+    if (!registroHoy || !registroHoy.hora_entrada) return 'sin_entrada';
+    if (!registroHoy.hora_salida) return 'en_turno';
+    return 'completado';
+  }, [registroHoy]);
+
+  const entradaMutation = useMarcarEntrada();
+  const salidaMutation  = useMarcarSalida();
+
   const onRefresh = useCallback(() => {
     refetchPeriodos();
     refetchRegistros();
-  }, []);
+  }, [refetchPeriodos, refetchRegistros]);
+
+  const handleEntrada = useCallback(async () => {
+    try {
+      const coords = tipoMarcacion === 'fijo' && currentLocation
+        ? { latitud: currentLocation.lat, longitud: currentLocation.lng }
+        : undefined;
+      await entradaMutation.mutateAsync(coords);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Error al marcar entrada';
+      Alert.alert('Error', msg);
+    }
+  }, [tipoMarcacion, currentLocation, entradaMutation]);
+
+  const handleSalida = useCallback(() => {
+    if (!registroHoy) return;
+    Alert.alert(
+      'Confirmar salida',
+      '¿Confirmas que deseas marcar tu salida?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Marcar salida',
+          onPress: async () => {
+            try {
+              const coords = tipoMarcacion === 'fijo' && currentLocation
+                ? { latitud: currentLocation.lat, longitud: currentLocation.lng }
+                : undefined;
+              await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
+            } catch (err) {
+              const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
+              Alert.alert('Error', msg);
+            }
+          },
+        },
+      ]
+    );
+  }, [registroHoy, tipoMarcacion, currentLocation, salidaMutation]);
 
   if (loadingPeriodos) {
     return (
@@ -125,6 +227,11 @@ function NominaTrabajadorView() {
     );
   }
 
+  const today    = new Date();
+  const todayLabel = `${SHORT_DAYS[today.getDay()]} ${today.getDate()} ${SHORT_MONTHS[today.getMonth()]}`;
+  const isMutating = entradaMutation.isPending || salidaMutation.isPending;
+  const fijoBloqueado = tipoMarcacion === 'fijo' && !canMark;
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <FlatList
@@ -142,18 +249,90 @@ function NominaTrabajadorView() {
             {/* ── Header ─────────────────────────────────────── */}
             <View className="pt-4 pb-6 px-6 rounded-b-[28px] gap-3"
               style={{ backgroundColor: theme.primary }}>
-              <View className="gap-1">
-                <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
-                  Mi Nómina
-                </Text>
-                <Text className="text-white text-xl font-bold">
-                  {activePeriodo ? fmtPeriodo(activePeriodo) : '—'}
-                </Text>
-                {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
+              <View className="flex-row items-start justify-between">
+                <View className="gap-1 flex-1">
+                  <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
+                    Mi Nómina
+                  </Text>
+                  <Text className="text-white text-xl font-bold">
+                    {activePeriodo ? fmtPeriodo(activePeriodo) : '—'}
+                  </Text>
+                  {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
+                </View>
               </View>
 
-              {/* Card "Esta semana" */}
-              <View className="bg-white/15 rounded-2xl px-4 py-3 flex-row gap-4">
+              {/* Card salario */}
+              <View className="bg-white/20 rounded-2xl px-4 py-3 flex-row items-center gap-4">
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-white text-lg font-extrabold">
+                    {perfil?.salario_base != null
+                      ? `$${Number(perfil.salario_base).toLocaleString('es-CO')}`
+                      : '—'}
+                  </Text>
+                  <Text className="text-white/70 text-[10px]">Salario mensual</Text>
+                </View>
+                {perfil?.salario_base != null && (
+                  <View className="gap-0.5 items-end">
+                    <Text className="text-white text-sm font-bold">
+                      ${Math.round(Number(perfil.salario_base) / 240).toLocaleString('es-CO')} / h
+                    </Text>
+                    <Text className="text-white/70 text-[10px]">Valor hora</Text>
+                  </View>
+                )}
+                {(resumen.extraDiurnas + resumen.extraNocturnas) > 0 && (
+                  <View className="bg-white/25 rounded-xl px-2.5 py-1.5 gap-0.5 items-center">
+                    <Text className="text-white text-sm font-extrabold">
+                      {(resumen.extraDiurnas + resumen.extraNocturnas).toFixed(1)}h
+                    </Text>
+                    <Text className="text-white/70 text-[9px]">Extra</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Card estado hoy */}
+              <View className="bg-white/15 rounded-2xl px-4 py-3 gap-1.5">
+                <Text className="text-white/80 text-xs font-medium">{todayLabel}</Text>
+                <View className="flex-row items-center gap-4">
+                  <View className="gap-0.5">
+                    <Text className="text-white text-sm font-bold">
+                      {fmtHora(registroHoy?.hora_entrada)}
+                    </Text>
+                    <Text className="text-white/60 text-[10px]">Entrada</Text>
+                  </View>
+                  <Text className="text-white/40">→</Text>
+                  <View className="gap-0.5">
+                    <Text className="text-white text-sm font-bold">
+                      {fmtHora(registroHoy?.hora_salida)}
+                    </Text>
+                    <Text className="text-white/60 text-[10px]">Salida</Text>
+                  </View>
+                  {estadoHoy === 'en_turno' && registroHoy?.hora_entrada && (
+                    <>
+                      <Text className="text-white/40">·</Text>
+                      <View className="gap-0.5">
+                        <Text className="text-white text-sm font-bold">
+                          {calcElapsedLabel(registroHoy.hora_entrada)}
+                        </Text>
+                        <Text className="text-white/60 text-[10px]">Transcurrido</Text>
+                      </View>
+                    </>
+                  )}
+                  {estadoHoy === 'completado' && registroHoy && (
+                    <>
+                      <Text className="text-white/40">·</Text>
+                      <View className="gap-0.5">
+                        <Text className="text-white text-sm font-bold">
+                          {totalHorasRegistro(registroHoy).toFixed(1)}h
+                        </Text>
+                        <Text className="text-white/60 text-[10px]">Trabajadas</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </View>
+
+              {/* Card semana */}
+              <View className="bg-white/10 rounded-2xl px-4 py-3 flex-row gap-4">
                 <View className="gap-0.5 flex-1">
                   <Text className="text-white text-base font-extrabold">
                     {resumenSemana.totalHoras.toFixed(1)}h
@@ -177,15 +356,103 @@ function NominaTrabajadorView() {
               </View>
             </View>
 
-            {/* ── Resumen horas ───────────────────────────────── */}
+            {/* ── Geofence badge + botones de marcaje ─────────── */}
             <View className="px-5 gap-3">
-              <View className="flex-row gap-2">
+              {tipoMarcacion === 'fijo' && (
+                <View className="flex-row items-center gap-2">
+                  {permissionDenied ? (
+                    <View className="flex-row items-center gap-1.5 bg-muted px-3 py-1.5 rounded-full">
+                      <View className="w-2 h-2 rounded-full bg-warning" />
+                      <Text className="text-xs text-muted-foreground">GPS no disponible</Text>
+                    </View>
+                  ) : (
+                    <View className={[
+                      'flex-row items-center gap-1.5 px-3 py-1.5 rounded-full',
+                      canMark ? 'bg-success-light' : 'bg-red-50',
+                    ].join(' ')}>
+                      <View className={[
+                        'w-2 h-2 rounded-full',
+                        canMark ? 'bg-success'
+                          : geoStatus === 'unknown' ? 'bg-muted-foreground' : 'bg-danger',
+                      ].join(' ')} />
+                      <Text className={[
+                        'text-xs font-medium',
+                        canMark ? 'text-success'
+                          : geoStatus === 'unknown' ? 'text-muted-foreground' : 'text-danger',
+                      ].join(' ')}>
+                        {canMark
+                          ? `Dentro del área${puntoMarcaje ? ` · ${puntoMarcaje.nombre}` : ''}`
+                          : geoStatus === 'unknown'
+                          ? 'Obteniendo ubicación…'
+                          : `Fuera del área${puntoMarcaje ? ` · ${puntoMarcaje.nombre}` : ''}`}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* Botón Marcar Entrada */}
+              {estadoHoy === 'sin_entrada' && activePeriodo?.estado === 'abierto' && (
+                <TouchableOpacity
+                  onPress={handleEntrada}
+                  disabled={isMutating || fijoBloqueado}
+                  className={[
+                    'rounded-2xl py-4 items-center',
+                    isMutating || fijoBloqueado ? 'bg-muted' : 'bg-success',
+                  ].join(' ')}
+                  style={!(isMutating || fijoBloqueado)
+                    ? { elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }
+                    : undefined}
+                >
+                  {isMutating
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text className={[
+                        'text-base font-bold',
+                        fijoBloqueado ? 'text-muted-foreground' : 'text-white',
+                      ].join(' ')}>Marcar entrada</Text>
+                  }
+                </TouchableOpacity>
+              )}
+
+              {/* Botón Marcar Salida */}
+              {estadoHoy === 'en_turno' && activePeriodo?.estado === 'abierto' && (
+                <TouchableOpacity
+                  onPress={handleSalida}
+                  disabled={isMutating || fijoBloqueado}
+                  className={[
+                    'rounded-2xl py-4 items-center',
+                    isMutating || fijoBloqueado ? 'bg-muted' : 'bg-danger',
+                  ].join(' ')}
+                  style={!(isMutating || fijoBloqueado)
+                    ? { elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }
+                    : undefined}
+                >
+                  {isMutating
+                    ? <ActivityIndicator color="#fff" size="small" />
+                    : <Text className={[
+                        'text-base font-bold',
+                        fijoBloqueado ? 'text-muted-foreground' : 'text-white',
+                      ].join(' ')}>Marcar salida</Text>
+                  }
+                </TouchableOpacity>
+              )}
+
+              {/* Turno completado hoy */}
+              {estadoHoy === 'completado' && registroHoy && (
+                <View className="bg-success-light rounded-2xl py-3 items-center">
+                  <Text className="text-sm font-semibold text-success">
+                    Turno completado · {totalHorasRegistro(registroHoy).toFixed(1)}h registradas
+                  </Text>
+                </View>
+              )}
+
+              {/* Resumen período */}
+              <View className="flex-row gap-2 mt-1">
                 <StatCard label="Total horas"  value={`${resumen.totalHoras.toFixed(1)}h`}  color="text-foreground" />
                 <StatCard label="Ordinarias"   value={`${resumen.ordinarias.toFixed(1)}h`}   color="text-foreground" />
-                <StatCard label="Días regist." value={String(resumen.diasRegistrados)} color="text-info" />
+                <StatCard label="Días regist." value={String(resumen.diasRegistrados)}        color="text-info" />
               </View>
 
-              {/* Extras row (only shown if present) */}
               {(resumen.extraDiurnas > 0 || resumen.extraNocturnas > 0 ||
                 resumen.nocturnas > 0    || resumen.festivo > 0) && (
                 <View className="bg-primary-50 rounded-2xl px-4 py-3 gap-2">
@@ -207,7 +474,6 @@ function NominaTrabajadorView() {
                 </View>
               )}
 
-              {/* Period selector (if multiple open) */}
               {periodos.length > 1 && (
                 <View className="flex-row gap-2 flex-wrap">
                   {periodos.map((p) => (
@@ -244,12 +510,12 @@ function NominaTrabajadorView() {
             </View>
           ) : (
             <View className="py-12 items-center gap-3 px-8">
-              <Ionicons name="clipboard-outline" size={48} color="#94A3B8" />
+              <Ionicons name="clipboard-outline" size={40} color="#94A3B8" />
               <Text className="text-base font-semibold text-foreground text-center">
                 Sin registros aún
               </Text>
               <Text className="text-sm text-muted-foreground text-center">
-                No hay registros en este período todavía.
+                Marca tu entrada para comenzar a registrar horas.
               </Text>
             </View>
           )
@@ -269,7 +535,6 @@ function NominaTrabajadorView() {
 function NominaGestorView() {
   const theme = useTheme();
 
-  // All periods (latest first)
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos();
 
@@ -292,7 +557,7 @@ function NominaGestorView() {
   const onRefresh = useCallback(() => {
     refetchPeriodos();
     refetchLiq();
-  }, []);
+  }, [refetchPeriodos, refetchLiq]);
 
   const handleCerrar = () => {
     if (!activePeriodoId) return;
@@ -307,7 +572,7 @@ function NominaGestorView() {
           onPress: async () => {
             try {
               await cerrarMutation.mutateAsync(activePeriodoId);
-              Alert.alert('✅ Período cerrado');
+              Alert.alert('Período cerrado');
             } catch (err) {
               const msg = err instanceof ApiError ? err.message : 'Error al cerrar el período';
               Alert.alert('Error', msg);
@@ -330,7 +595,7 @@ function NominaGestorView() {
           onPress: async () => {
             try {
               await liquidarMutation.mutateAsync(activePeriodoId);
-              Alert.alert('✅ Período liquidado');
+              Alert.alert('Período liquidado');
             } catch (err) {
               const msg = err instanceof ApiError ? err.message : 'Error al liquidar';
               Alert.alert('Error', msg);
@@ -366,7 +631,6 @@ function NominaGestorView() {
         }
         ListHeaderComponent={
           <View className="gap-4 pb-2">
-            {/* ── Header ─────────────────────────────────────── */}
             <View className="bg-success pt-4 pb-6 px-6 rounded-b-[28px] gap-2">
               <View className="flex-row items-center justify-between">
                 <View>
@@ -380,7 +644,6 @@ function NominaGestorView() {
                 {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
               </View>
 
-              {/* Big total */}
               {totales && (
                 <View className="bg-white/15 rounded-2xl px-4 py-3 mt-1">
                   <Text className="text-white/80 text-xs">Total bruto</Text>
@@ -395,7 +658,6 @@ function NominaGestorView() {
             </View>
 
             <View className="px-5 gap-3">
-              {/* Period selector pills */}
               {periodos.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View className="flex-row gap-2 py-1">
@@ -421,7 +683,6 @@ function NominaGestorView() {
                 </ScrollView>
               )}
 
-              {/* Period actions */}
               {activePeriodo && (
                 <View className="flex-row gap-2">
                   {activePeriodo.estado === 'abierto' && (
@@ -442,7 +703,7 @@ function NominaGestorView() {
                       className="flex-1 bg-success-light border border-green-200 rounded-2xl py-3 items-center"
                     >
                       <Text className="text-sm font-semibold text-success">
-                        {liquidarMutation.isPending ? 'Liquidando…' : '✅ Liquidar período'}
+                        {liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar período'}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -467,7 +728,7 @@ function NominaGestorView() {
             </View>
           ) : (
             <View className="py-12 items-center gap-3 px-8">
-              <Ionicons name="bar-chart-outline" size={48} color="#94A3B8" />
+              <Ionicons name="bar-chart-outline" size={40} color="#94A3B8" />
               <Text className="text-base font-semibold text-foreground text-center">
                 Sin registros en este período
               </Text>

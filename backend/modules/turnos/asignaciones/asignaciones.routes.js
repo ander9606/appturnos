@@ -24,6 +24,19 @@ const reglasCoordenadas = [
 
 router.use(verificarToken);
 
+// GET /api/turnos/asignaciones/liquidacion
+// Debe ir antes de /:id para que Express no trate "liquidacion" como ID.
+router.get(
+  '/liquidacion',
+  verificarRol(GESTIONAR),
+  [
+    query('fecha_inicio').optional().isISO8601().withMessage('fecha_inicio inválida'),
+    query('fecha_fin').optional().isISO8601().withMessage('fecha_fin inválida'),
+  ],
+  validar,
+  ctrl.liquidacion
+);
+
 // GET /api/turnos/asignaciones
 router.get(
   '/',

@@ -1,15 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi } from '@api-client';
+import type { LiquidacionTurnosTrabajador } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 
 // ── Query keys ────────────────────────────────────────────────────────────
 
 export const QUERY_KEYS = {
-  misTurnos:   ['misTurnos'] as const,
-  ofertas:     (params?: object) => ['ofertas', params] as const,
-  oferta:      (id: number) => ['oferta', id] as const,
-  asignacion:  (id: number) => ['asignacion', id] as const,
-  asignaciones:(params: object) => ['asignaciones', params] as const,
+  misTurnos:    ['misTurnos'] as const,
+  ofertas:      (params?: object) => ['ofertas', params] as const,
+  oferta:       (id: number) => ['oferta', id] as const,
+  asignacion:   (id: number) => ['asignacion', id] as const,
+  asignaciones: (params: object) => ['asignaciones', params] as const,
+  liquidacion:  (params?: object) => ['liquidacion-turnos', params] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
@@ -162,6 +164,15 @@ export function useMarcarEgreso() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
     },
+  });
+}
+
+/** Liquidación de turnos por trabajador (gestores/admin). */
+export function useLiquidacionTurnos(params?: { fecha_inicio?: string; fecha_fin?: string }) {
+  return useQuery<LiquidacionTurnosTrabajador[]>({
+    queryKey: QUERY_KEYS.liquidacion(params),
+    queryFn:  () => turnosApi.liquidacion(params),
+    staleTime: 60_000,
   });
 }
 

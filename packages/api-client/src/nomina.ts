@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { PuntoMarcaje } from './puntos-marcaje';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,17 @@ export interface ResumenHoras {
   diasRegistrados: number;
 }
 
+export type TipoMarcacion = 'libre' | 'fijo';
+
+export interface TrabajadorNominaPerfil {
+  id: number;
+  nombre: string;
+  apellido: string;
+  tipo_marcacion: TipoMarcacion;
+  punto_marcaje: PuntoMarcaje | null;
+  salario_base: number | null;
+}
+
 // ── API ───────────────────────────────────────────────────────────────────
 
 export const nominaApi = {
@@ -125,6 +137,20 @@ export const nominaApi = {
     novedad?: string;
   }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros', datos);
+  },
+
+  // ── Marcaje en tiempo real (trabajador_nomina) ────────────────────────────
+
+  obtenerMiPerfil(): Promise<TrabajadorNominaPerfil> {
+    return api.get<TrabajadorNominaPerfil>('/api/nomina/me');
+  },
+
+  marcarEntrada(datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
+    return api.post<RegistroDiario>('/api/nomina/registros/marcar-entrada', datos ?? {});
+  },
+
+  marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
+    return api.post<RegistroDiario>(`/api/nomina/registros/${registroId}/marcar-salida`, datos ?? {});
   },
 
   // ── Liquidación ───────────────────────────────────────────────────────

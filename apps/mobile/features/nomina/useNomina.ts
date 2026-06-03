@@ -23,6 +23,7 @@ export function usePeriodos(estado?: EstadoPeriodo) {
 export function useRegistros(params: {
   periodo_id?: number;
   trabajador_id?: number;
+  fecha?: string;
   limit?: number;
 }) {
   return useQuery({
@@ -62,6 +63,41 @@ export function useLiquidarPeriodo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['periodos'] });
       qc.invalidateQueries({ queryKey: ['liquidacion'] });
+    },
+  });
+}
+
+// ── Marcaje en tiempo real ────────────────────────────────────────────────
+
+export function useNominaPerfil() {
+  return useQuery({
+    queryKey: ['nomina-perfil'] as const,
+    queryFn: () => nominaApi.obtenerMiPerfil(),
+    staleTime: 300_000,
+  });
+}
+
+export function useMarcarEntrada() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (datos?: { latitud?: number; longitud?: number }) =>
+      nominaApi.marcarEntrada(datos),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registros'] });
+    },
+  });
+}
+
+export function useMarcarSalida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ registroId, latitud, longitud }: {
+      registroId: number;
+      latitud?: number;
+      longitud?: number;
+    }) => nominaApi.marcarSalida(registroId, { latitud, longitud }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registros'] });
     },
   });
 }

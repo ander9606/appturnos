@@ -23,6 +23,8 @@ export type {
   EstadoPeriodo,
   TipoPeriodo,
   ResumenHoras,
+  TipoMarcacion,
+  TrabajadorNominaPerfil,
 } from './nomina';
 export { turnosApi } from './turnos';
 export type {
@@ -36,6 +38,8 @@ export type {
   TipoGeofence,
   GeofenceInfo,
   PaginatedResponse,
+  LiquidacionTurnoLinea,
+  LiquidacionTurnosTrabajador,
 } from './turnos';
 export { puntosMarcajeApi } from './puntos-marcaje';
 export type {

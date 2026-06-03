@@ -8,6 +8,8 @@
  */
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 import { authApi, initApiClient, type UsuarioPerfil } from '@api-client';
 import { secureTokenStore } from '@/lib/secureStore';
@@ -15,10 +17,28 @@ import { secureTokenStore } from '@/lib/secureStore';
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const KEY_USUARIO = 'appturnos.usuario';
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-if (!API_BASE_URL) {
+
+const _envUrl = process.env.EXPO_PUBLIC_API_URL;
+if (!_envUrl) {
   throw new Error('EXPO_PUBLIC_API_URL no está configurado. Crea apps/mobile/.env con EXPO_PUBLIC_API_URL=http://...');
 }
+
+/**
+ * Resuelve la URL base del API según el entorno de ejecución.
+ * - Emulador Android  → reemplaza la IP local con 10.0.2.2 (gateway del host)
+ * - Dispositivo físico / simulador iOS → usa la URL del .env tal cual
+ */
+function resolveApiUrl(url: string): string {
+  if (Platform.OS === 'android' && !Constants.isDevice) {
+    return url.replace(
+      /(?:192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|localhost|127\.0\.0\.1)/,
+      '10.0.2.2'
+    );
+  }
+  return url;
+}
+
+const API_BASE_URL = resolveApiUrl(_envUrl);
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
