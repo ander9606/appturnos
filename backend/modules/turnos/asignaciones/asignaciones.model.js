@@ -476,7 +476,7 @@ const AsignacionesModel = {
         nombre: row.lugar,
         latitud: row.latitud != null ? Number(row.latitud) : null,
         longitud: row.longitud != null ? Number(row.longitud) : null,
-        radio_metros: 100,
+        radio_metros: 1000,
       };
     }
 

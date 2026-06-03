@@ -10,6 +10,7 @@ cd backend
 npm run dev          # nodemon server.js — hot reload, port 3001
 npm start            # production start
 npm run migrate      # apply pending SQL migrations (idempotent)
+npm run seed         # insert demo data (empresa + usuarios + turnos en todos los estados)
 npm run generar-vapid # generate VAPID keys for push notifications
 ```
 

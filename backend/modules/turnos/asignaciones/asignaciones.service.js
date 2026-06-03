@@ -3,6 +3,7 @@
 const AsignacionesModel = require('./asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
+const { pool } = require('../../../config/database');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const IntegracionService = require('../../integracion/integracion.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
@@ -129,6 +130,26 @@ const AsignacionesService = {
       latitud,
       longitud,
     });
+
+    // Notifica a jefes de turno y admin que el trabajador marcó ingreso (best-effort).
+    const [gestores] = await pool.query(
+      `SELECT id FROM usuarios
+       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
+      [empresaId]
+    );
+    if (gestores.length > 0) {
+      await NotificacionesService.notificarVarios(
+        gestores.map((g) => g.id),
+        {
+          empresaId,
+          tipo: 'turno.ingreso',
+          titulo: 'Trabajador marcó ingreso',
+          mensaje: `${trabajador.nombre} ${trabajador.apellido} registró su llegada al turno.`,
+          data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
+        }
+      );
+    }
+
     return AsignacionesModel.obtenerPorId(empresaId, id);
   },
 

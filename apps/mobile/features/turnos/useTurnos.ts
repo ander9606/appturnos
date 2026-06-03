@@ -149,8 +149,9 @@ export function useMarcarIngreso() {
   return useMutation({
     mutationFn: ({ id, lat, lng }: { id: number; lat: number; lng: number }) =>
       turnosApi.marcarIngreso(id, lat, lng),
-    onSuccess: () => {
+    onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
     },
   });
 }
@@ -161,8 +162,9 @@ export function useMarcarEgreso() {
   return useMutation({
     mutationFn: ({ id, firma }: { id: number; firma: string }) =>
       turnosApi.marcarEgreso(id, firma),
-    onSuccess: () => {
+    onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
     },
   });
 }
