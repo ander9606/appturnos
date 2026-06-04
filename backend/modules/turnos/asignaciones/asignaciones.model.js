@@ -142,6 +142,26 @@ const AsignacionesModel = {
         return { ok: false, motivo: 'lleno' };
       }
 
+      // Bloqueo de traslape: el trabajador no puede tener dos turnos confirmados simultáneos.
+      const finNuevo = oferta.hora_fin_estimada ?? '23:59:59';
+      const [[traslape]] = await conn.query(
+        `SELECT a.id
+         FROM asignaciones_turno a
+         JOIN ofertas_turno o ON o.id = a.oferta_id
+         WHERE a.trabajador_id = ?
+           AND a.id != ?
+           AND a.estado IN ('confirmado', 'en_progreso')
+           AND o.fecha = ?
+           AND o.hora_inicio < ?
+           AND COALESCE(o.hora_fin_estimada, '23:59:59') > ?
+         LIMIT 1`,
+        [asig.trabajador_id, id, oferta.fecha, finNuevo, oferta.hora_inicio]
+      );
+      if (traslape) {
+        await conn.rollback();
+        return { ok: false, motivo: 'traslape' };
+      }
+
       await conn.query(
         "UPDATE asignaciones_turno SET estado = 'confirmado' WHERE id = ?",
         [id]

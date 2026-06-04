@@ -60,9 +60,10 @@ const AsignacionesService = {
     if (!res.ok) {
       const errores = {
         no_existe: ['Asignación no encontrada', 404],
-        estado: ['La asignación no está pendiente de confirmación', 409],
-        oferta: ['La oferta ya no está disponible para confirmar', 409],
-        lleno: ['La oferta ya no tiene plazas disponibles', 409],
+        estado:    ['La asignación no está pendiente de confirmación', 409],
+        oferta:    ['La oferta ya no está disponible para confirmar', 409],
+        lleno:     ['La oferta ya no tiene plazas disponibles', 409],
+        traslape:  ['El trabajador ya tiene un turno confirmado en ese horario', 409],
       };
       const [mensaje, codigo] = errores[res.motivo];
       throw new AppError(mensaje, codigo);
