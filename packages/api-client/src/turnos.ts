@@ -103,6 +103,23 @@ export interface Oferta {
   puestos: OfertaPuesto[];
 }
 
+export interface CrearOfertaPayload {
+  titulo: string;
+  descripcion?: string;
+  fecha: string;           // YYYY-MM-DD
+  hora_inicio: string;     // HH:mm:ss
+  hora_fin_estimada?: string;
+  lugar?: string;
+  latitud?: number;
+  longitud?: number;
+  puestos: Array<{
+    cargo_id: number;
+    plazas: number;
+    tarifa_dia: number;
+    notas?: string;
+  }>;
+}
+
 export interface OfertaDetalle extends Oferta {
   asignaciones: AsignacionResumen[];
 }
@@ -185,6 +202,11 @@ export const turnosApi = {
   /** Detalle de una oferta + sus asignaciones. */
   obtenerOferta(id: number): Promise<OfertaDetalle> {
     return api.get<OfertaDetalle>(`/api/turnos/ofertas/${id}`);
+  },
+
+  /** Crea una oferta nueva con sus puestos en una sola transacción. */
+  crearOferta(payload: CrearOfertaPayload): Promise<Oferta> {
+    return api.post<Oferta>('/api/turnos/ofertas', payload);
   },
 
   /** Postular al turno en un puesto concreto. */

@@ -108,6 +108,12 @@ export default function TurnosScreen() {
     return set;
   }, [misTurnos]);
 
+  /** Asignaciones confirmadas/en curso del trabajador (para detectar traslapes) */
+  const turnosConfirmados = useMemo(
+    () => (misTurnos ?? []).filter((a) => a.estado === 'confirmado' || a.estado === 'en_progreso'),
+    [misTurnos],
+  );
+
   const ofertas = ofertasResp?.data ?? [];
 
   const isRefreshing = refetchingMios || refetchingOfertas;
@@ -133,6 +139,7 @@ export default function TurnosScreen() {
     const tarifaMin = item.puestos?.length > 0 ? Math.min(...item.puestos.map(p => p.tarifa_dia)) : 0;
     const hayVariasTarifas = item.puestos?.length > 1 && item.puestos.some(p => p.tarifa_dia !== tarifaMin);
     const firstAvailablePuesto = item.puestos?.find(p => p.plazas_cubiertas < p.plazas);
+    const hayTraslape = turnosSolapan(item, turnosConfirmados);
 
     return (
       <View
@@ -146,7 +153,7 @@ export default function TurnosScreen() {
         }}
       >
         {/* Accent bar */}
-        <View className="w-1.5 bg-primary-400" />
+        <View className={`w-1.5 ${hayTraslape ? 'bg-warning' : 'bg-primary-400'}`} />
 
         <View className="flex-1 px-4 py-4 gap-2">
           <View className="flex-row items-start justify-between gap-2">
@@ -157,6 +164,15 @@ export default function TurnosScreen() {
               <Badge label={`${plazasLibres} plaza${plazasLibres > 1 ? 's' : ''}`} variant="warning" size="sm" />
             )}
           </View>
+
+          {hayTraslape && (
+            <View className="flex-row items-center gap-1.5 bg-warning/10 rounded-xl px-2.5 py-1.5">
+              <Ionicons name="warning-outline" size={13} color="#D97706" />
+              <Text className="text-xs font-medium text-warning flex-1">
+                Ya tienes un turno confirmado en este horario
+              </Text>
+            </View>
+          )}
 
           <View className="flex-row gap-3 flex-wrap">
             <View className="flex-row items-center gap-1">
@@ -201,7 +217,7 @@ export default function TurnosScreen() {
         </View>
       </View>
     );
-  }, [aplicadosIds, aplicarMutation]);
+  }, [aplicadosIds, aplicarMutation, turnosConfirmados]);
 
   // ── Empty states ──────────────────────────────────────────────────────
 
@@ -236,22 +252,24 @@ export default function TurnosScreen() {
         <Text className="text-xl font-bold text-foreground">
           {isGestor ? 'Gestión de Turnos' : 'Mis Turnos'}
         </Text>
-        {isGestor ? (
-          <TouchableOpacity
-            onPress={() => router.push('/liquidacion-turnos')}
-            className="flex-row items-center gap-1.5 bg-primary-500 px-3 py-1.5 rounded-xl"
-            accessibilityLabel="Ver liquidación"
-          >
-            <Ionicons name="cash-outline" size={15} color="#fff" />
-            <Text className="text-white text-sm font-semibold">Liquidar</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            className="w-9 h-9 bg-primary-500 rounded-xl items-center justify-center"
-            accessibilityLabel="Nuevo turno"
-          >
-            <Text className="text-white text-xl font-bold">+</Text>
-          </TouchableOpacity>
+        {isGestor && (
+          <View className="flex-row gap-2 items-center">
+            <TouchableOpacity
+              onPress={() => router.push('/liquidacion-turnos')}
+              className="flex-row items-center gap-1.5 bg-primary-500 px-3 py-1.5 rounded-xl"
+              accessibilityLabel="Ver liquidación"
+            >
+              <Ionicons name="cash-outline" size={15} color="#fff" />
+              <Text className="text-white text-sm font-semibold">Liquidar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              className="w-9 h-9 bg-primary-500 rounded-xl items-center justify-center"
+              accessibilityLabel="Nuevo turno"
+              onPress={() => router.push('/turno/nuevo')}
+            >
+              <Ionicons name="add" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -432,4 +450,14 @@ function fmtRangeSimple(start: string, end: string | null): string {
   const s = start.slice(0, 5).replace(/^0/, '');
   if (!end) return s;
   return `${s} – ${end.slice(0, 5).replace(/^0/, '')}`;
+}
+
+/** Detecta si una oferta se solapa en horario con algún turno confirmado del trabajador. */
+function turnosSolapan(oferta: Oferta, confirmados: Asignacion[]): boolean {
+  const ofFin = oferta.hora_fin_estimada ?? '23:59:59';
+  return confirmados.some((a) => {
+    if (a.oferta_fecha !== oferta.fecha) return false;
+    const aFin = a.hora_fin_estimada ?? '23:59:59';
+    return a.hora_inicio < ofFin && aFin > oferta.hora_inicio;
+  });
 }
