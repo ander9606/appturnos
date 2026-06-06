@@ -33,14 +33,17 @@ async function ordenCreada(empresaId, data) {
   const existente = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
   if (existente) return; // ya creada — idempotente
 
-  // Construir descripción combinando notas para el operario + resumen de productos.
-  // El jefe de turnos puede enriquecerla desde la app antes de publicar.
-  const partesDesc = [];
-  if (data.notas_para_operario) partesDesc.push(data.notas_para_operario);
+  // Descripción: "Montaje de los productos X, Y de la empresa Z"
+  // notas_para_operario va al campo separado externo_notas, no aquí.
+  let descripcion = null;
   if (Array.isArray(data.productos_resumen) && data.productos_resumen.length) {
-    partesDesc.push(
-      'Productos: ' + data.productos_resumen.map((p) => `${p.cantidad}× ${p.nombre}`).join(', ')
+    const [[empresa]] = await pool.query(
+      'SELECT nombre FROM empresas WHERE id = ? LIMIT 1', [empresaId]
     );
+    const listaProductos = data.productos_resumen
+      .map((p) => `${p.cantidad}× ${p.nombre}`)
+      .join(', ');
+    descripcion = `Montaje de los productos: ${listaProductos} de la empresa ${empresa?.nombre ?? empresaId}`;
   }
 
   // Plazas y tarifa sugeridos por logiq360 se materializan como un único
@@ -55,7 +58,7 @@ async function ordenCreada(empresaId, data) {
     empresaId,
     {
       titulo: data.titulo || (data.tipo ? `Orden: ${data.tipo}` : 'Orden de trabajo'),
-      descripcion: partesDesc.join('\n\n') || null,
+      descripcion,
       fecha: data.fecha || data.fecha_programada || null,
       hora_inicio: data.hora_inicio || '08:00:00',
       hora_fin_estimada: data.hora_fin || null,
