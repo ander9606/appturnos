@@ -220,7 +220,7 @@ async function main() {
   // ── [1] BORRADOR — recién llegada de logiq360, jefe aún no la publica ─────
   const oBorradorId = await upsertOferta({
     titulo:   'Instalación Carpa IKEA — Zona Franca',
-    desc:     'Instalación y tensado de carpas para bodega temporal de 600 m².',
+    desc:     'Montaje de los productos: 1× Carpa 12x12, 2× Mástil de tensado, 20× Ancla de suelo de la empresa Carpas y Eventos Demo S.A.S',
     fecha:    d(2), hi: '06:00:00', hf: '15:00:00',
     lugar:    'Zona Franca Bogotá — Av. Calle 26 #82-70',
     lat: 4.6890, lon: -74.1220,
@@ -235,7 +235,7 @@ async function main() {
   // ── [2] PUBLICADA — publicada, trabajadores aplicaron ─────────────────────
   const oPublicadaId = await upsertOferta({
     titulo:   'Desmontaje Feria Alimentaria — Corferias',
-    desc:     'Desmontaje y cargue de estructuras y carpas post-feria.',
+    desc:     'Montaje de los productos: 2× Carpa 6x9, 8× Mesa plegable, 40× Silla plástica de la empresa Carpas y Eventos Demo S.A.S',
     fecha:    d(4), hi: '07:00:00', hf: '16:00:00',
     lugar:    'Corferias, Cra 37 #24-67, Bogotá',
     lat: 4.6280, lon: -74.0905,
@@ -271,7 +271,7 @@ async function main() {
   const fechaHoy = d(0);
   const oEnProcesoId = await upsertOferta({
     titulo:   'Evento Corporativo Bancolombia — Parque 93',
-    desc:     'Montaje de carpa VIP y mobiliario para lanzamiento de producto.',
+    desc:     'Montaje de los productos: 1× Carpa VIP 8x8, 5× Panel decorativo, 20× Silla Tiffany de la empresa Carpas y Eventos Demo S.A.S',
     fecha:    fechaHoy, hi: '07:00:00', hf: '17:00:00',
     lugar:    'Parque 93 — Cl. 93 #13-33, Bogotá',
     lat: 4.6665, lon: -74.0536,
@@ -324,7 +324,7 @@ async function main() {
   const fechaCompleta = d(-7);
   const oCompletadaId = await upsertOferta({
     titulo:   'Montaje Stand Expo Belleza — Ágora',
-    desc:     'Instalación de carpa y decoración para stand de belleza.',
+    desc:     'Montaje de los productos: 1× Stand 3x3, 4× Panel divisor, 10× Spot LED de la empresa Carpas y Eventos Demo S.A.S',
     fecha:    fechaCompleta, hi: '06:00:00', hf: '15:00:00',
     lugar:    'Ágora Bogotá — Cl. 24 #38-47',
     lat: 4.6180, lon: -74.0878,
@@ -407,14 +407,23 @@ async function main() {
       payload:{ event_id: randomUUID(), external_ref:'logiq360:orden:300', alquiler_ref:'logiq360:alquiler:80',
                 titulo:'Montaje Stand Expo Belleza — Ágora',
                 fecha:d(-7), hora_inicio:'06:00', ubicacion:'Ágora Bogotá — Cl. 24 #38-47',
-                cupos_sugeridos:2, valor_dia_sugerido:90000 } },
+                cupos_sugeridos:2, valor_dia_sugerido:90000,
+                productos_resumen:[
+                  { cantidad:1, nombre:'Stand 3x3' },
+                  { cantidad:4, nombre:'Panel divisor' },
+                  { cantidad:10, nombre:'Spot LED' },
+                ] } },
     { tipo:'orden.completada',ts: d(-7)+' 15:30:00', estado:'procesado',
       payload:{ external_ref:'logiq360:orden:300' } },
 
     { tipo:'orden.creada',    ts: d(-3)+' 10:00:00', estado:'procesado',
       payload:{ event_id: randomUUID(), external_ref:'logiq360:orden:299', alquiler_ref:'logiq360:alquiler:79',
                 titulo:'Evento Aire Libre', fecha:d(-1), hora_inicio:'09:00',
-                ubicacion:'Parque Simón Bolívar, Bogotá', cupos_sugeridos:3, valor_dia_sugerido:75000 } },
+                ubicacion:'Parque Simón Bolívar, Bogotá', cupos_sugeridos:3, valor_dia_sugerido:75000,
+                productos_resumen:[
+                  { cantidad:2, nombre:'Carpa 4x4' },
+                  { cantidad:20, nombre:'Silla plástica' },
+                ] } },
     { tipo:'orden.cancelada', ts: d(-2)+' 16:00:00', estado:'procesado',
       payload:{ external_ref:'logiq360:orden:299', motivo:'Cancelado por el cliente — pronóstico de lluvia' } },
 
@@ -424,19 +433,34 @@ async function main() {
                 fecha:d(2), hora_inicio:'06:00', ubicacion:'Zona Franca Bogotá',
                 latitud:4.6890, longitud:-74.1220,
                 cupos_sugeridos:4, valor_dia_sugerido:0,
-                notas_para_operario:'Bodega zona franca. Usar chaleco reflectivo. Contacto: Sr. Torres 310-555-0101.' } },
+                notas_para_operario:'Bodega zona franca. Usar chaleco reflectivo. Contacto: Sr. Torres 310-555-0101.',
+                productos_resumen:[
+                  { cantidad:1, nombre:'Carpa 12x12' },
+                  { cantidad:2, nombre:'Mástil de tensado' },
+                  { cantidad:20, nombre:'Ancla de suelo' },
+                ] } },
 
     { tipo:'orden.creada',    ts: d(0)+' 07:00:00', estado:'procesado',
       payload:{ event_id: randomUUID(), external_ref:'logiq360:orden:302', alquiler_ref:'logiq360:alquiler:82',
                 titulo:'Desmontaje Feria Alimentaria', fecha:d(4), hora_inicio:'07:00',
-                ubicacion:'Corferias, Bogotá', cupos_sugeridos:5, valor_dia_sugerido:80000 } },
+                ubicacion:'Corferias, Bogotá', cupos_sugeridos:5, valor_dia_sugerido:80000,
+                productos_resumen:[
+                  { cantidad:2, nombre:'Carpa 6x9' },
+                  { cantidad:8, nombre:'Mesa plegable' },
+                  { cantidad:40, nombre:'Silla plástica' },
+                ] } },
     { tipo:'orden.publicada', ts: d(0)+' 07:05:00', estado:'procesado',
       payload:{ external_ref:'logiq360:orden:302' } },
 
     { tipo:'orden.creada',    ts: d(-2)+' 06:00:00', estado:'procesado',
       payload:{ event_id: randomUUID(), external_ref:'logiq360:orden:303', alquiler_ref:'logiq360:alquiler:83',
                 titulo:'Evento Corporativo Bancolombia', fecha:d(0), hora_inicio:'07:00',
-                ubicacion:'Parque 93, Bogotá', cupos_sugeridos:2, valor_dia_sugerido:95000 } },
+                ubicacion:'Parque 93, Bogotá', cupos_sugeridos:2, valor_dia_sugerido:95000,
+                productos_resumen:[
+                  { cantidad:1, nombre:'Carpa VIP 8x8' },
+                  { cantidad:5, nombre:'Panel decorativo' },
+                  { cantidad:20, nombre:'Silla Tiffany' },
+                ] } },
     { tipo:'orden.publicada', ts: d(-2)+' 06:05:00', estado:'procesado',
       payload:{ external_ref:'logiq360:orden:303' } },
   ];
