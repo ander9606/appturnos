@@ -13,6 +13,7 @@ type Size    = 'sm' | 'md' | 'lg';
 interface ButtonProps extends Omit<TouchableOpacityProps, 'onPress'> {
   label: string;
   onPress?: () => void;
+  onPressDisabled?: () => void; // fires when tapped while disabled (for informational feedback)
   variant?: Variant;
   size?: Size;
   loading?: boolean;
@@ -38,6 +39,7 @@ const SIZE_STYLES: Record<Size, { container: string; text: string }> = {
 export function Button({
   label,
   onPress,
+  onPressDisabled,
   variant = 'primary',
   size = 'md',
   loading = false,
@@ -50,7 +52,11 @@ export function Button({
   const s = SIZE_STYLES[size];
 
   const handlePress = () => {
-    if (isDisabled || !onPress) return;
+    if (isDisabled) {
+      onPressDisabled?.();
+      return;
+    }
+    if (!onPress) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onPress();
   };
@@ -59,7 +65,7 @@ export function Button({
     <TouchableOpacity
       {...rest}
       onPress={handlePress}
-      disabled={isDisabled}
+      disabled={isDisabled && !onPressDisabled}
       className={[
         BASE,
         v.container,
