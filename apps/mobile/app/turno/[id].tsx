@@ -39,6 +39,16 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
+/** Convierte minutos restantes en etiqueta legible: "1h 23m", "45 min". */
+function fmtFaltan(min: number): string {
+  const m = Math.max(1, Math.ceil(min));
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  if (h > 0 && rem > 0) return `${h}h ${rem}m`;
+  if (h > 0) return `${h}h`;
+  return `${rem} min`;
+}
+
 function InfoRow({ icon, label, value }: { icon: IoniconsName; label: string; value: string }) {
   return (
     <View className="flex-row items-start gap-3 py-3 border-b border-border last:border-0">
@@ -77,9 +87,9 @@ export default function TurnoDetailScreen() {
   const ingresoMutation = useMarcarIngreso();
   const egresoMutation  = useMarcarEgreso();
 
-  // ── Live elapsed timer ────────────────────────────────────────────────
+  // ── Live timer: elapsed (en_progreso) + countdown (confirmado) ───────
   useEffect(() => {
-    if (asignacion?.estado !== 'en_progreso') return;
+    if (asignacion?.estado !== 'en_progreso' && asignacion?.estado !== 'confirmado') return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, [asignacion?.estado]);
@@ -99,6 +109,19 @@ export default function TurnoDetailScreen() {
     targets: geofenceTargets,
     enabled: asignacion?.estado === 'confirmado',
   });
+
+  // ── Ventana de ingreso: habilitado 30 min antes del hora_inicio ──────
+  const WINDOW_MIN = 30;
+
+  const minutosParaIngreso = useMemo(() => {
+    if (asignacion?.estado !== 'confirmado') return null;
+    const { oferta_fecha, hora_inicio } = asignacion;
+    const scheduled = new Date(`${oferta_fecha}T${hora_inicio}`).getTime();
+    return Math.ceil((scheduled - now) / 60_000);
+  }, [asignacion?.estado, asignacion?.oferta_fecha, asignacion?.hora_inicio, now]);
+
+  // true once we're within WINDOW_MIN minutes of (or past) the scheduled start
+  const dentroVentana = minutosParaIngreso === null || minutosParaIngreso <= WINDOW_MIN;
 
   // ── Derived ───────────────────────────────────────────────────────────
   const estadoConfig = useMemo(
@@ -120,9 +143,23 @@ export default function TurnoDetailScreen() {
 
   // ── Actions ───────────────────────────────────────────────────────────
 
+  const handleIngresoPronto = useCallback(() => {
+    if (minutosParaIngreso === null) return;
+    const min = Math.max(1, minutosParaIngreso);
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    const label = h > 0 && m > 0 ? `${h}h ${m}m`
+                : h > 0            ? `${h}h`
+                :                    `${m} min`;
+    Alert.alert(
+      'Muy pronto',
+      `Falta ${label} para el ingreso.\nEl marcaje se habilita 30 min antes de la hora de entrada.`,
+      [{ text: 'Entendido', style: 'cancel' }],
+    );
+  }, [minutosParaIngreso]);
+
   const handleIngreso = async () => {
     if (!asignacion || !canMark) return;
-    // Send worker's actual GPS position, not the shift's location
     const lat = currentLocation?.lat ?? 0;
     const lng = currentLocation?.lng ?? 0;
 
@@ -350,13 +387,26 @@ export default function TurnoDetailScreen() {
             >
               <Text className="text-sm font-semibold text-foreground">Marcar llegada</Text>
 
+              {/* Countdown — visible mientras falte más de 30 min */}
+              {!dentroVentana && minutosParaIngreso !== null && (
+                <View className="flex-row items-center gap-2.5 bg-muted rounded-xl px-3 py-3">
+                  <Ionicons name="time-outline" size={18} color="#64748B" />
+                  <View className="flex-1">
+                    <Text className="text-xs text-muted-foreground">El marcaje se habilita en</Text>
+                    <Text className="text-base font-bold text-foreground tabular-nums">
+                      {fmtFaltan(minutosParaIngreso - WINDOW_MIN)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               <GeoFenceIndicator
                 distanceM={distanceM}
                 status={geoStatus}
                 permissionDenied={permissionDenied}
               />
 
-              {!canMark && distanceM !== null && (
+              {dentroVentana && !canMark && distanceM !== null && (
                 <View className="flex-row items-start gap-2">
                   <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
                   <Text className="flex-1 text-xs text-muted-foreground">
@@ -371,8 +421,9 @@ export default function TurnoDetailScreen() {
                 size="lg"
                 fullWidth
                 loading={ingresoMutation.isPending}
-                disabled={!canMark}
+                disabled={!dentroVentana || !canMark}
                 onPress={handleIngreso}
+                onPressDisabled={!dentroVentana ? handleIngresoPronto : undefined}
               />
             </View>
           )}
