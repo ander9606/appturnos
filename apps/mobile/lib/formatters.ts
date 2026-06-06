@@ -62,6 +62,14 @@ export function formatTimeRange(start: string, end: string): string {
   return `${formatTime(start)} – ${formatTime(end)}`;
 }
 
+/** "2026-06-03 06:10:00" o "2026-06-03T06:10:00" → "6:10" (sin cero inicial) */
+export function formatTimestampHora(ts: string | null | undefined): string {
+  if (!ts) return '—';
+  const parts = ts.replace('T', ' ').split(' ');
+  const time  = parts.length > 1 ? parts[1] : parts[0];
+  return time.slice(0, 5).replace(/^0/, '');
+}
+
 /** Date → "14:30" */
 export function formatTimeObj(date: Date): string {
   const h = String(date.getHours()).padStart(2, '0');

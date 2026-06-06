@@ -12,22 +12,23 @@
  *   juan.garcia@demo.co   — trabajador_turnos
  *   maria.lopez@demo.co   — trabajador_turnos
  *
- * Turnos creados (relativas a hoy):
- *   1. pendiente   — postulado, sin confirmar
- *   2. confirmado  — listo para marcar ingreso (geofence 1 km activo)
- *   3. en_progreso — ingreso marcado hace 2 h, timer en vivo
- *   4. completado  — ayer, con pago calculado
- *   5. no_presentado — hace 2 días
- *   6. cancelado   — hace 3 días
+ * Turnos de Juan García:
+ *   1. pendiente   — Corferias en 3 días
+ *   2. confirmado  — Zona Franca mañana (geofence 1 km)
+ *   3. en_progreso — Parque 93 hoy, ingreso hace 2 h (timer vivo)
+ *   4. completado  — CEDI Cota ayer, 7.9 h, $113.850
+ *
+ * Turnos de María López:
+ *   5. confirmado    — Teletrabajo en 2 días (sin geofence)
+ *   6. no_presentado — Plaza Américas hace 2 días
+ *   7. cancelado     — CityPark hace 3 días
  */
 'use strict';
 
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
-const bcrypt  = require('bcrypt');
-const mysql   = require('mysql2/promise');
-
-// ── Conexión ──────────────────────────────────────────────────────────────────
+const bcrypt = require('bcrypt');
+const mysql  = require('mysql2/promise');
 
 const pool = mysql.createPool({
   host:     process.env.DB_HOST     || 'localhost',
@@ -37,43 +38,26 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME     || 'app_turnos',
   waitForConnections: true,
   connectionLimit: 5,
-  multipleStatements: false,
 });
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────
 
-/** yyyy-MM-dd */
-function dateStr(d) {
-  return d.toISOString().slice(0, 10);
-}
-
-/** 'yyyy-MM-dd HH:mm:ss' */
-function datetimeStr(d) {
-  return d.toISOString().slice(0, 19).replace('T', ' ');
-}
-
-function addDays(d, n) {
-  const r = new Date(d);
-  r.setDate(r.getDate() + n);
-  return r;
-}
-
-function addHours(d, h) {
-  return new Date(d.getTime() + h * 3_600_000);
-}
+function dateStr(d)     { return d.toISOString().slice(0, 10); }
+function datetimeStr(d) { return d.toISOString().slice(0, 19).replace('T', ' '); }
+function addDays(d, n)  { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function addHours(d, h) { return new Date(d.getTime() + h * 3_600_000); }
 
 async function ins(conn, table, row) {
   const cols = Object.keys(row).join(', ');
   const vals = Object.values(row);
   const ph   = vals.map(() => '?').join(', ');
   const [res] = await conn.execute(
-    `INSERT INTO ${table} (${cols}) VALUES (${ph})`,
-    vals,
+    `INSERT INTO ${table} (${cols}) VALUES (${ph})`, vals,
   );
   return res.insertId;
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
   const conn = await pool.getConnection();
@@ -83,15 +67,34 @@ async function main() {
   console.log('🌱 Iniciando seed de datos de prueba…');
 
   try {
-    // ── 0. Limpiar datos de demo anteriores (idempotente) ─────────────────────
-
-    await conn.execute(
-      `DELETE FROM empresas WHERE slug = 'logistica-demo'`
+    // ── 0. Limpiar datos demo anteriores (sin chequeo de FK temporalmente) ─
+    await conn.execute('SET FOREIGN_KEY_CHECKS = 0');
+    const [[{ empresaDemoId }]] = await conn.execute(
+      `SELECT COALESCE((SELECT id FROM empresas WHERE slug='logistica-demo' LIMIT 1), 0)
+       AS empresaDemoId`
     );
+    if (empresaDemoId) {
+      await conn.execute(`DELETE FROM calificaciones_turno   WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM contratos_diarios      WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM asignaciones_turno     WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM oferta_puestos         WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM ofertas_turno          WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM trabajador_cargos      WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?)`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM trabajador_empresa     WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM puntos_marcaje         WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM cargos                 WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM trabajadores WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM usuarios     WHERE empresa_id = ?`, [empresaDemoId]);
+      // Usuarios trabajadores (empresa_id=NULL) — eliminar por email
+      await conn.execute(
+        `DELETE FROM usuarios WHERE email IN ('juan.garcia@demo.co','maria.lopez@demo.co')`
+      );
+      await conn.execute(`DELETE FROM empresas WHERE id = ?`, [empresaDemoId]);
+    }
+    await conn.execute('SET FOREIGN_KEY_CHECKS = 1');
     console.log('  ✓ Datos anteriores eliminados');
 
-    // ── 1. Empresa ────────────────────────────────────────────────────────────
-
+    // ── 1. Empresa ────────────────────────────────────────────────────────
     const empresaId = await ins(conn, 'empresas', {
       nombre:               'Logística Demo S.A.S',
       slug:                 'logistica-demo',
@@ -103,348 +106,288 @@ async function main() {
     });
     console.log(`  ✓ Empresa creada: id=${empresaId}`);
 
-    // ── 2. Usuarios de gestión (con empresa_id) ────────────────────────────────
-
+    // ── 2. Usuarios de gestión ────────────────────────────────────────────
     const hashPwd = await bcrypt.hash('Demo1234!', 10);
 
     const adminId = await ins(conn, 'usuarios', {
-      empresa_id:    empresaId,
-      nombre:        'Carlos',
-      apellido:      'Mendoza',
-      email:         'admin@demo.co',
-      password_hash: hashPwd,
-      rol:           'admin_empresa',
+      empresa_id: empresaId, nombre: 'Carlos', apellido: 'Mendoza',
+      email: 'admin@demo.co', password_hash: hashPwd, rol: 'admin_empresa',
     });
-
     const jefeId = await ins(conn, 'usuarios', {
-      empresa_id:    empresaId,
-      nombre:        'Laura',
-      apellido:      'Pinzón',
-      email:         'jefe@demo.co',
-      password_hash: hashPwd,
-      rol:           'jefe_turnos',
+      empresa_id: empresaId, nombre: 'Laura', apellido: 'Pinzón',
+      email: 'jefe@demo.co', password_hash: hashPwd, rol: 'jefe_turnos',
     });
     console.log(`  ✓ Usuarios gestión: admin=${adminId}, jefe=${jefeId}`);
 
-    // ── 3. Usuarios trabajadores (empresa_id=NULL — modelo marketplace) ───────
-
+    // ── 3. Usuarios trabajadores (empresa_id=NULL — marketplace) ─────────
     const uJuanId = await ins(conn, 'usuarios', {
-      empresa_id:    null,
-      nombre:        'Juan',
-      apellido:      'García',
-      email:         'juan.garcia@demo.co',
-      password_hash: hashPwd,
-      rol:           'trabajador_turnos',
+      empresa_id: null, nombre: 'Juan', apellido: 'García',
+      email: 'juan.garcia@demo.co', password_hash: hashPwd, rol: 'trabajador_turnos',
     });
-
     const uMariaId = await ins(conn, 'usuarios', {
-      empresa_id:    null,
-      nombre:        'María',
-      apellido:      'López',
-      email:         'maria.lopez@demo.co',
-      password_hash: hashPwd,
-      rol:           'trabajador_turnos',
+      empresa_id: null, nombre: 'María', apellido: 'López',
+      email: 'maria.lopez@demo.co', password_hash: hashPwd, rol: 'trabajador_turnos',
     });
     console.log(`  ✓ Usuarios trabajadores: juan=${uJuanId}, maria=${uMariaId}`);
 
-    // ── 4. Trabajadores ────────────────────────────────────────────────────────
-
+    // ── 4. Trabajadores ───────────────────────────────────────────────────
     const tJuanId = await ins(conn, 'trabajadores', {
-      empresa_id:   empresaId,
-      usuario_id:   uJuanId,
-      nombre:       'Juan',
-      apellido:     'García',
-      cedula:       '1020304050',
-      telefono:     '3101234567',
-      email:        'juan.garcia@demo.co',
-      tipo:         'turnos',
-      cargo:        'Auxiliar',
-      tarifa_hora:  15625,  // ~$3.750.000 / 240 h
+      empresa_id: empresaId, usuario_id: uJuanId,
+      nombre: 'Juan', apellido: 'García', cedula: '1020304050',
+      telefono: '3101234567', email: 'juan.garcia@demo.co',
+      tipo: 'turnos', cargo: 'Auxiliar', tarifa_hora: 15625,
     });
-
     const tMariaId = await ins(conn, 'trabajadores', {
-      empresa_id:   empresaId,
-      usuario_id:   uMariaId,
-      nombre:       'María',
-      apellido:     'López',
-      cedula:       '1030405060',
-      telefono:     '3209876543',
-      email:        'maria.lopez@demo.co',
-      tipo:         'turnos',
-      cargo:        'Auxiliar',
-      tarifa_hora:  15625,
+      empresa_id: empresaId, usuario_id: uMariaId,
+      nombre: 'María', apellido: 'López', cedula: '1030405060',
+      telefono: '3209876543', email: 'maria.lopez@demo.co',
+      tipo: 'turnos', cargo: 'Auxiliar', tarifa_hora: 15625,
     });
     console.log(`  ✓ Trabajadores: juan=${tJuanId}, maria=${tMariaId}`);
 
-    // ── 5. Vínculos trabajador_empresa ─────────────────────────────────────────
-
+    // ── 5. Vínculos trabajador_empresa ────────────────────────────────────
     const teJuanId = await ins(conn, 'trabajador_empresa', {
-      usuario_id:     uJuanId,
-      empresa_id:     empresaId,
-      trabajador_id:  tJuanId,
-      estado:         'activo',
-      iniciado_por:   'empresa',
+      usuario_id: uJuanId, empresa_id: empresaId, trabajador_id: tJuanId,
+      estado: 'activo', iniciado_por: 'empresa',
       fecha_resuelto: datetimeStr(addDays(now, -30)),
     });
-
     await ins(conn, 'trabajador_empresa', {
-      usuario_id:     uMariaId,
-      empresa_id:     empresaId,
-      trabajador_id:  tMariaId,
-      estado:         'activo',
-      iniciado_por:   'empresa',
+      usuario_id: uMariaId, empresa_id: empresaId, trabajador_id: tMariaId,
+      estado: 'activo', iniciado_por: 'empresa',
       fecha_resuelto: datetimeStr(addDays(now, -25)),
     });
     console.log('  ✓ Vínculos trabajador_empresa');
 
-    // ── 6. Punto de marcaje fijo ───────────────────────────────────────────────
-    //    Bodega Central en Fontibón, Bogotá (zona industrial)
-
+    // ── 6. Punto de marcaje fijo ──────────────────────────────────────────
     const puntoId = await ins(conn, 'puntos_marcaje', {
-      empresa_id:   empresaId,
-      nombre:       'Bodega Central Fontibón',
-      descripcion:  'Sede principal — Cra 106 #22D-55, Bogotá',
-      latitud:      4.67901,
-      longitud:     -74.14803,
-      radio_metros: 150,
-      tipo:         'fijo',
+      empresa_id: empresaId, nombre: 'Bodega Central Fontibón',
+      descripcion: 'Sede principal — Cra 106 #22D-55, Bogotá',
+      latitud: 4.67901, longitud: -74.14803, radio_metros: 150, tipo: 'fijo',
     });
     console.log(`  ✓ Punto de marcaje: id=${puntoId}`);
 
-    // ── 7. Ofertas de turno ────────────────────────────────────────────────────
+    // ── 7. Cargos del sistema (empresa_id=NULL, ya existen por migración) ─
+    const [[{ cargoAuxiliarId }]] = await conn.execute(
+      `SELECT id AS cargoAuxiliarId FROM cargos
+       WHERE empresa_id IS NULL AND codigo = 'auxiliar' LIMIT 1`
+    );
+    const [[{ cargoConductorId }]] = await conn.execute(
+      `SELECT id AS cargoConductorId FROM cargos
+       WHERE empresa_id IS NULL AND codigo = 'conductor' LIMIT 1`
+    );
 
-    /*
-     * Coordenadas usadas:
-     *   Oferta Parque 93 (zona rosa): 4.6665, -74.0536
-     *   Oferta Bodega Fontibón:       4.6790, -74.1480
-     *   Oferta sin coords (libre):    null
-     *
-     * radio_metros del geofence para tipo 'oferta' = 1000 m (nuevo default)
-     */
+    // Cargo empresa custom: 'bodeguero' (geofence fijo → Bodega Fontibón)
+    const cargoBodegueroId = await ins(conn, 'cargos', {
+      empresa_id: empresaId, codigo: 'bodeguero', nombre: 'Bodeguero',
+      descripcion: 'Manejo de inventario y logística interna',
+      tipo_geofence: 'fijo', punto_marcaje_id: puntoId,
+    });
+    console.log(`  ✓ Cargos: auxiliar=${cargoAuxiliarId}, conductor=${cargoConductorId}, bodeguero=${cargoBodegueroId}`);
 
-    // (a) Oferta futura — asignacion PENDIENTE (Juan)
+    // ── 8. Ofertas de turno + puestos ─────────────────────────────────────
+    // Nota: desde migración 013, `ofertas_turno` ya NO tiene plazas/tarifa.
+    //       Esos campos viven en `oferta_puestos`.
+
+    // (a) Pendiente — Corferias en 3 días
     const ofertaPendienteId = await ins(conn, 'ofertas_turno', {
-      empresa_id:        empresaId,
-      titulo:            'Montaje feria Corferias — pendiente',
-      descripcion:       'Apoyo en montaje de stands. Lleva ropa cómoda.',
-      fecha:             dateStr(addDays(now, 3)),
-      hora_inicio:       '07:00:00',
-      hora_fin_estimada: '15:00:00',
-      lugar:             'Corferias, Cra 37 #24-67, Bogotá',
-      latitud:           4.6280,
-      longitud:          -74.0905,
-      plazas_disponibles: 5,
-      plazas_cubiertas:   1,
-      tarifa_dia:        120000,
-      estado:            'abierta',
-      creado_por:        jefeId,
+      empresa_id: empresaId,
+      titulo: 'Montaje feria Corferias',
+      descripcion: 'Apoyo en montaje de stands. Lleva ropa cómoda.',
+      fecha: dateStr(addDays(now, 3)),
+      hora_inicio: '07:00:00', hora_fin_estimada: '15:00:00',
+      lugar: 'Corferias, Cra 37 #24-67, Bogotá',
+      latitud: 4.6280, longitud: -74.0905,
+      estado: 'abierta', creado_por: jefeId,
+    });
+    const puestoPendienteId = await ins(conn, 'oferta_puestos', {
+      oferta_id: ofertaPendienteId, cargo_id: cargoAuxiliarId,
+      plazas: 5, plazas_cubiertas: 1, tarifa_dia: 120000,
     });
 
-    // (b) Oferta mañana — asignacion CONFIRMADA (Juan) — para probar Marcar Ingreso
+    // (b) Confirmado — Zona Franca mañana (geofence oferta 1 km)
     const ofertaConfirmadaId = await ins(conn, 'ofertas_turno', {
-      empresa_id:        empresaId,
-      titulo:            'Descargue contenedor — Zona Franca Bogotá',
-      descripcion:       'Descargue de mercancía pesada. Se requiere certificado de alturas.',
-      fecha:             dateStr(addDays(now, 1)),
-      hora_inicio:       '06:00:00',
-      hora_fin_estimada: '14:00:00',
-      lugar:             'Zona Franca Bogotá — Av. Calle 26 #82-70',
-      latitud:           4.6890,
-      longitud:          -74.1220,
-      plazas_disponibles: 3,
-      plazas_cubiertas:   1,
-      tarifa_dia:        150000,
-      estado:            'abierta',
-      creado_por:        jefeId,
+      empresa_id: empresaId,
+      titulo: 'Descargue contenedor — Zona Franca Bogotá',
+      descripcion: 'Descargue de mercancía pesada.',
+      fecha: dateStr(addDays(now, 1)),
+      hora_inicio: '06:00:00', hora_fin_estimada: '14:00:00',
+      lugar: 'Zona Franca Bogotá — Av. Calle 26 #82-70',
+      latitud: 4.6890, longitud: -74.1220,
+      estado: 'abierta', creado_por: jefeId,
+    });
+    const puestoConfirmadoId = await ins(conn, 'oferta_puestos', {
+      oferta_id: ofertaConfirmadaId, cargo_id: cargoConductorId,
+      plazas: 3, plazas_cubiertas: 1, tarifa_dia: 150000,
     });
 
-    // (c) Oferta hoy — asignacion EN PROGRESO (Juan) — para probar timer en vivo
+    // (c) En progreso — Parque 93 hoy, ingresó hace 2 h
     const ofertaEnProgresoId = await ins(conn, 'ofertas_turno', {
-      empresa_id:        empresaId,
-      titulo:            'Evento Parque 93 — bodeguero',
-      descripcion:       'Apoyo logístico en evento corporativo.',
-      fecha:             hoy,
-      hora_inicio:       '08:00:00',
-      hora_fin_estimada: '17:00:00',
-      lugar:             'Parque 93 — Cl. 93 #13-33, Bogotá',
-      latitud:           4.6665,
-      longitud:          -74.0536,
-      plazas_disponibles: 2,
-      plazas_cubiertas:   1,
-      tarifa_dia:        130000,
-      estado:            'en_proceso',
-      creado_por:        jefeId,
+      empresa_id: empresaId,
+      titulo: 'Evento Parque 93 — bodeguero',
+      descripcion: 'Apoyo logístico en evento corporativo.',
+      fecha: hoy,
+      hora_inicio: '08:00:00', hora_fin_estimada: '17:00:00',
+      lugar: 'Parque 93 — Cl. 93 #13-33, Bogotá',
+      latitud: 4.6665, longitud: -74.0536,
+      estado: 'en_proceso', creado_por: jefeId,
+    });
+    const puestoEnProgresoId = await ins(conn, 'oferta_puestos', {
+      oferta_id: ofertaEnProgresoId, cargo_id: cargoAuxiliarId,
+      plazas: 2, plazas_cubiertas: 1, tarifa_dia: 130000,
     });
 
-    // (d) Oferta ayer — asignacion COMPLETADA (Juan)
+    // (d) Completado — CEDI Cota ayer, 7.9 h
     const ofertaCompletadaId = await ins(conn, 'ofertas_turno', {
-      empresa_id:        empresaId,
-      titulo:            'Inventario almacén — CEDI Cota',
-      descripcion:       'Conteo y organización de inventario.',
-      fecha:             dateStr(addDays(now, -1)),
-      hora_inicio:       '07:00:00',
-      hora_fin_estimada: '15:00:00',
-      lugar:             'CEDI Cota — Vía Cota-Siberia km 2',
-      latitud:           4.8115,
-      longitud:          -74.1084,
-      plazas_disponibles: 4,
-      plazas_cubiertas:   2,
-      tarifa_dia:        115000,
-      estado:            'completada',
-      creado_por:        jefeId,
+      empresa_id: empresaId,
+      titulo: 'Inventario almacén — CEDI Cota',
+      descripcion: 'Conteo y organización de inventario.',
+      fecha: dateStr(addDays(now, -1)),
+      hora_inicio: '07:00:00', hora_fin_estimada: '15:00:00',
+      lugar: 'CEDI Cota — Vía Cota-Siberia km 2',
+      latitud: 4.8115, longitud: -74.1084,
+      estado: 'completada', creado_por: jefeId,
+    });
+    const puestoCompletadoId = await ins(conn, 'oferta_puestos', {
+      oferta_id: ofertaCompletadaId, cargo_id: cargoAuxiliarId,
+      plazas: 4, plazas_cubiertas: 2, tarifa_dia: 115000,
     });
 
-    // (e) Oferta hace 2 días — asignacion NO_PRESENTADO (María)
+    // (e) No presentado — Plaza Américas hace 2 días (María)
     const ofertaNoPresentadoId = await ins(conn, 'ofertas_turno', {
-      empresa_id:        empresaId,
-      titulo:            'Apoyo fuerza de ventas — Plaza Américas',
-      fecha:             dateStr(addDays(now, -2)),
-      hora_inicio:       '09:00:00',
-      hora_fin_estimada: '17:00:00',
-      lugar:             'Plaza de las Américas — Av. Boyacá 63-99, Bogotá',
-      latitud:           4.6095,
-      longitud:          -74.1223,
-      plazas_disponibles: 2,
-      plazas_cubiertas:   0,
-      tarifa_dia:        110000,
-      estado:            'completada',
-      creado_por:        jefeId,
+      empresa_id: empresaId,
+      titulo: 'Apoyo fuerza de ventas — Plaza Américas',
+      fecha: dateStr(addDays(now, -2)),
+      hora_inicio: '09:00:00', hora_fin_estimada: '17:00:00',
+      lugar: 'Plaza de las Américas — Av. Boyacá 63-99',
+      latitud: 4.6095, longitud: -74.1223,
+      estado: 'completada', creado_por: jefeId,
+    });
+    const puestoNoPresentadoId = await ins(conn, 'oferta_puestos', {
+      oferta_id: ofertaNoPresentadoId, cargo_id: cargoAuxiliarId,
+      plazas: 2, plazas_cubiertas: 0, tarifa_dia: 110000,
     });
 
-    // (f) Oferta hace 3 días — asignacion CANCELADA (María)
+    // (f) Cancelado — CityPark hace 3 días (María)
     const ofertaCanceladaId = await ins(conn, 'ofertas_turno', {
-      empresa_id:        empresaId,
-      titulo:            'Soporte logístico — CityPark',
-      fecha:             dateStr(addDays(now, -3)),
-      hora_inicio:       '08:00:00',
-      hora_fin_estimada: '16:00:00',
-      lugar:             'CityPark — Av. El Dorado, Bogotá',
-      latitud:           4.6596,
-      longitud:          -74.0815,
-      plazas_disponibles: 3,
-      plazas_cubiertas:   0,
-      tarifa_dia:        105000,
-      estado:            'cancelada',
-      creado_por:        jefeId,
+      empresa_id: empresaId,
+      titulo: 'Soporte logístico — CityPark',
+      fecha: dateStr(addDays(now, -3)),
+      hora_inicio: '08:00:00', hora_fin_estimada: '16:00:00',
+      lugar: 'CityPark — Av. El Dorado, Bogotá',
+      latitud: 4.6596, longitud: -74.0815,
+      estado: 'cancelada', creado_por: jefeId,
+    });
+    const puestoCanceladoId = await ins(conn, 'oferta_puestos', {
+      oferta_id: ofertaCanceladaId, cargo_id: cargoAuxiliarId,
+      plazas: 3, plazas_cubiertas: 0, tarifa_dia: 105000,
     });
 
-    // (g) Oferta futura — asignacion CONFIRMADA (María) — sin coords (libre)
+    // (g) Confirmado — Teletrabajo en 2 días (María, sin geofence)
     const ofertaLibreId = await ins(conn, 'ofertas_turno', {
-      empresa_id:        empresaId,
-      titulo:            'Atención call center — teletrabajo',
-      descripcion:       'Turno remoto, sin requisito de ubicación.',
-      fecha:             dateStr(addDays(now, 2)),
-      hora_inicio:       '14:00:00',
-      hora_fin_estimada: '22:00:00',
-      lugar:             'Remoto (teletrabajo)',
-      latitud:           null,
-      longitud:          null,
-      plazas_disponibles: 10,
-      plazas_cubiertas:   1,
-      tarifa_dia:        95000,
-      estado:            'abierta',
-      creado_por:        jefeId,
+      empresa_id: empresaId,
+      titulo: 'Atención call center — teletrabajo',
+      descripcion: 'Turno remoto, sin requisito de ubicación.',
+      fecha: dateStr(addDays(now, 2)),
+      hora_inicio: '14:00:00', hora_fin_estimada: '22:00:00',
+      lugar: 'Remoto (teletrabajo)',
+      latitud: null, longitud: null,
+      estado: 'abierta', creado_por: jefeId,
+    });
+    const puestoLibreId = await ins(conn, 'oferta_puestos', {
+      oferta_id: ofertaLibreId, cargo_id: cargoAuxiliarId,
+      plazas: 10, plazas_cubiertas: 1, tarifa_dia: 95000,
     });
 
-    console.log('  ✓ Ofertas de turno creadas');
+    console.log('  ✓ Ofertas y puestos creados');
 
-    // ── 8. Asignaciones ────────────────────────────────────────────────────────
-
-    const ingresoReal = addHours(now, -2);  // ingresó hace 2 horas
-
-    const egresoReal  = addHours(new Date(dateStr(addDays(now, -1)) + 'T07:00:00'), 8);
-    const ingresoAyer = new Date(dateStr(addDays(now, -1)) + 'T07:05:00');
+    // ── 9. Asignaciones ───────────────────────────────────────────────────
+    const ingresoReal  = addHours(now, -2);
+    const ingresoAyer  = new Date(`${dateStr(addDays(now, -1))}T07:05:00`);
+    const egresoAyer   = addHours(ingresoAyer, 8);
 
     // Juan → pendiente
     await ins(conn, 'asignaciones_turno', {
-      empresa_id:    empresaId,
-      oferta_id:     ofertaPendienteId,
-      trabajador_id: tJuanId,
-      estado:        'pendiente',
+      empresa_id: empresaId, oferta_id: ofertaPendienteId,
+      puesto_id: puestoPendienteId, trabajador_id: tJuanId, estado: 'pendiente',
     });
 
     // Juan → confirmado (geofence activo — habilita "Marcar Ingreso")
     await ins(conn, 'asignaciones_turno', {
-      empresa_id:    empresaId,
-      oferta_id:     ofertaConfirmadaId,
-      trabajador_id: tJuanId,
-      estado:        'confirmado',
+      empresa_id: empresaId, oferta_id: ofertaConfirmadaId,
+      puesto_id: puestoConfirmadoId, trabajador_id: tJuanId, estado: 'confirmado',
     });
 
     // Juan → en_progreso (timer corre desde hace 2 h)
     await ins(conn, 'asignaciones_turno', {
-      empresa_id:         empresaId,
-      oferta_id:          ofertaEnProgresoId,
-      trabajador_id:      tJuanId,
-      estado:             'en_progreso',
-      hora_ingreso_real:  datetimeStr(ingresoReal),
-      latitud_ingreso:    4.6665,
-      longitud_ingreso:   -74.0536,
+      empresa_id: empresaId, oferta_id: ofertaEnProgresoId,
+      puesto_id: puestoEnProgresoId, trabajador_id: tJuanId,
+      estado: 'en_progreso',
+      hora_ingreso_real: datetimeStr(ingresoReal),
+      latitud_ingreso: 4.6665, longitud_ingreso: -74.0536,
     });
 
-    // Juan → completado (ayer, 8 h trabajadas)
+    // Juan → completado (ayer, 7.9 h, $113.850)
     await ins(conn, 'asignaciones_turno', {
-      empresa_id:        empresaId,
-      oferta_id:         ofertaCompletadaId,
-      trabajador_id:     tJuanId,
-      estado:            'completado',
+      empresa_id: empresaId, oferta_id: ofertaCompletadaId,
+      puesto_id: puestoCompletadoId, trabajador_id: tJuanId,
+      estado: 'completado',
       hora_ingreso_real: datetimeStr(ingresoAyer),
-      hora_egreso_real:  datetimeStr(egresoReal),
-      latitud_ingreso:   4.8115,
-      longitud_ingreso:  -74.1084,
-      horas_trabajadas:  7.9,
-      pago_total:        113850,     // 115000 * (7.9/8) ≈ 113 k
+      hora_egreso_real:  datetimeStr(egresoAyer),
+      latitud_ingreso: 4.8115, longitud_ingreso: -74.1084,
+      horas_trabajadas: 7.9, pago_total: 113850, pago_extra: 0,
     });
 
     // María → no_presentado
     await ins(conn, 'asignaciones_turno', {
-      empresa_id:    empresaId,
-      oferta_id:     ofertaNoPresentadoId,
-      trabajador_id: tMariaId,
-      estado:        'no_presentado',
+      empresa_id: empresaId, oferta_id: ofertaNoPresentadoId,
+      puesto_id: puestoNoPresentadoId, trabajador_id: tMariaId,
+      estado: 'no_presentado',
     });
 
     // María → cancelado
     await ins(conn, 'asignaciones_turno', {
-      empresa_id:    empresaId,
-      oferta_id:     ofertaCanceladaId,
-      trabajador_id: tMariaId,
-      estado:        'cancelado',
+      empresa_id: empresaId, oferta_id: ofertaCanceladaId,
+      puesto_id: puestoCanceladoId, trabajador_id: tMariaId,
+      estado: 'cancelado',
     });
 
     // María → confirmado sin coords (tipo libre — botón siempre activo)
     await ins(conn, 'asignaciones_turno', {
-      empresa_id:    empresaId,
-      oferta_id:     ofertaLibreId,
-      trabajador_id: tMariaId,
-      estado:        'confirmado',
+      empresa_id: empresaId, oferta_id: ofertaLibreId,
+      puesto_id: puestoLibreId, trabajador_id: tMariaId,
+      estado: 'confirmado',
     });
 
     console.log('  ✓ Asignaciones creadas');
 
-    // ── Resumen ────────────────────────────────────────────────────────────────
+    // ── 10. Cargos trabajador (requerido por trabajador_cargos) ───────────
+    await ins(conn, 'trabajador_cargos', {
+      trabajador_empresa_id: teJuanId, cargo_id: cargoAuxiliarId,
+      asignado_por: adminId,
+    });
+    console.log('  ✓ Cargos de trabajadores asignados');
 
+    // ── Resumen ────────────────────────────────────────────────────────────
     console.log('\n✅ Seed completado.\n');
     console.log('─────────────────────────────────────────────────────');
     console.log('  URL backend:   http://localhost:3001');
-    console.log('─────────────────────────────────────────────────────');
-    console.log('  Contraseña de todos los usuarios: Demo1234!');
+    console.log('  Contraseña:    Demo1234!');
     console.log('');
-    console.log('  admin@demo.co          → admin_empresa');
-    console.log('  jefe@demo.co           → jefe_turnos');
-    console.log('  juan.garcia@demo.co    → trabajador_turnos');
-    console.log('  maria.lopez@demo.co    → trabajador_turnos');
+    console.log('  admin@demo.co        → admin_empresa');
+    console.log('  jefe@demo.co         → jefe_turnos');
+    console.log('  juan.garcia@demo.co  → trabajador_turnos');
+    console.log('  maria.lopez@demo.co  → trabajador_turnos');
     console.log('');
     console.log('  Turnos de Juan García:');
-    console.log('    • pendiente    — Montaje Corferias (en 3 días)');
-    console.log('    • confirmado   — Zona Franca (mañana) — geofence 1 km');
-    console.log('    • en_progreso  — Parque 93 (hoy, ingreso hace 2 h) — timer vivo');
+    console.log('    • pendiente    — Corferias (en 3 días)');
+    console.log('    • confirmado   — Zona Franca (mañana, geofence oferta)');
+    console.log('    • en_progreso  — Parque 93 (hoy, ingreso hace 2 h) ← timer vivo');
     console.log('    • completado   — CEDI Cota (ayer, $113.850, 7.9 h)');
     console.log('');
     console.log('  Turnos de María López:');
-    console.log('    • confirmado   — Teletrabajo (en 2 días) — sin geofence');
-    console.log('    • no_presentado — Plaza Américas (hace 2 días)');
-    console.log('    • cancelado    — CityPark (hace 3 días)');
+    console.log('    • confirmado     — Teletrabajo (en 2 días, sin geofence)');
+    console.log('    • no_presentado  — Plaza Américas (hace 2 días)');
+    console.log('    • cancelado      — CityPark (hace 3 días)');
     console.log('─────────────────────────────────────────────────────\n');
 
   } catch (err) {
