@@ -6,6 +6,7 @@ const IntegracionModel = require('./integracion.model');
 const entrantesHandlers = require('./entrantes.handlers');
 const { firmar } = require('../../utils/hmac');
 const logger = require('../../utils/logger');
+const AppError = require('../../utils/AppError');
 
 /**
  * Servicio de integración con logiq360.
@@ -68,6 +69,11 @@ const IntegracionService = {
    * y lo procesa con el handler correspondiente.
    */
   async recibirEvento({ empresaId, eventId, tipoEvento, payload }) {
+    const cfg = await IntegracionModel.obtenerConfig(empresaId);
+    if (!cfg || !cfg.activo) {
+      throw new AppError('Integración no activa para este tenant', 403);
+    }
+
     let registroId;
     try {
       registroId = await IntegracionModel.registrarEntrante({
