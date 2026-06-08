@@ -39,6 +39,22 @@ function reglasTrabajador({ parcial }) {
     body('telefono').optional({ values: 'falsy' }).isString().trim(),
     body('cargo').optional({ values: 'falsy' }).isString().trim(),
     body('external_ref').optional({ values: 'falsy' }).isString().trim(),
+    // Perfil extendido (todos opcionales)
+    body('tipo_documento').optional().isIn(['CC', 'CE', 'PAS']).withMessage('tipo_documento inválido'),
+    body('fecha_nacimiento').optional({ values: 'falsy' }).isISO8601().withMessage('fecha_nacimiento debe ser YYYY-MM-DD'),
+    body('sexo').optional().isIn(['M', 'F', 'otro']).withMessage('sexo inválido'),
+    body('contacto_emergencia_nombre').optional({ values: 'falsy' }).isString().trim(),
+    body('contacto_emergencia_tel').optional({ values: 'falsy' }).isString().trim(),
+    body('eps').optional({ values: 'falsy' }).isString().trim(),
+    body('afp').optional({ values: 'falsy' }).isString().trim(),
+    body('banco').optional({ values: 'falsy' }).isString().trim(),
+    body('tipo_cuenta').optional().isIn(['ahorros', 'corriente']).withMessage('tipo_cuenta inválido'),
+    body('numero_cuenta').optional({ values: 'falsy' }).isString().trim(),
+    body('ant_judiciales_fecha').optional({ values: 'falsy' }).isISO8601().withMessage('ant_judiciales_fecha debe ser YYYY-MM-DD'),
+    body('ant_disciplinarios_fecha').optional({ values: 'falsy' }).isISO8601().withMessage('ant_disciplinarios_fecha debe ser YYYY-MM-DD'),
+    body('experiencias').optional().isArray(),
+    body('diplomas').optional().isArray(),
+    body('cargo_ids').optional().isArray(),
   ];
 }
 

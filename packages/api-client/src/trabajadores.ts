@@ -3,6 +3,10 @@ import type { TipoTrabajador } from './types';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
+export type TipoDocumento = 'CC' | 'CE' | 'PAS';
+export type SexoTrabajador = 'M' | 'F' | 'otro';
+export type TipoCuenta = 'ahorros' | 'corriente';
+
 export interface Trabajador {
   id: number;
   empresa_id: number;
@@ -10,12 +14,24 @@ export interface Trabajador {
   nombre: string;
   apellido: string;
   cedula: string | null;
+  tipo_documento: TipoDocumento | null;
+  fecha_nacimiento: string | null;
+  sexo: SexoTrabajador | null;
+  contacto_emergencia_nombre: string | null;
+  contacto_emergencia_tel: string | null;
   telefono: string | null;
   email: string | null;
   tipo: TipoTrabajador;
   cargo: string | null;
   tarifa_hora: number | null;
   salario_base: number | null;
+  eps: string | null;
+  afp: string | null;
+  banco: string | null;
+  tipo_cuenta: TipoCuenta | null;
+  numero_cuenta: string | null;
+  ant_judiciales_fecha: string | null;
+  ant_disciplinarios_fecha: string | null;
   activo: boolean;
   external_ref: string | null;
   ranking: number | null;
@@ -35,16 +51,44 @@ export interface TrabajadoresListResponse {
   pagination: { page: number; limit: number; total: number };
 }
 
+export interface ExperienciaPayload {
+  empresa_nombre: string;
+  cargo: string;
+  fecha_inicio: string;
+  fecha_fin?: string | null;
+}
+
+export interface DiplomaPayload {
+  titulo: string;
+  institucion: string;
+  anio?: number | null;
+}
+
 export interface CrearTrabajadorPayload {
   nombre: string;
   apellido: string;
   tipo?: TipoTrabajador;
+  tipo_documento?: TipoDocumento;
   cedula?: string;
+  fecha_nacimiento?: string;
+  sexo?: SexoTrabajador;
   email?: string;
   telefono?: string;
+  contacto_emergencia_nombre?: string;
+  contacto_emergencia_tel?: string;
+  eps?: string;
+  afp?: string;
+  banco?: string;
+  tipo_cuenta?: TipoCuenta;
+  numero_cuenta?: string;
   cargo?: string;
   tarifa_hora?: number;
   salario_base?: number;
+  ant_judiciales_fecha?: string;
+  ant_disciplinarios_fecha?: string;
+  experiencias?: ExperienciaPayload[];
+  diplomas?: DiplomaPayload[];
+  cargo_ids?: number[];
   external_ref?: string;
 }
 

@@ -58,6 +58,11 @@ export type {
   TrabajadoresListResponse,
   CrearTrabajadorPayload,
   ActualizarTrabajadorPayload,
+  ExperienciaPayload,
+  DiplomaPayload,
+  TipoDocumento,
+  SexoTrabajador,
+  TipoCuenta,
 } from './trabajadores';
 export { adminApi } from './admin';
 export type {
