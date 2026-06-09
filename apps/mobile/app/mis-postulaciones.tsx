@@ -21,6 +21,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useMisTurnos } from '@/features/turnos/useTurnos';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import type { Asignacion, EstadoAsignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -50,19 +51,6 @@ const ESTADO_CFG: Record<string, {
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
-
-function SectionHeader({ title, count }: { title: string; count: number }) {
-  return (
-    <View className="flex-row items-center gap-2 px-5 mb-3 mt-1">
-      <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-        {title}
-      </Text>
-      <View className="bg-muted rounded-full min-w-[18px] h-[18px] items-center justify-center px-1">
-        <Text className="text-xs font-bold text-muted-foreground">{count}</Text>
-      </View>
-    </View>
-  );
-}
 
 function PostulacionCard({
   asignacion,

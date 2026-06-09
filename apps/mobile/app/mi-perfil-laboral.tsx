@@ -26,6 +26,8 @@ import {
   usePerfilLaboral,
   useUpdatePerfilLaboral,
 } from '@/features/equipo/perfil/usePerfilLaboral';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { InfoRow }        from '@/components/ui/InfoRow';
 import type { Trabajador, TipoDocumento, SexoTrabajador, TipoCuenta } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -37,37 +39,6 @@ function fmtFecha(iso: string | null) {
 }
 
 // ── Subcomponents ─────────────────────────────────────────────────────────
-
-function SectionHeader({ title }: { title: string }) {
-  return (
-    <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-5 mt-6 mb-2">
-      {title}
-    </Text>
-  );
-}
-
-function InfoRow({
-  label,
-  value,
-  last = false,
-}: {
-  label: string;
-  value: string | null | undefined;
-  last?: boolean;
-}) {
-  return (
-    <View
-      className={`flex-row items-center justify-between px-5 py-3.5 bg-card ${
-        !last ? 'border-b border-border' : ''
-      }`}
-    >
-      <Text className="text-sm text-muted-foreground w-36 shrink-0">{label}</Text>
-      <Text className="text-sm font-medium text-foreground flex-1 text-right" numberOfLines={1}>
-        {value || '—'}
-      </Text>
-    </View>
-  );
-}
 
 function PillRow<T extends string>({
   label,

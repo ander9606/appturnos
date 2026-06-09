@@ -31,7 +31,7 @@ export function WeekStrip({ days, selectedDate, datesWithShifts, onSelectDate, w
           accessibilityLabel="Semana anterior"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text className="text-lg font-semibold text-primary-500">‹</Text>
+          <Text className="text-lg font-semibold" style={{ color: primaryColor }}>‹</Text>
         </TouchableOpacity>
         <Text className="text-sm font-semibold text-foreground capitalize">{weekLabel}</Text>
         <TouchableOpacity
@@ -40,7 +40,7 @@ export function WeekStrip({ days, selectedDate, datesWithShifts, onSelectDate, w
           accessibilityLabel="Semana siguiente"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text className="text-lg font-semibold text-primary-500">›</Text>
+          <Text className="text-lg font-semibold" style={{ color: primaryColor }}>›</Text>
         </TouchableOpacity>
       </View>
 

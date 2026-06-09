@@ -33,6 +33,7 @@ import {
 } from '@/features/empresas/useTrabajadorEmpresa';
 import { empresasApi } from '@api-client';
 import type { Vinculo, EmpresaDirectorio } from '@api-client';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -42,21 +43,6 @@ function fmtFecha(iso: string) {
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
-
-function SectionHeader({ title, count }: { title: string; count?: number }) {
-  return (
-    <View className="flex-row items-center gap-2 px-5 mb-3 mt-2">
-      <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-        {title}
-      </Text>
-      {count != null && count > 0 && (
-        <View className="bg-primary-500 rounded-full min-w-[18px] h-[18px] items-center justify-center px-1">
-          <Text className="text-white text-xs font-bold">{count}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
 
 function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
   return (

@@ -7,7 +7,7 @@
  *
  * Colores: naranja (trabajador_turnos), verde (trabajador_nomina), azul (gestores).
  */
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -25,9 +25,12 @@ import { useTheme }     from '@/lib/theme';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { usePeriodos } from '@/features/nomina/useNomina';
-import { toISODate, fmtTime, fmtRange, getEstadoConfig } from '@/features/turnos/turnosUtils';
+import { toISODate, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';
-import type { Asignacion } from '@api-client';
+import { StatCard }       from '@/components/ui/StatCard';
+import { ActiveShiftCard } from '@/features/dashboard/ActiveShiftCard';
+import { NextShiftCard }   from '@/features/dashboard/NextShiftCard';
+import { NoShiftCard }     from '@/features/dashboard/NoShiftCard';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -35,194 +38,6 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 const WORKER_ROLES = ['trabajador_turnos', 'trabajador_nomina'];
 const MANAGE_ROLES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
-
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function calcProgress(inicio: string, fin: string | null): number {
-  if (!fin) return 0;
-  const now   = new Date();
-  const [ih, im] = inicio.split(':').map(Number);
-  const [fh, fm] = fin.split(':').map(Number);
-  const start = new Date(); start.setHours(ih, im, 0, 0);
-  const end   = new Date(); end.setHours(fh, fm, 0, 0);
-  const total   = end.getTime() - start.getTime();
-  const elapsed = now.getTime() - start.getTime();
-  if (total <= 0) return 100;
-  return Math.max(0, Math.min(100, (elapsed / total) * 100));
-}
-
-function minutesLeft(fin: string): number {
-  const [fh, fm] = fin.split(':').map(Number);
-  const end = new Date(); end.setHours(fh, fm, 0, 0);
-  return Math.max(0, Math.round((end.getTime() - Date.now()) / 60_000));
-}
-
-function hoursLabel(mins: number): string {
-  if (mins < 60) return `${mins}min restantes`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m > 0 ? `${h}h ${m}min restantes` : `${h}h restantes`;
-}
-
-// ── Sub-components ────────────────────────────────────────────────────────
-
-function ActiveShiftCard({
-  turno,
-  onPress,
-  onEgreso,
-  primaryColor,
-}: {
-  turno: Asignacion;
-  onPress: () => void;
-  onEgreso: () => void;
-  primaryColor: string;
-}) {
-  const [pct, setPct] = useState(() =>
-    calcProgress(turno.hora_inicio, turno.hora_fin_estimada),
-  );
-  const [minsLeft, setMinsLeft] = useState(() =>
-    turno.hora_fin_estimada ? minutesLeft(turno.hora_fin_estimada) : null,
-  );
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setPct(calcProgress(turno.hora_inicio, turno.hora_fin_estimada));
-      if (turno.hora_fin_estimada) setMinsLeft(minutesLeft(turno.hora_fin_estimada));
-    }, 60_000);
-    return () => clearInterval(id);
-  }, [turno.hora_inicio, turno.hora_fin_estimada]);
-
-  return (
-    <Pressable
-      onPress={onPress}
-      className="mx-4 mt-4 rounded-2xl p-5 gap-3 active:opacity-90"
-      style={{ backgroundColor: primaryColor }}
-    >
-      <View className="flex-row items-center justify-between">
-        <Text className="text-white/80 text-xs font-semibold uppercase tracking-wide">
-          {t('dashboard.activeShift')}
-        </Text>
-        <View className="bg-white/20 rounded-full px-3 py-1 flex-row items-center gap-1">
-          <View className="w-1.5 h-1.5 rounded-full bg-white" />
-          <Text className="text-white text-xs font-semibold">{t('dashboard.inProgress')}</Text>
-        </View>
-      </View>
-
-      <Text className="text-white text-xl font-bold" numberOfLines={1}>
-        {turno.oferta_titulo}
-      </Text>
-
-      <Text className="text-white/80 text-sm">
-        {fmtRange(turno.hora_inicio, turno.hora_fin_estimada)}
-        {turno.lugar ? `  ·  ${turno.lugar}` : ''}
-      </Text>
-
-      <View className="h-1.5 bg-white/30 rounded-full overflow-hidden">
-        <View
-          className="h-full bg-white rounded-full"
-          style={{ width: `${Math.round(pct)}%` }}
-        />
-      </View>
-
-      <Text className="text-white/70 text-xs">
-        {minsLeft != null ? hoursLabel(minsLeft) : ''}
-        {'  ·  '}
-        {pct.toFixed(0)}% completado
-      </Text>
-
-      <Pressable
-        onPress={(e) => { e.stopPropagation(); onEgreso(); }}
-        className="bg-white/20 rounded-xl py-2.5 items-center active:bg-white/30 mt-1"
-      >
-        <Text className="text-white text-sm font-semibold">Marcar Salida →</Text>
-      </Pressable>
-    </Pressable>
-  );
-}
-
-function NextShiftCard({
-  turno,
-  onPress,
-  onIngreso,
-  primaryColor,
-}: {
-  turno: Asignacion;
-  onPress: () => void;
-  onIngreso: () => void;
-  primaryColor: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className="mx-4 mt-4 bg-card rounded-2xl p-5 border border-border gap-2 active:opacity-80"
-    >
-      <View className="flex-row items-center justify-between">
-        <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-          Próximo turno hoy
-        </Text>
-        <View className="bg-info/10 rounded-full px-3 py-1">
-          <Text className="text-info text-xs font-semibold">Confirmado</Text>
-        </View>
-      </View>
-      <Text className="text-foreground text-lg font-bold" numberOfLines={1}>
-        {turno.oferta_titulo}
-      </Text>
-      <Text className="text-muted-foreground text-sm">
-        {fmtTime(turno.hora_inicio)}
-        {turno.hora_fin_estimada ? ` – ${fmtTime(turno.hora_fin_estimada)}` : ''}
-        {turno.lugar ? `  ·  ${turno.lugar}` : ''}
-      </Text>
-      <View className="flex-row gap-2 mt-1">
-        <Pressable
-          onPress={(e) => { e.stopPropagation(); onIngreso(); }}
-          className="flex-1 rounded-xl py-2 items-center active:opacity-70"
-          style={{ backgroundColor: primaryColor + '1A' }}
-        >
-          <Text className="text-xs font-semibold" style={{ color: primaryColor }}>
-            Marcar Entrada
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onPress}
-          className="flex-1 border border-border rounded-xl py-2 items-center active:opacity-70"
-        >
-          <Text className="text-muted-foreground text-xs font-semibold">Ver detalle →</Text>
-        </Pressable>
-      </View>
-    </Pressable>
-  );
-}
-
-function NoShiftCard() {
-  return (
-    <View className="mx-4 mt-4 bg-card rounded-2xl p-5 border border-border items-center gap-3">
-      <View className="w-14 h-14 rounded-full bg-muted items-center justify-center">
-        <Ionicons name="calendar-clear-outline" size={28} color="#94A3B8" />
-      </View>
-      <Text className="text-base font-semibold text-foreground">Sin turno activo hoy</Text>
-      <Text className="text-sm text-muted-foreground text-center">
-        No tienes turnos programados para hoy.
-      </Text>
-    </View>
-  );
-}
-
-function StatCard({
-  value,
-  label,
-  color = 'text-primary',
-}: {
-  value: string | number;
-  label: string;
-  color?: string;
-}) {
-  return (
-    <View className="flex-1 bg-card rounded-2xl p-4 gap-1 border border-border">
-      <Text className={`text-2xl font-extrabold ${color}`}>{value}</Text>
-      <Text className="text-xs text-muted-foreground">{label}</Text>
-    </View>
-  );
-}
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
