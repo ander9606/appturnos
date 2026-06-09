@@ -397,16 +397,38 @@ export default function PerfilScreen() {
           <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
             <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos} />
             {isTrabajadorTurnos && (
-              <Pressable
-                onPress={() => router.push('/mis-empresas')}
-                className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
-              >
-                <View className="flex-row items-center gap-3">
-                  <Ionicons name="business-outline" size={16} color="#64748B" />
-                  <Text className="text-sm font-medium text-foreground">Mis empresas</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-              </Pressable>
+              <>
+                <Pressable
+                  onPress={() => router.push('/mi-perfil-laboral')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="id-card-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Perfil laboral</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/mis-postulaciones')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="list-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Mis postulaciones</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/mis-empresas')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="business-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Mis empresas</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+              </>
             )}
           </View>
 

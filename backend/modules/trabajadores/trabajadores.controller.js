@@ -50,4 +50,14 @@ async function eliminar(req, res) {
   res.json({ success: true, data: null, message: 'Trabajador desactivado' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar };
+async function obtenerMe(req, res) {
+  const data = await TrabajadoresService.me(req.usuario.sub);
+  res.json({ success: true, data, message: 'Mi perfil laboral' });
+}
+
+async function actualizarMe(req, res) {
+  const data = await TrabajadoresService.actualizarMe(req.usuario.sub, req.body);
+  res.json({ success: true, data, message: 'Perfil actualizado' });
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar, obtenerMe, actualizarMe };

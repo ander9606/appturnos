@@ -18,6 +18,7 @@ const PUEDEN_VER = [
   ROLES.NOMINA,
 ];
 const SOLO_ADMIN = [ROLES.ADMIN_EMPRESA];
+const SOLO_TRABAJADOR_TURNOS = [ROLES.TRABAJADOR_TURNOS];
 
 const TIPOS = ['nomina', 'turnos', 'ambos'];
 
@@ -62,6 +63,34 @@ const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
 // Todas las rutas requieren autenticación.
 router.use(verificarToken);
+
+// GET /api/trabajadores/me — el trabajador obtiene su propio perfil completo.
+// Debe ir ANTES de /:id para que Express no interprete "me" como un ID numérico.
+router.get('/me', verificarRol(SOLO_TRABAJADOR_TURNOS), ctrl.obtenerMe);
+
+// PATCH /api/trabajadores/me — el trabajador actualiza sus datos de perfil
+router.patch(
+  '/me',
+  verificarRol(SOLO_TRABAJADOR_TURNOS),
+  [
+    body('tipo_documento').optional().isIn(['CC', 'CE', 'PAS']).withMessage('tipo_documento inválido'),
+    body('cedula').optional({ values: 'falsy' }).isString().trim(),
+    body('fecha_nacimiento').optional({ values: 'falsy' }).isISO8601().withMessage('fecha_nacimiento debe ser YYYY-MM-DD'),
+    body('sexo').optional().isIn(['M', 'F', 'otro']).withMessage('sexo inválido'),
+    body('telefono').optional({ values: 'falsy' }).isString().trim(),
+    body('contacto_emergencia_nombre').optional({ values: 'falsy' }).isString().trim(),
+    body('contacto_emergencia_tel').optional({ values: 'falsy' }).isString().trim(),
+    body('eps').optional({ values: 'falsy' }).isString().trim(),
+    body('afp').optional({ values: 'falsy' }).isString().trim(),
+    body('banco').optional({ values: 'falsy' }).isString().trim(),
+    body('tipo_cuenta').optional().isIn(['ahorros', 'corriente']).withMessage('tipo_cuenta inválido'),
+    body('numero_cuenta').optional({ values: 'falsy' }).isString().trim(),
+    body('ant_judiciales_fecha').optional({ values: 'falsy' }).isISO8601().withMessage('fecha inválida'),
+    body('ant_disciplinarios_fecha').optional({ values: 'falsy' }).isISO8601().withMessage('fecha inválida'),
+  ],
+  validar,
+  ctrl.actualizarMe
+);
 
 // GET /api/trabajadores
 router.get(

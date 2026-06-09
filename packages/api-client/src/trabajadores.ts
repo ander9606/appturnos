@@ -95,6 +95,24 @@ export interface CrearTrabajadorPayload {
 
 export interface ActualizarTrabajadorPayload extends Partial<CrearTrabajadorPayload> {}
 
+/** Campos que el propio trabajador_turnos puede editar en su perfil. */
+export interface UpdateMePayload {
+  tipo_documento?: TipoDocumento;
+  cedula?: string;
+  fecha_nacimiento?: string;
+  sexo?: SexoTrabajador;
+  telefono?: string;
+  contacto_emergencia_nombre?: string;
+  contacto_emergencia_tel?: string;
+  eps?: string;
+  afp?: string;
+  banco?: string;
+  tipo_cuenta?: TipoCuenta;
+  numero_cuenta?: string;
+  ant_judiciales_fecha?: string;
+  ant_disciplinarios_fecha?: string;
+}
+
 // ── API ───────────────────────────────────────────────────────────────────
 
 export const trabajadoresApi = {
@@ -119,4 +137,12 @@ export const trabajadoresApi = {
 
   desactivar: (id: number): Promise<void> =>
     api.delete<void>(`/api/trabajadores/${id}`),
+
+  /** Trabajador: obtener su propio perfil laboral completo. */
+  me: (): Promise<Trabajador> =>
+    api.get<Trabajador>('/api/trabajadores/me'),
+
+  /** Trabajador: actualizar sus propios datos de perfil. */
+  updateMe: (payload: UpdateMePayload): Promise<Trabajador> =>
+    api.patch<Trabajador>('/api/trabajadores/me', payload),
 };

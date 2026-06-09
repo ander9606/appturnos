@@ -159,6 +159,20 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
               }}
             />
+            <Stack.Screen
+              name="mi-perfil-laboral"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_right',
+              }}
+            />
+            <Stack.Screen
+              name="mis-postulaciones"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_right',
+              }}
+            />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

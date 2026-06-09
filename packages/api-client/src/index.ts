@@ -67,6 +67,7 @@ export type {
   TrabajadoresListResponse,
   CrearTrabajadorPayload,
   ActualizarTrabajadorPayload,
+  UpdateMePayload,
   ExperienciaPayload,
   DiplomaPayload,
   TipoDocumento,

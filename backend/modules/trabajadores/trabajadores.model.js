@@ -197,6 +197,31 @@ const TrabajadoresModel = {
     );
     return res.affectedRows;
   },
+
+  // Campos que el propio trabajador puede editar sobre sí mismo.
+  async actualizarPorUsuarioId(usuarioId, datos) {
+    const CAMPOS_ME = [
+      'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo', 'telefono',
+      'contacto_emergencia_nombre', 'contacto_emergencia_tel',
+      'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
+      'ant_judiciales_fecha', 'ant_disciplinarios_fecha',
+    ];
+    const sets = [];
+    const params = [];
+    for (const campo of CAMPOS_ME) {
+      if (datos[campo] !== undefined) {
+        sets.push(`${campo} = ?`);
+        params.push(datos[campo] === '' ? null : datos[campo]);
+      }
+    }
+    if (sets.length === 0) return 0;
+    params.push(usuarioId);
+    const [res] = await pool.query(
+      `UPDATE trabajadores SET ${sets.join(', ')} WHERE usuario_id = ? AND activo = 1`,
+      params
+    );
+    return res.affectedRows;
+  },
 };
 
 module.exports = TrabajadoresModel;
