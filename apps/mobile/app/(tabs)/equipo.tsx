@@ -38,7 +38,9 @@ const MANAGE_ROLES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
 
 function WorkerView() {
   const router = useRouter();
-  const { data, isLoading } = useMisEmpresas();
+  const rol    = useAuthStore((s) => s.usuario?.rol);
+  // Only trabajador_turnos can call mis-empresas; trabajador_nomina gets a 403
+  const { data, isLoading } = useMisEmpresas({ enabled: rol === 'trabajador_turnos' });
   const activas     = data?.activas     ?? [];
   const pendientes  = data?.pendientes  ?? [];
   const invitaciones = data?.invitaciones ?? [];
@@ -140,7 +142,7 @@ export default function EquipoScreen() {
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
-  const { data: solicitudesData = [] } = useSolicitudes('pendientes');
+  const { data: solicitudesData = [] } = useSolicitudes(); // undefined → backend default: both pending states
   const pendientesCount = solicitudesData.length;
 
   const { data, isLoading, isError, refetch } = useTrabajadores({

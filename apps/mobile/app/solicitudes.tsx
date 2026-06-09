@@ -43,7 +43,7 @@ function getInitials(nombre?: string, apellido?: string): string {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-type TabEstado = 'pendientes' | 'todas';
+type TabEstado = 'pendientes' | 'aprobadas';
 
 function TabBar({
   active,
@@ -52,11 +52,11 @@ function TabBar({
 }: {
   active: TabEstado;
   onChange: (t: TabEstado) => void;
-  counts: { pendientes: number; todas: number };
+  counts: { pendientes: number; aprobadas: number };
 }) {
   const tabs: { key: TabEstado; label: string }[] = [
     { key: 'pendientes', label: 'Pendientes' },
-    { key: 'todas',      label: 'Todas' },
+    { key: 'aprobadas',  label: 'Aprobadas' },
   ];
 
   return (
@@ -175,7 +175,9 @@ export default function SolicitudesScreen() {
   const [search, setSearch] = useState('');
   const [loadingId, setLoadingId] = useState<number | null>(null);
 
-  const estadoFiltro = tab === 'pendientes' ? 'pendientes' : undefined;
+  // undefined → backend default = IN ('solicitado_por_trabajador', 'solicitado_por_empresa')
+  // 'activo'  → vínculo ya aprobado
+  const estadoFiltro = tab === 'aprobadas' ? 'activo' : undefined;
   const { data = [], isLoading, refetch } = useSolicitudes(estadoFiltro);
 
   const aprobar  = useAprobar();
@@ -192,6 +194,7 @@ export default function SolicitudesScreen() {
   });
 
   const pendientesCount = tab === 'pendientes' ? solicitudes.length : 0;
+  const aprobadosCount  = tab === 'aprobadas'  ? solicitudes.length : 0;
 
   const handleAprobar = async (id: number) => {
     setLoadingId(id);
@@ -266,7 +269,7 @@ export default function SolicitudesScreen() {
         <TabBar
           active={tab}
           onChange={setTab}
-          counts={{ pendientes: pendientesCount, todas: solicitudes.length }}
+          counts={{ pendientes: pendientesCount, aprobadas: aprobadosCount }}
         />
 
         {/* Empty state */}
@@ -276,12 +279,12 @@ export default function SolicitudesScreen() {
               <Ionicons name="people-outline" size={32} color="#94A3B8" />
             </View>
             <Text className="text-lg font-bold text-foreground text-center">
-              {tab === 'pendientes' ? 'Sin solicitudes pendientes' : 'Sin solicitudes'}
+              {tab === 'pendientes' ? 'Sin solicitudes pendientes' : 'Sin vínculos aprobados'}
             </Text>
             <Text className="text-sm text-muted-foreground text-center">
               {tab === 'pendientes'
                 ? 'No hay solicitudes de vinculación que requieran tu atención.'
-                : 'Aún no hay solicitudes de vinculación registradas.'}
+                : 'Ningún trabajador tiene vínculo activo con esta empresa aún.'}
             </Text>
           </View>
         )}

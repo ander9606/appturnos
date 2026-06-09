@@ -10,11 +10,12 @@ export const TE_KEYS = {
 
 // ── Worker hooks ──────────────────────────────────────────────────────────
 
-export function useMisEmpresas() {
+export function useMisEmpresas({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: TE_KEYS.misEmpresas,
     queryFn: () => trabajadorEmpresaApi.misEmpresas(),
     staleTime: 30_000,
+    enabled,
   });
 }
 
