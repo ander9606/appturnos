@@ -74,6 +74,7 @@ export type {
   SexoTrabajador,
   TipoCuenta,
 } from './trabajadores';
+export { notificacionesApi } from './notificaciones';
 export { adminApi } from './admin';
 export type {
   EmpresaAdmin,

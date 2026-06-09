@@ -9,6 +9,7 @@ const IntegracionService = require('../../integracion/integracion.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
+const { calcularHoras } = require('../../../utils/laboralUtils');
 
 const DIAS   = ['dom','lun','mar','mié','jue','vie','sáb'];
 const MESES  = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -260,11 +261,32 @@ const AsignacionesService = {
   async misTurnos(empresaId, usuarioId) {
     // trabajador_turnos tiene empresa_id = null en el JWT (multi-empresa).
     // Se localiza por usuario_id a través de trabajador_empresa.
+    let asignaciones;
     if (!empresaId) {
-      return AsignacionesModel.listarPorUsuario(usuarioId);
+      asignaciones = await AsignacionesModel.listarPorUsuario(usuarioId);
+    } else {
+      const trabajador = await resolverTrabajador(empresaId, usuarioId);
+      asignaciones = await AsignacionesModel.listarPorTrabajador(empresaId, trabajador.id);
     }
-    const trabajador = await resolverTrabajador(empresaId, usuarioId);
-    return AsignacionesModel.listarPorTrabajador(empresaId, trabajador.id);
+
+    // Enrich completado shifts with Colombian labor-law hour breakdown.
+    // mysql2 may return DATETIME as a Date object or a string; extractTime handles both.
+    const extractTime = (dt) => {
+      const s = dt instanceof Date ? dt.toISOString() : String(dt);
+      return s.slice(11, 19); // 'HH:MM:SS'
+    };
+
+    return asignaciones.map((a) => {
+      if (a.estado !== 'completado' || !a.hora_ingreso_real || !a.hora_egreso_real) {
+        return a;
+      }
+      const desglose = calcularHoras({
+        horaEntrada: extractTime(a.hora_ingreso_real),
+        horaSalida:  extractTime(a.hora_egreso_real),
+        fecha:       a.oferta_fecha,
+      });
+      return { ...a, ...desglose };
+    });
   },
 
   async liquidacion(empresaId, { fecha_inicio, fecha_fin }) {

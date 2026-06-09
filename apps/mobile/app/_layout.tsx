@@ -14,6 +14,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { registerPushNotifications } from '@/lib/pushNotifications';
 
 // ── TanStack Query client ─────────────────────────────────────────────────
 
@@ -45,6 +46,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     rehydrate();
   }, []);
+
+  // Register Expo push token once authenticated
+  useEffect(() => {
+    if (status === 'authenticated') {
+      registerPushNotifications();
+    }
+  }, [status]);
 
   useEffect(() => {
     if (status === 'unknown') return; // still loading

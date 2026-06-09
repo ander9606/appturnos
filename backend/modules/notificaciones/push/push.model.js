@@ -38,6 +38,32 @@ const PushModel = {
     );
     return res.affectedRows;
   },
+
+  // ── Expo Push Tokens ──────────────────────────────────────────────────────
+
+  async guardarExpoToken(usuarioId, token) {
+    await pool.query(
+      `INSERT INTO expo_push_tokens (usuario_id, token) VALUES (?, ?)
+       ON DUPLICATE KEY UPDATE usuario_id = VALUES(usuario_id)`,
+      [usuarioId, token]
+    );
+  },
+
+  async listarExpoTokensPorUsuario(usuarioId) {
+    const [filas] = await pool.query(
+      'SELECT token FROM expo_push_tokens WHERE usuario_id = ?',
+      [usuarioId]
+    );
+    return filas.map((f) => f.token);
+  },
+
+  async eliminarExpoToken(usuarioId, token) {
+    const [res] = await pool.query(
+      'DELETE FROM expo_push_tokens WHERE usuario_id = ? AND token = ?',
+      [usuarioId, token]
+    );
+    return res.affectedRows;
+  },
 };
 
 module.exports = PushModel;

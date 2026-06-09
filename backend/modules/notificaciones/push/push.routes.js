@@ -34,4 +34,20 @@ router.delete(
   ctrl.desuscribir
 );
 
+// POST /api/push/expo-token  → registra un Expo push token (app móvil)
+router.post(
+  '/expo-token',
+  [body('token').notEmpty().withMessage('token requerido')],
+  validar,
+  ctrl.registrarExpoToken
+);
+
+// DELETE /api/push/expo-token  → elimina el Expo push token
+router.delete(
+  '/expo-token',
+  [body('token').notEmpty().withMessage('token requerido')],
+  validar,
+  ctrl.eliminarExpoToken
+);
+
 module.exports = router;
