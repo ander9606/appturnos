@@ -9,6 +9,13 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export { empresasApi } from './empresas';
 export type { EmpresaDirectorio, DirectorioResponse } from './empresas';
+export { trabajadorEmpresaApi } from './trabajador-empresa';
+export type {
+  Vinculo,
+  MisEmpresasResponse,
+  SolicitudAdmin,
+  EstadoVinculo,
+} from './trabajador-empresa';
 export type {
   LoginResponse,
   ActivarCuentaResponse,

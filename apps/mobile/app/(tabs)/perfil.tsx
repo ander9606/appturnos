@@ -22,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { authApi } from '@api-client';
 import { t } from '@/lib/i18n';
@@ -235,9 +236,11 @@ function ChangePasswordForm({
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function PerfilScreen() {
+  const router         = useRouter();
   const usuario        = useAuthStore((s) => s.usuario);
   const logout         = useAuthStore((s) => s.logout);
   const setUsuario     = useAuthStore((s) => s.setUsuario);
+  const isTrabajadorTurnos = usuario?.rol === 'trabajador_turnos';
 
   const [editingDatos,    setEditingDatos]    = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
@@ -392,7 +395,19 @@ export default function PerfilScreen() {
           <SectionHeader title={t('perfil.cuenta')} />
 
           <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
-            <CardRow label={t('perfil.rol')}     value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last />
+            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos} />
+            {isTrabajadorTurnos && (
+              <Pressable
+                onPress={() => router.push('/mis-empresas')}
+                className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+              >
+                <View className="flex-row items-center gap-3">
+                  <Ionicons name="business-outline" size={16} color="#64748B" />
+                  <Text className="text-sm font-medium text-foreground">Mis empresas</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </Pressable>
+            )}
           </View>
 
           {/* ── Cerrar sesión ────────────────────────────────────── */}

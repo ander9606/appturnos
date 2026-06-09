@@ -161,18 +161,28 @@ export default function LoginScreen() {
             size="lg"
           />
 
-          {/* Footer link → Activar cuenta */}
-          <View className="flex-row justify-center gap-1 mt-2">
-            <Text className="text-sm text-muted-foreground">
-              {t('auth.login.noAccount')}
-            </Text>
-            <Link href="/(auth)/activar" asChild>
-              <TouchableOpacity>
-                <Text className="text-sm font-semibold text-primary-500">
-                  {t('auth.login.activateLink')}
-                </Text>
-              </TouchableOpacity>
-            </Link>
+          {/* Footer links */}
+          <View className="items-center gap-2 mt-2">
+            <View className="flex-row justify-center gap-1">
+              <Text className="text-sm text-muted-foreground">¿Sin cuenta aún?</Text>
+              <Link href="/(auth)/registro" asChild>
+                <TouchableOpacity>
+                  <Text className="text-sm font-semibold text-primary-500">Crear cuenta</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+            <View className="flex-row justify-center gap-1">
+              <Text className="text-sm text-muted-foreground">
+                {t('auth.login.noAccount')}
+              </Text>
+              <Link href="/(auth)/activar" asChild>
+                <TouchableOpacity>
+                  <Text className="text-sm font-semibold text-primary-500">
+                    {t('auth.login.activateLink')}
+                  </Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
           </View>
         </View>
       </ScrollView>
