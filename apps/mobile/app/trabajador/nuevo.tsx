@@ -8,6 +8,7 @@ import { StepIndicator } from '@/features/equipo/perfil/StepIndicator';
 import { Step1DatosPersonales } from '@/features/equipo/perfil/Step1DatosPersonales';
 import { Step2SeguridadSocial } from '@/features/equipo/perfil/Step2SeguridadSocial';
 import { Step3Documentos } from '@/features/equipo/perfil/Step3Documentos';
+import { Step4Empresas } from '@/features/equipo/perfil/Step4Empresas';
 import { INITIAL } from '@/features/equipo/perfil/types';
 import { buildFecha, buildMesAnio } from '@/features/equipo/perfil/utils';
 import type { WizardData } from '@/features/equipo/perfil/types';
@@ -54,7 +55,8 @@ export default function NuevoTrabajadorScreen() {
           institucion: d.institucion,
           anio:        d.anio ? parseInt(d.anio, 10) : undefined,
         })),
-        cargo_ids: data.cargo_ids.length ? data.cargo_ids : undefined,
+        cargo_ids:   data.cargo_ids.length   ? data.cargo_ids   : undefined,
+        empresa_ids: data.empresa_ids.length ? data.empresa_ids : undefined,
       });
       router.replace(`/trabajador/${t.id}`);
     } catch (err: unknown) {
@@ -76,7 +78,7 @@ export default function NuevoTrabajadorScreen() {
           animation: 'slide_from_right',
         }}
       />
-      <StepIndicator current={step} />
+      <StepIndicator current={step} total={4} />
       {step === 1 && (
         <Step1DatosPersonales data={data} onChange={patch} onNext={() => setStep(2)} />
       )}
@@ -84,7 +86,10 @@ export default function NuevoTrabajadorScreen() {
         <Step2SeguridadSocial data={data} onChange={patch} onBack={() => setStep(1)} onNext={() => setStep(3)} />
       )}
       {step === 3 && (
-        <Step3Documentos data={data} onChange={patch} onBack={() => setStep(2)} onSubmit={handleCreate} />
+        <Step3Documentos data={data} onChange={patch} onBack={() => setStep(2)} onNext={() => setStep(4)} />
+      )}
+      {step === 4 && (
+        <Step4Empresas data={data} onChange={patch} onBack={() => setStep(3)} onSubmit={handleCreate} />
       )}
     </SafeAreaView>
   );

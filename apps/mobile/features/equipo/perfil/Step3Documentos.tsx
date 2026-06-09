@@ -201,22 +201,16 @@ type Props = {
   data: WizardData;
   onChange: (patch: Partial<WizardData>) => void;
   onBack: () => void;
-  onSubmit: () => Promise<void>;
+  onNext: () => void;
 };
 
-export function Step3Documentos({ data, onChange, onBack, onSubmit }: Props) {
-  const [submitting, setSubmitting] = React.useState(false);
+export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
   const { data: cargos, isLoading: cargosLoading } = useCargos();
 
-  const handleSubmit = async () => {
+  const handleNext = () => {
     const err = validateStep3(data);
     if (err) { Alert.alert('Datos incompletos', err); return; }
-    setSubmitting(true);
-    try {
-      await onSubmit();
-    } finally {
-      setSubmitting(false);
-    }
+    onNext();
   };
 
   const addExperiencia = () =>
@@ -374,17 +368,10 @@ export function Step3Documentos({ data, onChange, onBack, onSubmit }: Props) {
       {/* Navigation */}
       <View className="flex-row gap-3 mt-2">
         <View className="flex-1">
-          <Button label="← Atrás" variant="secondary" size="lg" fullWidth onPress={onBack} disabled={submitting} />
+          <Button label="← Atrás" variant="secondary" size="lg" fullWidth onPress={onBack} />
         </View>
         <View className="flex-1">
-          <Button
-            label={submitting ? 'Creando…' : 'Crear trabajador'}
-            variant="primary"
-            size="lg"
-            fullWidth
-            onPress={handleSubmit}
-            loading={submitting}
-          />
+          <Button label="Siguiente →" variant="primary" size="lg" fullWidth onPress={handleNext} />
         </View>
       </View>
     </ScrollView>

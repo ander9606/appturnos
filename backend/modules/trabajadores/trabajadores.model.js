@@ -101,8 +101,9 @@ const TrabajadoresModel = {
             telefono, email, tipo, cargo, tarifa_hora, salario_base,
             contacto_emergencia_nombre, contacto_emergencia_tel,
             eps, afp, banco, tipo_cuenta, numero_cuenta,
-            ant_judiciales_fecha, ant_disciplinarios_fecha, external_ref)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            ant_judiciales_fecha, ant_disciplinarios_fecha,
+            empresas_postulacion, external_ref)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           empresaId,
           datos.nombre,
@@ -126,6 +127,7 @@ const TrabajadoresModel = {
           datos.numero_cuenta ?? null,
           datos.ant_judiciales_fecha ?? null,
           datos.ant_disciplinarios_fecha ?? null,
+          datos.empresa_ids?.length ? JSON.stringify(datos.empresa_ids) : null,
           datos.external_ref ?? null,
         ]
       );

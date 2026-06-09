@@ -10,15 +10,19 @@ const ctrl = require('./empresas.controller');
 
 const router = express.Router();
 
-// Solo trabajadores-turnos usan el directorio (los jefes/admins
-// ya conocen su empresa directamente).
-const SOLO_TURNOS = [ROLES.TRABAJADOR_TURNOS];
+// Trabajadores ven el directorio para postularse; admins/jefes lo ven
+// para seleccionar empresas al crear perfiles de trabajadores.
+const PUEDEN_VER_DIRECTORIO = [
+  ROLES.TRABAJADOR_TURNOS,
+  ROLES.ADMIN_EMPRESA,
+  ROLES.JEFE_TURNOS,
+];
 
 // GET /api/empresas/directorio — directorio público de empleadores
 router.get(
   '/directorio',
   verificarToken,
-  verificarRol(SOLO_TURNOS),
+  verificarRol(PUEDEN_VER_DIRECTORIO),
   [
     query('busqueda').optional().isString().trim(),
     query('ciudad').optional().isString().trim(),
@@ -33,7 +37,7 @@ router.get(
 router.get(
   '/:id',
   verificarToken,
-  verificarRol(SOLO_TURNOS),
+  verificarRol(PUEDEN_VER_DIRECTORIO),
   [param('id').isInt({ min: 1 }).toInt().withMessage('id de empresa inválido')],
   validar,
   ctrl.detalle

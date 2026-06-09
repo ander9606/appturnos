@@ -89,6 +89,7 @@ export interface CrearTrabajadorPayload {
   experiencias?: ExperienciaPayload[];
   diplomas?: DiplomaPayload[];
   cargo_ids?: number[];
+  empresa_ids?: number[];
   external_ref?: string;
 }
 

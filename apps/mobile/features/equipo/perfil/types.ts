@@ -54,6 +54,8 @@ export interface WizardData {
   experiencias: ExperienciaInput[];
   diplomas: DiplomaInput[];
   cargo_ids: number[];
+  // Paso 4 — Empresas donde quiere trabajar
+  empresa_ids: number[];
 }
 
 export const INITIAL: WizardData = {
@@ -71,4 +73,5 @@ export const INITIAL: WizardData = {
   experiencias: [],
   diplomas: [],
   cargo_ids: [],
+  empresa_ids: [],
 };
