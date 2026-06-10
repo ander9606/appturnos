@@ -203,8 +203,11 @@ const AsignacionesService = {
     }
     // tipo 'libre' → sin validación
 
-    await AsignacionesModel.registrarIngreso(empresaId, id, latitud, longitud);
-    await IntegracionService.emitir(empresaId, 'trabajador.ingreso', {
+    // Use empresa_id from the DB row — JWT empresa_id is null for marketplace workers.
+    const dbEmpresaId = asignacion.empresa_id;
+
+    await AsignacionesModel.registrarIngreso(dbEmpresaId, id, latitud, longitud);
+    await IntegracionService.emitir(dbEmpresaId, 'trabajador.ingreso', {
       asignacion_id: id,
       oferta_id: asignacion.oferta_id,
       trabajador_id: asignacion.trabajador_id,
@@ -216,13 +219,13 @@ const AsignacionesService = {
     const [gestores] = await pool.query(
       `SELECT id FROM usuarios
        WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
-      [empresaId]
+      [dbEmpresaId]
     );
     if (gestores.length > 0) {
       await NotificacionesService.notificarVarios(
         gestores.map((g) => g.id),
         {
-          empresaId,
+          empresaId: dbEmpresaId,
           tipo: 'turno.ingreso',
           titulo: 'Trabajador marcó ingreso',
           mensaje: `${trabajador.nombre} ${trabajador.apellido} registró su llegada al turno.`,
@@ -231,12 +234,16 @@ const AsignacionesService = {
       );
     }
 
-    return AsignacionesModel.obtenerPorId(empresaId, id);
+    return AsignacionesModel.obtenerPorId(dbEmpresaId, id);
   },
 
   async marcarEgreso(empresaId, id, usuarioId, { firma_b64 }) {
-    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+    // obtenerConDetalles handles null empresaId; obtenerPorId does not.
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+
+    // Use empresa_id from the DB row — JWT empresa_id is null for marketplace workers.
+    const dbEmpresaId = asignacion.empresa_id;
 
     const trabajador = await resolverTrabajador(empresaId, usuarioId);
     if (asignacion.trabajador_id !== trabajador.id) {
@@ -246,16 +253,16 @@ const AsignacionesService = {
       throw new AppError('Debes marcar el ingreso antes de marcar la salida', 409);
     }
 
-    await AsignacionesModel.registrarEgreso(empresaId, id, firma_b64);
-    await IntegracionService.emitir(empresaId, 'trabajador.egreso', {
+    await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
+    await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
       asignacion_id: id,
       oferta_id: asignacion.oferta_id,
       trabajador_id: asignacion.trabajador_id,
     });
     // Si este egreso completó la oferta entera, emite costo_labor.calculado
     // a logiq360 y marca la oferta como completada (best-effort).
-    await CostoLaborService.verificarYEmitir(empresaId, asignacion.oferta_id);
-    return AsignacionesModel.obtenerPorId(empresaId, id);
+    await CostoLaborService.verificarYEmitir(dbEmpresaId, asignacion.oferta_id);
+    return AsignacionesModel.obtenerPorId(dbEmpresaId, id);
   },
 
   async misTurnos(empresaId, usuarioId) {

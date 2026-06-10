@@ -235,7 +235,9 @@ const OfertasService = {
     }
 
     // Visibilidad (ranking) + apertura.
-    const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);
+    // Use the JWT's empresaId (null for marketplace workers) so obtenerPorUsuarioId
+    // finds the worker row that was created with empresa_id = null.
+    const trabajador = await resolverTrabajador(empresaId, usuarioId);
     const oferta = await OfertasModel.obtenerPorId(
       empresaOfertaId,
       ofertaId,
@@ -299,7 +301,7 @@ const OfertasService = {
       empresaOfertaId = ofertaBase.empresa_id;
     }
 
-    const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);
+    const trabajador = await resolverTrabajador(empresaId, usuarioId);
     const asignacion = await AsignacionesModel.obtenerPorPuestoYTrabajador(
       Number(puestoId),
       trabajador.id
