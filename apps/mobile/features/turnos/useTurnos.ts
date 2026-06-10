@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi, cargosApi } from '@api-client';
-import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload } from '@api-client';
+import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 
 // ── Query keys ────────────────────────────────────────────────────────────
@@ -274,7 +274,32 @@ export function useCargos() {
   return useQuery({
     queryKey: QUERY_KEYS.cargos,
     queryFn:  () => cargosApi.listar(),
-    staleTime: 5 * 60_000, // cargos cambian poco
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useCrearCargo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CrearCargoPayload) => cargosApi.crear(payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.cargos }),
+  });
+}
+
+export function useActualizarCargo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: ActualizarCargoPayload }) =>
+      cargosApi.actualizar(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.cargos }),
+  });
+}
+
+export function useEliminarCargo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => cargosApi.eliminar(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.cargos }),
   });
 }
 

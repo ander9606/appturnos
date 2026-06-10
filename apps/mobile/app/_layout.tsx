@@ -189,6 +189,13 @@ export default function RootLayout() {
                 presentation: 'modal',
               }}
             />
+            <Stack.Screen
+              name="cargos"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_right',
+              }}
+            />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

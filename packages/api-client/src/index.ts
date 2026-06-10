@@ -52,7 +52,7 @@ export type {
   LiquidacionTurnosTrabajador,
 } from './turnos';
 export { cargosApi } from './cargos';
-export type { Cargo } from './cargos';
+export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult } from './cargos';
 export { puntosMarcajeApi } from './puntos-marcaje';
 export type {
   PuntoMarcaje,
@@ -68,6 +68,8 @@ export type {
   CrearTrabajadorPayload,
   ActualizarTrabajadorPayload,
   UpdateMePayload,
+  Experiencia,
+  Diploma,
   ExperienciaPayload,
   DiplomaPayload,
   TipoDocumento,

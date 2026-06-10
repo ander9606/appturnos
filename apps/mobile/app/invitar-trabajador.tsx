@@ -56,8 +56,8 @@ export default function InvitarTrabajadorScreen() {
           [{ text: 'Listo', onPress: () => router.back() }]
         );
       },
-      onError: (err: ApiError) => {
-        Alert.alert('Error', err.message ?? 'No se pudo enviar la invitación.');
+      onError: (err: unknown) => {
+        Alert.alert('Error', (err as ApiError).message ?? 'No se pudo enviar la invitación.');
       },
     });
   }
