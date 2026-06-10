@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar } from '@/features/turnos/useTurnos';
+import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar, useNoPresentado } from '@/features/turnos/useTurnos';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
@@ -48,16 +48,19 @@ function PostulanteRow({
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
+  noPresentadoMutation,
 }: {
   asignacion: AsignacionResumen;
   ofertaId: number;
-  confirmarMutation: ReturnType<typeof useConfirmar>;
-  rechazarMutation:  ReturnType<typeof useRechazar>;
-  cancelarMutation:  ReturnType<typeof useCancelar>;
+  confirmarMutation:     ReturnType<typeof useConfirmar>;
+  rechazarMutation:      ReturnType<typeof useRechazar>;
+  cancelarMutation:      ReturnType<typeof useCancelar>;
+  noPresentadoMutation:  ReturnType<typeof useNoPresentado>;
 }) {
-  const isPending   = asignacion.estado === 'pendiente';
-  const isConfirmed = asignacion.estado === 'confirmado';
-  const cfg         = ESTADO_CONFIG[asignacion.estado];
+  const isPending     = asignacion.estado === 'pendiente';
+  const isConfirmed   = asignacion.estado === 'confirmado';
+  const isEnProgreso  = asignacion.estado === 'en_progreso';
+  const cfg           = ESTADO_CONFIG[asignacion.estado];
 
   const isConfirming =
     confirmarMutation.isPending &&
@@ -71,7 +74,11 @@ function PostulanteRow({
     cancelarMutation.isPending &&
     (cancelarMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
 
-  const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending;
+  const isMarkingNP =
+    noPresentadoMutation.isPending &&
+    (noPresentadoMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
+
+  const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending || noPresentadoMutation.isPending;
 
   function handleRechazar() {
     Alert.alert(
@@ -97,6 +104,18 @@ function PostulanteRow({
     );
   }
 
+  function handleNoPresentado() {
+    Alert.alert(
+      'No se presentó',
+      `¿Marcar a ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} como no presentado? Esto registra 0 estrellas automáticamente y afecta su ranking.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Marcar ausente', style: 'destructive',
+          onPress: () => noPresentadoMutation.mutate({ asignacionId: asignacion.id, ofertaId }) },
+      ]
+    );
+  }
+
   return (
     <View className="py-2.5 border-b border-border gap-2">
       {/* Nombre + estado */}
@@ -118,15 +137,29 @@ function PostulanteRow({
         </View>
       )}
 
-      {/* Confirmado → chip Aceptado + botón Cancelar */}
+      {/* Confirmado → chip Aceptado + Cancelar + No se presentó */}
       {isConfirmed && (
-        <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center gap-2 flex-wrap">
           <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
             <Ionicons name="checkmark-circle" size={14} color="#059669" />
             <Text className="text-xs font-semibold text-success">Aceptado</Text>
           </View>
-          <Button label={isCancelling ? '…' : 'Cancelar turno'} variant="danger" size="sm"
+          <Button label={isCancelling ? '…' : 'Cancelar'} variant="danger" size="sm"
             loading={isCancelling} disabled={isBusy} onPress={handleCancelar} />
+          <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
+            loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+        </View>
+      )}
+
+      {/* En progreso → chip + No se presentó */}
+      {isEnProgreso && (
+        <View className="flex-row items-center gap-2">
+          <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl">
+            <Ionicons name="time-outline" size={14} color="#3B82F6" />
+            <Text className="text-xs font-semibold text-info">En turno</Text>
+          </View>
+          <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
+            loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
         </View>
       )}
     </View>
@@ -140,11 +173,13 @@ function GestorOfertaItem({
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
+  noPresentadoMutation,
 }: {
   oferta: Oferta;
-  confirmarMutation: ReturnType<typeof useConfirmar>;
-  rechazarMutation:  ReturnType<typeof useRechazar>;
-  cancelarMutation:  ReturnType<typeof useCancelar>;
+  confirmarMutation:    ReturnType<typeof useConfirmar>;
+  rechazarMutation:     ReturnType<typeof useRechazar>;
+  cancelarMutation:     ReturnType<typeof useCancelar>;
+  noPresentadoMutation: ReturnType<typeof useNoPresentado>;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { data: detalle, isLoading: loadingDetalle } = useOferta(expanded ? oferta.id : null);
@@ -239,6 +274,7 @@ function GestorOfertaItem({
                 confirmarMutation={confirmarMutation}
                 rechazarMutation={rechazarMutation}
                 cancelarMutation={cancelarMutation}
+                noPresentadoMutation={noPresentadoMutation}
               />
             ))
           )}
@@ -263,9 +299,10 @@ export function GestorTurnosView({ selectedDate }: Props) {
     isRefetching,
   } = useOfertas({ fecha: selectedDate, limit: 50 });
 
-  const confirmarMutation = useConfirmar();
-  const rechazarMutation  = useRechazar();
-  const cancelarMutation  = useCancelar();
+  const confirmarMutation     = useConfirmar();
+  const rechazarMutation      = useRechazar();
+  const cancelarMutation      = useCancelar();
+  const noPresentadoMutation  = useNoPresentado();
   const ofertas = resp?.data ?? [];
 
   if (isLoading) {
@@ -291,7 +328,7 @@ export function GestorTurnosView({ selectedDate }: Props) {
       data={ofertas}
       keyExtractor={(item) => String(item.id)}
       renderItem={({ item }) => (
-        <GestorOfertaItem oferta={item} confirmarMutation={confirmarMutation} rechazarMutation={rechazarMutation} cancelarMutation={cancelarMutation} />
+        <GestorOfertaItem oferta={item} confirmarMutation={confirmarMutation} rechazarMutation={rechazarMutation} cancelarMutation={cancelarMutation} noPresentadoMutation={noPresentadoMutation} />
       )}
       contentContainerClassName="px-5 py-4 gap-3"
       ListEmptyComponent={

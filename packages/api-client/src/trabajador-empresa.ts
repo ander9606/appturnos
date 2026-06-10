@@ -76,6 +76,11 @@ export const trabajadorEmpresaApi = {
     return api.get<SolicitudAdmin[]>(`/api/trabajador-empresa/solicitudes${suffix}`);
   },
 
+  /** Admin/Jefe: invitar a un trabajador por número de cédula */
+  invitar(cedula: string): Promise<Vinculo> {
+    return api.post<Vinculo>('/api/trabajador-empresa/invitar', { cedula });
+  },
+
   /** Admin/Jefe: aprobar solicitud de un trabajador */
   aprobar(id: number): Promise<Vinculo> {
     return api.post<Vinculo>(`/api/trabajador-empresa/${id}/aprobar`, {});

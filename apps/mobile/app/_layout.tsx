@@ -181,6 +181,14 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
               }}
             />
+            <Stack.Screen
+              name="invitar-trabajador"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_bottom',
+                presentation: 'modal',
+              }}
+            />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>
