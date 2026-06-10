@@ -198,6 +198,79 @@ const TrabajadoresModel = {
     return res.affectedRows;
   },
 
+  // ── Experiencias ──────────────────────────────────────────────────────────
+
+  async listarExperiencias(trabajadorId) {
+    const [filas] = await pool.query(
+      'SELECT * FROM trabajador_experiencias WHERE trabajador_id = ? ORDER BY fecha_inicio DESC',
+      [trabajadorId]
+    );
+    return filas;
+  },
+
+  async crearExperiencia(trabajadorId, { empresa_nombre, cargo, fecha_inicio, fecha_fin }) {
+    const [res] = await pool.query(
+      `INSERT INTO trabajador_experiencias (trabajador_id, empresa_nombre, cargo, fecha_inicio, fecha_fin)
+       VALUES (?, ?, ?, ?, ?)`,
+      [trabajadorId, empresa_nombre, cargo, fecha_inicio, fecha_fin ?? null]
+    );
+    const [[fila]] = await pool.query(
+      'SELECT * FROM trabajador_experiencias WHERE id = ?', [res.insertId]
+    );
+    return fila;
+  },
+
+  async eliminarExperiencia(trabajadorId, id) {
+    const [res] = await pool.query(
+      'DELETE FROM trabajador_experiencias WHERE id = ? AND trabajador_id = ?',
+      [id, trabajadorId]
+    );
+    return res.affectedRows;
+  },
+
+  // ── Diplomas ──────────────────────────────────────────────────────────────
+
+  async listarDiplomas(trabajadorId) {
+    const [filas] = await pool.query(
+      'SELECT * FROM trabajador_diplomas WHERE trabajador_id = ? ORDER BY anio DESC, id DESC',
+      [trabajadorId]
+    );
+    return filas;
+  },
+
+  async crearDiploma(trabajadorId, { titulo, institucion, anio }) {
+    const [res] = await pool.query(
+      `INSERT INTO trabajador_diplomas (trabajador_id, titulo, institucion, anio) VALUES (?, ?, ?, ?)`,
+      [trabajadorId, titulo, institucion, anio ?? null]
+    );
+    const [[fila]] = await pool.query(
+      'SELECT * FROM trabajador_diplomas WHERE id = ?', [res.insertId]
+    );
+    return fila;
+  },
+
+  async eliminarDiploma(trabajadorId, id) {
+    const [res] = await pool.query(
+      'DELETE FROM trabajador_diplomas WHERE id = ? AND trabajador_id = ?',
+      [id, trabajadorId]
+    );
+    return res.affectedRows;
+  },
+
+  // ── Cargos certificados ────────────────────────────────────────────────────
+
+  async listarCargos(trabajadorId) {
+    const [filas] = await pool.query(
+      `SELECT tc.cargo_id AS id, c.nombre, c.codigo
+       FROM trabajador_cargos tc
+       JOIN cargos c ON c.id = tc.cargo_id
+       WHERE tc.trabajador_id = ?
+       ORDER BY c.nombre`,
+      [trabajadorId]
+    );
+    return filas;
+  },
+
   // Campos que el propio trabajador puede editar sobre sí mismo.
   async actualizarPorUsuarioId(usuarioId, datos) {
     const CAMPOS_ME = [

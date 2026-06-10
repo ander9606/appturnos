@@ -60,4 +60,29 @@ async function actualizarMe(req, res) {
   res.json({ success: true, data, message: 'Perfil actualizado' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar, obtenerMe, actualizarMe };
+async function crearExperiencia(req, res) {
+  const data = await TrabajadoresService.crearExperiencia(req.usuario.sub, req.body);
+  res.status(201).json({ success: true, data });
+}
+
+async function eliminarExperiencia(req, res) {
+  await TrabajadoresService.eliminarExperiencia(req.usuario.sub, Number(req.params.expId));
+  res.json({ success: true, data: null });
+}
+
+async function crearDiploma(req, res) {
+  const data = await TrabajadoresService.crearDiploma(req.usuario.sub, req.body);
+  res.status(201).json({ success: true, data });
+}
+
+async function eliminarDiploma(req, res) {
+  await TrabajadoresService.eliminarDiploma(req.usuario.sub, Number(req.params.dipId));
+  res.json({ success: true, data: null });
+}
+
+module.exports = {
+  listar, obtener, crear, actualizar, eliminar,
+  obtenerMe, actualizarMe,
+  crearExperiencia, eliminarExperiencia,
+  crearDiploma, eliminarDiploma,
+};

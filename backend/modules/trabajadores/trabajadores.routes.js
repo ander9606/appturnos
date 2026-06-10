@@ -92,6 +92,51 @@ router.patch(
   ctrl.actualizarMe
 );
 
+// POST /api/trabajadores/me/experiencias
+router.post(
+  '/me/experiencias',
+  verificarRol(SOLO_TRABAJADOR_TURNOS),
+  [
+    body('empresa_nombre').isString().trim().notEmpty().withMessage('empresa_nombre requerido'),
+    body('cargo').isString().trim().notEmpty().withMessage('cargo requerido'),
+    body('fecha_inicio').isISO8601().withMessage('fecha_inicio debe ser YYYY-MM-DD'),
+    body('fecha_fin').optional({ values: 'falsy' }).isISO8601().withMessage('fecha_fin debe ser YYYY-MM-DD'),
+  ],
+  validar,
+  ctrl.crearExperiencia
+);
+
+// DELETE /api/trabajadores/me/experiencias/:expId
+router.delete(
+  '/me/experiencias/:expId',
+  verificarRol(SOLO_TRABAJADOR_TURNOS),
+  [param('expId').isInt({ min: 1 }).withMessage('expId inválido')],
+  validar,
+  ctrl.eliminarExperiencia
+);
+
+// POST /api/trabajadores/me/diplomas
+router.post(
+  '/me/diplomas',
+  verificarRol(SOLO_TRABAJADOR_TURNOS),
+  [
+    body('titulo').isString().trim().notEmpty().withMessage('titulo requerido'),
+    body('institucion').isString().trim().notEmpty().withMessage('institucion requerido'),
+    body('anio').optional({ values: 'falsy' }).isInt({ min: 1900, max: 2100 }).withMessage('anio inválido'),
+  ],
+  validar,
+  ctrl.crearDiploma
+);
+
+// DELETE /api/trabajadores/me/diplomas/:dipId
+router.delete(
+  '/me/diplomas/:dipId',
+  verificarRol(SOLO_TRABAJADOR_TURNOS),
+  [param('dipId').isInt({ min: 1 }).withMessage('dipId inválido')],
+  validar,
+  ctrl.eliminarDiploma
+);
+
 // GET /api/trabajadores
 router.get(
   '/',

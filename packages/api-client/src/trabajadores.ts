@@ -37,6 +37,10 @@ export interface Trabajador {
   ranking: number | null;
   total_calificaciones: number;
   created_at: string;
+  // Incluidos solo en GET /api/trabajadores/me
+  experiencias?: Experiencia[];
+  diplomas?: Diploma[];
+  cargos?: CargoAsignado[];
 }
 
 export interface TrabajadoresListParams {
@@ -51,18 +55,31 @@ export interface TrabajadoresListResponse {
   pagination: { page: number; limit: number; total: number };
 }
 
-export interface ExperienciaPayload {
+export interface Experiencia {
+  id: number;
+  trabajador_id: number;
   empresa_nombre: string;
   cargo: string;
   fecha_inicio: string;
-  fecha_fin?: string | null;
+  fecha_fin: string | null;
 }
 
-export interface DiplomaPayload {
+export interface Diploma {
+  id: number;
+  trabajador_id: number;
   titulo: string;
   institucion: string;
-  anio?: number | null;
+  anio: number | null;
 }
+
+export interface CargoAsignado {
+  id: number;
+  nombre: string;
+  codigo: string | null;
+}
+
+export type ExperienciaPayload = Omit<Experiencia, 'id' | 'trabajador_id'>;
+export type DiplomaPayload     = Omit<Diploma, 'id' | 'trabajador_id'>;
 
 export interface CrearTrabajadorPayload {
   nombre: string;
@@ -145,4 +162,16 @@ export const trabajadoresApi = {
   /** Trabajador: actualizar sus propios datos de perfil. */
   updateMe: (payload: UpdateMePayload): Promise<Trabajador> =>
     api.patch<Trabajador>('/api/trabajadores/me', payload),
+
+  crearExperiencia: (payload: ExperienciaPayload): Promise<Experiencia> =>
+    api.post<Experiencia>('/api/trabajadores/me/experiencias', payload),
+
+  eliminarExperiencia: (expId: number): Promise<void> =>
+    api.delete<void>(`/api/trabajadores/me/experiencias/${expId}`),
+
+  crearDiploma: (payload: DiplomaPayload): Promise<Diploma> =>
+    api.post<Diploma>('/api/trabajadores/me/diplomas', payload),
+
+  eliminarDiploma: (dipId: number): Promise<void> =>
+    api.delete<void>(`/api/trabajadores/me/diplomas/${dipId}`),
 };
