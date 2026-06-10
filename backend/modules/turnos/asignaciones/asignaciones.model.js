@@ -263,9 +263,14 @@ const AsignacionesModel = {
       `UPDATE asignaciones_turno
        SET hora_ingreso_real = NOW(), latitud_ingreso = ?, longitud_ingreso = ?,
            estado = 'en_progreso'
-       WHERE id = ? AND empresa_id = ?`,
+       WHERE id = ? AND empresa_id = ? AND estado = 'confirmado'`,
       [latitud, longitud, id, empresaId]
     );
+    // affectedRows = 0 means another concurrent request already marked ingreso
+    if (res.affectedRows === 0) {
+      const AppError = require('../../utils/AppError');
+      throw new AppError('El ingreso ya fue registrado o el turno no está confirmado', 409);
+    }
     return res.affectedRows;
   },
 
@@ -283,9 +288,16 @@ const AsignacionesModel = {
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, NOW()) / 60,
            a.pago_total = p.tarifa_dia
-       WHERE a.id = ? AND a.empresa_id = ?`,
+       WHERE a.id = ? AND a.empresa_id = ?
+         AND a.estado = 'en_progreso'
+         AND a.hora_ingreso_real IS NOT NULL`,
       [firmaB64, id, empresaId]
     );
+    // affectedRows = 0 means concurrent egreso, missing ingreso, or invalid state
+    if (res.affectedRows === 0) {
+      const AppError = require('../../utils/AppError');
+      throw new AppError('El egreso ya fue registrado o el ingreso no está marcado', 409);
+    }
     return res.affectedRows;
   },
 

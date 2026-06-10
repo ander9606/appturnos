@@ -51,8 +51,11 @@ async function eliminar(req, res) {
 }
 
 async function buscarPorCedula(req, res) {
+  // Only returns marketplace workers (empresa_id IS NULL) — never exposes other empresas' data.
   const data = await TrabajadoresService.buscarPorCedula(req.query.cedula?.trim());
-  res.json({ success: true, data });
+  // Return minimal fields needed for the invite flow
+  const { id, nombre, apellido, cedula, tipo_documento, cargo, ranking } = data;
+  res.json({ success: true, data: { id, nombre, apellido, cedula, tipo_documento, cargo, ranking } });
 }
 
 async function obtenerMe(req, res) {

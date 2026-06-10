@@ -151,15 +151,24 @@ const AuthService = {
     const rol = ROL_POR_TIPO[trabajador.tipo] || ROLES.TRABAJADOR_TURNOS;
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    const usuarioId = await AuthModel.activarCuentaTrabajador({
-      trabajadorId: trabajador.id,
-      empresa_id: trabajador.empresa_id,
-      nombre: trabajador.nombre,
-      apellido: trabajador.apellido,
-      email,
-      password_hash: passwordHash,
-      rol,
-    });
+    let usuarioId;
+    try {
+      usuarioId = await AuthModel.activarCuentaTrabajador({
+        trabajadorId: trabajador.id,
+        empresa_id: trabajador.empresa_id,
+        nombre: trabajador.nombre,
+        apellido: trabajador.apellido,
+        email,
+        password_hash: passwordHash,
+        rol,
+      });
+    } catch (err) {
+      // ER_DUP_ENTRY: concurrent activation with same email beat this request to the INSERT
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('El email ya está registrado', 409);
+      }
+      throw err;
+    }
 
     // Crear solicitudes de vinculación para las empresas pre-seleccionadas.
     if (rol === ROLES.TRABAJADOR_TURNOS && trabajador.empresas_postulacion) {
