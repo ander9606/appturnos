@@ -8,6 +8,7 @@ export interface Cargo {
   nombre: string;
   descripcion: string | null;
   tipo_geofence: TipoGeofence;
+  punto_marcaje_id: number | null;
   activo: boolean;
 }
 

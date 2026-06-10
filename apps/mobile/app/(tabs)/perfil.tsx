@@ -480,6 +480,16 @@ export default function PerfilScreen() {
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                 </Pressable>
+                <Pressable
+                  onPress={() => router.push('/puntos-marcaje')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="location-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Puntos de marcaje</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
               </>
             )}
           </View>

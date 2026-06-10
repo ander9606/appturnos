@@ -3,6 +3,7 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   Pressable,
   TextInput,
   Alert,
@@ -21,6 +22,7 @@ import {
   useActualizarCargo,
   useEliminarCargo,
 } from '@/features/turnos/useTurnos';
+import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import { COLORS } from '@/lib/designTokens';
 import type { Cargo, CrearCargoPayload, ActualizarCargoPayload, ApiError } from '@api-client';
 
@@ -38,33 +40,40 @@ const GEOFENCE_OPTIONS = ['oferta', 'fijo', 'zonal', 'libre'] as const;
 // ── Form ──────────────────────────────────────────────────────────────────
 
 type FormState = {
-  nombre:        string;
-  codigo:        string;
-  descripcion:   string;
-  tipo_geofence: string;
+  nombre:           string;
+  codigo:           string;
+  descripcion:      string;
+  tipo_geofence:    string;
+  punto_marcaje_id: number | null;
 };
 
 const EMPTY_FORM: FormState = {
-  nombre:        '',
-  codigo:        '',
-  descripcion:   '',
-  tipo_geofence: 'oferta',
+  nombre:           '',
+  codigo:           '',
+  descripcion:      '',
+  tipo_geofence:    'oferta',
+  punto_marcaje_id: null,
 };
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function CargosScreen() {
-  const { data: cargos = [], isLoading }   = useCargos();
-  const crearMutation                      = useCrearCargo();
-  const actualizarMutation                 = useActualizarCargo();
-  const eliminarMutation                   = useEliminarCargo();
+  const { data: cargos = [], isLoading }       = useCargos();
+  const { data: puntos = [] }                  = usePuntosMarcaje();
+  const crearMutation                          = useCrearCargo();
+  const actualizarMutation                     = useActualizarCargo();
+  const eliminarMutation                       = useEliminarCargo();
 
-  const [modalVisible, setModalVisible]   = useState(false);
-  const [editingCargo, setEditingCargo]   = useState<Cargo | null>(null);
-  const [form, setForm]                   = useState<FormState>(EMPTY_FORM);
+  const [modalVisible, setModalVisible]       = useState(false);
+  const [editingCargo, setEditingCargo]       = useState<Cargo | null>(null);
+  const [form, setForm]                       = useState<FormState>(EMPTY_FORM);
+  const [puntoModalVisible, setPuntoModal]    = useState(false);
 
   const sistemaCargos = cargos.filter((c) => c.empresa_id === null);
   const empresaCargos = cargos.filter((c) => c.empresa_id !== null);
+  const puntosFijos   = puntos.filter((p) => p.tipo === 'fijo');
+
+  const puntoSeleccionado = puntos.find((p) => p.id === form.punto_marcaje_id) ?? null;
 
   function openCreate() {
     setEditingCargo(null);
@@ -75,10 +84,11 @@ export default function CargosScreen() {
   function openEdit(cargo: Cargo) {
     setEditingCargo(cargo);
     setForm({
-      nombre:        cargo.nombre,
-      codigo:        cargo.codigo,
-      descripcion:   cargo.descripcion ?? '',
-      tipo_geofence: cargo.tipo_geofence,
+      nombre:           cargo.nombre,
+      codigo:           cargo.codigo,
+      descripcion:      cargo.descripcion ?? '',
+      tipo_geofence:    cargo.tipo_geofence,
+      punto_marcaje_id: cargo.punto_marcaje_id,
     });
     setModalVisible(true);
   }
@@ -93,8 +103,9 @@ export default function CargosScreen() {
     if (editingCargo) {
       const payload: ActualizarCargoPayload = {
         nombre,
-        descripcion:   form.descripcion.trim() || null,
-        tipo_geofence: form.tipo_geofence as ActualizarCargoPayload['tipo_geofence'],
+        descripcion:      form.descripcion.trim() || null,
+        tipo_geofence:    form.tipo_geofence as ActualizarCargoPayload['tipo_geofence'],
+        punto_marcaje_id: form.tipo_geofence === 'fijo' ? form.punto_marcaje_id : null,
       };
       actualizarMutation.mutate(
         { id: editingCargo.id, payload },
@@ -109,7 +120,10 @@ export default function CargosScreen() {
         nombre,
         ...(form.codigo.trim() ? { codigo: form.codigo.trim() } : {}),
         ...(form.descripcion.trim() ? { descripcion: form.descripcion.trim() } : {}),
-        tipo_geofence: form.tipo_geofence as CrearCargoPayload['tipo_geofence'],
+        tipo_geofence:    form.tipo_geofence as CrearCargoPayload['tipo_geofence'],
+        ...(form.tipo_geofence === 'fijo' && form.punto_marcaje_id
+          ? { punto_marcaje_id: form.punto_marcaje_id }
+          : {}),
       };
       crearMutation.mutate(payload, {
         onSuccess: () => setModalVisible(false),
@@ -359,13 +373,19 @@ export default function CargosScreen() {
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
               Tipo de geofence
             </Text>
-            <View className="flex-row flex-wrap gap-2 mb-8">
+            <View className="flex-row flex-wrap gap-2 mb-4">
               {GEOFENCE_OPTIONS.map((opt) => {
                 const active = form.tipo_geofence === opt;
                 return (
                   <Pressable
                     key={opt}
-                    onPress={() => setForm((f) => ({ ...f, tipo_geofence: opt }))}
+                    onPress={() =>
+                      setForm((f) => ({
+                        ...f,
+                        tipo_geofence: opt,
+                        punto_marcaje_id: opt === 'fijo' ? f.punto_marcaje_id : null,
+                      }))
+                    }
                     className={`px-4 py-2 rounded-xl border active:opacity-70 ${
                       active ? 'border-info' : 'bg-card border-border'
                     }`}
@@ -380,6 +400,37 @@ export default function CargosScreen() {
                 );
               })}
             </View>
+
+            {/* Punto de marcaje — solo cuando tipo_geofence = fijo */}
+            {form.tipo_geofence === 'fijo' && (
+              <View className="mb-8">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+                  Punto de marcaje
+                </Text>
+                <Pressable
+                  onPress={() => setPuntoModal(true)}
+                  className="bg-card border border-border rounded-2xl px-4 h-14 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-2 flex-1">
+                    <Ionicons name="location-outline" size={16} color="#64748B" />
+                    <Text
+                      className={`text-base flex-1 ${puntoSeleccionado ? 'text-foreground' : 'text-muted-foreground'}`}
+                      numberOfLines={1}
+                    >
+                      {puntoSeleccionado ? puntoSeleccionado.nombre : 'Seleccionar punto…'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                {puntosFijos.length === 0 && (
+                  <Text className="text-xs text-muted-foreground mt-1.5 px-1">
+                    No hay puntos fijos creados. Ve a "Puntos de marcaje" para crear uno primero.
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {form.tipo_geofence !== 'fijo' && <View className="mb-8" />}
 
             {/* Guardar */}
             <Pressable
@@ -398,6 +449,82 @@ export default function CargosScreen() {
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Modal selector de puntos de marcaje ───────────────────── */}
+      <Modal
+        visible={puntoModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPuntoModal(false)}
+      >
+        <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+          <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
+            <Text className="text-base font-bold text-foreground">Seleccionar punto</Text>
+            <Pressable onPress={() => setPuntoModal(false)} hitSlop={8}>
+              <Ionicons name="close" size={24} color="#64748B" />
+            </Pressable>
+          </View>
+
+          {/* Opción ninguno */}
+          <Pressable
+            onPress={() => {
+              setForm((f) => ({ ...f, punto_marcaje_id: null }));
+              setPuntoModal(false);
+            }}
+            className="flex-row items-center gap-3 px-5 py-4 border-b border-border active:opacity-70"
+          >
+            <View className="w-8 h-8 rounded-full bg-muted items-center justify-center">
+              <Ionicons name="close" size={14} color="#64748B" />
+            </View>
+            <Text className="text-sm text-muted-foreground flex-1">Sin punto asignado</Text>
+            {form.punto_marcaje_id === null && (
+              <Ionicons name="checkmark" size={18} color={COLORS.info} />
+            )}
+          </Pressable>
+
+          <FlatList
+            data={puntosFijos}
+            keyExtractor={(p) => String(p.id)}
+            renderItem={({ item: p }) => {
+              const selected = form.punto_marcaje_id === p.id;
+              return (
+                <Pressable
+                  onPress={() => {
+                    setForm((f) => ({ ...f, punto_marcaje_id: p.id }));
+                    setPuntoModal(false);
+                  }}
+                  className="flex-row items-center gap-3 px-5 py-4 border-b border-border active:opacity-70"
+                >
+                  <View className="w-8 h-8 rounded-full bg-warning/10 items-center justify-center flex-shrink-0">
+                    <Ionicons name="location-outline" size={14} color="#D97706" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-foreground">{p.nombre}</Text>
+                    {!!p.descripcion && (
+                      <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                        {p.descripcion}
+                      </Text>
+                    )}
+                    <Text className="text-xs text-muted-foreground">
+                      {p.latitud.toFixed(5)}, {p.longitud.toFixed(5)}  ·  Radio: {p.radio_metros} m
+                    </Text>
+                  </View>
+                  {selected && <Ionicons name="checkmark" size={18} color={COLORS.info} />}
+                </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              <View className="p-8 items-center gap-2">
+                <Ionicons name="location-outline" size={32} color="#94A3B8" />
+                <Text className="text-sm text-muted-foreground text-center">
+                  No hay puntos fijos creados.{'\n'}
+                  Ve a "Puntos de marcaje" para crear uno.
+                </Text>
+              </View>
+            }
+          />
+        </SafeAreaView>
       </Modal>
     </>
   );
