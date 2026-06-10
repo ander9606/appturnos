@@ -36,18 +36,49 @@ const TrabajadoresService = {
     return TrabajadoresModel.obtenerPorId(empresaId, id);
   },
 
-  /** El propio trabajador obtiene su perfil completo buscando por usuario_id. */
+  /** El propio trabajador obtiene su perfil completo (incluye experiencias, diplomas y cargos). */
   async me(usuarioId) {
     const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
     if (!trabajador) throw new AppError('Perfil de trabajador no encontrado', 404);
-    return trabajador;
+    const [experiencias, diplomas, cargos] = await Promise.all([
+      TrabajadoresModel.listarExperiencias(trabajador.id),
+      TrabajadoresModel.listarDiplomas(trabajador.id),
+      TrabajadoresModel.listarCargos(trabajador.id),
+    ]);
+    return { ...trabajador, experiencias, diplomas, cargos };
   },
 
-  /** El propio trabajador actualiza los campos de su perfil que le pertenecen. */
+  /** El propio trabajador actualiza los campos escalares de su perfil. */
   async actualizarMe(usuarioId, datos) {
     await this.me(usuarioId); // 404 si no existe
     await TrabajadoresModel.actualizarPorUsuarioId(usuarioId, datos);
-    return TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+    return this.me(usuarioId);
+  },
+
+  async crearExperiencia(usuarioId, datos) {
+    const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+    if (!trabajador) throw new AppError('Perfil de trabajador no encontrado', 404);
+    return TrabajadoresModel.crearExperiencia(trabajador.id, datos);
+  },
+
+  async eliminarExperiencia(usuarioId, expId) {
+    const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+    if (!trabajador) throw new AppError('Perfil de trabajador no encontrado', 404);
+    const rows = await TrabajadoresModel.eliminarExperiencia(trabajador.id, expId);
+    if (!rows) throw new AppError('Experiencia no encontrada', 404);
+  },
+
+  async crearDiploma(usuarioId, datos) {
+    const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+    if (!trabajador) throw new AppError('Perfil de trabajador no encontrado', 404);
+    return TrabajadoresModel.crearDiploma(trabajador.id, datos);
+  },
+
+  async eliminarDiploma(usuarioId, dipId) {
+    const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+    if (!trabajador) throw new AppError('Perfil de trabajador no encontrado', 404);
+    const rows = await TrabajadoresModel.eliminarDiploma(trabajador.id, dipId);
+    if (!rows) throw new AppError('Diploma no encontrado', 404);
   },
 
   /** Soft delete idempotente: si ya está inactivo no hace nada. */

@@ -313,6 +313,14 @@ export const turnosApi = {
   },
 
   /**
+   * Marca al trabajador como no presentado. Automáticamente registra 0 estrellas
+   * y recalcula su ranking. Solo gestores/admin.
+   */
+  marcarNoPresentado(asignacionId: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/no-presentado`, {});
+  },
+
+  /**
    * Califica una asignación completada (1–5 ⭐). Solo gestores/admin.
    * Una asignación solo puede calificarse una vez.
    */

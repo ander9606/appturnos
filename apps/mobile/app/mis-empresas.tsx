@@ -34,6 +34,7 @@ import {
 import { empresasApi } from '@api-client';
 import type { Vinculo, EmpresaDirectorio } from '@api-client';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { nivelRanking, rankingLabel, rankingColor, rankingDescription } from '@/features/turnos/rankingUtils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -44,7 +45,29 @@ function fmtFecha(iso: string) {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
+function StarRating({ value, total }: { value: number; total: number }) {
+  const filled = Math.round(value);
+  return (
+    <View className="flex-row items-center gap-1 mt-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Ionicons
+          key={i}
+          name={i <= filled ? 'star' : 'star-outline'}
+          size={12}
+          color={i <= filled ? '#F59E0B' : '#CBD5E1'}
+        />
+      ))}
+      <Text className="text-xs text-muted-foreground ml-0.5">
+        {value.toFixed(1)} · {total} {total === 1 ? 'calificación' : 'calificaciones'}
+      </Text>
+    </View>
+  );
+}
+
 function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
+  const tieneRanking = vinculo.ranking != null && vinculo.total_calificaciones > 0;
+  const nivel = nivelRanking(vinculo.ranking, vinculo.total_calificaciones);
+  const color = rankingColor(nivel);
   return (
     <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden">
       <View className="flex-row items-center gap-3 p-4">
@@ -55,6 +78,26 @@ function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
           <Text className="text-base font-bold text-foreground">{vinculo.empresa_nombre}</Text>
           {vinculo.empresa_ciudad && (
             <Text className="text-xs text-muted-foreground mt-0.5">{vinculo.empresa_ciudad}</Text>
+          )}
+          {tieneRanking ? (
+            <>
+              <StarRating value={vinculo.ranking!} total={vinculo.total_calificaciones} />
+              <View className="flex-row items-center gap-1.5 mt-1">
+                <View
+                  className="rounded-full px-2 py-0.5"
+                  style={{ backgroundColor: `${color}20` }}
+                >
+                  <Text className="text-xs font-semibold" style={{ color }}>
+                    {rankingLabel(nivel)}
+                  </Text>
+                </View>
+                <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
+                  {rankingDescription(nivel)}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <Text className="text-xs text-muted-foreground mt-1">Sin calificaciones aún</Text>
           )}
         </View>
         <View className="bg-success/10 rounded-full px-2.5 py-1">

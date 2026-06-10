@@ -62,6 +62,14 @@ async function misTurnos(req, res) {
   res.json({ success: true, data, message: 'Mis turnos y postulaciones' });
 }
 
+async function noPresentado(req, res) {
+  const data = await AsignacionesService.marcarNoPresentado(
+    req.empresa_id,
+    Number(req.params.id)
+  );
+  res.json({ success: true, data, message: 'Marcado como no presentado' });
+}
+
 async function calificar(req, res) {
   const data = await AsignacionesService.calificar(
     req.empresa_id,
@@ -80,4 +88,4 @@ async function liquidacion(req, res) {
   res.json({ success: true, data });
 }
 
-module.exports = { listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, calificar, liquidacion };
+module.exports = { listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, noPresentado, calificar, liquidacion };

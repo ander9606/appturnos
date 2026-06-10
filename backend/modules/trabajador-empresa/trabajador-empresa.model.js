@@ -37,13 +37,21 @@ const TrabajadorEmpresaModel = {
     return filas[0] || null;
   },
 
-  /** Todas las relaciones de un trabajador (para "Mis empresas"). */
+  /** Todas las relaciones de un trabajador (para "Mis empresas").
+   *  Las activas incluyen ranking y total_calificaciones de esa empresa concreta.
+   */
   async listarPorUsuario(usuarioId) {
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}
+      `SELECT ${COLUMNAS},
+              ROUND(AVG(ct.calificacion), 2) AS ranking,
+              COUNT(ct.id)                   AS total_calificaciones
        FROM trabajador_empresa te
        INNER JOIN empresas e ON e.id = te.empresa_id
+       LEFT JOIN calificaciones_turno ct
+              ON ct.empresa_id    = te.empresa_id
+             AND ct.trabajador_id = te.trabajador_id
        WHERE te.usuario_id = ?
+       GROUP BY te.id
        ORDER BY te.fecha_solicitud DESC`,
       [usuarioId]
     );

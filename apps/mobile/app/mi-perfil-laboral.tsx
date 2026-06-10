@@ -25,10 +25,14 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   usePerfilLaboral,
   useUpdatePerfilLaboral,
+  useCrearExperiencia,
+  useEliminarExperiencia,
+  useCrearDiploma,
+  useEliminarDiploma,
 } from '@/features/equipo/perfil/usePerfilLaboral';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { InfoRow }        from '@/components/ui/InfoRow';
-import type { Trabajador, TipoDocumento, SexoTrabajador, TipoCuenta } from '@api-client';
+import type { Trabajador, TipoDocumento, SexoTrabajador, TipoCuenta, Experiencia, Diploma } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -37,6 +41,45 @@ function fmtFecha(iso: string | null) {
   const d = new Date(iso + 'T00:00:00');
   return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
 }
+
+function fmtFechaCorta(iso: string | null) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
+}
+
+// ── Mini field para formularios inline ─────────────────────────────────────
+
+function MiniField({
+  label, value, onChangeText, placeholder, keyboardType,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+  keyboardType?: 'default' | 'numeric';
+}) {
+  return (
+    <View>
+      <Text className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder ?? label}
+        placeholderTextColor="#94A3B8"
+        keyboardType={keyboardType ?? 'default'}
+        className="text-sm text-foreground border border-border rounded-xl px-3 py-2"
+        autoCorrect={false}
+        autoCapitalize="none"
+      />
+    </View>
+  );
+}
+
+// ── Tipos de estado para formularios inline ─────────────────────────────────
+
+const EMPTY_EXP = { empresa_nombre: '', cargo: '', fecha_inicio: '', fecha_fin: '' };
+const EMPTY_DIP = { titulo: '', institucion: '', anio: '' };
 
 // ── Subcomponents ─────────────────────────────────────────────────────────
 
@@ -157,10 +200,20 @@ function buildForm(t: Trabajador | undefined): FormState {
 
 export default function MiPerfilLaboralScreen() {
   const { data: perfil, isLoading } = usePerfilLaboral();
-  const update = useUpdatePerfilLaboral();
+  const update       = useUpdatePerfilLaboral();
+  const crearExp     = useCrearExperiencia();
+  const eliminarExp  = useEliminarExperiencia();
+  const crearDip     = useCrearDiploma();
+  const eliminarDip  = useEliminarDiploma();
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<FormState>(() => buildForm(undefined));
+
+  // Estado para los formularios inline de experiencia y diploma
+  const [showAddExp, setShowAddExp] = useState(false);
+  const [newExp, setNewExp] = useState(EMPTY_EXP);
+  const [showAddDip, setShowAddDip] = useState(false);
+  const [newDip, setNewDip] = useState(EMPTY_DIP);
 
   useEffect(() => {
     if (perfil) setForm(buildForm(perfil));
@@ -201,6 +254,57 @@ export default function MiPerfilLaboralScreen() {
   const handleCancel = () => {
     if (perfil) setForm(buildForm(perfil));
     setEditing(false);
+  };
+
+  const handleAddExperiencia = async () => {
+    if (!newExp.empresa_nombre || !newExp.cargo || !newExp.fecha_inicio) {
+      Alert.alert('Campos requeridos', 'Empresa, cargo y fecha de inicio son obligatorios');
+      return;
+    }
+    try {
+      await crearExp.mutateAsync({
+        empresa_nombre: newExp.empresa_nombre,
+        cargo: newExp.cargo,
+        fecha_inicio: newExp.fecha_inicio,
+        fecha_fin: newExp.fecha_fin || null,
+      });
+      setNewExp(EMPTY_EXP);
+      setShowAddExp(false);
+    } catch {
+      Alert.alert('Error', 'No se pudo guardar la experiencia');
+    }
+  };
+
+  const handleDeleteExperiencia = (id: number) => {
+    Alert.alert('Eliminar experiencia', '¿Estás seguro?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarExp.mutate(id) },
+    ]);
+  };
+
+  const handleAddDiploma = async () => {
+    if (!newDip.titulo || !newDip.institucion) {
+      Alert.alert('Campos requeridos', 'Título e institución son obligatorios');
+      return;
+    }
+    try {
+      await crearDip.mutateAsync({
+        titulo: newDip.titulo,
+        institucion: newDip.institucion,
+        anio: newDip.anio ? Number(newDip.anio) : null,
+      });
+      setNewDip(EMPTY_DIP);
+      setShowAddDip(false);
+    } catch {
+      Alert.alert('Error', 'No se pudo guardar el diploma');
+    }
+  };
+
+  const handleDeleteDiploma = (id: number) => {
+    Alert.alert('Eliminar diploma', '¿Estás seguro?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarDip.mutate(id) },
+    ]);
   };
 
   if (isLoading) {
@@ -415,6 +519,133 @@ export default function MiPerfilLaboralScreen() {
               </>
             )}
           </View>
+
+          {/* ── Experiencia laboral ─────────────────────────────────── */}
+          <SectionHeader title="Experiencia laboral" count={perfil.experiencias?.length} />
+          <View className="mx-5 gap-3">
+            {(perfil.experiencias ?? []).map((exp: Experiencia) => (
+              <View key={exp.id} className="bg-card rounded-2xl border border-border px-4 py-3 flex-row items-start gap-3">
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-foreground">{exp.empresa_nombre}</Text>
+                  <Text className="text-xs text-muted-foreground mt-0.5">{exp.cargo}</Text>
+                  <Text className="text-xs text-muted-foreground mt-0.5">
+                    {fmtFechaCorta(exp.fecha_inicio)}
+                    {' – '}
+                    {exp.fecha_fin ? fmtFechaCorta(exp.fecha_fin) : 'actualidad'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleDeleteExperiencia(exp.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {showAddExp ? (
+              <View className="bg-card rounded-2xl border border-primary-200 p-4 gap-3">
+                <MiniField label="Empresa" value={newExp.empresa_nombre} onChangeText={(v) => setNewExp((p) => ({ ...p, empresa_nombre: v }))} />
+                <MiniField label="Cargo" value={newExp.cargo} onChangeText={(v) => setNewExp((p) => ({ ...p, cargo: v }))} />
+                <MiniField label="Fecha inicio (AAAA-MM-DD)" value={newExp.fecha_inicio} onChangeText={(v) => setNewExp((p) => ({ ...p, fecha_inicio: v }))} placeholder="2022-01-15" />
+                <MiniField label="Fecha fin (dejar vacío si actual)" value={newExp.fecha_fin} onChangeText={(v) => setNewExp((p) => ({ ...p, fecha_fin: v }))} placeholder="2024-06-30" />
+                <View className="flex-row gap-2">
+                  <TouchableOpacity
+                    onPress={() => { setShowAddExp(false); setNewExp(EMPTY_EXP); }}
+                    className="flex-1 h-9 rounded-xl border border-border items-center justify-center"
+                  >
+                    <Text className="text-xs font-semibold text-muted-foreground">Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAddExperiencia}
+                    disabled={crearExp.isPending}
+                    className="flex-1 h-9 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
+                  >
+                    {crearExp.isPending
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Text className="text-xs font-semibold text-white">Guardar</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setShowAddExp(true)}
+                className="h-11 rounded-2xl border border-dashed border-border items-center justify-center flex-row gap-2 active:opacity-70"
+              >
+                <Ionicons name="add-circle-outline" size={16} color="#64748B" />
+                <Text className="text-sm text-muted-foreground">Agregar experiencia</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* ── Diplomas y certificados ──────────────────────────────── */}
+          <SectionHeader title="Diplomas y certificados" count={perfil.diplomas?.length} />
+          <View className="mx-5 gap-3">
+            {(perfil.diplomas ?? []).map((dip: Diploma) => (
+              <View key={dip.id} className="bg-card rounded-2xl border border-border px-4 py-3 flex-row items-start gap-3">
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-foreground">{dip.titulo}</Text>
+                  <Text className="text-xs text-muted-foreground mt-0.5">{dip.institucion}</Text>
+                  {dip.anio && (
+                    <Text className="text-xs text-muted-foreground mt-0.5">{dip.anio}</Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleDeleteDiploma(dip.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {showAddDip ? (
+              <View className="bg-card rounded-2xl border border-primary-200 p-4 gap-3">
+                <MiniField label="Título / Certificado" value={newDip.titulo} onChangeText={(v) => setNewDip((p) => ({ ...p, titulo: v }))} />
+                <MiniField label="Institución" value={newDip.institucion} onChangeText={(v) => setNewDip((p) => ({ ...p, institucion: v }))} />
+                <MiniField label="Año (opcional)" value={newDip.anio} onChangeText={(v) => setNewDip((p) => ({ ...p, anio: v }))} keyboardType="numeric" placeholder="2023" />
+                <View className="flex-row gap-2">
+                  <TouchableOpacity
+                    onPress={() => { setShowAddDip(false); setNewDip(EMPTY_DIP); }}
+                    className="flex-1 h-9 rounded-xl border border-border items-center justify-center"
+                  >
+                    <Text className="text-xs font-semibold text-muted-foreground">Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleAddDiploma}
+                    disabled={crearDip.isPending}
+                    className="flex-1 h-9 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
+                  >
+                    {crearDip.isPending
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Text className="text-xs font-semibold text-white">Guardar</Text>}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setShowAddDip(true)}
+                className="h-11 rounded-2xl border border-dashed border-border items-center justify-center flex-row gap-2 active:opacity-70"
+              >
+                <Ionicons name="add-circle-outline" size={16} color="#64748B" />
+                <Text className="text-sm text-muted-foreground">Agregar diploma o certificado</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* ── Cargos certificados (solo lectura — asignados por la empresa) */}
+          {(perfil.cargos ?? []).length > 0 && (
+            <>
+              <SectionHeader title="Cargos certificados" count={perfil.cargos?.length} />
+              <View className="mx-5 flex-row flex-wrap gap-2">
+                {perfil.cargos!.map((c) => (
+                  <View key={c.id} className="bg-info/10 rounded-full px-3 py-1.5">
+                    <Text className="text-xs font-semibold text-info">{c.nombre}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
 
           {/* ── Acciones ─────────────────────────────────────────────── */}
           <View className="mx-5 mt-6 gap-3">
