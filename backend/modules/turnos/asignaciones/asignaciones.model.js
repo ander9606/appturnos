@@ -2,6 +2,7 @@
 
 const { pool } = require('../../../config/database');
 const ContratosModel = require('../../contratos/contratos.model');
+const { recalcularRanking } = require('../../../utils/rankingUtils');
 
 /**
  * Acceso a datos de asignaciones de turno (tabla asignaciones_turno).
@@ -333,8 +334,8 @@ const AsignacionesModel = {
 
   /**
    * Registra una calificación de la asignación y recomputa el ranking del
-   * trabajador (promedio + conteo), todo dentro de una transacción.
-   * Lanza ER_DUP_ENTRY si la asignación ya tenía calificación.
+   * trabajador. Lanza ER_DUP_ENTRY si la asignación ya tenía calificación.
+   * calificadoPor = null → calificación automática del sistema (ej. no_presentado).
    */
   async calificar(empresaId, asignacionId, { trabajadorId, calificacion, comentario, calificadoPor }) {
     const conn = await pool.getConnection();
@@ -344,21 +345,71 @@ const AsignacionesModel = {
         `INSERT INTO calificaciones_turno
            (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [empresaId, asignacionId, trabajadorId, calificacion, comentario, calificadoPor]
+        [empresaId, asignacionId, trabajadorId, calificacion, comentario ?? null, calificadoPor ?? null]
       );
-      const [[stats]] = await conn.query(
-        `SELECT AVG(calificacion) AS promedio, COUNT(*) AS total
-         FROM calificaciones_turno
-         WHERE empresa_id = ? AND trabajador_id = ?`,
-        [empresaId, trabajadorId]
-      );
-      await conn.query(
-        `UPDATE trabajadores SET ranking = ?, total_calificaciones = ?
-         WHERE id = ? AND empresa_id = ?`,
-        [Number(stats.promedio).toFixed(2), stats.total, trabajadorId, empresaId]
-      );
+      const resultado = await recalcularRanking(conn, empresaId, trabajadorId);
       await conn.commit();
-      return { ranking: Number(Number(stats.promedio).toFixed(2)), total: stats.total };
+      return resultado;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
+  /**
+   * Marca una asignación como no_presentado, devuelve la plaza al puesto
+   * e inserta automáticamente una calificación de 0 estrellas.
+   * Todo atómico en una transacción.
+   * @returns {Promise<{ok:boolean, motivo?:string, trabajador_id?:number}>}
+   */
+  async marcarNoPresentado(empresaId, id) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [[asig]] = await conn.query(
+        'SELECT * FROM asignaciones_turno WHERE id = ? AND empresa_id = ? FOR UPDATE',
+        [id, empresaId]
+      );
+      if (!asig) {
+        await conn.rollback();
+        return { ok: false, motivo: 'no_existe' };
+      }
+      if (!['confirmado', 'en_progreso'].includes(asig.estado)) {
+        await conn.rollback();
+        return { ok: false, motivo: 'estado' };
+      }
+
+      await conn.query(
+        "UPDATE asignaciones_turno SET estado = 'no_presentado' WHERE id = ?",
+        [id]
+      );
+
+      // Devolver la plaza al puesto (igual que cancelar).
+      await conn.query(
+        'UPDATE oferta_puestos SET plazas_cubiertas = GREATEST(0, plazas_cubiertas - 1) WHERE id = ?',
+        [asig.puesto_id]
+      );
+
+      // Insertar 0-star solo si la asignación aún no tiene calificación.
+      const [[ya]] = await conn.query(
+        'SELECT id FROM calificaciones_turno WHERE asignacion_id = ? LIMIT 1',
+        [id]
+      );
+      if (!ya) {
+        await conn.query(
+          `INSERT INTO calificaciones_turno
+             (empresa_id, asignacion_id, trabajador_id, calificacion, calificado_por)
+           VALUES (?, ?, ?, 0, NULL)`,
+          [empresaId, id, asig.trabajador_id]
+        );
+        await recalcularRanking(conn, empresaId, asig.trabajador_id);
+      }
+
+      await conn.commit();
+      return { ok: true, trabajador_id: asig.trabajador_id, oferta_id: asig.oferta_id };
     } catch (err) {
       await conn.rollback();
       throw err;

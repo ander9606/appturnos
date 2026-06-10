@@ -10,6 +10,7 @@ const CargosModel = require('../../cargos/cargos.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
 const { ROLES } = require('../../../config/constants');
+const { delayPorRanking } = require('../../../utils/rankingUtils');
 
 /**
  * Resuelve el trabajador vinculado al usuario autenticado en una empresa concreta.
@@ -20,19 +21,6 @@ async function resolverTrabajador(empresaId, usuarioId) {
     throw new AppError('Tu usuario no está vinculado a un trabajador activo en esta empresa', 403);
   }
   return trabajador;
-}
-
-/**
- * Visibilidad escalonada: minutos que el trabajador debe esperar antes de
- * ver una oferta nueva, según su ranking (0–5 estrellas).
- */
-function delayPorRanking(ranking) {
-  if (ranking == null) return 15;
-  const r = Number(ranking);
-  if (r >= 4.5) return 0;
-  if (r >= 3.5) return 15;
-  if (r >= 2.5) return 30;
-  return 60;
 }
 
 async function antiguedadMinima(empresaId, usuario) {

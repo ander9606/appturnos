@@ -265,6 +265,34 @@ const AsignacionesService = {
     return AsignacionesModel.obtenerPorId(dbEmpresaId, id);
   },
 
+  async marcarNoPresentado(empresaId, id) {
+    const res = await AsignacionesModel.marcarNoPresentado(empresaId, id);
+    if (!res.ok) {
+      const errores = {
+        no_existe: ['Asignación no encontrada', 404],
+        estado:    ['Solo se puede marcar como no presentado una asignación confirmada o en progreso', 409],
+      };
+      const [mensaje, codigo] = errores[res.motivo];
+      throw new AppError(mensaje, codigo);
+    }
+
+    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, res.trabajador_id);
+
+    if (trabajador) {
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajador.usuario_id,
+        tipo: 'asignacion.no_presentado',
+        titulo: 'Turno marcado como no presentado',
+        mensaje: 'Fuiste marcado como no presentado en un turno. Esto impacta tu calificación y la visibilidad de futuras ofertas.',
+        data: { asignacion_id: id, oferta_id: res.oferta_id },
+      });
+    }
+
+    return asignacion;
+  },
+
   async misTurnos(empresaId, usuarioId) {
     // trabajador_turnos tiene empresa_id = null en el JWT (multi-empresa).
     // Se localiza por usuario_id a través de trabajador_empresa.

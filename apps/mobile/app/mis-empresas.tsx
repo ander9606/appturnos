@@ -34,6 +34,7 @@ import {
 import { empresasApi } from '@api-client';
 import type { Vinculo, EmpresaDirectorio } from '@api-client';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { nivelRanking, rankingLabel, rankingColor, rankingDescription } from '@/features/turnos/rankingUtils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -65,6 +66,8 @@ function StarRating({ value, total }: { value: number; total: number }) {
 
 function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
   const tieneRanking = vinculo.ranking != null && vinculo.total_calificaciones > 0;
+  const nivel = nivelRanking(vinculo.ranking, vinculo.total_calificaciones);
+  const color = rankingColor(nivel);
   return (
     <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden">
       <View className="flex-row items-center gap-3 p-4">
@@ -77,7 +80,22 @@ function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
             <Text className="text-xs text-muted-foreground mt-0.5">{vinculo.empresa_ciudad}</Text>
           )}
           {tieneRanking ? (
-            <StarRating value={vinculo.ranking!} total={vinculo.total_calificaciones} />
+            <>
+              <StarRating value={vinculo.ranking!} total={vinculo.total_calificaciones} />
+              <View className="flex-row items-center gap-1.5 mt-1">
+                <View
+                  className="rounded-full px-2 py-0.5"
+                  style={{ backgroundColor: `${color}20` }}
+                >
+                  <Text className="text-xs font-semibold" style={{ color }}>
+                    {rankingLabel(nivel)}
+                  </Text>
+                </View>
+                <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
+                  {rankingDescription(nivel)}
+                </Text>
+              </View>
+            </>
           ) : (
             <Text className="text-xs text-muted-foreground mt-1">Sin calificaciones aún</Text>
           )}

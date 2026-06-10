@@ -83,6 +83,9 @@ router.post(
   ctrl.egreso
 );
 
+// POST /api/turnos/asignaciones/:id/no-presentado  (jefe/admin marca ausencia + 0 estrellas auto)
+router.post('/:id/no-presentado', verificarRol(GESTIONAR), [idParam], validar, ctrl.noPresentado);
+
 // POST /api/turnos/asignaciones/:id/calificar  (jefe/admin califica el turno)
 router.post(
   '/:id/calificar',
