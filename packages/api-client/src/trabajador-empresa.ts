@@ -23,6 +23,8 @@ export interface Vinculo {
   empresa_slug: string;
   empresa_logo: string | null;
   empresa_ciudad: string | null;
+  ranking: number | null;
+  total_calificaciones: number;
 }
 
 export interface MisEmpresasResponse {
