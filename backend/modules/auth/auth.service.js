@@ -160,6 +160,32 @@ const AuthService = {
       rol,
     });
 
+    // Crear solicitudes de vinculación para las empresas pre-seleccionadas.
+    if (rol === ROLES.TRABAJADOR_TURNOS && trabajador.empresas_postulacion) {
+      const empresaIds = Array.isArray(trabajador.empresas_postulacion)
+        ? trabajador.empresas_postulacion
+        : JSON.parse(trabajador.empresas_postulacion);
+
+      const TrabajadorEmpresaModel = require('../trabajador-empresa/trabajador-empresa.model');
+      const ESTADOS = require('../../config/constants').ESTADOS_TRABAJADOR_EMPRESA;
+
+      for (const empId of empresaIds) {
+        try {
+          const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empId);
+          if (!existente) {
+            await TrabajadorEmpresaModel.crear({
+              usuarioId,
+              empresaId: empId,
+              estado: ESTADOS.SOLICITADO_POR_TRABAJADOR,
+              iniciadoPor: 'trabajador',
+            });
+          }
+        } catch (_e) {
+          // Ignorar errores individuales — no bloquear la activación
+        }
+      }
+    }
+
     return { usuario_id: usuarioId, email, rol };
   },
 

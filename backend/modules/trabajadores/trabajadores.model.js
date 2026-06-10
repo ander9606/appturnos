@@ -7,31 +7,26 @@ const { pool } = require('../../config/database');
  * Todas las consultas se filtran por empresa_id (aislamiento multi-tenant).
  */
 
-// Columnas que se devuelven al cliente (se omite cualquier dato sensible).
-const COLUMNAS = `id, empresa_id, usuario_id, nombre, apellido, cedula, telefono,
-  email, tipo, cargo, tarifa_hora, salario_base, activo, external_ref,
-  ranking, total_calificaciones, created_at`;
+const COLUMNAS = `id, empresa_id, usuario_id, nombre, apellido, cedula,
+  tipo_documento, fecha_nacimiento, sexo,
+  contacto_emergencia_nombre, contacto_emergencia_tel,
+  telefono, email, tipo, cargo, tarifa_hora, salario_base,
+  eps, afp, banco, tipo_cuenta, numero_cuenta,
+  ant_judiciales_fecha, ant_disciplinarios_fecha,
+  activo, external_ref, ranking, total_calificaciones, created_at`;
 
-// Allowlist de columnas modificables vía PUT. Es una lista fija de código,
-// no claves de entrada del usuario, por lo que es seguro interpolarla en SQL.
+// Allowlist de columnas modificables vía PUT. Lista fija de código,
+// nunca construida a partir de input del cliente.
 const CAMPOS_EDITABLES = [
-  'nombre',
-  'apellido',
-  'cedula',
-  'telefono',
-  'email',
-  'tipo',
-  'cargo',
-  'tarifa_hora',
-  'salario_base',
+  'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
+  'telefono', 'email', 'tipo', 'cargo', 'tarifa_hora', 'salario_base',
+  'contacto_emergencia_nombre', 'contacto_emergencia_tel',
+  'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
+  'ant_judiciales_fecha', 'ant_disciplinarios_fecha',
   'external_ref',
 ];
 
 const TrabajadoresModel = {
-  /**
-   * Lista paginada con filtros opcionales por tipo y estado.
-   * @returns {Promise<{data: object[], total: number}>}
-   */
   async listar(empresaId, { tipo, activo, limit, offset }) {
     const where = ['empresa_id = ?'];
     const params = [empresaId];
@@ -68,10 +63,7 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
-  /** Trabajador activo vinculado a una cuenta de usuario (para acciones del propio trabajador). */
   async obtenerPorUsuarioId(empresaId, usuarioId) {
-    // Workers marketplace (logiq360) tienen empresa_id=null en el JWT.
-    // En ese caso buscamos solo por usuario_id sin filtrar empresa.
     const [filas] = empresaId != null
       ? await pool.query(
           `SELECT ${COLUMNAS} FROM trabajadores
@@ -86,7 +78,6 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
-  /** Trabajador por referencia externa (sincronización con logiq360). */
   async obtenerPorExternalRef(empresaId, externalRef) {
     const [filas] = await pool.query(
       `SELECT ${COLUMNAS} FROM trabajadores
@@ -96,34 +87,90 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
-  /** Inserta un trabajador y devuelve su id. */
+  /**
+   * Inserta un trabajador con todos sus datos de perfil en una transacción.
+   * @returns {Promise<number>} id del nuevo trabajador.
+   */
   async crear(empresaId, datos) {
-    const [res] = await pool.query(
-      `INSERT INTO trabajadores
-         (empresa_id, nombre, apellido, cedula, telefono, email, tipo,
-          cargo, tarifa_hora, salario_base, external_ref)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        empresaId,
-        datos.nombre,
-        datos.apellido,
-        datos.cedula ?? null,
-        datos.telefono ?? null,
-        datos.email ?? null,
-        datos.tipo || 'turnos',
-        datos.cargo ?? null,
-        datos.tarifa_hora ?? null,
-        datos.salario_base ?? null,
-        datos.external_ref ?? null,
-      ]
-    );
-    return res.insertId;
+    const conn = await pool.getConnection();
+    await conn.beginTransaction();
+    try {
+      const [res] = await conn.query(
+        `INSERT INTO trabajadores
+           (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo,
+            telefono, email, tipo, cargo, tarifa_hora, salario_base,
+            contacto_emergencia_nombre, contacto_emergencia_tel,
+            eps, afp, banco, tipo_cuenta, numero_cuenta,
+            ant_judiciales_fecha, ant_disciplinarios_fecha,
+            empresas_postulacion, external_ref)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          empresaId,
+          datos.nombre,
+          datos.apellido,
+          datos.cedula ?? null,
+          datos.tipo_documento ?? 'CC',
+          datos.fecha_nacimiento ?? null,
+          datos.sexo ?? null,
+          datos.telefono ?? null,
+          datos.email ?? null,
+          datos.tipo || 'turnos',
+          datos.cargo ?? null,
+          datos.tarifa_hora ?? null,
+          datos.salario_base ?? null,
+          datos.contacto_emergencia_nombre ?? null,
+          datos.contacto_emergencia_tel ?? null,
+          datos.eps ?? null,
+          datos.afp ?? null,
+          datos.banco ?? null,
+          datos.tipo_cuenta ?? null,
+          datos.numero_cuenta ?? null,
+          datos.ant_judiciales_fecha ?? null,
+          datos.ant_disciplinarios_fecha ?? null,
+          datos.empresa_ids?.length ? JSON.stringify(datos.empresa_ids) : null,
+          datos.external_ref ?? null,
+        ]
+      );
+      const trabajadorId = res.insertId;
+
+      if (datos.experiencias?.length) {
+        const vals = datos.experiencias.map((e) => [
+          trabajadorId, e.empresa_nombre, e.cargo, e.fecha_inicio, e.fecha_fin ?? null,
+        ]);
+        await conn.query(
+          'INSERT INTO trabajador_experiencias (trabajador_id, empresa_nombre, cargo, fecha_inicio, fecha_fin) VALUES ?',
+          [vals]
+        );
+      }
+
+      if (datos.diplomas?.length) {
+        const vals = datos.diplomas.map((d) => [
+          trabajadorId, d.titulo, d.institucion, d.anio ?? null,
+        ]);
+        await conn.query(
+          'INSERT INTO trabajador_diplomas (trabajador_id, titulo, institucion, anio) VALUES ?',
+          [vals]
+        );
+      }
+
+      if (datos.cargo_ids?.length) {
+        const vals = datos.cargo_ids.map((cid) => [trabajadorId, cid]);
+        await conn.query(
+          'INSERT IGNORE INTO trabajador_cargos (trabajador_id, cargo_id) VALUES ?',
+          [vals]
+        );
+      }
+
+      await conn.commit();
+      return trabajadorId;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 
-  /**
-   * Actualiza solo los campos presentes en `datos` (PUT parcial).
-   * @returns {Promise<number>} filas afectadas.
-   */
   async actualizar(empresaId, id, datos) {
     const sets = [];
     const params = [];
@@ -143,11 +190,35 @@ const TrabajadoresModel = {
     return res.affectedRows;
   },
 
-  /** Soft delete: marca activo = 0. */
   async desactivar(empresaId, id) {
     const [res] = await pool.query(
       'UPDATE trabajadores SET activo = 0 WHERE id = ? AND empresa_id = ?',
       [id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
+  // Campos que el propio trabajador puede editar sobre sí mismo.
+  async actualizarPorUsuarioId(usuarioId, datos) {
+    const CAMPOS_ME = [
+      'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo', 'telefono',
+      'contacto_emergencia_nombre', 'contacto_emergencia_tel',
+      'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
+      'ant_judiciales_fecha', 'ant_disciplinarios_fecha',
+    ];
+    const sets = [];
+    const params = [];
+    for (const campo of CAMPOS_ME) {
+      if (datos[campo] !== undefined) {
+        sets.push(`${campo} = ?`);
+        params.push(datos[campo] === '' ? null : datos[campo]);
+      }
+    }
+    if (sets.length === 0) return 0;
+    params.push(usuarioId);
+    const [res] = await pool.query(
+      `UPDATE trabajadores SET ${sets.join(', ')} WHERE usuario_id = ? AND activo = 1`,
+      params
     );
     return res.affectedRows;
   },

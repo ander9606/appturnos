@@ -7,6 +7,15 @@ export type { TokenStore } from './client';
 
 // API modules
 export { authApi } from './auth';
+export { empresasApi } from './empresas';
+export type { EmpresaDirectorio, DirectorioResponse } from './empresas';
+export { trabajadorEmpresaApi } from './trabajador-empresa';
+export type {
+  Vinculo,
+  MisEmpresasResponse,
+  SolicitudAdmin,
+  EstadoVinculo,
+} from './trabajador-empresa';
 export type {
   LoginResponse,
   ActivarCuentaResponse,
@@ -58,7 +67,14 @@ export type {
   TrabajadoresListResponse,
   CrearTrabajadorPayload,
   ActualizarTrabajadorPayload,
+  UpdateMePayload,
+  ExperienciaPayload,
+  DiplomaPayload,
+  TipoDocumento,
+  SexoTrabajador,
+  TipoCuenta,
 } from './trabajadores';
+export { notificacionesApi } from './notificaciones';
 export { adminApi } from './admin';
 export type {
   EmpresaAdmin,

@@ -1,5 +1,6 @@
 'use strict';
 
+const https = require('https');
 const webpush = require('web-push');
 
 const PushModel = require('./push.model');
@@ -30,6 +31,29 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 }
 if (!pushHabilitado) {
   logger.warn('[push] VAPID no configurado; la entrega push está deshabilitada');
+}
+
+/** Envía mensajes a la API de Expo Push (best-effort, sin lanzar). */
+async function _enviarExpoBatch(messages) {
+  if (!messages.length) return;
+  const body = JSON.stringify(messages);
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'exp.host',
+      path: '/--/api/v2/push/send',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+      },
+    };
+    const req = https.request(options, (res) => { res.resume(); resolve(); });
+    req.on('error', () => resolve());
+    req.write(body);
+    req.end();
+  });
 }
 
 const PushService = {
@@ -91,6 +115,38 @@ const PushService = {
         }
       })
     );
+  },
+  // ── Expo Push ─────────────────────────────────────────────────────────────
+
+  async registrarExpoToken(usuarioId, token) {
+    await PushModel.guardarExpoToken(usuarioId, token);
+  },
+
+  async eliminarExpoToken(usuarioId, token) {
+    await PushModel.eliminarExpoToken(usuarioId, token);
+  },
+
+  async enviarExpo(usuarioId, payload) {
+    if (!usuarioId) return;
+    let tokens;
+    try {
+      tokens = await PushModel.listarExpoTokensPorUsuario(usuarioId);
+    } catch (err) {
+      logger.error('[push] no se pudieron leer los Expo tokens:', err.message);
+      return;
+    }
+    if (!tokens.length) return;
+
+    const messages = tokens.map((token) => ({
+      to:    token,
+      sound: 'default',
+      title: payload.titulo,
+      body:  payload.mensaje,
+      data:  payload.data || {},
+    }));
+    await _enviarExpoBatch(messages).catch((err) => {
+      logger.error('[push] fallo en entrega Expo:', err.message);
+    });
   },
 };
 

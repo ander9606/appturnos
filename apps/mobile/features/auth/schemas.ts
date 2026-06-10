@@ -39,3 +39,33 @@ export const activarCuentaSchema = z
   });
 
 export type ActivarCuentaFormData = z.infer<typeof activarCuentaSchema>;
+
+// ── Registro libre (marketplace) ──────────────────────────────────────────
+
+export const registroSchema = z
+  .object({
+    nombre: z
+      .string({ required_error: 'El nombre es obligatorio' })
+      .min(1, 'El nombre es obligatorio')
+      .transform((v) => v.trim()),
+    apellido: z
+      .string()
+      .optional()
+      .transform((v) => v?.trim() || undefined),
+    email: z
+      .string({ required_error: 'El correo es obligatorio' })
+      .email('Introduce un correo válido')
+      .transform((v) => v.trim().toLowerCase()),
+    password: z
+      .string({ required_error: 'La contraseña es obligatoria' })
+      .min(8, 'La contraseña debe tener al menos 8 caracteres'),
+    confirmPassword: z
+      .string({ required_error: 'Confirma tu contraseña' })
+      .min(1, 'Confirma tu contraseña'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  });
+
+export type RegistroFormData = z.infer<typeof registroSchema>;

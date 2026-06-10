@@ -59,6 +59,13 @@ export interface Asignacion {
   tipo_geofence?: TipoGeofence;
   // Constructed by model (only on obtenerConDetalles)
   geofence_info?: GeofenceInfo;
+  // Hour breakdown (computed on-the-fly for completado shifts — all optional)
+  horas_ordinarias?: number;
+  horas_extra_diurnas?: number;
+  horas_extra_nocturnas?: number;
+  horas_nocturnas?: number;
+  horas_festivo?: number;
+  es_festivo?: number;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;

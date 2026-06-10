@@ -18,8 +18,10 @@ const NotificacionesService = {
     } catch (err) {
       logger.error('[notificaciones] no se pudo crear la notificación:', err.message);
     }
-    // Entrega push, independiente del registro in-app (PushService es best-effort).
+    // Web Push (navegadores) — best-effort.
     await PushService.enviar(empresaId, usuarioId, { tipo, titulo, mensaje, data });
+    // Expo Push (app móvil) — best-effort.
+    await PushService.enviarExpo(usuarioId, { titulo, mensaje, data });
   },
 
   async notificarVarios(usuarioIds, base) {

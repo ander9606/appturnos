@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
+import { useMisEmpresas, useSolicitudes } from '@/features/empresas/useTrabajadorEmpresa';
 import { COLORS } from '@/lib/designTokens';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
@@ -32,6 +33,93 @@ import type { Trabajador, TipoTrabajador } from '@api-client';
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const MANAGE_ROLES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
+
+// ── Worker view ───────────────────────────────────────────────────────────
+
+function WorkerView() {
+  const router = useRouter();
+  const rol    = useAuthStore((s) => s.usuario?.rol);
+  // Only trabajador_turnos can call mis-empresas; trabajador_nomina gets a 403
+  const { data, isLoading } = useMisEmpresas({ enabled: rol === 'trabajador_turnos' });
+  const activas     = data?.activas     ?? [];
+  const pendientes  = data?.pendientes  ?? [];
+  const invitaciones = data?.invitaciones ?? [];
+
+  return (
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <View className="px-5 pt-4 pb-3">
+        <Text className="text-2xl font-bold text-foreground">Mis empresas</Text>
+        <Text className="text-sm text-muted-foreground mt-0.5">
+          Gestiona tus vínculos con empresas
+        </Text>
+      </View>
+
+      {isLoading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#FF5A3C" />
+        </View>
+      ) : (
+        <View className="px-5 gap-3">
+          {/* Stats row */}
+          <View className="flex-row gap-3">
+            <View className="flex-1 bg-card rounded-2xl border border-border p-4 items-center">
+              <Text className="text-2xl font-bold text-success">{activas.length}</Text>
+              <Text className="text-xs text-muted-foreground mt-0.5">Activas</Text>
+            </View>
+            <View className="flex-1 bg-card rounded-2xl border border-border p-4 items-center">
+              <Text className="text-2xl font-bold text-warning">{pendientes.length}</Text>
+              <Text className="text-xs text-muted-foreground mt-0.5">Pendientes</Text>
+            </View>
+            {invitaciones.length > 0 && (
+              <View className="flex-1 bg-primary-50 rounded-2xl border border-primary-200 p-4 items-center">
+                <Text className="text-2xl font-bold text-primary-500">{invitaciones.length}</Text>
+                <Text className="text-xs text-muted-foreground mt-0.5">Invitaciones</Text>
+              </View>
+            )}
+          </View>
+
+          {/* CTA */}
+          <Pressable
+            onPress={() => router.push('/mis-empresas')}
+            className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-10 h-10 rounded-xl bg-primary-50 items-center justify-center">
+                <Ionicons name="business-outline" size={20} color="#FF5A3C" />
+              </View>
+              <View>
+                <Text className="text-sm font-semibold text-foreground">Gestionar vínculos</Text>
+                <Text className="text-xs text-muted-foreground mt-0.5">
+                  Solicitudes, invitaciones y empresas activas
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+          </Pressable>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+// ── Admin solicitudes badge ────────────────────────────────────────────────
+
+function SolicitudesBadge({ count, onPress }: { count: number; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      className="flex-row items-center gap-1 rounded-full px-3 py-1.5 border border-border bg-card mt-1 active:opacity-70"
+    >
+      <Ionicons name="people-outline" size={14} color="#64748B" />
+      <Text className="text-xs font-semibold text-muted-foreground">Solicitudes</Text>
+      {count > 0 && (
+        <View className="bg-primary-500 rounded-full min-w-[16px] h-[16px] items-center justify-center px-0.5">
+          <Text className="text-white text-xs font-bold">{count}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
 
 type Filtro = 'todos' | TipoTrabajador;
 
@@ -54,28 +142,18 @@ export default function EquipoScreen() {
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
+  const { data: solicitudesData = [] } = useSolicitudes(); // undefined → backend default: both pending states
+  const pendientesCount = solicitudesData.length;
+
   const { data, isLoading, isError, refetch } = useTrabajadores({
     tipo:   filtro !== 'todos' ? filtro : undefined,
     activo: showInactive ? undefined : true,
   });
 
-  // ── Acceso denegado ────────────────────────────────────────────────────
+  // ── Vista trabajador ──────────────────────────────────────────────────
 
   if (!canManage) {
-    return (
-      <SafeAreaView
-        className="flex-1 bg-background items-center justify-center px-8"
-        edges={['top']}
-      >
-        <Ionicons name="lock-closed-outline" size={48} color="#94A3B8" style={{ marginBottom: 16 }} />
-        <Text className="text-xl font-bold text-foreground text-center">
-          Acceso restringido
-        </Text>
-        <Text className="text-sm text-muted-foreground text-center mt-2">
-          No tienes permisos para ver la lista del equipo.
-        </Text>
-      </SafeAreaView>
-    );
+    return <WorkerView />;
   }
 
   // ── Filtrado local por búsqueda ────────────────────────────────────────
@@ -108,21 +186,30 @@ export default function EquipoScreen() {
             </Text>
           )}
         </View>
-        {/* Toggle inactivos */}
-        <Pressable
-          onPress={() => setShowInactive((v) => !v)}
-          className={`rounded-full px-3 py-1.5 border mt-1 ${
-            showInactive ? 'bg-danger/10 border-danger' : 'bg-card border-border'
-          }`}
-        >
-          <Text
-            className={`text-xs font-semibold ${
-              showInactive ? 'text-danger' : 'text-muted-foreground'
+        <View className="items-end gap-1">
+          {/* Toggle inactivos */}
+          <Pressable
+            onPress={() => setShowInactive((v) => !v)}
+            className={`rounded-full px-3 py-1.5 border ${
+              showInactive ? 'bg-danger/10 border-danger' : 'bg-card border-border'
             }`}
           >
-            {showInactive ? 'Mostrando inactivos' : 'Solo activos'}
-          </Text>
-        </Pressable>
+            <Text
+              className={`text-xs font-semibold ${
+                showInactive ? 'text-danger' : 'text-muted-foreground'
+              }`}
+            >
+              {showInactive ? 'Mostrando inactivos' : 'Solo activos'}
+            </Text>
+          </Pressable>
+          {/* Solicitudes badge — solo admin */}
+          {isAdmin && (
+            <SolicitudesBadge
+              count={pendientesCount}
+              onPress={() => router.push('/solicitudes')}
+            />
+          )}
+        </View>
       </View>
 
       {/* Search bar */}

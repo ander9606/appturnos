@@ -25,4 +25,14 @@ async function desuscribir(req, res) {
   res.json({ success: true, data: null, message: 'Suscripción push eliminada' });
 }
 
-module.exports = { clavePublica, suscribir, desuscribir };
+async function registrarExpoToken(req, res) {
+  await PushService.registrarExpoToken(req.usuario.sub, req.body.token);
+  res.status(201).json({ success: true, data: null, message: 'Token Expo registrado' });
+}
+
+async function eliminarExpoToken(req, res) {
+  await PushService.eliminarExpoToken(req.usuario.sub, req.body.token);
+  res.json({ success: true, data: null, message: 'Token Expo eliminado' });
+}
+
+module.exports = { clavePublica, suscribir, desuscribir, registrarExpoToken, eliminarExpoToken };

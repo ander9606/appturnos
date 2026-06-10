@@ -87,4 +87,20 @@ export const authApi = {
       { authenticated: false },
     );
   },
+  /**
+   * Registro libre para trabajador_turnos (modelo marketplace).
+   * No requiere cédula ni empresa preexistente.
+   */
+  registrar(params: {
+    nombre: string;
+    apellido?: string;
+    email: string;
+    password: string;
+  }): Promise<LoginResponse> {
+    return api.post<LoginResponse>(
+      '/api/auth/registro',
+      params,
+      { authenticated: false },
+    );
+  },
 };

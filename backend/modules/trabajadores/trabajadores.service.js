@@ -36,6 +36,20 @@ const TrabajadoresService = {
     return TrabajadoresModel.obtenerPorId(empresaId, id);
   },
 
+  /** El propio trabajador obtiene su perfil completo buscando por usuario_id. */
+  async me(usuarioId) {
+    const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+    if (!trabajador) throw new AppError('Perfil de trabajador no encontrado', 404);
+    return trabajador;
+  },
+
+  /** El propio trabajador actualiza los campos de su perfil que le pertenecen. */
+  async actualizarMe(usuarioId, datos) {
+    await this.me(usuarioId); // 404 si no existe
+    await TrabajadoresModel.actualizarPorUsuarioId(usuarioId, datos);
+    return TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+  },
+
   /** Soft delete idempotente: si ya está inactivo no hace nada. */
   async eliminar(empresaId, id) {
     const trabajador = await this.obtener(empresaId, id);

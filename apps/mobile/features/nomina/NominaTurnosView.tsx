@@ -130,7 +130,53 @@ export function NominaTurnosView() {
               </Text>
             </View>
           )}
+          {item.es_festivo === 1 && (
+            <View className="bg-red-50 rounded-full px-2 py-0.5">
+              <Text className="text-[10px] font-semibold text-red-600">Festivo</Text>
+            </View>
+          )}
         </View>
+
+        {/* Hour breakdown — only when backend has computed it */}
+        {item.horas_ordinarias != null && (
+          <View className="flex-row flex-wrap gap-1">
+            {(item.horas_ordinarias ?? 0) > 0 && (
+              <View className="bg-muted rounded-full px-2 py-0.5">
+                <Text className="text-[10px] text-muted-foreground">
+                  {item.horas_ordinarias!.toFixed(1)}h ord
+                </Text>
+              </View>
+            )}
+            {(item.horas_nocturnas ?? 0) > 0 && (
+              <View className="bg-blue-50 rounded-full px-2 py-0.5">
+                <Text className="text-[10px] text-blue-600">
+                  {item.horas_nocturnas!.toFixed(1)}h noc
+                </Text>
+              </View>
+            )}
+            {(item.horas_extra_diurnas ?? 0) > 0 && (
+              <View className="bg-amber-50 rounded-full px-2 py-0.5">
+                <Text className="text-[10px] text-amber-700">
+                  {item.horas_extra_diurnas!.toFixed(1)}h ext.d
+                </Text>
+              </View>
+            )}
+            {(item.horas_extra_nocturnas ?? 0) > 0 && (
+              <View className="bg-amber-50 rounded-full px-2 py-0.5">
+                <Text className="text-[10px] text-amber-700">
+                  {item.horas_extra_nocturnas!.toFixed(1)}h ext.n
+                </Text>
+              </View>
+            )}
+            {(item.horas_festivo ?? 0) > 0 && (
+              <View className="bg-red-50 rounded-full px-2 py-0.5">
+                <Text className="text-[10px] text-red-600">
+                  {item.horas_festivo!.toFixed(1)}h fest
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         <View className="flex-row items-center justify-between mt-1">
           <Text className="text-sm font-bold" style={{ color: theme.primary }}>
