@@ -37,6 +37,17 @@ export function useTrabajador(id: number) {
   });
 }
 
+/** Busca un trabajador marketplace por cédula. Devuelve null si no existe. */
+export function useBuscarPorCedula(cedula: string) {
+  return useQuery({
+    queryKey: ['trabajadores', 'buscar', cedula],
+    queryFn: () => trabajadoresApi.buscarPorCedula(cedula),
+    enabled: cedula.trim().length >= 5,
+    staleTime: 30_000,
+    retry: false,
+  });
+}
+
 // ── Mutations ─────────────────────────────────────────────────────────────
 
 export function useCrearTrabajador() {

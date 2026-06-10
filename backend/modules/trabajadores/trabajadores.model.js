@@ -54,6 +54,21 @@ const TrabajadoresModel = {
     return { data: filas, total };
   },
 
+  async buscarPorCedula(cedula) {
+    const [filas] = await pool.query(
+      `SELECT t.id, t.nombre, t.apellido, t.cedula, t.tipo_documento, t.cargo, t.ranking
+       FROM trabajadores t
+       INNER JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.cedula = ?
+         AND u.rol = 'trabajador_turnos'
+         AND u.activo = 1
+         AND t.empresa_id IS NULL
+       LIMIT 1`,
+      [cedula]
+    );
+    return filas[0] || null;
+  },
+
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT ${COLUMNAS} FROM trabajadores
