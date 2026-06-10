@@ -57,6 +57,16 @@ export function useSolicitudes(estado?: string) {
   });
 }
 
+export function useInvitar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cedula: string) => trabajadorEmpresaApi.invitar(cedula),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trabajador-empresa', 'solicitudes'] });
+    },
+  });
+}
+
 export function useAprobar() {
   const qc = useQueryClient();
   return useMutation({

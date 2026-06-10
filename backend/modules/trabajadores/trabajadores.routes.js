@@ -137,6 +137,16 @@ router.delete(
   ctrl.eliminarDiploma
 );
 
+// GET /api/trabajadores/buscar?cedula=X — búsqueda cross-empresa por cédula (solo marketplace workers)
+// Debe ir ANTES de /:id
+router.get(
+  '/buscar',
+  verificarRol([ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS]),
+  [query('cedula').isString().trim().notEmpty().withMessage('cedula requerida')],
+  validar,
+  ctrl.buscarPorCedula
+);
+
 // GET /api/trabajadores
 router.get(
   '/',

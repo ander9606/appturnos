@@ -132,7 +132,22 @@ export interface UpdateMePayload {
 
 // ── API ───────────────────────────────────────────────────────────────────
 
+export interface TrabajadorPreview {
+  id: number;
+  nombre: string;
+  apellido: string;
+  cedula: string;
+  tipo_documento: string | null;
+  cargo: string | null;
+  ranking: number | null;
+}
+
 export const trabajadoresApi = {
+  /** Búsqueda cross-empresa por cédula — solo devuelve marketplace workers activos. */
+  buscarPorCedula(cedula: string): Promise<TrabajadorPreview> {
+    return api.get<TrabajadorPreview>(`/api/trabajadores/buscar?cedula=${encodeURIComponent(cedula)}`);
+  },
+
   async listar(params: TrabajadoresListParams = {}): Promise<TrabajadoresListResponse> {
     const qs = new URLSearchParams();
     if (params.tipo !== undefined) qs.set('tipo', params.tipo);

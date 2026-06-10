@@ -27,6 +27,7 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { authApi } from '@api-client';
 import { t } from '@/lib/i18n';
 import type { ApiError } from '@api-client';
+import { useTheme } from '@/lib/theme';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -240,7 +241,9 @@ export default function PerfilScreen() {
   const usuario        = useAuthStore((s) => s.usuario);
   const logout         = useAuthStore((s) => s.logout);
   const setUsuario     = useAuthStore((s) => s.setUsuario);
+  const theme          = useTheme();
   const isTrabajadorTurnos = usuario?.rol === 'trabajador_turnos';
+  const isJefeTurnos       = usuario?.rol === 'jefe_turnos';
 
   const [editingDatos,    setEditingDatos]    = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
@@ -312,7 +315,7 @@ export default function PerfilScreen() {
           {/* ── Header ──────────────────────────────────────────── */}
           <View
             className="pt-4 pb-10 px-6 rounded-b-[32px] items-center gap-3"
-            style={{ backgroundColor: '#FF5A3C' }}
+            style={{ backgroundColor: theme.primary }}
           >
             <Text className="text-white text-lg font-bold self-start">{t('perfil.title')}</Text>
 
@@ -357,7 +360,7 @@ export default function PerfilScreen() {
                 onPress={() => setEditingDatos(true)}
                 className="border-t border-border px-5 py-3 flex-row items-center justify-center gap-2 active:opacity-70"
               >
-                <Ionicons name="pencil-outline" size={14} color="#FF5A3C" />
+                <Ionicons name="pencil-outline" size={14} color={theme.primary} />
                 <Text className="text-sm font-semibold text-primary">{t('perfil.editarDatos')}</Text>
               </Pressable>
             </View>
@@ -395,7 +398,9 @@ export default function PerfilScreen() {
           <SectionHeader title={t('perfil.cuenta')} />
 
           <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
-            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos} />
+            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos} />
+
+            {/* ── Trabajador Turnos — accesos rápidos ──────────────── */}
             {isTrabajadorTurnos && (
               <>
                 <Pressable
@@ -425,6 +430,42 @@ export default function PerfilScreen() {
                   <View className="flex-row items-center gap-3">
                     <Ionicons name="business-outline" size={16} color="#64748B" />
                     <Text className="text-sm font-medium text-foreground">Mis empresas</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+              </>
+            )}
+
+            {/* ── Jefe de Turnos — accesos rápidos ─────────────────── */}
+            {isJefeTurnos && (
+              <>
+                <Pressable
+                  onPress={() => router.push('/(tabs)/equipo')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="people-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Mi equipo</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/solicitudes')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="person-add-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Solicitudes de ingreso</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/(tabs)/turnos')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Gestión de turnos</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                 </Pressable>

@@ -50,6 +50,11 @@ async function eliminar(req, res) {
   res.json({ success: true, data: null, message: 'Trabajador desactivado' });
 }
 
+async function buscarPorCedula(req, res) {
+  const data = await TrabajadoresService.buscarPorCedula(req.query.cedula?.trim());
+  res.json({ success: true, data });
+}
+
 async function obtenerMe(req, res) {
   const data = await TrabajadoresService.me(req.usuario.sub);
   res.json({ success: true, data, message: 'Mi perfil laboral' });
@@ -81,7 +86,7 @@ async function eliminarDiploma(req, res) {
 }
 
 module.exports = {
-  listar, obtener, crear, actualizar, eliminar,
+  listar, obtener, buscarPorCedula, crear, actualizar, eliminar,
   obtenerMe, actualizarMe,
   crearExperiencia, eliminarExperiencia,
   crearDiploma, eliminarDiploma,

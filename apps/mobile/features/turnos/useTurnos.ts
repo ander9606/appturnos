@@ -259,6 +259,16 @@ export function useCalificar() {
   });
 }
 
+/** Marcar no-presentado (jefe/admin) — registra 0 estrellas automático y recalcula ranking. */
+export function useNoPresentado() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId }: { asignacionId: number; ofertaId: number }) =>
+      turnosApi.marcarNoPresentado(asignacionId),
+    onSuccess: (data, { ofertaId }) => aplicarEstadoEnCache(qc, data, ofertaId),
+  });
+}
+
 /** Catálogo de cargos (sistema + custom de la empresa). */
 export function useCargos() {
   return useQuery({

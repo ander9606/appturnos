@@ -136,7 +136,9 @@ export default function EquipoScreen() {
   const router  = useRouter();
   const usuario = useAuthStore((s) => s.usuario);
   const canManage = usuario != null && MANAGE_ROLES.includes(usuario.rol);
-  const isAdmin   = usuario?.rol === 'admin_empresa';
+  const isAdmin       = usuario?.rol === 'admin_empresa';
+  const isJefeTurnos  = usuario?.rol === 'jefe_turnos';
+  const canInvitar    = isAdmin || isJefeTurnos;
 
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [search, setSearch] = useState('');
@@ -202,8 +204,8 @@ export default function EquipoScreen() {
               {showInactive ? 'Mostrando inactivos' : 'Solo activos'}
             </Text>
           </Pressable>
-          {/* Solicitudes badge — solo admin */}
-          {isAdmin && (
+          {/* Solicitudes badge — admin y jefe_turnos */}
+          {canInvitar && (
             <SolicitudesBadge
               count={pendientesCount}
               onPress={() => router.push('/solicitudes')}
@@ -297,7 +299,7 @@ export default function EquipoScreen() {
         />
       )}
 
-      {/* FAB — solo admin */}
+      {/* FAB — admin: crear trabajador / jefe_turnos: invitar por cédula */}
       {isAdmin && (
         <Pressable
           onPress={() => router.push('/trabajador/nuevo')}
@@ -311,6 +313,21 @@ export default function EquipoScreen() {
           }}
         >
           <Text className="text-white text-2xl font-bold">+</Text>
+        </Pressable>
+      )}
+      {isJefeTurnos && (
+        <Pressable
+          onPress={() => router.push('/invitar-trabajador')}
+          className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-info items-center justify-center shadow-lg active:opacity-80"
+          style={{
+            shadowColor: '#3B82F6',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35,
+            shadowRadius: 8,
+            elevation: 8,
+          }}
+        >
+          <Ionicons name="person-add-outline" size={22} color="#fff" />
         </Pressable>
       )}
     </SafeAreaView>

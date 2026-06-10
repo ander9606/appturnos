@@ -19,6 +19,13 @@ const TrabajadoresService = {
     return { data, pagination: { page, limit, total } };
   },
 
+  async buscarPorCedula(cedula) {
+    if (!cedula) throw new AppError('cedula requerida', 400);
+    const trabajador = await TrabajadoresModel.buscarPorCedula(cedula);
+    if (!trabajador) throw new AppError('No se encontró un trabajador con esa cédula', 404);
+    return trabajador;
+  },
+
   async obtener(empresaId, id) {
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, id);
     if (!trabajador) throw new AppError('Trabajador no encontrado', 404);
