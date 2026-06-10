@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 
 const AuthModel = require('./auth.model');
@@ -255,6 +256,42 @@ const AuthService = {
         email,
         rol: ROLES.TRABAJADOR_TURNOS,
       },
+    };
+  },
+
+  /**
+   * Crea un usuario gestor (jefe_turnos, jefe_nomina, nomina) para la empresa del admin.
+   * Genera una contraseña temporal que se devuelve una sola vez.
+   */
+  async crearGestor(empresaId, { nombre, apellido, email, rol }) {
+    const ROLES_PERMITIDOS = [ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
+    if (!ROLES_PERMITIDOS.includes(rol)) {
+      throw new AppError(`Rol inválido. Usa: ${ROLES_PERMITIDOS.join(', ')}`, 400);
+    }
+
+    const existente = await AuthModel.buscarUsuarioPorEmail(email);
+    if (existente) throw new AppError('Ya existe un usuario con ese email', 409);
+
+    // Contraseña temporal: "Tmp" + 8 hex chars = 11 caracteres
+    const passwordTemporal = 'Tmp' + crypto.randomBytes(4).toString('hex');
+    const passwordHash = await bcrypt.hash(passwordTemporal, BCRYPT_ROUNDS);
+
+    const id = await AuthModel.crearGestor({
+      empresaId,
+      nombre:       nombre.trim(),
+      apellido:     apellido?.trim() || null,
+      email:        email.trim().toLowerCase(),
+      passwordHash,
+      rol,
+    });
+
+    return {
+      id,
+      nombre:            nombre.trim(),
+      apellido:          apellido?.trim() || null,
+      email:             email.trim().toLowerCase(),
+      rol,
+      password_temporal: passwordTemporal,
     };
   },
 };

@@ -8,6 +8,22 @@ import {
   ChangePasswordParams,
 } from './types';
 
+export interface CrearGestorPayload {
+  nombre: string;
+  apellido?: string;
+  email: string;
+  rol: 'jefe_turnos' | 'jefe_nomina' | 'nomina';
+}
+
+export interface CrearGestorResult {
+  id: number;
+  nombre: string;
+  apellido: string | null;
+  email: string;
+  rol: string;
+  password_temporal: string;
+}
+
 export const authApi = {
   /**
    * Login con email + contraseña.
@@ -102,5 +118,10 @@ export const authApi = {
       params,
       { authenticated: false },
     );
+  },
+
+  /** admin_empresa crea un usuario gestor en su empresa con contraseña temporal. */
+  crearGestor(payload: CrearGestorPayload): Promise<CrearGestorResult> {
+    return api.post<CrearGestorResult>('/api/auth/crear-gestor', payload);
   },
 };

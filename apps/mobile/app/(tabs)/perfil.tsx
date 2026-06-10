@@ -244,6 +244,7 @@ export default function PerfilScreen() {
   const theme          = useTheme();
   const isTrabajadorTurnos = usuario?.rol === 'trabajador_turnos';
   const isJefeTurnos       = usuario?.rol === 'jefe_turnos';
+  const isAdmin            = usuario?.rol === 'admin_empresa';
 
   const [editingDatos,    setEditingDatos]    = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
@@ -398,7 +399,7 @@ export default function PerfilScreen() {
           <SectionHeader title={t('perfil.cuenta')} />
 
           <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
-            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos} />
+            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos && !isAdmin} />
 
 
             {/* ── Trabajador Turnos — accesos rápidos ──────────────── */}
@@ -467,6 +468,52 @@ export default function PerfilScreen() {
                   <View className="flex-row items-center gap-3">
                     <Ionicons name="calendar-outline" size={16} color="#64748B" />
                     <Text className="text-sm font-medium text-foreground">Gestión de turnos</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/cargos')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Gestión de cargos</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/puntos-marcaje')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="location-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Puntos de marcaje</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+              </>
+            )}
+
+            {/* ── Admin Empresa — accesos rápidos ──────────────────── */}
+            {isAdmin && (
+              <>
+                <Pressable
+                  onPress={() => router.push('/crear-gestor')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="person-add-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Crear gestor</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/solicitudes')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="people-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Solicitudes de ingreso</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                 </Pressable>
