@@ -4,7 +4,8 @@ const express = require('express');
 const { body } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
-const { verificarToken } = require('../../middleware/authMiddleware');
+const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const { ROLES } = require('../../config/constants');
 const ctrl = require('./auth.controller');
 
 const router = express.Router();
@@ -103,6 +104,23 @@ router.patch(
   ],
   validar,
   ctrl.cambiarPassword
+);
+
+// POST /api/auth/crear-gestor — admin_empresa crea un usuario gestor en su empresa
+router.post(
+  '/crear-gestor',
+  verificarToken,
+  verificarRol([ROLES.ADMIN_EMPRESA]),
+  [
+    body('nombre').isString().trim().notEmpty().withMessage('Nombre requerido'),
+    body('apellido').optional().isString().trim(),
+    emailSanitizado,
+    body('rol')
+      .isIn(['jefe_turnos', 'jefe_nomina', 'nomina'])
+      .withMessage('Rol inválido. Usa: jefe_turnos, jefe_nomina o nomina'),
+  ],
+  validar,
+  ctrl.crearGestor
 );
 
 // Sub-router OAuth — POST /api/auth/oauth/:provider, etc.

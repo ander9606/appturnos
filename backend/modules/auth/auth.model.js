@@ -199,6 +199,16 @@ const AuthModel = {
     );
     return res.insertId;
   },
+
+  /** Crea un usuario gestor (jefe_turnos, jefe_nomina, nomina) para una empresa. */
+  async crearGestor({ empresaId, nombre, apellido, email, passwordHash, rol }) {
+    const [res] = await pool.query(
+      `INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [empresaId, nombre, apellido || null, email, passwordHash, rol]
+    );
+    return res.insertId;
+  },
 };
 
 module.exports = AuthModel;

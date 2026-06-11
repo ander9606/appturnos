@@ -19,8 +19,13 @@ app.use(helmet());
 
 // CORS: en producción solo los orígenes explícitos de CORS_ORIGINS (CSV).
 // En desarrollo acepta cualquier origen para facilitar pruebas locales.
-const corsOrigins = process.env.CORS_ORIGINS?.split(',').map((o) => o.trim());
-app.use(cors(corsOrigins?.length ? { origin: corsOrigins, credentials: true } : {}));
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
+  : [];
+if (corsOrigins.length === 0 && process.env.NODE_ENV === 'production') {
+  logger.error('CORS_ORIGINS no configurado en producción — todos los orígenes permitidos. Configura esta variable.');
+}
+app.use(cors(corsOrigins.length ? { origin: corsOrigins, credentials: true } : {}));
 
 // ─── Rate limiting ────────────────────────────────────────────
 // Límite general: 200 req / 15 min por IP (protege todos los endpoints).
@@ -42,6 +47,19 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/refresh', authLimiter);
+
+// Límite por IP+ruta en endpoints de marcaje y postulación: 10 req / min.
+// Previene doble-marcaje por spam y abuso de postulaciones masivas.
+const marcajeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Demasiadas solicitudes, intenta en un momento' },
+});
+app.use('/api/turnos/asignaciones/:id/ingreso', marcajeLimiter);
+app.use('/api/turnos/asignaciones/:id/egreso', marcajeLimiter);
+app.use('/api/turnos/ofertas/:id/aplicar', marcajeLimiter);
 
 // Captura el body crudo: necesario para verificar la firma HMAC de los
 // webhooks entrantes de logiq360 (ver 05-INTEGRACION.md).

@@ -7,6 +7,7 @@ export type { TokenStore } from './client';
 
 // API modules
 export { authApi } from './auth';
+export type { CrearGestorPayload, CrearGestorResult } from './auth';
 export { empresasApi } from './empresas';
 export type { EmpresaDirectorio, DirectorioResponse } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
@@ -52,7 +53,7 @@ export type {
   LiquidacionTurnosTrabajador,
 } from './turnos';
 export { cargosApi } from './cargos';
-export type { Cargo } from './cargos';
+export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult } from './cargos';
 export { puntosMarcajeApi } from './puntos-marcaje';
 export type {
   PuntoMarcaje,

@@ -54,4 +54,10 @@ async function cambiarPassword(req, res) {
   res.json({ success: true, data: null, message: 'Contraseña actualizada. Inicia sesión de nuevo.' });
 }
 
-module.exports = { login, refresh, logout, me, activarCuenta, registrar, actualizarPerfil, cambiarPassword };
+async function crearGestor(req, res) {
+  const { nombre, apellido, email, rol } = req.body;
+  const data = await AuthService.crearGestor(req.empresa_id, { nombre, apellido, email, rol });
+  res.status(201).json({ success: true, data, message: 'Gestor creado exitosamente' });
+}
+
+module.exports = { login, refresh, logout, me, activarCuenta, registrar, actualizarPerfil, cambiarPassword, crearGestor };
