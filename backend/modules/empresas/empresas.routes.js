@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { query, param } = require('express-validator');
+const { body, query, param } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
@@ -10,15 +10,15 @@ const ctrl = require('./empresas.controller');
 
 const router = express.Router();
 
-// Trabajadores ven el directorio para postularse; admins/jefes lo ven
-// para seleccionar empresas al crear perfiles de trabajadores.
 const PUEDEN_VER_DIRECTORIO = [
   ROLES.TRABAJADOR_TURNOS,
   ROLES.ADMIN_EMPRESA,
   ROLES.JEFE_TURNOS,
 ];
 
-// GET /api/empresas/directorio — directorio público de empleadores
+const SOLO_ADMIN = [ROLES.ADMIN_EMPRESA];
+
+// GET /api/empresas/directorio
 router.get(
   '/directorio',
   verificarToken,
@@ -33,7 +33,29 @@ router.get(
   ctrl.directorio
 );
 
-// GET /api/empresas/:id — detalle público de una empresa
+// GET /api/empresas/me — admin_empresa ve su propia empresa (campos completos)
+// Debe ir ANTES de /:id para que Express no interprete "me" como un ID.
+router.get('/me', verificarToken, verificarRol(SOLO_ADMIN), ctrl.miEmpresa);
+
+// PATCH /api/empresas/me — admin_empresa actualiza su empresa
+router.patch(
+  '/me',
+  verificarToken,
+  verificarRol(SOLO_ADMIN),
+  [
+    body('nombre').optional().isString().trim().notEmpty().withMessage('nombre no puede ir vacío'),
+    body('nit').optional({ values: 'falsy' }).isString().trim(),
+    body('ciudad').optional({ values: 'falsy' }).isString().trim(),
+    body('descripcion').optional({ values: 'falsy' }).isString().trim(),
+    body('actividad').optional({ values: 'falsy' }).isString().trim(),
+    body('logo_url').optional({ values: 'falsy' }).isURL().withMessage('logo_url debe ser una URL válida'),
+    body('acepta_postulaciones').optional().isBoolean().withMessage('acepta_postulaciones debe ser booleano'),
+  ],
+  validar,
+  ctrl.actualizarMiEmpresa
+);
+
+// GET /api/empresas/:id — detalle público
 router.get(
   '/:id',
   verificarToken,

@@ -9,7 +9,7 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export type { CrearGestorPayload, CrearGestorResult } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, DirectorioResponse } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
