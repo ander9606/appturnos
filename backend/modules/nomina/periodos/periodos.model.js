@@ -106,6 +106,17 @@ const PeriodosModel = {
     }
   },
 
+  async obtenerAbiertoPorFecha(empresaId, fecha) {
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS} FROM periodos_nomina
+       WHERE empresa_id = ? AND estado = 'abierto'
+         AND fecha_inicio <= ? AND fecha_fin >= ?
+       LIMIT 1`,
+      [empresaId, fecha, fecha]
+    );
+    return filas[0] || null;
+  },
+
   async liquidar(empresaId, id) {
     const [res] = await pool.query(
       "UPDATE periodos_nomina SET estado = 'liquidado' WHERE id = ? AND empresa_id = ?",

@@ -11,12 +11,14 @@ const ctrl = require('./registros.controller');
 const router = express.Router();
 
 // Permisos según la matriz de 06-AUTH.md.
-const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
-const CREAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
+const VER    = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
+const CREAR  = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
 const CORREGIR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA];
+const MARCAR = [ROLES.TRABAJADOR_NOMINA];
 
-const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
-const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
+const TIPOS_DIA = ['ordinario', 'descanso', 'compensatorio', 'incapacidad', 'vacacion', 'licencia'];
+const RE_HORA   = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+const idParam   = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
 router.use(verificarToken);
 
@@ -54,6 +56,32 @@ router.post(
   ctrl.crear
 );
 
+// POST /api/nomina/registros/marcar-entrada  (trabajador_nomina only)
+// IMPORTANT: must be declared before /:id routes to avoid route collision
+router.post(
+  '/marcar-entrada',
+  verificarRol(MARCAR),
+  [
+    body('latitud').optional().isFloat({ min: -90,  max: 90  }).withMessage('latitud inválida'),
+    body('longitud').optional().isFloat({ min: -180, max: 180 }).withMessage('longitud inválida'),
+  ],
+  validar,
+  ctrl.marcarEntrada
+);
+
+// POST /api/nomina/registros/:id/marcar-salida  (trabajador_nomina only)
+router.post(
+  '/:id/marcar-salida',
+  verificarRol(MARCAR),
+  [
+    idParam,
+    body('latitud').optional().isFloat({ min: -90,  max: 90  }).withMessage('latitud inválida'),
+    body('longitud').optional().isFloat({ min: -180, max: 180 }).withMessage('longitud inválida'),
+  ],
+  validar,
+  ctrl.marcarSalida
+);
+
 // PUT /api/nomina/registros/:id  (corregir)
 router.put(
   '/:id',
@@ -63,6 +91,7 @@ router.put(
     body('hora_entrada').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_entrada inválida'),
     body('hora_salida').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_salida inválida'),
     body('novedad').optional({ values: 'falsy' }).isString(),
+    body('tipo_dia').optional().isIn(TIPOS_DIA).withMessage('tipo_dia inválido'),
   ],
   validar,
   ctrl.corregir

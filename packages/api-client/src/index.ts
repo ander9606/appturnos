@@ -34,6 +34,7 @@ export type {
   TipoPeriodo,
   ResumenHoras,
   TipoMarcacion,
+  TipoDia,
   TrabajadorNominaPerfil,
 } from './nomina';
 export { turnosApi } from './turnos';

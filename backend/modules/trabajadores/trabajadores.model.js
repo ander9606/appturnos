@@ -13,6 +13,7 @@ const COLUMNAS = `id, empresa_id, usuario_id, nombre, apellido, cedula,
   telefono, email, tipo, cargo, tarifa_hora, salario_base,
   eps, afp, banco, tipo_cuenta, numero_cuenta,
   ant_judiciales_fecha, ant_disciplinarios_fecha,
+  tipo_marcacion, punto_marcaje_id,
   activo, external_ref, ranking, total_calificaciones, created_at`;
 
 // Allowlist de columnas modificables vía PUT. Lista fija de código,

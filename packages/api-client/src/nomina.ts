@@ -33,6 +33,7 @@ export interface RegistroDiario {
   horas_festivo: number;
   es_festivo: 0 | 1;
   novedad: string | null;
+  tipo_dia: TipoDia;
   aprobado_por: number | null;
   created_at: string;
   // Joined
@@ -72,6 +73,7 @@ export interface ResumenHoras {
 }
 
 export type TipoMarcacion = 'libre' | 'fijo';
+export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia';
 
 export interface TrabajadorNominaPerfil {
   id: number;

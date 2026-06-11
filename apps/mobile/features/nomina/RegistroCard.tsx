@@ -10,6 +10,14 @@ import type { RegistroDiario } from '@api-client';
 const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
+const TIPO_DIA_LABEL: Record<string, string> = {
+  descanso:      'Descanso',
+  compensatorio: 'Compensatorio',
+  incapacidad:   'Incapacidad',
+  vacacion:      'Vacación',
+  licencia:      'Licencia',
+};
+
 function fmt(iso: string) {
   const d = new Date(`${iso}T00:00:00`);
   return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
@@ -35,8 +43,9 @@ export function RegistroCard({ registro }: RegistroCardProps) {
   const fest = Number(registro.horas_festivo);
   const total = ord + exd + exn + noc + fest;
 
-  const hasExtras = exd > 0 || exn > 0 || noc > 0 || fest > 0;
-  const isFestivo = registro.es_festivo === 1;
+  const hasExtras    = exd > 0 || exn > 0 || noc > 0 || fest > 0;
+  const isFestivo    = registro.es_festivo === 1;
+  const tipoDiaLabel = TIPO_DIA_LABEL[registro.tipo_dia] ?? null;
 
   return (
     <TouchableOpacity
@@ -76,17 +85,28 @@ export function RegistroCard({ registro }: RegistroCardProps) {
         {/* Total hours + expand indicator */}
         <View className="items-end gap-1">
           <Text className="text-base font-bold text-foreground">{total.toFixed(1)}h</Text>
-          {(hasExtras || registro.novedad) && (
+          {(hasExtras || registro.novedad || tipoDiaLabel) && (
             <Text className="text-xs text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
           )}
         </View>
       </View>
 
-      {/* ── Expanded: novedad ─────────────────────────────────── */}
-      {expanded && registro.novedad && (
-        <View className="px-4 pb-3 pt-0 border-t border-border">
-          <Text className="text-xs text-muted-foreground mt-2">Novedad</Text>
-          <Text className="text-sm text-foreground mt-0.5">{registro.novedad}</Text>
+      {/* ── Expanded: tipo_dia + novedad ──────────────────────── */}
+      {expanded && (tipoDiaLabel || registro.novedad) && (
+        <View className="px-4 pb-3 pt-0 border-t border-border gap-1">
+          {tipoDiaLabel && (
+            <View className="flex-row items-center gap-2 mt-2">
+              <View className="bg-warning-light px-2 py-0.5 rounded-full">
+                <Text className="text-xs font-medium text-amber-700">{tipoDiaLabel}</Text>
+              </View>
+            </View>
+          )}
+          {registro.novedad && (
+            <>
+              <Text className="text-xs text-muted-foreground mt-1">Novedad</Text>
+              <Text className="text-sm text-foreground">{registro.novedad}</Text>
+            </>
+          )}
         </View>
       )}
     </TouchableOpacity>
