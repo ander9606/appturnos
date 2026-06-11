@@ -19,6 +19,7 @@ function TabIcon({ name, focused, color }: { name: IoniconsName; focused: boolea
 
 export default function TabsLayout() {
   const rol = useAuthStore((s) => s.usuario?.rol);
+  const isWorker = rol === 'trabajador_turnos';
   const primaryColor = rol === 'trabajador_nomina'
     ? THEME_COLORS.nomina.primary
     : THEME_COLORS.turnos.primary;
@@ -66,9 +67,18 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="empresas"
+        options={{
+          title: t('tabs.empresas'),
+          href: isWorker ? undefined : null,
+          tabBarIcon: ({ focused, color }) => <TabIcon name="business-outline" focused={focused} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="equipo"
         options={{
           title: t('tabs.equipo'),
+          href: isWorker ? null : undefined,
           tabBarIcon: ({ focused, color }) => <TabIcon name="people-outline" focused={focused} color={color} />,
         }}
       />

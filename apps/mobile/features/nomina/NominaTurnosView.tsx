@@ -14,42 +14,13 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
+import { getQuincena as getQuincenaRange, getPrevQuincena } from './quincenaUtils';
 import type { Asignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-
-interface QuincenaRange {
-  inicio: Date;
-  fin: Date;
-  label: string;
-}
-
-function getQuincenaRange(ref: Date): QuincenaRange {
-  const day   = ref.getDate();
-  const month = ref.getMonth();
-  const year  = ref.getFullYear();
-  if (day <= 15) {
-    return {
-      inicio: new Date(year, month, 1),
-      fin:    new Date(year, month, 15, 23, 59, 59),
-      label:  `1–15 ${SHORT_MONTHS[month]}`,
-    };
-  }
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  return {
-    inicio: new Date(year, month, 16),
-    fin:    new Date(year, month, lastDay, 23, 59, 59),
-    label:  `16–${lastDay} ${SHORT_MONTHS[month]}`,
-  };
-}
-
-function getPrevQuincena(range: QuincenaRange): QuincenaRange {
-  const refDate = new Date(range.inicio.getTime() - 24 * 60 * 60 * 1000);
-  return getQuincenaRange(refDate);
-}
 
 function isExtendido(a: Asignacion): { extendido: boolean; extraMin: number } {
   if (!a.hora_egreso_real || !a.hora_fin_estimada || !a.oferta_fecha) {

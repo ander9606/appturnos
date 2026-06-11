@@ -252,16 +252,18 @@ export default function TurnosScreen() {
         <Text className="text-xl font-bold text-foreground">
           {isGestor ? 'Gestión de Turnos' : 'Mis Turnos'}
         </Text>
-        {isGestor && (
+        {isGestor ? (
           <View className="flex-row gap-2 items-center">
-            <TouchableOpacity
-              onPress={() => router.push('/liquidacion-turnos')}
-              className="flex-row items-center gap-1.5 bg-primary-500 px-3 py-1.5 rounded-xl"
-              accessibilityLabel="Ver liquidación"
-            >
-              <Ionicons name="cash-outline" size={15} color="#fff" />
-              <Text className="text-white text-sm font-semibold">Liquidar</Text>
-            </TouchableOpacity>
+            {rol === 'admin_empresa' && (
+              <TouchableOpacity
+                onPress={() => router.push('/liquidacion-turnos')}
+                className="flex-row items-center gap-1.5 bg-primary-500 px-3 py-1.5 rounded-xl"
+                accessibilityLabel="Ver liquidación"
+              >
+                <Ionicons name="cash-outline" size={15} color="#fff" />
+                <Text className="text-white text-sm font-semibold">Liquidar</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               className="w-9 h-9 bg-primary-500 rounded-xl items-center justify-center"
               accessibilityLabel="Nuevo turno"
@@ -270,7 +272,7 @@ export default function TurnosScreen() {
               <Ionicons name="add" size={22} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
       </View>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}

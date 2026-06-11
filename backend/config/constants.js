@@ -25,7 +25,7 @@ const GRUPOS_ROLES = {
   TRACK_TURNOS: [ROLES.JEFE_TURNOS, ROLES.TRABAJADOR_TURNOS],
 };
 
-const ESTADOS_OFERTA = ['abierta', 'en_proceso', 'completada', 'cancelada'];
+const ESTADOS_OFERTA = ['borrador', 'abierta', 'publicada', 'en_proceso', 'cerrada', 'completada', 'cancelada'];
 
 const ESTADOS_ASIGNACION = [
   'pendiente',

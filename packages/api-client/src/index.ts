@@ -71,6 +71,7 @@ export type {
   UpdateMePayload,
   Experiencia,
   Diploma,
+  CargoAsignado,
   ExperienciaPayload,
   DiplomaPayload,
   TipoDocumento,

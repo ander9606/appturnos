@@ -1,18 +1,38 @@
 'use strict';
 
+const { pool } = require('../config/database');
 const AppError = require('../utils/AppError');
 const { firmar, firmasCoinciden } = require('../utils/hmac');
 
 /**
  * Verifica la firma HMAC-SHA256 de un webhook entrante de logiq360.
  *
- * Usa el secreto global `LOGIQ360_WEBHOOK_SECRET`. Si no está configurado,
- * no se verifica nada: la integración es opcional (ver 05-INTEGRACION.md).
+ * Prioridad del secreto:
+ *  1. integracion_config.incoming_secret del tenant (per-tenant, recomendado).
+ *  2. Variable de entorno LOGIQ360_WEBHOOK_SECRET (global, retrocompatible).
+ *  3. Sin secreto → sin verificación (integración opcional).
  *
- * Requiere que `req.rawBody` esté disponible (lo captura server.js).
+ * El tenant_id se lee del body JSON ya parseado (express.json corre antes).
+ * Requiere que req.rawBody esté disponible (lo captura server.js).
  */
-function verificarFirmaLogiq360(req, _res, next) {
-  const secreto = process.env.LOGIQ360_WEBHOOK_SECRET;
+async function verificarFirmaLogiq360(req, _res, next) {
+  let secreto = null;
+
+  const tenantId = req.body?.tenant_id;
+  if (tenantId) {
+    const [rows] = await pool.query(
+      'SELECT incoming_secret FROM integracion_config WHERE empresa_id = ? AND activo = 1 LIMIT 1',
+      [tenantId]
+    );
+    if (rows.length && rows[0].incoming_secret) {
+      secreto = rows[0].incoming_secret;
+    }
+  }
+
+  if (!secreto) {
+    secreto = process.env.LOGIQ360_WEBHOOK_SECRET || null;
+  }
+
   if (!secreto) return next();
 
   const recibida = req.headers['x-logiq360-signature'] || '';

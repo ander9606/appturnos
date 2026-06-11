@@ -58,8 +58,31 @@
     "turnos":   "Turnos",
     "nomina":   "Nómina",
     "quincena": "Quincena",
+    "empresas": "Empresas",
     "equipo":   "Equipo",
     "perfil":   "Perfil"
+  },
+  "empresas": {
+    "misEmpresas":       "Mis empresas",
+    "directorio":        "Directorio",
+    "solicitar":         "Solicitar",
+    "solicitado":        "Solicitud enviada",
+    "aceptar":           "Aceptar",
+    "rechazar":          "Rechazar",
+    "desvincular":       "Desvincular",
+    "cancelarSolicitud": "Cancelar solicitud",
+    "emptyMisEmpresas":  "Busca empresas en el Directorio y solicita unirte.",
+    "emptyDirectorio":   "No encontramos empresas con ese nombre.",
+    "invitaciones":      "Invitaciones",
+    "activas":           "Activas",
+    "pendientes":        "Pendientes de aprobación",
+    "estados": {
+      "activo":                    "Activa",
+      "solicitado_por_trabajador": "Pendiente",
+      "solicitado_por_empresa":    "Invitación",
+      "rechazado":                 "Rechazado",
+      "archivado":                 "Archivado"
+    }
   },
   "perfil": {
     "title":              "Mi Perfil",
