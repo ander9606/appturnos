@@ -47,7 +47,8 @@ async function aplicar(req, res) {
     Number(req.params.id),
     Number(req.body.puesto_id),
     req.usuario.sub,
-    req.empresasActivas
+    req.empresasActivas,
+    req.usuario
   );
   res.status(201).json({ success: true, data, message: 'Postulación registrada' });
 }

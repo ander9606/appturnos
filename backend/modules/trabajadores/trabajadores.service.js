@@ -62,6 +62,14 @@ const TrabajadoresService = {
     return this.me(usuarioId);
   },
 
+  /** El propio trabajador nomina actualiza su flag acepta_extras. */
+  async actualizarExtras(usuarioId, acepta) {
+    const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+    if (!trabajador) throw new AppError('Perfil de trabajador no encontrado', 404);
+    await TrabajadoresModel.actualizarExtras(usuarioId, acepta);
+    return TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+  },
+
   async crearExperiencia(usuarioId, datos) {
     const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
     if (!trabajador) throw new AppError('Perfil de trabajador no encontrado', 404);

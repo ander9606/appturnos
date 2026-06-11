@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { THEME_COLORS } from '@/lib/designTokens';
+import { useNominaPerfil } from '@/features/nomina/useNomina';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -19,11 +20,17 @@ function TabIcon({ name, focused, color }: { name: IoniconsName; focused: boolea
 
 export default function TabsLayout() {
   const rol = useAuthStore((s) => s.usuario?.rol);
-  const isWorker = rol === 'trabajador_turnos';
-  const primaryColor = rol === 'trabajador_nomina'
-    ? THEME_COLORS.nomina.primary
-    : THEME_COLORS.turnos.primary;
-  const nominaLabel = rol === 'trabajador_turnos' ? t('tabs.quincena') : t('tabs.nomina');
+  const isWorker      = rol === 'trabajador_turnos';
+  const isNomina      = rol === 'trabajador_nomina';
+  const primaryColor  = isNomina ? THEME_COLORS.nomina.primary : THEME_COLORS.turnos.primary;
+  const nominaLabel   = rol === 'trabajador_turnos' ? t('tabs.quincena') : t('tabs.nomina');
+
+  const { data: nominaPerfil } = useNominaPerfil();
+  const aceptaExtras = isNomina ? Boolean(nominaPerfil?.acepta_extras) : false;
+  const turnosTabHref = isNomina
+    ? (aceptaExtras ? undefined : null)   // show only if acepta_extras
+    : (isWorker ? undefined : undefined); // always show for others
+  const turnosLabel = isNomina && aceptaExtras ? 'Extras' : t('tabs.turnos');
 
   return (
     <Tabs
@@ -55,7 +62,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="turnos"
         options={{
-          title: t('tabs.turnos'),
+          title: turnosLabel,
+          href: turnosTabHref,
           tabBarIcon: ({ focused, color }) => <TabIcon name="calendar-outline" focused={focused} color={color} />,
         }}
       />
@@ -70,7 +78,7 @@ export default function TabsLayout() {
         name="empresas"
         options={{
           title: t('tabs.empresas'),
-          href: isWorker ? undefined : null,
+          href: isWorker && !isNomina ? undefined : null,
           tabBarIcon: ({ focused, color }) => <TabIcon name="business-outline" focused={focused} color={color} />,
         }}
       />

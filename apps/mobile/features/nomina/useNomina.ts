@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { nominaApi } from '@api-client';
+import { nominaApi, trabajadoresApi } from '@api-client';
 import type { EstadoPeriodo } from '@api-client';
 
 // ── Query keys ────────────────────────────────────────────────────────────
@@ -84,6 +84,16 @@ export function useMarcarEntrada() {
       nominaApi.marcarEntrada(datos),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registros'] });
+    },
+  });
+}
+
+export function useActualizarExtras() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (acepta: boolean) => trabajadoresApi.actualizarExtras(acepta),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nomina-perfil'] });
     },
   });
 }

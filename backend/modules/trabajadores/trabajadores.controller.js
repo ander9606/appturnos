@@ -68,6 +68,12 @@ async function actualizarMe(req, res) {
   res.json({ success: true, data, message: 'Perfil actualizado' });
 }
 
+async function actualizarExtras(req, res) {
+  const acepta = Boolean(req.body.acepta_extras);
+  const data = await TrabajadoresService.actualizarExtras(req.usuario.sub, acepta);
+  res.json({ success: true, data, message: acepta ? 'Extras activados' : 'Extras desactivados' });
+}
+
 async function crearExperiencia(req, res) {
   const data = await TrabajadoresService.crearExperiencia(req.usuario.sub, req.body);
   res.status(201).json({ success: true, data });
@@ -90,7 +96,7 @@ async function eliminarDiploma(req, res) {
 
 module.exports = {
   listar, obtener, buscarPorCedula, crear, actualizar, eliminar,
-  obtenerMe, actualizarMe,
+  obtenerMe, actualizarMe, actualizarExtras,
   crearExperiencia, eliminarExperiencia,
   crearDiploma, eliminarDiploma,
 };

@@ -179,6 +179,7 @@ const RegistrosService = {
       tipo_marcacion: trabajador.tipo_marcacion ?? 'libre',
       punto_marcaje: puntoMarcaje,
       salario_base: trabajador.salario_base,
+      acepta_extras: Boolean(trabajador.acepta_extras),
     };
   },
 

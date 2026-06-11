@@ -19,6 +19,7 @@ const PUEDEN_VER = [
 ];
 const SOLO_ADMIN = [ROLES.ADMIN_EMPRESA];
 const SOLO_TRABAJADOR_TURNOS = [ROLES.TRABAJADOR_TURNOS];
+const SOLO_TRABAJADOR_NOMINA = [ROLES.TRABAJADOR_NOMINA];
 
 const TIPOS = ['nomina', 'turnos', 'ambos'];
 
@@ -90,6 +91,15 @@ router.patch(
   ],
   validar,
   ctrl.actualizarMe
+);
+
+// PATCH /api/trabajadores/me/extras — el trabajador_nomina activa/desactiva extras
+router.patch(
+  '/me/extras',
+  verificarRol(SOLO_TRABAJADOR_NOMINA),
+  [body('acepta_extras').isBoolean().withMessage('acepta_extras debe ser booleano')],
+  validar,
+  ctrl.actualizarExtras
 );
 
 // POST /api/trabajadores/me/experiencias

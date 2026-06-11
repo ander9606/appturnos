@@ -82,6 +82,7 @@ export interface TrabajadorNominaPerfil {
   tipo_marcacion: TipoMarcacion;
   punto_marcaje: PuntoMarcaje | null;
   salario_base: number | null;
+  acepta_extras: boolean;
 }
 
 // ── API ───────────────────────────────────────────────────────────────────
