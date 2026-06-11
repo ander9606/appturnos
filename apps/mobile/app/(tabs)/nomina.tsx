@@ -13,7 +13,8 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert,
+  ActivityIndicator, RefreshControl, Alert, Modal,
+  TextInput, KeyboardAvoidingView, Platform, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,10 +28,12 @@ import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import {
   usePeriodos, useLiquidacion,
-  useCerrarPeriodo, useLiquidarPeriodo,
+  useCerrarPeriodo, useLiquidarPeriodo, useCrearPeriodo,
 } from '@/features/nomina/useNomina';
 import { ApiError } from '@api-client';
+import type { TipoPeriodo } from '@api-client';
 import { useTheme } from '@/lib/theme';
+import { useRouter } from 'expo-router';
 
 // ── Router de roles ───────────────────────────────────────────────────────
 
@@ -50,14 +53,134 @@ export default function NominaScreen() {
 // Vista del GESTOR — liquidación completa del período
 // ══════════════════════════════════════════════════════════════════════════
 
+// ── Tipos día para el tipo de período ─────────────────────────────────────
+const TIPOS_PERIODO: { v: TipoPeriodo; label: string }[] = [
+  { v: 'quincenal', label: 'Quincenal' },
+  { v: 'mensual',   label: 'Mensual'   },
+  { v: 'semanal',   label: 'Semanal'   },
+];
+
+// ── Formulario de nuevo período ────────────────────────────────────────────
+
+function NuevoPeriodoModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const theme = useTheme();
+  const crearMutation = useCrearPeriodo();
+  const [inicio, setInicio]   = useState('');
+  const [fin, setFin]         = useState('');
+  const [tipo, setTipo]       = useState<TipoPeriodo>('quincenal');
+  const [error, setError]     = useState<string | null>(null);
+
+  const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
+
+  const handleGuardar = async () => {
+    setError(null);
+    if (!RE_FECHA.test(inicio)) { setError('Ingresa la fecha de inicio en formato AAAA-MM-DD'); return; }
+    if (!RE_FECHA.test(fin))    { setError('Ingresa la fecha de fin en formato AAAA-MM-DD'); return; }
+    if (fin < inicio)           { setError('La fecha de fin no puede ser anterior a la de inicio'); return; }
+    try {
+      await crearMutation.mutateAsync({ fecha_inicio: inicio, fecha_fin: fin, tipo });
+      setInicio(''); setFin(''); setError(null);
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Error al crear el período');
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 justify-end bg-black/40"
+      >
+        <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-foreground">Nuevo período</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color="#64748B" />
+            </Pressable>
+          </View>
+
+          {error && (
+            <View className="bg-danger/10 border border-danger/30 rounded-xl px-4 py-3">
+              <Text className="text-sm text-danger">{error}</Text>
+            </View>
+          )}
+
+          {/* Tipo */}
+          <View className="gap-2">
+            <Text className="text-sm font-semibold text-foreground">Tipo de período</Text>
+            <View className="flex-row gap-2">
+              {TIPOS_PERIODO.map(({ v, label }) => (
+                <Pressable
+                  key={v}
+                  onPress={() => setTipo(v)}
+                  className={`px-4 py-2 rounded-xl border ${tipo === v ? 'bg-foreground border-foreground' : 'bg-card border-border'}`}
+                >
+                  <Text className={`text-sm font-semibold ${tipo === v ? 'text-white' : 'text-muted-foreground'}`}>
+                    {label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Fechas */}
+          <View className="flex-row gap-3">
+            <View className="flex-1 gap-1.5">
+              <Text className="text-sm font-semibold text-foreground">Inicio</Text>
+              <TextInput
+                value={inicio}
+                onChangeText={setInicio}
+                placeholder="2025-07-01"
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                className="bg-card border border-border rounded-xl px-4 h-12 text-base text-foreground"
+              />
+            </View>
+            <View className="flex-1 gap-1.5">
+              <Text className="text-sm font-semibold text-foreground">Fin</Text>
+              <TextInput
+                value={fin}
+                onChangeText={setFin}
+                placeholder="2025-07-15"
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                className="bg-card border border-border rounded-xl px-4 h-12 text-base text-foreground"
+              />
+            </View>
+          </View>
+          <Text className="text-xs text-muted-foreground -mt-3">Formato: AAAA-MM-DD</Text>
+
+          {/* Botón */}
+          <TouchableOpacity
+            onPress={handleGuardar}
+            disabled={crearMutation.isPending}
+            className="h-14 rounded-2xl items-center justify-center active:opacity-80 disabled:opacity-40"
+            style={{ backgroundColor: theme.primary }}
+          >
+            {crearMutation.isPending
+              ? <ActivityIndicator color="#fff" />
+              : <Text className="text-base font-semibold text-white">Crear período</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+
 function NominaGestorView() {
   const theme = useTheme();
+  const router = useRouter();
 
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos();
 
   const periodos = periodosResp?.data ?? [];
-  const [periodoId, setPeriodoId] = useState<number | undefined>(undefined);
+  const [periodoId, setPeriodoId]         = useState<number | undefined>(undefined);
+  const [modalNuevo, setModalNuevo]       = useState(false);
 
   const activePeriodoId = periodoId ?? periodos[0]?.id;
   const activePeriodo   = periodos.find((p) => p.id === activePeriodoId) ?? periodos[0];
@@ -137,6 +260,7 @@ function NominaGestorView() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <NuevoPeriodoModal visible={modalNuevo} onClose={() => setModalNuevo(false)} />
       <FlatList
         data={lineas}
         keyExtractor={(item) => String(item.trabajador_id)}
@@ -159,7 +283,15 @@ function NominaGestorView() {
                     {activePeriodo ? fmtPeriodo(activePeriodo) : '—'}
                   </Text>
                 </View>
-                {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
+                <View className="flex-row items-center gap-2">
+                  {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
+                  <TouchableOpacity
+                    onPress={() => setModalNuevo(true)}
+                    className="w-8 h-8 rounded-full bg-white/20 items-center justify-center"
+                  >
+                    <Ionicons name="add" size={20} color="#fff" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {totales && (
@@ -231,6 +363,19 @@ function NominaGestorView() {
                     </View>
                   )}
                 </View>
+              )}
+
+              {activePeriodo && (
+                <TouchableOpacity
+                  onPress={() => router.push(`/registros-periodo?periodoId=${activePeriodoId}`)}
+                  className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+                >
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Registros del equipo</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </TouchableOpacity>
               )}
 
               <Text className="text-sm font-semibold text-foreground">

@@ -210,6 +210,13 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
               }}
             />
+            <Stack.Screen
+              name="registros-periodo"
+              options={{
+                headerShown: true,
+                animation: 'slide_from_right',
+              }}
+            />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

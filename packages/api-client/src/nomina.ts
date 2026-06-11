@@ -101,6 +101,10 @@ export const nominaApi = {
     );
   },
 
+  crearPeriodo(datos: { fecha_inicio: string; fecha_fin: string; tipo?: TipoPeriodo }): Promise<PeriodoNomina> {
+    return api.post<PeriodoNomina>('/api/nomina/periodos', datos);
+  },
+
   cerrarPeriodo(periodoId: number): Promise<PeriodoNomina> {
     return api.post<PeriodoNomina>(`/api/nomina/periodos/${periodoId}/cerrar`);
   },
@@ -140,6 +144,15 @@ export const nominaApi = {
     novedad?: string;
   }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros', datos);
+  },
+
+  corregirRegistro(id: number, datos: {
+    tipo_dia?: TipoDia;
+    novedad?: string;
+    hora_entrada?: string;
+    hora_salida?: string;
+  }): Promise<RegistroDiario> {
+    return api.put<RegistroDiario>(`/api/nomina/registros/${id}`, datos);
   },
 
   // ── Marcaje en tiempo real (trabajador_nomina) ────────────────────────────
