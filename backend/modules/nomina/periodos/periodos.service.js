@@ -1,7 +1,21 @@
 'use strict';
 
+const { pool } = require('../../../config/database');
 const PeriodosModel = require('./periodos.model');
+const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
+
+/** Obtiene usuario_id de todos los trabajador_nomina activos de la empresa. */
+async function listarUsuariosNomina(empresaId) {
+  const [filas] = await pool.query(
+    `SELECT u.id AS usuario_id
+     FROM trabajadores t
+     JOIN usuarios u ON u.id = t.usuario_id
+     WHERE t.empresa_id = ? AND t.activo = 1 AND u.rol = 'trabajador_nomina' AND u.activo = 1`,
+    [empresaId]
+  );
+  return filas.map((f) => f.usuario_id);
+}
 
 /**
  * Lógica de períodos de nómina. Máquina de estados:
@@ -25,7 +39,25 @@ const PeriodosService = {
       throw new AppError('fecha_fin no puede ser anterior a fecha_inicio', 422);
     }
     const id = await PeriodosModel.crear(empresaId, datos);
-    return PeriodosModel.obtenerPorId(empresaId, id);
+    const periodo = await PeriodosModel.obtenerPorId(empresaId, id);
+
+    // Notificar a todos los trabajadores de nómina de la empresa (best-effort).
+    const destinatarios = await listarUsuariosNomina(empresaId);
+    if (destinatarios.length > 0) {
+      const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
+        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+      const fin = new Date(periodo.fecha_fin + 'T00:00:00')
+        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+      await NotificacionesService.notificarVarios(destinatarios, {
+        empresaId,
+        tipo: 'nomina.periodo_abierto',
+        titulo: 'Nuevo período de nómina abierto',
+        mensaje: `Período ${inicio} – ${fin} disponible. Ya puedes registrar tu jornada.`,
+        data: { periodo_id: id },
+      });
+    }
+
+    return periodo;
   },
 
   async cerrar(empresaId, id, usuarioId) {

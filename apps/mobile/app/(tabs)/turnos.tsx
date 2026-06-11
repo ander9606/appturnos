@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes } from '@/features/turnos/useTurnos';
+import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
@@ -30,10 +31,14 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 
 export default function TurnosScreen() {
   const rol      = useAuthStore((s) => s.usuario?.rol);
-  const isWorker = rol === 'trabajador_turnos';
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
+  const isNomina = rol === 'trabajador_nomina';
   const theme    = useTheme();
   const today    = useMemo(() => toISODate(new Date()), []);
+
+  const { data: nominaPerfil } = useNominaPerfil();
+  // nomina con extras activos actúa igual que trabajador_turnos en esta tab
+  const isWorker = rol === 'trabajador_turnos' || (isNomina && Boolean(nominaPerfil?.acepta_extras));
 
   const [weekRef,      setWeekRef]      = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -250,7 +255,7 @@ export default function TurnosScreen() {
       {/* ── Header ─────────────────────────────────────────────────── */}
       <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
         <Text className="text-xl font-bold text-foreground">
-          {isGestor ? 'Gestión de Turnos' : 'Mis Turnos'}
+          {isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         </Text>
         {isGestor ? (
           <View className="flex-row gap-2 items-center">
