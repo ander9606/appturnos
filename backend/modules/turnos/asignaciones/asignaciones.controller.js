@@ -8,7 +8,7 @@ async function obtener(req, res) {
 }
 
 async function listar(req, res) {
-  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
   const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 20));
 
   const { data, pagination } = await AsignacionesService.listar(req.empresa_id, {

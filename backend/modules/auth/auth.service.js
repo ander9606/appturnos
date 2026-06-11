@@ -8,7 +8,7 @@ const TokenService = require('../../utils/TokenService');
 const AppError = require('../../utils/AppError');
 const { ROLES, LOGIN } = require('../../config/constants');
 
-const BCRYPT_ROUNDS = 12;
+const BCRYPT_ROUNDS = 11;
 
 // Mapea el tipo de trabajador al rol con el que se crea su cuenta.
 // 'ambos' usa el rol de Turnos por defecto (track principal en campo).
