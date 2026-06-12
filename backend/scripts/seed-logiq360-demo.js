@@ -17,9 +17,11 @@
  *  [5] COMPLETADA — Semana pasada. Asignaciones completadas con calificación.
  *  [6] CANCELADA  — Cancelada por logiq360 (orden.cancelada).
  *
- * Integración configurada:
- *   incoming_secret = 'in_secret_carpas_demo_hmac_789'
- *   (usado por logiq360 para firmar webhooks entrantes — HMAC per-tenant)
+ * Integración configurada (compatibles con npm run seed:plataforma-integracion en logiq360):
+ *   incoming_secret  = 'in_secret_carpas_demo_hmac_789'  — logiq360 firma sus webhooks con este
+ *   api_key          = 'lt_plataforma_demo_apikey_2024x'  — AppTurnos se autentica en logiq360
+ *   webhook_secret   = 'hook_out_carpas_demo_secret_456'  — AppTurnos firma sus webhooks
+ *   webhook_url      = LOGIQ360_WEBHOOK_URL || http://localhost:3000/api/integracion/eventos
  *
  * Credenciales (contraseña: Demo1234!):
  *   admin@carpas-demo.co      → admin_empresa
@@ -169,17 +171,18 @@ async function main() {
   if (icEx) {
     skip('integracion_config ya existe');
   } else {
+    const logiq360WebhookUrl = process.env.LOGIQ360_WEBHOOK_URL || 'http://localhost:3000/api/integracion/eventos';
     await pool.query(
       `INSERT INTO integracion_config
          (empresa_id,activo,webhook_url,webhook_secret,api_key,incoming_secret)
        VALUES (?,1,?,?,?,?)`,
       [eId,
-       'https://api.logiq360.com/webhooks/appturnos',
-       'hook_out_carpas_demo_secret_456',   // appturnos firma así sus eventos salientes
-       'api_out_key_carpas_001',
-       'in_secret_carpas_demo_hmac_789']    // logiq360 usa este para firmar webhooks entrantes
+       logiq360WebhookUrl,                          // logiq360 recibe eventos de AppTurnos aquí
+       'hook_out_carpas_demo_secret_456',            // AppTurnos firma sus webhooks con este secreto
+       'lt_plataforma_demo_apikey_2024x',            // AppTurnos usa este key al llamar a logiq360
+       'in_secret_carpas_demo_hmac_789']             // logiq360 firma sus webhooks con este secreto
     );
-    ok('integracion_config (activo=1, incoming_secret configurado)');
+    ok(`integracion_config (webhook_url=${logiq360WebhookUrl})`);
   }
 
   // ── 6. Ofertas — un escenario por estado ────────────────────────────────────
