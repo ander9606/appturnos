@@ -209,6 +209,28 @@ const AuthModel = {
     );
     return res.insertId;
   },
+
+  /** Lista todos los gestores (jefe_turnos, jefe_nomina, nomina) de la empresa. */
+  async listarGestores(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id, nombre, apellido, email, rol, activo, created_at
+       FROM usuarios
+       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'jefe_nomina', 'nomina')
+       ORDER BY nombre`,
+      [empresaId]
+    );
+    return filas;
+  },
+
+  /** Activa o desactiva un gestor. Retorna true si se actualizó. */
+  async setActivoGestor(empresaId, gestorId, activo) {
+    const [res] = await pool.query(
+      `UPDATE usuarios SET activo = ?
+       WHERE id = ? AND empresa_id = ? AND rol IN ('jefe_turnos', 'jefe_nomina', 'nomina')`,
+      [activo ? 1 : 0, gestorId, empresaId]
+    );
+    return res.affectedRows > 0;
+  },
 };
 
 module.exports = AuthModel;

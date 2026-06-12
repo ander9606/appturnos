@@ -520,6 +520,26 @@ export default function PerfilScreen() {
                   <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                 </Pressable>
                 <Pressable
+                  onPress={() => router.push('/gestores')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="people-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Gestores</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/reportes')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="bar-chart-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Reportes</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
                   onPress={() => router.push('/crear-gestor')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
@@ -534,7 +554,7 @@ export default function PerfilScreen() {
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="people-outline" size={16} color="#64748B" />
+                    <Ionicons name="person-add-outline" size={16} color="#64748B" />
                     <Text className="text-sm font-medium text-foreground">Solicitudes de ingreso</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#94A3B8" />

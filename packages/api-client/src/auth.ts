@@ -24,6 +24,16 @@ export interface CrearGestorResult {
   password_temporal: string;
 }
 
+export interface Gestor {
+  id: number;
+  nombre: string;
+  apellido: string | null;
+  email: string;
+  rol: 'jefe_turnos' | 'jefe_nomina' | 'nomina';
+  activo: boolean;
+  created_at: string;
+}
+
 export const authApi = {
   /**
    * Login con email + contraseña.
@@ -123,5 +133,15 @@ export const authApi = {
   /** admin_empresa crea un usuario gestor en su empresa con contraseña temporal. */
   crearGestor(payload: CrearGestorPayload): Promise<CrearGestorResult> {
     return api.post<CrearGestorResult>('/api/auth/crear-gestor', payload);
+  },
+
+  /** Lista todos los gestores (jefe_turnos, jefe_nomina, nomina) de la empresa. */
+  listarGestores(): Promise<Gestor[]> {
+    return api.get<Gestor[]>('/api/auth/gestores');
+  },
+
+  /** Activa o desactiva un gestor de la empresa. */
+  setActivoGestor(id: number, activo: boolean): Promise<null> {
+    return api.patch<null>(`/api/auth/gestores/${id}/activo`, { activo });
   },
 };

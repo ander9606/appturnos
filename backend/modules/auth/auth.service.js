@@ -268,6 +268,17 @@ const AuthService = {
     };
   },
 
+  /** Devuelve todos los gestores de la empresa. */
+  async listarGestores(empresaId) {
+    return AuthModel.listarGestores(empresaId);
+  },
+
+  /** Activa o desactiva un gestor de la empresa. */
+  async setActivoGestor(empresaId, gestorId, activo) {
+    const actualizado = await AuthModel.setActivoGestor(empresaId, gestorId, activo);
+    if (!actualizado) throw new AppError('Gestor no encontrado', 404);
+  },
+
   /**
    * Crea un usuario gestor (jefe_turnos, jefe_nomina, nomina) para la empresa del admin.
    * Genera una contraseña temporal que se devuelve una sola vez.
