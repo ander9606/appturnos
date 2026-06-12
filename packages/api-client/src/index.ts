@@ -7,9 +7,9 @@ export type { TokenStore } from './client';
 
 // API modules
 export { authApi } from './auth';
-export type { CrearGestorPayload, CrearGestorResult } from './auth';
+export type { CrearGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, DirectorioResponse } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
@@ -34,6 +34,7 @@ export type {
   TipoPeriodo,
   ResumenHoras,
   TipoMarcacion,
+  TipoDia,
   TrabajadorNominaPerfil,
 } from './nomina';
 export { turnosApi } from './turnos';
@@ -80,6 +81,17 @@ export type {
 } from './trabajadores';
 export { notificacionesApi } from './notificaciones';
 export { adminApi } from './admin';
+export { reportesApi } from './reportes';
+export type {
+  ReporteParams,
+  ReporteRango,
+  AsistenciaResponse,
+  AsistenciaTurno,
+  AsistenciaNomina,
+  CostosResponse,
+  CostoNominaDetalle,
+  HistorialTrabajadorResponse,
+} from './reportes';
 export type {
   EmpresaAdmin,
   EmpresasListResponse,

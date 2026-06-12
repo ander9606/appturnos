@@ -33,6 +33,7 @@ import {
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { InfoRow }        from '@/components/ui/InfoRow';
 import type { Trabajador, TipoDocumento, SexoTrabajador, TipoCuenta, Experiencia, Diploma } from '@api-client';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -199,6 +200,9 @@ function buildForm(t: Trabajador | undefined): FormState {
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function MiPerfilLaboralScreen() {
+  const rol      = useAuthStore((s) => s.usuario?.rol);
+  const isNomina = rol === 'trabajador_nomina';
+
   const { data: perfil, isLoading } = usePerfilLaboral();
   const update       = useUpdatePerfilLaboral();
   const crearExp     = useCrearExperiencia();
@@ -520,7 +524,9 @@ export default function MiPerfilLaboralScreen() {
             )}
           </View>
 
-          {/* ── Experiencia laboral ─────────────────────────────────── */}
+          {/* ── Experiencia / Diplomas / Cargos (solo marketplace) ───── */}
+          {!isNomina && (
+          <>
           <SectionHeader title="Experiencia laboral" count={perfil.experiencias?.length} />
           <View className="mx-5 gap-3">
             {(perfil.experiencias ?? []).map((exp: Experiencia) => (
@@ -578,7 +584,6 @@ export default function MiPerfilLaboralScreen() {
             )}
           </View>
 
-          {/* ── Diplomas y certificados ──────────────────────────────── */}
           <SectionHeader title="Diplomas y certificados" count={perfil.diplomas?.length} />
           <View className="mx-5 gap-3">
             {(perfil.diplomas ?? []).map((dip: Diploma) => (
@@ -633,7 +638,6 @@ export default function MiPerfilLaboralScreen() {
             )}
           </View>
 
-          {/* ── Cargos certificados (solo lectura — asignados por la empresa) */}
           {(perfil.cargos ?? []).length > 0 && (
             <>
               <SectionHeader title="Cargos certificados" count={perfil.cargos?.length} />
@@ -646,6 +650,7 @@ export default function MiPerfilLaboralScreen() {
               </View>
             </>
           )}
+          </>)}
 
           {/* ── Acciones ─────────────────────────────────────────────── */}
           <View className="mx-5 mt-6 gap-3">

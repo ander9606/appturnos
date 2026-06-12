@@ -1,5 +1,7 @@
 import { api } from './client';
 
+// ── Tipos ─────────────────────────────────────────────────────────────────
+
 export interface EmpresaDirectorio {
   id: number;
   nombre: string;
@@ -10,10 +12,30 @@ export interface EmpresaDirectorio {
   acepta_postulaciones: boolean;
 }
 
+/** Vista completa que solo ve el admin_empresa de esa empresa */
+export interface Empresa extends EmpresaDirectorio {
+  nit: string | null;
+  actividad: string | null;
+  plan: string;
+  created_at: string;
+}
+
+export interface ActualizarMiEmpresaPayload {
+  nombre?: string;
+  nit?: string;
+  ciudad?: string;
+  descripcion?: string;
+  actividad?: string;
+  logo_url?: string;
+  acepta_postulaciones?: boolean;
+}
+
 export interface DirectorioResponse {
   data: EmpresaDirectorio[];
   pagination: { page: number; limit: number; total: number };
 }
+
+// ── API ───────────────────────────────────────────────────────────────────
 
 export const empresasApi = {
   async directorio(params: { busqueda?: string; ciudad?: string; page?: number; limit?: number } = {}): Promise<DirectorioResponse> {
@@ -24,5 +46,13 @@ export const empresasApi = {
     if (params.limit)    qs.set('limit', String(params.limit));
     const suffix = qs.toString() ? `?${qs}` : '';
     return api.get<DirectorioResponse>(`/api/empresas/directorio${suffix}`);
+  },
+
+  obtenerMiEmpresa(): Promise<Empresa> {
+    return api.get<Empresa>('/api/empresas/me');
+  },
+
+  actualizarMiEmpresa(datos: ActualizarMiEmpresaPayload): Promise<Empresa> {
+    return api.patch<Empresa>('/api/empresas/me', datos);
   },
 };

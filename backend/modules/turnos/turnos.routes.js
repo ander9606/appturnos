@@ -21,7 +21,7 @@ router.use('/asignaciones', require('./asignaciones/asignaciones.routes'));
 router.get(
   '/mis-turnos',
   verificarToken,
-  verificarRol([ROLES.TRABAJADOR_TURNOS]),
+  verificarRol([ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]),
   asignacionesCtrl.misTurnos
 );
 

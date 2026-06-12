@@ -3,7 +3,7 @@
 const NotificacionesService = require('./notificaciones.service');
 
 async function listar(req, res) {
-  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const soloNoLeidas = req.query.no_leidas === 'true' || req.query.no_leidas === '1';
 

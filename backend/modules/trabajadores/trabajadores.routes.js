@@ -19,6 +19,8 @@ const PUEDEN_VER = [
 ];
 const SOLO_ADMIN = [ROLES.ADMIN_EMPRESA];
 const SOLO_TRABAJADOR_TURNOS = [ROLES.TRABAJADOR_TURNOS];
+const SOLO_TRABAJADOR_NOMINA = [ROLES.TRABAJADOR_NOMINA];
+const CUALQUIER_TRABAJADOR   = [ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 
 const TIPOS = ['nomina', 'turnos', 'ambos'];
 
@@ -66,12 +68,12 @@ router.use(verificarToken);
 
 // GET /api/trabajadores/me — el trabajador obtiene su propio perfil completo.
 // Debe ir ANTES de /:id para que Express no interprete "me" como un ID numérico.
-router.get('/me', verificarRol(SOLO_TRABAJADOR_TURNOS), ctrl.obtenerMe);
+router.get('/me', verificarRol(CUALQUIER_TRABAJADOR), ctrl.obtenerMe);
 
 // PATCH /api/trabajadores/me — el trabajador actualiza sus datos de perfil
 router.patch(
   '/me',
-  verificarRol(SOLO_TRABAJADOR_TURNOS),
+  verificarRol(CUALQUIER_TRABAJADOR),
   [
     body('tipo_documento').optional().isIn(['CC', 'CE', 'PAS']).withMessage('tipo_documento inválido'),
     body('cedula').optional({ values: 'falsy' }).isString().trim(),
@@ -90,6 +92,15 @@ router.patch(
   ],
   validar,
   ctrl.actualizarMe
+);
+
+// PATCH /api/trabajadores/me/extras — el trabajador_nomina activa/desactiva extras
+router.patch(
+  '/me/extras',
+  verificarRol(SOLO_TRABAJADOR_NOMINA),
+  [body('acepta_extras').isBoolean().withMessage('acepta_extras debe ser booleano')],
+  validar,
+  ctrl.actualizarExtras
 );
 
 // POST /api/trabajadores/me/experiencias

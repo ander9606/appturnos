@@ -123,6 +123,19 @@ router.post(
   ctrl.crearGestor
 );
 
+// GET /api/auth/gestores — lista gestores de la empresa
+router.get('/gestores', verificarToken, verificarRol([ROLES.ADMIN_EMPRESA]), ctrl.listarGestores);
+
+// PATCH /api/auth/gestores/:id/activo — activar/desactivar un gestor
+router.patch(
+  '/gestores/:id/activo',
+  verificarToken,
+  verificarRol([ROLES.ADMIN_EMPRESA]),
+  [body('activo').isBoolean().withMessage('activo debe ser booleano')],
+  validar,
+  ctrl.setActivoGestor
+);
+
 // Sub-router OAuth — POST /api/auth/oauth/:provider, etc.
 router.use('/oauth', require('./oauth/oauth.routes'));
 

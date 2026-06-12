@@ -33,6 +33,7 @@ export interface RegistroDiario {
   horas_festivo: number;
   es_festivo: 0 | 1;
   novedad: string | null;
+  tipo_dia: TipoDia;
   aprobado_por: number | null;
   created_at: string;
   // Joined
@@ -72,6 +73,7 @@ export interface ResumenHoras {
 }
 
 export type TipoMarcacion = 'libre' | 'fijo';
+export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia';
 
 export interface TrabajadorNominaPerfil {
   id: number;
@@ -80,6 +82,7 @@ export interface TrabajadorNominaPerfil {
   tipo_marcacion: TipoMarcacion;
   punto_marcaje: PuntoMarcaje | null;
   salario_base: number | null;
+  acepta_extras: boolean;
 }
 
 // ── API ───────────────────────────────────────────────────────────────────
@@ -96,6 +99,10 @@ export const nominaApi = {
     return api.get<{ data: PeriodoNomina[]; pagination: { page: number; limit: number; total: number } }>(
       `/api/nomina/periodos${q}`,
     );
+  },
+
+  crearPeriodo(datos: { fecha_inicio: string; fecha_fin: string; tipo?: TipoPeriodo }): Promise<PeriodoNomina> {
+    return api.post<PeriodoNomina>('/api/nomina/periodos', datos);
   },
 
   cerrarPeriodo(periodoId: number): Promise<PeriodoNomina> {
@@ -137,6 +144,15 @@ export const nominaApi = {
     novedad?: string;
   }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros', datos);
+  },
+
+  corregirRegistro(id: number, datos: {
+    tipo_dia?: TipoDia;
+    novedad?: string;
+    hora_entrada?: string;
+    hora_salida?: string;
+  }): Promise<RegistroDiario> {
+    return api.put<RegistroDiario>(`/api/nomina/registros/${id}`, datos);
   },
 
   // ── Marcaje en tiempo real (trabajador_nomina) ────────────────────────────

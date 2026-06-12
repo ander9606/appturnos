@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
@@ -28,6 +29,7 @@ import { authApi } from '@api-client';
 import { t } from '@/lib/i18n';
 import type { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
+import { useNominaPerfil, useActualizarExtras } from '@/features/nomina/useNomina';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -246,9 +248,20 @@ export default function PerfilScreen() {
   const isJefeTurnos       = usuario?.rol === 'jefe_turnos';
   const isAdmin            = usuario?.rol === 'admin_empresa';
 
+  const isTrabajadorNomina = usuario?.rol === 'trabajador_nomina';
+
   const [editingDatos,    setEditingDatos]    = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
   const [loggingOut,      setLoggingOut]      = useState(false);
+
+  const { data: nominaPerfil } = useNominaPerfil();
+  const actualizarExtrasMutation = useActualizarExtras();
+
+  const handleToggleExtras = (val: boolean) => {
+    actualizarExtrasMutation.mutate(val, {
+      onError: (err) => Alert.alert('Error', (err as ApiError).message ?? t('common.error')),
+    });
+  };
 
   const initials = getInitials(usuario?.nombre, usuario?.apellido);
 
@@ -399,7 +412,7 @@ export default function PerfilScreen() {
           <SectionHeader title={t('perfil.cuenta')} />
 
           <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
-            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos && !isAdmin} />
+            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos && !isAdmin && !isTrabajadorNomina} />
 
             {/* ── Trabajador Turnos — accesos rápidos ──────────────── */}
             {isTrabajadorTurnos && (
@@ -497,6 +510,36 @@ export default function PerfilScreen() {
             {isAdmin && (
               <>
                 <Pressable
+                  onPress={() => router.push('/mi-empresa')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="business-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Mi empresa</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/gestores')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="people-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Gestores</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
+                  onPress={() => router.push('/reportes')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="bar-chart-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Reportes</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                <Pressable
                   onPress={() => router.push('/crear-gestor')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
@@ -511,7 +554,7 @@ export default function PerfilScreen() {
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="people-outline" size={16} color="#64748B" />
+                    <Ionicons name="person-add-outline" size={16} color="#64748B" />
                     <Text className="text-sm font-medium text-foreground">Solicitudes de ingreso</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
@@ -539,6 +582,62 @@ export default function PerfilScreen() {
               </>
             )}
           </View>
+
+          {/* ── Trabajador Nómina — accesos rápidos ─────────────── */}
+          {isTrabajadorNomina && (
+            <>
+              <SectionHeader title="Mi nómina" />
+              <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
+                <Pressable
+                  onPress={() => router.push('/mi-perfil-laboral')}
+                  className="px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="id-card-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Mi información laboral</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+
+                {/* Toggle acepta_extras */}
+                <View className="border-t border-border px-5 py-4 flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-3 flex-1 mr-3">
+                    <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+                    <View className="flex-1">
+                      <Text className="text-sm font-medium text-foreground">Turnos extra</Text>
+                      <Text className="text-xs text-muted-foreground mt-0.5">
+                        Recibe ofertas de turnos adicionales fuera de tu jornada
+                      </Text>
+                    </View>
+                  </View>
+                  {actualizarExtrasMutation.isPending ? (
+                    <ActivityIndicator size="small" color={theme.primary} />
+                  ) : (
+                    <Switch
+                      value={Boolean(nominaPerfil?.acepta_extras)}
+                      onValueChange={handleToggleExtras}
+                      trackColor={{ false: '#E2E8F0', true: theme.primary }}
+                      thumbColor="#FFFFFF"
+                    />
+                  )}
+                </View>
+
+                {/* Mis postulaciones — only if acepta_extras */}
+                {nominaPerfil?.acepta_extras && (
+                  <Pressable
+                    onPress={() => router.push('/mis-postulaciones')}
+                    className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                  >
+                    <View className="flex-row items-center gap-3">
+                      <Ionicons name="list-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Mis postulaciones extra</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </Pressable>
+                )}
+              </View>
+            </>
+          )}
 
           {/* ── Cerrar sesión ────────────────────────────────────── */}
           <Pressable

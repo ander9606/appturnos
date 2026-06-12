@@ -48,11 +48,23 @@ async function validarPuestosParaEmpresa(empresaId, puestos) {
   }
 }
 
+async function validarAceptaExtras(usuario) {
+  if (usuario.rol !== ROLES.TRABAJADOR_NOMINA) return;
+  const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuario.sub);
+  if (!trabajador || !trabajador.acepta_extras) {
+    throw new AppError('No tienes activada la opción de turnos extra', 403);
+  }
+}
+
 const OfertasService = {
   async listar(empresaId, usuario, { fecha, estado, disponibles, page, limit }, empresasActivas) {
     const offset = (page - 1) * limit;
 
-    if (usuario.rol === ROLES.TRABAJADOR_TURNOS) {
+    if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
+      await validarAceptaExtras(usuario);
+    }
+
+    if (usuario.rol === ROLES.TRABAJADOR_TURNOS || usuario.rol === ROLES.TRABAJADOR_NOMINA) {
       const ids = empresasActivas && empresasActivas.length
         ? empresasActivas
         : await TrabajadorEmpresaModel.listarEmpresaIds(usuario.sub);
@@ -71,7 +83,11 @@ const OfertasService = {
   },
 
   async obtener(empresaId, id, usuario, empresasActivas) {
-    if (usuario.rol === ROLES.TRABAJADOR_TURNOS) {
+    if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
+      await validarAceptaExtras(usuario);
+    }
+
+    if (usuario.rol === ROLES.TRABAJADOR_TURNOS || usuario.rol === ROLES.TRABAJADOR_NOMINA) {
       const oferta = await OfertasModel.obtenerPorId(empresaId, id, 0);
       if (!oferta) throw new AppError('Oferta no encontrada', 404);
 
@@ -201,8 +217,12 @@ const OfertasService = {
    *   - El trabajador tiene el cargo del puesto CERTIFICADO por la empresa.
    *   - El trabajador no está ya postulado a ese puesto.
    */
-  async aplicar(empresaId, ofertaId, puestoId, usuarioId, empresasActivas) {
+  async aplicar(empresaId, ofertaId, puestoId, usuarioId, empresasActivas, usuario) {
     if (!puestoId) throw new AppError('puesto_id requerido para postular', 400);
+
+    if (usuario && usuario.rol === ROLES.TRABAJADOR_NOMINA) {
+      await validarAceptaExtras(usuario);
+    }
 
     // Resolver empresa real de la oferta (multi-empresa para TRABAJADOR_TURNOS).
     let empresaOfertaId = empresaId;

@@ -25,6 +25,7 @@ export interface Trabajador {
   cargo: string | null;
   tarifa_hora: number | null;
   salario_base: number | null;
+  acepta_extras: boolean;
   eps: string | null;
   afp: string | null;
   banco: string | null;
@@ -177,6 +178,10 @@ export const trabajadoresApi = {
   /** Trabajador: actualizar sus propios datos de perfil. */
   updateMe: (payload: UpdateMePayload): Promise<Trabajador> =>
     api.patch<Trabajador>('/api/trabajadores/me', payload),
+
+  /** trabajador_nomina: activar/desactivar opción de turnos extra. */
+  actualizarExtras: (acepta_extras: boolean): Promise<Trabajador> =>
+    api.patch<Trabajador>('/api/trabajadores/me/extras', { acepta_extras }),
 
   crearExperiencia: (payload: ExperienciaPayload): Promise<Experiencia> =>
     api.post<Experiencia>('/api/trabajadores/me/experiencias', payload),

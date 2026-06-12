@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { nominaApi } from '@api-client';
-import type { EstadoPeriodo } from '@api-client';
+import { nominaApi, trabajadoresApi } from '@api-client';
+import type { EstadoPeriodo, TipoPeriodo, TipoDia } from '@api-client';
 
 // ── Query keys ────────────────────────────────────────────────────────────
 
@@ -45,6 +45,24 @@ export function useLiquidacion(periodoId: number | null) {
 
 // ── Mutations ─────────────────────────────────────────────────────────────
 
+export function useCrearPeriodo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (datos: { fecha_inicio: string; fecha_fin: string; tipo?: TipoPeriodo }) =>
+      nominaApi.crearPeriodo(datos),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['periodos'] }),
+  });
+}
+
+export function useCorregirRegistro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...datos }: { id: number; tipo_dia?: TipoDia; novedad?: string; hora_entrada?: string; hora_salida?: string }) =>
+      nominaApi.corregirRegistro(id, datos),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
+  });
+}
+
 export function useCerrarPeriodo() {
   const qc = useQueryClient();
   return useMutation({
@@ -84,6 +102,16 @@ export function useMarcarEntrada() {
       nominaApi.marcarEntrada(datos),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registros'] });
+    },
+  });
+}
+
+export function useActualizarExtras() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (acepta: boolean) => trabajadoresApi.actualizarExtras(acepta),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nomina-perfil'] });
     },
   });
 }

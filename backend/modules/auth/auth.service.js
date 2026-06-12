@@ -8,7 +8,7 @@ const TokenService = require('../../utils/TokenService');
 const AppError = require('../../utils/AppError');
 const { ROLES, LOGIN } = require('../../config/constants');
 
-const BCRYPT_ROUNDS = 12;
+const BCRYPT_ROUNDS = 11;
 
 // Mapea el tipo de trabajador al rol con el que se crea su cuenta.
 // 'ambos' usa el rol de Turnos por defecto (track principal en campo).
@@ -266,6 +266,17 @@ const AuthService = {
         rol: ROLES.TRABAJADOR_TURNOS,
       },
     };
+  },
+
+  /** Devuelve todos los gestores de la empresa. */
+  async listarGestores(empresaId) {
+    return AuthModel.listarGestores(empresaId);
+  },
+
+  /** Activa o desactiva un gestor de la empresa. */
+  async setActivoGestor(empresaId, gestorId, activo) {
+    const actualizado = await AuthModel.setActivoGestor(empresaId, gestorId, activo);
+    if (!actualizado) throw new AppError('Gestor no encontrado', 404);
   },
 
   /**

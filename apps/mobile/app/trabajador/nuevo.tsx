@@ -19,6 +19,9 @@ export default function NuevoTrabajadorScreen() {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(INITIAL);
 
+  const isNomina = data.tipo === 'nomina';
+  const totalSteps = isNomina ? 3 : 4;
+
   const patch = (p: Partial<WizardData>) => setData((prev) => ({ ...prev, ...p }));
 
   const handleCreate = async () => {
@@ -78,7 +81,7 @@ export default function NuevoTrabajadorScreen() {
           animation: 'slide_from_right',
         }}
       />
-      <StepIndicator current={step} total={4} />
+      <StepIndicator current={step} total={totalSteps} />
       {step === 1 && (
         <Step1DatosPersonales data={data} onChange={patch} onNext={() => setStep(2)} />
       )}
@@ -86,7 +89,12 @@ export default function NuevoTrabajadorScreen() {
         <Step2SeguridadSocial data={data} onChange={patch} onBack={() => setStep(1)} onNext={() => setStep(3)} />
       )}
       {step === 3 && (
-        <Step3Documentos data={data} onChange={patch} onBack={() => setStep(2)} onNext={() => setStep(4)} />
+        <Step3Documentos
+          data={data}
+          onChange={patch}
+          onBack={() => setStep(2)}
+          onNext={() => (isNomina ? handleCreate() : setStep(4))}
+        />
       )}
       {step === 4 && (
         <Step4Empresas data={data} onChange={patch} onBack={() => setStep(3)} onSubmit={handleCreate} />

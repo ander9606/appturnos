@@ -11,7 +11,7 @@ const ctrl = require('./periodos.controller');
 const router = express.Router();
 
 // Permisos según la matriz de 06-AUTH.md.
-const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA];
+const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
 const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA];
 
 const TIPOS = ['semanal', 'quincenal', 'mensual'];

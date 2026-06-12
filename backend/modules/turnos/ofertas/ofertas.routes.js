@@ -11,9 +11,9 @@ const puestosRouter = require('./puestos/puestos.routes');
 
 const router = express.Router();
 
-const PUEDEN_VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.TRABAJADOR_TURNOS];
+const PUEDEN_VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
-const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS];
+const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 
 const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');

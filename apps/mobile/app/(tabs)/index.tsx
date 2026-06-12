@@ -24,7 +24,7 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
-import { usePeriodos } from '@/features/nomina/useNomina';
+import { usePeriodos, useNominaPerfil } from '@/features/nomina/useNomina';
 import { toISODate, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';
 import { StatCard }       from '@/components/ui/StatCard';
@@ -59,11 +59,13 @@ export default function DashboardScreen() {
 
   // ── Data fetching ────────────────────────────────────────────────────────
 
+  const showShifts = !isNomina; // nomina workers don't use shift hero unless acepta_extras
+
   const {
     data: turnos = [],
     isLoading: turnosLoading,
     refetch: refetchTurnos,
-  } = useMisTurnos();
+  } = useMisTurnos({ enabled: showShifts });
 
   const {
     data: equipoData,
@@ -77,12 +79,19 @@ export default function DashboardScreen() {
   } = usePeriodos('abierto');
   const periodoAbierto = periodosData?.data?.[0] ?? null;
 
+  const { data: nominaPerfil, refetch: refetchNominaPerfil } = useNominaPerfil();
+
   // ── Pull to refresh ──────────────────────────────────────────────────────
 
   const [refreshing, setRefreshing] = useState(false);
   async function onRefresh() {
     setRefreshing(true);
-    await Promise.all([refetchTurnos(), refetchEquipo(), refetchPeriodos()]);
+    await Promise.all([
+      showShifts ? refetchTurnos() : Promise.resolve(),
+      refetchEquipo(),
+      refetchPeriodos(),
+      isNomina ? refetchNominaPerfil() : Promise.resolve(),
+    ]);
     setRefreshing(false);
   }
 
@@ -116,7 +125,13 @@ export default function DashboardScreen() {
 
   // ── Stats ────────────────────────────────────────────────────────────────
 
-  const stats: { value: string | number; label: string; color: string }[] = isWorker
+  const stats: { value: string | number; label: string; color: string }[] = isNomina
+    ? [
+        { value: periodoAbierto ? '✓' : '—', label: 'Período activo', color: periodoAbierto ? 'text-success' : 'text-muted-foreground' },
+        { value: nominaPerfil?.acepta_extras ? '✓' : '—',             label: 'Extras activos', color: nominaPerfil?.acepta_extras ? 'text-info' : 'text-muted-foreground' },
+        { value: turnosHoy.length > 0 ? turnosHoy.length : '—',       label: 'Extras hoy', color: 'text-foreground' },
+      ]
+    : isWorker
     ? [
         { value: turnosHoy.length,                               label: 'Turnos hoy',  color: 'text-foreground' },
         { value: proximos.length,                                label: 'Próximos',    color: 'text-info' },
@@ -188,8 +203,8 @@ export default function DashboardScreen() {
           </Text>
         </View>
 
-        {/* ── Hero: turno activo / próximo / vacío (solo workers) ─────── */}
-        {isWorker && (
+        {/* ── Hero: turno activo / próximo / vacío (solo turnos) ─────── */}
+        {showShifts && (
           turnoActivo ? (
             <ActiveShiftCard
               turno={turnoActivo}
@@ -207,6 +222,30 @@ export default function DashboardScreen() {
           ) : (
             <NoShiftCard />
           )
+        )}
+
+        {/* ── Hero: nomina day card ────────────────────────────────────── */}
+        {isNomina && (
+          <Pressable
+            onPress={() => router.push('/(tabs)/nomina')}
+            className="mx-4 mt-4 flex-row items-center gap-3 rounded-2xl px-4 py-4 active:opacity-80 border"
+            style={{ backgroundColor: theme.primaryLight, borderColor: theme.primary + '4D' }}
+          >
+            <View
+              className="w-10 h-10 rounded-xl items-center justify-center"
+              style={{ backgroundColor: theme.primary + '22' }}
+            >
+              <Ionicons name="time-outline" size={22} color={theme.primary} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold" style={{ color: theme.primary }}>
+                Marcaje de jornada
+              </Text>
+              <Text className="text-xs" style={{ color: theme.primary + 'BB' }}>
+                Toca para marcar entrada / salida →
+              </Text>
+            </View>
+          </Pressable>
         )}
 
         {/* ── Período abierto banner (managers) ───────────────────────── */}
@@ -273,7 +312,7 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── Próximos turnos (workers) ────────────────────────────────── */}
-        {isWorker && proximos.length > 0 && (
+        {showShifts && proximos.length > 0 && (
           <View className="px-4 mt-5 gap-3">
             <View className="flex-row items-center justify-between">
               <Text className="text-base font-semibold text-foreground">

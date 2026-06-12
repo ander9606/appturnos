@@ -10,9 +10,10 @@ const { pool } = require('../../config/database');
 const COLUMNAS = `id, empresa_id, usuario_id, nombre, apellido, cedula,
   tipo_documento, fecha_nacimiento, sexo,
   contacto_emergencia_nombre, contacto_emergencia_tel,
-  telefono, email, tipo, cargo, tarifa_hora, salario_base,
+  telefono, email, tipo, cargo, tarifa_hora, salario_base, acepta_extras,
   eps, afp, banco, tipo_cuenta, numero_cuenta,
   ant_judiciales_fecha, ant_disciplinarios_fecha,
+  tipo_marcacion, punto_marcaje_id,
   activo, external_ref, ranking, total_calificaciones, created_at`;
 
 // Allowlist de columnas modificables vía PUT. Lista fija de código,
@@ -292,7 +293,7 @@ const TrabajadoresModel = {
       'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo', 'telefono',
       'contacto_emergencia_nombre', 'contacto_emergencia_tel',
       'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
-      'ant_judiciales_fecha', 'ant_disciplinarios_fecha',
+      'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'acepta_extras',
     ];
     const sets = [];
     const params = [];
@@ -307,6 +308,14 @@ const TrabajadoresModel = {
     const [res] = await pool.query(
       `UPDATE trabajadores SET ${sets.join(', ')} WHERE usuario_id = ? AND activo = 1`,
       params
+    );
+    return res.affectedRows;
+  },
+
+  async actualizarExtras(usuarioId, acepta) {
+    const [res] = await pool.query(
+      'UPDATE trabajadores SET acepta_extras = ? WHERE usuario_id = ? AND activo = 1',
+      [acepta ? 1 : 0, usuarioId]
     );
     return res.affectedRows;
   },

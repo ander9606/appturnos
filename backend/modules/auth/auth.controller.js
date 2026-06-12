@@ -60,4 +60,16 @@ async function crearGestor(req, res) {
   res.status(201).json({ success: true, data, message: 'Gestor creado exitosamente' });
 }
 
-module.exports = { login, refresh, logout, me, activarCuenta, registrar, actualizarPerfil, cambiarPassword, crearGestor };
+async function listarGestores(req, res) {
+  const data = await AuthService.listarGestores(req.empresa_id);
+  res.json({ success: true, data, message: 'Gestores de la empresa' });
+}
+
+async function setActivoGestor(req, res) {
+  const gestorId = Number(req.params.id);
+  const { activo } = req.body;
+  await AuthService.setActivoGestor(req.empresa_id, gestorId, activo);
+  res.json({ success: true, data: null, message: activo ? 'Gestor activado' : 'Gestor desactivado' });
+}
+
+module.exports = { login, refresh, logout, me, activarCuenta, registrar, actualizarPerfil, cambiarPassword, crearGestor, listarGestores, setActivoGestor };
