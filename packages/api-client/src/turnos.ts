@@ -44,6 +44,7 @@ export interface Asignacion {
   // Joined from ofertas_turno
   oferta_titulo: string;
   oferta_descripcion: string | null;
+  oferta_externo_notas: string | null;
   oferta_fecha: string; // YYYY-MM-DD
   hora_inicio: string;  // HH:MM:SS
   hora_fin_estimada: string | null;
