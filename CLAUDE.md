@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Coding Philosophy (Ponytail — Lazy Senior Dev Mode)
+
+Before writing any code, work through this hierarchy in order:
+
+1. **Does it need to exist?** — skip if not explicitly required (YAGNI)
+2. **Standard library** — use built-in language/runtime features first
+3. **Native platform features** — leverage the framework (Express, React Native, Expo)
+4. **Existing dependencies** — check already-installed packages before adding new ones
+5. **One-liner** — compress to a single expression when possible
+6. **Minimum custom code** — only then write the bare minimum that works
+
+**Rules:** no unrequested abstractions, no boilerplate, deletion over addition, boring over clever, fewest files possible. Mark intentional simplifications with a `// ponytail: <reason> — upgrade path: <how>` comment.
+
+**Never lazy about:** input validation at trust boundaries, error handling that prevents data loss, security, accessibility.
+
+**Testing:** non-trivial logic gets one minimal runnable check (assertion or small script — no frameworks). Trivial one-liners need none.
+
 ## Commands
 
 ### Backend (`backend/`)
