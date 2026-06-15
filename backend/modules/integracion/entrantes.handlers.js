@@ -33,8 +33,7 @@ async function ordenCreada(empresaId, data) {
   const existente = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
   if (existente) return; // ya creada — idempotente
 
-  // Descripción: "Montaje de los productos X, Y de la empresa Z"
-  // notas_para_operario va al campo separado externo_notas, no aquí.
+  // Descripción: productos que se van a montar/desmontar
   let descripcion = null;
   if (Array.isArray(data.productos_resumen) && data.productos_resumen.length) {
     const [[empresa]] = await pool.query(
@@ -43,16 +42,39 @@ async function ordenCreada(empresaId, data) {
     const listaProductos = data.productos_resumen
       .map((p) => `${p.cantidad}× ${p.nombre}`)
       .join(', ');
-    descripcion = `Montaje de los productos: ${listaProductos} de la empresa ${empresa?.nombre ?? empresaId}`;
+    descripcion = `${listaProductos} (${empresa?.nombre ?? 'logiq360'})`;
   }
 
-  // Plazas y tarifa sugeridos por logiq360 se materializan como un único
-  // puesto "auxiliar" en estado borrador. El jefe puede dividir luego en
-  // varios puestos por cargo antes de publicar.
-  const plazasSugeridas =
-    data.cupos_sugeridos ||
-    (Array.isArray(data.equipo) && data.equipo.length ? data.equipo.length : 1);
+  // equipo_nomina: empleados de nómina de logiq360 ya asignados (backward-compat con campo 'equipo').
+  // Estos NO son cupos gig — aparecen en las notas para que el jefe_turnos los vea.
+  const equipoNomina = Array.isArray(data.equipo_nomina) ? data.equipo_nomina
+    : (Array.isArray(data.equipo) ? data.equipo : []);
+
+  // cupos_gig: plazas abiertas para trabajadores de turno adicionales.
+  // Explícito del payload nuevo; fallback a cupos_sugeridos del payload viejo.
+  // Si ninguno está definido → 0 (el jefe_turnos agrega puestos manualmente).
+  const cuposGig = data.cupos_gig ?? data.cupos_sugeridos ?? 0;
   const tarifaSugerida = data.valor_dia_sugerido || 0;
+
+  // externo_notas: notas para el operario + lista del equipo de nómina de logiq360
+  const notasNomina = equipoNomina.length > 0
+    ? `Equipo nómina logiq360 (${equipoNomina.length}): ${
+        equipoNomina.map((e) => `${e.nombre}${e.rol ? ` — ${e.rol}` : ''}`).join(', ')
+      }`
+    : null;
+  const externo_notas = [data.notas_para_operario, notasNomina].filter(Boolean).join('\n') || null;
+
+  // Puestos: solo si hay cupos gig > 0. Si no, el jefe_turnos los agrega desde App Turnos.
+  const puestos = cuposGig > 0
+    ? [
+        {
+          cargo_id: await cargoAuxiliarId(),
+          plazas: cuposGig,
+          tarifa_dia: tarifaSugerida,
+          notas: 'Plazas para trabajadores de turno (gig) — el jefe puede dividirlas por cargo',
+        },
+      ]
+    : [];
 
   await OfertasModel.crear(
     empresaId,
@@ -68,15 +90,8 @@ async function ordenCreada(empresaId, data) {
       estado: 'borrador',
       external_ref: data.external_ref,
       alquiler_ref: data.alquiler_ref || null,
-      externo_notas: data.notas_para_operario || null,
-      puestos: [
-        {
-          cargo_id: await cargoAuxiliarId(),
-          plazas: plazasSugeridas,
-          tarifa_dia: tarifaSugerida,
-          notas: 'Puesto generado por logiq360 — el jefe puede dividirlo por cargo',
-        },
-      ],
+      externo_notas,
+      puestos,
     },
     null
   );

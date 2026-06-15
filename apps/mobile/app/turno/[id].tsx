@@ -225,7 +225,8 @@ export default function TurnoDetailScreen() {
   const { estado, oferta_titulo, oferta_fecha, hora_inicio, hora_fin_estimada,
           lugar, tarifa_dia, hora_ingreso_real, hora_egreso_real,
           horas_trabajadas, pago_total,
-          calificacion, calificacion_comentario } = asignacion;
+          calificacion, calificacion_comentario,
+          oferta_descripcion, oferta_externo_notas } = asignacion;
 
   const hasMapCoords = asignacion.latitud != null && asignacion.longitud != null;
 
@@ -302,6 +303,40 @@ export default function TurnoDetailScreen() {
               </View>
             </View>
           </View>
+
+          {/* ── Descripción del turno (productos + equipo nómina) ─ */}
+          {(oferta_descripcion || oferta_externo_notas) && (
+            <View
+              className="bg-card rounded-2xl px-5 py-4 gap-3"
+              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
+            >
+              {oferta_descripcion && (
+                <View className="gap-1">
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="cube-outline" size={14} color="#64748B" />
+                    <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Material a instalar
+                    </Text>
+                  </View>
+                  <Text className="text-sm text-foreground leading-5 pl-5">{oferta_descripcion}</Text>
+                </View>
+              )}
+              {oferta_descripcion && oferta_externo_notas && (
+                <View className="border-t border-border" />
+              )}
+              {oferta_externo_notas && (
+                <View className="gap-1">
+                  <View className="flex-row items-center gap-2">
+                    <Ionicons name="people-outline" size={14} color="#64748B" />
+                    <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Equipo del cliente
+                    </Text>
+                  </View>
+                  <Text className="text-sm text-foreground leading-5 pl-5">{oferta_externo_notas}</Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* ── Timeline ──────────────────────────────────────── */}
           <View
