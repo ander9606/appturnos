@@ -99,8 +99,9 @@ async function main() {
   section('1. Ofertas de turno (8 completadas + 2 canceladas)');
 
   /**
-   * Cada oferta referencia un alquiler de logiq360 mediante alquiler_ref.
-   * Los IDs (14-23) son aproximados para la demo; el campo es libre (VARCHAR).
+   * ext_ref → ordenes_trabajo IDs creados en seed_historial_alquileres.sql (sección 4).
+   *   A=24, B=26, C=28, D=30, E=32, F=34, G=36, H=38, I=39, J=41
+   * alq_ref → alquileres IDs del mismo seed (14-23 según dump base).
    */
   const ofertasDefs = [
     // ── A: Matrimonio Ospina-Castellanos (16-17 mayo 2025) ──────────────────
@@ -110,7 +111,7 @@ async function main() {
       fecha:  '2025-05-16', hi: '07:00:00', hf: '17:00:00',
       lugar:  'Hacienda Villa del Río, Vía Montenegro Km 8, Armenia',
       lat: 4.5291, lon: -75.6745, estado: 'completada',
-      ext_ref: 'logiq360:orden:301', alq_ref: 'logiq360:alquiler:14',
+      ext_ref: 'logiq360:orden:24', alq_ref: 'logiq360:alquiler:14',
       ext_notas: 'Montaje para 200 personas. Carpa doble con pasillo central. Zona de parqueo disponible.',
       puestos: [
         { cid: auxId,  plazas: 3, tarifa: 75000,  notas: 'Uniforme empresa obligatorio' },
@@ -124,7 +125,7 @@ async function main() {
       fecha:  '2025-06-20', hi: '06:00:00', hf: '18:00:00',
       lugar:  'Parque Central, Carrera 3 #10-50, Pereira',
       lat: 4.8133, lon: -75.6961, estado: 'completada',
-      ext_ref: 'logiq360:orden:302', alq_ref: 'logiq360:alquiler:15',
+      ext_ref: 'logiq360:orden:26', alq_ref: 'logiq360:alquiler:15',
       ext_notas: '3 carpas, capacidad 500 personas. 2 equipos independientes.',
       puestos: [
         { cid: auxId,  plazas: 3, tarifa: 80000,  notas: null },
@@ -138,7 +139,7 @@ async function main() {
       fecha:  '2025-07-05', hi: '09:00:00', hf: '15:00:00',
       lugar:  'Vereda Carrasquilla, Casa Finca Los Pinos, Tenjo',
       lat: 4.8685, lon: -74.1493, estado: 'completada',
-      ext_ref: 'logiq360:orden:303', alq_ref: 'logiq360:alquiler:16',
+      ext_ref: 'logiq360:orden:28', alq_ref: 'logiq360:alquiler:16',
       ext_notas: 'Evento para 40 personas. Acceso por camino destapado.',
       puestos: [
         { cid: auxId, plazas: 2, tarifa: 70000, notas: null },
@@ -151,7 +152,7 @@ async function main() {
       fecha:  '2025-08-21', hi: '07:00:00', hf: '17:00:00',
       lugar:  'Centro Empresarial Parque Andino, Bogotá',
       lat: 4.6799, lon: -74.0523, estado: 'completada',
-      ext_ref: 'logiq360:orden:304', alq_ref: 'logiq360:alquiler:17',
+      ext_ref: 'logiq360:orden:30', alq_ref: 'logiq360:alquiler:17',
       ext_notas: 'Montaje previo al evento. Equipo completo de 4 operarios. Carnet de acceso en portería.',
       puestos: [
         { cid: auxId,  plazas: 2, tarifa: 80000,  notas: null },
@@ -166,7 +167,7 @@ async function main() {
       fecha:  '2025-09-05', hi: '14:00:00', hf: '22:00:00',
       lugar:  'Campus Universitario Externado, Cancha Principal, Bogotá',
       lat: 4.6087, lon: -74.0689, estado: 'completada',
-      ext_ref: 'logiq360:orden:305', alq_ref: 'logiq360:alquiler:18',
+      ext_ref: 'logiq360:orden:32', alq_ref: 'logiq360:alquiler:18',
       ext_notas: 'Montaje tarde para ceremonia nocturna. Acceso vehicular hasta las 14h.',
       puestos: [
         { cid: auxId, plazas: 2, tarifa: 75000, notas: 'Turno tarde-noche' },
@@ -179,7 +180,7 @@ async function main() {
       fecha:  '2025-10-10', hi: '08:00:00', hf: '18:00:00',
       lugar:  'Finca La Esperanza, Vía Palmira Km 3, Cali',
       lat: 3.4516, lon: -76.5320, estado: 'completada',
-      ext_ref: 'logiq360:orden:306', alq_ref: 'logiq360:alquiler:19',
+      ext_ref: 'logiq360:orden:34', alq_ref: 'logiq360:alquiler:19',
       ext_notas: 'Finca con acceso por vía destapada. Llevar vehículo adecuado.',
       puestos: [
         { cid: auxId,  plazas: 2, tarifa: 75000,  notas: null },
@@ -193,7 +194,7 @@ async function main() {
       fecha:  '2025-11-13', hi: '06:00:00', hf: '18:00:00',
       lugar:  'Recinto del Pensamiento, Manizales',
       lat: 5.0688, lon: -75.5174, estado: 'completada',
-      ext_ref: 'logiq360:orden:307', alq_ref: 'logiq360:alquiler:20',
+      ext_ref: 'logiq360:orden:36', alq_ref: 'logiq360:alquiler:20',
       ext_notas: 'Operación grande: 4 equipos simultáneos. Coordinación en sitio.',
       puestos: [
         { cid: auxId,  plazas: 3, tarifa: 80000,  notas: 'Turno extendido 12h' },
@@ -208,7 +209,7 @@ async function main() {
       fecha:  '2025-11-29', hi: '09:00:00', hf: '15:00:00',
       lugar:  'Apartamento PH, Cra 15 #85-20, Bogotá',
       lat: 4.6660, lon: -74.0575, estado: 'cancelada',
-      ext_ref: 'logiq360:orden:308', alq_ref: 'logiq360:alquiler:21',
+      ext_ref: 'logiq360:orden:38', alq_ref: 'logiq360:alquiler:21',
       ext_notas: 'CANCELADO: administración del edificio negó el permiso para la terraza.',
       puestos: [
         { cid: auxId, plazas: 1, tarifa: 70000, notas: null },
@@ -221,7 +222,7 @@ async function main() {
       fecha:  '2025-12-05', hi: '07:30:00', hf: '16:30:00',
       lugar:  'Colegio Montessori La Arboleda, Calle 18 #9-30, Zipaquirá',
       lat: 5.0225, lon: -74.0065, estado: 'completada',
-      ext_ref: 'logiq360:orden:309', alq_ref: 'logiq360:alquiler:22',
+      ext_ref: 'logiq360:orden:39', alq_ref: 'logiq360:alquiler:22',
       ext_notas: 'Contrapesos requeridos por piso de concreto. Evento escolar.',
       puestos: [
         { cid: auxId,  plazas: 2, tarifa: 75000,  notas: null },
@@ -235,7 +236,7 @@ async function main() {
       fecha:  '2025-12-19', hi: '08:00:00', hf: '16:00:00',
       lugar:  'Club Los Lagartos, Salón Jardín, Bogotá',
       lat: 4.6762, lon: -74.0538, estado: 'cancelada',
-      ext_ref: 'logiq360:orden:310', alq_ref: 'logiq360:alquiler:23',
+      ext_ref: 'logiq360:orden:41', alq_ref: 'logiq360:alquiler:23',
       ext_notas: 'CANCELADO 10 días antes: recorte de presupuesto navideño.',
       puestos: [
         { cid: auxId,  plazas: 2, tarifa: 75000,  notas: null },
