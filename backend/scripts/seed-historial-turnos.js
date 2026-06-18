@@ -5,32 +5,44 @@
  *
  * Uso: cd backend && node scripts/seed-historial-turnos.js
  *
- * Requiere que seed-datos-prueba.js haya corrido antes (empresa-demo, trabajadores, cargos).
+ * Auto-contenido: crea la empresa "Plataforma de Prueba logiq360" y sus
+ * trabajadores si no existen. No requiere seeds previos.
  * Idempotente: se puede correr múltiples veces sin duplicar registros.
+ *
+ * Empresa creada:
+ *   slug: logiq360-prueba
+ *   nombre: Plataforma de Prueba logiq360
+ *   admin@logiq360-prueba.co  / Prueba1234!
+ *   jefe@logiq360-prueba.co   / Prueba1234!
+ *   integracion_config.incoming_secret = 'in_secret_logiq360_prueba_hmac_789'
  *
  * Crea:
  *   - 10 ofertas de turno en 2025 (8 completadas + 2 canceladas)
- *   - 24 asignaciones con ingreso/egreso, contratos y calificaciones
+ *   - 22 asignaciones con ingreso/egreso, contratos y calificaciones
  *   - 10 eventos de integración entrantes (orden.creada desde logiq360)
- *   - 16 eventos de integración salientes (ingreso/egreso/contrato)
+ *   - 10 eventos de integración salientes (ingreso/egreso/contrato)
  *
  * Referencia alquileres logiq360 (seed_historial_alquileres.sql):
- *   14: Matrimonio Ospina-Castellanos
- *   15: Festival del Viento
- *   16: Baby Shower Valentina
- *   17: Convención Avicol
- *   18: Grado Externado
- *   19: Quinceañera Daniela
- *   20: Feria Quindío
- *   21: Cumple 50 años (CANCELADO)
- *   22: Clausura Montessori
- *   23: Navidad Corp (CANCELADO)
+ *   14: Matrimonio Ospina-Castellanos   ext_ref: logiq360:orden:24
+ *   15: Festival del Viento             ext_ref: logiq360:orden:26
+ *   16: Baby Shower Valentina           ext_ref: logiq360:orden:28
+ *   17: Convención Avicol               ext_ref: logiq360:orden:30
+ *   18: Grado Externado                 ext_ref: logiq360:orden:32
+ *   19: Quinceañera Daniela             ext_ref: logiq360:orden:34
+ *   20: Feria Quindío                   ext_ref: logiq360:orden:36
+ *   21: Cumple 50 años (CANCELADO)      ext_ref: logiq360:orden:38
+ *   22: Clausura Montessori             ext_ref: logiq360:orden:39
+ *   23: Navidad Corp (CANCELADO)        ext_ref: logiq360:orden:41
  */
 
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 
+const bcrypt         = require('bcrypt');
 const { pool }       = require('../config/database');
 const { randomUUID } = require('crypto');
+
+const SLUG     = 'logiq360-prueba';
+const PASSWORD = 'Prueba1234!';
 
 function ok(msg)      { console.log(`  ✅ ${msg}`); }
 function skip(msg)    { console.log(`  ⚠️  ${msg}`); }
@@ -44,55 +56,114 @@ async function main() {
   try { await pool.query('SELECT 1'); ok('Base de datos conectada\n'); }
   catch (e) { console.error('❌ DB error:', e.message); process.exit(1); }
 
-  // ── 0. IDs base ─────────────────────────────────────────────────────────────
-  const [[empresa]] = await pool.query(`SELECT id FROM empresas WHERE slug = 'empresa-demo'`);
-  if (!empresa) {
-    console.error('❌ Empresa Demo no encontrada. Corre seed-datos-prueba.js primero.');
-    process.exit(1);
+  // ── 0. Empresa Plataforma de Prueba logiq360 ─────────────────────────────────
+  section('0. Empresa + integración + trabajadores');
+
+  let eId;
+  const [[empEx]] = await pool.query(`SELECT id FROM empresas WHERE slug=?`, [SLUG]);
+  if (empEx) {
+    eId = empEx.id;
+    skip(`empresa "Plataforma de Prueba logiq360" ya existe (id=${eId})`);
+  } else {
+    const [re] = await pool.query(
+      `INSERT INTO empresas (nombre,slug,nit,ciudad,plan,acepta_postulaciones)
+       VALUES (?,?,?,?,?,1)`,
+      ['Plataforma de Prueba logiq360', SLUG, '900000099-9', 'Bogotá D.C.', 'profesional']
+    );
+    eId = re.insertId;
+    ok(`empresa "Plataforma de Prueba logiq360" creada (id=${eId})`);
   }
-  const eId = empresa.id;
   console.log(`  ℹ️  empresa_id = ${eId}`);
 
   const [[cAux]]  = await pool.query(`SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo='auxiliar'`);
   const [[cJefe]] = await pool.query(`SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo='jefe_montaje'`);
   const [[cCond]] = await pool.query(`SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo='conductor'`);
   if (!cAux || !cJefe || !cCond) {
-    console.error('❌ Cargos del sistema no encontrados.');
+    console.error('❌ Cargos del sistema no encontrados. Asegúrate de que las migraciones hayan corrido.');
     process.exit(1);
   }
   const [auxId, jefeId, condId] = [cAux.id, cJefe.id, cCond.id];
   console.log(`  ℹ️  cargos: auxiliar=${auxId}  jefe_montaje=${jefeId}  conductor=${condId}`);
 
-  const [[uJTurnos]] = await pool.query(`SELECT id FROM usuarios WHERE email='jturnos@demo.com'`);
-  const jTurnosId    = uJTurnos?.id;
-  console.log(`  ℹ️  jefe_turnos id=${jTurnosId}`);
+  const hash = await bcrypt.hash(PASSWORD, 10);
 
-  // Trabajadores de turno del seed previo
-  const trabajadores = {};
-  for (const email of [
-    'diego.herrera@turnos.com',
-    'valentina.torres@turnos.com',
-    'andres.lopez@turnos.com',
-    'sofia.ramirez@turnos.com',
-  ]) {
-    const [[u]] = await pool.query(`SELECT id FROM usuarios WHERE email=?`, [email]);
-    if (!u) {
-      console.error(`❌ Usuario ${email} no encontrado. Corre seed-datos-prueba.js primero.`);
-      process.exit(1);
-    }
-    const [[t]] = await pool.query(`SELECT id FROM trabajadores WHERE empresa_id=? AND usuario_id=?`, [eId, u.id]);
-    if (!t) {
-      console.error(`❌ Trabajador ${email} no encontrado en empresa ${eId}.`);
-      process.exit(1);
-    }
-    trabajadores[email] = t.id;
+  async function upsertUsuarioEmpresa(nombre, apellido, email, rol) {
+    const [[ex]] = await pool.query(`SELECT id FROM usuarios WHERE email=?`, [email]);
+    if (ex) { skip(`usuario ${email} ya existe`); return ex.id; }
+    const empId = rol.startsWith('trabajador') ? null : eId;
+    const [r] = await pool.query(
+      `INSERT INTO usuarios (empresa_id,nombre,apellido,email,password_hash,rol,activo) VALUES (?,?,?,?,?,?,1)`,
+      [empId, nombre, apellido, email, hash, rol]
+    );
+    ok(`usuario ${email} (${rol})`);
+    return r.insertId;
   }
-  const [diegoId, valentId, andresId, sofiaId] = [
-    trabajadores['diego.herrera@turnos.com'],
-    trabajadores['valentina.torres@turnos.com'],
-    trabajadores['andres.lopez@turnos.com'],
-    trabajadores['sofia.ramirez@turnos.com'],
-  ];
+
+  const adminId   = await upsertUsuarioEmpresa('Admin', 'Logiq360', 'admin@logiq360-prueba.co', 'admin_empresa');
+  const jTurnosId = await upsertUsuarioEmpresa('Jefe',  'Turnos',   'jefe@logiq360-prueba.co',  'jefe_turnos');
+
+  // Integración logiq360 → appturnos
+  const [[icEx]] = await pool.query(`SELECT id FROM integracion_config WHERE empresa_id=?`, [eId]);
+  if (icEx) {
+    skip('integracion_config ya existe');
+  } else {
+    await pool.query(
+      `INSERT INTO integracion_config (empresa_id,activo,webhook_url,webhook_secret,api_key,incoming_secret)
+       VALUES (?,1,?,?,?,?)`,
+      [eId,
+       'https://logiq360.co/webhooks/appturnos',
+       'hook_out_logiq360_prueba_456',
+       'api_key_logiq360_prueba_001',
+       'in_secret_logiq360_prueba_hmac_789']
+    );
+    ok('integracion_config (incoming_secret: in_secret_logiq360_prueba_hmac_789)');
+  }
+
+  // Trabajadores — platform workers (empresa_id=NULL en usuarios)
+  async function upsertTrabajador(nombre, apellido, email, cedula, cargo, tarifaHora, ranking, extRef) {
+    let uId;
+    const [[uEx]] = await pool.query(`SELECT id FROM usuarios WHERE email=?`, [email]);
+    if (uEx) {
+      uId = uEx.id;
+      skip(`usuario ${email} ya existe`);
+    } else {
+      const [ru] = await pool.query(
+        `INSERT INTO usuarios (empresa_id,nombre,apellido,email,password_hash,rol,activo)
+         VALUES (NULL,?,?,?,?,'trabajador_turnos',1)`,
+        [nombre, apellido, email, hash]
+      );
+      uId = ru.insertId;
+      ok(`usuario trabajador ${email}`);
+    }
+    const [[tEx]] = await pool.query(
+      `SELECT id FROM trabajadores WHERE empresa_id=? AND usuario_id=?`, [eId, uId]
+    );
+    if (tEx) { skip(`trabajador ${nombre} en ${SLUG} ya existe`); return tEx.id; }
+    const [rt] = await pool.query(
+      `INSERT INTO trabajadores
+         (empresa_id,usuario_id,nombre,apellido,cedula,tipo,cargo,
+          tarifa_hora,ranking,total_calificaciones,external_ref,activo)
+       VALUES (?,?,?,?,?,'turnos',?,?,?,0,?,1)`,
+      [eId, uId, nombre, apellido, cedula, cargo, tarifaHora, ranking, extRef]
+    );
+    ok(`trabajador ${nombre} ${apellido} id=${rt.insertId}`);
+    const [[teEx]] = await pool.query(
+      `SELECT id FROM trabajador_empresa WHERE usuario_id=? AND empresa_id=?`, [uId, eId]
+    );
+    if (!teEx) {
+      await pool.query(
+        `INSERT INTO trabajador_empresa (usuario_id,empresa_id,trabajador_id,estado,iniciado_por,fecha_resuelto)
+         VALUES (?,?,?,'activo','empresa',NOW())`,
+        [uId, eId, rt.insertId]
+      );
+    }
+    return rt.insertId;
+  }
+
+  const diegoId  = await upsertTrabajador('Diego',     'Herrera', 'diego.herrera@turnos.com',    '30405060', 'Auxiliar',     9375,  4.8, 'logiq360:trabajador:201');
+  const valentId = await upsertTrabajador('Valentina', 'Torres',  'valentina.torres@turnos.com', '30405061', 'Auxiliar',     9375,  4.6, 'logiq360:trabajador:202');
+  const andresId = await upsertTrabajador('Andrés',    'López',   'andres.lopez@turnos.com',     '30405062', 'Conductor',    11250, 4.9, 'logiq360:trabajador:203');
+  const sofiaId  = await upsertTrabajador('Sofía',     'Ramírez', 'sofia.ramirez@turnos.com',    '30405063', 'Jefe Montaje', 13125, 5.0, 'logiq360:trabajador:204');
   console.log(`  ℹ️  Diego=${diegoId}  Valentina=${valentId}  Andrés=${andresId}  Sofía=${sofiaId}\n`);
 
   // ── 1. Ofertas de turno ──────────────────────────────────────────────────────
@@ -618,6 +689,8 @@ async function main() {
   console.log('\n╔══════════════════════════════════════════════════════╗');
   console.log('║   Resumen                                            ║');
   console.log('╠══════════════════════════════════════════════════════╣');
+  console.log('║  Empresa: Plataforma de Prueba logiq360              ║');
+  console.log('║  Slug:    logiq360-prueba                            ║');
   console.log('║  10 ofertas de turno (8 completadas + 2 canceladas)  ║');
   console.log('║  22 asignaciones completadas con ingreso/egreso GPS  ║');
   console.log('║  22 contratos diarios firmados                       ║');
