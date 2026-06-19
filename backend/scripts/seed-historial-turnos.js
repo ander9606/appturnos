@@ -17,7 +17,7 @@
  *   integracion_config.incoming_secret = 'in_secret_logiq360_prueba_hmac_789'
  *
  * Crea:
- *   - 10 ofertas de turno en 2025 (8 completadas + 2 canceladas)
+ *   - 10 ofertas de turno en 2026 (8 completadas + 2 canceladas)
  *   - 22 asignaciones con ingreso/egreso, contratos y calificaciones
  *   - 10 eventos de integración entrantes (orden.creada desde logiq360)
  *   - 10 eventos de integración salientes (ingreso/egreso/contrato)
@@ -50,7 +50,7 @@ function section(t)   { console.log(`\n── ${t} ${'─'.repeat(Math.max(0, 50
 
 async function main() {
   console.log('\n╔══════════════════════════════════════════════════════╗');
-  console.log('║   Seed historial de turnos — logiq360 2025           ║');
+  console.log('║   Seed historial de turnos — logiq360 2026           ║');
   console.log('╚══════════════════════════════════════════════════════╝\n');
 
   try { await pool.query('SELECT 1'); ok('Base de datos conectada\n'); }
@@ -175,11 +175,11 @@ async function main() {
    * alq_ref → alquileres IDs del mismo seed (14-23 según dump base).
    */
   const ofertasDefs = [
-    // ── A: Matrimonio Ospina-Castellanos (16-17 mayo 2025) ──────────────────
+    // ── A: Matrimonio Ospina-Castellanos (16-17 enero 2026) ─────────────────
     {
       titulo: 'Montaje Matrimonio Ospina-Castellanos',
       desc:   'Instalación de 2 carpas P10 con iluminación perimetral para ceremonia y recepción',
-      fecha:  '2025-05-16', hi: '07:00:00', hf: '17:00:00',
+      fecha:  '2026-01-16', hi: '07:00:00', hf: '17:00:00',
       lugar:  'Hacienda Villa del Río, Vía Montenegro Km 8, Armenia',
       lat: 4.5291, lon: -75.6745, estado: 'completada',
       ext_ref: 'logiq360:orden:24', alq_ref: 'logiq360:alquiler:14',
@@ -189,11 +189,11 @@ async function main() {
         { cid: condId, plazas: 1, tarifa: 120000, notas: 'Licencia vigente requerida' },
       ],
     },
-    // ── B: Festival del Viento (20-22 jun 2025) ─────────────────────────────
+    // ── B: Festival del Viento (20-22 feb 2026) ─────────────────────────────
     {
       titulo: 'Operación Festival del Viento 2025',
       desc:   'Montaje de 3 carpas independientes para evento musical al aire libre',
-      fecha:  '2025-06-20', hi: '06:00:00', hf: '18:00:00',
+      fecha:  '2026-02-20', hi: '06:00:00', hf: '18:00:00',
       lugar:  'Parque Central, Carrera 3 #10-50, Pereira',
       lat: 4.8133, lon: -75.6961, estado: 'completada',
       ext_ref: 'logiq360:orden:26', alq_ref: 'logiq360:alquiler:15',
@@ -203,11 +203,11 @@ async function main() {
         { cid: jefeId, plazas: 1, tarifa: 155000, notas: 'Coordinar equipos simultáneos' },
       ],
     },
-    // ── C: Baby Shower Valentina (5 jul 2025) ────────────────────────────────
+    // ── C: Baby Shower Valentina (5 mar 2026) ────────────────────────────────
     {
       titulo: 'Montaje Baby Shower Valentina',
       desc:   'Instalación de parasol en jardín de finca para evento íntimo',
-      fecha:  '2025-07-05', hi: '09:00:00', hf: '15:00:00',
+      fecha:  '2026-03-05', hi: '09:00:00', hf: '15:00:00',
       lugar:  'Vereda Carrasquilla, Casa Finca Los Pinos, Tenjo',
       lat: 4.8685, lon: -74.1493, estado: 'completada',
       ext_ref: 'logiq360:orden:28', alq_ref: 'logiq360:alquiler:16',
@@ -216,11 +216,11 @@ async function main() {
         { cid: auxId, plazas: 2, tarifa: 70000, notas: null },
       ],
     },
-    // ── D: Convención Avicol (21-24 ago 2025) ────────────────────────────────
+    // ── D: Convención Avicol (4-7 abr 2026) ─────────────────────────────────
     {
       titulo: 'Montaje Convención Avicol 2025',
       desc:   'Instalación de 2 carpas con iluminación para convención empresarial de 300 personas',
-      fecha:  '2025-08-21', hi: '07:00:00', hf: '17:00:00',
+      fecha:  '2026-04-04', hi: '07:00:00', hf: '17:00:00',
       lugar:  'Centro Empresarial Parque Andino, Bogotá',
       lat: 4.6799, lon: -74.0523, estado: 'completada',
       ext_ref: 'logiq360:orden:30', alq_ref: 'logiq360:alquiler:17',
@@ -231,11 +231,11 @@ async function main() {
         { cid: jefeId, plazas: 1, tarifa: 155000, notas: 'Coordinar con administrador del centro' },
       ],
     },
-    // ── E: Grado Externado (5-7 sep 2025) ────────────────────────────────────
+    // ── E: Grado Externado (18-20 abr 2026) ──────────────────────────────────
     {
       titulo: 'Montaje Ceremonia de Grados Externado',
       desc:   'Carpa para ceremonia de grado nocturna en campus universitario',
-      fecha:  '2025-09-05', hi: '14:00:00', hf: '22:00:00',
+      fecha:  '2026-04-18', hi: '14:00:00', hf: '22:00:00',
       lugar:  'Campus Universitario Externado, Cancha Principal, Bogotá',
       lat: 4.6087, lon: -74.0689, estado: 'completada',
       ext_ref: 'logiq360:orden:32', alq_ref: 'logiq360:alquiler:18',
@@ -244,11 +244,11 @@ async function main() {
         { cid: auxId, plazas: 2, tarifa: 75000, notas: 'Turno tarde-noche' },
       ],
     },
-    // ── F: Quinceañera Daniela (10-12 oct 2025) ──────────────────────────────
+    // ── F: Quinceañera Daniela (2-4 may 2026) ────────────────────────────────
     {
       titulo: 'Montaje Quinceañera Daniela Ruiz',
       desc:   'Carpa principal y parasol de zona de mesas para fiesta de 150 personas',
-      fecha:  '2025-10-10', hi: '08:00:00', hf: '18:00:00',
+      fecha:  '2026-05-02', hi: '08:00:00', hf: '18:00:00',
       lugar:  'Finca La Esperanza, Vía Palmira Km 3, Cali',
       lat: 3.4516, lon: -76.5320, estado: 'completada',
       ext_ref: 'logiq360:orden:34', alq_ref: 'logiq360:alquiler:19',
@@ -258,11 +258,11 @@ async function main() {
         { cid: condId, plazas: 1, tarifa: 120000, notas: 'Vehículo doble tracción recomendado' },
       ],
     },
-    // ── G: Feria Quindío (13-16 nov 2025) ────────────────────────────────────
+    // ── G: Feria Quindío (14-17 may 2026) ────────────────────────────────────
     {
       titulo: 'Operación Feria Empresarial Quindío 2025',
       desc:   '4 carpas P10 para stands de exposición. 2 días de montaje previo.',
-      fecha:  '2025-11-13', hi: '06:00:00', hf: '18:00:00',
+      fecha:  '2026-05-14', hi: '06:00:00', hf: '18:00:00',
       lugar:  'Recinto del Pensamiento, Manizales',
       lat: 5.0688, lon: -75.5174, estado: 'completada',
       ext_ref: 'logiq360:orden:36', alq_ref: 'logiq360:alquiler:20',
@@ -277,7 +277,7 @@ async function main() {
     {
       titulo: 'Montaje Cumpleaños 50 Años Ospina',
       desc:   'Parasol en terraza de edificio para evento íntimo',
-      fecha:  '2025-11-29', hi: '09:00:00', hf: '15:00:00',
+      fecha:  '2026-05-21', hi: '09:00:00', hf: '15:00:00',
       lugar:  'Apartamento PH, Cra 15 #85-20, Bogotá',
       lat: 4.6660, lon: -74.0575, estado: 'cancelada',
       ext_ref: 'logiq360:orden:38', alq_ref: 'logiq360:alquiler:21',
@@ -286,11 +286,11 @@ async function main() {
         { cid: auxId, plazas: 1, tarifa: 70000, notas: null },
       ],
     },
-    // ── I: Clausura Montessori (5-7 dic 2025) ────────────────────────────────
+    // ── I: Clausura Montessori (26-28 may 2026) ──────────────────────────────
     {
       titulo: 'Montaje Clausura Escuela Montessori',
       desc:   'Carpa con iluminación y contrapesos en cancha de concreto',
-      fecha:  '2025-12-05', hi: '07:30:00', hf: '16:30:00',
+      fecha:  '2026-05-26', hi: '07:30:00', hf: '16:30:00',
       lugar:  'Colegio Montessori La Arboleda, Calle 18 #9-30, Zipaquirá',
       lat: 5.0225, lon: -74.0065, estado: 'completada',
       ext_ref: 'logiq360:orden:39', alq_ref: 'logiq360:alquiler:22',
@@ -304,7 +304,7 @@ async function main() {
     {
       titulo: 'Montaje Cena Navidad Corporativa Herrera',
       desc:   'Carpa P10 para cena navideña en jardín de club',
-      fecha:  '2025-12-19', hi: '08:00:00', hf: '16:00:00',
+      fecha:  '2026-06-05', hi: '08:00:00', hf: '16:00:00',
       lugar:  'Club Los Lagartos, Salón Jardín, Bogotá',
       lat: 4.6762, lon: -74.0538, estado: 'cancelada',
       ext_ref: 'logiq360:orden:41', alq_ref: 'logiq360:alquiler:23',
@@ -378,107 +378,107 @@ async function main() {
    * com   → comentario calificación
    */
   const asigs = [
-    // ── A: Matrimonio Ospina (mayo 16) ────────────────────────────────────────
+    // ── A: Matrimonio Ospina (ene 16) ─────────────────────────────────────────
     { oIdx:0, tId:diegoId,   cid:auxId,  tarifa:75000,
-      hi:'2025-05-16 07:08:00', he:'2025-05-16 17:12:00',
+      hi:'2026-01-16 07:08:00', he:'2026-01-16 17:12:00',
       lat:4.5293, lon:-75.6743, hrs:10.07, pago:75000, num:'CD-2025-001',
       cal:5, com:'Montaje perfecto. Muy puntual y prolijo con los detalles.' },
     { oIdx:0, tId:valentId,  cid:auxId,  tarifa:75000,
-      hi:'2025-05-16 07:15:00', he:'2025-05-16 17:05:00',
+      hi:'2026-01-16 07:15:00', he:'2026-01-16 17:05:00',
       lat:4.5292, lon:-75.6744, hrs:9.83, pago:75000, num:'CD-2025-002',
       cal:4, com:'Buen trabajo. Cumplió todas las instrucciones.' },
     { oIdx:0, tId:andresId,  cid:condId, tarifa:120000,
-      hi:'2025-05-16 06:50:00', he:'2025-05-16 17:20:00',
+      hi:'2026-01-16 06:50:00', he:'2026-01-16 17:20:00',
       lat:4.5290, lon:-75.6747, hrs:10.50, pago:120000, num:'CD-2025-003',
       cal:5, com:'Excelente conductor. Maniobró perfecto en espacio reducido.' },
 
-    // ── B: Festival Viento (jun 20) ────────────────────────────────────────────
+    // ── B: Festival Viento (feb 20) ────────────────────────────────────────────
     { oIdx:1, tId:diegoId,   cid:auxId,  tarifa:80000,
-      hi:'2025-06-20 06:05:00', he:'2025-06-20 18:10:00',
+      hi:'2026-02-20 06:05:00', he:'2026-02-20 18:10:00',
       lat:4.8135, lon:-75.6959, hrs:12.08, pago:96000, num:'CD-2025-004',
       cal:5, com:'Turno extendido, excelente disposición y resistencia.' },
     { oIdx:1, tId:valentId,  cid:auxId,  tarifa:80000,
-      hi:'2025-06-20 06:10:00', he:'2025-06-20 18:05:00',
+      hi:'2026-02-20 06:10:00', he:'2026-02-20 18:05:00',
       lat:4.8134, lon:-75.6960, hrs:11.92, pago:95000, num:'CD-2025-005',
       cal:4, com:'Cumplió con el turno extendido sin quejas.' },
     { oIdx:1, tId:sofiaId,   cid:jefeId, tarifa:155000,
-      hi:'2025-06-20 05:55:00', he:'2025-06-20 18:20:00',
+      hi:'2026-02-20 05:55:00', he:'2026-02-20 18:20:00',
       lat:4.8132, lon:-75.6962, hrs:12.42, pago:193125, num:'CD-2025-006',
       cal:5, com:'Coordinación impecable de 3 equipos en simultáneo.' },
 
-    // ── C: Baby Shower (jul 5) ─────────────────────────────────────────────────
+    // ── C: Baby Shower (mar 5) ─────────────────────────────────────────────────
     { oIdx:2, tId:diegoId,   cid:auxId, tarifa:70000,
-      hi:'2025-07-05 09:05:00', he:'2025-07-05 14:55:00',
+      hi:'2026-03-05 09:05:00', he:'2026-03-05 14:55:00',
       lat:4.8687, lon:-74.1491, hrs:5.83, pago:70000, num:'CD-2025-007',
       cal:5, com:'Llegó con tiempo, trabajo limpio y ordenado.' },
     { oIdx:2, tId:valentId,  cid:auxId, tarifa:70000,
-      hi:'2025-07-05 09:10:00', he:'2025-07-05 15:00:00',
+      hi:'2026-03-05 09:10:00', he:'2026-03-05 15:00:00',
       lat:4.8686, lon:-74.1492, hrs:5.83, pago:70000, num:'CD-2025-008',
       cal:5, com:'Muy amable con los anfitriones. Gran actitud.' },
 
-    // ── D: Convención Avicol (ago 21) ─────────────────────────────────────────
+    // ── D: Convención Avicol (abr 4) ──────────────────────────────────────────
     { oIdx:3, tId:diegoId,   cid:auxId,  tarifa:80000,
-      hi:'2025-08-21 07:10:00', he:'2025-08-21 17:15:00',
+      hi:'2026-04-04 07:10:00', he:'2026-04-04 17:15:00',
       lat:4.6801, lon:-74.0521, hrs:10.08, pago:80000, num:'CD-2025-009',
       cal:4, com:'Buen trabajo en espacio corporativo.' },
     { oIdx:3, tId:valentId,  cid:auxId,  tarifa:80000,
-      hi:'2025-08-21 07:05:00', he:'2025-08-21 17:10:00',
+      hi:'2026-04-04 07:05:00', he:'2026-04-04 17:10:00',
       lat:4.6800, lon:-74.0522, hrs:10.08, pago:80000, num:'CD-2025-010',
       cal:4, com:null },
     { oIdx:3, tId:andresId,  cid:condId, tarifa:120000,
-      hi:'2025-08-21 06:50:00', he:'2025-08-21 17:30:00',
+      hi:'2026-04-04 06:50:00', he:'2026-04-04 17:30:00',
       lat:4.6798, lon:-74.0525, hrs:10.67, pago:120000, num:'CD-2025-011',
       cal:5, com:'Manejo perfecto del camión en sótano de parqueo.' },
     { oIdx:3, tId:sofiaId,   cid:jefeId, tarifa:155000,
-      hi:'2025-08-21 07:00:00', he:'2025-08-21 17:00:00',
+      hi:'2026-04-04 07:00:00', he:'2026-04-04 17:00:00',
       lat:4.6799, lon:-74.0523, hrs:10.00, pago:155000, num:'CD-2025-012',
       cal:5, com:'Coordinación ejemplar. Cliente muy satisfecho.' },
 
-    // ── E: Grado Externado (sep 5) ────────────────────────────────────────────
+    // ── E: Grado Externado (abr 18) ───────────────────────────────────────────
     { oIdx:4, tId:diegoId,   cid:auxId, tarifa:75000,
-      hi:'2025-09-05 14:10:00', he:'2025-09-05 22:05:00',
+      hi:'2026-04-18 14:10:00', he:'2026-04-18 22:05:00',
       lat:4.6089, lon:-74.0687, hrs:7.92, pago:75000, num:'CD-2025-013',
       cal:4, com:'Excelente pese al turno nocturno.' },
     { oIdx:4, tId:valentId,  cid:auxId, tarifa:75000,
-      hi:'2025-09-05 14:15:00', he:'2025-09-05 22:00:00',
+      hi:'2026-04-18 14:15:00', he:'2026-04-18 22:00:00',
       lat:4.6088, lon:-74.0688, hrs:7.75, pago:75000, num:'CD-2025-014',
       cal:4, com:null },
 
-    // ── F: Quinceañera Daniela (oct 10) ───────────────────────────────────────
+    // ── F: Quinceañera Daniela (may 2) ────────────────────────────────────────
     { oIdx:5, tId:valentId,  cid:auxId,  tarifa:75000,
-      hi:'2025-10-10 08:05:00', he:'2025-10-10 18:00:00',
+      hi:'2026-05-02 08:05:00', he:'2026-05-02 18:00:00',
       lat:3.4518, lon:-76.5318, hrs:9.92, pago:75000, num:'CD-2025-015',
       cal:5, com:'Perfecta actitud con el cliente, entorno social.' },
     { oIdx:5, tId:andresId,  cid:condId, tarifa:120000,
-      hi:'2025-10-10 07:50:00', he:'2025-10-10 18:10:00',
+      hi:'2026-05-02 07:50:00', he:'2026-05-02 18:10:00',
       lat:3.4514, lon:-76.5322, hrs:10.33, pago:120000, num:'CD-2025-016',
       cal:5, com:'Manejó impecable por vía destapada.' },
 
-    // ── G: Feria Quindío (nov 13) ─────────────────────────────────────────────
+    // ── G: Feria Quindío (may 14) ─────────────────────────────────────────────
     { oIdx:6, tId:diegoId,   cid:auxId,  tarifa:80000,
-      hi:'2025-11-13 06:02:00', he:'2025-11-13 18:05:00',
+      hi:'2026-05-14 06:02:00', he:'2026-05-14 18:05:00',
       lat:5.0690, lon:-75.5172, hrs:12.05, pago:96000, num:'CD-2025-017',
       cal:5, com:'Increíble resistencia en turno de 12 horas.' },
     { oIdx:6, tId:valentId,  cid:auxId,  tarifa:80000,
-      hi:'2025-11-13 06:08:00', he:'2025-11-13 18:02:00',
+      hi:'2026-05-14 06:08:00', he:'2026-05-14 18:02:00',
       lat:5.0689, lon:-75.5173, hrs:11.90, pago:95000, num:'CD-2025-018',
       cal:4, com:'Muy buena en operación grande.' },
     { oIdx:6, tId:andresId,  cid:condId, tarifa:125000,
-      hi:'2025-11-13 05:55:00', he:'2025-11-13 18:10:00',
+      hi:'2026-05-14 05:55:00', he:'2026-05-14 18:10:00',
       lat:5.0687, lon:-75.5176, hrs:12.25, pago:125000, num:'CD-2025-019',
       cal:5, com:'Logística de transporte perfecta para 4 carpas.' },
     { oIdx:6, tId:sofiaId,   cid:jefeId, tarifa:160000,
-      hi:'2025-11-13 06:00:00', he:'2025-11-13 18:00:00',
+      hi:'2026-05-14 06:00:00', he:'2026-05-14 18:00:00',
       lat:5.0688, lon:-75.5174, hrs:12.00, pago:160000, num:'CD-2025-020',
       cal:5, com:'Mejor coordinación de operación grande que hemos tenido.' },
 
-    // ── I: Clausura Montessori (dic 5) ────────────────────────────────────────
+    // ── I: Clausura Montessori (may 26) ───────────────────────────────────────
     { oIdx:8, tId:diegoId,   cid:auxId,  tarifa:75000,
-      hi:'2025-12-05 07:35:00', he:'2025-12-05 16:28:00',
+      hi:'2026-05-26 07:35:00', he:'2026-05-26 16:28:00',
       lat:5.0227, lon:-74.0063, hrs:8.88, pago:75000, num:'CD-2025-021',
       cal:5, com:'Muy cuidadoso con el entorno escolar.' },
     { oIdx:8, tId:sofiaId,   cid:jefeId, tarifa:150000,
-      hi:'2025-12-05 07:30:00', he:'2025-12-05 16:30:00',
+      hi:'2026-05-26 07:30:00', he:'2026-05-26 16:30:00',
       lat:5.0225, lon:-74.0065, hrs:9.00, pago:150000, num:'CD-2025-022',
       cal:5, com:'Profesionalismo total con comunidad educativa.' },
   ];
@@ -561,50 +561,50 @@ async function main() {
   section('3. Eventos de integración (entrantes + salientes)');
 
   const [[evInCount]] = await pool.query(
-    `SELECT COUNT(*) AS c FROM integration_events_in WHERE empresa_id=? AND tipo_evento LIKE '%orden%' AND created_at < '2026-01-01'`,
+    `SELECT COUNT(*) AS c FROM integration_events_in WHERE empresa_id=? AND tipo_evento LIKE '%orden%' AND created_at < '2027-01-01'`,
     [eId]
   );
 
   if (evInCount.c >= 10) {
-    skip(`integration_events_in: ${evInCount.c} eventos 2025 ya existen`);
+    skip(`integration_events_in: ${evInCount.c} eventos ya existen`);
   } else {
     const evIn = [
-      { tipo:'orden.creada',    ts:'2025-05-13 09:00:00', alq:14,
+      { tipo:'orden.creada',    ts:'2026-01-13 09:00:00', alq:14,
         payload:{ alquiler_id:14, titulo:'Montaje Matrimonio Ospina-Castellanos',
-          fecha:'2025-05-16', hora_inicio:'07:00', lugar:'Hacienda Villa del Río, Armenia',
+          fecha:'2026-01-16', hora_inicio:'07:00', lugar:'Hacienda Villa del Río, Armenia',
           puestos:[{cargo:'auxiliar',plazas:3,tarifa_dia:75000},{cargo:'conductor',plazas:1,tarifa_dia:120000}] }},
-      { tipo:'orden.creada',    ts:'2025-06-18 10:00:00', alq:15,
+      { tipo:'orden.creada',    ts:'2026-02-18 10:00:00', alq:15,
         payload:{ alquiler_id:15, titulo:'Operación Festival del Viento 2025',
-          fecha:'2025-06-20', hora_inicio:'06:00', lugar:'Parque Central, Pereira',
+          fecha:'2026-02-20', hora_inicio:'06:00', lugar:'Parque Central, Pereira',
           puestos:[{cargo:'auxiliar',plazas:3,tarifa_dia:80000},{cargo:'jefe_montaje',plazas:1,tarifa_dia:155000}] }},
-      { tipo:'orden.creada',    ts:'2025-07-03 15:00:00', alq:16,
+      { tipo:'orden.creada',    ts:'2026-03-03 15:00:00', alq:16,
         payload:{ alquiler_id:16, titulo:'Montaje Baby Shower Valentina',
-          fecha:'2025-07-05', hora_inicio:'09:00', lugar:'Finca Los Pinos, Tenjo',
+          fecha:'2026-03-05', hora_inicio:'09:00', lugar:'Finca Los Pinos, Tenjo',
           puestos:[{cargo:'auxiliar',plazas:2,tarifa_dia:70000}] }},
-      { tipo:'orden.creada',    ts:'2025-08-19 11:00:00', alq:17,
+      { tipo:'orden.creada',    ts:'2026-04-02 11:00:00', alq:17,
         payload:{ alquiler_id:17, titulo:'Montaje Convención Avicol 2025',
-          fecha:'2025-08-21', hora_inicio:'07:00', lugar:'Centro Empresarial Parque Andino, Bogotá',
+          fecha:'2026-04-04', hora_inicio:'07:00', lugar:'Centro Empresarial Parque Andino, Bogotá',
           puestos:[{cargo:'auxiliar',plazas:2,tarifa_dia:80000},{cargo:'conductor',plazas:1,tarifa_dia:120000},{cargo:'jefe_montaje',plazas:1,tarifa_dia:155000}] }},
-      { tipo:'orden.creada',    ts:'2025-09-03 09:00:00', alq:18,
+      { tipo:'orden.creada',    ts:'2026-04-16 09:00:00', alq:18,
         payload:{ alquiler_id:18, titulo:'Montaje Ceremonia de Grados Externado',
-          fecha:'2025-09-05', hora_inicio:'14:00', lugar:'Campus Externado, Bogotá',
+          fecha:'2026-04-18', hora_inicio:'14:00', lugar:'Campus Externado, Bogotá',
           puestos:[{cargo:'auxiliar',plazas:2,tarifa_dia:75000}] }},
-      { tipo:'orden.creada',    ts:'2025-10-08 10:00:00', alq:19,
+      { tipo:'orden.creada',    ts:'2026-04-30 10:00:00', alq:19,
         payload:{ alquiler_id:19, titulo:'Montaje Quinceañera Daniela Ruiz',
-          fecha:'2025-10-10', hora_inicio:'08:00', lugar:'Finca La Esperanza, Cali',
+          fecha:'2026-05-02', hora_inicio:'08:00', lugar:'Finca La Esperanza, Cali',
           puestos:[{cargo:'auxiliar',plazas:2,tarifa_dia:75000},{cargo:'conductor',plazas:1,tarifa_dia:120000}] }},
-      { tipo:'orden.creada',    ts:'2025-11-11 08:00:00', alq:20,
+      { tipo:'orden.creada',    ts:'2026-05-12 08:00:00', alq:20,
         payload:{ alquiler_id:20, titulo:'Operación Feria Empresarial Quindío 2025',
-          fecha:'2025-11-13', hora_inicio:'06:00', lugar:'Recinto del Pensamiento, Manizales',
+          fecha:'2026-05-14', hora_inicio:'06:00', lugar:'Recinto del Pensamiento, Manizales',
           puestos:[{cargo:'auxiliar',plazas:3,tarifa_dia:80000},{cargo:'conductor',plazas:1,tarifa_dia:125000},{cargo:'jefe_montaje',plazas:1,tarifa_dia:160000}] }},
-      { tipo:'orden.cancelada', ts:'2025-11-19 14:00:00', alq:21,
-        payload:{ alquiler_id:21, motivo:'Cliente canceló — permiso de terraza denegado', fecha_original:'2025-11-29' }},
-      { tipo:'orden.creada',    ts:'2025-12-03 09:00:00', alq:22,
+      { tipo:'orden.cancelada', ts:'2026-05-19 14:00:00', alq:21,
+        payload:{ alquiler_id:21, motivo:'Cliente canceló — permiso de terraza denegado', fecha_original:'2026-05-21' }},
+      { tipo:'orden.creada',    ts:'2026-05-24 09:00:00', alq:22,
         payload:{ alquiler_id:22, titulo:'Montaje Clausura Escuela Montessori',
-          fecha:'2025-12-05', hora_inicio:'07:30', lugar:'Colegio Montessori, Zipaquirá',
+          fecha:'2026-05-26', hora_inicio:'07:30', lugar:'Colegio Montessori, Zipaquirá',
           puestos:[{cargo:'auxiliar',plazas:2,tarifa_dia:75000},{cargo:'jefe_montaje',plazas:1,tarifa_dia:150000}] }},
-      { tipo:'orden.cancelada', ts:'2025-12-09 16:00:00', alq:23,
-        payload:{ alquiler_id:23, motivo:'Cliente canceló por recorte de presupuesto navideño', fecha_original:'2025-12-19' }},
+      { tipo:'orden.cancelada', ts:'2026-06-03 16:00:00', alq:23,
+        payload:{ alquiler_id:23, motivo:'Cliente canceló por recorte de presupuesto navideño', fecha_original:'2026-06-05' }},
     ];
 
     for (const ev of evIn) {
@@ -627,45 +627,45 @@ async function main() {
 
   // Eventos salientes representativos (ingreso/egreso de turnos completados)
   const [[evOutCount]] = await pool.query(
-    `SELECT COUNT(*) AS c FROM integration_events_out WHERE empresa_id=? AND created_at < '2026-01-01'`,
+    `SELECT COUNT(*) AS c FROM integration_events_out WHERE empresa_id=? AND created_at < '2027-01-01'`,
     [eId]
   );
 
   if (evOutCount.c >= 18) {
-    skip(`integration_events_out: ${evOutCount.c} eventos 2025 ya existen`);
+    skip(`integration_events_out: ${evOutCount.c} eventos ya existen`);
   } else {
     // empleado_ref usa logiq360:trabajador:XXX (formato pre-sync).
     // Después de correr seed:sync-appturnos en logiq360, los external_ref
     // de trabajadores se actualizan a logiq360:empleado:ID para futuros eventos.
     const evOut = [
-      { tipo:'trabajador.ingreso',  ts:'2025-05-16 07:08:00',
+      { tipo:'trabajador.ingreso',  ts:'2026-01-16 07:08:00',
         payload:{ alquiler_ref:'logiq360:alquiler:14', trabajador_ref:'logiq360:trabajador:201',
-                  hora_ingreso:'2025-05-16T07:08:00-05:00', lat:4.5293, lon:-75.6743 } },
-      { tipo:'trabajador.egreso',   ts:'2025-05-16 17:12:00',
+                  hora_ingreso:'2026-01-16T07:08:00-05:00', lat:4.5293, lon:-75.6743 } },
+      { tipo:'trabajador.egreso',   ts:'2026-01-16 17:12:00',
         payload:{ alquiler_ref:'logiq360:alquiler:14', trabajador_ref:'logiq360:trabajador:201',
-                  hora_egreso:'2025-05-16T17:12:00-05:00', horas_trabajadas:10.07, pago_total:75000 } },
-      { tipo:'contrato.completado', ts:'2025-05-16 17:13:00',
+                  hora_egreso:'2026-01-16T17:12:00-05:00', horas_trabajadas:10.07, pago_total:75000 } },
+      { tipo:'contrato.completado', ts:'2026-01-16 17:13:00',
         payload:{ alquiler_ref:'logiq360:alquiler:14', numero_contrato:'CD-2025-001',
                   trabajador_ref:'logiq360:trabajador:201', valor_dia:75000 } },
-      { tipo:'trabajador.ingreso',  ts:'2025-06-20 06:05:00',
+      { tipo:'trabajador.ingreso',  ts:'2026-02-20 06:05:00',
         payload:{ alquiler_ref:'logiq360:alquiler:15', trabajador_ref:'logiq360:trabajador:201',
-                  hora_ingreso:'2025-06-20T06:05:00-05:00', lat:4.8135, lon:-75.6959 } },
-      { tipo:'trabajador.egreso',   ts:'2025-06-20 18:10:00',
+                  hora_ingreso:'2026-02-20T06:05:00-05:00', lat:4.8135, lon:-75.6959 } },
+      { tipo:'trabajador.egreso',   ts:'2026-02-20 18:10:00',
         payload:{ alquiler_ref:'logiq360:alquiler:15', trabajador_ref:'logiq360:trabajador:201',
-                  hora_egreso:'2025-06-20T18:10:00-05:00', horas_trabajadas:12.08, pago_total:96000 } },
-      { tipo:'trabajador.ingreso',  ts:'2025-08-21 07:10:00',
+                  hora_egreso:'2026-02-20T18:10:00-05:00', horas_trabajadas:12.08, pago_total:96000 } },
+      { tipo:'trabajador.ingreso',  ts:'2026-04-04 07:10:00',
         payload:{ alquiler_ref:'logiq360:alquiler:17', trabajador_ref:'logiq360:trabajador:201',
-                  hora_ingreso:'2025-08-21T07:10:00-05:00', lat:4.6801, lon:-74.0521 } },
-      { tipo:'trabajador.egreso',   ts:'2025-08-21 17:15:00',
+                  hora_ingreso:'2026-04-04T07:10:00-05:00', lat:4.6801, lon:-74.0521 } },
+      { tipo:'trabajador.egreso',   ts:'2026-04-04 17:15:00',
         payload:{ alquiler_ref:'logiq360:alquiler:17', trabajador_ref:'logiq360:trabajador:201',
-                  hora_egreso:'2025-08-21T17:15:00-05:00', horas_trabajadas:10.08, pago_total:80000 } },
-      { tipo:'trabajador.ingreso',  ts:'2025-11-13 06:02:00',
+                  hora_egreso:'2026-04-04T17:15:00-05:00', horas_trabajadas:10.08, pago_total:80000 } },
+      { tipo:'trabajador.ingreso',  ts:'2026-05-14 06:02:00',
         payload:{ alquiler_ref:'logiq360:alquiler:20', trabajador_ref:'logiq360:trabajador:201',
-                  hora_ingreso:'2025-11-13T06:02:00-05:00', lat:5.0690, lon:-75.5172 } },
-      { tipo:'trabajador.egreso',   ts:'2025-11-13 18:05:00',
+                  hora_ingreso:'2026-05-14T06:02:00-05:00', lat:5.0690, lon:-75.5172 } },
+      { tipo:'trabajador.egreso',   ts:'2026-05-14 18:05:00',
         payload:{ alquiler_ref:'logiq360:alquiler:20', trabajador_ref:'logiq360:trabajador:201',
-                  hora_egreso:'2025-11-13T18:05:00-05:00', horas_trabajadas:12.05, pago_total:96000 } },
-      { tipo:'contrato.completado', ts:'2025-12-05 16:29:00',
+                  hora_egreso:'2026-05-14T18:05:00-05:00', horas_trabajadas:12.05, pago_total:96000 } },
+      { tipo:'contrato.completado', ts:'2026-05-26 16:29:00',
         payload:{ alquiler_ref:'logiq360:alquiler:22', numero_contrato:'CD-2025-021',
                   trabajador_ref:'logiq360:trabajador:201', valor_dia:75000 } },
 
@@ -673,27 +673,27 @@ async function main() {
       // Alimenta ordenes_trabajo.costo_mano_obra y costo_individual en logiq360.
       // resumen usa logiq360:trabajador:XXX (pre-sync); se actualiza a empleado:ID
       // tras correr seed:sync-appturnos en el backend de logiq360.
-      { tipo:'costo_labor.calculado', ts:'2025-05-16 18:00:00',
+      { tipo:'costo_labor.calculado', ts:'2026-01-16 18:00:00',
         payload:{ external_ref:'logiq360:orden:24', total_pagado:270000, hora_inicio:'07:00', hora_fin:'17:20',
           resumen:[
             { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:75000,  tarifa_dia:75000,  horas:10.07 },
             { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:75000,  tarifa_dia:75000,  horas:9.83  },
             { empleado_ref:'logiq360:trabajador:203', empleado_nombre:'Andrés López',     valor:120000, tarifa_dia:120000, horas:10.50 },
           ]}},
-      { tipo:'costo_labor.calculado', ts:'2025-06-20 19:00:00',
+      { tipo:'costo_labor.calculado', ts:'2026-02-20 19:00:00',
         payload:{ external_ref:'logiq360:orden:26', total_pagado:384125, hora_inicio:'06:00', hora_fin:'18:20',
           resumen:[
             { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:96000,  tarifa_dia:80000,  horas:12.08 },
             { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:95000,  tarifa_dia:80000,  horas:11.92 },
             { empleado_ref:'logiq360:trabajador:204', empleado_nombre:'Sofía Ramírez',    valor:193125, tarifa_dia:155000, horas:12.42 },
           ]}},
-      { tipo:'costo_labor.calculado', ts:'2025-07-05 16:00:00',
+      { tipo:'costo_labor.calculado', ts:'2026-03-05 16:00:00',
         payload:{ external_ref:'logiq360:orden:28', total_pagado:140000, hora_inicio:'09:00', hora_fin:'15:00',
           resumen:[
             { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:70000, tarifa_dia:70000, horas:5.83 },
             { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:70000, tarifa_dia:70000, horas:5.83 },
           ]}},
-      { tipo:'costo_labor.calculado', ts:'2025-08-21 18:00:00',
+      { tipo:'costo_labor.calculado', ts:'2026-04-04 18:00:00',
         payload:{ external_ref:'logiq360:orden:30', total_pagado:435000, hora_inicio:'07:00', hora_fin:'17:30',
           resumen:[
             { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:80000,  tarifa_dia:80000,  horas:10.08 },
@@ -701,19 +701,19 @@ async function main() {
             { empleado_ref:'logiq360:trabajador:203', empleado_nombre:'Andrés López',     valor:120000, tarifa_dia:120000, horas:10.67 },
             { empleado_ref:'logiq360:trabajador:204', empleado_nombre:'Sofía Ramírez',    valor:155000, tarifa_dia:155000, horas:10.00 },
           ]}},
-      { tipo:'costo_labor.calculado', ts:'2025-09-05 23:00:00',
+      { tipo:'costo_labor.calculado', ts:'2026-04-18 23:00:00',
         payload:{ external_ref:'logiq360:orden:32', total_pagado:150000, hora_inicio:'14:00', hora_fin:'22:05',
           resumen:[
             { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:75000, tarifa_dia:75000, horas:7.92 },
             { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:75000, tarifa_dia:75000, horas:7.75 },
           ]}},
-      { tipo:'costo_labor.calculado', ts:'2025-10-10 19:00:00',
+      { tipo:'costo_labor.calculado', ts:'2026-05-02 19:00:00',
         payload:{ external_ref:'logiq360:orden:34', total_pagado:195000, hora_inicio:'08:00', hora_fin:'18:10',
           resumen:[
             { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:75000,  tarifa_dia:75000,  horas:9.92  },
             { empleado_ref:'logiq360:trabajador:203', empleado_nombre:'Andrés López',     valor:120000, tarifa_dia:120000, horas:10.33 },
           ]}},
-      { tipo:'costo_labor.calculado', ts:'2025-11-13 19:00:00',
+      { tipo:'costo_labor.calculado', ts:'2026-05-14 19:00:00',
         payload:{ external_ref:'logiq360:orden:36', total_pagado:476000, hora_inicio:'06:00', hora_fin:'18:10',
           resumen:[
             { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:96000,  tarifa_dia:80000,  horas:12.05 },
@@ -721,7 +721,7 @@ async function main() {
             { empleado_ref:'logiq360:trabajador:203', empleado_nombre:'Andrés López',     valor:125000, tarifa_dia:125000, horas:12.25 },
             { empleado_ref:'logiq360:trabajador:204', empleado_nombre:'Sofía Ramírez',    valor:160000, tarifa_dia:160000, horas:12.00 },
           ]}},
-      { tipo:'costo_labor.calculado', ts:'2025-12-05 17:00:00',
+      { tipo:'costo_labor.calculado', ts:'2026-05-26 17:00:00',
         payload:{ external_ref:'logiq360:orden:39', total_pagado:225000, hora_inicio:'07:30', hora_fin:'16:30',
           resumen:[
             { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera', valor:75000,  tarifa_dia:75000,  horas:8.88 },
@@ -753,7 +753,7 @@ async function main() {
   console.log('╠══════════════════════════════════════════════════════╣');
   console.log('║  Empresa: Plataforma de Prueba logiq360              ║');
   console.log('║  Slug:    logiq360-prueba                            ║');
-  console.log('║  10 ofertas de turno (8 completadas + 2 canceladas)  ║');
+  console.log('║  10 ofertas de turno 2026 (8 completadas + 2 cancel) ║');
   console.log('║  22 asignaciones completadas con ingreso/egreso GPS  ║');
   console.log('║  22 contratos diarios firmados                       ║');
   console.log('║  22 calificaciones (rankings actualizados)           ║');
