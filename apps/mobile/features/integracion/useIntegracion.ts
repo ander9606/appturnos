@@ -35,6 +35,17 @@ export function useActualizarIntegracion() {
   });
 }
 
+export function useEmparejar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (codigo: string) => integracionApi.emparejar(codigo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTEGRACION_KEYS.config });
+      qc.invalidateQueries({ queryKey: INTEGRACION_KEYS.estado });
+    },
+  });
+}
+
 /** Genera un secret hex de 64 caracteres para usar como webhook key. */
 export function generarSecret(): string {
   return Array.from(

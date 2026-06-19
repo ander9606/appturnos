@@ -33,6 +33,11 @@ export interface EstadoIntegracion {
   };
 }
 
+export interface EmparejarResultado {
+  conectado: boolean;
+  logiq360_tenant_id: number;
+}
+
 // ── API ───────────────────────────────────────────────────────────────────
 
 export const integracionApi = {
@@ -46,5 +51,10 @@ export const integracionApi = {
 
   obtenerEstado(): Promise<EstadoIntegracion> {
     return api.get<EstadoIntegracion>('/api/integracion/estado');
+  },
+
+  /** Conecta con logiq360 usando un código de emparejamiento generado allá. */
+  emparejar(codigo: string): Promise<EmparejarResultado> {
+    return api.post<EmparejarResultado>('/api/integracion/emparejar', { codigo });
   },
 };
