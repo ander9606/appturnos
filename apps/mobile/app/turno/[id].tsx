@@ -299,7 +299,7 @@ export default function TurnoDetailScreen() {
                   </View>
                 )}
 
-                <InfoRow icon="cash-outline" label="Tarifa" value={`$${tarifa_dia.toLocaleString('es-CO')} / día`} />
+                <InfoRow icon="cash-outline" label="Tarifa" value={`$${tarifa_dia.toLocaleString('es-CO')} / turno`} />
               </View>
             </View>
           </View>
@@ -360,19 +360,19 @@ export default function TurnoDetailScreen() {
                   <Text className="text-base font-bold text-success">¡Turno completado!</Text>
                 </View>
                 <View className="flex-row gap-4">
-                  {horas_trabajadas != null && (
+                  {pago_total != null && (
                     <View className="flex-1 bg-white/60 rounded-xl px-4 py-3">
-                      <Text className="text-xs text-success/70">Horas trabajadas</Text>
+                      <Text className="text-xs text-success/70">Pago del turno</Text>
                       <Text className="text-lg font-bold text-success">
-                        {Number(horas_trabajadas).toFixed(1)}h
+                        ${Number(pago_total).toLocaleString('es-CO')}
                       </Text>
                     </View>
                   )}
-                  {pago_total != null && (
+                  {horas_trabajadas != null && (
                     <View className="flex-1 bg-white/60 rounded-xl px-4 py-3">
-                      <Text className="text-xs text-success/70">Pago total</Text>
+                      <Text className="text-xs text-success/70">Horas en sitio</Text>
                       <Text className="text-lg font-bold text-success">
-                        ${Number(pago_total).toLocaleString('es-CO')}
+                        {Number(horas_trabajadas).toFixed(1)}h
                       </Text>
                     </View>
                   )}

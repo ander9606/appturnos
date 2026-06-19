@@ -93,7 +93,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
         {/* Tarifa */}
         {asignacion.tarifa_dia > 0 && (
           <Text className="text-xs text-muted-foreground">
-            Tarifa: ${asignacion.tarifa_dia.toLocaleString('es-CO')}
+            ${asignacion.tarifa_dia.toLocaleString('es-CO')} / turno
           </Text>
         )}
       </View>
