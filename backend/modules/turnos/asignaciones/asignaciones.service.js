@@ -90,6 +90,17 @@ const AsignacionesService = {
         mensaje: `Quedaste confirmado${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`,
         data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
       });
+
+      // Notifica a logiq360 que este trabajador confirmó participación en la orden.
+      if (detalles.oferta_external_ref) {
+        await IntegracionService.emitir(empresaId, 'asignacion.confirmada', {
+          external_ref:  detalles.oferta_external_ref,
+          empleado_ref:  detalles.trabajador_external_ref || null,
+          nombre:        detalles.trabajador_nombre,
+          apellido:      detalles.trabajador_apellido,
+          rol:           detalles.cargo_codigo || 'operario',
+        });
+      }
     }
 
     return asignacion;
@@ -120,6 +131,13 @@ const AsignacionesService = {
         mensaje: `Tu turno "${detalles.oferta_titulo}" el ${fecha} fue cancelado por la empresa. Revisa otras ofertas disponibles.`,
         data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
       });
+
+      if (detalles.oferta_external_ref) {
+        await IntegracionService.emitir(empresaId, 'asignacion.cancelada', {
+          external_ref: detalles.oferta_external_ref,
+          empleado_ref: detalles.trabajador_external_ref || null,
+        });
+      }
     }
 
     return asignacion;

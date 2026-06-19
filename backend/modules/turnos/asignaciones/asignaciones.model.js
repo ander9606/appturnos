@@ -584,6 +584,7 @@ const AsignacionesModel = {
               o.externo_notas AS oferta_externo_notas,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
               o.lugar, o.latitud, o.longitud,
+              o.external_ref AS oferta_external_ref,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
               carg.tipo_geofence,
@@ -591,7 +592,7 @@ const AsignacionesModel = {
               pm.latitud AS punto_latitud, pm.longitud AS punto_longitud,
               pm.radio_metros AS punto_radio,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
-              t.cargo AS trabajador_cargo,
+              t.cargo AS trabajador_cargo, t.external_ref AS trabajador_external_ref,
               cal.calificacion, cal.comentario AS calificacion_comentario
        FROM asignaciones_turno a
        JOIN ofertas_turno o    ON o.id   = a.oferta_id
