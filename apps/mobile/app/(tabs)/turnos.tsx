@@ -261,27 +261,7 @@ export default function TurnosScreen() {
         <Text className="text-xl font-bold text-foreground">
           {isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         </Text>
-        {isGestor ? (
-          <View className="flex-row gap-2 items-center">
-            {rol === 'admin_empresa' && (
-              <TouchableOpacity
-                onPress={() => router.push('/liquidacion-turnos')}
-                className="flex-row items-center gap-1.5 bg-primary-500 px-3 py-1.5 rounded-xl"
-                accessibilityLabel="Ver liquidación"
-              >
-                <Ionicons name="cash-outline" size={15} color="#fff" />
-                <Text className="text-white text-sm font-semibold">Liquidar</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              className="w-9 h-9 bg-primary-500 rounded-xl items-center justify-center"
-              accessibilityLabel="Nuevo turno"
-              onPress={() => router.push('/turno/nuevo')}
-            >
-              <Ionicons name="add" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        ) : null}
+        {null}
       </View>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
@@ -301,7 +281,32 @@ export default function TurnosScreen() {
         <View className="flex-1">
           <GestorTurnosView selectedDate={selectedDate} />
 
-          {/* FAB — acceso a todas las postulaciones */}
+          {/* FAB izquierdo — crear turno */}
+          <TouchableOpacity
+            onPress={() => router.push('/turno/nuevo')}
+            activeOpacity={0.85}
+            style={{
+              position: 'absolute',
+              bottom: 24,
+              left: 20,
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: theme.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              elevation: 6,
+              shadowColor: theme.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.35,
+              shadowRadius: 8,
+            }}
+            accessibilityLabel="Crear turno"
+          >
+            <Ionicons name="add" size={28} color="#fff" />
+          </TouchableOpacity>
+
+          {/* FAB derecho — postulaciones pendientes */}
           <TouchableOpacity
             onPress={() => router.push('/postulaciones')}
             activeOpacity={0.85}
