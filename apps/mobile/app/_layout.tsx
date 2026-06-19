@@ -89,155 +89,21 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <AuthGuard>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            {/* Panel de super_admin */}
-            <Stack.Screen name="(admin)" />
-            {/* Detail screens — full-screen push over the tab bar */}
-            <Stack.Screen
-              name="turno/[id]"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="turno/nuevo"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_bottom',
-                presentation: 'modal',
-              }}
-            />
-            <Stack.Screen
-              name="trabajador/[id]"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="trabajador/nuevo"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            {/* Marcar ingreso / egreso — pantallas dedicadas */}
-            <Stack.Screen
-              name="ingreso/[id]"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="egreso/[id]"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="liquidacion-turnos"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="postulaciones"
-              options={{
-                headerShown: false,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="mis-empresas"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="solicitudes"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="mi-perfil-laboral"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="mis-postulaciones"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="invitar-trabajador"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_bottom',
-                presentation: 'modal',
-              }}
-            />
-            <Stack.Screen
-              name="cargos"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="puntos-marcaje"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="crear-gestor"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="registros-periodo"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="mi-empresa"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="gestores"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
-            <Stack.Screen
-              name="reportes"
-              options={{
-                headerShown: true,
-                animation: 'slide_from_right',
-              }}
-            />
+          {/* Default: header visible, slide from right.
+              Only exceptions are registered explicitly. */}
+          <Stack screenOptions={{ headerShown: true, animation: 'slide_from_right' }}>
+            {/* Tab groups — sin header (cada tab lo gestiona) */}
+            <Stack.Screen name="(auth)"  options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)"  options={{ headerShown: false }} />
+            <Stack.Screen name="(admin)" options={{ headerShown: false }} />
+            {/* postulaciones usa su propio header personalizado */}
+            <Stack.Screen name="postulaciones" options={{ headerShown: false }} />
+            {/* Modales — sube desde abajo */}
+            <Stack.Screen name="turno/nuevo"        options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+            <Stack.Screen name="invitar-trabajador"  options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+            {/* Marcaje — transición vertical (flujo de acción rápida) */}
+            <Stack.Screen name="ingreso/[id]" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="egreso/[id]"  options={{ animation: 'slide_from_bottom' }} />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>
