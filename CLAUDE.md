@@ -113,8 +113,11 @@ JWT access token (15 min) + refresh token (7 days, stored in DB). `verificarToke
 ### Error Handling
 Throw `new AppError(message, httpStatus)` from services. The root `errorHandler` middleware serializes it as `{ success: false, data: null, message }`.
 
-### Salary Snapshot (migration 010)
+### Salary Snapshot (migration 010b)
 When a payroll period is closed, `cerrarConSnapshot()` in `periodos.model.js` atomically freezes `registros_diarios.valor_hora_snapshot` for all records of that period using a single transaction. `liquidacion.service.js` reads the snapshot first; it falls back to live salary only for open periods (backwards-compatible).
+
+### logiq360 Integration Worker
+`integracion.worker.js` polls the `integration_events_out` queue every 30 s. Failed events are retried with exponential backoff `[0s, 30s, 2m, 10m, 1h]` (5 attempts max). After the cap the event is marked `fallido` and logged. See `integracion.service.js` constants `MAX_INTENTOS` and `INTERVALOS`.
 
 ### Labor Law Constants (`backend/config/constants.js`)
 | Constant | Value | Meaning |
