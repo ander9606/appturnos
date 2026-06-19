@@ -88,6 +88,10 @@ export type {
   ActualizarIntegracionPayload,
   EstadoIntegracion,
   ConteoEstado,
+  EmparejarResultado,
+  CandidatoLogiq360,
+  TrabajadorPendiente,
+  Conciliacion,
 } from './integracion';
 export type {
   ReporteParams,

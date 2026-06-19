@@ -74,7 +74,24 @@ async function publicEnSitio(req, res) {
   res.json({ success: true, data });
 }
 
+/**
+ * GET /api/integracion/conciliacion — trabajadores sin vincular + candidatos de
+ * logiq360 + sugerencias de match por nombre.
+ */
+async function conciliacion(req, res) {
+  const data = await IntegracionService.conciliacion(req.empresa_id);
+  res.json({ success: true, data, message: 'Conciliación de personal' });
+}
+
+/** POST /api/integracion/conciliacion/vincular — vincula trabajador ↔ empleado logiq360. */
+async function vincularEmpleado(req, res) {
+  const { trabajador_id, empleado_id } = req.body;
+  const data = await IntegracionService.vincularEmpleado(req.empresa_id, trabajador_id, empleado_id);
+  res.json({ success: true, data, message: 'Trabajador vinculado' });
+}
+
 module.exports = {
   recibirEventos, estado, obtenerConfig, actualizarConfig, emparejar,
+  conciliacion, vincularEmpleado,
   publicEstado, publicEnSitio,
 };

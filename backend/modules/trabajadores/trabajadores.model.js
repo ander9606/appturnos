@@ -103,6 +103,29 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
+  /** Trabajadores activos aún no vinculados a un empleado de logiq360. */
+  async listarSinVincularLogiq360(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id, nombre, apellido, cedula, external_ref
+       FROM trabajadores
+       WHERE empresa_id = ? AND activo = 1
+         AND (external_ref IS NULL OR external_ref NOT LIKE 'logiq360:empleado:%')
+       ORDER BY nombre, apellido`,
+      [empresaId]
+    );
+    return filas;
+  },
+
+  /** Fija el external_ref de un trabajador (vínculo de conciliación). */
+  async vincularExternalRef(empresaId, trabajadorId, externalRef) {
+    const [res] = await pool.query(
+      `UPDATE trabajadores SET external_ref = ?
+       WHERE id = ? AND empresa_id = ?`,
+      [externalRef, trabajadorId, empresaId]
+    );
+    return res.affectedRows;
+  },
+
   /**
    * Inserta un trabajador con todos sus datos de perfil en una transacción.
    * @returns {Promise<number>} id del nuevo trabajador.
