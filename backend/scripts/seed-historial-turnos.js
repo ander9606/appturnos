@@ -631,9 +631,12 @@ async function main() {
     [eId]
   );
 
-  if (evOutCount.c >= 10) {
+  if (evOutCount.c >= 18) {
     skip(`integration_events_out: ${evOutCount.c} eventos 2025 ya existen`);
   } else {
+    // empleado_ref usa logiq360:trabajador:XXX (formato pre-sync).
+    // Después de correr seed:sync-appturnos en logiq360, los external_ref
+    // de trabajadores se actualizan a logiq360:empleado:ID para futuros eventos.
     const evOut = [
       { tipo:'trabajador.ingreso',  ts:'2025-05-16 07:08:00',
         payload:{ alquiler_ref:'logiq360:alquiler:14', trabajador_ref:'logiq360:trabajador:201',
@@ -665,6 +668,65 @@ async function main() {
       { tipo:'contrato.completado', ts:'2025-12-05 16:29:00',
         payload:{ alquiler_ref:'logiq360:alquiler:22', numero_contrato:'CD-2025-021',
                   trabajador_ref:'logiq360:trabajador:201', valor_dia:75000 } },
+
+      // costo_labor.calculado — enviado por App Turnos al cerrar cada oferta.
+      // Alimenta ordenes_trabajo.costo_mano_obra y costo_individual en logiq360.
+      // resumen usa logiq360:trabajador:XXX (pre-sync); se actualiza a empleado:ID
+      // tras correr seed:sync-appturnos en el backend de logiq360.
+      { tipo:'costo_labor.calculado', ts:'2025-05-16 18:00:00',
+        payload:{ external_ref:'logiq360:orden:24', total_pagado:270000, hora_inicio:'07:00', hora_fin:'17:20',
+          resumen:[
+            { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:75000,  tarifa_dia:75000,  horas:10.07 },
+            { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:75000,  tarifa_dia:75000,  horas:9.83  },
+            { empleado_ref:'logiq360:trabajador:203', empleado_nombre:'Andrés López',     valor:120000, tarifa_dia:120000, horas:10.50 },
+          ]}},
+      { tipo:'costo_labor.calculado', ts:'2025-06-20 19:00:00',
+        payload:{ external_ref:'logiq360:orden:26', total_pagado:384125, hora_inicio:'06:00', hora_fin:'18:20',
+          resumen:[
+            { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:96000,  tarifa_dia:80000,  horas:12.08 },
+            { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:95000,  tarifa_dia:80000,  horas:11.92 },
+            { empleado_ref:'logiq360:trabajador:204', empleado_nombre:'Sofía Ramírez',    valor:193125, tarifa_dia:155000, horas:12.42 },
+          ]}},
+      { tipo:'costo_labor.calculado', ts:'2025-07-05 16:00:00',
+        payload:{ external_ref:'logiq360:orden:28', total_pagado:140000, hora_inicio:'09:00', hora_fin:'15:00',
+          resumen:[
+            { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:70000, tarifa_dia:70000, horas:5.83 },
+            { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:70000, tarifa_dia:70000, horas:5.83 },
+          ]}},
+      { tipo:'costo_labor.calculado', ts:'2025-08-21 18:00:00',
+        payload:{ external_ref:'logiq360:orden:30', total_pagado:435000, hora_inicio:'07:00', hora_fin:'17:30',
+          resumen:[
+            { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:80000,  tarifa_dia:80000,  horas:10.08 },
+            { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:80000,  tarifa_dia:80000,  horas:10.08 },
+            { empleado_ref:'logiq360:trabajador:203', empleado_nombre:'Andrés López',     valor:120000, tarifa_dia:120000, horas:10.67 },
+            { empleado_ref:'logiq360:trabajador:204', empleado_nombre:'Sofía Ramírez',    valor:155000, tarifa_dia:155000, horas:10.00 },
+          ]}},
+      { tipo:'costo_labor.calculado', ts:'2025-09-05 23:00:00',
+        payload:{ external_ref:'logiq360:orden:32', total_pagado:150000, hora_inicio:'14:00', hora_fin:'22:05',
+          resumen:[
+            { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:75000, tarifa_dia:75000, horas:7.92 },
+            { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:75000, tarifa_dia:75000, horas:7.75 },
+          ]}},
+      { tipo:'costo_labor.calculado', ts:'2025-10-10 19:00:00',
+        payload:{ external_ref:'logiq360:orden:34', total_pagado:195000, hora_inicio:'08:00', hora_fin:'18:10',
+          resumen:[
+            { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:75000,  tarifa_dia:75000,  horas:9.92  },
+            { empleado_ref:'logiq360:trabajador:203', empleado_nombre:'Andrés López',     valor:120000, tarifa_dia:120000, horas:10.33 },
+          ]}},
+      { tipo:'costo_labor.calculado', ts:'2025-11-13 19:00:00',
+        payload:{ external_ref:'logiq360:orden:36', total_pagado:476000, hora_inicio:'06:00', hora_fin:'18:10',
+          resumen:[
+            { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera',    valor:96000,  tarifa_dia:80000,  horas:12.05 },
+            { empleado_ref:'logiq360:trabajador:202', empleado_nombre:'Valentina Torres', valor:95000,  tarifa_dia:80000,  horas:11.90 },
+            { empleado_ref:'logiq360:trabajador:203', empleado_nombre:'Andrés López',     valor:125000, tarifa_dia:125000, horas:12.25 },
+            { empleado_ref:'logiq360:trabajador:204', empleado_nombre:'Sofía Ramírez',    valor:160000, tarifa_dia:160000, horas:12.00 },
+          ]}},
+      { tipo:'costo_labor.calculado', ts:'2025-12-05 17:00:00',
+        payload:{ external_ref:'logiq360:orden:39', total_pagado:225000, hora_inicio:'07:30', hora_fin:'16:30',
+          resumen:[
+            { empleado_ref:'logiq360:trabajador:201', empleado_nombre:'Diego Herrera', valor:75000,  tarifa_dia:75000,  horas:8.88 },
+            { empleado_ref:'logiq360:trabajador:204', empleado_nombre:'Sofía Ramírez', valor:150000, tarifa_dia:150000, horas:9.00 },
+          ]}},
     ];
 
     for (const ev of evOut) {
@@ -696,7 +758,7 @@ async function main() {
   console.log('║  22 contratos diarios firmados                       ║');
   console.log('║  22 calificaciones (rankings actualizados)           ║');
   console.log('║  10 eventos integración entrantes (órdenes logiq360) ║');
-  console.log('║  10 eventos integración salientes (ingreso/egreso)   ║');
+  console.log('║  18 eventos salientes (ingreso/egreso + costo_labor)  ║');
   console.log('╚══════════════════════════════════════════════════════╝\n');
 
   await pool.end();
