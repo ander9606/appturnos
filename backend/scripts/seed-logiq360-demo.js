@@ -54,14 +54,19 @@ function ts(dateStr, time) { return `${dateStr} ${time}`; }
 
 async function upsertEmpresa(nombre, slug, nit) {
   const [[ex]] = await pool.query('SELECT id FROM empresas WHERE slug=?', [slug]);
-  if (ex) { skip(`empresa "${nombre}" ya existe (id=${ex.id})`); return ex.id; }
-  const [r] = await pool.query(
-    `INSERT INTO empresas (nombre,slug,nit,ciudad,plan,acepta_postulaciones)
-     VALUES (?,?,?,'Bogotá D.C.','profesional',1)`,
+  if (ex) {
+    if (ex.id !== 1) throw new Error(`empresa "${nombre}" existe con id=${ex.id} pero logiq360 espera empresa_id=1. Limpia la DB y vuelve a correr el seed.`);
+    skip(`empresa "${nombre}" ya existe (id=${ex.id})`);
+    return ex.id;
+  }
+  // ponytail: fuerza id=1 para que coincida con tenant_id=1 de logiq360 — upgrade path: pasar tenant_id en el payload del webhook en vez de asumirlo
+  await pool.query(
+    `INSERT INTO empresas (id,nombre,slug,nit,ciudad,plan,acepta_postulaciones)
+     VALUES (1,?,?,?,'Bogotá D.C.','profesional',1)`,
     [nombre, slug, nit]
   );
-  ok(`empresa "${nombre}" creada (id=${r.insertId})`);
-  return r.insertId;
+  ok(`empresa "${nombre}" creada (id=1)`);
+  return 1;
 }
 
 async function upsertUsuario(eId, nombre, apellido, email, rol, hash) {
