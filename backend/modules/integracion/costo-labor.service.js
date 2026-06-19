@@ -62,8 +62,10 @@ const CostoLaborService = {
       const resumen = completados.map((a) => ({
         empleado_ref: a.trabajador_external_ref || null,
         empleado_nombre: `${a.trabajador_nombre} ${a.trabajador_apellido || ''}`.trim(),
+        // valor = pago_total = tarifa_dia × turnos completados (no depende de horas)
         valor: Number(a.pago_total) || 0,
-        horas: formatearHoras(a.horas_trabajadas),
+        tarifa_dia: Number(a.tarifa_dia) || 0,
+        horas_presencia: formatearHoras(a.horas_trabajadas), // informativo (geofence)
       }));
 
       const totalPagado = completados.reduce(

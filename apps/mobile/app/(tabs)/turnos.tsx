@@ -165,8 +165,12 @@ export default function TurnosScreen() {
             <Text className="text-base font-semibold text-foreground flex-1" numberOfLines={1}>
               {item.titulo}
             </Text>
-            {plazasLibres <= 2 && plazasLibres > 0 && (
-              <Badge label={`${plazasLibres} plaza${plazasLibres > 1 ? 's' : ''}`} variant="warning" size="sm" />
+            {plazasLibres > 0 && (
+              <Badge
+                label={`${plazasLibres} libre${plazasLibres > 1 ? 's' : ''}`}
+                variant={plazasLibres <= 2 ? 'warning' : 'info'}
+                size="sm"
+              />
             )}
           </View>
 
@@ -204,7 +208,7 @@ export default function TurnosScreen() {
 
           <View className="flex-row items-center justify-between mt-1">
             <Text className="text-sm font-semibold text-success">
-              {hayVariasTarifas ? 'Desde ' : ''}${tarifaMin.toLocaleString('es-CO')} / día
+              {hayVariasTarifas ? 'Desde ' : ''}${tarifaMin.toLocaleString('es-CO')} / turno
             </Text>
             {yaAplicado ? (
               <Badge label="Ya postulado" variant="info" size="sm" />
