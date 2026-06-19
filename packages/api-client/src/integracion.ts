@@ -38,6 +38,30 @@ export interface EmparejarResultado {
   logiq360_tenant_id: number;
 }
 
+export interface CandidatoLogiq360 {
+  id: number;
+  nombre: string;
+  apellido: string;
+  email: string | null;
+  tipo_contrato: string;
+  estado: string;
+  external_ref: string;
+}
+
+export interface TrabajadorPendiente {
+  id: number;
+  nombre: string;
+  apellido: string;
+  cedula: string | null;
+  external_ref: string | null;
+  sugerencia: { id: number; nombre: string } | null;
+}
+
+export interface Conciliacion {
+  pendientes: TrabajadorPendiente[];
+  candidatos: CandidatoLogiq360[];
+}
+
 // ── API ───────────────────────────────────────────────────────────────────
 
 export const integracionApi = {
@@ -56,5 +80,18 @@ export const integracionApi = {
   /** Conecta con logiq360 usando un código de emparejamiento generado allá. */
   emparejar(codigo: string): Promise<EmparejarResultado> {
     return api.post<EmparejarResultado>('/api/integracion/emparejar', { codigo });
+  },
+
+  /** Personal sin vincular + candidatos de logiq360 + sugerencias de match. */
+  conciliacion(): Promise<Conciliacion> {
+    return api.get<Conciliacion>('/api/integracion/conciliacion');
+  },
+
+  /** Vincula un trabajador de App Turnos a un empleado de logiq360. */
+  vincularEmpleado(trabajadorId: number, empleadoId: number): Promise<{ vinculado: boolean }> {
+    return api.post('/api/integracion/conciliacion/vincular', {
+      trabajador_id: trabajadorId,
+      empleado_id: empleadoId,
+    });
   },
 };

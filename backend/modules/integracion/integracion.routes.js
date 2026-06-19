@@ -63,6 +63,22 @@ router.post(
   ctrl.emparejar
 );
 
+// GET /api/integracion/conciliacion — personal sin vincular + candidatos logiq360
+router.get('/conciliacion', verificarToken, verificarRol(SOLO_ADMIN), ctrl.conciliacion);
+
+// POST /api/integracion/conciliacion/vincular — vincular trabajador ↔ empleado
+router.post(
+  '/conciliacion/vincular',
+  verificarToken,
+  verificarRol(SOLO_ADMIN),
+  [
+    body('trabajador_id').isInt({ min: 1 }).withMessage('trabajador_id inválido'),
+    body('empleado_id').isInt({ min: 1 }).withMessage('empleado_id inválido'),
+  ],
+  validar,
+  ctrl.vincularEmpleado
+);
+
 // ── Endpoints pull que logiq360 consulta con X-API-Key ───────────────────────
 // GET /api/integracion/public/estado/:external_ref — estado de oferta y contratos
 router.get(

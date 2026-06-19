@@ -310,6 +310,23 @@ export default function IntegracionConfigScreen() {
           onClear={() => setNewWebhookSecret(null)}
         />
 
+        {/* ── Enlace a conciliación de personal ──────────────────── */}
+        <Pressable
+          onPress={() => router.push('/integracion/conciliacion')}
+          className="mx-4 mt-4 flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3 active:opacity-70"
+        >
+          <View className="flex-row items-center gap-3">
+            <View
+              className="w-8 h-8 rounded-xl items-center justify-center"
+              style={{ backgroundColor: '#6366F11A' }}
+            >
+              <Ionicons name="people-outline" size={18} color="#6366F1" />
+            </View>
+            <Text className="text-sm font-semibold text-foreground">Conciliación de personal</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+        </Pressable>
+
         {/* ── Enlace a estado ────────────────────────────────────── */}
         <Pressable
           onPress={() => router.push('/integracion/estado')}

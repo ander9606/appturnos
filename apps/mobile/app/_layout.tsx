@@ -108,6 +108,7 @@ export default function RootLayout() {
             {/* Integración logiq360 — solo admin_empresa */}
             <Stack.Screen name="integracion/config" options={{ title: 'Integración logiq360' }} />
             <Stack.Screen name="integracion/estado" options={{ title: 'Estado de la cola' }} />
+            <Stack.Screen name="integracion/conciliacion" options={{ title: 'Conciliación de personal' }} />
             {/* Marcaje — transición vertical (flujo de acción rápida) */}
             <Stack.Screen name="ingreso/[id]" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="egreso/[id]"  options={{ animation: 'slide_from_bottom' }} />

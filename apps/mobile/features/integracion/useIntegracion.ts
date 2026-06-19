@@ -5,6 +5,7 @@ import type { ActualizarIntegracionPayload } from '@api-client';
 export const INTEGRACION_KEYS = {
   config: ['integracion', 'config'] as const,
   estado: ['integracion', 'estado'] as const,
+  conciliacion: ['integracion', 'conciliacion'] as const,
 };
 
 export function useIntegracionConfig() {
@@ -42,6 +43,25 @@ export function useEmparejar() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: INTEGRACION_KEYS.config });
       qc.invalidateQueries({ queryKey: INTEGRACION_KEYS.estado });
+    },
+  });
+}
+
+export function useConciliacion() {
+  return useQuery({
+    queryKey: INTEGRACION_KEYS.conciliacion,
+    queryFn: () => integracionApi.conciliacion(),
+    staleTime: 30_000,
+  });
+}
+
+export function useVincularEmpleado() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ trabajadorId, empleadoId }: { trabajadorId: number; empleadoId: number }) =>
+      integracionApi.vincularEmpleado(trabajadorId, empleadoId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INTEGRACION_KEYS.conciliacion });
     },
   });
 }
