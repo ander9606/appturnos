@@ -62,6 +62,24 @@ async function ejecutar() {
       .filter((f) => f.endsWith('.sql'))
       .sort();
 
+    // Guardia: detectar prefijos numéricos duplicados antes de ejecutar nada.
+    // Un prefijo es el tramo inicial de dígitos (ej. "010" en "010_foo.sql").
+    // Dos archivos con el mismo prefijo indican un error de numeración que
+    // puede causar orden de ejecución no determinista.
+    const vistoPrefijo = new Map();
+    for (const archivo of archivos) {
+      const prefijo = archivo.match(/^(\d+)_/)?.[1];
+      if (!prefijo) continue;
+      if (vistoPrefijo.has(prefijo)) {
+        throw new Error(
+          `Prefijo de migración duplicado "${prefijo}": ` +
+          `"${vistoPrefijo.get(prefijo)}" y "${archivo}". ` +
+          `Renombra uno de los archivos antes de continuar.`
+        );
+      }
+      vistoPrefijo.set(prefijo, archivo);
+    }
+
     let nuevas = 0;
     for (const archivo of archivos) {
       if (aplicadas.has(archivo)) {
