@@ -88,6 +88,10 @@ async function main() {
       cargo:'Jefe de montaje',      salario_base:2_200_000, tarifa_hora:9166.67  },
     { nombre:'Luisa',    apellido:'Vargas Moreno',   email:'luisa.vargas@demo.com',    cedula:'1020304053',
       cargo:'Conductora',           salario_base:1_800_000, tarifa_hora:7500.00  },
+    { nombre:'Ana',      apellido:'Morales Peña',    email:'ana.morales@demo.com',      cedula:'1020304054',
+      cargo:'Auxiliar logístico',   salario_base:1_600_000, tarifa_hora:6666.67  },
+    { nombre:'Ricardo',  apellido:'Castro Bernal',   email:'ricardo.castro@demo.com',   cedula:'1020304055',
+      cargo:'Auxiliar logístico',   salario_base:1_600_000, tarifa_hora:6666.67  },
   ];
 
   // valor_hora_snapshot = salario_base / 240

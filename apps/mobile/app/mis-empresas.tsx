@@ -58,7 +58,7 @@ function StarRating({ value, total }: { value: number; total: number }) {
         />
       ))}
       <Text className="text-xs text-muted-foreground ml-0.5">
-        {value.toFixed(1)} · {total} {total === 1 ? 'calificación' : 'calificaciones'}
+        {Number(value).toFixed(1)} · {total} {total === 1 ? 'calificación' : 'calificaciones'}
       </Text>
     </View>
   );

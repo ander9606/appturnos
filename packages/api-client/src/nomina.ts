@@ -35,6 +35,7 @@ export interface RegistroDiario {
   novedad: string | null;
   tipo_dia: TipoDia;
   aprobado_por: number | null;
+  valor_hora_snapshot: number | null; // frozen at period close (migration 010b); null for open periods
   created_at: string;
   // Joined
   trabajador_nombre: string;

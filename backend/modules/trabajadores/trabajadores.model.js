@@ -169,14 +169,6 @@ const TrabajadoresModel = {
         );
       }
 
-      if (datos.cargo_ids?.length) {
-        const vals = datos.cargo_ids.map((cid) => [trabajadorId, cid]);
-        await conn.query(
-          'INSERT IGNORE INTO trabajador_cargos (trabajador_id, cargo_id) VALUES ?',
-          [vals]
-        );
-      }
-
       await conn.commit();
       return trabajadorId;
     } catch (err) {
@@ -277,10 +269,11 @@ const TrabajadoresModel = {
 
   async listarCargos(trabajadorId) {
     const [filas] = await pool.query(
-      `SELECT tc.cargo_id AS id, c.nombre, c.codigo
+      `SELECT DISTINCT tc.cargo_id AS id, c.nombre, c.codigo
        FROM trabajador_cargos tc
        JOIN cargos c ON c.id = tc.cargo_id
-       WHERE tc.trabajador_id = ?
+       JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
+       WHERE te.trabajador_id = ?
        ORDER BY c.nombre`,
       [trabajadorId]
     );

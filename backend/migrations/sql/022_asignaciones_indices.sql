@@ -4,5 +4,5 @@
 -- conforme la tabla crece.
 
 ALTER TABLE asignaciones_turno
-  ADD INDEX IF NOT EXISTS idx_at_trabajador_estado (trabajador_id, estado),
-  ADD INDEX IF NOT EXISTS idx_at_empresa_estado    (empresa_id, estado);
+  ADD INDEX idx_at_trabajador_estado (trabajador_id, estado),
+  ADD INDEX idx_at_empresa_estado    (empresa_id, estado);

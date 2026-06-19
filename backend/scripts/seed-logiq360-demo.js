@@ -24,8 +24,8 @@
  *   webhook_url      = LOGIQ360_WEBHOOK_URL || http://localhost:3000/api/integracion/eventos
  *
  * Credenciales (contraseña: Demo1234!):
- *   admin@carpas-demo.co      → admin_empresa
- *   jefe@carpas-demo.co       → jefe_turnos
+ *   admin@plataforma-prueba.co      → admin_empresa
+ *   jefe@plataforma-prueba.co       → jefe_turnos
  *   diego@turnos.co           → trabajador_turnos  (ranking 5.0 — ve ofertas al instante)
  *   valentina@turnos.co       → trabajador_turnos  (ranking 2.0 — delay 60 min)
  */
@@ -36,7 +36,7 @@ const bcrypt          = require('bcrypt');
 const { pool }        = require('../config/database');
 const { randomUUID }  = require('crypto');
 
-const SLUG     = 'carpas-demo';
+const SLUG     = 'plataforma-prueba';
 const PASSWORD = 'Demo1234!';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -132,13 +132,13 @@ async function main() {
 
   // ── 1. Empresa ──────────────────────────────────────────────────────────────
   section('1. Empresa');
-  const eId = await upsertEmpresa('Carpas y Eventos Demo S.A.S', SLUG, '901234567-8');
+  const eId = await upsertEmpresa('Plataforma de Prueba S.A.S', SLUG, '901234567-8');
 
   // ── 2. Usuarios ─────────────────────────────────────────────────────────────
   section('2. Usuarios');
   const hash = await bcrypt.hash(PASSWORD, 10);
-  const adminId     = await upsertUsuario(eId, 'Andrés',    'Morales',  'admin@carpas-demo.co',    'admin_empresa',     hash);
-  const jefeId      = await upsertUsuario(eId, 'Claudia',   'Restrepo', 'jefe@carpas-demo.co',     'jefe_turnos',       hash);
+  const adminId     = await upsertUsuario(eId, 'Andrés',    'Morales',  'admin@plataforma-prueba.co',    'admin_empresa',     hash);
+  const jefeId      = await upsertUsuario(eId, 'Claudia',   'Restrepo', 'jefe@plataforma-prueba.co',     'jefe_turnos',       hash);
   const uDiegoId    = await upsertUsuario(eId, 'Diego',     'Herrera',  'diego@turnos.co',         'trabajador_turnos', hash);
   const uValentinaId= await upsertUsuario(eId, 'Valentina', 'Torres',   'valentina@turnos.co',     'trabajador_turnos', hash);
 
@@ -223,7 +223,7 @@ async function main() {
   // ── [1] BORRADOR — recién llegada de logiq360, jefe aún no la publica ─────
   const oBorradorId = await upsertOferta({
     titulo:   'Instalación Carpa IKEA — Zona Franca',
-    desc:     'Montaje de los productos: 1× Carpa 12x12, 2× Mástil de tensado, 20× Ancla de suelo de la empresa Carpas y Eventos Demo S.A.S',
+    desc:     'Montaje de los productos: 1× Carpa 12x12, 2× Mástil de tensado, 20× Ancla de suelo de la empresa Plataforma de Prueba S.A.S',
     fecha:    d(2), hi: '06:00:00', hf: '15:00:00',
     lugar:    'Zona Franca Bogotá — Av. Calle 26 #82-70',
     lat: 4.6890, lon: -74.1220,
@@ -238,7 +238,7 @@ async function main() {
   // ── [2] PUBLICADA — publicada, trabajadores aplicaron ─────────────────────
   const oPublicadaId = await upsertOferta({
     titulo:   'Desmontaje Feria Alimentaria — Corferias',
-    desc:     'Montaje de los productos: 2× Carpa 6x9, 8× Mesa plegable, 40× Silla plástica de la empresa Carpas y Eventos Demo S.A.S',
+    desc:     'Montaje de los productos: 2× Carpa 6x9, 8× Mesa plegable, 40× Silla plástica de la empresa Plataforma de Prueba S.A.S',
     fecha:    d(4), hi: '07:00:00', hf: '16:00:00',
     lugar:    'Corferias, Cra 37 #24-67, Bogotá',
     lat: 4.6280, lon: -74.0905,
@@ -274,7 +274,7 @@ async function main() {
   const fechaHoy = d(0);
   const oEnProcesoId = await upsertOferta({
     titulo:   'Evento Corporativo Bancolombia — Parque 93',
-    desc:     'Montaje de los productos: 1× Carpa VIP 8x8, 5× Panel decorativo, 20× Silla Tiffany de la empresa Carpas y Eventos Demo S.A.S',
+    desc:     'Montaje de los productos: 1× Carpa VIP 8x8, 5× Panel decorativo, 20× Silla Tiffany de la empresa Plataforma de Prueba S.A.S',
     fecha:    fechaHoy, hi: '07:00:00', hf: '17:00:00',
     lugar:    'Parque 93 — Cl. 93 #13-33, Bogotá',
     lat: 4.6665, lon: -74.0536,
@@ -327,7 +327,7 @@ async function main() {
   const fechaCompleta = d(-7);
   const oCompletadaId = await upsertOferta({
     titulo:   'Montaje Stand Expo Belleza — Ágora',
-    desc:     'Montaje de los productos: 1× Stand 3x3, 4× Panel divisor, 10× Spot LED de la empresa Carpas y Eventos Demo S.A.S',
+    desc:     'Montaje de los productos: 1× Stand 3x3, 4× Panel divisor, 10× Spot LED de la empresa Plataforma de Prueba S.A.S',
     fecha:    fechaCompleta, hi: '06:00:00', hf: '15:00:00',
     lugar:    'Ágora Bogotá — Cl. 24 #38-47',
     lat: 4.6180, lon: -74.0878,
@@ -531,8 +531,8 @@ async function main() {
   process.stdout.write('╚═══════════════════════════════════════════════════════════════╝\n\n');
   process.stdout.write('  Contraseña de todos: Demo1234!\n\n');
   process.stdout.write('  USUARIOS ─────────────────────────────────────────────────────\n');
-  process.stdout.write('    admin@carpas-demo.co        admin_empresa\n');
-  process.stdout.write('    jefe@carpas-demo.co         jefe_turnos\n');
+  process.stdout.write('    admin@plataforma-prueba.co        admin_empresa\n');
+  process.stdout.write('    jefe@plataforma-prueba.co         jefe_turnos\n');
   process.stdout.write('    diego@turnos.co             trabajador_turnos  (ranking 5.0 ★★★★★)\n');
   process.stdout.write('    valentina@turnos.co         trabajador_turnos  (ranking 2.0 ★★☆☆☆)\n\n');
   process.stdout.write('  ESCENARIOS LOGIQ360 ──────────────────────────────────────────\n');

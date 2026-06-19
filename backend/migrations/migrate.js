@@ -63,12 +63,14 @@ async function ejecutar() {
       .sort();
 
     // Guardia: detectar prefijos numéricos duplicados antes de ejecutar nada.
-    // Un prefijo es el tramo inicial de dígitos (ej. "010" en "010_foo.sql").
-    // Dos archivos con el mismo prefijo indican un error de numeración que
-    // puede causar orden de ejecución no determinista.
+    // El prefijo es el tramo inicial de dígitos + letra opcional (ej. "010", "010b").
+    // Dos archivos con el mismo prefijo completo son un error de numeración.
+    // Los sufijos letra (010b) son válidos como hotfix sobre 010; el guard solo
+    // bloquea prefijos idénticos (010b vs 010b), no variantes (010 vs 010b).
+    // Nuevas migraciones deben usar el siguiente número entero, no más letras.
     const vistoPrefijo = new Map();
     for (const archivo of archivos) {
-      const prefijo = archivo.match(/^(\d+)_/)?.[1];
+      const prefijo = archivo.match(/^(\d+[a-z]?)_/)?.[1];
       if (!prefijo) continue;
       if (vistoPrefijo.has(prefijo)) {
         throw new Error(

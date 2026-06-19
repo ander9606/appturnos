@@ -82,6 +82,13 @@ export type {
 export { notificacionesApi } from './notificaciones';
 export { adminApi } from './admin';
 export { reportesApi } from './reportes';
+export { integracionApi } from './integracion';
+export type {
+  IntegracionConfig,
+  ActualizarIntegracionPayload,
+  EstadoIntegracion,
+  ConteoEstado,
+} from './integracion';
 export type {
   ReporteParams,
   ReporteRango,

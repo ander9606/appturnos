@@ -1,8 +1,14 @@
+# Arrancar con:  docker compose --env-file backend/.env up -d
+# --env-file es necesario para que ${DB_PASSWORD} y ${DB_ROOT_PASSWORD}
+# se resuelvan al nivel del motor compose (env_file solo inyecta en el contenedor).
+
 services:
   api:
     build: ./backend
     restart: unless-stopped
     env_file: ./backend/.env
+    environment:
+      DB_HOST: db
     ports:
       - "3001:3001"
     depends_on:
@@ -14,6 +20,7 @@ services:
   db:
     image: mysql:8.0
     restart: unless-stopped
+    env_file: ./backend/.env
     environment:
       MYSQL_DATABASE: ${DB_NAME:-app_turnos}
       MYSQL_USER: ${DB_USER:-appturnos}

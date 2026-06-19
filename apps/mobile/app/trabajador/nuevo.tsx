@@ -58,7 +58,6 @@ export default function NuevoTrabajadorScreen() {
           institucion: d.institucion,
           anio:        d.anio ? parseInt(d.anio, 10) : null,
         })),
-        cargo_ids:   data.cargo_ids.length   ? data.cargo_ids   : undefined,
         empresa_ids: data.empresa_ids.length ? data.empresa_ids : undefined,
       });
       router.replace(`/trabajador/${t.id}`);

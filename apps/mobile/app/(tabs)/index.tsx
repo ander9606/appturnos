@@ -164,7 +164,10 @@ export default function DashboardScreen() {
         { icon: 'wallet-outline',        label: 'Nómina',     onPress: () => router.push('/(tabs)/nomina') },
         { icon: 'people-outline',        label: 'Equipo',     onPress: () => router.push('/(tabs)/equipo') },
         ...(isAdmin
-          ? [{ icon: 'person-add-outline' as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') }]
+          ? [
+              { icon: 'person-add-outline' as IoniconsName, label: 'Agregar emp.',  onPress: () => router.push('/trabajador/nuevo') },
+              { icon: 'link-outline'        as IoniconsName, label: 'logiq360',      onPress: () => router.push('/integracion/config') },
+            ]
           : []),
       ];
 
