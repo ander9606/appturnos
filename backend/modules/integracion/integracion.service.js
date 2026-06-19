@@ -49,8 +49,53 @@ const IntegracionService = {
       webhook_secret: tomar('webhook_secret'),
       api_key: tomar('api_key'),
       incoming_secret: tomar('incoming_secret'),
+      // Preservar el mapeo establecido por el emparejamiento.
+      logiq360_tenant_id: tomar('logiq360_tenant_id'),
+      logiq360_base_url: tomar('logiq360_base_url'),
     });
     return IntegracionService.obtenerConfig(empresaId);
+  },
+
+  /**
+   * Empareja con logiq360 a partir de un código generado allá.
+   * Decodifica { url, nonce }, confirma contra logiq360, y persiste el bundle de
+   * secretos + el mapeo tenant_id↔empresa_id. El humano no ve ningún secreto.
+   */
+  async emparejar(empresaId, codigo, appTurnosBaseUrl) {
+    let url, nonce;
+    try {
+      ({ url, nonce } = JSON.parse(Buffer.from(codigo, 'base64url').toString('utf8')));
+    } catch {
+      throw new AppError('Código de emparejamiento inválido', 400);
+    }
+    if (!url || !nonce) throw new AppError('Código de emparejamiento inválido', 400);
+
+    const base = String(appTurnosBaseUrl).replace(/\/$/, '');
+    const resp = await fetch(`${url.replace(/\/$/, '')}/api/integracion/emparejar/confirmar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nonce,
+        app_turnos_webhook_url: `${base}/api/integracion/eventos`,
+        app_turnos_base_url: base,
+      }),
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      throw new AppError(json.message || `logiq360 rechazó el emparejamiento (HTTP ${resp.status})`, 400);
+    }
+
+    const b = json.data || {};
+    await IntegracionModel.guardarConfig(empresaId, {
+      activo: 1,
+      webhook_url: b.webhook_url,
+      webhook_secret: b.webhook_secret,
+      api_key: b.api_key,
+      incoming_secret: b.incoming_secret,
+      logiq360_tenant_id: b.tenant_id,
+      logiq360_base_url: b.logiq360_base_url,
+    });
+    return { conectado: true, logiq360_tenant_id: b.tenant_id };
   },
 
   async estado(empresaId) {
@@ -145,6 +190,10 @@ const IntegracionService = {
       const headers = { 'Content-Type': 'application/json' };
       if (evento.webhook_secret) {
         headers['X-Turnos-Signature'] = firmar(cuerpo, evento.webhook_secret);
+      }
+      // logiq360 autentica nuestros webhooks por X-API-Key además de la firma.
+      if (evento.api_key) {
+        headers['X-API-Key'] = evento.api_key;
       }
       const resp = await fetch(evento.webhook_url, { method: 'POST', headers, body: cuerpo });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

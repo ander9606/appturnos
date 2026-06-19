@@ -53,6 +53,16 @@ router.put(
   ctrl.actualizarConfig
 );
 
+// POST /api/integracion/emparejar — conectar con logiq360 vía código de pairing
+router.post(
+  '/emparejar',
+  verificarToken,
+  verificarRol(SOLO_ADMIN),
+  [body('codigo').notEmpty().withMessage('codigo requerido').isString()],
+  validar,
+  ctrl.emparejar
+);
+
 // ── Endpoints pull que logiq360 consulta con X-API-Key ───────────────────────
 // GET /api/integracion/public/estado/:external_ref — estado de oferta y contratos
 router.get(

@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useIntegracionConfig, useActualizarIntegracion, generarSecret } from '@/features/integracion/useIntegracion';
+import { useIntegracionConfig, useActualizarIntegracion, useEmparejar, generarSecret } from '@/features/integracion/useIntegracion';
 import { useTheme } from '@/lib/theme';
 
 const ENDPOINT_PATH = '/api/integracion/eventos';
@@ -119,6 +119,21 @@ export default function IntegracionConfigScreen() {
 
   const { data: cfg, isLoading, refetch, isRefetching } = useIntegracionConfig();
   const { mutateAsync: guardar, isPending } = useActualizarIntegracion();
+  const { mutateAsync: emparejar, isPending: emparejando } = useEmparejar();
+
+  const [codigoPair, setCodigoPair] = useState('');
+
+  async function handleEmparejar() {
+    const codigo = codigoPair.trim();
+    if (!codigo) return;
+    try {
+      const r = await emparejar(codigo);
+      setCodigoPair('');
+      Alert.alert('Conectado', `Integración vinculada con logiq360 (tenant ${r.logiq360_tenant_id}).`);
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo emparejar.');
+    }
+  }
 
   // Form state — only tracks what the user changes
   const [activo,           setActivo]           = useState(false);
@@ -193,6 +208,38 @@ export default function IntegracionConfigScreen() {
             Conecta tu empresa con el sistema de alquiler de equipos
           </Text>
         </View>
+
+        {/* ── Conexión rápida (emparejamiento) ───────────────────── */}
+        <SectionHeader title="Conexión rápida" />
+        <Row>
+          <Label text="Código de emparejamiento de logiq360" />
+          <Text className="text-xs text-muted-foreground mb-2">
+            En logiq360 → Integración → «Generar código de emparejamiento» y pégalo aquí.
+            Las claves se intercambian automáticamente.
+          </Text>
+          <TextInput
+            value={codigoPair}
+            onChangeText={setCodigoPair}
+            placeholder="Pega el código aquí"
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="none"
+            autoCorrect={false}
+            multiline
+            className="text-xs font-mono bg-background border border-border rounded-xl px-3 py-2.5 text-foreground"
+          />
+          <Pressable
+            onPress={handleEmparejar}
+            disabled={emparejando || !codigoPair.trim()}
+            className="mt-3 h-11 rounded-2xl items-center justify-center"
+            style={{ backgroundColor: emparejando || !codigoPair.trim() ? theme.primary + '80' : theme.primary }}
+          >
+            {emparejando ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white font-bold text-sm">Conectar con logiq360</Text>
+            )}
+          </Pressable>
+        </Row>
 
         {/* ── Toggle activo ──────────────────────────────────────── */}
         <Row>

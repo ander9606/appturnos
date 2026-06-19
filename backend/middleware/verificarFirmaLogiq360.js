@@ -20,9 +20,12 @@ async function verificarFirmaLogiq360(req, _res, next) {
 
   const tenantId = req.body?.tenant_id;
   if (tenantId) {
+    // Resolver por el mapeo del pairing; fallback a empresa_id == tenant_id (legacy).
     const [rows] = await pool.query(
-      'SELECT incoming_secret FROM integracion_config WHERE empresa_id = ? AND activo = 1 LIMIT 1',
-      [tenantId]
+      `SELECT incoming_secret FROM integracion_config
+       WHERE (logiq360_tenant_id = ? OR empresa_id = ?) AND activo = 1
+       ORDER BY (logiq360_tenant_id = ?) DESC LIMIT 1`,
+      [tenantId, tenantId, tenantId]
     );
     if (rows.length && rows[0].incoming_secret) {
       secreto = rows[0].incoming_secret;

@@ -8,8 +8,11 @@ const IntegracionService = require('./integracion.service');
  */
 async function recibirEventos(req, res) {
   const { event_id, tipo_evento, tenant_id, data } = req.body;
+  // Resolver empresa_id real a partir del tenant_id de logiq360 (pairing).
+  const IntegracionModel = require('./integracion.model');
+  const empresaId = await IntegracionModel.empresaIdPorTenantLogiq360(tenant_id);
   const resultado = await IntegracionService.recibirEvento({
-    empresaId: tenant_id,
+    empresaId,
     eventId: event_id,
     tipoEvento: tipo_evento,
     payload: { data },
@@ -37,6 +40,17 @@ async function actualizarConfig(req, res) {
 }
 
 /**
+ * POST /api/integracion/emparejar — conecta con logiq360 usando un código de un solo
+ * uso generado allá. Persiste secretos y el mapeo tenant_id↔empresa_id sin exponer
+ * ningún secreto al usuario.
+ */
+async function emparejar(req, res) {
+  const baseUrl = process.env.PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`;
+  const data = await IntegracionService.emparejar(req.empresa_id, req.body.codigo, baseUrl);
+  res.json({ success: true, data, message: 'Integración conectada con logiq360' });
+}
+
+/**
  * GET /api/integracion/public/estado/:external_ref
  * Permite que logiq360 consulte el estado de una oferta y sus contratos a partir
  * del external_ref que él mismo generó (ej: "logiq360:orden:47").
@@ -61,6 +75,6 @@ async function publicEnSitio(req, res) {
 }
 
 module.exports = {
-  recibirEventos, estado, obtenerConfig, actualizarConfig,
+  recibirEventos, estado, obtenerConfig, actualizarConfig, emparejar,
   publicEstado, publicEnSitio,
 };

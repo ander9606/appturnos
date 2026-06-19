@@ -19,14 +19,17 @@ const IntegracionModel = {
   async guardarConfig(empresaId, d) {
     await pool.query(
       `INSERT INTO integracion_config
-         (empresa_id, activo, webhook_url, webhook_secret, api_key, incoming_secret)
-       VALUES (?, ?, ?, ?, ?, ?)
+         (empresa_id, activo, webhook_url, webhook_secret, api_key, incoming_secret,
+          logiq360_tenant_id, logiq360_base_url)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          activo = VALUES(activo),
          webhook_url = VALUES(webhook_url),
          webhook_secret = VALUES(webhook_secret),
          api_key = VALUES(api_key),
-         incoming_secret = VALUES(incoming_secret)`,
+         incoming_secret = VALUES(incoming_secret),
+         logiq360_tenant_id = VALUES(logiq360_tenant_id),
+         logiq360_base_url = VALUES(logiq360_base_url)`,
       [
         empresaId,
         d.activo ? 1 : 0,
@@ -34,8 +37,23 @@ const IntegracionModel = {
         d.webhook_secret ?? null,
         d.api_key ?? null,
         d.incoming_secret ?? null,
+        d.logiq360_tenant_id ?? null,
+        d.logiq360_base_url ?? null,
       ]
     );
+  },
+
+  /**
+   * Resuelve el empresa_id de App Turnos a partir del tenant_id de logiq360.
+   * Fallback retrocompatible: si nadie ha emparejado con ese tenant, asume que
+   * empresa_id == tenant_id (comportamiento previo al pairing).
+   */
+  async empresaIdPorTenantLogiq360(tenantId) {
+    const [filas] = await pool.query(
+      'SELECT empresa_id FROM integracion_config WHERE logiq360_tenant_id = ? AND activo = 1 LIMIT 1',
+      [tenantId]
+    );
+    return filas[0]?.empresa_id ?? tenantId;
   },
 
   // ─── Eventos entrantes ──────────────────────────────────────
@@ -76,7 +94,7 @@ const IntegracionModel = {
   async listarPendientes(limite) {
     const [filas] = await pool.query(
       `SELECT e.id, e.empresa_id, e.event_id, e.tipo_evento, e.payload, e.intentos,
-              c.webhook_url, c.webhook_secret
+              c.webhook_url, c.webhook_secret, c.api_key
        FROM integration_events_out e
        JOIN integracion_config c ON c.empresa_id = e.empresa_id AND c.activo = 1
        WHERE e.estado = 'pendiente' AND e.proximo_intento <= NOW()
