@@ -37,7 +37,7 @@ export type {
   TipoDia,
   TrabajadorNominaPerfil,
 } from './nomina';
-export { turnosApi } from './turnos';
+export { turnosApi, ESTADOS_ASIGNACION } from './turnos';
 export type {
   Asignacion,
   CalificacionResponse,

@@ -27,6 +27,9 @@ const GRUPOS_ROLES = {
 
 const ESTADOS_OFERTA = ['borrador', 'abierta', 'publicada', 'en_proceso', 'cerrada', 'completada', 'cancelada'];
 
+// Fuente de verdad en TS: packages/api-client/src/turnos.ts → ESTADOS_ASIGNACION
+// Si añades un estado aquí, actualiza también ese array y el ESTADO_CONFIG
+// en apps/mobile/features/turnos/turnosUtils.ts.
 const ESTADOS_ASIGNACION = [
   'pendiente',
   'confirmado',

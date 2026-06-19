@@ -1,5 +1,5 @@
 -- ============================================================
--- 016 — tipo_marcacion para trabajadores de nómina
+-- 016b — tipo_marcacion para trabajadores de nómina
 --
 -- Permite al admin definir si un trabajador puede marcar
 -- desde cualquier lugar (libre) o debe estar en su punto

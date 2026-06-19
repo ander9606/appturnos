@@ -1,5 +1,5 @@
 -- ============================================================
--- 010 — Snapshot de valor_hora al cerrar período de nómina
+-- 010b — Snapshot de valor_hora al cerrar período de nómina
 --
 -- Problema que resuelve:
 --   La liquidación leía tarifa_hora / salario_base del trabajador

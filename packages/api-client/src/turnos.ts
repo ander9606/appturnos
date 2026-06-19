@@ -10,6 +10,17 @@ export type EstadoAsignacion =
   | 'no_presentado'
   | 'cancelado';
 
+// Fuente de verdad para validación en runtime. El backend (JS) debe
+// mantenerse en sync con este array; ver backend/config/constants.js.
+export const ESTADOS_ASIGNACION = [
+  'pendiente',
+  'confirmado',
+  'en_progreso',
+  'completado',
+  'no_presentado',
+  'cancelado',
+] as const satisfies EstadoAsignacion[];
+
 export type EstadoOferta =
   | 'borrador'
   | 'abierta'
