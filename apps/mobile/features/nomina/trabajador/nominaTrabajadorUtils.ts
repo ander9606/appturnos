@@ -56,6 +56,7 @@ export interface ResumenPeriodoNomina {
   diasRegistrados:     number;
   diasConExtras:       number;
   diasCortos:          number;  // días con posible descuento
+  horasFaltantes:      number;  // horas por debajo de la jornada en días cortos
   diasEspeciales:      number;  // tipo_dia != 'ordinario'
   valorExtraCOP:       number;  // total adicional acumulado en el período
 }
@@ -142,6 +143,7 @@ export function calcularResumenPeriodo(
   let horasFestivo        = 0;
   let diasConExtras       = 0;
   let diasCortos          = 0;
+  let horasFaltantes      = 0;
   let diasEspeciales      = 0;
   let valorExtraCOP       = 0;
 
@@ -161,7 +163,12 @@ export function calcularResumenPeriodo(
     if (r.tipo_dia !== 'ordinario') diasEspeciales++;
 
     const analisis = analizarDia(r, valorHora);
-    if (analisis.esDiaCorto) diasCortos++;
+    if (analisis.esDiaCorto) {
+      diasCortos++;
+      // Horas por debajo de la jornada ordinaria (sin contar el margen de gracia)
+      const minutos = totalMinutosRegistro(r) ?? 0;
+      horasFaltantes += Math.max(0, (JORNADA_MIN - minutos) / 60);
+    }
     valorExtraCOP += analisis.valorExtraCOP;
   }
 
@@ -177,6 +184,7 @@ export function calcularResumenPeriodo(
     diasRegistrados:     registros.length,
     diasConExtras,
     diasCortos,
+    horasFaltantes:      round(horasFaltantes),
     diasEspeciales,
     valorExtraCOP,
   };

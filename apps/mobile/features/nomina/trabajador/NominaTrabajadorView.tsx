@@ -140,6 +140,7 @@ export function NominaTrabajadorView() {
                 periodos={periodos}
                 periodoActivoId={periodoActivo?.id}
                 onSeleccionarPeriodo={setPeriodoSeleccionado}
+                valorHora={valorHora}
               />
 
               <Text className="text-sm font-semibold text-foreground mt-1">
