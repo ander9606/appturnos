@@ -1,12 +1,13 @@
 'use strict';
 
-const RegistrosModel   = require('./registros.model');
-const PeriodosModel    = require('../periodos/periodos.model');
-const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
-const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
-const { calcularHoras } = require('../../../utils/laboralUtils');
-const AppError = require('../../../utils/AppError');
-const { ROLES }  = require('../../../config/constants');
+const RegistrosModel       = require('./registros.model');
+const PeriodosModel        = require('../periodos/periodos.model');
+const TrabajadoresModel    = require('../../trabajadores/trabajadores.model');
+const PuntosMarcajeModel   = require('../../puntos-marcaje/puntos-marcaje.model');
+const CompensatoriosService = require('../compensatorios/compensatorios.service');
+const { calcularHoras }    = require('../../../utils/laboralUtils');
+const AppError             = require('../../../utils/AppError');
+const { ROLES }            = require('../../../config/constants');
 
 /**
  * El trabajador_nomina solo opera sobre sus propios registros: se resuelve
@@ -241,6 +242,15 @@ const RegistrosService = {
       ...horas,
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);
+
+    // Descanso compensatorio automático si es festivo o domingo (Art. 179 CST)
+    await CompensatoriosService.crearSiCorresponde(empresaId, {
+      trabajadorId,
+      periodoId: registro.periodo_id,
+      fecha: registro.fecha,
+      esFestivo: Boolean(horas.es_festivo),
+      registroId,
+    });
 
     return RegistrosModel.obtenerPorId(empresaId, registroId);
   },

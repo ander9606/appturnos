@@ -26,6 +26,8 @@ import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView
 import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { GestorCompensatoriosPanel } from '@/features/nomina/compensatorios/GestorCompensatoriosPanel';
+import { useCompensatoriosTodos }    from '@/features/nomina/compensatorios/useCompensatorios';
 import {
   usePeriodos, useLiquidacion,
   useCerrarPeriodo, useLiquidarPeriodo, useCrearPeriodo,
@@ -177,6 +179,7 @@ function NominaGestorView() {
 
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos();
+  const { data: compensatorios = [] } = useCompensatoriosTodos();
 
   const periodos = periodosResp?.data ?? [];
   const [periodoId, setPeriodoId]         = useState<number | undefined>(undefined);
@@ -377,6 +380,8 @@ function NominaGestorView() {
                   <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                 </TouchableOpacity>
               )}
+
+              <GestorCompensatoriosPanel compensatorios={compensatorios} />
 
               <Text className="text-sm font-semibold text-foreground">
                 Detalle por empleado

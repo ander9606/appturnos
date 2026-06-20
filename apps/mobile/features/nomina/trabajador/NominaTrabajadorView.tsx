@@ -18,9 +18,12 @@ import { MarcajeButtons } from './components/MarcajeButtons';
 import { ResumenCards } from './components/ResumenCards';
 import { useNominaTrabajador } from './useNominaTrabajador';
 import { calcularResumenPeriodo, analizarDia } from './nominaTrabajadorUtils';
+import { CompensatorioBanner } from '../compensatorios/CompensatorioBanner';
+import { useCompensatoriosPendientes } from '../compensatorios/useCompensatorios';
 
 export function NominaTrabajadorView() {
   const theme = useTheme();
+  const { data: compensatorios = [] } = useCompensatoriosPendientes();
 
   const {
     valorHora,
@@ -133,6 +136,11 @@ export function NominaTrabajadorView() {
                 onSalida={handleSalida}
                 horasTrabajadas={analisisHoy?.totalHoras}
               />
+
+              {/* ── Alertas de descanso compensatorio ──────────── */}
+              {compensatorios.length > 0 && (
+                <CompensatorioBanner compensatorios={compensatorios} />
+              )}
 
               {/* ── Estadísticas + desglose + selector período ─ */}
               <ResumenCards
