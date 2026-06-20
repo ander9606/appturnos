@@ -4,12 +4,14 @@ const RegistrosService = require('./registros.service');
 
 async function listar(req, res) {
   const page  = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
-  const limit = Math.min(100,   Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const limit = Math.min(500,   Math.max(1, parseInt(req.query.limit, 10) || 20));
 
   const { data, pagination } = await RegistrosService.listar(req.empresa_id, req.usuario, {
     periodo_id:    req.query.periodo_id    ? Number(req.query.periodo_id)    : undefined,
     trabajador_id: req.query.trabajador_id ? Number(req.query.trabajador_id) : undefined,
-    fecha:         req.query.fecha || undefined,
+    fecha:         req.query.fecha         || undefined,
+    fecha_desde:   req.query.fecha_desde   || undefined,
+    fecha_hasta:   req.query.fecha_hasta   || undefined,
     page,
     limit,
   });

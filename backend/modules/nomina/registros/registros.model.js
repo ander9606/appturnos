@@ -4,21 +4,14 @@ const { pool } = require('../../../config/database');
 
 /** Acceso a datos de registros diarios de nómina (tabla registros_diarios). */
 const RegistrosModel = {
-  async listar(empresaId, { periodoId, trabajadorId, fecha, limit, offset }) {
+  async listar(empresaId, { periodoId, trabajadorId, fecha, fechaDesde, fechaHasta, limit, offset }) {
     const where = ['r.empresa_id = ?'];
     const params = [empresaId];
-    if (periodoId) {
-      where.push('r.periodo_id = ?');
-      params.push(periodoId);
-    }
-    if (trabajadorId) {
-      where.push('r.trabajador_id = ?');
-      params.push(trabajadorId);
-    }
-    if (fecha) {
-      where.push('r.fecha = ?');
-      params.push(fecha);
-    }
+    if (periodoId)   { where.push('r.periodo_id = ?');    params.push(periodoId); }
+    if (trabajadorId){ where.push('r.trabajador_id = ?'); params.push(trabajadorId); }
+    if (fecha)       { where.push('r.fecha = ?');         params.push(fecha); }
+    if (fechaDesde)  { where.push('r.fecha >= ?');        params.push(fechaDesde); }
+    if (fechaHasta)  { where.push('r.fecha <= ?');        params.push(fechaHasta); }
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(

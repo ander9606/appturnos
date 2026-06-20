@@ -381,6 +381,17 @@ function NominaGestorView() {
                 </TouchableOpacity>
               )}
 
+              <TouchableOpacity
+                onPress={() => router.push('/dashboard-asistencia')}
+                className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="people-outline" size={16} color="#64748B" />
+                  <Text className="text-sm font-medium text-foreground">Asistencia hoy</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+
               <GestorCompensatoriosPanel compensatorios={compensatorios} />
 
               <Text className="text-sm font-semibold text-foreground">

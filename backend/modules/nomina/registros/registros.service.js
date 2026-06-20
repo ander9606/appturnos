@@ -68,7 +68,7 @@ function ahoraHHMMSS() {
 }
 
 const RegistrosService = {
-  async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, page, limit }) {
+  async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, fecha_desde, fecha_hasta, page, limit }) {
     let trabajadorId = trabajador_id;
     if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
       trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
@@ -78,6 +78,8 @@ const RegistrosService = {
       periodoId: periodo_id,
       trabajadorId,
       fecha,
+      fechaDesde: fecha_desde,
+      fechaHasta: fecha_hasta,
       limit,
       offset,
     });
