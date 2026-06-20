@@ -3,14 +3,29 @@
 # se resuelvan al nivel del motor compose (env_file solo inyecta en el contenedor).
 
 services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    networks:
+      - interna
+
   api:
     build: ./backend
     restart: unless-stopped
     env_file: ./backend/.env
     environment:
       DB_HOST: db
-    ports:
-      - "3001:3001"
+    # Sin ports: solo accesible desde la red interna vía Caddy
     depends_on:
       db:
         condition: service_healthy
@@ -20,6 +35,8 @@ services:
   db:
     image: mysql:8.0
     restart: unless-stopped
+    # ponytail: --performance-schema=OFF ahorra ~200MB RAM; buffer pool explícito para 1GB droplet
+    command: --innodb-buffer-pool-size=128M --performance-schema=OFF
     env_file: ./backend/.env
     environment:
       MYSQL_DATABASE: ${DB_NAME:-app_turnos}
@@ -39,6 +56,8 @@ services:
 
 volumes:
   db_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   interna:
