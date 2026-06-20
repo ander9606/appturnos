@@ -67,7 +67,8 @@ async function upsertEmpresa(nombre, slug, nit) {
 async function upsertUsuario(eId, nombre, apellido, email, rol, hash) {
   const [[ex]] = await pool.query('SELECT id FROM usuarios WHERE email=?', [email]);
   if (ex) { skip(`usuario ${email} ya existe (id=${ex.id})`); return ex.id; }
-  const empresaId = rol.startsWith('trabajador') ? null : eId;
+  // turnos workers son marketplace (multi-empresa) → null; nomina workers son tenant-specific → eId
+  const empresaId = rol === 'trabajador_nomina' ? eId : rol.startsWith('trabajador') ? null : eId;
   const [r] = await pool.query(
     `INSERT INTO usuarios (empresa_id,nombre,apellido,email,password_hash,rol,activo)
      VALUES (?,?,?,?,?,?,1)`,
@@ -194,40 +195,57 @@ async function main() {
     nominaTIds.push({ tId: r.insertId, snapshot: tarifa });
   }
 
-  // Período cerrado mayo
+  // Períodos relativos a hoy para que siempre cubran la fecha actual
+  const hoy   = new Date();
+  const mes   = hoy.getMonth() + 1;
+  const anio  = hoy.getFullYear();
+  const mesA  = mes === 1 ? 12 : mes - 1;
+  const anioA = mes === 1 ? anio - 1 : anio;
+  const pad   = (n) => String(n).padStart(2, '0');
+
+  const p1Inicio = `${anioA}-${pad(mesA)}-01`;
+  const p1Fin    = `${anioA}-${pad(mesA)}-15`;
+  const p2Inicio = `${anio}-${pad(mes)}-01`;
+  const p2Fin    = `${anio}-${pad(mes)}-30`;
+
+  // Período cerrado (mes anterior)
   let p1Id;
-  const [[p1Ex]] = await pool.query(`SELECT id FROM periodos_nomina WHERE empresa_id=? AND fecha_inicio='2026-05-01'`, [eId]);
-  if (p1Ex) { p1Id = p1Ex.id; skip(`período mayo ya existe (id=${p1Id})`); }
+  const [[p1Ex]] = await pool.query(`SELECT id FROM periodos_nomina WHERE empresa_id=? AND fecha_inicio=?`, [eId, p1Inicio]);
+  if (p1Ex) { p1Id = p1Ex.id; skip(`período cerrado ya existe (id=${p1Id})`); }
   else {
     const [r] = await pool.query(
       `INSERT INTO periodos_nomina (empresa_id,fecha_inicio,fecha_fin,tipo,estado) VALUES (?,?,?,'quincenal','cerrado')`,
-      [eId, '2026-05-01', '2026-05-15']
+      [eId, p1Inicio, p1Fin]
     );
-    p1Id = r.insertId; ok(`período mayo creado (id=${p1Id})`);
+    p1Id = r.insertId; ok(`período cerrado creado ${p1Inicio}→${p1Fin} (id=${p1Id})`);
   }
 
-  // Período abierto junio
+  // Período abierto (mes actual, cubre todo el mes para no quedar fuera de rango)
   let p2Id;
-  const [[p2Ex]] = await pool.query(`SELECT id FROM periodos_nomina WHERE empresa_id=? AND fecha_inicio='2026-06-01'`, [eId]);
-  if (p2Ex) { p2Id = p2Ex.id; skip(`período junio ya existe (id=${p2Id})`); }
-  else {
+  const [[p2Ex]] = await pool.query(`SELECT id FROM periodos_nomina WHERE empresa_id=? AND fecha_inicio=?`, [eId, p2Inicio]);
+  if (p2Ex) {
+    p2Id = p2Ex.id;
+    // Asegura que fecha_fin cubra hoy (puede haberse creado con fecha_fin pasada)
+    await pool.query(`UPDATE periodos_nomina SET fecha_fin=? WHERE id=?`, [p2Fin, p2Id]);
+    skip(`período abierto ya existe (id=${p2Id}) — fecha_fin actualizada a ${p2Fin}`);
+  } else {
     const [r] = await pool.query(
       `INSERT INTO periodos_nomina (empresa_id,fecha_inicio,fecha_fin,tipo,estado) VALUES (?,?,?,'quincenal','abierto')`,
-      [eId, '2026-06-01', '2026-06-15']
+      [eId, p2Inicio, p2Fin]
     );
-    p2Id = r.insertId; ok(`período junio creado (id=${p2Id})`);
+    p2Id = r.insertId; ok(`período abierto creado ${p2Inicio}→${p2Fin} (id=${p2Id})`);
   }
 
-  // Registros diarios representativos
+  // Registros diarios representativos (días fijos del mes anterior y primeros del actual)
   const diasP1 = [
-    { f:'2026-05-05', e:'07:00:00', s:'15:00:00', fest:0, ord:8, xd:0,   xn:0, noc:0, fes:0 },
-    { f:'2026-05-06', e:'07:00:00', s:'16:00:00', fest:0, ord:8, xd:1,   xn:0, noc:0, fes:0 },
-    { f:'2026-05-07', e:'21:00:00', s:'05:00:00', fest:0, ord:0, xd:0,   xn:2, noc:6, fes:0 },
-    { f:'2026-05-08', e:'07:00:00', s:'15:00:00', fest:1, ord:0, xd:0,   xn:0, noc:0, fes:8 }, // Ascensión
+    { f:`${anioA}-${pad(mesA)}-05`, e:'07:00:00', s:'15:00:00', fest:0, ord:8, xd:0, xn:0, noc:0, fes:0 },
+    { f:`${anioA}-${pad(mesA)}-06`, e:'07:00:00', s:'16:00:00', fest:0, ord:8, xd:1, xn:0, noc:0, fes:0 },
+    { f:`${anioA}-${pad(mesA)}-07`, e:'21:00:00', s:'05:00:00', fest:0, ord:0, xd:0, xn:2, noc:6, fes:0 },
+    { f:`${anioA}-${pad(mesA)}-08`, e:'07:00:00', s:'15:00:00', fest:1, ord:0, xd:0, xn:0, noc:0, fes:8 },
   ];
   const diasP2 = [
-    { f:'2026-06-02', e:'07:00:00', s:'15:00:00', fest:0, ord:8, xd:0,   xn:0, noc:0, fes:0 },
-    { f:'2026-06-03', e:'07:00:00', s:'16:00:00', fest:0, ord:8, xd:1,   xn:0, noc:0, fes:0 },
+    { f:`${anio}-${pad(mes)}-02`, e:'07:00:00', s:'15:00:00', fest:0, ord:8, xd:0, xn:0, noc:0, fes:0 },
+    { f:`${anio}-${pad(mes)}-03`, e:'07:00:00', s:'16:00:00', fest:0, ord:8, xd:1, xn:0, noc:0, fes:0 },
   ];
 
   let regCreados = 0, regOmitidos = 0;
