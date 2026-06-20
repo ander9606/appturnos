@@ -113,10 +113,8 @@ describe('RegistrosService.marcarSalida', () => {
 
   beforeEach(() => {
     TrabajadoresModel.obtenerPorUsuarioId.mockResolvedValue({ id: 5 });
-    TrabajadoresModel.obtenerPorId.mockResolvedValue({
-      id: 5,
-      tipo_marcacion: 'libre',
-    });
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, tipo_marcacion: 'libre' });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
   });
 
   test('registro no encontrado → AppError 404', async () => {
@@ -203,6 +201,7 @@ describe('RegistrosService.marcarSalida', () => {
       expect.objectContaining({ horas_ordinarias: expect.any(Number) })
     );
     expect(result.id).toBe(1);
+    expect(result).toHaveProperty('advertencia'); // null o string
   });
 });
 

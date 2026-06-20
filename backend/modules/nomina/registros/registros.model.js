@@ -118,6 +118,20 @@ const RegistrosModel = {
     return res.affectedRows;
   },
 
+  /** Suma horas ordinarias y extras de la semana actual (lunes → antes de hoy). */
+  async sumarOrdinariasEnSemana(empresaId, trabajadorId, fechaLunes, fechaHoy) {
+    const [[row]] = await pool.query(
+      `SELECT COALESCE(SUM(horas_ordinarias + horas_nocturnas), 0)          AS ordinarias,
+              COALESCE(SUM(horas_extra_diurnas + horas_extra_nocturnas), 0) AS extras
+       FROM registros_diarios
+       WHERE empresa_id = ? AND trabajador_id = ?
+         AND fecha >= ? AND fecha < ?
+         AND hora_salida IS NOT NULL`,
+      [empresaId, trabajadorId, fechaLunes, fechaHoy]
+    );
+    return { ordinarias: Number(row.ordinarias), extras: Number(row.extras) };
+  },
+
   /** Reemplaza los campos recalculables del registro (corrección). */
   async actualizar(empresaId, id, d) {
     const [res] = await pool.query(

@@ -40,6 +40,7 @@ export interface RegistroDiario {
   // Joined
   trabajador_nombre: string;
   trabajador_apellido: string;
+  advertencia?: string | null; // set by marcarSalida when weekly extra limit is near/exceeded
 }
 
 export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
@@ -73,6 +74,9 @@ export interface LiquidacionLinea {
   horas_nocturnas: number;
   horas_festivo: number;
   valor_hora: number;
+  pago_por_horas: number;
+  salario_minimo_periodo: number;
+  ajuste_minimo: number;
   total: number;
 }
 

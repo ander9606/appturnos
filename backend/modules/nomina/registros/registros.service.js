@@ -7,7 +7,7 @@ const PuntosMarcajeModel   = require('../../puntos-marcaje/puntos-marcaje.model'
 const CompensatoriosService = require('../compensatorios/compensatorios.service');
 const { calcularHoras }    = require('../../../utils/laboralUtils');
 const AppError             = require('../../../utils/AppError');
-const { ROLES }            = require('../../../config/constants');
+const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
 
 /**
  * El trabajador_nomina solo opera sobre sus propios registros: se resuelve
@@ -51,6 +51,14 @@ async function validarGeofence(empresaId, trabajador, latitud, longitud) {
       422
     );
   }
+}
+
+/** ISO date of the Monday of the week containing isoDate. */
+function getLunesDeSemana(isoDate) {
+  const d = new Date(isoDate + 'T12:00:00Z');
+  const dow = d.getUTCDay(); // 0=dom…6=sab
+  d.setUTCDate(d.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+  return d.toISOString().slice(0, 10);
 }
 
 /** Returns today's date as 'YYYY-MM-DD' in local server time. */
@@ -232,11 +240,17 @@ const RegistrosService = {
       throw new AppError('El período ya está cerrado', 409);
     }
 
+    // Contexto semanal: horas ordinarias y extras ya registradas esta semana (lunes–ayer)
+    const lunes = getLunesDeSemana(registro.fecha);
+    const { ordinarias: ordinariasAcum, extras: extrasAcum } =
+      await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunes, registro.fecha);
+
     const horaSalida = ahoraHHMMSS();
     const horas = calcularHoras({
       horaEntrada: registro.hora_entrada,
       horaSalida,
       fecha: registro.fecha,
+      horasOrdinariasAcumuladas: ordinariasAcum,
     });
 
     const updated = await RegistrosModel.actualizarSalida(empresaId, registroId, {
@@ -254,7 +268,18 @@ const RegistrosService = {
       registroId,
     });
 
-    return RegistrosModel.obtenerPorId(empresaId, registroId);
+    const registroFinal = await RegistrosModel.obtenerPorId(empresaId, registroId);
+
+    // Advertencia de horas extra semanales
+    const totalExtras = extrasAcum + horas.horas_extra_diurnas + horas.horas_extra_nocturnas;
+    let advertencia = null;
+    if (totalExtras > HORAS_EXTRA_MAX_SEMANA) {
+      advertencia = `Superaste el límite de ${HORAS_EXTRA_MAX_SEMANA} h extra esta semana (total: ${totalExtras.toFixed(1)} h).`;
+    } else if (totalExtras >= HORAS_EXTRA_MAX_SEMANA - 2) {
+      advertencia = `Te quedan ${(HORAS_EXTRA_MAX_SEMANA - totalExtras).toFixed(1)} h extra disponibles esta semana.`;
+    }
+
+    return { ...registroFinal, advertencia };
   },
 };
 

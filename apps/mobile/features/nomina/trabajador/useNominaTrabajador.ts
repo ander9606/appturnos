@@ -146,7 +146,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
               const coords = tipoMarcacion === 'fijo' && geo.currentLocation
                 ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
                 : undefined;
-              await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
+              const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
+              if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
             } catch (err) {
               const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
               Alert.alert('Error', msg);

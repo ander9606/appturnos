@@ -51,7 +51,9 @@ const RECARGOS = {
 };
 
 // Jornada y horario nocturno
-const JORNADA_ORDINARIA_HORAS = 8;
+const JORNADA_ORDINARIA_HORAS = 8;        // referencia diaria (no usada para extras)
+const JORNADA_SEMANAL_HORAS   = 42;       // umbral semanal ordinario → extra
+const HORAS_EXTRA_MAX_SEMANA  = 12;       // límite legal de horas extra por semana
 const HORA_INICIO_NOCTURNO = 21; // 21:00
 const HORA_FIN_NOCTURNO = 6; // 06:00
 
@@ -83,6 +85,8 @@ module.exports = {
   ESTADOS_PERIODO,
   RECARGOS,
   JORNADA_ORDINARIA_HORAS,
+  JORNADA_SEMANAL_HORAS,
+  HORAS_EXTRA_MAX_SEMANA,
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
   HORAS_MES_NOMINA,
