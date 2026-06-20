@@ -2,26 +2,31 @@
  * ResumenCards — estadísticas del período y selector de períodos.
  *
  * Jerarquía de información:
- *   1. Extra acumulado en pesos   (lo que impacta el bolsillo positivamente)
- *   2. Días registrados           (verificación de completitud)
- *   3. Panel expandible de novedades: horas faltantes + extras (categorías separadas)
- *   4. Desglose de horas con recargo
- *   5. Selector de período (si hay varios)
+ *   1. Extra acumulado en pesos   (impacto positivo al bolsillo)
+ *   2. Días registrados           (completitud)
+ *   3. Panel expandible: horas extra por semana vs límite legal (Ley 2101)
+ *   4. Desglose de horas con recargo nocturno/extra/festivo
+ *   5. Selector de período
  */
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
-import { fmtPeriodo, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
+import {
+  fmtPeriodo,
+  getJornadaLegalSemanal,
+  type ResumenPeriodoNomina,
+  type ResumenSemana,
+} from '../nominaTrabajadorUtils';
 import type { PeriodoNomina } from '@api-client';
 
 interface Props {
-  resumen:                ResumenPeriodoNomina;
-  periodos:               PeriodoNomina[];
-  periodoActivoId:        number | undefined;
-  onSeleccionarPeriodo:   (id: number) => void;
-  valorHora?:             number;
+  resumen:              ResumenPeriodoNomina;
+  periodos:             PeriodoNomina[];
+  periodoActivoId:      number | undefined;
+  onSeleccionarPeriodo: (id: number) => void;
+  valorHora?:           number;
 }
 
 export function ResumenCards({
@@ -33,12 +38,10 @@ export function ResumenCards({
 }: Props) {
   const [expanded, setExpanded] = useState(false);
 
-  const tieneExtras   = resumen.horasExtraDiurnas > 0 || resumen.horasExtraNocturnas > 0 ||
-                        resumen.horasNocturnas > 0    || resumen.horasFestivo > 0;
-  const tieneNovedades = resumen.diasCortos > 0 || tieneExtras;
-
-  // Descuento estimado por horas faltantes
-  const descuentoEstimado = Math.round(resumen.horasFaltantes * valorHora);
+  const tieneExtras    = resumen.horasExtraDiurnas > 0 || resumen.horasExtraNocturnas > 0 ||
+                         resumen.horasNocturnas > 0    || resumen.horasFestivo > 0;
+  const semanasConExtra = resumen.semanas.filter((s) => s.horasExtra > 0);
+  const tieneNovedades  = tieneExtras || semanasConExtra.length > 0;
 
   return (
     <View className="gap-3">
@@ -61,39 +64,35 @@ export function ResumenCards({
         <TouchableOpacity
           onPress={() => setExpanded((v) => !v)}
           activeOpacity={0.8}
-          className="bg-card border border-border rounded-2xl px-4 py-3 gap-0"
+          className="bg-card border border-border rounded-2xl px-4 py-3"
         >
           {/* Header del panel */}
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
-              {resumen.diasCortos > 0 && (
-                <View className="w-2 h-2 rounded-full bg-warning" />
-              )}
-              {tieneExtras && (
-                <View className="w-2 h-2 rounded-full bg-success" />
-              )}
+              {tieneExtras && <View className="w-2 h-2 rounded-full bg-success" />}
               <Text className="text-sm font-semibold text-foreground">
                 Novedades del período
               </Text>
             </View>
-            <Ionicons
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color="#64748B"
-            />
+            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#64748B" />
           </View>
 
-          {/* Resumen comprimido siempre visible */}
+          {/* Resumen comprimido */}
           {!expanded && (
             <View className="flex-row gap-4 mt-2">
-              {resumen.diasCortos > 0 && (
-                <Text className="text-xs text-amber-700">
-                  ⚠ {resumen.diasCortos} día{resumen.diasCortos > 1 ? 's' : ''} incompleto{resumen.diasCortos > 1 ? 's' : ''}
+              {semanasConExtra.length > 0 && (
+                <Text className="text-xs text-success">
+                  ↑ {semanasConExtra.reduce((s, w) => s + w.horasExtra, 0).toFixed(1)}h extra
                 </Text>
               )}
-              {tieneExtras && (
-                <Text className="text-xs text-success">
-                  ↑ {(resumen.horasExtraDiurnas + resumen.horasExtraNocturnas + resumen.horasNocturnas + resumen.horasFestivo).toFixed(1)}h con recargo
+              {resumen.horasNocturnas > 0 && (
+                <Text className="text-xs text-info">
+                  🌙 {resumen.horasNocturnas.toFixed(1)}h nocturnas
+                </Text>
+              )}
+              {resumen.horasFestivo > 0 && (
+                <Text className="text-xs text-danger">
+                  📅 {resumen.horasFestivo.toFixed(1)}h festivo
                 </Text>
               )}
             </View>
@@ -102,36 +101,27 @@ export function ResumenCards({
           {/* Detalle expandido */}
           {expanded && (
             <View className="mt-3 gap-3">
-              {/* Horas faltantes */}
-              {resumen.diasCortos > 0 && (
-                <View className="bg-warning-light rounded-xl px-3 py-3 gap-1.5">
-                  <Text className="text-xs font-semibold text-amber-800">
-                    Horas pendientes
+              {/* Desglose semanal */}
+              {resumen.semanas.length > 0 && (
+                <View className="gap-1.5">
+                  <Text className="text-xs font-semibold text-foreground">
+                    Horas por semana
                   </Text>
-                  <View className="flex-row items-baseline gap-1">
-                    <Text className="text-xl font-extrabold text-amber-700">
-                      {resumen.horasFaltantes.toFixed(1)}h
-                    </Text>
-                    <Text className="text-xs text-amber-600">
-                      en {resumen.diasCortos} día{resumen.diasCortos > 1 ? 's' : ''} incompleto{resumen.diasCortos > 1 ? 's' : ''}
-                    </Text>
-                  </View>
-                  {descuentoEstimado > 0 && (
-                    <Text className="text-xs text-amber-700">
-                      Descuento estimado: -{formatCOP(descuentoEstimado)}
-                    </Text>
-                  )}
-                  <Text className="text-[10px] text-amber-600 mt-0.5">
-                    Las horas pendientes y las horas extra son conceptos independientes. Consulta con tu empleador.
+                  {resumen.semanas.map((s) => (
+                    <SemanaRow key={s.inicioSemana} semana={s} valorHora={valorHora} />
+                  ))}
+                  <Text className="text-[10px] text-muted-foreground mt-0.5">
+                    Límite según Ley 2101 para {new Date().getFullYear()}: {getJornadaLegalSemanal(new Date().getFullYear())}h/semana.
+                    Las horas extra solo se generan al superar este límite.
                   </Text>
                 </View>
               )}
 
-              {/* Horas extra con recargo */}
+              {/* Horas con recargo por tipo */}
               {tieneExtras && (
                 <View className="bg-primary-50 rounded-xl px-3 py-3 gap-1.5">
                   <Text className="text-xs font-semibold text-primary-600">
-                    Horas con recargo
+                    Horas con recargo acumuladas
                   </Text>
                   <View className="flex-row flex-wrap gap-x-4 gap-y-2">
                     {resumen.horasExtraDiurnas > 0 && (
@@ -188,7 +178,7 @@ export function ResumenCards({
   );
 }
 
-// ── Primitivos locales ────────────────────────────────────────────────────
+// ── Primitivos locales ─────────────────────────────────────────────────────
 
 type ColorToken = 'text-foreground' | 'text-muted-foreground' | 'text-success' |
                   'text-primary-500' | 'text-primary-600' | 'text-info' | 'text-danger';
@@ -210,6 +200,37 @@ function HoraChip({ label, horas, color }: { label: string; horas: number; color
     <View className="gap-0.5">
       <Text className={`text-sm font-bold ${color}`}>{horas.toFixed(1)}h</Text>
       <Text className="text-[10px] text-muted-foreground">{label}</Text>
+    </View>
+  );
+}
+
+const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function fmtLunes(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
+}
+
+function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorHora: number }) {
+  const excede = semana.horasExtra > 0;
+  const extra$ = excede ? Math.round(semana.horasExtra * 1.25 * valorHora) : 0;
+
+  return (
+    <View className="flex-row items-center justify-between py-1 border-b border-border last:border-0">
+      <Text className="text-xs text-muted-foreground">
+        Sem. {fmtLunes(semana.inicioSemana)}
+      </Text>
+      <View className="flex-row items-center gap-2">
+        <Text className={`text-xs font-medium ${excede ? 'text-success' : 'text-foreground'}`}>
+          {semana.horasTotales.toFixed(1)}h / {semana.limiteHoras}h
+        </Text>
+        {excede && (
+          <Text className="text-xs font-semibold text-success">
+            +{semana.horasExtra.toFixed(1)}h
+            {extra$ > 0 ? ` ≈ +${formatCOP(extra$)}` : ''}
+          </Text>
+        )}
+      </View>
     </View>
   );
 }

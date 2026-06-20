@@ -33,7 +33,7 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
   const analisis     = analizarDia(registro, valorHora);
   const tipoDiaLabel = TIPO_DIA_LABEL[registro.tipo_dia] ?? null;
   const esEspecial   = tipoDiaLabel !== null;
-  const canExpand    = analisis.tieneExtras || registro.novedad || analisis.esDiaCorto;
+  const canExpand    = analisis.tieneExtras || registro.novedad;
 
   const d = new Date(`${registro.fecha}T00:00:00`);
 
@@ -43,13 +43,6 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
       return (
         <View className="bg-warning-light px-2 py-0.5 rounded-full self-start">
           <Text className="text-[10px] font-medium text-amber-700">{tipoDiaLabel}</Text>
-        </View>
-      );
-    }
-    if (analisis.esDiaCorto) {
-      return (
-        <View className="bg-warning-light px-2 py-0.5 rounded-full self-start">
-          <Text className="text-[10px] font-medium text-amber-700">Jornada incompleta</Text>
         </View>
       );
     }
@@ -191,11 +184,6 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
                 </Text>
               )}
             </View>
-          )}
-          {analisis.esDiaCorto && (
-            <Text className="text-xs text-amber-600">
-              Jornada corta — puede generar descuento salarial
-            </Text>
           )}
           {registro.novedad && (
             <View>
