@@ -42,6 +42,25 @@ export interface RegistroDiario {
   trabajador_apellido: string;
 }
 
+export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
+
+export interface DescansoCompensatorio {
+  id: number;
+  empresa_id: number;
+  trabajador_id: number;
+  periodo_id: number;
+  origen_fecha: string;       // YYYY-MM-DD — el domingo/festivo trabajado
+  origen_registro_id: number | null;
+  estado: EstadoCompensatorio;
+  fecha_asignada: string | null; // YYYY-MM-DD — asignada por el empleador
+  asignado_por: number | null;
+  asignado_en: string | null;
+  created_at: string;
+  // Joined
+  trabajador_nombre: string;
+  trabajador_apellido: string;
+}
+
 export interface LiquidacionLinea {
   trabajador_id: number;
   nombre: string;
@@ -168,6 +187,22 @@ export const nominaApi = {
 
   marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>(`/api/nomina/registros/${registroId}/marcar-salida`, datos ?? {});
+  },
+
+  // ── Compensatorios ────────────────────────────────────────────────────
+
+  /** Trabajador → solo los suyos; gestor → todos (filtrable por estado). */
+  listarCompensatorios(params?: { estado?: EstadoCompensatorio }): Promise<DescansoCompensatorio[]> {
+    const qs = params?.estado ? `?estado=${params.estado}` : '';
+    return api.get<DescansoCompensatorio[]>(`/api/nomina/compensatorios${qs}`);
+  },
+
+  /** Solo jefe_nomina / admin_empresa. */
+  asignarCompensatorio(id: number, fechaAsignada: string): Promise<DescansoCompensatorio> {
+    return api.put<DescansoCompensatorio>(
+      `/api/nomina/compensatorios/${id}/asignar`,
+      { fechaAsignada }
+    );
   },
 
   // ── Liquidación ───────────────────────────────────────────────────────

@@ -22,8 +22,9 @@ router.get(
   registrosCtrl.obtenerMiPerfil
 );
 
-router.use('/periodos',    require('./periodos/periodos.routes'));
-router.use('/registros',   require('./registros/registros.routes'));
-router.use('/liquidacion', require('./liquidacion/liquidacion.routes'));
+router.use('/periodos',       require('./periodos/periodos.routes'));
+router.use('/registros',      require('./registros/registros.routes'));
+router.use('/liquidacion',    require('./liquidacion/liquidacion.routes'));
+router.use('/compensatorios', require('./compensatorios/compensatorios.routes'));
 
 module.exports = router;
