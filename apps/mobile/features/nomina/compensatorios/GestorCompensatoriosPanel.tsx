@@ -1,10 +1,12 @@
 /**
  * GestorCompensatoriosPanel — para jefe_nomina / admin_empresa.
- * Lista los descansos compensatorios pendientes y permite asignar la fecha.
+ * Lista los descansos compensatorios pendientes y permite asignar la fecha
+ * con el selector de fecha nativo del sistema (Android / iOS).
  */
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';
@@ -42,7 +44,7 @@ export function GestorCompensatoriosPanel({ compensatorios }: Props) {
             <CompensatorioRow compensatorio={c} />
           </View>
         ))}
-        {asignados.map((c, i) => (
+        {asignados.map((c) => (
           <View key={c.id} className="border-t border-border">
             <AsignadoRow compensatorio={c} />
           </View>
@@ -52,26 +54,35 @@ export function GestorCompensatoriosPanel({ compensatorios }: Props) {
   );
 }
 
-// ── Fila pendiente con input de fecha ────────────────────────────────────────
+// ── Fila pendiente con DateTimePicker nativo ──────────────────────────────────
 
 function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompensatorio }) {
-  const [fecha, setFecha]     = useState('');
-  const { mutate, isPending } = useAsignarCompensatorio();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const [fecha, setFecha]         = useState(tomorrow);
+  const [showPicker, setShowPicker] = useState(false);
+  const { mutate, isPending }     = useAsignarCompensatorio();
+
+  function onDateChange(_: DateTimePickerEvent, selected?: Date) {
+    // En Android el picker se cierra solo; en iOS permanece visible
+    if (Platform.OS === 'android') setShowPicker(false);
+    if (selected) setFecha(selected);
+  }
 
   function confirmar() {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-      Alert.alert('Fecha inválida', 'Escribe la fecha en formato AAAA-MM-DD');
-      return;
-    }
+    const iso = fecha.toISOString().slice(0, 10);
     Alert.alert(
       'Confirmar descanso',
-      `¿Asignar el ${fmtFechaCorta(fecha)} como descanso compensatorio para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
+      `¿Asignar el ${fmtFechaCorta(iso)} como descanso compensatorio para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
       [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Confirmar', onPress: () => mutate({ id: c.id, fecha }) },
+        { text: 'Confirmar', onPress: () => mutate({ id: c.id, fecha: iso }) },
       ]
     );
   }
+
+  const iso = fecha.toISOString().slice(0, 10);
 
   return (
     <View className="px-4 py-3 gap-2">
@@ -90,25 +101,45 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
       </View>
 
       <View className="flex-row gap-2 items-center">
-        <TextInput
-          value={fecha}
-          onChangeText={setFecha}
-          placeholder="AAAA-MM-DD"
-          placeholderTextColor="#94A3B8"
-          keyboardType="numeric"
-          maxLength={10}
-          className="flex-1 bg-muted rounded-xl px-3 py-2 text-sm text-foreground"
-        />
+        {/* Botón que abre el picker nativo */}
+        <TouchableOpacity
+          onPress={() => setShowPicker(true)}
+          className="flex-1 bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
+        >
+          <Ionicons name="calendar-outline" size={14} color="#64748B" />
+          <Text className="text-sm text-foreground">{fmtFechaCorta(iso)}</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={confirmar}
-          disabled={isPending || fecha.length < 10}
-          className={`px-4 py-2 rounded-xl ${isPending || fecha.length < 10 ? 'bg-muted' : 'bg-primary'}`}
+          disabled={isPending}
+          className={`px-4 py-2 rounded-xl ${isPending ? 'bg-muted' : 'bg-primary'}`}
         >
-          <Text className={`text-sm font-semibold ${isPending || fecha.length < 10 ? 'text-muted-foreground' : 'text-white'}`}>
+          <Text className={`text-sm font-semibold ${isPending ? 'text-muted-foreground' : 'text-white'}`}>
             {isPending ? 'Guardando…' : 'Asignar'}
           </Text>
         </TouchableOpacity>
       </View>
+
+      {showPicker && (
+        <DateTimePicker
+          value={fecha}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          minimumDate={tomorrow}
+          onChange={onDateChange}
+        />
+      )}
+
+      {/* En iOS el picker inline ocupa espacio; botón para confirmar selección */}
+      {showPicker && Platform.OS === 'ios' && (
+        <TouchableOpacity
+          onPress={() => setShowPicker(false)}
+          className="bg-primary/10 rounded-xl py-2 items-center"
+        >
+          <Text className="text-sm font-semibold text-primary">Listo</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
