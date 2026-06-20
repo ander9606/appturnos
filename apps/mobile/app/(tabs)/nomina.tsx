@@ -26,8 +26,6 @@ import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView
 import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
-import { GestorCompensatoriosPanel } from '@/features/nomina/compensatorios/GestorCompensatoriosPanel';
-import { useCompensatoriosTodos }    from '@/features/nomina/compensatorios/useCompensatorios';
 import {
   usePeriodos, useLiquidacion,
   useCerrarPeriodo, useLiquidarPeriodo, useCrearPeriodo,
@@ -179,8 +177,6 @@ function NominaGestorView() {
 
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos();
-  const { data: compensatorios = [] } = useCompensatoriosTodos();
-
   const periodos = periodosResp?.data ?? [];
   const [periodoId, setPeriodoId]         = useState<number | undefined>(undefined);
   const [modalNuevo, setModalNuevo]       = useState(false);
@@ -381,7 +377,38 @@ function NominaGestorView() {
                 </TouchableOpacity>
               )}
 
-              <GestorCompensatoriosPanel compensatorios={compensatorios} />
+              <TouchableOpacity
+                onPress={() => router.push('/dashboard-asistencia')}
+                className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="people-outline" size={16} color="#64748B" />
+                  <Text className="text-sm font-medium text-foreground">Asistencia hoy</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push('/gestor-compensatorios')}
+                className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                  <Text className="text-sm font-medium text-foreground">Descansos compensatorios</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push('/asignaciones-lugar')}
+                className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Ionicons name="location-outline" size={16} color="#64748B" />
+                  <Text className="text-sm font-medium text-foreground">Asignaciones de lugar</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              </TouchableOpacity>
 
               <Text className="text-sm font-semibold text-foreground">
                 Detalle por empleado

@@ -26,6 +26,10 @@ const TrabajadoresService = {
     return trabajador;
   },
 
+  async actualizarMarcacion(empresaId, id, body) {
+    return TrabajadoresModel.actualizarMarcacion(empresaId, id, body);
+  },
+
   async obtener(empresaId, id) {
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, id);
     if (!trabajador) throw new AppError('Trabajador no encontrado', 404);

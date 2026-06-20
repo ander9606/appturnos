@@ -70,6 +70,19 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
+  async actualizarMarcacion(empresaId, id, { tipo_marcacion, punto_marcaje_id }) {
+    const [result] = await pool.query(
+      'UPDATE trabajadores SET tipo_marcacion = ?, punto_marcaje_id = ? WHERE id = ? AND empresa_id = ?',
+      [tipo_marcacion, punto_marcaje_id ?? null, id, empresaId]
+    );
+    if (!result.affectedRows) throw new (require('../../utils/AppError'))('Trabajador no encontrado', 404);
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS} FROM trabajadores WHERE id = ? AND empresa_id = ? LIMIT 1`,
+      [id, empresaId]
+    );
+    return filas[0];
+  },
+
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT ${COLUMNAS} FROM trabajadores

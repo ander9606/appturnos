@@ -94,9 +94,19 @@ async function eliminarDiploma(req, res) {
   res.json({ success: true, data: null });
 }
 
+async function actualizarMarcacion(req, res) {
+  const data = await TrabajadoresService.actualizarMarcacion(
+    req.empresa_id,
+    Number(req.params.id),
+    req.body
+  );
+  res.json({ success: true, data });
+}
+
 module.exports = {
   listar, obtener, buscarPorCedula, crear, actualizar, eliminar,
   obtenerMe, actualizarMe, actualizarExtras,
   crearExperiencia, eliminarExperiencia,
   crearDiploma, eliminarDiploma,
+  actualizarMarcacion,
 };

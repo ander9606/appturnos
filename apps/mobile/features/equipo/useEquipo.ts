@@ -67,6 +67,18 @@ export function useActualizarTrabajador(id: number) {
   });
 }
 
+export function useActualizarMarcacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, tipo_marcacion, punto_marcaje_id }: {
+      id: number;
+      tipo_marcacion: 'libre' | 'fijo';
+      punto_marcaje_id?: number | null;
+    }) => trabajadoresApi.actualizarMarcacion(id, { tipo_marcacion, punto_marcaje_id }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
+  });
+}
+
 export function useDesactivarTrabajador() {
   const qc = useQueryClient();
   return useMutation({

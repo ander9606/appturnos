@@ -33,6 +33,8 @@ export interface Trabajador {
   numero_cuenta: string | null;
   ant_judiciales_fecha: string | null;
   ant_disciplinarios_fecha: string | null;
+  tipo_marcacion: 'libre' | 'fijo';
+  punto_marcaje_id: number | null;
   activo: boolean;
   external_ref: string | null;
   ranking: number | null;
@@ -178,6 +180,13 @@ export const trabajadoresApi = {
   /** Trabajador: actualizar sus propios datos de perfil. */
   updateMe: (payload: UpdateMePayload): Promise<Trabajador> =>
     api.patch<Trabajador>('/api/trabajadores/me', payload),
+
+  /** admin/jefe_nomina: actualizar tipo de marcación y punto asignado al trabajador. */
+  actualizarMarcacion: (
+    id: number,
+    data: { tipo_marcacion: 'libre' | 'fijo'; punto_marcaje_id?: number | null }
+  ): Promise<Trabajador> =>
+    api.patch<Trabajador>(`/api/trabajadores/${id}/marcacion`, data),
 
   /** trabajador_nomina: activar/desactivar opción de turnos extra. */
   actualizarExtras: (acepta_extras: boolean): Promise<Trabajador> =>

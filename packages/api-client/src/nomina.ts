@@ -140,6 +140,8 @@ export const nominaApi = {
     periodo_id?: number;
     trabajador_id?: number;
     fecha?: string;
+    fecha_desde?: string;
+    fecha_hasta?: string;
     page?: number;
     limit?: number;
   }) {
@@ -147,6 +149,8 @@ export const nominaApi = {
     if (params.periodo_id)    qs.set('periodo_id',    String(params.periodo_id));
     if (params.trabajador_id) qs.set('trabajador_id', String(params.trabajador_id));
     if (params.fecha)         qs.set('fecha',         params.fecha);
+    if (params.fecha_desde)   qs.set('fecha_desde',   params.fecha_desde);
+    if (params.fecha_hasta)   qs.set('fecha_hasta',   params.fecha_hasta);
     if (params.page)          qs.set('page',          String(params.page));
     if (params.limit)         qs.set('limit',         String(params.limit));
     const q = qs.toString() ? `?${qs}` : '';
