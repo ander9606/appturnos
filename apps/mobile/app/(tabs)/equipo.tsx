@@ -26,6 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { useMisEmpresas, useSolicitudes } from '@/features/empresas/useTrabajadorEmpresa';
+import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { COLORS } from '@/lib/designTokens';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
@@ -33,6 +34,87 @@ import type { Trabajador, TipoTrabajador } from '@api-client';
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const MANAGE_ROLES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
+
+// ── Nomina worker view — Mi empresa (singular) ───────────────────────────
+
+function MiEmpresaNominaView() {
+  const { data: perfil, isLoading } = useNominaPerfil();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
+        <ActivityIndicator color="#64748B" />
+      </SafeAreaView>
+    );
+  }
+
+  const cargos = perfil?.cargos ?? [];
+  const cargoTexto = perfil?.cargo ?? null;
+
+  return (
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <View className="px-5 pt-4 pb-3">
+        <Text className="text-2xl font-bold text-foreground">Mi empresa</Text>
+        <Text className="text-sm text-muted-foreground mt-0.5">
+          Tu vínculo laboral actual
+        </Text>
+      </View>
+
+      <View className="px-5 gap-3">
+        {/* Empresa */}
+        <View className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center gap-4">
+          <View className="w-12 h-12 rounded-2xl bg-primary/10 items-center justify-center">
+            <Ionicons name="business-outline" size={22} color="#FF5A3C" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-bold text-foreground">
+              {perfil?.empresa_nombre ?? '—'}
+            </Text>
+            <Text className="text-xs text-muted-foreground mt-0.5">Empresa empleadora</Text>
+          </View>
+        </View>
+
+        {/* Cargo de texto (campo libre del trabajador) */}
+        {cargoTexto && (
+          <View className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center gap-4">
+            <View className="w-12 h-12 rounded-2xl bg-blue-50 items-center justify-center">
+              <Ionicons name="briefcase-outline" size={22} color="#3B82F6" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-semibold text-foreground">{cargoTexto}</Text>
+              <Text className="text-xs text-muted-foreground mt-0.5">Cargo</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Cargos certificados (del catálogo de la empresa) */}
+        {cargos.length > 0 && (
+          <View className="bg-card rounded-2xl border border-border overflow-hidden">
+            <View className="px-5 py-3 border-b border-border">
+              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Cargos que desempeña
+              </Text>
+            </View>
+            {cargos.map((c, i) => (
+              <View
+                key={c.id}
+                className={`px-5 py-3 flex-row items-center gap-3 ${i > 0 ? 'border-t border-border' : ''}`}
+              >
+                <Ionicons name="checkmark-circle-outline" size={16} color="#22C55E" />
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-foreground">{c.nombre}</Text>
+                  {c.codigo && (
+                    <Text className="text-xs text-muted-foreground">{c.codigo}</Text>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
 
 // ── Worker view ───────────────────────────────────────────────────────────
 
@@ -155,7 +237,7 @@ export default function EquipoScreen() {
   // ── Vista trabajador ──────────────────────────────────────────────────
 
   if (!canManage) {
-    return <WorkerView />;
+    return usuario?.rol === 'trabajador_nomina' ? <MiEmpresaNominaView /> : <WorkerView />;
   }
 
   // ── Filtrado local por búsqueda ────────────────────────────────────────

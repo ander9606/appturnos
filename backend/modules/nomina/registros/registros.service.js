@@ -4,6 +4,7 @@ const RegistrosModel       = require('./registros.model');
 const PeriodosModel        = require('../periodos/periodos.model');
 const TrabajadoresModel    = require('../../trabajadores/trabajadores.model');
 const PuntosMarcajeModel   = require('../../puntos-marcaje/puntos-marcaje.model');
+const EmpresasModel        = require('../../empresas/empresas.model');
 const CompensatoriosService = require('../compensatorios/compensatorios.service');
 const { calcularHoras }    = require('../../../utils/laboralUtils');
 const AppError             = require('../../../utils/AppError');
@@ -178,15 +179,21 @@ const RegistrosService = {
       throw new AppError('Tu usuario no está vinculado a un trabajador activo', 403);
     }
 
-    let puntoMarcaje = null;
-    if (trabajador.punto_marcaje_id) {
-      puntoMarcaje = await PuntosMarcajeModel.obtenerPorId(empresaId, trabajador.punto_marcaje_id);
-    }
+    const [puntoMarcaje, empresa, cargos] = await Promise.all([
+      trabajador.punto_marcaje_id
+        ? PuntosMarcajeModel.obtenerPorId(empresaId, trabajador.punto_marcaje_id)
+        : Promise.resolve(null),
+      EmpresasModel.obtenerDetalle(empresaId),
+      TrabajadoresModel.listarCargos(trabajador.id),
+    ]);
 
     return {
       id: trabajador.id,
       nombre: trabajador.nombre,
       apellido: trabajador.apellido,
+      cargo: trabajador.cargo ?? null,
+      empresa_nombre: empresa?.nombre ?? null,
+      cargos,
       tipo_marcacion: trabajador.tipo_marcacion ?? 'libre',
       punto_marcaje: puntoMarcaje,
       salario_base: trabajador.salario_base,

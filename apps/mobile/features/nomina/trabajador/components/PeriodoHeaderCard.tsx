@@ -8,8 +8,9 @@
  *   • Resumen semanal
  */
 
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { PeriodoBadge } from '../../PeriodoBadge';
 import { formatCOP } from '@/lib/formatters';
 import {
@@ -45,7 +46,9 @@ export function PeriodoHeaderCard({
   color,
   todayLabel,
 }: Props) {
+  const [visible, setVisible] = useState(false);
   const analisisHoy = registroHoy ? analizarDia(registroHoy, valorHora) : null;
+  const mask = (v: string) => (visible ? v : '••••••');
 
   return (
     <View
@@ -69,7 +72,7 @@ export function PeriodoHeaderCard({
       <View className="bg-white/20 rounded-2xl px-4 py-3 flex-row items-center gap-3">
         <View className="flex-1 gap-0.5">
           <Text className="text-white text-lg font-extrabold">
-            {salarioBase != null ? formatCOP(salarioBase) : '—'}
+            {salarioBase != null ? mask(formatCOP(salarioBase)) : '—'}
           </Text>
           <Text className="text-white/70 text-[10px]">Salario mensual</Text>
         </View>
@@ -77,7 +80,7 @@ export function PeriodoHeaderCard({
         {salarioBase != null && (
           <View className="gap-0.5 items-end">
             <Text className="text-white text-sm font-bold">
-              {formatCOP(Math.round(valorHora))} / h
+              {mask(formatCOP(Math.round(valorHora)))} / h
             </Text>
             <Text className="text-white/70 text-[10px]">Valor hora</Text>
           </View>
@@ -86,11 +89,15 @@ export function PeriodoHeaderCard({
         {resumen.valorExtraCOP > 0 && (
           <View className="bg-white/25 rounded-xl px-2.5 py-1.5 gap-0.5 items-center">
             <Text className="text-white text-sm font-extrabold">
-              +{formatCOP(resumen.valorExtraCOP)}
+              +{mask(formatCOP(resumen.valorExtraCOP))}
             </Text>
             <Text className="text-white/70 text-[9px]">Extra período</Text>
           </View>
         )}
+
+        <TouchableOpacity onPress={() => setVisible((v) => !v)} hitSlop={8}>
+          <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={18} color="rgba(255,255,255,0.8)" />
+        </TouchableOpacity>
       </View>
 
       {/* ── Card estado hoy ─────────────────────────────────── */}
@@ -139,7 +146,7 @@ export function PeriodoHeaderCard({
                   <Text className="text-white/40">·</Text>
                   <View className="gap-0.5">
                     <Text className="text-white text-sm font-bold">
-                      +{formatCOP(analisisHoy.valorExtraCOP)}
+                      +{mask(formatCOP(analisisHoy.valorExtraCOP))}
                     </Text>
                     <Text className="text-white/60 text-[10px]">Extra hoy</Text>
                   </View>
@@ -162,7 +169,7 @@ export function PeriodoHeaderCard({
         {resumenSemana.valorExtraCOP > 0 && (
           <View className="gap-0.5 flex-1">
             <Text className="text-white text-base font-extrabold">
-              +{formatCOP(resumenSemana.valorExtraCOP)}
+              +{mask(formatCOP(resumenSemana.valorExtraCOP))}
             </Text>
             <Text className="text-white/70 text-[10px]">Extra sem.</Text>
           </View>

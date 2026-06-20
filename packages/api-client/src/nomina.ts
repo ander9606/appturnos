@@ -103,6 +103,9 @@ export interface TrabajadorNominaPerfil {
   id: number;
   nombre: string;
   apellido: string;
+  cargo: string | null;
+  empresa_nombre: string | null;
+  cargos: Array<{ id: number; nombre: string; codigo: string | null }>;
   tipo_marcacion: TipoMarcacion;
   punto_marcaje: PuntoMarcaje | null;
   salario_base: number | null;
