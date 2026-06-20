@@ -15,7 +15,17 @@
 --   actual (comportamiento previo, solo para períodos vivos).
 -- ============================================================
 
-ALTER TABLE registros_diarios
-  ADD COLUMN valor_hora_snapshot DECIMAL(10,4) NULL
-    COMMENT 'Valor hora congelado al cerrar el período (COP). NULL = período aún abierto.'
-  AFTER horas_festivo;
+-- ponytail: idempotente vía information_schema — columna pre-existía en algunos entornos
+SET @col_exists = (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME   = 'registros_diarios'
+    AND COLUMN_NAME  = 'valor_hora_snapshot'
+);
+SET @ddl = IF(@col_exists = 0,
+  'ALTER TABLE registros_diarios ADD COLUMN valor_hora_snapshot DECIMAL(10,4) NULL COMMENT ''Valor hora congelado al cerrar el período (COP). NULL = período aún abierto.'' AFTER horas_festivo',
+  'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

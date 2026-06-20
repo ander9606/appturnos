@@ -4,7 +4,7 @@ const express          = require('express');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
 const { ROLES }        = require('../../../config/constants');
 const { body, param, query } = require('express-validator');
-const { validarCampos } = require('../../../middleware/validator');
+const { validar: validarCampos } = require('../../../middleware/validator');
 const ctrl             = require('./compensatorios.controller');
 
 const router = express.Router();
