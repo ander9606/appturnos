@@ -134,6 +134,17 @@ const RegistrosService = {
       novedad: datos.novedad || null,
       tipo_dia: 'ordinario',
     });
+
+    // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que marcarSalida.
+    // La unique constraint en origen_registro_id previene duplicados.
+    await CompensatoriosService.crearSiCorresponde(empresaId, {
+      trabajadorId,
+      periodoId: datos.periodo_id,
+      fecha: datos.fecha,
+      esFestivo: Boolean(horas.es_festivo),
+      registroId: id,
+    });
+
     return RegistrosModel.obtenerPorId(empresaId, id);
   },
 
