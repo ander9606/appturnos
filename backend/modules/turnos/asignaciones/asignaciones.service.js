@@ -283,6 +283,47 @@ const AsignacionesService = {
     return AsignacionesModel.obtenerPorId(dbEmpresaId, id);
   },
 
+  /**
+   * Corrección manual de ingreso y/o egreso por jefe_turnos / admin_empresa.
+   * No requiere GPS ni firma digital. Recalcula horas_trabajadas si ambos extremos están presentes.
+   * Estados permitidos: confirmado, en_progreso, completado.
+   */
+  async corregir(empresaId, id, usuarioId, { hora_ingreso_real, hora_egreso_real }) {
+    const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
+    if (!asig) throw new AppError('Asignación no encontrada', 404);
+    if (!['confirmado', 'en_progreso', 'completado'].includes(asig.estado)) {
+      throw new AppError('Solo se pueden corregir asignaciones confirmadas, en progreso o completadas', 409);
+    }
+
+    const horaIngreso = hora_ingreso_real !== undefined ? hora_ingreso_real : asig.hora_ingreso_real;
+    const horaEgreso  = hora_egreso_real  !== undefined ? hora_egreso_real  : asig.hora_egreso_real;
+
+    if (horaIngreso && horaEgreso && new Date(horaEgreso) <= new Date(horaIngreso)) {
+      throw new AppError('La hora de egreso debe ser posterior al ingreso', 422);
+    }
+
+    let estadoNuevo;
+    let horasTrabajadas;
+    if (horaIngreso && horaEgreso) {
+      estadoNuevo    = 'completado';
+      horasTrabajadas = (new Date(horaEgreso) - new Date(horaIngreso)) / 3_600_000;
+    } else if (horaIngreso) {
+      estadoNuevo    = 'en_progreso';
+      horasTrabajadas = null;
+    } else {
+      estadoNuevo    = 'confirmado';
+      horasTrabajadas = null;
+    }
+
+    await AsignacionesModel.corregir(empresaId, id, { horaIngreso, horaEgreso, horasTrabajadas, estado: estadoNuevo });
+
+    if (estadoNuevo === 'completado') {
+      await CostoLaborService.verificarYEmitir(empresaId, asig.oferta_id);
+    }
+
+    return AsignacionesModel.obtenerPorId(empresaId, id);
+  },
+
   async marcarNoPresentado(empresaId, id) {
     const res = await AsignacionesModel.marcarNoPresentado(empresaId, id);
     if (!res.ok) {

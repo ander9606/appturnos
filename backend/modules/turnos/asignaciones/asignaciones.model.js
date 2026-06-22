@@ -577,6 +577,18 @@ const AsignacionesModel = {
     return Array.from(workers.values());
   },
 
+  /** Corrección manual de ingreso/egreso por un gestor (sin GPS ni firma). */
+  async corregir(empresaId, id, { horaIngreso, horaEgreso, horasTrabajadas, estado }) {
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno
+       SET hora_ingreso_real = ?, hora_egreso_real = ?,
+           horas_trabajadas  = ?, estado = ?
+       WHERE id = ? AND empresa_id = ?`,
+      [horaIngreso ?? null, horaEgreso ?? null, horasTrabajadas ?? null, estado, id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
   async obtenerConDetalles(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT a.*,

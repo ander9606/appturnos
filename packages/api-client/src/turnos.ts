@@ -313,6 +313,18 @@ export const turnosApi = {
   },
 
   /**
+   * Corrección manual de ingreso y/o egreso por gestor/admin (sin GPS ni firma).
+   * Recalcula horas_trabajadas si se proporcionan ambos extremos.
+   * Acepta ISO 8601: "2025-06-20T08:30:00" o "2025-06-20T08:30:00.000Z".
+   */
+  corregirAsignacion(
+    asignacionId: number,
+    datos: { hora_ingreso_real?: string; hora_egreso_real?: string }
+  ): Promise<Asignacion> {
+    return api.patch<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/corregir`, datos);
+  },
+
+  /**
    * Liquidación de turnos: por trabajador, cuánto se le debe pagar.
    * Agrupa asignaciones completadas en el rango de fechas dado.
    */
