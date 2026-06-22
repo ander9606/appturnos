@@ -54,6 +54,21 @@ export function useCrearPeriodo() {
   });
 }
 
+export function useCrearRegistro() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (datos: {
+      periodo_id: number;
+      fecha: string;
+      hora_entrada: string;
+      hora_salida?: string;
+      trabajador_id?: number;
+      novedad?: string;
+    }) => nominaApi.crearRegistro(datos),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
+  });
+}
+
 export function useCorregirRegistro() {
   const qc = useQueryClient();
   return useMutation({
