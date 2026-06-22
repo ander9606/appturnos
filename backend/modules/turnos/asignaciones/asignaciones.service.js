@@ -284,6 +284,56 @@ const AsignacionesService = {
   },
 
   /**
+   * Asignación directa por gestor/admin: crea la asignación confirmada sin que el
+   * trabajador tenga que postularse primero. Útil para cuadrar equipos rápido.
+   */
+  async asignarDirecto(empresaId, ofertaId, { puesto_id, trabajador_id }) {
+    const res = await AsignacionesModel.asignarDirecto(empresaId, ofertaId, puesto_id, trabajador_id);
+    if (!res.ok) {
+      const errores = {
+        oferta:    ['La oferta no está disponible para asignaciones', 409],
+        puesto:    ['El puesto no pertenece a esta oferta', 400],
+        lleno:     ['El puesto ya no tiene plazas disponibles', 409],
+        traslape:  ['El trabajador ya tiene un turno confirmado en ese horario', 409],
+        duplicado: ['El trabajador ya está asignado a este puesto', 409],
+      };
+      const [mensaje, codigo] = errores[res.motivo];
+      throw new AppError(mensaje, codigo);
+    }
+
+    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, res.asignacionId);
+    const detalles   = await AsignacionesModel.obtenerConDetalles(empresaId, res.asignacionId).catch(() => null);
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajador_id);
+
+    if (detalles) {
+      const fecha = fmtFechaCorta(detalles.oferta_fecha);
+      const hora  = detalles.hora_inicio?.slice(0, 5) ?? '';
+      const lugar = detalles.lugar ? ` · ${detalles.lugar}` : '';
+      const cargo = detalles.cargo_nombre ? ` como ${detalles.cargo_nombre}` : '';
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajador?.usuario_id,
+        tipo: 'postulacion.confirmada',
+        titulo: 'Turno asignado',
+        mensaje: `Fuiste asignado${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`,
+        data: { asignacion_id: res.asignacionId, oferta_id: ofertaId },
+      });
+
+      if (detalles.oferta_external_ref) {
+        await IntegracionService.emitir(empresaId, 'asignacion.confirmada', {
+          external_ref:  detalles.oferta_external_ref,
+          empleado_ref:  detalles.trabajador_external_ref || null,
+          nombre:        detalles.trabajador_nombre,
+          apellido:      detalles.trabajador_apellido,
+          rol:           detalles.cargo_codigo || 'operario',
+        });
+      }
+    }
+
+    return asignacion;
+  },
+
+  /**
    * Corrección manual de ingreso y/o egreso por jefe_turnos / admin_empresa.
    * No requiere GPS ni firma digital. Recalcula horas_trabajadas si ambos extremos están presentes.
    * Estados permitidos: confirmado, en_progreso, completado.

@@ -233,6 +233,17 @@ export const turnosApi = {
     return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });
   },
 
+  /**
+   * Asignación directa por gestor/admin: confirma al trabajador sin postulación previa.
+   * Solo para jefe_turnos y admin_empresa.
+   */
+  asignarDirecto(ofertaId: number, puestoId: number, trabajadorId: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/asignar`, {
+      puesto_id: puestoId,
+      trabajador_id: trabajadorId,
+    });
+  },
+
   /** Retirar postulación de un puesto (solo cuando estado === 'pendiente'). */
   retirar(ofertaId: number, puestoId: number): Promise<null> {
     return api.delete<null>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });

@@ -577,6 +577,100 @@ const AsignacionesModel = {
     return Array.from(workers.values());
   },
 
+  /**
+   * Asignación directa: crea la asignación en estado 'confirmado' sin postulación previa.
+   * Hace las mismas validaciones atómicas que `confirmar` (plazas, traslape, duplicados).
+   * @returns {Promise<{ok:boolean, asignacionId?:number, motivo?:string}>}
+   */
+  async asignarDirecto(empresaId, ofertaId, puestoId, trabajadorId) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [[oferta]] = await conn.query(
+        'SELECT * FROM ofertas_turno WHERE id = ? AND empresa_id = ? FOR UPDATE',
+        [ofertaId, empresaId]
+      );
+      if (!oferta || !['abierta', 'publicada'].includes(oferta.estado)) {
+        await conn.rollback();
+        return { ok: false, motivo: 'oferta' };
+      }
+
+      const [[puesto]] = await conn.query(
+        'SELECT * FROM oferta_puestos WHERE id = ? AND oferta_id = ? FOR UPDATE',
+        [puestoId, ofertaId]
+      );
+      if (!puesto) {
+        await conn.rollback();
+        return { ok: false, motivo: 'puesto' };
+      }
+      if (puesto.plazas_cubiertas >= puesto.plazas) {
+        await conn.rollback();
+        return { ok: false, motivo: 'lleno' };
+      }
+
+      const finNuevo = oferta.hora_fin_estimada ?? '23:59:59';
+      const [[traslape]] = await conn.query(
+        `SELECT a.id FROM asignaciones_turno a
+         JOIN ofertas_turno o ON o.id = a.oferta_id
+         WHERE a.trabajador_id = ?
+           AND a.estado IN ('confirmado', 'en_progreso')
+           AND o.fecha = ?
+           AND o.hora_inicio < ?
+           AND COALESCE(o.hora_fin_estimada, '23:59:59') > ?
+         LIMIT 1`,
+        [trabajadorId, oferta.fecha, finNuevo, oferta.hora_inicio]
+      );
+      if (traslape) {
+        await conn.rollback();
+        return { ok: false, motivo: 'traslape' };
+      }
+
+      const [[existente]] = await conn.query(
+        `SELECT id FROM asignaciones_turno
+         WHERE puesto_id = ? AND trabajador_id = ? AND estado NOT IN ('cancelado')
+         LIMIT 1`,
+        [puestoId, trabajadorId]
+      );
+      if (existente) {
+        await conn.rollback();
+        return { ok: false, motivo: 'duplicado' };
+      }
+
+      const [res] = await conn.query(
+        `INSERT INTO asignaciones_turno (empresa_id, oferta_id, puesto_id, trabajador_id, estado)
+         VALUES (?, ?, ?, ?, 'confirmado')`,
+        [empresaId, ofertaId, puestoId, trabajadorId]
+      );
+      const asignacionId = res.insertId;
+
+      await conn.query(
+        'UPDATE oferta_puestos SET plazas_cubiertas = plazas_cubiertas + 1 WHERE id = ?',
+        [puestoId]
+      );
+
+      await ContratosModel.crear(
+        empresaId,
+        {
+          asignacionId,
+          anio: String(oferta.fecha).slice(0, 4),
+          fecha: oferta.fecha,
+          descripcionLabor: oferta.descripcion || oferta.titulo,
+          valorDia: puesto.tarifa_dia,
+        },
+        conn
+      );
+
+      await conn.commit();
+      return { ok: true, asignacionId };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
   /** Corrección manual de ingreso/egreso por un gestor (sin GPS ni firma). */
   async corregir(empresaId, id, { horaIngreso, horaEgreso, horasTrabajadas, estado }) {
     const [res] = await pool.query(
