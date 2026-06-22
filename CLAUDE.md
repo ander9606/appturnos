@@ -21,6 +21,14 @@ Before writing any code, work through this hierarchy in order:
 
 ## Commands
 
+### Web (`apps/web/`)
+```bash
+cd apps/web
+npm run dev          # vite dev server (port 5174)
+npm run build        # production build
+npm run type-check   # tsc --noEmit
+```
+
 ### Backend (`backend/`)
 ```bash
 cd backend
