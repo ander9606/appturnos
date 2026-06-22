@@ -78,6 +78,11 @@ export interface Asignacion {
   horas_nocturnas?: number;
   horas_festivo?: number;
   es_festivo?: number;
+  // Auditoría de acciones de gestores
+  rechazado_por: number | null;
+  rechazado_at: string | null;
+  cancelado_por: number | null;
+  cancelado_at: string | null;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;

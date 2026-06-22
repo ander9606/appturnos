@@ -202,7 +202,7 @@ const AsignacionesModel = {
    * Devuelve la plaza al puesto dentro de una transacción.
    * @returns {Promise<{ok:boolean, motivo?:string}>}
    */
-  async cancelar(empresaId, id) {
+  async cancelar(empresaId, id, gestorId) {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -221,8 +221,8 @@ const AsignacionesModel = {
       }
 
       await conn.query(
-        "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE id = ?",
-        [id]
+        "UPDATE asignaciones_turno SET estado = 'cancelado', cancelado_por = ?, cancelado_at = NOW() WHERE id = ?",
+        [gestorId, id]
       );
       await conn.query(
         'UPDATE oferta_puestos SET plazas_cubiertas = GREATEST(0, plazas_cubiertas - 1) WHERE id = ?',
@@ -244,7 +244,7 @@ const AsignacionesModel = {
    * No requiere transacción: plazas_cubiertas no fue incrementado aún.
    * @returns {Promise<{ok:boolean, motivo?:string}>}
    */
-  async rechazar(empresaId, id) {
+  async rechazar(empresaId, id, gestorId) {
     const [[asig]] = await pool.query(
       'SELECT estado FROM asignaciones_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
       [id, empresaId]
@@ -253,8 +253,8 @@ const AsignacionesModel = {
     if (asig.estado !== 'pendiente') return { ok: false, motivo: 'estado' };
 
     await pool.query(
-      "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE id = ? AND empresa_id = ?",
-      [id, empresaId]
+      "UPDATE asignaciones_turno SET estado = 'cancelado', rechazado_por = ?, rechazado_at = NOW() WHERE id = ? AND empresa_id = ?",
+      [gestorId, id, empresaId]
     );
     return { ok: true };
   },

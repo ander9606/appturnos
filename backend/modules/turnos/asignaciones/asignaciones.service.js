@@ -106,8 +106,8 @@ const AsignacionesService = {
     return asignacion;
   },
 
-  async cancelar(empresaId, id) {
-    const res = await AsignacionesModel.cancelar(empresaId, id);
+  async cancelar(empresaId, id, gestorId) {
+    const res = await AsignacionesModel.cancelar(empresaId, id, gestorId);
     if (!res.ok) {
       const errores = {
         no_existe: ['Asignación no encontrada', 404],
@@ -143,8 +143,8 @@ const AsignacionesService = {
     return asignacion;
   },
 
-  async rechazar(empresaId, id) {
-    const res = await AsignacionesModel.rechazar(empresaId, id);
+  async rechazar(empresaId, id, gestorId) {
+    const res = await AsignacionesModel.rechazar(empresaId, id, gestorId);
     if (!res.ok) {
       const errores = {
         no_existe: ['Asignación no encontrada', 404],

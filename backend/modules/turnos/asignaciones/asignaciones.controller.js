@@ -28,12 +28,12 @@ async function confirmar(req, res) {
 }
 
 async function cancelar(req, res) {
-  const data = await AsignacionesService.cancelar(req.empresa_id, Number(req.params.id));
+  const data = await AsignacionesService.cancelar(req.empresa_id, Number(req.params.id), req.usuario.sub);
   res.json({ success: true, data, message: 'Asignación cancelada' });
 }
 
 async function rechazar(req, res) {
-  const data = await AsignacionesService.rechazar(req.empresa_id, Number(req.params.id));
+  const data = await AsignacionesService.rechazar(req.empresa_id, Number(req.params.id), req.usuario.sub);
   res.json({ success: true, data, message: 'Postulación rechazada' });
 }
 
