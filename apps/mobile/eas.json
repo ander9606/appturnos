@@ -16,13 +16,13 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-staging.tudominio.com"
+        "EXPO_PUBLIC_API_URL": "https://api.zaturno.app"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.tudominio.com"
+        "EXPO_PUBLIC_API_URL": "https://api.zaturno.app"
       }
     }
   },

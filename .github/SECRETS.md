@@ -25,7 +25,7 @@ cat ~/.ssh/appturnos_deploy  # copiar este contenido al secret
 | Secret | Descripción | Cómo obtenerlo |
 |--------|-------------|----------------|
 | `EXPO_TOKEN` | Token de autenticación de Expo | `eas login` → expo.dev → Account → Access Tokens |
-| `EXPO_PUBLIC_API_URL` | URL del backend en producción | `https://api.tudominio.com` |
+| `EXPO_PUBLIC_API_URL` | URL del backend en producción | `https://api.zaturno.app` |
 
 ### Obtener EXPO_TOKEN:
 1. Ir a https://expo.dev/accounts/[tu-usuario]/settings/access-tokens
@@ -34,12 +34,12 @@ cat ~/.ssh/appturnos_deploy  # copiar este contenido al secret
 
 ## Variables de entorno en el VPS
 
-El archivo `/srv/appturnos/backend/.env` debe existir en el VPS con
+El archivo `/srv/zaturno/backend/.env` debe existir en el VPS con
 los valores de producción. NO se gestiona por GitHub Actions.
 
 Estructura recomendada en el VPS:
 ```
-/srv/appturnos/
+/srv/zaturno/
 ├── docker-compose.yml   ← del repo
 ├── backend/
 │   ├── .env             ← NO en git, creado manualmente en el VPS

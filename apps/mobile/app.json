@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "AppTurnos",
-    "slug": "appturnos",
+    "name": "Zaturno",
+    "slug": "zaturno",
     "owner": "anderson960616",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -16,7 +16,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.appturnos.mobile",
+      "bundleIdentifier": "com.zaturno.mobile",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "AppTurnos necesita tu ubicación para verificar que estás en el punto de trabajo al marcar entrada/salida.",
         "NSFaceIDUsageDescription": "Usa Face ID para acceder rápidamente a AppTurnos."
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FF5A3C"
       },
-      "package": "com.appturnos.mobile",
+      "package": "com.zaturno.mobile",
       "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "USE_FINGERPRINT", "USE_BIOMETRIC"]
     },
     "web": {
