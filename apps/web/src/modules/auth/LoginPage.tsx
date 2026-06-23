@@ -56,7 +56,7 @@ export function LoginPage() {
           <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-3 shadow-lg shadow-primary/30">
             <Calendar size={28} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">AppTurnos</h1>
+          <h1 className="text-2xl font-bold text-foreground">Zaturno</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Panel de administración</p>
         </div>
 
