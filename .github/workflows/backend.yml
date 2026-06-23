@@ -45,30 +45,26 @@ jobs:
 
     steps:
       - name: Deploy vía SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: root
-          key: ${{ secrets.DROPLET_SSH_KEY }}
-          script: |
+        env:
+          SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+          ssh root@"$HOST" << 'ENDSSH'
             set -e
             cd /app
-
             echo "→ Actualizando código..."
             git pull origin main
-
-            echo "→ Construyendo imagen..."
-            docker compose build api
-
-            echo "→ Aplicando migraciones..."
-            # Levanta la DB si no está corriendo y corre las migraciones
-            docker compose run --rm api npm run migrate
-
+            echo "→ Reconstruyendo API..."
+            docker compose --env-file backend/.env build api
             echo "→ Reiniciando API..."
-            docker compose up -d api
-
+            docker compose --env-file backend/.env up -d api
             echo "→ Verificando health..."
             sleep 5
             curl -sf http://localhost:3001/api/health || (echo "Health check falló" && exit 1)
-
             echo "✅ Deploy completado"
+          ENDSSH
