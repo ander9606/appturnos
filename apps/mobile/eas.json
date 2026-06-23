@@ -22,6 +22,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "prebuildCommand": "npx expo prebuild --clean --platform android",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.zaturno.app"
       }
