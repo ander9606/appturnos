@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { notificacionesApi } from '@api-client';
 
@@ -19,6 +20,8 @@ Notifications.setNotificationHandler({
  * the user authenticates.
  */
 export async function registerPushNotifications(): Promise<void> {
+  // ponytail: skip in Expo Go — remote push removed from SDK 53+ — upgrade path: dev build
+  if (Constants.appOwnership === 'expo') return;
   try {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
