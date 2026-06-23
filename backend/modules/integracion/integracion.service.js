@@ -61,23 +61,27 @@ const IntegracionService = {
    * Decodifica { url, nonce }, confirma contra logiq360, y persiste el bundle de
    * secretos + el mapeo tenant_id↔empresa_id. El humano no ve ningún secreto.
    */
-  async emparejar(empresaId, codigo, appTurnosBaseUrl) {
-    let url, nonce;
+  async emparejar(empresaId, codigo) {
+    let url, nonce, webhookUrl;
     try {
-      ({ url, nonce } = JSON.parse(Buffer.from(codigo, 'base64url').toString('utf8')));
+      ({ url, nonce, webhook_url: webhookUrl } = JSON.parse(Buffer.from(codigo, 'base64url').toString('utf8')));
     } catch {
       throw new AppError('Código de emparejamiento inválido', 400);
     }
     if (!url || !nonce) throw new AppError('Código de emparejamiento inválido', 400);
 
-    const base = String(appTurnosBaseUrl).replace(/\/$/, '');
+    // Auto-detect own base URL from env; fallback to controller-injected PUBLIC_API_URL
+    const base = (process.env.PUBLIC_API_URL || '').replace(/\/$/, '');
+    const appTurnosApiKey = 'at_' + crypto.randomBytes(32).toString('hex');
+
     const resp = await fetch(`${url.replace(/\/$/, '')}/api/integracion/emparejar/confirmar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         nonce,
         app_turnos_webhook_url: `${base}/api/integracion/eventos`,
-        app_turnos_base_url: base,
+        app_turnos_base_url: base || undefined,
+        app_turnos_api_key: appTurnosApiKey,
       }),
     });
     const json = await resp.json().catch(() => ({}));
@@ -88,10 +92,10 @@ const IntegracionService = {
     const b = json.data || {};
     await IntegracionModel.guardarConfig(empresaId, {
       activo: 1,
-      webhook_url: b.webhook_url,
+      webhook_url: webhookUrl || b.webhook_url,
       webhook_secret: b.webhook_secret,
       api_key: b.api_key,
-      incoming_secret: b.incoming_secret,
+      incoming_secret: appTurnosApiKey, // key App Turnos generated — logiq360 must use it as X-API-Key
       logiq360_tenant_id: b.tenant_id,
       logiq360_base_url: b.logiq360_base_url,
     });
