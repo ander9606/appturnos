@@ -25,9 +25,7 @@ services:
     env_file: ./backend/.env
     environment:
       DB_HOST: db
-    # ponytail: expuesto directo hasta tener dominio+Caddy — quitar cuando haya HTTPS
-    ports:
-      - "3001:3001"
+    # Sin ports: solo accesible desde la red interna vía Caddy
     depends_on:
       db:
         condition: service_healthy
