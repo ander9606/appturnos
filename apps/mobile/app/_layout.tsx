@@ -39,9 +39,10 @@ const queryClient = new QueryClient({
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const segments = useSegments();
-  const status   = useAuthStore((s) => s.status);
-  const rol      = useAuthStore((s) => s.usuario?.rol);
-  const rehydrate = useAuthStore((s) => s.rehydrate);
+  const status      = useAuthStore((s) => s.status);
+  const rol         = useAuthStore((s) => s.usuario?.rol);
+  const hasLaunched = useAuthStore((s) => s.hasLaunched);
+  const rehydrate   = useAuthStore((s) => s.rehydrate);
 
   // Rehydrate once on mount
   useEffect(() => {
@@ -62,6 +63,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const inAdminGroup = segments[0] === '(admin)';
 
     const isSuperAdmin = rol === 'super_admin';
+    const welcomeRoute = hasLaunched ? '/(auth)/login' : '/(auth)/';
 
     if (status === 'authenticated') {
       if (isSuperAdmin && !inAdminGroup) {
@@ -75,9 +77,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         router.replace('/(tabs)');
       }
     } else if (status === 'unauthenticated' && !inAuthGroup) {
-      router.replace('/(auth)/');
+      router.replace(welcomeRoute);
     }
-  }, [status, segments, rol]);
+  }, [status, segments, rol, hasLaunched]);
 
   return <>{children}</>;
 }

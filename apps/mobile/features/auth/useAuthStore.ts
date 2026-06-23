@@ -16,7 +16,8 @@ import { secureTokenStore } from '@/lib/secureStore';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const KEY_USUARIO = 'appturnos.usuario';
+const KEY_USUARIO      = 'appturnos.usuario';
+const KEY_HAS_LAUNCHED = 'appturnos.hasLaunched';
 
 const _envUrl = process.env.EXPO_PUBLIC_API_URL;
 if (!_envUrl) {
@@ -47,9 +48,13 @@ type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 interface AuthState {
   status: AuthStatus;
   usuario: UsuarioPerfil | null;
+  hasLaunched: boolean;
 
   /** Llama initApiClient + lee tokens del secure store al arrancar la app */
   rehydrate(): Promise<void>;
+
+  /** Marca que el usuario ya vio la pantalla de bienvenida */
+  markLaunched(): Promise<void>;
 
   /** Login normal con email + contraseña */
   login(email: string, password: string): Promise<void>;
@@ -97,6 +102,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()((set, get) => ({
   status: 'unknown',
   usuario: null,
+  hasLaunched: false,
 
   // ── rehydrate ─────────────────────────────────────────────────────────
   async rehydrate() {
@@ -109,10 +115,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       },
     });
 
-    const [accessToken, cachedUsuario] = await Promise.all([
+    const [accessToken, cachedUsuario, launched] = await Promise.all([
       secureTokenStore.getAccessToken(),
       SecureStore.getItemAsync(KEY_USUARIO),
+      SecureStore.getItemAsync(KEY_HAS_LAUNCHED),
     ]);
+    if (launched) set({ hasLaunched: true });
 
     if (!accessToken) {
       set({ status: 'unauthenticated' });
@@ -180,6 +188,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   async setUsuario(usuario: UsuarioPerfil) {
     await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
     set({ usuario });
+  },
+
+  // ── markLaunched ──────────────────────────────────────────────────────
+  async markLaunched() {
+    await SecureStore.setItemAsync(KEY_HAS_LAUNCHED, '1');
+    set({ hasLaunched: true });
   },
 
   // ── logout ────────────────────────────────────────────────────────────

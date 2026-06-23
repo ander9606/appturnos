@@ -10,13 +10,17 @@ import {
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 
 const { height } = Dimensions.get('window');
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function WelcomeScreen() {
-  const router = useRouter();
+  const router       = useRouter();
+  const markLaunched = useAuthStore((s) => s.markLaunched);
+
+  React.useEffect(() => { markLaunched(); }, []);
 
   return (
     <SafeAreaView style={styles.root}>
