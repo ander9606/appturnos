@@ -8,9 +8,9 @@ import {
 import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea } from '../types';
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
-  abierto: 'bg-green-100 text-green-700',
-  cerrado: 'bg-amber-100 text-amber-700',
-  liquidado: 'bg-blue-100 text-blue-700',
+  abierto: 'bg-success-light text-success',
+  cerrado: 'bg-warning-light text-warning',
+  liquidado: 'bg-primary-100 text-primary-600',
 };
 
 const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario','descanso','compensatorio','incapacidad','vacacion','licencia'];
@@ -70,16 +70,16 @@ export function PeriodoDetailPage() {
     <div>
       <button
         onClick={() => navigate('/nomina')}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"
+        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
       >
         <ArrowLeft size={16} /> Volver a Nómina
       </button>
 
       {periodo && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 flex items-center gap-4">
+        <div className="bg-card border border-border rounded-xl p-4 mb-6 flex items-center gap-4">
           <div className="flex-1">
-            <p className="text-xs text-gray-500 mb-0.5">Período</p>
-            <p className="font-semibold text-gray-900">{fmtDate(periodo.fecha_inicio)} — {fmtDate(periodo.fecha_fin)}</p>
+            <p className="text-xs text-muted-foreground mb-0.5">Período</p>
+            <p className="font-semibold text-foreground">{fmtDate(periodo.fecha_inicio)} — {fmtDate(periodo.fecha_fin)}</p>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[periodo.estado as EstadoPeriodo]}`}>
             {periodo.estado.charAt(0).toUpperCase() + periodo.estado.slice(1)}
@@ -87,13 +87,13 @@ export function PeriodoDetailPage() {
         </div>
       )}
 
-      <div className="flex gap-1 mb-6 border-b border-gray-200">
+      <div className="flex gap-1 mb-6 border-b border-border">
         {(['registros', 'liquidacion'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
-              tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             {t === 'registros' ? 'Registros' : 'Liquidación'}
@@ -107,7 +107,7 @@ export function PeriodoDetailPage() {
             <select
               value={filtroTrabajador ?? ''}
               onChange={e => setFiltroTrabajador(e.target.value ? Number(e.target.value) : undefined)}
-              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
               <option value="">Todos los trabajadores</option>
               {trabajadoresEnPeriodo.map(t => (
@@ -116,21 +116,21 @@ export function PeriodoDetailPage() {
             </select>
             <button
               onClick={() => setShowCrear(true)}
-              className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
             >
               <Plus size={14} /> Agregar registro
             </button>
           </div>
 
           {loadingReg ? (
-            <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p>
+            <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
           ) : registrosFiltrados.length === 0 ? (
-            <p className="text-gray-500 text-sm py-8 text-center">Sin registros</p>
+            <p className="text-muted-foreground text-sm py-8 text-center">Sin registros</p>
           ) : (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+            <div className="bg-card border border-border rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+                  <tr className="bg-muted text-muted-foreground text-xs uppercase">
                     <th className="text-left px-3 py-3 font-medium">Trabajador</th>
                     <th className="text-left px-3 py-3 font-medium">Fecha</th>
                     <th className="text-left px-3 py-3 font-medium">Entrada</th>
@@ -144,23 +144,23 @@ export function PeriodoDetailPage() {
                 </thead>
                 <tbody>
                   {registrosFiltrados.map(r => (
-                    <tr key={r.id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-3 py-2.5 text-gray-900">
+                    <tr key={r.id} className="border-t border-border/60 hover:bg-muted">
+                      <td className="px-3 py-2.5 text-foreground">
                         {r.trabajador ? `${r.trabajador.nombre} ${r.trabajador.apellido}` : r.trabajador_id}
                       </td>
-                      <td className="px-3 py-2.5 text-gray-600">{fmtDate(r.fecha)}</td>
-                      <td className="px-3 py-2.5 text-gray-600">{r.hora_entrada ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-gray-600">{r.hora_salida ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-right text-gray-600">{fmtHrs(r.horas_ordinarias)}</td>
-                      <td className="px-3 py-2.5 text-right text-gray-600">
+                      <td className="px-3 py-2.5 text-muted-foreground">{fmtDate(r.fecha)}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground">{r.hora_entrada ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground">{r.hora_salida ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
+                      <td className="px-3 py-2.5 text-right text-muted-foreground">
                         {fmtHrs(r.horas_extra_diurnas + r.horas_extra_nocturnas)}
                       </td>
-                      <td className="px-3 py-2.5 text-gray-600 capitalize">{r.tipo_dia}</td>
-                      <td className="px-3 py-2.5 text-gray-500 max-w-32 truncate">{r.novedad ?? ''}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground capitalize">{r.tipo_dia}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground max-w-32 truncate">{r.novedad ?? ''}</td>
                       <td className="px-3 py-2.5">
                         <button
                           onClick={() => setCorrigiendoId(r.id)}
-                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          className="text-muted-foreground/60 hover:text-primary transition-colors"
                         >
                           <Pencil size={14} />
                         </button>
@@ -177,37 +177,37 @@ export function PeriodoDetailPage() {
       {tab === 'liquidacion' && (
         <div>
           {periodo?.estado === 'abierto' ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-700 text-sm">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-warning text-sm">
               El período debe estar cerrado para ver la liquidación.
             </div>
           ) : loadingLiq ? (
-            <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p>
+            <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
           ) : liqData?.data ? (
             <div>
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-white border border-gray-200 rounded-xl p-4">
-                  <p className="text-xs text-gray-500 mb-1">Trabajadores</p>
-                  <p className="text-2xl font-bold text-gray-900">{liqData.data.totales.trabajadores}</p>
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Trabajadores</p>
+                  <p className="text-2xl font-bold text-foreground">{liqData.data.totales.trabajadores}</p>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-xl p-4">
-                  <p className="text-xs text-gray-500 mb-1">Total a pagar</p>
-                  <p className="text-2xl font-bold text-gray-900">{fmtCOP(liqData.data.totales.total_general)}</p>
+                <div className="bg-card border border-border rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground mb-1">Total a pagar</p>
+                  <p className="text-2xl font-bold text-foreground">{fmtCOP(liqData.data.totales.total_general)}</p>
                 </div>
               </div>
 
               <div className="flex justify-end mb-3">
                 <button
                   onClick={handleExport}
-                  className="flex items-center gap-1.5 border border-gray-300 hover:bg-gray-50 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
                 >
                   <Download size={14} /> Exportar XLSX
                 </button>
               </div>
 
-              <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+              <div className="bg-card border border-border rounded-xl overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <tr className="bg-muted text-muted-foreground text-xs uppercase">
                       <th className="text-left px-3 py-3 font-medium">Trabajador</th>
                       <th className="text-right px-3 py-3 font-medium">Días</th>
                       <th className="text-right px-3 py-3 font-medium">Hrs Ord</th>
@@ -221,16 +221,16 @@ export function PeriodoDetailPage() {
                   </thead>
                   <tbody>
                     {(liqData.data.lineas as LiquidacionLinea[]).map(l => (
-                      <tr key={l.trabajador_id} className="border-t border-gray-100 hover:bg-gray-50">
-                        <td className="px-3 py-2.5 text-gray-900">{l.nombre} {l.apellido}</td>
-                        <td className="px-3 py-2.5 text-right text-gray-600">{l.dias_registrados}</td>
-                        <td className="px-3 py-2.5 text-right text-gray-600">{fmtHrs(l.horas_ordinarias)}</td>
-                        <td className="px-3 py-2.5 text-right text-gray-600">{fmtHrs(l.horas_extra_diurnas)}</td>
-                        <td className="px-3 py-2.5 text-right text-gray-600">{fmtHrs(l.horas_extra_nocturnas)}</td>
-                        <td className="px-3 py-2.5 text-right text-gray-600">{fmtHrs(l.horas_nocturnas)}</td>
-                        <td className="px-3 py-2.5 text-right text-gray-600">{fmtHrs(l.horas_festivo)}</td>
-                        <td className="px-3 py-2.5 text-right text-gray-600">{fmtCOP(l.valor_hora)}</td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-gray-900">{fmtCOP(l.total)}</td>
+                      <tr key={l.trabajador_id} className="border-t border-border/60 hover:bg-muted">
+                        <td className="px-3 py-2.5 text-foreground">{l.nombre} {l.apellido}</td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">{l.dias_registrados}</td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_ordinarias)}</td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_extra_diurnas)}</td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_extra_nocturnas)}</td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_nocturnas)}</td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_festivo)}</td>
+                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtCOP(l.valor_hora)}</td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-foreground">{fmtCOP(l.total)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -281,36 +281,36 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Corregir registro</h2>
-        <p className="text-sm text-gray-500 mb-4">{fmtDate(registro.fecha)}</p>
+      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
+        <h2 className="text-lg font-semibold text-foreground mb-1">Corregir registro</h2>
+        <p className="text-sm text-muted-foreground mb-4">{fmtDate(registro.fecha)}</p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hora entrada</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora entrada</label>
               <input
                 type="time"
                 value={form.hora_entrada}
                 onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hora salida</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora salida</label>
               <input
                 type="time"
                 value={form.hora_salida}
                 onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo día</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Tipo día</label>
             <select
               value={form.tipo_dia}
               onChange={e => setForm(f => ({ ...f, tipo_dia: e.target.value as TipoDia }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
               {TIPO_DIA_OPTIONS.map(o => (
                 <option key={o} value={o} className="capitalize">{o.charAt(0).toUpperCase() + o.slice(1)}</option>
@@ -318,19 +318,19 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Novedad</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Novedad</label>
             <input
               type="text"
               value={form.novedad}
               onChange={e => setForm(f => ({ ...f, novedad: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-gray-300 hover:bg-gray-50 text-sm font-medium py-2 rounded-lg transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button type="submit" disabled={corregir.isPending} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            <button type="submit" disabled={corregir.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
               {corregir.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
@@ -367,16 +367,16 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Agregar registro</h2>
+      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Agregar registro</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Trabajador</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Trabajador</label>
             <select
               required
               value={form.trabajador_id}
               onChange={e => setForm(f => ({ ...f, trabajador_id: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
               <option value="">Seleccionar...</option>
               {trabajadores.map(t => (
@@ -385,50 +385,50 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Fecha</label>
             <input
               type="date"
               required
               value={form.fecha}
               onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hora entrada</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora entrada</label>
               <input
                 type="time"
                 required
                 value={form.hora_entrada}
                 onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hora salida</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora salida</label>
               <input
                 type="time"
                 value={form.hora_salida}
                 onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Novedad</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Novedad</label>
             <input
               type="text"
               value={form.novedad}
               onChange={e => setForm(f => ({ ...f, novedad: e.target.value }))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-gray-300 hover:bg-gray-50 text-sm font-medium py-2 rounded-lg transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button type="submit" disabled={crear.isPending} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
               {crear.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>

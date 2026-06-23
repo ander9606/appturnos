@@ -23,14 +23,14 @@ export function ConfiguracionPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Configuración</h1>
-      <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
+      <h1 className="text-2xl font-bold text-foreground mb-6">Configuración</h1>
+      <div className="flex gap-1 mb-6 border-b border-border overflow-x-auto">
         {tabs.map(t => (
           <button
             key={t.value}
             onClick={() => setTab(t.value)}
             className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
-              tab === t.value ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              tab === t.value ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             {t.label}
@@ -52,7 +52,7 @@ function EmpresaTab() {
   const empresa = data?.data;
   const [form, setForm] = useState<Record<string, string> | null>(null);
 
-  if (isLoading) return <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
   if (!empresa) return null;
 
   const editing = form !== null;
@@ -77,14 +77,14 @@ function EmpresaTab() {
   });
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-6 max-w-lg">
+    <div className="bg-card border border-border rounded-2xl p-6 max-w-lg">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-gray-900">Datos de la empresa</h2>
+        <h2 className="text-base font-semibold text-foreground">Datos de la empresa</h2>
         {!editing
-          ? <button onClick={() => setForm({ ...val })} className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700"><Pencil size={14} /> Editar</button>
+          ? <button onClick={() => setForm({ ...val })} className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-600"><Pencil size={14} /> Editar</button>
           : <div className="flex gap-2">
-              <button onClick={() => setForm(null)} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 border border-gray-200 rounded-lg">Cancelar</button>
-              <button onClick={handleSave} disabled={update.isPending} className="text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1 rounded-lg">
+              <button onClick={() => setForm(null)} className="text-sm text-muted-foreground hover:text-foreground px-3 py-1 border border-border rounded-lg">Cancelar</button>
+              <button onClick={handleSave} disabled={update.isPending} className="text-sm bg-primary hover:bg-primary-600 disabled:opacity-50 text-white px-3 py-1 rounded-lg">
                 {update.isPending ? 'Guardando...' : 'Guardar'}
               </button>
             </div>
@@ -93,10 +93,10 @@ function EmpresaTab() {
       <div className="flex flex-col gap-4">
         {(['nombre', 'nit', 'direccion', 'telefono', 'email'] as const).map(k => (
           <div key={k}>
-            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">{k}</label>
+            <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">{k}</label>
             <input
               type={k === 'email' ? 'email' : 'text'}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-600"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground"
               {...field(k)}
             />
           </div>
@@ -137,15 +137,15 @@ function PuntosTab() {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <button onClick={openCreate} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+        <button onClick={openCreate} className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
           <Plus size={16} /> Nuevo punto
         </button>
       </div>
-      {isLoading ? <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p> : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr className="bg-muted text-muted-foreground text-xs uppercase">
                 <th className="text-left px-4 py-3 font-medium">Nombre</th>
                 <th className="text-right px-4 py-3 font-medium">Latitud</th>
                 <th className="text-right px-4 py-3 font-medium">Longitud</th>
@@ -156,23 +156,23 @@ function PuntosTab() {
             </thead>
             <tbody>
               {puntos.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400 text-sm">Sin puntos de marcaje</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground/60 text-sm">Sin puntos de marcaje</td></tr>
               )}
               {puntos.map(p => (
-                <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-900">{p.nombre}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{p.latitud}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{p.longitud}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{p.radio_metros}</td>
+                <tr key={p.id} className="border-t border-border/60 hover:bg-muted">
+                  <td className="px-4 py-3 text-foreground">{p.nombre}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{p.latitud}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{p.longitud}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{p.radio_metros}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                       {p.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => openEdit(p)} className="text-gray-400 hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                      <button onClick={() => { if (window.confirm('¿Eliminar punto?')) del.mutate(p.id); }} className="text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                      <button onClick={() => openEdit(p)} className="text-muted-foreground/60 hover:text-primary transition-colors"><Pencil size={14} /></button>
+                      <button onClick={() => { if (window.confirm('¿Eliminar punto?')) del.mutate(p.id); }} className="text-muted-foreground/60 hover:text-danger transition-colors"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -185,26 +185,26 @@ function PuntosTab() {
         <Modal title={editing ? 'Editar punto' : 'Nuevo punto'} onClose={() => setShowForm(false)}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-              <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+              <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Latitud *</label>
-                <input required type="number" step="any" value={form.latitud} onChange={e => setForm(f => ({ ...f, latitud: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-sm font-medium text-foreground mb-1">Latitud *</label>
+                <input required type="number" step="any" value={form.latitud} onChange={e => setForm(f => ({ ...f, latitud: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Longitud *</label>
-                <input required type="number" step="any" value={form.longitud} onChange={e => setForm(f => ({ ...f, longitud: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-sm font-medium text-foreground mb-1">Longitud *</label>
+                <input required type="number" step="any" value={form.longitud} onChange={e => setForm(f => ({ ...f, longitud: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Radio (metros) *</label>
-              <input required type="number" min="10" max="5000" value={form.radio_metros} onChange={e => setForm(f => ({ ...f, radio_metros: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Radio (metros) *</label>
+              <input required type="number" min="10" max="5000" value={form.radio_metros} onChange={e => setForm(f => ({ ...f, radio_metros: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-300 hover:bg-gray-50 text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-              <button type="submit" disabled={create.isPending || update.isPending} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">Guardar</button>
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+              <button type="submit" disabled={create.isPending || update.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">Guardar</button>
             </div>
           </form>
         </Modal>
@@ -237,15 +237,15 @@ function CargosTab() {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <button onClick={openCreate} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+        <button onClick={openCreate} className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
           <Plus size={16} /> Nuevo cargo
         </button>
       </div>
-      {isLoading ? <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p> : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr className="bg-muted text-muted-foreground text-xs uppercase">
                 <th className="text-left px-4 py-3 font-medium">Nombre</th>
                 <th className="text-left px-4 py-3 font-medium">Descripción</th>
                 <th className="text-left px-4 py-3 font-medium">Estado</th>
@@ -254,21 +254,21 @@ function CargosTab() {
             </thead>
             <tbody>
               {cargos.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-gray-400 text-sm">Sin cargos</td></tr>
+                <tr><td colSpan={4} className="px-4 py-6 text-center text-muted-foreground/60 text-sm">Sin cargos</td></tr>
               )}
               {cargos.map(c => (
-                <tr key={c.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{c.nombre}</td>
-                  <td className="px-4 py-3 text-gray-500">{c.descripcion ?? '—'}</td>
+                <tr key={c.id} className="border-t border-border/60 hover:bg-muted">
+                  <td className="px-4 py-3 font-medium text-foreground">{c.nombre}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{c.descripcion ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${c.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${c.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                       {c.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
-                      <button onClick={() => openEdit(c)} className="text-gray-400 hover:text-blue-600 transition-colors"><Pencil size={14} /></button>
-                      <button onClick={() => { if (window.confirm(`¿Eliminar cargo "${c.nombre}"?`)) del.mutate(c.id); }} className="text-gray-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                      <button onClick={() => openEdit(c)} className="text-muted-foreground/60 hover:text-primary transition-colors"><Pencil size={14} /></button>
+                      <button onClick={() => { if (window.confirm(`¿Eliminar cargo "${c.nombre}"?`)) del.mutate(c.id); }} className="text-muted-foreground/60 hover:text-danger transition-colors"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -281,16 +281,16 @@ function CargosTab() {
         <Modal title={editing ? 'Editar cargo' : 'Nuevo cargo'} onClose={() => setShowForm(false)}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-              <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+              <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-              <input type="text" value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
+              <input type="text" value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-300 hover:bg-gray-50 text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-              <button type="submit" disabled={create.isPending || update.isPending} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">Guardar</button>
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+              <button type="submit" disabled={create.isPending || update.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">Guardar</button>
             </div>
           </form>
         </Modal>
@@ -322,15 +322,15 @@ function GestoresTab() {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors">
           <Plus size={16} /> Nuevo gestor
         </button>
       </div>
-      {isLoading ? <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p> : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr className="bg-muted text-muted-foreground text-xs uppercase">
                 <th className="text-left px-4 py-3 font-medium">Nombre</th>
                 <th className="text-left px-4 py-3 font-medium">Email</th>
                 <th className="text-left px-4 py-3 font-medium">Rol</th>
@@ -340,22 +340,22 @@ function GestoresTab() {
             </thead>
             <tbody>
               {gestores.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400 text-sm">Sin gestores</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground/60 text-sm">Sin gestores</td></tr>
               )}
               {gestores.map(g => (
-                <tr key={g.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-900">{g.nombre} {g.apellido}</td>
-                  <td className="px-4 py-3 text-gray-500">{g.email}</td>
-                  <td className="px-4 py-3 text-gray-600">{ROL_LABEL[g.rol] ?? g.rol}</td>
+                <tr key={g.id} className="border-t border-border/60 hover:bg-muted">
+                  <td className="px-4 py-3 text-foreground">{g.nombre} {g.apellido}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{g.email}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{ROL_LABEL[g.rol] ?? g.rol}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${g.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${g.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                       {g.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => toggle.mutate({ id: g.id, activo: !g.activo })}
-                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                      className="text-muted-foreground/60 hover:text-primary transition-colors"
                       title={g.activo ? 'Desactivar' : 'Activar'}
                     >
                       {g.activo ? <ToggleRight size={18} className="text-green-500" /> : <ToggleLeft size={18} />}
@@ -372,31 +372,31 @@ function GestoresTab() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+                <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
-                <input required type="text" value={form.apellido} onChange={e => setForm(f => ({ ...f, apellido: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className="block text-sm font-medium text-foreground mb-1">Apellido *</label>
+                <input required type="text" value={form.apellido} onChange={e => setForm(f => ({ ...f, apellido: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Email *</label>
+              <input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rol *</label>
-              <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <label className="block text-sm font-medium text-foreground mb-1">Rol *</label>
+              <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
                 {ROLES_GESTOR.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña temporal *</label>
-              <input required type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Contraseña temporal *</label>
+              <input required type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-300 hover:bg-gray-50 text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-              <button type="submit" disabled={create.isPending} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+              <button type="submit" disabled={create.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
                 {create.isPending ? 'Creando...' : 'Crear gestor'}
               </button>
             </div>
@@ -411,8 +411,8 @@ function GestoresTab() {
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{title}</h2>
+      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
+        <h2 className="text-lg font-semibold text-foreground mb-4">{title}</h2>
         {children}
       </div>
     </div>
