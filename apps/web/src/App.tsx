@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { LoginPage } from '@/modules/auth/LoginPage';
 import { ProtectedRoute } from '@/modules/auth/ProtectedRoute';
 import { Layout } from '@/shared/components/Layout';
+import { WelcomePage } from '@/pages/WelcomePage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { NominaPage } from '@/modules/nomina/pages/NominaPage';
 import { PeriodoDetailPage } from '@/modules/nomina/pages/PeriodoDetailPage';
@@ -15,6 +16,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/bienvenida" element={<WelcomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>

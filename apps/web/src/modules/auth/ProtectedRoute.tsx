@@ -3,6 +3,6 @@ import { useAuthStore } from './authStore';
 
 export function ProtectedRoute() {
   const usuario = useAuthStore(s => s.usuario);
-  if (!usuario) return <Navigate to="/login" replace />;
+  if (!usuario) return <Navigate to="/bienvenida" replace />;
   return <Outlet />;
 }

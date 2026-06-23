@@ -75,7 +75,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         router.replace('/(tabs)');
       }
     } else if (status === 'unauthenticated' && !inAuthGroup) {
-      router.replace('/(auth)/login');
+      router.replace('/(auth)/');
     }
   }, [status, segments, rol]);
 
