@@ -7,6 +7,8 @@ import { NominaPage } from '@/modules/nomina/pages/NominaPage';
 import { PeriodoDetailPage } from '@/modules/nomina/pages/PeriodoDetailPage';
 import { EquipoPage } from '@/modules/equipo/pages/EquipoPage';
 import { TrabajadorDetailPage } from '@/modules/equipo/pages/TrabajadorDetailPage';
+import { TurnosPage } from '@/modules/turnos/pages/TurnosPage';
+import { OfertaDetailPage } from '@/modules/turnos/pages/OfertaDetailPage';
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
             <Route path="nomina/:id" element={<PeriodoDetailPage />} />
             <Route path="equipo" element={<EquipoPage />} />
             <Route path="equipo/:id" element={<TrabajadorDetailPage />} />
+            <Route path="turnos" element={<TurnosPage />} />
+            <Route path="turnos/:id" element={<OfertaDetailPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
