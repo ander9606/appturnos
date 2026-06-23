@@ -93,7 +93,7 @@ export function RegistroEmpresaPage() {
         <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-sm shadow-primary/30">
           <Calendar size={20} className="text-white" />
         </div>
-        <span className="font-bold text-foreground text-lg">AppTurnos</span>
+        <span className="font-bold text-foreground text-lg">Zaturno</span>
       </div>
 
       <div className="w-full max-w-lg bg-card border border-border rounded-2xl p-6 shadow-sm">

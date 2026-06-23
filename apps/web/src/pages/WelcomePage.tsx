@@ -14,7 +14,7 @@ export function WelcomePage() {
         <div className="w-20 h-20 rounded-3xl bg-white/20 flex items-center justify-center mb-5">
           <Calendar size={40} className="text-white" />
         </div>
-        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">AppTurnos</h1>
+        <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Zaturno</h1>
         <p className="text-white/75 text-base text-center max-w-xs">
           Gestión de turnos y nómina para tu empresa
         </p>

@@ -133,7 +133,7 @@ function TabEstado({ conectado, onGoConfig }: { conectado: boolean; onGoConfig: 
       {/* Right: event stats */}
       <div className="flex-1 flex flex-col gap-4">
         <div>
-          <p className="text-xs text-muted-foreground uppercase font-medium mb-3">Eventos salientes (App Turnos → logiq360)</p>
+          <p className="text-xs text-muted-foreground uppercase font-medium mb-3">Eventos salientes (Zaturno → logiq360)</p>
           <div className="grid grid-cols-3 gap-3">
             <EventCard label="Enviados" value={salientesEnviados} color="success" icon={CheckCircle} />
             <EventCard label="Pendientes" value={salientesPendientes} color="warning" icon={RefreshCw} />
@@ -141,7 +141,7 @@ function TabEstado({ conectado, onGoConfig }: { conectado: boolean; onGoConfig: 
           </div>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground uppercase font-medium mb-3">Eventos entrantes (logiq360 → App Turnos)</p>
+          <p className="text-xs text-muted-foreground uppercase font-medium mb-3">Eventos entrantes (logiq360 → Zaturno)</p>
           <div className="grid grid-cols-2 gap-3">
             <EventCard label="Procesados" value={entrantesProcesados} color="success" icon={CheckCircle} />
             <EventCard label="Con error" value={entrantesError} color={entrantesError > 0 ? 'danger' : 'muted'} icon={AlertCircle} />
