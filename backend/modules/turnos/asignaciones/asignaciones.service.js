@@ -271,6 +271,11 @@ const AsignacionesService = {
       throw new AppError('Debes marcar el ingreso antes de marcar la salida', 409);
     }
 
+    const minutosTranscurridos = Math.floor((Date.now() - new Date(asignacion.hora_ingreso_real)) / 60_000);
+    if (minutosTranscurridos < 1) {
+      throw new AppError('Debes esperar al menos 1 minuto entre el ingreso y la salida', 422);
+    }
+
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
       asignacion_id: id,
