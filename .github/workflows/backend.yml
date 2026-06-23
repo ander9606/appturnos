@@ -47,13 +47,12 @@ jobs:
       - name: Deploy vía SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          host: ${{ secrets.DROPLET_HOST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
           script: |
             set -e
-            cd /srv/appturnos
+            cd /app
 
             echo "→ Actualizando código..."
             git pull origin main
