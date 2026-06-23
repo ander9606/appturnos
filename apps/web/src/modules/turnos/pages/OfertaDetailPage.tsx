@@ -112,8 +112,8 @@ export function OfertaDetailPage() {
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-xl font-bold text-foreground truncate">{oferta.titulo}</h1>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${ESTADO_OFERTA_BADGE[oferta.estado]}`}>
-                {ESTADO_OFERTA_LABEL[oferta.estado]}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${ESTADO_OFERTA_BADGE[oferta.estado as EstadoOferta]}`}>
+                {ESTADO_OFERTA_LABEL[oferta.estado as EstadoOferta]}
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
