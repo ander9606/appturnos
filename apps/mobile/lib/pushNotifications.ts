@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { notificacionesApi } from '@api-client';
 
-// Show notifications while the app is in the foreground.
+// ponytail: setNotificationHandler sí funciona en Expo Go (solo aplica a notificaciones locales)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -15,12 +15,11 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Requests push notification permissions and registers the Expo push token
- * with the backend. Best-effort: never throws. Should be called once after
- * the user authenticates.
+ * Registra el Expo push token en el backend. No-op en Expo Go (SDK 53+ eliminó
+ * push remoto de Expo Go — el ERROR en consola es del propio módulo, no un crash).
  */
 export async function registerPushNotifications(): Promise<void> {
-  // ponytail: skip in Expo Go — remote push removed from SDK 53+ — upgrade path: dev build
+  // ponytail: skip en Expo Go — upgrade path: development build
   if (Constants.appOwnership === 'expo') return;
   try {
     if (Platform.OS === 'android') {
@@ -30,7 +29,6 @@ export async function registerPushNotifications(): Promise<void> {
         vibrationPattern: [0, 250, 250, 250],
       });
     }
-
     const { status: current } = await Notifications.getPermissionsAsync();
     let finalStatus = current;
     if (current !== 'granted') {
