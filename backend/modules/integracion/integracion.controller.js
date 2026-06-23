@@ -90,8 +90,13 @@ async function vincularEmpleado(req, res) {
   res.json({ success: true, data, message: 'Trabajador vinculado' });
 }
 
+/** GET /api/integracion/public/ping — verifica conectividad y autenticación desde logiq360. */
+async function publicPing(req, res) {
+  res.json({ ok: true, empresa_id: req.empresa_id });
+}
+
 module.exports = {
   recibirEventos, estado, obtenerConfig, actualizarConfig, emparejar,
   conciliacion, vincularEmpleado,
-  publicEstado, publicEnSitio,
+  publicEstado, publicEnSitio, publicPing,
 };
