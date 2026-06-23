@@ -51,7 +51,7 @@ export function WelcomePage() {
 
           {/* Empresa / Admin */}
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/registro')}
             className="flex items-center gap-4 p-5 rounded-2xl border border-border text-left transition-all active:scale-[0.98] hover:bg-muted"
             style={{ backgroundColor: '#FFFFFF' }}
           >
@@ -61,7 +61,7 @@ export function WelcomePage() {
             <div className="flex-1">
               <p className="text-foreground font-bold text-base">Tengo una empresa</p>
               <p className="text-muted-foreground text-sm mt-0.5">
-                Inicia sesión como administrador
+                Registra tu empresa o inicia sesión como admin
               </p>
             </div>
             <ChevronRight size={18} className="text-muted-foreground/60 flex-shrink-0" />

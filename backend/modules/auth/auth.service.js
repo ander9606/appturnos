@@ -268,6 +268,31 @@ const AuthService = {
     };
   },
 
+  /**
+   * Registro público de empresa nueva.
+   * Crea empresa + usuario admin_empresa en una transacción y devuelve tokens.
+   */
+  async registrarEmpresa({ nombreEmpresa, nit, nombre, apellido, email, password }) {
+    const existente = await AuthModel.buscarUsuarioPorEmail(email);
+    if (existente) throw new AppError('El email ya está registrado', 409);
+
+    // Slug único: nombre-normalizado + 3 bytes hex de entropía
+    const base = nombreEmpresa.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slug = `${base}-${crypto.randomBytes(3).toString('hex')}`;
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const { empresaId, usuarioId } = await AuthModel.registrarEmpresa({
+      nombreEmpresa, slug, nit, nombre, apellido, email, passwordHash,
+    });
+
+    const usuario = { id: usuarioId, empresa_id: empresaId, rol: ROLES.ADMIN_EMPRESA, nombre };
+    const tokens = await emitirTokens(usuario);
+    return {
+      ...tokens,
+      usuario: { id: usuarioId, empresa_id: empresaId, nombre, apellido: apellido || null, email, rol: ROLES.ADMIN_EMPRESA },
+    };
+  },
+
   /** Devuelve todos los gestores de la empresa. */
   async listarGestores(empresaId) {
     return AuthModel.listarGestores(empresaId);

@@ -3,6 +3,7 @@ import { LoginPage } from '@/modules/auth/LoginPage';
 import { ProtectedRoute } from '@/modules/auth/ProtectedRoute';
 import { Layout } from '@/shared/components/Layout';
 import { WelcomePage } from '@/pages/WelcomePage';
+import { RegistroEmpresaPage } from '@/pages/RegistroEmpresaPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { NominaPage } from '@/modules/nomina/pages/NominaPage';
 import { PeriodoDetailPage } from '@/modules/nomina/pages/PeriodoDetailPage';
@@ -17,6 +18,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/bienvenida" element={<WelcomePage />} />
+        <Route path="/registro" element={<RegistroEmpresaPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>

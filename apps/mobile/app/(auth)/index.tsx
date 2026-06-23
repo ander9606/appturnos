@@ -67,8 +67,8 @@ export default function WelcomeScreen() {
           <OptionCard
             icon="briefcase-outline"
             title="Tengo una empresa"
-            description="Inicia sesión como administrador para gestionar tu equipo"
-            onPress={() => router.push('/(auth)/login')}
+            description="Registra tu empresa o inicia sesión como administrador"
+            onPress={() => router.push('/(auth)/registro-empresa')}
             variant="outline"
           />
         </View>

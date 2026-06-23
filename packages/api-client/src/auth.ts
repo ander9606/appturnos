@@ -130,6 +130,22 @@ export const authApi = {
     );
   },
 
+  /** Registro público de empresa nueva + admin_empresa. */
+  registrarEmpresa(params: {
+    nombre_empresa: string;
+    nit?: string;
+    nombre: string;
+    apellido?: string;
+    email: string;
+    password: string;
+  }): Promise<LoginResponse> {
+    return api.post<LoginResponse>(
+      '/api/auth/registro-empresa',
+      params,
+      { authenticated: false },
+    );
+  },
+
   /** admin_empresa crea un usuario gestor en su empresa con contraseña temporal. */
   crearGestor(payload: CrearGestorPayload): Promise<CrearGestorResult> {
     return api.post<CrearGestorResult>('/api/auth/crear-gestor', payload);

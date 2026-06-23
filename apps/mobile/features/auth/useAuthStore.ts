@@ -61,6 +61,16 @@ interface AuthState {
     password: string;
   }): Promise<void>;
 
+  /** Registro público de empresa nueva + auto-login como admin_empresa */
+  registrarEmpresa(params: {
+    nombre_empresa: string;
+    nit?: string;
+    nombre: string;
+    apellido?: string;
+    email: string;
+    password: string;
+  }): Promise<void>;
+
   /** Registro libre para trabajador_turnos (marketplace) */
   registrar(params: {
     nombre: string;
@@ -138,6 +148,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // After success we do a regular login so the user lands logged in.
     await authApi.activarCuenta({ cedula, email, password });
     await get().login(email, password);
+  },
+
+  // ── registrarEmpresa ──────────────────────────────────────────────────
+  async registrarEmpresa({ nombre_empresa, nit, nombre, apellido, email, password }) {
+    const { access_token, refresh_token, usuario } = await authApi.registrarEmpresa({
+      nombre_empresa, nit, nombre, apellido, email, password,
+    });
+    await secureTokenStore.setTokens(access_token, refresh_token);
+    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    set({ status: 'authenticated', usuario });
   },
 
   // ── registrar ─────────────────────────────────────────────────────────
