@@ -7,8 +7,8 @@ import type { TipoTrabajador, Trabajador } from '../types';
 
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
   nomina: 'bg-purple-100 text-purple-700',
-  turnos: 'bg-blue-100 text-blue-700',
-  ambos: 'bg-green-100 text-green-700',
+  turnos: 'bg-primary-100 text-primary-600',
+  ambos: 'bg-success-light text-success',
 };
 
 const TIPO_LABEL: Record<TipoTrabajador, string> = {
@@ -52,11 +52,11 @@ export function EquipoPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Equipo</h1>
+        <h1 className="text-2xl font-bold text-foreground">Equipo</h1>
         {isAdmin && (
           <button
             onClick={() => setShowCrear(true)}
-            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
           >
             <Plus size={16} /> Nuevo trabajador
           </button>
@@ -64,15 +64,15 @@ export function EquipoPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-4">
-        <div className="flex gap-1 border-b border-gray-200">
+        <div className="flex gap-1 border-b border-border">
           {estadoTabs.map(t => (
             <button
               key={String(t.value)}
               onClick={() => setEstadoFiltro(t.value)}
               className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
                 estadoFiltro === t.value
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               {t.label}
@@ -82,7 +82,7 @@ export function EquipoPage() {
         <select
           value={tipoFiltro ?? ''}
           onChange={e => setTipoFiltro((e.target.value as TipoTrabajador) || undefined)}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
           {tipoTabs.map(t => (
             <option key={String(t.value)} value={t.value ?? ''}>{t.label}</option>
@@ -91,14 +91,14 @@ export function EquipoPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-gray-500 text-sm py-8 text-center">Cargando...</p>
+        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
       ) : trabajadores.length === 0 ? (
-        <p className="text-gray-500 text-sm py-8 text-center">No hay trabajadores</p>
+        <p className="text-muted-foreground text-sm py-8 text-center">No hay trabajadores</p>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-gray-500 text-xs uppercase">
+              <tr className="bg-muted text-muted-foreground text-xs uppercase">
                 <th className="text-left px-4 py-3 font-medium">Nombre</th>
                 <th className="text-left px-4 py-3 font-medium">Cédula</th>
                 <th className="text-left px-4 py-3 font-medium">Tipo</th>
@@ -110,18 +110,18 @@ export function EquipoPage() {
             </thead>
             <tbody>
               {trabajadores.map(t => (
-                <tr key={t.id} className="border-t border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{t.nombre} {t.apellido}</td>
-                  <td className="px-4 py-3 text-gray-600">{t.cedula ?? '—'}</td>
+                <tr key={t.id} className="border-t border-border/60 hover:bg-muted">
+                  <td className="px-4 py-3 font-medium text-foreground">{t.nombre} {t.apellido}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{t.cedula ?? '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_BADGE[t.tipo]}`}>
                       {TIPO_LABEL[t.tipo]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{t.cargo ?? '—'}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{fmtCOP(t.tarifa_hora)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{t.cargo ?? '—'}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{fmtCOP(t.tarifa_hora)}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${t.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${t.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                       {t.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
@@ -134,7 +134,7 @@ export function EquipoPage() {
                               desactivar.mutate(t.id);
                             }
                           }}
-                          className="text-gray-400 hover:text-red-600 transition-colors"
+                          className="text-muted-foreground/60 hover:text-danger transition-colors"
                           title="Desactivar"
                         >
                           <UserX size={14} />
@@ -142,7 +142,7 @@ export function EquipoPage() {
                       )}
                       <button
                         onClick={() => navigate(`/equipo/${t.id}`)}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors"
+                        className="text-xs text-primary hover:text-primary-600 font-medium px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors"
                       >
                         Ver →
                       </button>
@@ -192,22 +192,22 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Nuevo trabajador</h2>
+      <div className="bg-card rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo trabajador</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-              <input required type="text" {...field('nombre')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+              <input required type="text" {...field('nombre')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Apellido *</label>
-              <input required type="text" {...field('apellido')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Apellido *</label>
+              <input required type="text" {...field('apellido')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select {...field('tipo')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <label className="block text-sm font-medium text-foreground mb-1">Tipo</label>
+            <select {...field('tipo')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
               <option value="nomina">Nómina</option>
               <option value="turnos">Turnos</option>
               <option value="ambos">Ambos</option>
@@ -215,35 +215,35 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cédula</label>
-              <input type="text" {...field('cedula')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Cédula</label>
+              <input type="text" {...field('cedula')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-              <input type="text" {...field('telefono')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Teléfono</label>
+              <input type="text" {...field('telefono')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" {...field('email')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+            <input type="email" {...field('email')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-            <input type="text" {...field('cargo')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <label className="block text-sm font-medium text-foreground mb-1">Cargo</label>
+            <input type="text" {...field('cargo')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tarifa/hora (COP)</label>
-              <input type="number" min="0" step="any" {...field('tarifa_hora')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Tarifa/hora (COP)</label>
+              <input type="number" min="0" step="any" {...field('tarifa_hora')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Salario base (COP)</label>
-              <input type="number" min="0" step="any" {...field('salario_base')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <label className="block text-sm font-medium text-foreground mb-1">Salario base (COP)</label>
+              <input type="number" min="0" step="any" {...field('salario_base')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
           </div>
           <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-gray-300 hover:bg-gray-50 text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" disabled={crear.isPending} className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+            <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
               {crear.isPending ? 'Creando...' : 'Crear'}
             </button>
           </div>
