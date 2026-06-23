@@ -10,8 +10,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Pressable,
+  Dimensions,
+  StyleSheet,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,6 +25,8 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ApiError } from '@api-client';
+
+const { height } = Dimensions.get('window');
 
 const schema = z.object({
   nombre_empresa: z.string().min(2, 'Nombre de empresa requerido'),
@@ -45,6 +50,7 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export default function RegistroEmpresaScreen() {
+  const router           = useRouter();
   const registrarEmpresa = useAuthStore((s) => s.registrarEmpresa);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -62,68 +68,68 @@ export default function RegistroEmpresaScreen() {
     try {
       await registrarEmpresa({
         nombre_empresa: data.nombre_empresa,
-        nit: data.nit || undefined,
-        actividad: data.actividad || undefined,
-        descripcion: data.descripcion || undefined,
-        telefono: data.telefono || undefined,
-        email_empresa: data.email_empresa || undefined,
-        direccion: data.direccion || undefined,
-        ciudad: data.ciudad || undefined,
-        nombre: data.nombre,
-        apellido: data.apellido || undefined,
-        email: data.email,
-        password: data.password,
+        nit:            data.nit            || undefined,
+        actividad:      data.actividad      || undefined,
+        descripcion:    data.descripcion    || undefined,
+        telefono:       data.telefono       || undefined,
+        email_empresa:  data.email_empresa  || undefined,
+        direccion:      data.direccion      || undefined,
+        ciudad:         data.ciudad         || undefined,
+        nombre:         data.nombre,
+        apellido:       data.apellido       || undefined,
+        email:          data.email,
+        password:       data.password,
       });
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 409) setServerError('El email ya está registrado.');
-        else setServerError(err.message);
+        setServerError(err.status === 409 ? 'El email ya está registrado.' : err.message);
       } else {
         setServerError('Error inesperado. Intenta de nuevo.');
       }
     }
   };
 
-  const SectionLabel = ({ children }: { children: string }) => (
-    <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2">
-      {children}
-    </Text>
-  );
-
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-background"
+      style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <StatusBar style="light" />
       <ScrollView
-        contentContainerClassName="flex-grow"
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View className="items-center justify-end bg-primary-500 pt-14 pb-10 rounded-b-[40px]">
-          <View
-            className="rounded-2xl bg-white/20 items-center justify-center mb-4"
-            style={{ width: 72, height: 72 }}
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <View style={styles.circle1} />
+          <View style={styles.circle2} />
+
+          {/* Botón back */}
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
           >
-            <Ionicons name="briefcase-outline" size={36} color="white" />
+            <Ionicons name="chevron-back" size={22} color="white" />
+          </Pressable>
+
+          <View style={styles.logoBox}>
+            <Ionicons name="briefcase" size={38} color="white" />
           </View>
-          <Text className="text-2xl font-bold text-white">Registra tu empresa</Text>
-          <Text className="text-sm text-white/75 mt-1 px-8 text-center">
-            Crea tu cuenta y empieza a gestionar turnos
-          </Text>
+          <Text style={styles.title}>Registra tu empresa</Text>
+          <Text style={styles.subtitle}>Crea tu cuenta y empieza a gestionar turnos</Text>
         </View>
 
-        {/* Form */}
-        <View className="flex-1 px-6 pt-6 pb-6 gap-4">
+        {/* ── Formulario ── */}
+        <View style={styles.form}>
           {serverError && (
-            <View className="bg-danger-light border border-danger/30 rounded-xl px-4 py-3">
-              <Text className="text-sm font-medium text-danger">{serverError}</Text>
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+              <Text style={styles.errorText}>{serverError}</Text>
             </View>
           )}
 
-          <SectionLabel>Datos de la empresa</SectionLabel>
+          <Section label="Datos de la empresa" icon="business-outline" />
 
           <Controller control={control} name="nombre_empresa" render={({ field: { onChange, onBlur, value } }) => (
             <Input
@@ -137,8 +143,8 @@ export default function RegistroEmpresaScreen() {
             />
           )} />
 
-          <View className="flex-row gap-3">
-            <View className="flex-1">
+          <View style={styles.row}>
+            <View style={styles.half}>
               <Controller control={control} name="nit" render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="NIT"
@@ -150,7 +156,7 @@ export default function RegistroEmpresaScreen() {
                 />
               )} />
             </View>
-            <View className="flex-1">
+            <View style={styles.half}>
               <Controller control={control} name="ciudad" render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Ciudad"
@@ -188,10 +194,10 @@ export default function RegistroEmpresaScreen() {
             />
           )} />
 
-          <SectionLabel>Contacto</SectionLabel>
+          <Section label="Contacto" icon="call-outline" />
 
-          <View className="flex-row gap-3">
-            <View className="flex-1">
+          <View style={styles.row}>
+            <View style={styles.half}>
               <Controller control={control} name="telefono" render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Teléfono"
@@ -204,7 +210,7 @@ export default function RegistroEmpresaScreen() {
                 />
               )} />
             </View>
-            <View className="flex-1">
+            <View style={styles.half}>
               <Controller control={control} name="email_empresa" render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Email empresa"
@@ -232,10 +238,10 @@ export default function RegistroEmpresaScreen() {
             />
           )} />
 
-          <SectionLabel>Tu cuenta de administrador</SectionLabel>
+          <Section label="Tu cuenta de administrador" icon="person-circle-outline" />
 
-          <View className="flex-row gap-3">
-            <View className="flex-1">
+          <View style={styles.row}>
+            <View style={styles.half}>
               <Controller control={control} name="nombre" render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Nombre *"
@@ -248,7 +254,7 @@ export default function RegistroEmpresaScreen() {
                 />
               )} />
             </View>
-            <View className="flex-1">
+            <View style={styles.half}>
               <Controller control={control} name="apellido" render={({ field: { onChange, onBlur, value } }) => (
                 <Input
                   label="Apellido"
@@ -303,24 +309,109 @@ export default function RegistroEmpresaScreen() {
             />
           )} />
 
-          <Button
-            label={isSubmitting ? 'Creando empresa...' : 'Crear empresa'}
-            onPress={handleSubmit(onSubmit)}
-            loading={isSubmitting}
-            fullWidth
-            size="lg"
-          />
+          <View style={styles.submitWrap}>
+            <Button
+              label={isSubmitting ? 'Creando empresa...' : 'Crear empresa'}
+              onPress={handleSubmit(onSubmit)}
+              loading={isSubmitting}
+              fullWidth
+              size="lg"
+            />
+          </View>
 
-          <View className="flex-row justify-center gap-1 mt-1">
-            <Text className="text-sm text-muted-foreground">¿Ya tienes cuenta?</Text>
-            <Link href="/(auth)/login" asChild>
-              <TouchableOpacity>
-                <Text className="text-sm font-semibold text-primary-500">Iniciar sesión</Text>
-              </TouchableOpacity>
-            </Link>
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+              <Text style={styles.footerLink}>Iniciar sesión</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+function Section({ label, icon }: { label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionIcon}>
+        <Ionicons name={icon} size={14} color="#FF5A3C" />
+      </View>
+      <Text style={styles.sectionLabel}>{label}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root:   { flex: 1, backgroundColor: '#F8FAFC' },
+  scroll: { flexGrow: 1 },
+
+  // Header
+  header: {
+    minHeight: height * 0.26,
+    backgroundColor: '#FF5A3C',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 32,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    overflow: 'hidden',
+  },
+  circle1: {
+    position: 'absolute', width: 240, height: 240, borderRadius: 120,
+    backgroundColor: 'rgba(255,255,255,0.07)', top: -80, right: -50,
+  },
+  circle2: {
+    position: 'absolute', width: 160, height: 160, borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.05)', bottom: -20, left: -40,
+  },
+  backBtn: {
+    position: 'absolute', top: 52, left: 16,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  logoBox: {
+    width: 76, height: 76, borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14,
+  },
+  title:    { fontSize: 24, fontWeight: '800', color: 'white', letterSpacing: -0.3 },
+  subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+
+  // Form
+  form: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 32, gap: 12 },
+
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
+  },
+  errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: '#EF4444' },
+
+  // Section header
+  section: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginTop: 8, marginBottom: 2,
+  },
+  sectionIcon: {
+    width: 24, height: 24, borderRadius: 8,
+    backgroundColor: '#FFF1EE',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sectionLabel: {
+    fontSize: 11, fontWeight: '700', color: '#64748B',
+    textTransform: 'uppercase', letterSpacing: 0.8,
+  },
+
+  row:  { flexDirection: 'row', gap: 10 },
+  half: { flex: 1 },
+
+  submitWrap: { marginTop: 8 },
+
+  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4 },
+  footerText: { fontSize: 14, color: '#94A3B8' },
+  footerLink: { fontSize: 14, fontWeight: '700', color: '#FF5A3C' },
+});

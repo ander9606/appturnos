@@ -15,13 +15,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Image,
+  Pressable,
+  Dimensions,
+  StyleSheet,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { StatusBar } from 'expo-status-bar';
-
 import { Ionicons } from '@expo/vector-icons';
 
 import { loginSchema, type LoginFormData } from '@/features/auth/schemas';
@@ -31,15 +32,14 @@ import { Input } from '@/components/ui/Input';
 import { t } from '@/lib/i18n';
 import { ApiError } from '@api-client';
 
+const { height } = Dimensions.get('window');
+
 export default function LoginScreen() {
-  const login = useAuthStore((s) => s.login);
+  const router = useRouter();
+  const login  = useAuthStore((s) => s.login);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginFormData>({
+  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   });
@@ -48,15 +48,14 @@ export default function LoginScreen() {
     setServerError(null);
     try {
       await login(data.email, data.password);
-      // Navigation handled automatically by _layout.tsx on status change
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.status === 401) setServerError(t('auth.errors.invalidCredentials'));
+        if (err.status === 401)      setServerError(t('auth.errors.invalidCredentials'));
         else if (err.status === 429) setServerError(t('auth.errors.accountLocked'));
         else if (err.status === 403) setServerError(t('auth.errors.inactiveUser'));
-        else setServerError(err.message);
+        else                         setServerError(err.message);
       } else if (err instanceof TypeError) {
-        setServerError('No se pudo conectar al servidor. Verifica que el backend esté activo y que EXPO_PUBLIC_API_URL tenga la IP correcta.');
+        setServerError('No se pudo conectar al servidor. Verifica tu conexión.');
       } else {
         setServerError(t('auth.errors.generic'));
       }
@@ -65,45 +64,47 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-background"
+      style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <ScrollView
-        contentContainerClassName="flex-grow"
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header illustration ──────────────────────────────────────── */}
-        <View className="items-center justify-end bg-primary-500 pt-16 pb-10 rounded-b-[40px]">
-          {/* Logo placeholder — replace with <Image> when asset is ready */}
-          <View className="w-20 h-20 rounded-2xl bg-white/20 items-center justify-center mb-4">
-            <Ionicons name="calendar-outline" size={40} color="white" />
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <View style={styles.circle1} />
+          <View style={styles.circle2} />
+
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons name="chevron-back" size={22} color="white" />
+          </Pressable>
+
+          <View style={styles.logoBox}>
+            <Ionicons name="planet" size={40} color="white" />
           </View>
-          <Text className="text-2xl font-bold text-white">Zaturno</Text>
-          <Text className="text-sm text-white/80 mt-1">Gestión de turnos y nómina</Text>
+          <Text style={styles.appName}>Zaturno</Text>
+          <Text style={styles.appSub}>Gestión de turnos y nómina</Text>
         </View>
 
-        {/* ── Form ─────────────────────────────────────────────────────── */}
-        <View className="flex-1 px-6 pt-8 pb-6 gap-5">
-          <View className="gap-1">
-            <Text className="text-2xl font-bold text-foreground">
-              {t('auth.login.title')}
-            </Text>
-            <Text className="text-base text-muted-foreground">
-              {t('auth.login.subtitle')}
-            </Text>
-          </View>
+        {/* ── Formulario ── */}
+        <View style={styles.form}>
+          <Text style={styles.formTitle}>{t('auth.login.title')}</Text>
+          <Text style={styles.formSub}>{t('auth.login.subtitle')}</Text>
 
-          {/* Server error banner */}
           {serverError && (
-            <View className="bg-danger-light border border-danger/30 rounded-xl px-4 py-3">
-              <Text className="text-sm font-medium text-danger">{serverError}</Text>
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+              <Text style={styles.errorText}>{serverError}</Text>
             </View>
           )}
 
-          <View className="gap-4">
-            {/* Email */}
+          <View style={styles.fields}>
             <Controller
               control={control}
               name="email"
@@ -124,7 +125,6 @@ export default function LoginScreen() {
               )}
             />
 
-            {/* Password */}
             <Controller
               control={control}
               name="password"
@@ -145,14 +145,10 @@ export default function LoginScreen() {
             />
           </View>
 
-          {/* Forgot password (future) */}
-          <TouchableOpacity className="self-end">
-            <Text className="text-sm text-primary-500 font-medium">
-              {t('auth.login.forgotPassword')}
-            </Text>
+          <TouchableOpacity style={styles.forgotWrap}>
+            <Text style={styles.forgotText}>{t('auth.login.forgotPassword')}</Text>
           </TouchableOpacity>
 
-          {/* Submit */}
           <Button
             label={isSubmitting ? t('auth.login.submitting') : t('auth.login.submit')}
             onPress={handleSubmit(onSubmit)}
@@ -161,31 +157,107 @@ export default function LoginScreen() {
             size="lg"
           />
 
-          {/* Footer links */}
-          <View className="items-center gap-2 mt-2">
-            <View className="flex-row justify-center gap-1">
-              <Text className="text-sm text-muted-foreground">¿Sin cuenta aún?</Text>
-              <Link href="/(auth)/registro" asChild>
-                <TouchableOpacity>
-                  <Text className="text-sm font-semibold text-primary-500">Crear cuenta</Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
-            <View className="flex-row justify-center gap-1">
-              <Text className="text-sm text-muted-foreground">
-                {t('auth.login.noAccount')}
-              </Text>
-              <Link href="/(auth)/activar" asChild>
-                <TouchableOpacity>
-                  <Text className="text-sm font-semibold text-primary-500">
-                    {t('auth.login.activateLink')}
-                  </Text>
-                </TouchableOpacity>
-              </Link>
-            </View>
+          {/* Divisor */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>o también</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Links secundarios */}
+          <View style={styles.links}>
+            <LinkRow
+              label="¿Eres trabajador sin cuenta?"
+              action="Activa tu cuenta"
+              onPress={() => router.push('/(auth)/activar')}
+            />
+            <LinkRow
+              label="¿Primera vez con tu empresa?"
+              action="Regístrala aquí"
+              onPress={() => router.push('/(auth)/registro-empresa')}
+            />
           </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+function LinkRow({ label, action, onPress }: { label: string; action: string; onPress: () => void }) {
+  return (
+    <View style={styles.linkRow}>
+      <Text style={styles.linkLabel}>{label} </Text>
+      <TouchableOpacity onPress={onPress}>
+        <Text style={styles.linkAction}>{action}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root:   { flex: 1, backgroundColor: '#F8FAFC' },
+  scroll: { flexGrow: 1 },
+
+  // Header
+  header: {
+    minHeight: height * 0.32,
+    backgroundColor: '#FF5A3C',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: 36,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+    overflow: 'hidden',
+  },
+  circle1: {
+    position: 'absolute', width: 260, height: 260, borderRadius: 130,
+    backgroundColor: 'rgba(255,255,255,0.07)', top: -80, right: -60,
+  },
+  circle2: {
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.05)', bottom: 0, left: -50,
+  },
+  backBtn: {
+    position: 'absolute', top: 52, left: 16,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  logoBox: {
+    width: 82, height: 82, borderRadius: 26,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14,
+  },
+  appName: { fontSize: 28, fontWeight: '800', color: 'white', letterSpacing: -0.4 },
+  appSub:  { fontSize: 14, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+
+  // Formulario
+  form: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 32 },
+
+  formTitle: { fontSize: 22, fontWeight: '700', color: '#0F172A' },
+  formSub:   { fontSize: 14, color: '#64748B', marginTop: 4, marginBottom: 20 },
+
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
+  },
+  errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: '#EF4444' },
+
+  fields:     { gap: 14 },
+  forgotWrap: { alignSelf: 'flex-end', marginTop: 10, marginBottom: 20 },
+  forgotText: { fontSize: 13, fontWeight: '600', color: '#FF5A3C' },
+
+  // Divisor
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 20 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
+  dividerText: { fontSize: 12, color: '#94A3B8', fontWeight: '500' },
+
+  // Links
+  links:      { gap: 10 },
+  linkRow:    { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' },
+  linkLabel:  { fontSize: 13, color: '#94A3B8' },
+  linkAction: { fontSize: 13, fontWeight: '700', color: '#FF5A3C' },
+});
