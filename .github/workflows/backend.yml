@@ -64,7 +64,14 @@ jobs:
             echo "→ Reiniciando API..."
             docker compose --env-file backend/.env up -d api
             echo "→ Verificando health..."
-            sleep 5
-            curl -sf http://localhost:3001/api/health || (echo "Health check falló" && exit 1)
-            echo "✅ Deploy completado"
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:3001/api/health > /dev/null 2>&1; then
+                echo "✅ Deploy completado"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "❌ Health check falló después de 60s"
+            docker compose --env-file backend/.env logs api --tail 20
+            exit 1
           ENDSSH
