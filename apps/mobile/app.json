@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "AppTurnos",
-    "slug": "appturnos",
+    "name": "Zaturno",
+    "slug": "zaturno",
     "owner": "anderson960616",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -16,7 +16,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.appturnos.mobile",
+      "bundleIdentifier": "com.zaturno.mobile",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "AppTurnos necesita tu ubicación para verificar que estás en el punto de trabajo al marcar entrada/salida.",
         "NSFaceIDUsageDescription": "Usa Face ID para acceder rápidamente a AppTurnos."
@@ -27,8 +27,15 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FF5A3C"
       },
-      "package": "com.appturnos.mobile",
-      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "USE_FINGERPRINT", "USE_BIOMETRIC"]
+      "package": "com.zaturno.mobile",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "USE_FINGERPRINT",
+        "USE_BIOMETRIC",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -38,11 +45,23 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-notifications", { "icon": "./assets/notification-icon.png", "color": "#FF5A3C" }],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#FF5A3C"
+        }
+      ],
       "expo-local-authentication"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a6ea9c0c-0d8f-4e4b-b12e-201d553266b7"
+      }
     }
   }
 }

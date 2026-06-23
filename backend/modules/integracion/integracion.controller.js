@@ -45,8 +45,7 @@ async function actualizarConfig(req, res) {
  * ningún secreto al usuario.
  */
 async function emparejar(req, res) {
-  const baseUrl = process.env.PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`;
-  const data = await IntegracionService.emparejar(req.empresa_id, req.body.codigo, baseUrl);
+  const data = await IntegracionService.emparejar(req.empresa_id, req.body.codigo);
   res.json({ success: true, data, message: 'Integración conectada con logiq360' });
 }
 
@@ -90,8 +89,13 @@ async function vincularEmpleado(req, res) {
   res.json({ success: true, data, message: 'Trabajador vinculado' });
 }
 
+/** GET /api/integracion/public/ping — verifica conectividad y autenticación desde logiq360. */
+async function publicPing(req, res) {
+  res.json({ ok: true, empresa_id: req.empresa_id });
+}
+
 module.exports = {
   recibirEventos, estado, obtenerConfig, actualizarConfig, emparejar,
   conciliacion, vincularEmpleado,
-  publicEstado, publicEnSitio,
+  publicEstado, publicEnSitio, publicPing,
 };

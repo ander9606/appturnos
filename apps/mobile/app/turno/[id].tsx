@@ -11,6 +11,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   ActivityIndicator,
   Alert,
@@ -24,7 +25,8 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }            from '@/lib/theme';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso } from '@/features/turnos/useTurnos';
+import { useAuthStore }        from '@/features/auth/useAuthStore';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar } from '@/features/turnos/useTurnos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
@@ -80,12 +82,18 @@ export default function TurnoDetailScreen() {
 
   const [signatureVisible, setSignatureVisible] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [comentario, setComentario] = useState('');
+
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
 
   // ── Data ──────────────────────────────────────────────────────────────
   const { data: asignacion, isLoading } = useAsignacion(id);
 
-  const ingresoMutation = useMarcarIngreso();
-  const egresoMutation  = useMarcarEgreso();
+  const ingresoMutation    = useMarcarIngreso();
+  const egresoMutation     = useMarcarEgreso();
+  const calificarMutation  = useCalificar();
 
   // ── Live timer: elapsed (en_progreso) + countdown (confirmado) ───────
   useEffect(() => {
@@ -182,6 +190,22 @@ export default function TurnoDetailScreen() {
       Alert.alert('Salida registrada', '¡Turno completado! Buen trabajo.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
+      Alert.alert('Error', msg);
+    }
+  };
+
+  const handleCalificar = async () => {
+    if (!asignacion || selectedRating === 0) return;
+    try {
+      await calificarMutation.mutateAsync({
+        id: asignacion.id,
+        calificacion: selectedRating,
+        comentario: comentario.trim() || undefined,
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Calificación guardada', '');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo guardar la calificación.';
       Alert.alert('Error', msg);
     }
   };
@@ -390,10 +414,10 @@ export default function TurnoDetailScreen() {
                 </View>
               </View>
 
-              {/* Calificación recibida */}
+              {/* Calificación */}
               <View className="bg-card rounded-2xl px-5 py-4 border border-border">
                 <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                  Calificación recibida
+                  Calificación
                 </Text>
                 {calificacion != null ? (
                   <View className="gap-2">
@@ -403,6 +427,27 @@ export default function TurnoDetailScreen() {
                         "{calificacion_comentario}"
                       </Text>
                     )}
+                  </View>
+                ) : isGestor ? (
+                  <View className="gap-3">
+                    <StarRating mode="input" value={selectedRating} onChange={setSelectedRating} size="lg" />
+                    <TextInput
+                      placeholder="Comentario (opcional)"
+                      value={comentario}
+                      onChangeText={setComentario}
+                      className="text-sm text-foreground border border-border rounded-xl px-3 py-2.5"
+                      placeholderTextColor="#94A3B8"
+                      maxLength={500}
+                      multiline
+                    />
+                    <Button
+                      label={calificarMutation.isPending ? 'Guardando…' : 'Guardar calificación'}
+                      variant="primary"
+                      fullWidth
+                      loading={calificarMutation.isPending}
+                      disabled={selectedRating === 0 || calificarMutation.isPending}
+                      onPress={handleCalificar}
+                    />
                   </View>
                 ) : (
                   <View className="flex-row items-center gap-2">

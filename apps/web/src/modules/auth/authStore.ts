@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { configureAuth } from '@/shared/api/axios';
 
-export type Rol = 'admin_empresa' | 'jefe_nomina' | 'jefe_turnos' | 'nomina';
+export type Rol = 'super_admin' | 'admin_empresa' | 'jefe_nomina' | 'jefe_turnos' | 'nomina';
 
 interface Usuario {
   id: number;
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthStore>()(
       setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
       clearAuth: () => set({ usuario: null, accessToken: null, refreshToken: null }),
     }),
-    { name: 'appturnos-auth' }
+    { name: 'zaturno-auth' }
   )
 );
 

@@ -1,0 +1,81 @@
+name: Web CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/api-client/**'
+      - '.github/workflows/web.yml'
+      - 'Caddyfile'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/api-client/**'
+
+jobs:
+  # ── Build (corre en PR y en push a main) ──────────────────────
+  ci:
+    name: Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_URL: https://api.zaturno.app/api
+
+      - name: Subir artefacto
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+
+  # ── Deploy (solo en push a main) ──────────────────────────────
+  deploy:
+    name: Deploy al VPS
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Descargar artefacto
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      - name: Deploy vía SSH
+        env:
+          SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          HOST: ${{ secrets.DROPLET_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+          # Crear directorio en el VPS si no existe
+          ssh root@"$HOST" "mkdir -p /srv/web"
+
+          # Copiar el build al VPS
+          scp -r dist/* root@"$HOST":/srv/web/
+
+          # Recargar Caddy para que sirva el nuevo contenido
+          ssh root@"$HOST" "cd /app && docker compose --env-file backend/.env restart caddy"

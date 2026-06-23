@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router';
-import { LayoutDashboard, Users, Calendar, Settings, DollarSign, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, Settings, DollarSign, LogOut, Plug, Building2 } from 'lucide-react';
 import { useAuthStore } from '@/modules/auth/authStore';
 import type { Rol } from '@/modules/auth/authStore';
 
@@ -10,12 +10,16 @@ type NavItem = {
 };
 
 const NAV_BY_ROL: Record<Rol, NavItem[]> = {
+  super_admin: [
+    { label: 'Empresas', to: '/admin/empresas', icon: Building2 },
+  ],
   admin_empresa: [
     { label: 'Inicio',         to: '/',              icon: LayoutDashboard },
     { label: 'Nómina',         to: '/nomina',         icon: DollarSign },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
     { label: 'Turnos',         to: '/turnos',         icon: Calendar },
     { label: 'Configuración',  to: '/configuracion',  icon: Settings },
+    { label: 'logiq360',       to: '/integracion',    icon: Plug },
   ],
   jefe_nomina: [
     { label: 'Inicio',  to: '/',       icon: LayoutDashboard },
@@ -35,6 +39,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
 };
 
 const ROL_LABEL: Record<Rol, string> = {
+  super_admin:   'Super Admin',
   admin_empresa: 'Administrador',
   jefe_nomina:   'Jefe Nómina',
   jefe_turnos:   'Jefe Turnos',
@@ -63,7 +68,7 @@ export function Sidebar() {
           <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
             <Calendar size={16} className="text-white" />
           </div>
-          <span className="font-bold text-white text-base tracking-tight">AppTurnos</span>
+          <span className="font-bold text-white text-base tracking-tight">Zaturno</span>
         </div>
         {usuario && (
           <div className="flex items-center gap-3">

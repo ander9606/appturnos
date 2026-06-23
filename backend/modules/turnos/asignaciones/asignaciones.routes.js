@@ -83,6 +83,19 @@ router.post(
   ctrl.egreso
 );
 
+// PATCH /api/turnos/asignaciones/:id/corregir  (jefe/admin corrige ingreso/egreso manualmente)
+router.patch(
+  '/:id/corregir',
+  verificarRol(GESTIONAR),
+  [
+    idParam,
+    body('hora_ingreso_real').optional().isISO8601().withMessage('hora_ingreso_real inválida (usa formato ISO 8601)'),
+    body('hora_egreso_real').optional().isISO8601().withMessage('hora_egreso_real inválida (usa formato ISO 8601)'),
+  ],
+  validar,
+  ctrl.corregir
+);
+
 // POST /api/turnos/asignaciones/:id/no-presentado  (jefe/admin marca ausencia + 0 estrellas auto)
 router.post('/:id/no-presentado', verificarRol(GESTIONAR), [idParam], validar, ctrl.noPresentado);
 

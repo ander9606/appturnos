@@ -194,7 +194,7 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
 
   const inicio = horaAMinutos(horaEntrada);
   let fin = horaAMinutos(horaSalida);
-  if (fin <= inicio) fin += MIN_POR_DIA; // cruza medianoche
+  if (fin < inicio) fin += MIN_POR_DIA; // cruza medianoche
 
   const totalMin = fin - inicio;
   if (totalMin <= 0) return vacio;

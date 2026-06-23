@@ -5,8 +5,8 @@
  * Toda la lógica de negocio vive en useNominaTrabajador + nominaTrabajadorUtils.
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -14,21 +14,24 @@ import { useTheme } from '@/lib/theme';
 import { formatShortDate } from '@/lib/formatters';
 import { RegistroCard } from '../RegistroCard';
 import { PeriodoHeaderCard } from './components/PeriodoHeaderCard';
-import { MarcajeButtons } from './components/MarcajeButtons';
 import { ResumenCards } from './components/ResumenCards';
+import { IngresoHoyTab } from './components/IngresoHoyTab';
 import { useNominaTrabajador } from './useNominaTrabajador';
 import { calcularResumenPeriodo, analizarDia } from './nominaTrabajadorUtils';
-import { CompensatorioBanner } from '../compensatorios/CompensatorioBanner';
 import { useCompensatoriosPendientes } from '../compensatorios/useCompensatorios';
+
+type ActiveTab = 'hoy' | 'nomina';
 
 export function NominaTrabajadorView() {
   const theme = useTheme();
   const { data: compensatorios = [] } = useCompensatoriosPendientes();
+  const [activeTab, setActiveTab] = useState<ActiveTab>('hoy');
 
   const {
     valorHora,
     salarioBase,
     tipoMarcacion,
+    cargo,
     puntoMarcaje,
     periodos,
     periodoActivo,
@@ -91,92 +94,113 @@ export function NominaTrabajadorView() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <FlatList
-        data={registros}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <RegistroCard registro={item} valorHora={valorHora} />
-        )}
-        contentContainerClassName="gap-2 pb-8"
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={onRefresh}
-            tintColor={theme.primary}
-            colors={[theme.primary]}
-          />
-        }
-        ListHeaderComponent={
-          <View className="gap-4 pb-2">
-            {/* ── Header con período, salario, hoy, semana ─── */}
-            <PeriodoHeaderCard
-              periodo={periodoActivo}
-              registroHoy={registroHoy}
-              estadoHoy={estadoHoy}
-              resumen={resumen}
-              resumenSemana={resumenSemana}
-              salarioBase={salarioBase}
-              valorHora={valorHora}
-              color={theme.primary}
-              todayLabel={todayLabel}
+      {/* ── Tab switcher ───────────────────────────────────── */}
+      <View className="bg-card flex-row border-b border-border px-6">
+        {(['hoy', 'nomina'] as ActiveTab[]).map((tab) => {
+          const label = tab === 'hoy' ? 'Hoy' : 'Mi Nómina';
+          const isActive = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+            >
+              <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* ── Tab: Hoy ───────────────────────────────────────── */}
+      {activeTab === 'hoy' ? (
+        <IngresoHoyTab
+          cargo={cargo}
+          puntoMarcaje={puntoMarcaje}
+          tipoMarcacion={tipoMarcacion}
+          estadoHoy={estadoHoy}
+          periodoAbierto={periodoActivo?.estado === 'abierto'}
+          registroHoy={registroHoy}
+          geo={geo}
+          fijoBloqueado={fijoBloqueado}
+          isMutating={isMutating}
+          onEntrada={handleEntrada}
+          onSalida={handleSalida}
+          horasTrabajadas={analisisHoy?.totalHoras}
+          compensatorios={compensatorios}
+          isRefetching={isRefetching}
+          onRefresh={onRefresh}
+          primaryColor={theme.primary}
+        />
+      ) : (
+        /* ── Tab: Mi Nómina ──────────────────────────────── */
+        <FlatList
+          data={registros}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <RegistroCard registro={item} valorHora={valorHora} />
+          )}
+          contentContainerClassName="gap-2 pb-8"
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={onRefresh}
+              tintColor={theme.primary}
+              colors={[theme.primary]}
             />
-
-            <View className="px-5 gap-3">
-              {/* ── Geofence + botones de marcaje ──────────── */}
-              <MarcajeButtons
+          }
+          ListHeaderComponent={
+            <View className="gap-4 pb-2">
+              <PeriodoHeaderCard
+                periodo={periodoActivo}
+                registroHoy={registroHoy}
                 estadoHoy={estadoHoy}
-                periodoAbierto={periodoActivo?.estado === 'abierto'}
-                tipoMarcacion={tipoMarcacion}
-                puntoNombre={puntoMarcaje?.nombre ?? null}
-                geo={geo}
-                fijoBloqueado={fijoBloqueado}
-                isMutating={isMutating}
-                onEntrada={handleEntrada}
-                onSalida={handleSalida}
-                horasTrabajadas={analisisHoy?.totalHoras}
-              />
-
-              {/* ── Alertas de descanso compensatorio ──────────── */}
-              {compensatorios.length > 0 && (
-                <CompensatorioBanner compensatorios={compensatorios} />
-              )}
-
-              {/* ── Estadísticas + desglose + selector período ─ */}
-              <ResumenCards
                 resumen={resumen}
-                periodos={periodos}
-                periodoActivoId={periodoActivo?.id}
-                onSeleccionarPeriodo={setPeriodoSeleccionado}
+                resumenSemana={resumenSemana}
+                salarioBase={salarioBase}
                 valorHora={valorHora}
+                color={theme.primary}
+                todayLabel={todayLabel}
               />
-
-              <Text className="text-sm font-semibold text-foreground mt-1">
-                Registros del período
-              </Text>
+              <View className="px-5 gap-3">
+                <ResumenCards
+                  resumen={resumen}
+                  periodos={periodos}
+                  periodoActivoId={periodoActivo?.id}
+                  onSeleccionarPeriodo={setPeriodoSeleccionado}
+                  valorHora={valorHora}
+                />
+                <Text className="text-sm font-semibold text-foreground mt-1">
+                  Registros del período
+                </Text>
+              </View>
             </View>
-          </View>
-        }
-        ListEmptyComponent={
-          loadingRegistros ? (
-            <View className="py-12 items-center">
-              <ActivityIndicator color={theme.primary} />
-            </View>
-          ) : (
-            <View className="py-12 items-center gap-3 px-8">
-              <Ionicons name="clipboard-outline" size={40} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin registros aún
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                Marca tu entrada para comenzar a registrar horas.
-              </Text>
-            </View>
-          )
-        }
-        ItemSeparatorComponent={() => <View className="h-2" />}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
-      />
+          }
+          ListEmptyComponent={
+            loadingRegistros ? (
+              <View className="py-12 items-center">
+                <ActivityIndicator color={theme.primary} />
+              </View>
+            ) : (
+              <View className="py-12 items-center gap-3 px-8">
+                <Ionicons name="clipboard-outline" size={40} color="#94A3B8" />
+                <Text className="text-base font-semibold text-foreground text-center">
+                  Sin registros aún
+                </Text>
+                <Text className="text-sm text-muted-foreground text-center">
+                  Marca tu entrada para comenzar a registrar horas.
+                </Text>
+              </View>
+            )
+          }
+          ItemSeparatorComponent={() => <View className="h-2" />}
+          contentContainerStyle={{ paddingHorizontal: 20 }}
+        />
+      )}
     </SafeAreaView>
   );
 }

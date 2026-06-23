@@ -7,6 +7,7 @@ import type { EstadoOferta, EstadoAsignacion } from '../types';
 const KEYS = {
   ofertas: (params?: object) => ['turnos', 'ofertas', params] as const,
   oferta: (id: number) => ['turnos', 'oferta', id] as const,
+  puestos: (ofertaId: number) => ['turnos', 'puestos', ofertaId] as const,
   asignaciones: (params?: object) => ['turnos', 'asignaciones', params] as const,
 };
 
@@ -30,6 +31,56 @@ export function useOferta(id: number | null) {
     queryFn: () => turnosApi.obtenerOferta(id!),
     enabled: id !== null,
     staleTime: 30_000,
+  });
+}
+
+export function usePuestos(ofertaId: number) {
+  return useQuery({
+    queryKey: KEYS.puestos(ofertaId),
+    queryFn: () => turnosApi.listarPuestos(ofertaId),
+    staleTime: 30_000,
+  });
+}
+
+export function useCrearPuesto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, ...data }: { ofertaId: number; cargo_id: number; plazas?: number; tarifa_dia: number; notas?: string }) =>
+      turnosApi.crearPuesto(ofertaId, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: KEYS.puestos(vars.ofertaId) });
+      qc.invalidateQueries({ queryKey: ['turnos', 'oferta'] });
+      toast.success('Puesto agregado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useActualizarPuesto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, puestoId, ...data }: { ofertaId: number; puestoId: number; plazas?: number; tarifa_dia?: number; notas?: string | null }) =>
+      turnosApi.actualizarPuesto(ofertaId, puestoId, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: KEYS.puestos(vars.ofertaId) });
+      qc.invalidateQueries({ queryKey: ['turnos', 'oferta'] });
+      toast.success('Puesto actualizado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useEliminarPuesto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, puestoId }: { ofertaId: number; puestoId: number }) =>
+      turnosApi.eliminarPuesto(ofertaId, puestoId),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: KEYS.puestos(vars.ofertaId) });
+      qc.invalidateQueries({ queryKey: ['turnos', 'oferta'] });
+      toast.success('Puesto eliminado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }
 

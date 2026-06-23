@@ -12,6 +12,9 @@ import { TrabajadorDetailPage } from '@/modules/equipo/pages/TrabajadorDetailPag
 import { TurnosPage } from '@/modules/turnos/pages/TurnosPage';
 import { OfertaDetailPage } from '@/modules/turnos/pages/OfertaDetailPage';
 import { ConfiguracionPage } from '@/modules/configuracion/pages/ConfiguracionPage';
+import { IntegracionPage } from '@/modules/integracion/pages/IntegracionPage';
+import { SuperAdminPage } from '@/modules/admin/pages/SuperAdminPage';
+import { EmpresaDetailPage } from '@/modules/admin/pages/EmpresaDetailPage';
 
 export default function App() {
   return (
@@ -30,6 +33,9 @@ export default function App() {
             <Route path="turnos" element={<TurnosPage />} />
             <Route path="turnos/:id" element={<OfertaDetailPage />} />
             <Route path="configuracion" element={<ConfiguracionPage />} />
+            <Route path="integracion" element={<IntegracionPage />} />
+            <Route path="admin/empresas" element={<SuperAdminPage />} />
+            <Route path="admin/empresas/:id" element={<EmpresaDetailPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

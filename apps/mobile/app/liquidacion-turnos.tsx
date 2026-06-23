@@ -60,9 +60,14 @@ function buildMonthLabel(inicio: string): string {
 // ── TurnoLineaRow ─────────────────────────────────────────────────────────
 
 function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: string }) {
+  const router = useRouter();
   const hasExtra = t.pago_extra > 0;
   return (
-    <View className="py-3 border-b border-border last:border-b-0">
+    <TouchableOpacity
+      onPress={() => router.push(`/turno/${t.asignacion_id}` as `/${string}`)}
+      activeOpacity={0.7}
+      className="py-3 border-b border-border last:border-b-0"
+    >
       {/* Fila 1: fecha + monto */}
       <View className="flex-row items-start justify-between gap-2">
         <View className="flex-1">
@@ -99,14 +104,19 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
             </Text>
           </View>
         )}
-        {t.calificacion != null && (
+        {t.calificacion != null ? (
           <View className="flex-row items-center gap-0.5">
             <Ionicons name="star" size={11} color="#F59E0B" />
             <Text className="text-xs text-muted-foreground">{t.calificacion}</Text>
           </View>
+        ) : (
+          <View className="flex-row items-center gap-0.5">
+            <Ionicons name="star-outline" size={11} color="#94A3B8" />
+            <Text className="text-xs text-muted-foreground">Calificar</Text>
+          </View>
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
