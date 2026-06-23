@@ -77,5 +77,5 @@ jobs:
           # Copiar el build al VPS
           scp -r dist/* root@"$HOST":/srv/web/
 
-          # Recargar Caddy para que sirva el nuevo contenido
-          ssh root@"$HOST" "cd /app && docker compose --env-file backend/.env restart caddy"
+          # Levantar/recrear Caddy para que monte el volumen /srv/web y sirva el nuevo build
+          ssh root@"$HOST" "cd /app && docker compose --env-file backend/.env up -d --force-recreate caddy"
