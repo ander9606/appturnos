@@ -80,7 +80,7 @@ export default function LoginScreen() {
           <View className="w-20 h-20 rounded-2xl bg-white/20 items-center justify-center mb-4">
             <Ionicons name="calendar-outline" size={40} color="white" />
           </View>
-          <Text className="text-2xl font-bold text-white">AppTurnos</Text>
+          <Text className="text-2xl font-bold text-white">Zaturno</Text>
           <Text className="text-sm text-white/80 mt-1">Gestión de turnos y nómina</Text>
         </View>
 
