@@ -112,6 +112,19 @@ router.delete(
   ctrl.retirar
 );
 
+// POST /api/turnos/ofertas/:id/asignar  — gestores asignan directamente sin postulación
+router.post(
+  '/:id/asignar',
+  verificarRol(GESTIONAR),
+  [
+    idParam,
+    body('puesto_id').isInt({ min: 1 }).withMessage('puesto_id requerido'),
+    body('trabajador_id').isInt({ min: 1 }).withMessage('trabajador_id requerido'),
+  ],
+  validar,
+  ctrl.asignar
+);
+
 // Sub-router de puestos: /api/turnos/ofertas/:id/puestos/...
 router.use('/:id/puestos', puestosRouter);
 

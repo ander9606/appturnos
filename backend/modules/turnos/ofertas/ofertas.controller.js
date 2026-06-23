@@ -1,6 +1,7 @@
 'use strict';
 
 const OfertasService = require('./ofertas.service');
+const AsignacionesService = require('../asignaciones/asignaciones.service');
 
 async function listar(req, res) {
   const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
@@ -64,4 +65,13 @@ async function retirar(req, res) {
   res.json({ success: true, data: null, message: 'Postulación retirada' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, cancelar, aplicar, retirar };
+async function asignar(req, res) {
+  const data = await AsignacionesService.asignarDirecto(
+    req.empresa_id,
+    Number(req.params.id),
+    req.body
+  );
+  res.status(201).json({ success: true, data, message: 'Trabajador asignado al turno' });
+}
+
+module.exports = { listar, obtener, crear, actualizar, cancelar, aplicar, retirar, asignar };
