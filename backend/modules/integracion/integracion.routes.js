@@ -80,6 +80,9 @@ router.post(
 );
 
 // ── Endpoints pull que logiq360 consulta con X-API-Key ───────────────────────
+// GET /api/integracion/public/ping — test de conectividad y autenticación
+router.get('/public/ping', verificarApiKeyLogiq360, ctrl.publicPing);
+
 // GET /api/integracion/public/estado/:external_ref — estado de oferta y contratos
 router.get(
   '/public/estado/:external_ref',
