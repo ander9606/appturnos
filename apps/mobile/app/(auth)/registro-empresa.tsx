@@ -26,6 +26,12 @@ import { ApiError } from '@api-client';
 const schema = z.object({
   nombre_empresa: z.string().min(2, 'Nombre de empresa requerido'),
   nit:            z.string().optional(),
+  actividad:      z.string().max(200).optional(),
+  descripcion:    z.string().max(500).optional(),
+  telefono:       z.string().max(30).optional(),
+  email_empresa:  z.string().email('Email inválido').optional().or(z.literal('')),
+  direccion:      z.string().max(300).optional(),
+  ciudad:         z.string().max(100).optional(),
   nombre:         z.string().min(2, 'Tu nombre es requerido'),
   apellido:       z.string().optional(),
   email:          z.string().email('Email inválido'),
@@ -45,8 +51,9 @@ export default function RegistroEmpresaScreen() {
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema),
     defaultValues: {
-      nombre_empresa: '', nit: '', nombre: '', apellido: '',
-      email: '', password: '', confirmar: '',
+      nombre_empresa: '', nit: '', actividad: '', descripcion: '',
+      telefono: '', email_empresa: '', direccion: '', ciudad: '',
+      nombre: '', apellido: '', email: '', password: '', confirmar: '',
     },
   });
 
@@ -56,12 +63,17 @@ export default function RegistroEmpresaScreen() {
       await registrarEmpresa({
         nombre_empresa: data.nombre_empresa,
         nit: data.nit || undefined,
+        actividad: data.actividad || undefined,
+        descripcion: data.descripcion || undefined,
+        telefono: data.telefono || undefined,
+        email_empresa: data.email_empresa || undefined,
+        direccion: data.direccion || undefined,
+        ciudad: data.ciudad || undefined,
         nombre: data.nombre,
         apellido: data.apellido || undefined,
         email: data.email,
         password: data.password,
       });
-      // AuthGuard redirige automáticamente a (tabs) tras autenticación
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) setServerError('El email ya está registrado.');
@@ -71,6 +83,12 @@ export default function RegistroEmpresaScreen() {
       }
     }
   };
+
+  const SectionLabel = ({ children }: { children: string }) => (
+    <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2">
+      {children}
+    </Text>
+  );
 
   return (
     <KeyboardAvoidingView
@@ -93,7 +111,7 @@ export default function RegistroEmpresaScreen() {
           </View>
           <Text className="text-2xl font-bold text-white">Registra tu empresa</Text>
           <Text className="text-sm text-white/75 mt-1 px-8 text-center">
-            Crea tu cuenta de administrador y empieza a gestionar turnos
+            Crea tu cuenta y empieza a gestionar turnos
           </Text>
         </View>
 
@@ -105,9 +123,7 @@ export default function RegistroEmpresaScreen() {
             </View>
           )}
 
-          <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Datos de la empresa
-          </Text>
+          <SectionLabel>Datos de la empresa</SectionLabel>
 
           <Controller control={control} name="nombre_empresa" render={({ field: { onChange, onBlur, value } }) => (
             <Input
@@ -121,10 +137,37 @@ export default function RegistroEmpresaScreen() {
             />
           )} />
 
-          <Controller control={control} name="nit" render={({ field: { onChange, onBlur, value } }) => (
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <Controller control={control} name="nit" render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="NIT"
+                  placeholder="900.123.456-7"
+                  value={value ?? ''}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  returnKeyType="next"
+                />
+              )} />
+            </View>
+            <View className="flex-1">
+              <Controller control={control} name="ciudad" render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Ciudad"
+                  placeholder="Bogotá"
+                  value={value ?? ''}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  returnKeyType="next"
+                />
+              )} />
+            </View>
+          </View>
+
+          <Controller control={control} name="actividad" render={({ field: { onChange, onBlur, value } }) => (
             <Input
-              label="NIT (opcional)"
-              placeholder="900.123.456-7"
+              label="Actividad económica"
+              placeholder="Ej. Organización de eventos"
               value={value ?? ''}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -132,9 +175,64 @@ export default function RegistroEmpresaScreen() {
             />
           )} />
 
-          <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-2">
-            Tu cuenta de administrador
-          </Text>
+          <Controller control={control} name="descripcion" render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              label="Descripción"
+              placeholder="Breve descripción de tu empresa..."
+              value={value ?? ''}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              multiline
+              numberOfLines={3}
+              returnKeyType="next"
+            />
+          )} />
+
+          <SectionLabel>Contacto</SectionLabel>
+
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <Controller control={control} name="telefono" render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Teléfono"
+                  placeholder="+57 300 000 0000"
+                  keyboardType="phone-pad"
+                  value={value ?? ''}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  returnKeyType="next"
+                />
+              )} />
+            </View>
+            <View className="flex-1">
+              <Controller control={control} name="email_empresa" render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Email empresa"
+                  placeholder="info@empresa.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={value ?? ''}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={errors.email_empresa?.message}
+                  returnKeyType="next"
+                />
+              )} />
+            </View>
+          </View>
+
+          <Controller control={control} name="direccion" render={({ field: { onChange, onBlur, value } }) => (
+            <Input
+              label="Dirección"
+              placeholder="Calle 123 # 45-67"
+              value={value ?? ''}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              returnKeyType="next"
+            />
+          )} />
+
+          <SectionLabel>Tu cuenta de administrador</SectionLabel>
 
           <View className="flex-row gap-3">
             <View className="flex-1">

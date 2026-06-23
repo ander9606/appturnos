@@ -65,6 +65,12 @@ interface AuthState {
   registrarEmpresa(params: {
     nombre_empresa: string;
     nit?: string;
+    actividad?: string;
+    descripcion?: string;
+    telefono?: string;
+    email_empresa?: string;
+    direccion?: string;
+    ciudad?: string;
     nombre: string;
     apellido?: string;
     email: string;
@@ -151,9 +157,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   // ── registrarEmpresa ──────────────────────────────────────────────────
-  async registrarEmpresa({ nombre_empresa, nit, nombre, apellido, email, password }) {
+  async registrarEmpresa({ nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password }) {
     const { access_token, refresh_token, usuario } = await authApi.registrarEmpresa({
-      nombre_empresa, nit, nombre, apellido, email, password,
+      nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password,
     });
     await secureTokenStore.setTokens(access_token, refresh_token);
     await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));

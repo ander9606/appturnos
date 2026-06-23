@@ -134,6 +134,12 @@ export const authApi = {
   registrarEmpresa(params: {
     nombre_empresa: string;
     nit?: string;
+    descripcion?: string;
+    actividad?: string;
+    telefono?: string;
+    email_empresa?: string;
+    direccion?: string;
+    ciudad?: string;
     nombre: string;
     apellido?: string;
     email: string;

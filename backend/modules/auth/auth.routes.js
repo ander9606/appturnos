@@ -63,7 +63,14 @@ router.post(
   '/registro-empresa',
   [
     body('nombre_empresa').isString().trim().notEmpty().withMessage('Nombre de empresa requerido'),
-    body('nit').optional().isString().trim(),
+    body('nit').optional({ values: 'falsy' }).isString().trim(),
+    body('descripcion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 500 }),
+    body('actividad').optional({ values: 'falsy' }).isString().trim().isLength({ max: 200 }),
+    body('telefono').optional({ values: 'falsy' }).isString().trim().isLength({ max: 30 }),
+    body('email_empresa').optional({ values: 'falsy' }).isEmail().withMessage('Email de empresa inválido')
+      .customSanitizer(v => v.trim().toLowerCase()),
+    body('direccion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 300 }),
+    body('ciudad').optional({ values: 'falsy' }).isString().trim().isLength({ max: 100 }),
     body('nombre').isString().trim().notEmpty().withMessage('Nombre requerido'),
     body('apellido').optional().isString().trim(),
     emailSanitizado,

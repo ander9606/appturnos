@@ -55,8 +55,12 @@ async function cambiarPassword(req, res) {
 }
 
 async function registrarEmpresa(req, res) {
-  const { nombre_empresa, nit, nombre, apellido, email, password } = req.body;
-  const data = await AuthService.registrarEmpresa({ nombreEmpresa: nombre_empresa, nit, nombre, apellido, email, password });
+  const { nombre_empresa, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password } = req.body;
+  const data = await AuthService.registrarEmpresa({
+    nombreEmpresa: nombre_empresa, nit, descripcion, actividad, telefono,
+    emailEmpresa: email_empresa, direccion, ciudad,
+    nombre, apellido, email, password,
+  });
   res.status(201).json({ success: true, data, message: '¡Empresa registrada! Bienvenido a AppTurnos.' });
 }
 
