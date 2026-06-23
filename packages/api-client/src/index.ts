@@ -82,6 +82,7 @@ export type {
   TipoCuenta,
 } from './trabajadores';
 export { notificacionesApi } from './notificaciones';
+export type { Notificacion, ListarNotificacionesResponse } from './notificaciones';
 export { adminApi } from './admin';
 export { reportesApi } from './reportes';
 export { integracionApi } from './integracion';
