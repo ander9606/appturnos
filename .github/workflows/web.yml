@@ -71,11 +71,14 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
 
+          # Sincronizar Caddyfile y docker-compose.yml en el VPS
+          ssh root@"$HOST" "cd /app && git pull origin main"
+
           # Crear directorio en el VPS si no existe
           ssh root@"$HOST" "mkdir -p /srv/web"
 
           # Copiar el build al VPS
           scp -r dist/* root@"$HOST":/srv/web/
 
-          # Levantar/recrear Caddy para que monte el volumen /srv/web y sirva el nuevo build
+          # Recrear Caddy con la config actualizada (Caddyfile + bind mount /srv/web)
           ssh root@"$HOST" "cd /app && docker compose --env-file backend/.env up -d --force-recreate caddy"
