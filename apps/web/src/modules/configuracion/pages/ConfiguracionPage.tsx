@@ -46,6 +46,18 @@ export function ConfiguracionPage() {
 }
 
 /* ── Empresa ── */
+const EMPRESA_FIELDS: { key: string; label: string; type?: string; full?: boolean; textarea?: boolean }[] = [
+  { key: 'nombre',         label: 'Nombre de la empresa *' },
+  { key: 'nit',            label: 'NIT' },
+  { key: 'ciudad',         label: 'Ciudad' },
+  { key: 'actividad',      label: 'Actividad económica' },
+  { key: 'descripcion',    label: 'Descripción', textarea: true, full: true },
+  { key: 'telefono',       label: 'Teléfono' },
+  { key: 'email_empresa',  label: 'Email de la empresa', type: 'email' },
+  { key: 'direccion',      label: 'Dirección', full: true },
+  { key: 'logo_url',       label: 'URL del logo', type: 'url', full: true },
+];
+
 function EmpresaTab() {
   const { data, isLoading } = useEmpresa();
   const update = useUpdateEmpresa();
@@ -56,13 +68,9 @@ function EmpresaTab() {
   if (!empresa) return null;
 
   const editing = form !== null;
-  const val = editing ? form : {
-    nombre: empresa.nombre ?? '',
-    nit: empresa.nit ?? '',
-    direccion: empresa.direccion ?? '',
-    telefono: empresa.telefono ?? '',
-    email: empresa.email ?? '',
-  };
+  const base: Record<string, string> = {};
+  for (const { key } of EMPRESA_FIELDS) base[key] = ((empresa as unknown as Record<string, unknown>)[key] as string) ?? '';
+  const val = editing ? form : base;
 
   const handleSave = async () => {
     if (!form) return;
@@ -70,15 +78,11 @@ function EmpresaTab() {
     setForm(null);
   };
 
-  const field = (k: string) => ({
-    value: val[k] ?? '',
-    disabled: !editing,
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f!, [k]: e.target.value })),
-  });
+  const INPUT_CLS = 'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground';
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 max-w-lg">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-card border border-border rounded-2xl p-6 max-w-2xl">
+      <div className="flex items-center justify-between mb-5">
         <h2 className="text-base font-semibold text-foreground">Datos de la empresa</h2>
         {!editing
           ? <button onClick={() => setForm({ ...val })} className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-600"><Pencil size={14} /> Editar</button>
@@ -90,15 +94,26 @@ function EmpresaTab() {
             </div>
         }
       </div>
-      <div className="flex flex-col gap-4">
-        {(['nombre', 'nit', 'direccion', 'telefono', 'email'] as const).map(k => (
-          <div key={k}>
-            <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">{k}</label>
-            <input
-              type={k === 'email' ? 'email' : 'text'}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground"
-              {...field(k)}
-            />
+      <div className="grid grid-cols-2 gap-4">
+        {EMPRESA_FIELDS.map(({ key, label, type = 'text', full, textarea }) => (
+          <div key={key} className={full ? 'col-span-2' : ''}>
+            <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">{label}</label>
+            {textarea
+              ? <textarea
+                  rows={3}
+                  disabled={!editing}
+                  value={val[key] ?? ''}
+                  onChange={e => setForm(f => ({ ...f!, [key]: e.target.value }))}
+                  className={INPUT_CLS + ' resize-none'}
+                />
+              : <input
+                  type={type}
+                  disabled={!editing}
+                  value={val[key] ?? ''}
+                  onChange={e => setForm(f => ({ ...f!, [key]: e.target.value }))}
+                  className={INPUT_CLS}
+                />
+            }
           </div>
         ))}
       </div>

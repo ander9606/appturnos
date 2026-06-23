@@ -58,6 +58,31 @@ router.post(
   ctrl.activarCuenta
 );
 
+// POST /api/auth/registro-empresa — registro público de empresa nueva + admin_empresa.
+router.post(
+  '/registro-empresa',
+  [
+    body('nombre_empresa').isString().trim().notEmpty().withMessage('Nombre de empresa requerido'),
+    body('nit').optional({ values: 'falsy' }).isString().trim(),
+    body('descripcion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 500 }),
+    body('actividad').optional({ values: 'falsy' }).isString().trim().isLength({ max: 200 }),
+    body('telefono').optional({ values: 'falsy' }).isString().trim().isLength({ max: 30 }),
+    body('email_empresa').optional({ values: 'falsy' }).isEmail().withMessage('Email de empresa inválido')
+      .customSanitizer(v => v.trim().toLowerCase()),
+    body('direccion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 300 }),
+    body('ciudad').optional({ values: 'falsy' }).isString().trim().isLength({ max: 100 }),
+    body('nombre').isString().trim().notEmpty().withMessage('Nombre requerido'),
+    body('apellido').optional().isString().trim(),
+    emailSanitizado,
+    body('password')
+      .isString()
+      .isLength({ min: 8 })
+      .withMessage('La contraseña debe tener al menos 8 caracteres'),
+  ],
+  validar,
+  ctrl.registrarEmpresa
+);
+
 // POST /api/auth/registro — registro libre para trabajador_turnos (marketplace).
 // No requiere cédula ni empresa preexistente.
 router.post(

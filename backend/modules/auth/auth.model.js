@@ -200,6 +200,35 @@ const AuthModel = {
     return res.insertId;
   },
 
+  /**
+   * Crea una empresa nueva y su primer usuario admin_empresa en una transacción.
+   * @returns {{ empresaId: number, usuarioId: number }}
+   */
+  async registrarEmpresa({ nombreEmpresa, slug, nit, descripcion, actividad, telefono, emailEmpresa, direccion, ciudad, nombre, apellido, email, passwordHash }) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [empRes] = await conn.query(
+        `INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico')`,
+        [nombreEmpresa, slug, nit || null, descripcion || null, actividad || null, telefono || null, emailEmpresa || null, direccion || null, ciudad || null]
+      );
+      const empresaId = empRes.insertId;
+      const [usrRes] = await conn.query(
+        `INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol)
+         VALUES (?, ?, ?, ?, ?, 'admin_empresa')`,
+        [empresaId, nombre, apellido || null, email, passwordHash]
+      );
+      await conn.commit();
+      return { empresaId, usuarioId: usrRes.insertId };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
   /** Crea un usuario gestor (jefe_turnos, jefe_nomina, nomina) para una empresa. */
   async crearGestor({ empresaId, nombre, apellido, email, passwordHash, rol }) {
     const [res] = await pool.query(

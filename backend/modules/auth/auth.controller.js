@@ -54,6 +54,16 @@ async function cambiarPassword(req, res) {
   res.json({ success: true, data: null, message: 'Contraseña actualizada. Inicia sesión de nuevo.' });
 }
 
+async function registrarEmpresa(req, res) {
+  const { nombre_empresa, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password } = req.body;
+  const data = await AuthService.registrarEmpresa({
+    nombreEmpresa: nombre_empresa, nit, descripcion, actividad, telefono,
+    emailEmpresa: email_empresa, direccion, ciudad,
+    nombre, apellido, email, password,
+  });
+  res.status(201).json({ success: true, data, message: '¡Empresa registrada! Bienvenido a AppTurnos.' });
+}
+
 async function crearGestor(req, res) {
   const { nombre, apellido, email, rol } = req.body;
   const data = await AuthService.crearGestor(req.empresa_id, { nombre, apellido, email, rol });
@@ -72,4 +82,4 @@ async function setActivoGestor(req, res) {
   res.json({ success: true, data: null, message: activo ? 'Gestor activado' : 'Gestor desactivado' });
 }
 
-module.exports = { login, refresh, logout, me, activarCuenta, registrar, actualizarPerfil, cambiarPassword, crearGestor, listarGestores, setActivoGestor };
+module.exports = { login, refresh, logout, me, activarCuenta, registrar, registrarEmpresa, actualizarPerfil, cambiarPassword, crearGestor, listarGestores, setActivoGestor };
