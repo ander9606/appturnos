@@ -9,6 +9,7 @@ import { EquipoPage } from '@/modules/equipo/pages/EquipoPage';
 import { TrabajadorDetailPage } from '@/modules/equipo/pages/TrabajadorDetailPage';
 import { TurnosPage } from '@/modules/turnos/pages/TurnosPage';
 import { OfertaDetailPage } from '@/modules/turnos/pages/OfertaDetailPage';
+import { ConfiguracionPage } from '@/modules/configuracion/pages/ConfiguracionPage';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="equipo/:id" element={<TrabajadorDetailPage />} />
             <Route path="turnos" element={<TurnosPage />} />
             <Route path="turnos/:id" element={<OfertaDetailPage />} />
+            <Route path="configuracion" element={<ConfiguracionPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
