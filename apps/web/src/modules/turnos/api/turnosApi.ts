@@ -41,10 +41,6 @@ export const turnosApi = {
   calificar: (id: number, data: { calificacion: number; comentario?: string }) =>
     api.post(`/turnos/asignaciones/${id}/calificar`, data).then(r => r.data),
 
-  // Puestos
-  listarPuestos: (ofertaId: number) =>
-    api.get(`/turnos/ofertas/${ofertaId}/puestos`).then(r => r.data),
-
   crearPuesto: (ofertaId: number, data: { cargo_id: number; plazas?: number; tarifa_dia: number; notas?: string }) =>
     api.post(`/turnos/ofertas/${ofertaId}/puestos`, data).then(r => r.data),
 

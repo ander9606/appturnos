@@ -50,8 +50,8 @@ export function EmpresaDetailPage() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h1 className="text-xl font-bold text-foreground">{empresa.nombre}</h1>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PLAN_BADGE[empresa.plan]}`}>
-                  {PLAN_LABEL[empresa.plan]}
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PLAN_BADGE[empresa.plan as Plan]}`}>
+                  {PLAN_LABEL[empresa.plan as Plan]}
                 </span>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                   {activo ? 'Activa' : 'Inactiva'}
@@ -91,7 +91,7 @@ export function EmpresaDetailPage() {
           <InfoRow label="Slug" value={empresa.slug} mono />
           <InfoRow label="NIT" value={empresa.nit ?? '—'} />
           <InfoRow label="Ciudad" value={empresa.ciudad ?? '—'} />
-          <InfoRow label="Plan" value={PLAN_LABEL[empresa.plan]} />
+          <InfoRow label="Plan" value={PLAN_LABEL[empresa.plan as Plan]} />
           <InfoRow label="Alta" value={fmtDate(empresa.created_at)} />
           <InfoRow
             label="Acepta postulaciones"
