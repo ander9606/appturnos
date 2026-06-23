@@ -34,10 +34,10 @@ export default function WelcomeScreen() {
 
         {/* Logo */}
         <View style={styles.logoBox}>
-          <Ionicons name="calendar" size={44} color="white" />
+          <Ionicons name="planet" size={44} color="white" />
         </View>
 
-        <Text style={styles.appName}>AppTurnos</Text>
+        <Text style={styles.appName}>Zaturno</Text>
         <Text style={styles.appSub}>Gestión de turnos y nómina{'\n'}para tu empresa</Text>
 
         {/* Indicadores */}

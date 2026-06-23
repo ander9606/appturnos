@@ -86,9 +86,9 @@ export default function LoginScreen() {
           </Pressable>
 
           <View style={styles.logoBox}>
-            <Ionicons name="calendar" size={40} color="white" />
+            <Ionicons name="planet" size={40} color="white" />
           </View>
-          <Text style={styles.appName}>AppTurnos</Text>
+          <Text style={styles.appName}>Zaturno</Text>
           <Text style={styles.appSub}>Gestión de turnos y nómina</Text>
         </View>
 
