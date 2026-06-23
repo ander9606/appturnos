@@ -1,12 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Linking, Platform, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import type { PuntoMarcaje, DescansoCompensatorio } from '@api-client';
 import type { RegistroDiario } from '@api-client';
-import { MarcajeButtons } from './MarcajeButtons';
 import { CompensatorioBanner } from '../../compensatorios/CompensatorioBanner';
 import { fmtHora, calcularElapsedLabel, type EstadoHoy } from '../nominaTrabajadorUtils';
-import type { useGeofence } from '@/features/turnos/useGeofence';
 
 interface Props {
   cargo:          string | null;
@@ -15,12 +14,6 @@ interface Props {
   estadoHoy:      EstadoHoy;
   periodoAbierto: boolean;
   registroHoy:    RegistroDiario | null;
-  geo:            ReturnType<typeof useGeofence>;
-  fijoBloqueado:  boolean;
-  isMutating:     boolean;
-  onEntrada:      () => void;
-  onSalida:       () => void;
-  horasTrabajadas?: number;
   compensatorios: DescansoCompensatorio[];
   isRefetching:   boolean;
   onRefresh:      () => void;
@@ -41,17 +34,13 @@ export function IngresoHoyTab({
   estadoHoy,
   periodoAbierto,
   registroHoy,
-  geo,
-  fijoBloqueado,
-  isMutating,
-  onEntrada,
-  onSalida,
-  horasTrabajadas,
   compensatorios,
   isRefetching,
   onRefresh,
   primaryColor,
 }: Props) {
+  const router = useRouter();
+
   return (
     <ScrollView
       className="flex-1"
@@ -137,19 +126,41 @@ export function IngresoHoyTab({
       {/* ── Alertas compensatorios ───────────────────────── */}
       {compensatorios.length > 0 && <CompensatorioBanner compensatorios={compensatorios} />}
 
-      {/* ── Geofence + botones de marcaje ────────────────── */}
-      <MarcajeButtons
-        estadoHoy={estadoHoy}
-        periodoAbierto={periodoAbierto}
-        tipoMarcacion={tipoMarcacion}
-        puntoNombre={puntoMarcaje?.nombre ?? null}
-        geo={geo}
-        fijoBloqueado={fijoBloqueado}
-        isMutating={isMutating}
-        onEntrada={onEntrada}
-        onSalida={onSalida}
-        horasTrabajadas={horasTrabajadas}
-      />
+      {/* ── Acceso a la pantalla de marcaje ──────────────── */}
+      {estadoHoy === 'sin_periodo' ? (
+        <View className="bg-muted rounded-2xl py-4 items-center px-4 gap-1">
+          <Text className="text-sm font-semibold text-muted-foreground text-center">Sin período de nómina activo</Text>
+          <Text className="text-xs text-muted-foreground text-center">
+            Tu responsable debe abrir un período para que puedas registrar horas.
+          </Text>
+        </View>
+      ) : (
+        <TouchableOpacity
+          onPress={() => router.push('/nomina-ingreso')}
+          className="rounded-2xl py-4 items-center gap-1 active:opacity-80"
+          style={{ backgroundColor: primaryColor }}
+          accessibilityRole="button"
+          accessibilityLabel="Ir a pantalla de marcaje"
+        >
+          <View className="flex-row items-center gap-2">
+            <Ionicons
+              name={estadoHoy === 'en_jornada' ? 'timer-outline' : estadoHoy === 'jornada_completa' ? 'checkmark-circle-outline' : 'log-in-outline'}
+              size={22}
+              color="white"
+            />
+            <Text className="text-base font-bold text-white">
+              {estadoHoy === 'en_jornada'
+                ? `En jornada · ${registroHoy?.hora_entrada ? calcularElapsedLabel(registroHoy.hora_entrada) : '—'}`
+                : estadoHoy === 'jornada_completa'
+                ? 'Jornada completada'
+                : 'Marcar entrada'}
+            </Text>
+          </View>
+          <Text className="text-white/70 text-xs">
+            {estadoHoy === 'en_jornada' ? 'Toca para ver el contador y marcar salida →' : 'Toca para abrir el marcaje →'}
+          </Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }

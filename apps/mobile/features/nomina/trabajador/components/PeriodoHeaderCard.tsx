@@ -77,15 +77,6 @@ export function PeriodoHeaderCard({
           <Text className="text-white/70 text-[10px]">Salario mensual</Text>
         </View>
 
-        {salarioBase != null && (
-          <View className="gap-0.5 items-end">
-            <Text className="text-white text-sm font-bold">
-              {mask(formatCOP(Math.round(valorHora)))} / h
-            </Text>
-            <Text className="text-white/70 text-[10px]">Valor hora</Text>
-          </View>
-        )}
-
         {resumen.valorExtraCOP > 0 && (
           <View className="bg-white/25 rounded-xl px-2.5 py-1.5 gap-0.5 items-center">
             <Text className="text-white text-sm font-extrabold">

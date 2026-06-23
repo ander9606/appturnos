@@ -59,7 +59,8 @@ export default function DashboardScreen() {
 
   // ── Data fetching ────────────────────────────────────────────────────────
 
-  const showShifts = !isNomina; // nomina workers don't use shift hero unless acepta_extras
+  // Only trabajador_turnos gets the shift hero — managers/admin have no own shifts
+  const showShifts = isWorker && !isNomina;
 
   const {
     data: turnos = [],

@@ -41,11 +41,6 @@ export function NominaTrabajadorView() {
     registroHoy,
     estadoHoy,
     todayISO,
-    geo,
-    fijoBloqueado,
-    isMutating,
-    handleEntrada,
-    handleSalida,
     loading,
     loadingRegistros,
     isRefetching,
@@ -124,12 +119,6 @@ export function NominaTrabajadorView() {
           estadoHoy={estadoHoy}
           periodoAbierto={periodoActivo?.estado === 'abierto'}
           registroHoy={registroHoy}
-          geo={geo}
-          fijoBloqueado={fijoBloqueado}
-          isMutating={isMutating}
-          onEntrada={handleEntrada}
-          onSalida={handleSalida}
-          horasTrabajadas={analisisHoy?.totalHoras}
           compensatorios={compensatorios}
           isRefetching={isRefetching}
           onRefresh={onRefresh}

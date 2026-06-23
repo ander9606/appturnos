@@ -111,9 +111,11 @@ export default function RootLayout() {
             <Stack.Screen name="integracion/config" options={{ title: 'Integración logiq360' }} />
             <Stack.Screen name="integracion/estado" options={{ title: 'Estado de la cola' }} />
             <Stack.Screen name="integracion/conciliacion" options={{ title: 'Conciliación de personal' }} />
-            {/* Marcaje — transición vertical (flujo de acción rápida) */}
+            {/* Marcaje turnos — transición vertical */}
             <Stack.Screen name="ingreso/[id]" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="egreso/[id]"  options={{ animation: 'slide_from_bottom' }} />
+            {/* Marcaje nómina — pantalla dedicada con contador */}
+            <Stack.Screen name="nomina-ingreso" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>
