@@ -26,6 +26,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Inicio', to: '/', icon: LayoutDashboard },
     { label: 'Turnos', to: '/turnos', icon: Calendar },
     { label: 'Equipo', to: '/equipo', icon: Users },
+    { label: 'Configuración', to: '/configuracion', icon: Settings },
   ],
   nomina: [
     { label: 'Inicio', to: '/', icon: LayoutDashboard },
