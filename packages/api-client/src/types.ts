@@ -20,7 +20,20 @@ export interface UsuarioPerfil {
   apellido: string;
   foto_perfil: string | null;
   email: string;
+  telefono: string | null;
   rol: Rol;
+}
+
+export interface OAuthLoginResponse extends LoginResponse {
+  tipo: 'login' | 'vinculacion' | 'registro';
+}
+
+export interface OAuthVinculo {
+  id: number;
+  provider: string;
+  email: string | null;
+  ultima_sesion: string | null;
+  created_at: string;
 }
 
 export interface TokenPair {
@@ -42,6 +55,8 @@ export interface UpdateProfileParams {
   nombre?: string;
   apellido?: string;
   email?: string;
+  telefono?: string;
+  telefono_token?: string;
 }
 
 export interface ChangePasswordParams {

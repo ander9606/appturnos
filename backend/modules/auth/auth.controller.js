@@ -51,8 +51,11 @@ async function actualizarFoto(req, res) {
 }
 
 async function actualizarPerfil(req, res) {
-  const { nombre, apellido, email } = req.body;
-  const data = await AuthService.actualizarPerfil(req.usuario.sub, { nombre, apellido, email });
+  const { nombre, apellido, email, telefono, telefono_token } = req.body;
+  if (telefono !== undefined) {
+    VerificacionSvc.validarTokenVerificacion(telefono_token, 'telefono', telefono);
+  }
+  const data = await AuthService.actualizarPerfil(req.usuario.sub, { nombre, apellido, email, telefono });
   res.json({ success: true, data, message: 'Perfil actualizado' });
 }
 

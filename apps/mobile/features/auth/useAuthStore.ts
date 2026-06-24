@@ -93,6 +93,9 @@ interface AuthState {
     telefono_token: string;
   }): Promise<void>;
 
+  /** Login / registro vía Google OAuth. Devuelve `tipo` para que el caller sepa si fue registro. */
+  loginConGoogle(idToken: string): Promise<'login' | 'vinculacion' | 'registro'>;
+
   /** Actualiza el usuario en memoria y en SecureStore (tras edición de perfil) */
   setUsuario(usuario: UsuarioPerfil): Promise<void>;
 
@@ -185,6 +188,15 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     await secureTokenStore.setTokens(access_token, refresh_token);
     await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
     set({ status: 'authenticated', usuario });
+  },
+
+  // ── loginConGoogle ────────────────────────────────────────────────────
+  async loginConGoogle(idToken) {
+    const { access_token, refresh_token, usuario, tipo } = await authApi.loginConProvider('google', idToken);
+    await secureTokenStore.setTokens(access_token, refresh_token);
+    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    set({ status: 'authenticated', usuario });
+    return tipo;
   },
 
   // ── setUsuario ────────────────────────────────────────────────────────

@@ -6,6 +6,8 @@ import {
   TokenPair,
   UpdateProfileParams,
   ChangePasswordParams,
+  OAuthLoginResponse,
+  OAuthVinculo,
 } from './types';
 
 export interface CrearGestorPayload {
@@ -153,6 +155,28 @@ export const authApi = {
       params,
       { authenticated: false },
     );
+  },
+
+  /**
+   * Login / registro vía OAuth (Google, etc.).
+   * El `idToken` proviene de expo-auth-session o el SDK nativo de Google.
+   */
+  loginConProvider(provider: string, idToken: string): Promise<OAuthLoginResponse> {
+    return api.post<OAuthLoginResponse>(
+      `/api/auth/oauth/${provider}`,
+      { id_token: idToken },
+      { authenticated: false },
+    );
+  },
+
+  /** Lista los proveedores OAuth vinculados a la cuenta autenticada. */
+  oauthVinculos(): Promise<OAuthVinculo[]> {
+    return api.get<OAuthVinculo[]>('/api/auth/oauth/vinculos');
+  },
+
+  /** Desvincula un proveedor OAuth de la cuenta autenticada. */
+  oauthDesvincular(provider: string): Promise<null> {
+    return api.delete<null>(`/api/auth/oauth/${provider}`);
   },
 
   /** Envía un código OTP de 6 dígitos al email o teléfono indicado. */

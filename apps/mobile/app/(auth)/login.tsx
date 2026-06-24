@@ -27,6 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { loginSchema, type LoginFormData } from '@/features/auth/schemas';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useGoogleAuth } from '@/features/auth/useGoogleAuth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { t } from '@/lib/i18n';
@@ -38,6 +39,9 @@ export default function LoginScreen() {
   const router = useRouter();
   const login  = useAuthStore((s) => s.login);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const { promptAsync: googleLogin, loading: googleLoading } = useGoogleAuth(
+    (msg) => setServerError(msg),
+  );
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -164,6 +168,19 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
+          {/* Google Sign-In */}
+          <TouchableOpacity
+            style={styles.googleBtn}
+            onPress={() => googleLogin()}
+            disabled={googleLoading}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="logo-google" size={20} color="#4285F4" />
+            <Text style={styles.googleBtnText}>
+              {googleLoading ? 'Conectando…' : 'Continuar con Google'}
+            </Text>
+          </TouchableOpacity>
+
           {/* Links secundarios */}
           <View style={styles.links}>
             <LinkRow
@@ -260,4 +277,14 @@ const styles = StyleSheet.create({
   linkRow:    { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' },
   linkLabel:  { fontSize: 13, color: '#94A3B8' },
   linkAction: { fontSize: 13, fontWeight: '700', color: '#FF5A3C' },
+
+  // Google button
+  googleBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 14,
+    paddingVertical: 13, backgroundColor: 'white',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+  },
+  googleBtnText: { fontSize: 15, fontWeight: '600', color: '#0F172A' },
 });

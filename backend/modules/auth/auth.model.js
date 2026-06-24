@@ -112,12 +112,13 @@ const AuthModel = {
 
   // ─── Actualización de perfil ────────────────────────────────
 
-  async actualizarPerfil(id, { nombre, apellido, email }) {
+  async actualizarPerfil(id, { nombre, apellido, email, telefono }) {
     const updates = [];
     const params = [];
-    if (nombre !== undefined) { updates.push('nombre = ?'); params.push(nombre); }
-    if (apellido !== undefined) { updates.push('apellido = ?'); params.push(apellido); }
-    if (email !== undefined) { updates.push('email = ?'); params.push(email); }
+    if (nombre    !== undefined) { updates.push('nombre = ?');    params.push(nombre); }
+    if (apellido  !== undefined) { updates.push('apellido = ?');  params.push(apellido); }
+    if (email     !== undefined) { updates.push('email = ?');     params.push(email); }
+    if (telefono  !== undefined) { updates.push('telefono = ?');  params.push(telefono); }
     if (updates.length === 0) return;
     params.push(id);
     await pool.query(`UPDATE usuarios SET ${updates.join(', ')} WHERE id = ?`, params);

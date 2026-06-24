@@ -128,7 +128,7 @@ router.post(
   ctrl.registrar
 );
 
-// PATCH /api/auth/me — actualizar nombre / apellido / email
+// PATCH /api/auth/me — actualizar nombre / apellido / email / telefono
 router.patch(
   '/me',
   verificarToken,
@@ -139,6 +139,8 @@ router.patch(
       .optional()
       .isEmail().withMessage('Email inválido').bail()
       .customSanitizer((v) => v.trim().toLowerCase()),
+    body('telefono').optional().isString().trim().isLength({ min: 7, max: 20 }).withMessage('Teléfono inválido'),
+    body('telefono_token').optional().isString(),
   ],
   validar,
   ctrl.actualizarPerfil
