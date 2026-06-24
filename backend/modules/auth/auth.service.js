@@ -129,10 +129,16 @@ const AuthService = {
   async verificarCedula(cedula) {
     const fila = await AuthModel.verificarCedula(cedula);
     if (!fila) return { existe: false };
+
+    // Determinar el label de tipo/rol más específico disponible
+    const tipo = fila.rol_usuario
+      ? (fila.rol_usuario === 'nomina' ? 'nomina_gestor' : fila.rol_usuario)
+      : fila.tipo;
+
     return {
       existe: true,
       tiene_cuenta: !!fila.usuario_id,
-      tipo: fila.tipo,
+      tipo,
       invitacion: fila.estado_vinculo === 'solicitado_por_empresa'
         ? { empresa_nombre: fila.empresa_nombre }
         : null,
