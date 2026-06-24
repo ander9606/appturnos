@@ -333,34 +333,55 @@ function NominaGestorView() {
               )}
 
               {activePeriodo && (
-                <View className="flex-row gap-2">
-                  {activePeriodo.estado === 'abierto' && (
-                    <TouchableOpacity
-                      onPress={handleCerrar}
-                      disabled={cerrarMutation.isPending}
-                      className="flex-1 bg-warning-light border border-amber-200 rounded-2xl py-3 items-center"
-                    >
-                      <Text className="text-sm font-semibold text-amber-700">
-                        {cerrarMutation.isPending ? 'Cerrando…' : 'Cerrar período'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {activePeriodo.estado === 'cerrado' && (
-                    <TouchableOpacity
-                      onPress={handleLiquidar}
-                      disabled={liquidarMutation.isPending}
-                      className="flex-1 bg-success-light border border-green-200 rounded-2xl py-3 items-center"
-                    >
-                      <Text className="text-sm font-semibold text-success">
-                        {liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar período'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {activePeriodo.estado === 'liquidado' && (
-                    <View className="flex-1 bg-muted rounded-2xl py-3 items-center">
-                      <Text className="text-sm text-muted-foreground">Período liquidado</Text>
-                    </View>
-                  )}
+                <View className="gap-2">
+                  {/* Context label explaining what the current state means */}
+                  <View className="flex-row items-center gap-1.5 px-1">
+                    <Ionicons
+                      name={
+                        activePeriodo.estado === 'abierto'   ? 'lock-open-outline'
+                        : activePeriodo.estado === 'cerrado' ? 'lock-closed-outline'
+                        : 'checkmark-circle-outline'
+                      }
+                      size={14}
+                      color="#64748B"
+                    />
+                    <Text className="text-xs text-muted-foreground">
+                      {activePeriodo.estado === 'abierto'
+                        ? 'Los trabajadores pueden registrar horas'
+                        : activePeriodo.estado === 'cerrado'
+                        ? 'Horas congeladas — pendiente de pago'
+                        : 'Período pagado'}
+                    </Text>
+                  </View>
+                  <View className="flex-row gap-2">
+                    {activePeriodo.estado === 'abierto' && (
+                      <TouchableOpacity
+                        onPress={handleCerrar}
+                        disabled={cerrarMutation.isPending}
+                        className="flex-1 bg-warning-light border border-amber-200 rounded-2xl py-3 items-center"
+                      >
+                        <Text className="text-sm font-semibold text-amber-700">
+                          {cerrarMutation.isPending ? 'Cerrando…' : 'Cerrar período'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {activePeriodo.estado === 'cerrado' && (
+                      <TouchableOpacity
+                        onPress={handleLiquidar}
+                        disabled={liquidarMutation.isPending}
+                        className="flex-1 bg-success-light border border-green-200 rounded-2xl py-3 items-center"
+                      >
+                        <Text className="text-sm font-semibold text-success">
+                          {liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar período'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {activePeriodo.estado === 'liquidado' && (
+                      <View className="flex-1 bg-muted rounded-2xl py-3 items-center">
+                        <Text className="text-sm text-muted-foreground">Período liquidado</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               )}
 
