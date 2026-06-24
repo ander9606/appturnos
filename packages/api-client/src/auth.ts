@@ -95,6 +95,22 @@ export const authApi = {
   },
 
   /**
+   * Verifica si una cédula existe y tiene invitación pendiente de empresa.
+   * Endpoint público — no requiere token.
+   */
+  verificarCedula(cedula: string): Promise<{
+    existe: boolean;
+    tiene_cuenta?: boolean;
+    tipo?: string;
+    invitacion?: { empresa_nombre: string } | null;
+  }> {
+    return api.get(
+      `/api/auth/verificar-cedula?cedula=${encodeURIComponent(cedula)}`,
+      { authenticated: false },
+    );
+  },
+
+  /**
    * Activa la cuenta de un trabajador que aún no tiene login.
    * El trabajador debe existir en la BD con la cédula indicada.
    *

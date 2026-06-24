@@ -150,6 +150,28 @@ const AuthModel = {
   },
 
   /**
+   * Verifica si una cédula tiene invitación pendiente de empresa.
+   * Retorna null si no existe trabajador, o un objeto con los datos relevantes.
+   */
+  async verificarCedula(cedula) {
+    const [filas] = await pool.query(
+      `SELECT t.id, t.tipo, t.usuario_id,
+              te.estado   AS estado_vinculo,
+              e.nombre    AS empresa_nombre
+       FROM trabajadores t
+       LEFT JOIN trabajador_empresa te
+         ON te.trabajador_id = t.id
+         AND te.estado = 'solicitado_por_empresa'
+       LEFT JOIN empresas e ON e.id = te.empresa_id
+       WHERE t.cedula = ? AND t.activo = 1
+       ORDER BY te.id DESC
+       LIMIT 1`,
+      [cedula]
+    );
+    return filas[0] ?? null;
+  },
+
+  /**
    * Crea el usuario y lo vincula al trabajador en una sola transacción.
    * @returns {Promise<number>} id del usuario creado.
    */

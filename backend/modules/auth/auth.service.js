@@ -126,6 +126,19 @@ const AuthService = {
    * Activa la cuenta de un trabajador que aún no tiene login.
    * Crea el usuario (rol según `trabajador.tipo`) y lo vincula.
    */
+  async verificarCedula(cedula) {
+    const fila = await AuthModel.verificarCedula(cedula);
+    if (!fila) return { existe: false };
+    return {
+      existe: true,
+      tiene_cuenta: !!fila.usuario_id,
+      tipo: fila.tipo,
+      invitacion: fila.estado_vinculo === 'solicitado_por_empresa'
+        ? { empresa_nombre: fila.empresa_nombre }
+        : null,
+    };
+  },
+
   async activarCuenta({ cedula, email, password }) {
     const trabajadores = await AuthModel.buscarTrabajadoresPorCedula(cedula);
     if (trabajadores.length === 0) {
