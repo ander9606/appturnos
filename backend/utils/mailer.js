@@ -1,26 +1,16 @@
 'use strict';
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// ponytail: lazy singleton — upgrade path: extract to DI container if testing needs mocking
-let _transport;
-function transport() {
-  if (!_transport) {
-    _transport = nodemailer.createTransport({
-      host:   process.env.SMTP_HOST,
-      port:   Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-  return _transport;
+// ponytail: lazy singleton — upgrade path: inject in tests via dependency inversion
+let _resend;
+function client() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
 }
 
 async function enviarEmail({ to, subject, html }) {
-  await transport().sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+  await client().emails.send({
+    from: process.env.RESEND_FROM || 'Zaturno <onboarding@resend.dev>',
     to,
     subject,
     html,
