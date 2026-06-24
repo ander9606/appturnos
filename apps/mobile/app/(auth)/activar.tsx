@@ -31,7 +31,21 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { t } from '@/lib/i18n';
-import { ApiError } from '@api-client';
+import { ApiError, authApi } from '@api-client';
+
+const TIPO_LABEL: Record<string, string> = {
+  // tipos de trabajador
+  turnos:            'Trabajador de Turnos',
+  nomina:            'Trabajador de Nómina',
+  ambos:             'Trabajador de Turnos y Nómina',
+  // roles de gestor
+  jefe_turnos:       'Jefe de Turnos',
+  jefe_nomina:       'Jefe de Nómina',
+  nomina_gestor:     'Gestor de Nómina',
+  // roles completos (usuarios.rol)
+  trabajador_turnos: 'Trabajador de Turnos',
+  trabajador_nomina: 'Trabajador de Nómina',
+};
 
 const { height } = Dimensions.get('window');
 
@@ -39,6 +53,21 @@ export default function ActivarCuentaScreen() {
   const router = useRouter();
   const activarCuenta = useAuthStore((s) => s.activarCuenta);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [invitacionInfo, setInvitacionInfo] = React.useState<{ empresa_nombre: string; tipo: string } | null>(null);
+
+  const checkCedula = async (cedula: string) => {
+    if (cedula.length < 4) return;
+    try {
+      const res = await authApi.verificarCedula(cedula);
+      if (res.existe && res.invitacion) {
+        setInvitacionInfo({ empresa_nombre: res.invitacion.empresa_nombre, tipo: res.tipo ?? '' });
+      } else {
+        setInvitacionInfo(null);
+      }
+    } catch {
+      setInvitacionInfo(null);
+    }
+  };
 
   const {
     control,
@@ -115,16 +144,29 @@ export default function ActivarCuentaScreen() {
               control={control}
               name="cedula"
               render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label={t('auth.activar.cedula')}
-                  placeholder={t('auth.activar.cedulaPlaceholder')}
-                  keyboardType="number-pad"
-                  returnKeyType="next"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.cedula?.message}
-                />
+                <>
+                  <Input
+                    label={t('auth.activar.cedula')}
+                    placeholder={t('auth.activar.cedulaPlaceholder')}
+                    keyboardType="number-pad"
+                    returnKeyType="next"
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={() => { onBlur(); checkCedula(value); }}
+                    error={errors.cedula?.message}
+                  />
+                  {invitacionInfo && (
+                    <View style={styles.invitacionBanner}>
+                      <Ionicons name="business-outline" size={16} color="#0EA5E9" />
+                      <Text style={styles.invitacionText}>
+                        Tienes una invitación de{' '}
+                        <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
+                        {invitacionInfo.tipo ? ` como ${TIPO_LABEL[invitacionInfo.tipo] ?? invitacionInfo.tipo}` : ''}.
+                        Completa tu activación aquí.
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
             />
 
@@ -262,4 +304,12 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16 },
   footerText: { fontSize: 14, color: '#94A3B8' },
   footerLink: { fontSize: 14, fontWeight: '700', color: '#FF5A3C' },
+
+  invitacionBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: '#F0F9FF', borderWidth: 1, borderColor: '#BAE6FD',
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginTop: 8,
+  },
+  invitacionText: { flex: 1, fontSize: 13, color: '#0369A1', lineHeight: 18 },
+  invitacionBold: { fontWeight: '700' },
 });

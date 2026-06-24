@@ -29,6 +29,13 @@ async function me(req, res) {
   res.json({ success: true, data, message: 'Perfil del usuario' });
 }
 
+async function verificarCedula(req, res) {
+  const cedula = String(req.query.cedula ?? '').trim();
+  if (!cedula) return res.status(400).json({ success: false, data: null, message: 'cedula requerida' });
+  const data = await AuthService.verificarCedula(cedula);
+  res.json({ success: true, data, message: 'Verificación de cédula' });
+}
+
 async function activarCuenta(req, res) {
   const { cedula, email, password } = req.body;
   const data = await AuthService.activarCuenta({ cedula, email, password });
@@ -87,4 +94,4 @@ async function setActivoGestor(req, res) {
   res.json({ success: true, data: null, message: activo ? 'Gestor activado' : 'Gestor desactivado' });
 }
 
-module.exports = { login, refresh, logout, me, activarCuenta, registrar, registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, crearGestor, listarGestores, setActivoGestor };
+module.exports = { login, refresh, logout, me, verificarCedula, activarCuenta, registrar, registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, crearGestor, listarGestores, setActivoGestor };
