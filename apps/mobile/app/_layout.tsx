@@ -60,7 +60,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   // Navigate to the relevant screen when the user taps a push notification
   useEffect(() => {
     if (status !== 'authenticated') return;
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
       if (data.asignacion_id) {
         router.push(`/turno/${data.asignacion_id}`);
