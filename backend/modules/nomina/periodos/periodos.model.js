@@ -106,6 +106,16 @@ const PeriodosModel = {
     }
   },
 
+  /** Returns open periods whose fecha_fin is strictly before the given date. */
+  async listarAbiertosVencidos(empresaId, fecha) {
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS} FROM periodos_nomina
+       WHERE empresa_id = ? AND estado = 'abierto' AND fecha_fin < ?`,
+      [empresaId, fecha]
+    );
+    return filas;
+  },
+
   async obtenerAbiertoPorFecha(empresaId, fecha) {
     const [filas] = await pool.query(
       `SELECT ${COLUMNAS} FROM periodos_nomina

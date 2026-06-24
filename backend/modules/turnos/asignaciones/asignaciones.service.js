@@ -57,6 +57,36 @@ const AsignacionesService = {
   },
 
   async confirmar(empresaId, id) {
+    // Para trabajadores_nomina: verificar que el turno no solape con jornada ya registrada.
+    const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
+    if (asig) {
+      const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asig.trabajador_id);
+      if (trabajador?.rol === 'trabajador_nomina' || trabajador?.usuario_rol === 'trabajador_nomina') {
+        // Obtener detalle de la oferta para hora_inicio / hora_fin_estimada
+        const [[ofertaRow]] = await pool.query(
+          `SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada
+           FROM asignaciones_turno a
+           JOIN ofertas_turno o ON o.id = a.oferta_id
+           WHERE a.id = ? AND a.empresa_id = ?`,
+          [id, empresaId]
+        );
+        if (ofertaRow) {
+          const horaFin = ofertaRow.hora_fin_estimada || '23:59:00';
+          const [[solapado]] = await pool.query(
+            `SELECT id FROM registros_diarios
+             WHERE empresa_id = ? AND trabajador_id = ? AND fecha = ?
+               AND hora_entrada IS NOT NULL
+               AND hora_entrada < ? AND COALESCE(hora_salida,'23:59:00') > ?
+             LIMIT 1`,
+            [empresaId, asig.trabajador_id, ofertaRow.fecha, horaFin, ofertaRow.hora_inicio]
+          );
+          if (solapado) {
+            throw new AppError('Conflicto con jornada laboral registrada para ese día y horario', 409);
+          }
+        }
+      }
+    }
+
     const res = await AsignacionesModel.confirmar(empresaId, id);
     if (!res.ok) {
       const errores = {

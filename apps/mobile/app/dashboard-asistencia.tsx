@@ -94,24 +94,25 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
           <Text className="text-xs text-muted-foreground">{horario}</Text>
         ) : null}
 
-        {/* Barra de horas semanales (dos colores: azul = ordinarias, naranja = extras) */}
+        {/* Barra semanal: azul = diurnas ordinarias, violeta = nocturnas (recargo ×1.35), naranja = extras */}
         {(() => {
-          const ordinH   = Math.max(0, fila.horasSemana - fila.horasExtra);
-          const pctOrdin = Math.min(100, (ordinH / fila.limiteSemana) * 100);
-          const pctExtra = Math.min(100 - pctOrdin, (fila.horasExtra / fila.limiteSemana) * 100);
+          const L      = fila.limiteSemana;
+          const noc    = Math.min(fila.horasNocturnas, Math.max(0, fila.horasSemana - fila.horasExtra));
+          const ordin  = Math.max(0, fila.horasSemana - fila.horasExtra - noc);
+          const pctO   = Math.min(100, (ordin / L) * 100);
+          const pctN   = Math.min(100 - pctO, (noc  / L) * 100);
+          const pctE   = Math.min(100 - pctO - pctN, (fila.horasExtra / L) * 100);
           return (
             <View className="gap-1 mt-1">
               <View className="h-2 bg-muted rounded-full overflow-hidden flex-row">
-                {pctOrdin > 0 && (
-                  <View className="h-full bg-primary/60 rounded-full" style={{ width: `${pctOrdin}%` }} />
-                )}
-                {pctExtra > 0 && (
-                  <View className="h-full" style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }} />
-                )}
+                {pctO > 0 && <View className="h-full bg-primary/60" style={{ width: `${pctO}%` }} />}
+                {pctN > 0 && <View className="h-full" style={{ width: `${pctN}%`, backgroundColor: '#818CF8' }} />}
+                {pctE > 0 && <View className="h-full" style={{ width: `${pctE}%`, backgroundColor: '#F59E0B' }} />}
               </View>
               <Text className={`text-[10px] font-semibold ${excedeSemana ? 'text-amber-600' : 'text-muted-foreground'}`}>
-                {fila.horasSemana}h
-                {excedeSemana ? ` (+${fila.horasExtra}h extra)` : ` / ${fila.limiteSemana}h`}
+                {fila.horasSemana}h semana
+                {fila.horasNocturnas > 0 ? ` · ${fila.horasNocturnas}h noct` : ''}
+                {excedeSemana ? ` · +${fila.horasExtra}h extra` : ` / ${L}h`}
               </Text>
             </View>
           );

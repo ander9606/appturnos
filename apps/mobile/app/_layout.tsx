@@ -60,7 +60,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   // Navigate to the relevant screen when the user taps a push notification
   useEffect(() => {
     if (status !== 'authenticated') return;
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
       if (data.asignacion_id) {
         router.push(`/turno/${data.asignacion_id}`);
@@ -133,6 +133,8 @@ export default function RootLayout() {
             <Stack.Screen name="nomina-ingreso" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
             {/* Liquidación de turnos — gestores y admin */}
             <Stack.Screen name="liquidacion-turnos" options={{ title: 'Liquidación de turnos' }} />
+            {/* Liquidación trimestral de turnos eventuales */}
+            <Stack.Screen name="liquidacion-eventual" options={{ title: 'Turnos eventuales' }} />
             {/* Notificaciones — inbox accesible desde la campana */}
             <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
           </Stack>

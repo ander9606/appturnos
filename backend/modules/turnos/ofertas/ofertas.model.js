@@ -9,7 +9,7 @@ const { pool } = require('../../../config/database');
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-  lugar, latitud, longitud, estado,
+  lugar, latitud, longitud, estado, para_quien,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
@@ -47,6 +47,7 @@ const CAMPOS_EDITABLES = [
   'lugar',
   'latitud',
   'longitud',
+  'para_quien',
 ];
 
 /** Convierte la columna `puestos_json` (string) en array de objetos. */
@@ -61,11 +62,16 @@ function parsearPuestos(fila) {
 }
 
 const OfertasModel = {
-  async listar(empresaId, { fecha, estado, disponibles, antiguedadMinMin, limit, offset }) {
+  async listar(empresaId, { fecha, estado, disponibles, antiguedadMinMin, paraQuien, limit, offset }) {
     const where = ['empresa_id = ?'];
     const params = [empresaId];
     if (fecha) { where.push('fecha = ?'); params.push(fecha); }
     if (estado) { where.push('estado = ?'); params.push(estado); }
+    if (paraQuien === 'nomina') {
+      where.push("para_quien IN ('nomina','ambos')");
+    } else if (paraQuien === 'turnos') {
+      where.push("para_quien IN ('turnos','ambos')");
+    }
     if (disponibles) {
       where.push(`estado IN ('abierta', 'publicada') AND EXISTS (
         SELECT 1 FROM oferta_puestos p
@@ -100,7 +106,7 @@ const OfertasModel = {
    *   - Filtro por cargos: solo ofertas con al menos un puesto cuyo cargo
    *     el trabajador tiene certificado en esa empresa.
    */
-  async listarMultiEmpresa(usuarioId, empresaIds, { fecha, estado, disponibles, limit, offset }) {
+  async listarMultiEmpresa(usuarioId, empresaIds, { fecha, estado, disponibles, paraQuien, limit, offset }) {
     if (!empresaIds || empresaIds.length === 0) {
       return { data: [], total: 0 };
     }
@@ -110,6 +116,11 @@ const OfertasModel = {
 
     if (fecha) { where.push('o.fecha = ?'); params.push(fecha); }
     if (estado) { where.push('o.estado = ?'); params.push(estado); }
+    if (paraQuien === 'nomina') {
+      where.push("o.para_quien IN ('nomina','ambos')");
+    } else if (paraQuien === 'turnos') {
+      where.push("o.para_quien IN ('turnos','ambos')");
+    }
     if (disponibles) {
       where.push(`o.estado IN ('abierta', 'publicada') AND EXISTS (
         SELECT 1 FROM oferta_puestos p
@@ -223,8 +234,8 @@ const OfertasModel = {
         `INSERT INTO ofertas_turno
            (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
             lugar, latitud, longitud,
-            estado, external_ref, alquiler_ref, externo_notas, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            estado, para_quien, external_ref, alquiler_ref, externo_notas, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresaId,
           datos.titulo,
@@ -236,6 +247,7 @@ const OfertasModel = {
           datos.latitud ?? null,
           datos.longitud ?? null,
           datos.estado ?? 'abierta',
+          datos.para_quien ?? 'turnos',
           datos.external_ref ?? null,
           datos.alquiler_ref ?? null,
           datos.externo_notas ?? null,

@@ -135,6 +135,13 @@ const PeriodosService = {
     if (!empresa) return null;
     const tipo = empresa.tipo_liquidacion || 'mensual';
     const hoy  = toISODate(new Date());
+
+    // Cerrar automáticamente cualquier período abierto que ya venció.
+    const vencidos = await PeriodosModel.listarAbiertosVencidos(empresaId, hoy);
+    for (const v of vencidos) {
+      await PeriodosModel.cerrarConSnapshot(empresaId, v.id, null).catch(() => {});
+    }
+
     // Ya hay uno abierto que cubre hoy → no crear.
     const existente = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
     if (existente) return existente;
