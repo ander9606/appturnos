@@ -133,6 +133,8 @@ export default function RootLayout() {
             <Stack.Screen name="nomina-ingreso" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
             {/* Liquidación de turnos — gestores y admin */}
             <Stack.Screen name="liquidacion-turnos" options={{ title: 'Liquidación de turnos' }} />
+            {/* Liquidación trimestral de turnos eventuales */}
+            <Stack.Screen name="liquidacion-eventual" options={{ title: 'Turnos eventuales' }} />
             {/* Notificaciones — inbox accesible desde la campana */}
             <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
           </Stack>

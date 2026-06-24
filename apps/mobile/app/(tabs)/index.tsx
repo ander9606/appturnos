@@ -169,10 +169,10 @@ export default function DashboardScreen() {
 
   const managerActions: Action[] = isJefeNomina
     ? [
-        { icon: 'wallet-outline',        label: 'Nómina',      onPress: () => router.push('/(tabs)/nomina') },
-        { icon: 'people-outline',        label: 'Asistencia',  onPress: () => router.push('/dashboard-asistencia') },
-        { icon: 'person-outline',        label: 'Equipo',      onPress: () => router.push('/(tabs)/equipo') },
-        { icon: 'calendar-outline',      label: 'Registros',   onPress: () => router.push('/registros-periodo') },
+        { icon: 'wallet-outline',        label: 'Nómina',        onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'people-outline',        label: 'Asistencia',    onPress: () => router.push('/dashboard-asistencia') },
+        { icon: 'briefcase-outline',     label: 'Trim. eventual',onPress: () => router.push('/liquidacion-eventual') },
+        { icon: 'calendar-outline',      label: 'Registros',     onPress: () => router.push('/registros-periodo') },
       ]
     : [
         { icon: 'calendar-outline',      label: 'Turnos',      onPress: () => router.push('/(tabs)/turnos') },

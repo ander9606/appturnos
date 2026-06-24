@@ -288,16 +288,17 @@ function GestorOfertaItem({
 
 interface Props {
   selectedDate: string;
+  filtroParaQuien?: 'turnos' | 'nomina' | 'ambos';
 }
 
-export function GestorTurnosView({ selectedDate }: Props) {
+export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
   const {
     data: resp,
     isLoading,
     isError,
     refetch,
     isRefetching,
-  } = useOfertas({ fecha: selectedDate, limit: 50 });
+  } = useOfertas({ fecha: selectedDate, limit: 50, para_quien: filtroParaQuien });
 
   const confirmarMutation     = useConfirmar();
   const rechazarMutation      = useRechazar();

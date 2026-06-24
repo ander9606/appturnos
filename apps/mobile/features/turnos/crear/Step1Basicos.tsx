@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TextInput,
+  TouchableOpacity,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -101,6 +102,34 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
           longitud={data.longitud}
           onChange={(lugar, lat, lng) => onChange({ lugar, latitud: lat, longitud: lng })}
         />
+      </View>
+
+      {/* Destinatarios */}
+      <View className="gap-2">
+        <Text className="text-sm font-semibold text-foreground">Destinatarios</Text>
+        <Text className="text-xs text-muted-foreground -mt-1">¿A quién va dirigido este turno?</Text>
+        <View className="flex-row gap-2">
+          {([
+            { value: 'turnos', label: 'Trabajadores\nturnos' },
+            { value: 'nomina', label: 'Personal\nnómina' },
+            { value: 'ambos',  label: 'Ambos' },
+          ] as const).map((opt) => {
+            const active = data.para_quien === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => onChange({ para_quien: opt.value })}
+                className={`flex-1 rounded-2xl border py-3 px-2 items-center ${
+                  active ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                }`}
+              >
+                <Text className={`text-xs font-bold text-center ${active ? 'text-primary' : 'text-foreground'}`}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       <Button label="Siguiente →" variant="primary" size="lg" fullWidth onPress={handleNext} />

@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes } from '@/features/turnos/useTurnos';
+import { usePeriodoEventual } from '@/features/turnos/useTurnosEventual';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
@@ -30,15 +31,16 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function TurnosScreen() {
-  const rol      = useAuthStore((s) => s.usuario?.rol);
-  const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
-  const isNomina = rol === 'trabajador_nomina';
+  const rol           = useAuthStore((s) => s.usuario?.rol);
+  const isGestor      = rol === 'jefe_turnos' || rol === 'admin_empresa' || rol === 'jefe_nomina';
+  const isJefeNomina  = rol === 'jefe_nomina';
+  const isNomina      = rol === 'trabajador_nomina';
   const theme    = useTheme();
   const today    = useMemo(() => toISODate(new Date()), []);
 
   const { data: nominaPerfil } = useNominaPerfil();
-  // nomina con extras activos actúa igual que trabajador_turnos en esta tab
-  const isWorker = rol === 'trabajador_turnos' || (isNomina && Boolean(nominaPerfil?.acepta_extras));
+  // trabajador_nomina siempre ve sus turnos eventuales; trabajador_turnos también
+  const isWorker = rol === 'trabajador_turnos' || isNomina;
 
   const [weekRef,      setWeekRef]      = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -79,6 +81,7 @@ export default function TurnosScreen() {
   } = useMisTurnos({ enabled: isWorker });
 
   const { data: pendientesResp } = usePostulacionesPendientes({ enabled: isGestor });
+  const { data: periodoEventual } = usePeriodoEventual();
   const pendientesCount = pendientesResp?.data?.length ?? 0;
 
   const {
@@ -259,7 +262,7 @@ export default function TurnosScreen() {
       {/* ── Header ─────────────────────────────────────────────────── */}
       <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
         <Text className="text-xl font-bold text-foreground">
-          {isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
+          {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         </Text>
         {null}
       </View>
@@ -279,7 +282,10 @@ export default function TurnosScreen() {
       {/* ── Gestor view ────────────────────────────────────────────── */}
       {isGestor ? (
         <View className="flex-1">
-          <GestorTurnosView selectedDate={selectedDate} />
+          <GestorTurnosView
+            selectedDate={selectedDate}
+            filtroParaQuien={isJefeNomina ? 'nomina' : undefined}
+          />
 
           {/* FAB izquierdo — crear turno */}
           <TouchableOpacity
@@ -353,6 +359,26 @@ export default function TurnosScreen() {
         </View>
       ) : (
         <>
+          {/* ── Banner turnos eventuales (trabajador_nomina) ─────── */}
+          {isNomina && (
+            <TouchableOpacity
+              onPress={() => periodoEventual && router.push('/liquidacion-eventual')}
+              activeOpacity={0.8}
+              className="mx-5 mt-3 bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex-row items-center gap-3"
+            >
+              <Ionicons name="briefcase-outline" size={20} color="#7C3AED" />
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-violet-700">Turnos eventuales · Pago trimestral</Text>
+                {periodoEventual && (
+                  <Text className="text-xs text-violet-500 mt-0.5">
+                    {periodoEventual.estado === 'abierto' ? `Período abierto hasta ${periodoEventual.fecha_fin}` : 'Período liquidado'}
+                  </Text>
+                )}
+              </View>
+              <Ionicons name="chevron-forward-outline" size={16} color="#7C3AED" />
+            </TouchableOpacity>
+          )}
+
           {/* ── Tab selector ─────────────────────────────────────── */}
           {isWorker && (
             <View className="bg-card flex-row border-b border-border px-6">

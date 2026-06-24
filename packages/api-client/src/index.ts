@@ -54,7 +54,14 @@ export type {
   PaginatedResponse,
   LiquidacionTurnoLinea,
   LiquidacionTurnosTrabajador,
+  ParaQuienOferta,
 } from './turnos';
+export { turnosEventualApi } from './turnosEventual';
+export type {
+  PeriodoTurnoEventual,
+  LineaLiquidacionEventual,
+  LiquidacionEventualResponse,
+} from './turnosEventual';
 export { cargosApi } from './cargos';
 export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult } from './cargos';
 export { puntosMarcajeApi } from './puntos-marcaje';
