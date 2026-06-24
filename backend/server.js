@@ -14,6 +14,9 @@ const { errorHandler, noEncontrado } = require('./middleware/errorHandler');
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
+// Confiar en el primer proxy (Caddy) para X-Forwarded-For y rate limiting correcto
+app.set('trust proxy', 1);
+
 // ─── Middleware base ──────────────────────────────────────────
 app.use(helmet());
 
