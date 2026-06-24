@@ -16,4 +16,7 @@ export const equipoApi = {
 
   desactivar: (id: number) =>
     api.delete(`/trabajadores/${id}`).then(r => r.data),
+
+  invitar: (cedula: string) =>
+    api.post('/trabajador-empresa/invitar', { cedula }).then(r => r.data),
 };
