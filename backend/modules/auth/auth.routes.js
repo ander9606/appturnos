@@ -119,6 +119,15 @@ router.patch(
   ctrl.actualizarPerfil
 );
 
+// PATCH /api/auth/me/foto — actualizar foto de perfil
+router.patch(
+  '/me/foto',
+  verificarToken,
+  [body('foto_b64').optional({ values: 'falsy' }).isString().withMessage('foto_b64 debe ser string base64')],
+  validar,
+  ctrl.actualizarFoto
+);
+
 // PATCH /api/auth/me/password — cambiar contraseña
 router.patch(
   '/me/password',

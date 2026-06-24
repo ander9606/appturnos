@@ -114,6 +114,8 @@ app.use('/api/cargos', require('./modules/cargos/cargos.routes'));
 app.use('/api/puntos-marcaje', require('./modules/puntos-marcaje/puntos-marcaje.routes'));
 // Panel de super_admin: gestión cross-tenant de empresas y reportes globales.
 app.use('/api/admin', require('./modules/admin/admin.routes'));
+// Novedades de turno: reportes de retraso, ausencia, incidente u otro por asignación.
+app.use('/api/novedades/asignaciones', require('./modules/novedades/novedades.routes'));
 
 // ─── Manejo de errores ────────────────────────────────────────
 app.use(noEncontrado);
