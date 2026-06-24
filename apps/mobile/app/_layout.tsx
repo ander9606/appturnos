@@ -137,6 +137,10 @@ export default function RootLayout() {
             <Stack.Screen name="liquidacion-eventual" options={{ title: 'Turnos eventuales' }} />
             {/* Notificaciones — inbox accesible desde la campana */}
             <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
+            {/* Directorio de empresas — trabajador_turnos */}
+            <Stack.Screen name="directorio-empresas" options={{ title: 'Buscar empresa' }} />
+            {/* Mis empresas — vínculos del trabajador */}
+            <Stack.Screen name="mis-empresas" options={{ title: 'Mis empresas' }} />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>
