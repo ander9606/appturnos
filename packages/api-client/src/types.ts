@@ -18,6 +18,7 @@ export interface UsuarioPerfil {
   empresa_id: number | null; // null para super_admin (cross-tenant)
   nombre: string;
   apellido: string;
+  foto_perfil: string | null;
   email: string;
   rol: Rol;
 }

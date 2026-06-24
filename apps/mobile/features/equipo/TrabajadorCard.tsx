@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import type { Trabajador } from '@api-client';
-import { getInitials } from '@/lib/formatters';
-import { avatarColorForId } from '@/lib/designTokens';
+import { Avatar } from '@/components/ui/Avatar';
 
 const TIPO_LABELS: Record<string, string> = {
   turnos:  'Turnos',
@@ -18,7 +17,7 @@ interface Props {
 }
 
 export function TrabajadorCard({ trabajador: t, onPress }: Props) {
-  const { id, nombre, apellido, cargo, email, tipo, activo, tarifa_hora, salario_base } = t;
+  const { id, nombre, apellido, cargo, email, tipo, activo, tarifa_hora, salario_base, foto_perfil } = t;
 
   const salarioLabel = tarifa_hora != null
     ? `$${Number(tarifa_hora).toLocaleString('es-CO')} / h`
@@ -32,13 +31,8 @@ export function TrabajadorCard({ trabajador: t, onPress }: Props) {
       className="bg-card rounded-xl p-4 mb-3 flex-row items-center border border-border active:opacity-70"
     >
       {/* Avatar */}
-      <View
-        className="w-12 h-12 rounded-full items-center justify-center mr-3"
-        style={{ backgroundColor: avatarColorForId(id) }}
-      >
-        <Text className="text-white font-bold text-base">
-          {getInitials(nombre, apellido)}
-        </Text>
+      <View className="mr-3">
+        <Avatar id={id} nombre={nombre} apellido={apellido} fotoB64={foto_perfil} size={48} />
       </View>
 
       {/* Info */}
