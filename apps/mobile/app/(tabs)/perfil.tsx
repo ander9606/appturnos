@@ -18,10 +18,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
@@ -30,6 +32,7 @@ import { t } from '@/lib/i18n';
 import type { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { useNominaPerfil, useActualizarExtras } from '@/features/nomina/useNomina';
+import { Avatar } from '@/components/ui/Avatar';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -42,12 +45,6 @@ const ROL_LABELS: Record<string, string> = {
   trabajador_nomina:   'Trabajador de Nómina',
   super_admin:         'Super Admin',
 };
-
-function getInitials(nombre?: string, apellido?: string): string {
-  const n = (nombre?.[0] ?? '').toUpperCase();
-  const a = (apellido?.[0] ?? '').toUpperCase();
-  return n + a || '?';
-}
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -253,6 +250,7 @@ export default function PerfilScreen() {
   const [editingDatos,    setEditingDatos]    = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
   const [loggingOut,      setLoggingOut]      = useState(false);
+  const [uploadingFoto,   setUploadingFoto]   = useState(false);
 
   const { data: nominaPerfil } = useNominaPerfil();
   const actualizarExtrasMutation = useActualizarExtras();
@@ -263,7 +261,44 @@ export default function PerfilScreen() {
     });
   };
 
-  const initials = getInitials(usuario?.nombre, usuario?.apellido);
+  // ── Foto de perfil ─────────────────────────────────────────────────
+
+  const handleCambiarFoto = () => {
+    Alert.alert('Foto de perfil', undefined, [
+      {
+        text: 'Tomar foto',
+        onPress: async () => {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la cámara.'); return; }
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
+          if (!result.canceled && result.assets[0]?.base64) _subirFoto(result.assets[0].base64);
+        },
+      },
+      {
+        text: 'Galería',
+        onPress: async () => {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la galería.'); return; }
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
+          if (!result.canceled && result.assets[0]?.base64) _subirFoto(result.assets[0].base64);
+        },
+      },
+      usuario?.foto_perfil ? { text: 'Quitar foto', style: 'destructive' as const, onPress: () => _subirFoto(null) } : null,
+      { text: 'Cancelar', style: 'cancel' as const },
+    ].filter(Boolean) as any[]);
+  };
+
+  const _subirFoto = async (b64: string | null) => {
+    setUploadingFoto(true);
+    try {
+      const perfil = await authApi.actualizarFoto(b64);
+      setUsuario(perfil);
+    } catch (err) {
+      Alert.alert('Error', (err as ApiError).message ?? t('common.error'));
+    } finally {
+      setUploadingFoto(false);
+    }
+  };
 
   // ── Mutations ──────────────────────────────────────────────────────────
 
@@ -333,10 +368,21 @@ export default function PerfilScreen() {
           >
             <Text className="text-white text-lg font-bold self-start">{t('perfil.title')}</Text>
 
-            {/* Avatar */}
-            <View className="w-20 h-20 rounded-full bg-white/30 items-center justify-center mt-2">
-              <Text className="text-white text-3xl font-bold">{initials}</Text>
-            </View>
+            {/* Avatar con botón de cambio */}
+            <TouchableOpacity onPress={handleCambiarFoto} disabled={uploadingFoto} className="mt-2 relative">
+              <Avatar
+                id={usuario?.id}
+                nombre={usuario?.nombre}
+                apellido={usuario?.apellido}
+                fotoB64={usuario?.foto_perfil}
+                size={80}
+              />
+              <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white items-center justify-center border-2 border-white" style={{ borderColor: theme.primary }}>
+                {uploadingFoto
+                  ? <ActivityIndicator size="small" color={theme.primary} />
+                  : <Ionicons name="camera" size={14} color={theme.primary} />}
+              </View>
+            </TouchableOpacity>
 
             <View className="items-center gap-1">
               <Text className="text-white text-xl font-bold">

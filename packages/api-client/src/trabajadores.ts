@@ -13,6 +13,7 @@ export interface Trabajador {
   usuario_id: number | null;
   nombre: string;
   apellido: string;
+  foto_perfil: string | null;
   cedula: string | null;
   tipo_documento: TipoDocumento | null;
   fecha_nacimiento: string | null;

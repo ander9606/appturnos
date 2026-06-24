@@ -90,6 +90,8 @@ export type {
 } from './trabajadores';
 export { notificacionesApi } from './notificaciones';
 export type { Notificacion, ListarNotificacionesResponse } from './notificaciones';
+export { novedadesApi } from './novedades';
+export type { Novedad, TipoNovedad, CrearNovedadPayload } from './novedades';
 export { adminApi } from './admin';
 export { reportesApi } from './reportes';
 export { integracionApi } from './integracion';

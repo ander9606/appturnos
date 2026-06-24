@@ -21,7 +21,7 @@ const AuthModel = {
   /** Perfil público del usuario por id (sin password_hash). */
   async buscarUsuarioPorId(id) {
     const [filas] = await pool.query(
-      `SELECT id, empresa_id, nombre, apellido, email, rol, activo, created_at
+      `SELECT id, empresa_id, nombre, apellido, foto_perfil, email, rol, activo, created_at
        FROM usuarios WHERE id = ? LIMIT 1`,
       [id]
     );
@@ -136,6 +136,10 @@ const AuthModel = {
       'UPDATE usuarios SET password_hash = ? WHERE id = ?',
       [passwordHash, id]
     );
+  },
+
+  async actualizarFotoPerfil(id, fotoB64) {
+    await pool.query('UPDATE usuarios SET foto_perfil = ? WHERE id = ?', [fotoB64, id]);
   },
 
   // ─── Activación de cuenta (trabajadores) ────────────────────

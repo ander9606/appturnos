@@ -152,6 +152,11 @@ export const authApi = {
     );
   },
 
+  /** Actualiza (o elimina) la foto de perfil del usuario autenticado. */
+  actualizarFoto(fotoB64: string | null): Promise<UsuarioPerfil> {
+    return api.patch<UsuarioPerfil>('/api/auth/me/foto', { foto_b64: fotoB64 });
+  },
+
   /** admin_empresa crea un usuario gestor en su empresa con contraseña temporal. */
   crearGestor(payload: CrearGestorPayload): Promise<CrearGestorResult> {
     return api.post<CrearGestorResult>('/api/auth/crear-gestor', payload);

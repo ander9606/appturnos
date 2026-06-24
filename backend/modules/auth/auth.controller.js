@@ -42,6 +42,11 @@ async function registrar(req, res) {
   res.status(201).json({ success: true, data, message: 'Cuenta creada. ¡Bienvenido!' });
 }
 
+async function actualizarFoto(req, res) {
+  const data = await AuthService.actualizarFoto(req.usuario.sub, req.body.foto_b64 ?? null);
+  res.json({ success: true, data, message: 'Foto de perfil actualizada' });
+}
+
 async function actualizarPerfil(req, res) {
   const { nombre, apellido, email } = req.body;
   const data = await AuthService.actualizarPerfil(req.usuario.sub, { nombre, apellido, email });
@@ -82,4 +87,4 @@ async function setActivoGestor(req, res) {
   res.json({ success: true, data: null, message: activo ? 'Gestor activado' : 'Gestor desactivado' });
 }
 
-module.exports = { login, refresh, logout, me, activarCuenta, registrar, registrarEmpresa, actualizarPerfil, cambiarPassword, crearGestor, listarGestores, setActivoGestor };
+module.exports = { login, refresh, logout, me, activarCuenta, registrar, registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, crearGestor, listarGestores, setActivoGestor };

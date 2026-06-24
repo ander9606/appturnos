@@ -37,6 +37,7 @@ function perfilPublico(u) {
     empresa_id: u.empresa_id,
     nombre: u.nombre,
     apellido: u.apellido,
+    foto_perfil: u.foto_perfil ?? null,
     email: u.email,
     rol: u.rol,
   };
@@ -210,6 +211,11 @@ const AuthService = {
       }
     }
     await AuthModel.actualizarPerfil(usuarioId, datos);
+    return AuthService.perfil(usuarioId);
+  },
+
+  async actualizarFoto(usuarioId, fotoB64) {
+    await AuthModel.actualizarFotoPerfil(usuarioId, fotoB64 || null);
     return AuthService.perfil(usuarioId);
   },
 
