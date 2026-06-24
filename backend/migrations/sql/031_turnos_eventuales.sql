@@ -1,7 +1,7 @@
 -- 031: Turnos eventuales para trabajadores de nómina
 
 ALTER TABLE ofertas_turno
-  ADD COLUMN IF NOT EXISTS para_quien ENUM('turnos','nomina','ambos') NOT NULL DEFAULT 'turnos';
+  ADD COLUMN para_quien ENUM('turnos','nomina','ambos') NOT NULL DEFAULT 'turnos';
 
 CREATE TABLE IF NOT EXISTS periodos_turno_eventual (
   id           INT AUTO_INCREMENT PRIMARY KEY,
