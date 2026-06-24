@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, UserX } from 'lucide-react';
-import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador } from '../hooks/useEquipo';
+import { Plus, UserX, UserPlus } from 'lucide-react';
+import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador, useInvitarTrabajador } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
 import type { TipoTrabajador, Trabajador } from '../types';
 
@@ -31,6 +31,7 @@ export function EquipoPage() {
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>(true);
   const [tipoFiltro, setTipoFiltro] = useState<TipoTrabajador | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
+  const [showInvitar, setShowInvitar] = useState(false);
 
   const { data, isLoading } = useTrabajadores({ activo: estadoFiltro, tipo: tipoFiltro, limit: 200 });
   const trabajadores: Trabajador[] = data?.data ?? [];
@@ -54,12 +55,20 @@ export function EquipoPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Equipo</h1>
         {isAdmin && (
-          <button
-            onClick={() => setShowCrear(true)}
-            className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
-          >
-            <Plus size={16} /> Nuevo trabajador
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowInvitar(true)}
+              className="flex items-center gap-1.5 border border-primary text-primary hover:bg-primary-50 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+            >
+              <UserPlus size={16} /> Invitar por cédula
+            </button>
+            <button
+              onClick={() => setShowCrear(true)}
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+            >
+              <Plus size={16} /> Nuevo trabajador
+            </button>
+          </div>
         )}
       </div>
 
@@ -156,6 +165,48 @@ export function EquipoPage() {
       )}
 
       {showCrear && <TrabajadorFormModal onClose={() => setShowCrear(false)} />}
+      {showInvitar && <InvitarModal onClose={() => setShowInvitar(false)} />}
+    </div>
+  );
+}
+
+function InvitarModal({ onClose }: { onClose: () => void }) {
+  const invitar = useInvitarTrabajador();
+  const [cedula, setCedula] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await invitar.mutateAsync(cedula.trim());
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-2xl p-6 w-full max-w-sm">
+        <h2 className="text-lg font-semibold text-foreground mb-1">Invitar trabajador</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Ingresa la cédula del trabajador. Si ya tiene cuenta, quedará vinculado a tu empresa. Si no, podrá activarla con esta cédula.
+        </p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Cédula *</label>
+            <input
+              required
+              type="text"
+              value={cedula}
+              onChange={e => setCedula(e.target.value)}
+              placeholder="Ej. 1234567890"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+            <button type="submit" disabled={invitar.isPending || !cedula.trim()} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+              {invitar.isPending ? 'Enviando...' : 'Invitar'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

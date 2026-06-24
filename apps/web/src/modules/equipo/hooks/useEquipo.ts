@@ -68,3 +68,15 @@ export function useDesactivarTrabajador() {
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }
+
+export function useInvitarTrabajador() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cedula: string) => equipoApi.invitar(cedula),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trabajadores'] });
+      toast.success('Invitación enviada');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}

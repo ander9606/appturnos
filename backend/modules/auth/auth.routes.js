@@ -43,6 +43,9 @@ router.post(
 // GET /api/auth/me
 router.get('/me', verificarToken, ctrl.me);
 
+// GET /api/auth/verificar-cedula?cedula=xxx — endpoint público, sin auth
+router.get('/verificar-cedula', ctrl.verificarCedula);
+
 // POST /api/auth/activar-cuenta
 router.post(
   '/activar-cuenta',
