@@ -300,8 +300,16 @@ function CargosTab() {
               <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
-              <input type="text" value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              <label className="block text-sm font-medium text-foreground mb-1">Descripción <span className="font-normal text-muted-foreground">(opcional)</span></label>
+              <textarea
+                rows={3}
+                value={form.descripcion}
+                onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
+                placeholder="Funciones principales del cargo…"
+                maxLength={255}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+              />
+              <p className="text-xs text-muted-foreground text-right mt-0.5">{form.descripcion.length}/255</p>
             </div>
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
