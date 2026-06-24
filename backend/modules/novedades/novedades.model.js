@@ -5,7 +5,9 @@ const { pool } = require('../../config/database');
 const NovedadesModel = {
   async getByAsignacion(empresaId, asignacionId) {
     const [filas] = await pool.query(
-      `SELECT n.*, u.nombre AS autor_nombre, u.apellido AS autor_apellido
+      `SELECT n.id, n.asignacion_id, n.autor_id, n.tipo, n.descripcion,
+              n.hora_evento, n.created_at, n.foto_b64,
+              u.nombre AS autor_nombre, u.apellido AS autor_apellido
        FROM novedades n
        JOIN usuarios u ON u.id = n.autor_id
        WHERE n.empresa_id = ? AND n.asignacion_id = ?
@@ -15,14 +17,16 @@ const NovedadesModel = {
     return filas;
   },
 
-  async create(empresaId, asignacionId, autorId, tipo, descripcion) {
+  async create(empresaId, asignacionId, autorId, tipo, descripcion, horaEvento, fotoB64) {
     const [res] = await pool.query(
-      `INSERT INTO novedades (empresa_id, asignacion_id, autor_id, tipo, descripcion)
-       VALUES (?, ?, ?, ?, ?)`,
-      [empresaId, asignacionId, autorId, tipo, descripcion]
+      `INSERT INTO novedades (empresa_id, asignacion_id, autor_id, tipo, descripcion, hora_evento, foto_b64)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [empresaId, asignacionId, autorId, tipo, descripcion, horaEvento || null, fotoB64 || null]
     );
     const [filas] = await pool.query(
-      `SELECT n.*, u.nombre AS autor_nombre, u.apellido AS autor_apellido
+      `SELECT n.id, n.asignacion_id, n.autor_id, n.tipo, n.descripcion,
+              n.hora_evento, n.created_at,
+              u.nombre AS autor_nombre, u.apellido AS autor_apellido
        FROM novedades n
        JOIN usuarios u ON u.id = n.autor_id
        WHERE n.id = ?`,

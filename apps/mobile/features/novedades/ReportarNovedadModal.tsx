@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator,
+  ScrollView, Alert, ActivityIndicator, Image, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import type { TipoNovedad } from '@api-client';
 import { useCrearNovedad } from './useNovedades';
 
@@ -20,10 +21,59 @@ interface Props {
   onClose: () => void;
 }
 
+function toLocalIso(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
 export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) {
   const [tipo, setTipo] = useState<TipoNovedad>('retraso');
   const [descripcion, setDescripcion] = useState('');
+  const [horaEvento, setHoraEvento] = useState<string | null>(null);
+  const [fotoB64, setFotoB64] = useState<string | null>(null);
   const mutation = useCrearNovedad(asignacionId);
+
+  const handlePickFoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permiso requerido', 'Permite el acceso a la galería para adjuntar una foto.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]?.base64) {
+      setFotoB64(result.assets[0].base64);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert('Permiso requerido', 'Permite el acceso a la cámara para tomar una foto.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets[0]?.base64) {
+      setFotoB64(result.assets[0].base64);
+    }
+  };
+
+  const handleFoto = () => {
+    Alert.alert('Adjuntar foto', undefined, [
+      { text: 'Tomar foto', onPress: handleTakePhoto },
+      { text: 'Galería', onPress: handlePickFoto },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  };
+
+  const handleUsarAhora = () => setHoraEvento(toLocalIso(new Date()));
 
   const handleEnviar = async () => {
     if (!descripcion.trim()) {
@@ -31,9 +81,16 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
       return;
     }
     try {
-      await mutation.mutateAsync({ tipo, descripcion: descripcion.trim() });
+      await mutation.mutateAsync({
+        tipo,
+        descripcion: descripcion.trim(),
+        hora_evento: horaEvento || undefined,
+        foto_b64: fotoB64 || undefined,
+      });
       setDescripcion('');
       setTipo('retraso');
+      setHoraEvento(null);
+      setFotoB64(null);
       onClose();
     } catch {
       Alert.alert('Error', 'No se pudo reportar la novedad. Intenta de nuevo.');
@@ -51,7 +108,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerClassName="px-5 py-5 gap-5">
+        <ScrollView contentContainerClassName="px-5 py-5 gap-5" keyboardShouldPersistTaps="handled">
           {/* Tipo */}
           <View className="gap-2">
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tipo</Text>
@@ -87,6 +144,57 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
               textAlignVertical="top"
             />
             <Text className="text-xs text-muted-foreground text-right">{descripcion.length}/1000</Text>
+          </View>
+
+          {/* Hora del evento */}
+          <View className="gap-2">
+            <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hora del evento</Text>
+            {horaEvento ? (
+              <View className="flex-row items-center gap-2 bg-muted rounded-xl px-4 py-3">
+                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Text className="flex-1 text-sm text-foreground">{horaEvento.replace('T', ' ').slice(0, 16)}</Text>
+                <TouchableOpacity onPress={() => setHoraEvento(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handleUsarAhora}
+                className="flex-row items-center gap-2 bg-muted rounded-xl px-4 py-3"
+              >
+                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Text className="text-sm text-muted-foreground">Usar hora actual</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Foto */}
+          <View className="gap-2">
+            <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Foto (opcional)</Text>
+            {fotoB64 ? (
+              <View className="gap-2">
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${fotoB64}` }}
+                  className="w-full h-48 rounded-xl"
+                  resizeMode="cover"
+                />
+                <TouchableOpacity
+                  onPress={() => setFotoB64(null)}
+                  className="flex-row items-center gap-1.5 self-start px-3 py-1.5 bg-muted rounded-xl"
+                >
+                  <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                  <Text className="text-xs font-medium text-danger">Quitar foto</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handleFoto}
+                className="flex-row items-center gap-2 bg-muted rounded-xl px-4 py-3 border border-dashed border-border"
+              >
+                <Ionicons name="camera-outline" size={18} color="#64748B" />
+                <Text className="text-sm text-muted-foreground">Adjuntar foto</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Botón */}

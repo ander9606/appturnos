@@ -6,7 +6,7 @@ const NotificacionesService = require('../notificaciones/notificaciones.service'
 const AppError = require('../../utils/AppError');
 const { ROLES } = require('../../config/constants');
 
-const GESTORES = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
+const GESTORES = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA];
 
 const TIPOS_LABEL = {
   retraso:   'Retraso',
@@ -21,11 +21,11 @@ const NovedadesService = {
     return NovedadesModel.getByAsignacion(empresaId, asignacionId);
   },
 
-  async crear(empresaId, asignacionId, tipo, descripcion, usuario) {
+  async crear(empresaId, asignacionId, tipo, descripcion, horaEvento, fotoB64, usuario) {
     await _validarAcceso(empresaId, asignacionId, usuario);
 
     const novedad = await NovedadesModel.create(
-      empresaId, asignacionId, usuario.id, tipo, descripcion
+      empresaId, asignacionId, usuario.id, tipo, descripcion, horaEvento, fotoB64
     );
 
     // Notificar a los demás participantes (best-effort).

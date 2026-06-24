@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { novedadesApi, TipoNovedad } from '@api-client';
+import { novedadesApi, CrearNovedadPayload } from '@api-client';
 
 export function useNovedades(asignacionId: number | null) {
   return useQuery({
@@ -13,8 +13,7 @@ export function useNovedades(asignacionId: number | null) {
 export function useCrearNovedad(asignacionId: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { tipo: TipoNovedad; descripcion: string }) =>
-      novedadesApi.crear(asignacionId, payload),
+    mutationFn: (payload: CrearNovedadPayload) => novedadesApi.crear(asignacionId, payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['novedades', asignacionId] }),
   });
 }

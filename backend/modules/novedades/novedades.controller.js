@@ -15,6 +15,8 @@ async function crear(req, res) {
     Number(req.params.asignacionId),
     req.body.tipo,
     req.body.descripcion,
+    req.body.hora_evento || null,
+    req.body.foto_b64 || null,
     req.usuario
   );
   res.status(201).json({ success: true, data });

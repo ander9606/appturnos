@@ -11,7 +11,16 @@ export interface Novedad {
   autor_apellido: string;
   tipo: TipoNovedad;
   descripcion: string;
+  hora_evento: string | null;
+  foto_b64: string | null;
   created_at: string;
+}
+
+export interface CrearNovedadPayload {
+  tipo: TipoNovedad;
+  descripcion: string;
+  hora_evento?: string | null;
+  foto_b64?: string | null;
 }
 
 export const novedadesApi = {
@@ -19,7 +28,7 @@ export const novedadesApi = {
     return api.get<Novedad[]>(`/api/novedades/asignaciones/${asignacionId}`);
   },
 
-  crear(asignacionId: number, payload: { tipo: TipoNovedad; descripcion: string }): Promise<Novedad> {
+  crear(asignacionId: number, payload: CrearNovedadPayload): Promise<Novedad> {
     return api.post<Novedad>(`/api/novedades/asignaciones/${asignacionId}`, payload);
   },
 };
