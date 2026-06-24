@@ -54,6 +54,7 @@ router.patch(
       .customSanitizer(v => v.trim().toLowerCase()),
     body('direccion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 300 }),
     body('acepta_postulaciones').optional().isBoolean().withMessage('acepta_postulaciones debe ser booleano'),
+    body('tipo_liquidacion').optional().isIn(['mensual', 'quincenal', 'semanal']).withMessage('tipo_liquidacion inválido'),
   ],
   validar,
   ctrl.actualizarMiEmpresa
