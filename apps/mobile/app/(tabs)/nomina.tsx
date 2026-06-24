@@ -27,7 +27,7 @@ import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import {
   usePeriodos, useLiquidacion,
-  useCerrarPeriodo, useLiquidarPeriodo,
+  useLiquidarPeriodo,
 } from '@/features/nomina/useNomina';
 import { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
@@ -72,37 +72,12 @@ function NominaGestorView() {
     isRefetching,
   } = useLiquidacion(activePeriodoId ?? null);
 
-  const cerrarMutation   = useCerrarPeriodo();
   const liquidarMutation = useLiquidarPeriodo();
 
   const onRefresh = useCallback(() => {
     refetchPeriodos();
     refetchLiq();
   }, [refetchPeriodos, refetchLiq]);
-
-  const handleCerrar = () => {
-    if (!activePeriodoId) return;
-    Alert.alert(
-      'Cerrar período',
-      '¿Confirmas que deseas cerrar este período? Ya no se podrán añadir registros.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Cerrar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await cerrarMutation.mutateAsync(activePeriodoId);
-              Alert.alert('Período cerrado');
-            } catch (err) {
-              const msg = err instanceof ApiError ? err.message : 'Error al cerrar el período';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ],
-    );
-  };
 
   const handleLiquidar = () => {
     if (!activePeriodoId) return;
@@ -228,17 +203,6 @@ function NominaGestorView() {
                     </Text>
                   </View>
                   <View className="flex-row gap-2">
-                    {activePeriodo.estado === 'abierto' && (
-                      <TouchableOpacity
-                        onPress={handleCerrar}
-                        disabled={cerrarMutation.isPending}
-                        className="flex-1 bg-warning-light border border-amber-200 rounded-2xl py-3 items-center"
-                      >
-                        <Text className="text-sm font-semibold text-amber-700">
-                          {cerrarMutation.isPending ? 'Cerrando…' : 'Cerrar período'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
                     {activePeriodo.estado === 'cerrado' && (
                       <TouchableOpacity
                         onPress={handleLiquidar}
