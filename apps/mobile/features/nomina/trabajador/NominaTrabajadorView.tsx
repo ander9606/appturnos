@@ -118,11 +118,13 @@ export function NominaTrabajadorView() {
           tipoMarcacion={tipoMarcacion}
           estadoHoy={estadoHoy}
           periodoAbierto={periodoActivo?.estado === 'abierto'}
+          resumenSemana={resumenSemana}
           registroHoy={registroHoy}
           compensatorios={compensatorios}
           isRefetching={isRefetching}
           onRefresh={onRefresh}
           primaryColor={theme.primary}
+          onVerDetalles={() => setActiveTab('nomina')}
         />
       ) : (
         /* ── Tab: Mi Nómina ──────────────────────────────── */
@@ -155,6 +157,7 @@ export function NominaTrabajadorView() {
                 color={theme.primary}
                 todayLabel={todayLabel}
               />
+              {/* onVerDetalles omitted — ResumenCards is immediately below */}
               <View className="px-5 gap-3">
                 <ResumenCards
                   resumen={resumen}

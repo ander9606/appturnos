@@ -94,19 +94,28 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
           <Text className="text-xs text-muted-foreground">{horario}</Text>
         ) : null}
 
-        {/* Barra de horas semanales */}
-        <View className="flex-row items-center gap-1.5 mt-1">
-          <View className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-            <View
-              className={`h-full rounded-full ${excedeSemana ? 'bg-success' : 'bg-primary/40'}`}
-              style={{ width: `${Math.min(100, (fila.horasSemana / fila.limiteSemana) * 100)}%` }}
-            />
-          </View>
-          <Text className={`text-[10px] font-semibold ${excedeSemana ? 'text-success' : 'text-muted-foreground'}`}>
-            {fila.horasSemana}h
-            {excedeSemana ? ` (+${fila.horasExtra}h extra)` : ` / ${fila.limiteSemana}h`}
-          </Text>
-        </View>
+        {/* Barra de horas semanales (dos colores: azul = ordinarias, naranja = extras) */}
+        {(() => {
+          const ordinH   = Math.max(0, fila.horasSemana - fila.horasExtra);
+          const pctOrdin = Math.min(100, (ordinH / fila.limiteSemana) * 100);
+          const pctExtra = Math.min(100 - pctOrdin, (fila.horasExtra / fila.limiteSemana) * 100);
+          return (
+            <View className="gap-1 mt-1">
+              <View className="h-2 bg-muted rounded-full overflow-hidden flex-row">
+                {pctOrdin > 0 && (
+                  <View className="h-full bg-primary/60 rounded-full" style={{ width: `${pctOrdin}%` }} />
+                )}
+                {pctExtra > 0 && (
+                  <View className="h-full" style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }} />
+                )}
+              </View>
+              <Text className={`text-[10px] font-semibold ${excedeSemana ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                {fila.horasSemana}h
+                {excedeSemana ? ` (+${fila.horasExtra}h extra)` : ` / ${fila.limiteSemana}h`}
+              </Text>
+            </View>
+          );
+        })()}
       </View>
 
       {/* Estado badge */}

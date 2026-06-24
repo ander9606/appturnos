@@ -33,6 +33,7 @@ interface Props {
   valorHora:   number;
   color:       string;  // theme.primary
   todayLabel:  string;  // "Lun 9 Jun"
+  onVerDetalles?: () => void;
 }
 
 export function PeriodoHeaderCard({
@@ -45,6 +46,7 @@ export function PeriodoHeaderCard({
   valorHora,
   color,
   todayLabel,
+  onVerDetalles,
 }: Props) {
   const [visible, setVisible] = useState(false);
   const analisisHoy = registroHoy ? analizarDia(registroHoy, valorHora) : null;
@@ -148,31 +150,70 @@ export function PeriodoHeaderCard({
         </View>
       </View>
 
-      {/* ── Card semana ─────────────────────────────────────── */}
-      <View className="bg-white/10 rounded-2xl px-4 py-3 flex-row gap-4">
-        <View className="gap-0.5 flex-1">
-          <Text className="text-white text-base font-extrabold">
-            {resumenSemana.totalHoras.toFixed(1)}h
-          </Text>
-          <Text className="text-white/70 text-[10px]">Esta semana</Text>
-        </View>
+      {/* ── Barra de horas semanales ────────────────────────── */}
+      {(() => {
+        const semana      = resumenSemana.semanas[0];
+        const limite      = semana?.limiteHoras ?? 40;
+        const totalH      = resumenSemana.totalHoras;
+        const extraH      = resumenSemana.horasExtraDiurnas + resumenSemana.horasExtraNocturnas;
+        const ordinH      = Math.max(0, totalH - extraH);
+        const pctOrdin    = Math.min(100, (ordinH / limite) * 100);
+        const pctExtra    = Math.min(100 - pctOrdin, (extraH / limite) * 100);
+        const hayExtras   = extraH > 0;
 
-        {resumenSemana.valorExtraCOP > 0 && (
-          <View className="gap-0.5 flex-1">
-            <Text className="text-white text-base font-extrabold">
-              +{mask(formatCOP(resumenSemana.valorExtraCOP))}
-            </Text>
-            <Text className="text-white/70 text-[10px]">Extra sem.</Text>
+        return (
+          <View className="bg-white/10 rounded-2xl px-4 py-3 gap-2">
+            {/* Cabecera: horas + label */}
+            <View className="flex-row items-baseline justify-between">
+              <View className="flex-row items-baseline gap-1">
+                <Text className="text-white text-base font-extrabold">
+                  {totalH.toFixed(1)}h
+                </Text>
+                <Text className="text-white/60 text-[10px]">
+                  / {limite}h esta semana
+                </Text>
+                {hayExtras && (
+                  <View className="ml-1 bg-amber-400/30 rounded-full px-1.5 py-0.5">
+                    <Text className="text-amber-200 text-[9px] font-bold">
+                      +{extraH.toFixed(1)}h extra
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {onVerDetalles && (
+                <TouchableOpacity onPress={onVerDetalles} hitSlop={8}>
+                  <Text className="text-white/70 text-[10px] font-semibold underline">
+                    Ver detalles
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Barra dos colores */}
+            <View className="h-2.5 bg-white/20 rounded-full overflow-hidden flex-row">
+              {pctOrdin > 0 && (
+                <View
+                  className="h-full rounded-full"
+                  style={{ width: `${pctOrdin}%`, backgroundColor: 'rgba(255,255,255,0.85)' }}
+                />
+              )}
+              {pctExtra > 0 && (
+                <View
+                  className="h-full"
+                  style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }}
+                />
+              )}
+            </View>
+
+            {/* Extras en pesos si hay */}
+            {hayExtras && resumenSemana.valorExtraCOP > 0 && (
+              <Text className="text-amber-200 text-[10px] font-semibold">
+                +{mask(formatCOP(resumenSemana.valorExtraCOP))} por extras esta semana
+              </Text>
+            )}
           </View>
-        )}
-
-        <View className="gap-0.5 flex-1">
-          <Text className="text-white text-base font-extrabold">
-            {resumenSemana.diasRegistrados}d
-          </Text>
-          <Text className="text-white/70 text-[10px]">Días sem.</Text>
-        </View>
-      </View>
+        );
+      })()}
     </View>
   );
 }
