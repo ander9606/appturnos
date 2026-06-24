@@ -43,14 +43,15 @@ export type EstadoAsistencia =
   | 'ausente';          // no hay registro hoy
 
 export interface FilaDashboard {
-  trabajador:    Trabajador;
-  registroHoy:   RegistroDiario | null;
-  estado:        EstadoAsistencia;
-  horaEntrada:   string | null;
-  horaSalida:    string | null;
-  horasSemana:   number;
-  limiteSemana:  number;
-  horasExtra:    number;
+  trabajador:      Trabajador;
+  registroHoy:     RegistroDiario | null;
+  estado:          EstadoAsistencia;
+  horaEntrada:     string | null;
+  horaSalida:      string | null;
+  horasSemana:     number;
+  limiteSemana:    number;
+  horasExtra:      number;
+  horasNocturnas:  number; // always carry recargo ×1.35, shown separately
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ export function useDashboardAsistencia() {
       registrosHoy.map((r) => [r.trabajador_id, r])
     );
     const horasSemPorTrabajador = new Map<number, number>();
+    const horasNocPorTrabajador = new Map<number, number>();
     for (const r of registrosSemana) {
       const total =
         Number(r.horas_ordinarias) + Number(r.horas_extra_diurnas) +
@@ -101,6 +103,10 @@ export function useDashboardAsistencia() {
       horasSemPorTrabajador.set(
         r.trabajador_id,
         (horasSemPorTrabajador.get(r.trabajador_id) ?? 0) + total
+      );
+      horasNocPorTrabajador.set(
+        r.trabajador_id,
+        (horasNocPorTrabajador.get(r.trabajador_id) ?? 0) + Number(r.horas_nocturnas)
       );
     }
 
@@ -117,15 +123,17 @@ export function useDashboardAsistencia() {
         estado = 'completo';
       }
 
+      const horasNocturnas = Math.round((horasNocPorTrabajador.get(t.id) ?? 0) * 10) / 10;
       return {
-        trabajador:   t,
-        registroHoy:  reg,
+        trabajador:    t,
+        registroHoy:   reg,
         estado,
-        horaEntrada:  reg?.hora_entrada?.slice(0, 5) ?? null,
-        horaSalida:   reg?.hora_salida?.slice(0, 5)  ?? null,
+        horaEntrada:   reg?.hora_entrada?.slice(0, 5) ?? null,
+        horaSalida:    reg?.hora_salida?.slice(0, 5)  ?? null,
         horasSemana,
-        limiteSemana: limite,
-        horasExtra:   Math.max(0, Math.round((horasSemana - limite) * 10) / 10),
+        limiteSemana:  limite,
+        horasExtra:    Math.max(0, Math.round((horasSemana - limite) * 10) / 10),
+        horasNocturnas,
       };
     }).sort((a, b) => {
       // Orden: en_jornada → ausente → completo → especial
