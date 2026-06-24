@@ -145,6 +145,10 @@ export default function RootLayout() {
             <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
             {/* Completar perfil — usuarios OAuth sin teléfono registrado */}
             <Stack.Screen name="completar-perfil" options={{ headerShown: false }} />
+            {/* Directorio de empresas — trabajador_turnos */}
+            <Stack.Screen name="directorio-empresas" options={{ title: 'Buscar empresa' }} />
+            {/* Mis empresas — vínculos del trabajador */}
+            <Stack.Screen name="mis-empresas" options={{ title: 'Mis empresas' }} />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

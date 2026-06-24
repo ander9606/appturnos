@@ -37,6 +37,14 @@ export function useTrabajador(id: number) {
   });
 }
 
+export function useMe() {
+  return useQuery({
+    queryKey: ['trabajadores', 'me'] as const,
+    queryFn: () => trabajadoresApi.me(),
+    staleTime: 60_000,
+  });
+}
+
 /** Busca un trabajador marketplace por cédula. Devuelve null si no existe. */
 export function useBuscarPorCedula(cedula: string) {
   return useQuery({
