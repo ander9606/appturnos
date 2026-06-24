@@ -25,6 +25,7 @@ import { useTheme }     from '@/lib/theme';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { usePeriodos, useNominaPerfil } from '@/features/nomina/useNomina';
+import { useCountNoLeidas } from '@/features/notificaciones/useNotificaciones';
 import { toISODate, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';
 import { StatCard }       from '@/components/ui/StatCard';
@@ -46,10 +47,11 @@ export default function DashboardScreen() {
   const usuario = useAuthStore((s) => s.usuario);
   const theme   = useTheme();
 
-  const isWorker  = WORKER_ROLES.includes(usuario?.rol ?? '');
-  const isManager = MANAGE_ROLES.includes(usuario?.rol ?? '');
-  const isAdmin   = usuario?.rol === 'admin_empresa';
-  const isNomina  = usuario?.rol === 'trabajador_nomina';
+  const isWorker      = WORKER_ROLES.includes(usuario?.rol ?? '');
+  const isManager     = MANAGE_ROLES.includes(usuario?.rol ?? '');
+  const isAdmin       = usuario?.rol === 'admin_empresa';
+  const isNomina      = usuario?.rol === 'trabajador_nomina';
+  const isJefeNomina  = usuario?.rol === 'jefe_nomina';
 
   const hour = new Date().getHours();
   const greeting =
@@ -59,7 +61,8 @@ export default function DashboardScreen() {
 
   // ── Data fetching ────────────────────────────────────────────────────────
 
-  const showShifts = !isNomina; // nomina workers don't use shift hero unless acepta_extras
+  // Only trabajador_turnos gets the shift hero — managers/admin have no own shifts
+  const showShifts = isWorker && !isNomina;
 
   const {
     data: turnos = [],
@@ -80,6 +83,7 @@ export default function DashboardScreen() {
   const periodoAbierto = periodosData?.data?.[0] ?? null;
 
   const { data: nominaPerfil, refetch: refetchNominaPerfil } = useNominaPerfil();
+  const noLeidas = useCountNoLeidas();
 
   // ── Pull to refresh ──────────────────────────────────────────────────────
 
@@ -137,10 +141,16 @@ export default function DashboardScreen() {
         { value: proximos.length,                                label: 'Próximos',    color: 'text-info' },
         { value: turnos.filter((a) => a.estado === 'completado').length, label: 'Completados', color: 'text-success' },
       ]
+    : isJefeNomina
+    ? [
+        { value: totalEquipo ?? '…',          label: 'Empleados',      color: 'text-info' },
+        { value: periodoAbierto ? '✓' : '—',  label: 'Período activo', color: periodoAbierto ? 'text-success' : 'text-muted-foreground' },
+        { value: periodoAbierto?.tipo ?? '—', label: 'Ciclo',          color: 'text-foreground' },
+      ]
     : [
-        { value: totalEquipo ?? '…',                                   label: t('dashboard.statEmployees'),  color: 'text-info' },
-        { value: turnosHoy.length > 0 ? turnosHoy.length : '—',       label: t('dashboard.statShiftsToday'), color: 'text-foreground' },
-        { value: periodoAbierto ? '1' : '0',                           label: 'Período abierto', color: periodoAbierto ? 'text-success' : 'text-muted-foreground' },
+        { value: totalEquipo ?? '…',                             label: t('dashboard.statEmployees'),   color: 'text-info' },
+        { value: turnosHoy.length > 0 ? turnosHoy.length : '—', label: t('dashboard.statShiftsToday'), color: 'text-foreground' },
+        { value: periodoAbierto ? '1' : '0',                     label: 'Período abierto',              color: periodoAbierto ? 'text-success' : 'text-muted-foreground' },
       ];
 
   // ── Quick actions ────────────────────────────────────────────────────────
@@ -157,19 +167,27 @@ export default function DashboardScreen() {
         { icon: 'wallet-outline',   label: 'Quincena',   onPress: () => router.push('/(tabs)/nomina') },
       ];
 
-  const actions: Action[] = isWorker
-    ? workerActions
+  const managerActions: Action[] = isJefeNomina
+    ? [
+        { icon: 'wallet-outline',        label: 'Nómina',        onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'people-outline',        label: 'Asistencia',    onPress: () => router.push('/dashboard-asistencia') },
+        { icon: 'briefcase-outline',     label: 'Trim. eventual',onPress: () => router.push('/liquidacion-eventual') },
+        { icon: 'calendar-outline',      label: 'Registros',     onPress: () => router.push('/registros-periodo') },
+      ]
     : [
-        { icon: 'calendar-outline',      label: 'Turnos',     onPress: () => router.push('/(tabs)/turnos') },
-        { icon: 'wallet-outline',        label: 'Nómina',     onPress: () => router.push('/(tabs)/nomina') },
-        { icon: 'people-outline',        label: 'Equipo',     onPress: () => router.push('/(tabs)/equipo') },
+        { icon: 'calendar-outline',      label: 'Turnos',      onPress: () => router.push('/(tabs)/turnos') },
+        { icon: 'wallet-outline',        label: 'Nómina',      onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'people-outline',        label: 'Equipo',      onPress: () => router.push('/(tabs)/equipo') },
         ...(isAdmin
           ? [
-              { icon: 'person-add-outline' as IoniconsName, label: 'Agregar emp.',  onPress: () => router.push('/trabajador/nuevo') },
-              { icon: 'link-outline'        as IoniconsName, label: 'logiq360',      onPress: () => router.push('/integracion/config') },
+              { icon: 'cash-outline'        as IoniconsName, label: 'Liq. turnos',  onPress: () => router.push('/liquidacion-turnos') },
+              { icon: 'person-add-outline'  as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') },
+              { icon: 'link-outline'        as IoniconsName, label: 'logiq360',     onPress: () => router.push('/integracion/config') },
             ]
           : []),
       ];
+
+  const actions: Action[] = isWorker ? workerActions : managerActions;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -197,9 +215,21 @@ export default function DashboardScreen() {
             <Text className="text-white text-2xl font-bold">
               {usuario?.nombre ?? '…'}
             </Text>
-            <View className="w-10 h-10 rounded-xl bg-white/20 items-center justify-center">
+            <Pressable
+              onPress={() => router.push('/notificaciones')}
+              className="w-10 h-10 rounded-xl bg-white/20 items-center justify-center"
+              accessibilityRole="button"
+              accessibilityLabel={`Notificaciones${noLeidas > 0 ? `, ${noLeidas} sin leer` : ''}`}
+            >
               <Ionicons name="notifications-outline" size={20} color="white" />
-            </View>
+              {noLeidas > 0 && (
+                <View className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-danger items-center justify-center px-0.5">
+                  <Text className="text-white text-[9px] font-bold leading-none">
+                    {noLeidas > 99 ? '99+' : noLeidas}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
           </View>
           <Text className="text-white/60 text-xs capitalize">
             {usuario?.rol?.replace(/_/g, ' ')}

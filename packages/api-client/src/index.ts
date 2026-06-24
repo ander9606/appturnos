@@ -9,7 +9,7 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export type { CrearGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
@@ -54,7 +54,14 @@ export type {
   PaginatedResponse,
   LiquidacionTurnoLinea,
   LiquidacionTurnosTrabajador,
+  ParaQuienOferta,
 } from './turnos';
+export { turnosEventualApi } from './turnosEventual';
+export type {
+  PeriodoTurnoEventual,
+  LineaLiquidacionEventual,
+  LiquidacionEventualResponse,
+} from './turnosEventual';
 export { cargosApi } from './cargos';
 export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult } from './cargos';
 export { puntosMarcajeApi } from './puntos-marcaje';
@@ -82,6 +89,7 @@ export type {
   TipoCuenta,
 } from './trabajadores';
 export { notificacionesApi } from './notificaciones';
+export type { Notificacion, ListarNotificacionesResponse } from './notificaciones';
 export { novedadesApi } from './novedades';
 export type { Novedad, TipoNovedad, CrearNovedadPayload } from './novedades';
 export { adminApi } from './admin';

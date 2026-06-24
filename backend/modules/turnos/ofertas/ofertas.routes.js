@@ -11,8 +11,8 @@ const puestosRouter = require('./puestos/puestos.routes');
 
 const router = express.Router();
 
-const PUEDEN_VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
-const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
+const PUEDEN_VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
+const GESTIONAR  = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA];
 const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 
 const RE_HORA = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
@@ -33,6 +33,7 @@ function reglasOferta({ parcial }) {
       .optional({ values: 'falsy' })
       .matches(RE_HORA)
       .withMessage('hora_fin_estimada inválida (HH:MM)'),
+    body('para_quien').optional().isIn(['turnos','nomina','ambos']).withMessage('para_quien inválido'),
     body('descripcion').optional({ values: 'falsy' }).isString(),
     body('lugar').optional({ values: 'falsy' }).isString(),
     body('latitud')

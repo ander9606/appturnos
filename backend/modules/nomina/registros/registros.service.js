@@ -2,6 +2,7 @@
 
 const RegistrosModel       = require('./registros.model');
 const PeriodosModel        = require('../periodos/periodos.model');
+const PeriodosService      = require('../periodos/periodos.service');
 const TrabajadoresModel    = require('../../trabajadores/trabajadores.model');
 const PuntosMarcajeModel   = require('../../puntos-marcaje/puntos-marcaje.model');
 const EmpresasModel        = require('../../empresas/empresas.model');
@@ -220,7 +221,9 @@ const RegistrosService = {
     await validarGeofence(empresaId, trabajador, latitud, longitud);
 
     const hoy = hoyISO();
-    const periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
+    let periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
+    // Si no hay período abierto, auto-crear según tipo_liquidacion de la empresa.
+    if (!periodo) periodo = await PeriodosService.autoCrear(empresaId);
     if (!periodo) throw new AppError('No hay un período de nómina abierto para hoy', 409);
 
     const existing = await RegistrosModel.obtenerPorFecha(empresaId, trabajadorId, hoy);

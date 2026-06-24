@@ -94,19 +94,29 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
           <Text className="text-xs text-muted-foreground">{horario}</Text>
         ) : null}
 
-        {/* Barra de horas semanales */}
-        <View className="flex-row items-center gap-1.5 mt-1">
-          <View className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-            <View
-              className={`h-full rounded-full ${excedeSemana ? 'bg-success' : 'bg-primary/40'}`}
-              style={{ width: `${Math.min(100, (fila.horasSemana / fila.limiteSemana) * 100)}%` }}
-            />
-          </View>
-          <Text className={`text-[10px] font-semibold ${excedeSemana ? 'text-success' : 'text-muted-foreground'}`}>
-            {fila.horasSemana}h
-            {excedeSemana ? ` (+${fila.horasExtra}h extra)` : ` / ${fila.limiteSemana}h`}
-          </Text>
-        </View>
+        {/* Barra semanal: azul = diurnas ordinarias, violeta = nocturnas (recargo ×1.35), naranja = extras */}
+        {(() => {
+          const L      = fila.limiteSemana;
+          const noc    = Math.min(fila.horasNocturnas, Math.max(0, fila.horasSemana - fila.horasExtra));
+          const ordin  = Math.max(0, fila.horasSemana - fila.horasExtra - noc);
+          const pctO   = Math.min(100, (ordin / L) * 100);
+          const pctN   = Math.min(100 - pctO, (noc  / L) * 100);
+          const pctE   = Math.min(100 - pctO - pctN, (fila.horasExtra / L) * 100);
+          return (
+            <View className="gap-1 mt-1">
+              <View className="h-2 bg-muted rounded-full overflow-hidden flex-row">
+                {pctO > 0 && <View className="h-full bg-primary/60" style={{ width: `${pctO}%` }} />}
+                {pctN > 0 && <View className="h-full" style={{ width: `${pctN}%`, backgroundColor: '#818CF8' }} />}
+                {pctE > 0 && <View className="h-full" style={{ width: `${pctE}%`, backgroundColor: '#F59E0B' }} />}
+              </View>
+              <Text className={`text-[10px] font-semibold ${excedeSemana ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                {fila.horasSemana}h semana
+                {fila.horasNocturnas > 0 ? ` · ${fila.horasNocturnas}h noct` : ''}
+                {excedeSemana ? ` · +${fila.horasExtra}h extra` : ` / ${L}h`}
+              </Text>
+            </View>
+          );
+        })()}
       </View>
 
       {/* Estado badge */}

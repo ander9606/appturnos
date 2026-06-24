@@ -218,20 +218,42 @@ export function getEstadoHoy(
   return 'jornada_completa';
 }
 
-/** Tiempo transcurrido desde hora_entrada hasta ahora como "2h 35m". */
+/** Tiempo transcurrido desde hora_entrada ("HH:MM" o "HH:MM:SS") hasta ahora. */
 export function calcularElapsedLabel(horaEntrada: string): string {
-  const [hh, mm] = horaEntrada.split(':').map(Number);
+  const parts = horaEntrada.split(':').map(Number);
+  const hh = parts[0];
+  const mm = parts[1] ?? 0;
+  if (isNaN(hh) || isNaN(mm)) return '—';
+
   const now = new Date();
-  const entradaMs = (hh * 60 + mm) * 60_000;
-  const ahoraMs   = (now.getHours() * 60 + now.getMinutes()) * 60_000;
-  let diffMs = ahoraMs - entradaMs;
+  // Build a Date for today at the given time in the DEVICE's local timezone so
+  // both sides of the subtraction are in the same reference frame.
+  const entrada = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+  let diffMs = now.getTime() - entrada.getTime();
+  // Clamp to [0, 24h) — handles midnight crossing and protects against a
+  // server/device timezone skew that would produce a large spurious elapsed.
   if (diffMs < 0) diffMs += 24 * 3_600_000;
+  if (diffMs >= 24 * 3_600_000) diffMs -= 24 * 3_600_000;
+
   const totalMin = Math.floor(diffMs / 60_000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
+}
+
+/** Minutos transcurridos desde hora_entrada hasta ahora (para lógica de descanso). */
+export function calcularElapsedMinutes(horaEntrada: string): number {
+  const parts = horaEntrada.split(':').map(Number);
+  const hh = parts[0];
+  const mm = parts[1] ?? 0;
+  if (isNaN(hh) || isNaN(mm)) return 0;
+  const now = new Date();
+  const entrada = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+  let diffMs = now.getTime() - entrada.getTime();
+  if (diffMs < 0) diffMs += 24 * 3_600_000;
+  return Math.floor(diffMs / 60_000);
 }
 
 // ── Formatters ──────────────────────────────────────────────────────────────

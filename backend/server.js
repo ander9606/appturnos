@@ -14,6 +14,9 @@ const { errorHandler, noEncontrado } = require('./middleware/errorHandler');
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
+// Confiar en el primer proxy (Caddy) para X-Forwarded-For y rate limiting correcto
+app.set('trust proxy', 1);
+
 // ─── Middleware base ──────────────────────────────────────────
 app.use(helmet());
 
@@ -95,6 +98,7 @@ app.get('/api/health', async (_req, res) => {
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/trabajadores', require('./modules/trabajadores/trabajadores.routes'));
 app.use('/api/turnos', require('./modules/turnos/turnos.routes'));
+app.use('/api/turnos/eventual', require('./modules/turnos-eventual/turnos-eventual.routes'));
 app.use('/api/nomina', require('./modules/nomina/nomina.routes'));
 app.use('/api/contratos', require('./modules/contratos/contratos.routes'));
 app.use('/api/notificaciones', require('./modules/notificaciones/notificaciones.routes'));

@@ -41,11 +41,6 @@ export function NominaTrabajadorView() {
     registroHoy,
     estadoHoy,
     todayISO,
-    geo,
-    fijoBloqueado,
-    isMutating,
-    handleEntrada,
-    handleSalida,
     loading,
     loadingRegistros,
     isRefetching,
@@ -123,17 +118,13 @@ export function NominaTrabajadorView() {
           tipoMarcacion={tipoMarcacion}
           estadoHoy={estadoHoy}
           periodoAbierto={periodoActivo?.estado === 'abierto'}
+          resumenSemana={resumenSemana}
           registroHoy={registroHoy}
-          geo={geo}
-          fijoBloqueado={fijoBloqueado}
-          isMutating={isMutating}
-          onEntrada={handleEntrada}
-          onSalida={handleSalida}
-          horasTrabajadas={analisisHoy?.totalHoras}
           compensatorios={compensatorios}
           isRefetching={isRefetching}
           onRefresh={onRefresh}
           primaryColor={theme.primary}
+          onVerDetalles={() => setActiveTab('nomina')}
         />
       ) : (
         /* ── Tab: Mi Nómina ──────────────────────────────── */
@@ -166,6 +157,7 @@ export function NominaTrabajadorView() {
                 color={theme.primary}
                 todayLabel={todayLabel}
               />
+              {/* onVerDetalles omitted — ResumenCards is immediately below */}
               <View className="px-5 gap-3">
                 <ResumenCards
                   resumen={resumen}

@@ -38,6 +38,7 @@ export default function NuevoTurnoScreen() {
       lugar:             data.lugar.trim() || undefined,
       latitud:           data.latitud ?? undefined,
       longitud:          data.longitud ?? undefined,
+      para_quien:        data.para_quien,
       puestos:           data.puestos.map((p) => ({
         cargo_id:   p.cargo_id,
         plazas:     p.plazas,

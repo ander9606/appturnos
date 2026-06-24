@@ -69,8 +69,12 @@ const OfertasService = {
         ? empresasActivas
         : await TrabajadorEmpresaModel.listarEmpresaIds(usuario.sub);
 
-      const { data, total } = await OfertasModel.listarMultiEmpresa(usuario.sub, ids, {
-        fecha, estado, disponibles, limit, offset,
+      // trabajador_nomina solo ve ofertas dirigidas a nómina, en su empresa actual
+      const paraQuien = usuario.rol === ROLES.TRABAJADOR_NOMINA ? 'nomina' : 'turnos';
+      const idsFiltered = usuario.rol === ROLES.TRABAJADOR_NOMINA ? [empresaId] : ids;
+
+      const { data, total } = await OfertasModel.listarMultiEmpresa(usuario.sub, idsFiltered, {
+        fecha, estado, disponibles, paraQuien, limit, offset,
       });
       return { data, pagination: { page, limit, total } };
     }

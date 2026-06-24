@@ -19,6 +19,7 @@ export type WizardData = {
   lugar: string;
   latitud: number | null;
   longitud: number | null;
+  para_quien: 'turnos' | 'nomina' | 'ambos';
   puestos: PuestoInput[];
 };
 
@@ -35,5 +36,6 @@ export const INITIAL: WizardData = {
   lugar: '',
   latitud: null,
   longitud: null,
+  para_quien: 'turnos',
   puestos: [],
 };

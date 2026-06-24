@@ -12,6 +12,7 @@ import React, { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Notifications from 'expo-notifications';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { registerPushNotifications } from '@/lib/pushNotifications';
@@ -54,6 +55,20 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (status === 'authenticated') {
       registerPushNotifications();
     }
+  }, [status]);
+
+  // Navigate to the relevant screen when the user taps a push notification
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const sub = Notifications.addNotificationResponseReceivedListener((response: any) => {
+      const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
+      if (data.asignacion_id) {
+        router.push(`/turno/${data.asignacion_id}`);
+      } else {
+        router.push('/notificaciones');
+      }
+    });
+    return () => sub.remove();
   }, [status]);
 
   useEffect(() => {
@@ -111,9 +126,17 @@ export default function RootLayout() {
             <Stack.Screen name="integracion/config" options={{ title: 'Integración logiq360' }} />
             <Stack.Screen name="integracion/estado" options={{ title: 'Estado de la cola' }} />
             <Stack.Screen name="integracion/conciliacion" options={{ title: 'Conciliación de personal' }} />
-            {/* Marcaje — transición vertical (flujo de acción rápida) */}
+            {/* Marcaje turnos — transición vertical */}
             <Stack.Screen name="ingreso/[id]" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="egreso/[id]"  options={{ animation: 'slide_from_bottom' }} />
+            {/* Marcaje nómina — pantalla dedicada con contador */}
+            <Stack.Screen name="nomina-ingreso" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+            {/* Liquidación de turnos — gestores y admin */}
+            <Stack.Screen name="liquidacion-turnos" options={{ title: 'Liquidación de turnos' }} />
+            {/* Liquidación trimestral de turnos eventuales */}
+            <Stack.Screen name="liquidacion-eventual" options={{ title: 'Turnos eventuales' }} />
+            {/* Notificaciones — inbox accesible desde la campana */}
+            <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

@@ -110,6 +110,8 @@ export interface OfertaPuesto {
   notas: string | null;
 }
 
+export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
+
 export interface Oferta {
   id: number;
   empresa_id: number;
@@ -122,6 +124,7 @@ export interface Oferta {
   latitud: number | null;
   longitud: number | null;
   estado: EstadoOferta;
+  para_quien: ParaQuienOferta;
   creado_por: number;
   created_at: string;
   puestos: OfertaPuesto[];
@@ -136,6 +139,7 @@ export interface CrearOfertaPayload {
   lugar?: string;
   latitud?: number;
   longitud?: number;
+  para_quien?: ParaQuienOferta;
   puestos: Array<{
     cargo_id: number;
     plazas: number;
@@ -212,6 +216,7 @@ export const turnosApi = {
     fecha?: string;
     page?: number;
     limit?: number;
+    para_quien?: ParaQuienOferta;
   }): Promise<PaginatedResponse<Oferta>> {
     const qs = new URLSearchParams();
     if (params?.estado) qs.set('estado', params.estado);
@@ -219,6 +224,7 @@ export const turnosApi = {
     if (params?.fecha) qs.set('fecha', params.fecha);
     if (params?.page)  qs.set('page',  String(params.page));
     if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.para_quien) qs.set('para_quien', params.para_quien);
     const query = qs.toString() ? `?${qs}` : '';
     return api.get<PaginatedResponse<Oferta>>(`/api/turnos/ofertas${query}`);
   },

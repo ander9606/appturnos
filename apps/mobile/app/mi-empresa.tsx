@@ -16,13 +16,19 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 
 import { empresasApi } from '@api-client';
-import type { ActualizarMiEmpresaPayload } from '@api-client';
+import type { ActualizarMiEmpresaPayload, TipoLiquidacion } from '@api-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 
 // ── Schema ────────────────────────────────────────────────────────────────
+
+const TIPO_LIQUIDACION_OPTIONS: { value: TipoLiquidacion; label: string; sub: string }[] = [
+  { value: 'mensual',    label: 'Mensual',    sub: 'Ej. 1–30 Jun' },
+  { value: 'quincenal',  label: 'Quincenal',  sub: 'Ej. 1–15 / 16–30' },
+  { value: 'semanal',    label: 'Semanal',    sub: 'Lun–Dom' },
+];
 
 const schema = z.object({
   nombre:               z.string().trim().min(1, 'Razón social requerida'),
@@ -32,6 +38,7 @@ const schema = z.object({
   descripcion:          z.string().trim().optional(),
   logo_url:             z.string().trim().url('Debe ser una URL válida').optional().or(z.literal('')),
   acepta_postulaciones: z.boolean(),
+  tipo_liquidacion:     z.enum(['mensual', 'quincenal', 'semanal']),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -78,6 +85,7 @@ export default function MiEmpresaScreen() {
       descripcion:          '',
       logo_url:             '',
       acepta_postulaciones: true,
+      tipo_liquidacion:     'mensual' as TipoLiquidacion,
     },
   });
 
@@ -93,6 +101,7 @@ export default function MiEmpresaScreen() {
         descripcion:          empresa.descripcion ?? '',
         logo_url:             empresa.logo_url ?? '',
         acepta_postulaciones: Boolean(empresa.acepta_postulaciones),
+        tipo_liquidacion:     (empresa.tipo_liquidacion ?? 'mensual') as TipoLiquidacion,
       });
     }
   }, [empresa, reset]);
@@ -107,6 +116,7 @@ export default function MiEmpresaScreen() {
         descripcion:          data.descripcion || undefined,
         logo_url:             data.logo_url  || undefined,
         acepta_postulaciones: data.acepta_postulaciones,
+        tipo_liquidacion:     data.tipo_liquidacion,
       });
       Alert.alert('✓ Guardado', 'Datos de la empresa actualizados.');
     } catch {
@@ -267,6 +277,46 @@ export default function MiEmpresaScreen() {
               />
             )}
           />
+
+          {/* ── Ciclo de pago de nómina ──────────────────────────── */}
+          <View className="gap-3 mt-2">
+            <View className="gap-1">
+              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                Ciclo de nómina
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                Determina cómo se crean automáticamente los períodos de nómina por hora.
+              </Text>
+            </View>
+            <Controller
+              control={control}
+              name="tipo_liquidacion"
+              render={({ field: { onChange, value } }) => (
+                <View className="flex-row gap-2">
+                  {TIPO_LIQUIDACION_OPTIONS.map((opt) => {
+                    const active = value === opt.value;
+                    return (
+                      <View
+                        key={opt.value}
+                        className={`flex-1 rounded-2xl border py-3 px-2 items-center gap-0.5 ${
+                          active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
+                        }`}
+                        // ponytail: TouchableOpacity wrapping needed
+                      >
+                        <Text
+                          onPress={() => onChange(opt.value)}
+                          className={`text-sm font-bold ${active ? 'text-primary-500' : 'text-foreground'}`}
+                        >
+                          {opt.label}
+                        </Text>
+                        <Text className="text-[10px] text-muted-foreground text-center">{opt.sub}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            />
+          </View>
 
           {/* Acepta postulaciones */}
           <View className="bg-card border border-border rounded-2xl px-5 py-4 flex-row items-center justify-between">

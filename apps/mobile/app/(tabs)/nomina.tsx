@@ -13,8 +13,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert, Modal,
-  TextInput, KeyboardAvoidingView, Platform, Pressable,
+  ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,10 +27,9 @@ import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import {
   usePeriodos, useLiquidacion,
-  useCerrarPeriodo, useLiquidarPeriodo, useCrearPeriodo,
+  useLiquidarPeriodo,
 } from '@/features/nomina/useNomina';
 import { ApiError } from '@api-client';
-import type { TipoPeriodo } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { useRouter } from 'expo-router';
 
@@ -53,122 +51,6 @@ export default function NominaScreen() {
 // Vista del GESTOR — liquidación completa del período
 // ══════════════════════════════════════════════════════════════════════════
 
-// ── Tipos día para el tipo de período ─────────────────────────────────────
-const TIPOS_PERIODO: { v: TipoPeriodo; label: string }[] = [
-  { v: 'quincenal', label: 'Quincenal' },
-  { v: 'mensual',   label: 'Mensual'   },
-  { v: 'semanal',   label: 'Semanal'   },
-];
-
-// ── Formulario de nuevo período ────────────────────────────────────────────
-
-function NuevoPeriodoModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const theme = useTheme();
-  const crearMutation = useCrearPeriodo();
-  const [inicio, setInicio]   = useState('');
-  const [fin, setFin]         = useState('');
-  const [tipo, setTipo]       = useState<TipoPeriodo>('quincenal');
-  const [error, setError]     = useState<string | null>(null);
-
-  const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
-
-  const handleGuardar = async () => {
-    setError(null);
-    if (!RE_FECHA.test(inicio)) { setError('Ingresa la fecha de inicio en formato AAAA-MM-DD'); return; }
-    if (!RE_FECHA.test(fin))    { setError('Ingresa la fecha de fin en formato AAAA-MM-DD'); return; }
-    if (fin < inicio)           { setError('La fecha de fin no puede ser anterior a la de inicio'); return; }
-    try {
-      await crearMutation.mutateAsync({ fecha_inicio: inicio, fecha_fin: fin, tipo });
-      setInicio(''); setFin(''); setError(null);
-      onClose();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al crear el período');
-    }
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1 justify-end bg-black/40"
-      >
-        <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-lg font-bold text-foreground">Nuevo período</Text>
-            <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
-            </Pressable>
-          </View>
-
-          {error && (
-            <View className="bg-danger/10 border border-danger/30 rounded-xl px-4 py-3">
-              <Text className="text-sm text-danger">{error}</Text>
-            </View>
-          )}
-
-          {/* Tipo */}
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-foreground">Tipo de período</Text>
-            <View className="flex-row gap-2">
-              {TIPOS_PERIODO.map(({ v, label }) => (
-                <Pressable
-                  key={v}
-                  onPress={() => setTipo(v)}
-                  className={`px-4 py-2 rounded-xl border ${tipo === v ? 'bg-foreground border-foreground' : 'bg-card border-border'}`}
-                >
-                  <Text className={`text-sm font-semibold ${tipo === v ? 'text-white' : 'text-muted-foreground'}`}>
-                    {label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Fechas */}
-          <View className="flex-row gap-3">
-            <View className="flex-1 gap-1.5">
-              <Text className="text-sm font-semibold text-foreground">Inicio</Text>
-              <TextInput
-                value={inicio}
-                onChangeText={setInicio}
-                placeholder="2025-07-01"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                className="bg-card border border-border rounded-xl px-4 h-12 text-base text-foreground"
-              />
-            </View>
-            <View className="flex-1 gap-1.5">
-              <Text className="text-sm font-semibold text-foreground">Fin</Text>
-              <TextInput
-                value={fin}
-                onChangeText={setFin}
-                placeholder="2025-07-15"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                className="bg-card border border-border rounded-xl px-4 h-12 text-base text-foreground"
-              />
-            </View>
-          </View>
-          <Text className="text-xs text-muted-foreground -mt-3">Formato: AAAA-MM-DD</Text>
-
-          {/* Botón */}
-          <TouchableOpacity
-            onPress={handleGuardar}
-            disabled={crearMutation.isPending}
-            className="h-14 rounded-2xl items-center justify-center active:opacity-80 disabled:opacity-40"
-            style={{ backgroundColor: theme.primary }}
-          >
-            {crearMutation.isPending
-              ? <ActivityIndicator color="#fff" />
-              : <Text className="text-base font-semibold text-white">Crear período</Text>
-            }
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
-
 // ──────────────────────────────────────────────────────────────────────────
 
 function NominaGestorView() {
@@ -178,8 +60,7 @@ function NominaGestorView() {
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos();
   const periodos = periodosResp?.data ?? [];
-  const [periodoId, setPeriodoId]         = useState<number | undefined>(undefined);
-  const [modalNuevo, setModalNuevo]       = useState(false);
+  const [periodoId, setPeriodoId] = useState<number | undefined>(undefined);
 
   const activePeriodoId = periodoId ?? periodos[0]?.id;
   const activePeriodo   = periodos.find((p) => p.id === activePeriodoId) ?? periodos[0];
@@ -191,37 +72,12 @@ function NominaGestorView() {
     isRefetching,
   } = useLiquidacion(activePeriodoId ?? null);
 
-  const cerrarMutation   = useCerrarPeriodo();
   const liquidarMutation = useLiquidarPeriodo();
 
   const onRefresh = useCallback(() => {
     refetchPeriodos();
     refetchLiq();
   }, [refetchPeriodos, refetchLiq]);
-
-  const handleCerrar = () => {
-    if (!activePeriodoId) return;
-    Alert.alert(
-      'Cerrar período',
-      '¿Confirmas que deseas cerrar este período? Ya no se podrán añadir registros.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Cerrar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await cerrarMutation.mutateAsync(activePeriodoId);
-              Alert.alert('Período cerrado');
-            } catch (err) {
-              const msg = err instanceof ApiError ? err.message : 'Error al cerrar el período';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ],
-    );
-  };
 
   const handleLiquidar = () => {
     if (!activePeriodoId) return;
@@ -259,7 +115,6 @@ function NominaGestorView() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <NuevoPeriodoModal visible={modalNuevo} onClose={() => setModalNuevo(false)} />
       <FlatList
         data={lineas}
         keyExtractor={(item) => String(item.trabajador_id)}
@@ -284,12 +139,6 @@ function NominaGestorView() {
                 </View>
                 <View className="flex-row items-center gap-2">
                   {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
-                  <TouchableOpacity
-                    onPress={() => setModalNuevo(true)}
-                    className="w-8 h-8 rounded-full bg-white/20 items-center justify-center"
-                  >
-                    <Ionicons name="add" size={20} color="#fff" />
-                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -333,34 +182,44 @@ function NominaGestorView() {
               )}
 
               {activePeriodo && (
-                <View className="flex-row gap-2">
-                  {activePeriodo.estado === 'abierto' && (
-                    <TouchableOpacity
-                      onPress={handleCerrar}
-                      disabled={cerrarMutation.isPending}
-                      className="flex-1 bg-warning-light border border-amber-200 rounded-2xl py-3 items-center"
-                    >
-                      <Text className="text-sm font-semibold text-amber-700">
-                        {cerrarMutation.isPending ? 'Cerrando…' : 'Cerrar período'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {activePeriodo.estado === 'cerrado' && (
-                    <TouchableOpacity
-                      onPress={handleLiquidar}
-                      disabled={liquidarMutation.isPending}
-                      className="flex-1 bg-success-light border border-green-200 rounded-2xl py-3 items-center"
-                    >
-                      <Text className="text-sm font-semibold text-success">
-                        {liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar período'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {activePeriodo.estado === 'liquidado' && (
-                    <View className="flex-1 bg-muted rounded-2xl py-3 items-center">
-                      <Text className="text-sm text-muted-foreground">Período liquidado</Text>
-                    </View>
-                  )}
+                <View className="gap-2">
+                  {/* Context label explaining what the current state means */}
+                  <View className="flex-row items-center gap-1.5 px-1">
+                    <Ionicons
+                      name={
+                        activePeriodo.estado === 'abierto'   ? 'lock-open-outline'
+                        : activePeriodo.estado === 'cerrado' ? 'lock-closed-outline'
+                        : 'checkmark-circle-outline'
+                      }
+                      size={14}
+                      color="#64748B"
+                    />
+                    <Text className="text-xs text-muted-foreground">
+                      {activePeriodo.estado === 'abierto'
+                        ? 'Los trabajadores pueden registrar horas'
+                        : activePeriodo.estado === 'cerrado'
+                        ? 'Horas congeladas — pendiente de pago'
+                        : 'Período pagado'}
+                    </Text>
+                  </View>
+                  <View className="flex-row gap-2">
+                    {activePeriodo.estado === 'cerrado' && (
+                      <TouchableOpacity
+                        onPress={handleLiquidar}
+                        disabled={liquidarMutation.isPending}
+                        className="flex-1 bg-success-light border border-green-200 rounded-2xl py-3 items-center"
+                      >
+                        <Text className="text-sm font-semibold text-success">
+                          {liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar período'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {activePeriodo.estado === 'liquidado' && (
+                      <View className="flex-1 bg-muted rounded-2xl py-3 items-center">
+                        <Text className="text-sm text-muted-foreground">Período liquidado</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               )}
 
