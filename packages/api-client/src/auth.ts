@@ -180,7 +180,7 @@ export const authApi = {
   loginConProvider(provider: string, idToken: string): Promise<OAuthLoginResponse> {
     return api.post<OAuthLoginResponse>(
       `/api/auth/oauth/${provider}`,
-      { id_token: idToken },
+      { token: idToken },
       { authenticated: false },
     );
   },
