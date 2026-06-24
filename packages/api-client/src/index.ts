@@ -9,7 +9,7 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export type { CrearGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
@@ -82,6 +82,7 @@ export type {
   TipoCuenta,
 } from './trabajadores';
 export { notificacionesApi } from './notificaciones';
+export type { Notificacion, ListarNotificacionesResponse } from './notificaciones';
 export { adminApi } from './admin';
 export { reportesApi } from './reportes';
 export { integracionApi } from './integracion';

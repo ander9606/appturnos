@@ -12,11 +12,14 @@ export interface EmpresaDirectorio {
   acepta_postulaciones: boolean;
 }
 
+export type TipoLiquidacion = 'mensual' | 'quincenal' | 'semanal';
+
 /** Vista completa que solo ve el admin_empresa de esa empresa */
 export interface Empresa extends EmpresaDirectorio {
   nit: string | null;
   actividad: string | null;
   plan: string;
+  tipo_liquidacion: TipoLiquidacion;
   created_at: string;
 }
 
@@ -28,6 +31,7 @@ export interface ActualizarMiEmpresaPayload {
   actividad?: string;
   logo_url?: string;
   acepta_postulaciones?: boolean;
+  tipo_liquidacion?: TipoLiquidacion;
 }
 
 export interface DirectorioResponse {
