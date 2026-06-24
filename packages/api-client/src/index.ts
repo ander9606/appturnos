@@ -23,6 +23,8 @@ export type {
   UsuarioPerfil,
   UpdateProfileParams,
   ChangePasswordParams,
+  OAuthLoginResponse,
+  OAuthVinculo,
 } from './types';
 export { nominaApi, calcularResumenHoras } from './nomina';
 export type {

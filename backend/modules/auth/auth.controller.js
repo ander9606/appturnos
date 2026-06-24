@@ -1,6 +1,7 @@
 'use strict';
 
-const AuthService = require('./auth.service');
+const AuthService       = require('./auth.service');
+const VerificacionSvc   = require('./verificacion.service');
 
 /**
  * Controladores HTTP del módulo auth.
@@ -44,8 +45,10 @@ async function activarCuenta(req, res) {
 
 /** Registro libre para trabajador_turnos (modelo marketplace). */
 async function registrar(req, res) {
-  const { nombre, apellido, email, password } = req.body;
-  const data = await AuthService.registrarLibre({ nombre, apellido, email, password });
+  const { nombre, apellido, email, telefono, password, email_token, telefono_token } = req.body;
+  VerificacionSvc.validarTokenVerificacion(email_token, 'email', email);
+  VerificacionSvc.validarTokenVerificacion(telefono_token, 'telefono', telefono);
+  const data = await AuthService.registrarLibre({ nombre, apellido, email, telefono, password });
   res.status(201).json({ success: true, data, message: 'Cuenta creada. ¡Bienvenido!' });
 }
 
@@ -55,8 +58,11 @@ async function actualizarFoto(req, res) {
 }
 
 async function actualizarPerfil(req, res) {
-  const { nombre, apellido, email } = req.body;
-  const data = await AuthService.actualizarPerfil(req.usuario.sub, { nombre, apellido, email });
+  const { nombre, apellido, email, telefono, telefono_token } = req.body;
+  if (telefono !== undefined) {
+    VerificacionSvc.validarTokenVerificacion(telefono_token, 'telefono', telefono);
+  }
+  const data = await AuthService.actualizarPerfil(req.usuario.sub, { nombre, apellido, email, telefono });
   res.json({ success: true, data, message: 'Perfil actualizado' });
 }
 
@@ -67,7 +73,10 @@ async function cambiarPassword(req, res) {
 }
 
 async function registrarEmpresa(req, res) {
-  const { nombre_empresa, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password } = req.body;
+  const { nombre_empresa, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad,
+          nombre, apellido, email, password, email_token, telefono_token } = req.body;
+  VerificacionSvc.validarTokenVerificacion(email_token, 'email', email);
+  if (telefono) VerificacionSvc.validarTokenVerificacion(telefono_token, 'telefono', telefono);
   const data = await AuthService.registrarEmpresa({
     nombreEmpresa: nombre_empresa, nit, descripcion, actividad, telefono,
     emailEmpresa: email_empresa, direccion, ciudad,
@@ -94,4 +103,18 @@ async function setActivoGestor(req, res) {
   res.json({ success: true, data: null, message: activo ? 'Gestor activado' : 'Gestor desactivado' });
 }
 
-module.exports = { login, refresh, logout, me, verificarCedula, activarCuenta, registrar, registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, crearGestor, listarGestores, setActivoGestor };
+async function enviarOtp(req, res) {
+  const { tipo, destino } = req.body;
+  await VerificacionSvc.enviarOtp(tipo, destino);
+  res.json({ success: true, data: null, message: 'Código enviado' });
+}
+
+async function verificarOtp(req, res) {
+  const { tipo, destino, codigo } = req.body;
+  const token = await VerificacionSvc.verificarOtp(tipo, destino, codigo);
+  res.json({ success: true, data: { token }, message: 'Verificado' });
+}
+
+module.exports = { login, refresh, logout, me, verificarCedula, activarCuenta, registrar,
+  registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, crearGestor,
+  listarGestores, setActivoGestor, enviarOtp, verificarOtp };
