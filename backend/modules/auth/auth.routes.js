@@ -78,9 +78,34 @@ router.post(
       .isString()
       .isLength({ min: 8 })
       .withMessage('La contraseña debe tener al menos 8 caracteres'),
+    body('email_token').isString().notEmpty().withMessage('Token de verificación de email requerido'),
+    body('telefono_token').optional().isString(),
   ],
   validar,
   ctrl.registrarEmpresa
+);
+
+// POST /api/auth/enviar-otp — envía código OTP por email o SMS
+router.post(
+  '/enviar-otp',
+  [
+    body('tipo').isIn(['email', 'telefono']).withMessage('tipo debe ser "email" o "telefono"'),
+    body('destino').isString().trim().notEmpty().withMessage('destino requerido'),
+  ],
+  validar,
+  ctrl.enviarOtp,
+);
+
+// POST /api/auth/verificar-otp — verifica OTP y devuelve token de verificación
+router.post(
+  '/verificar-otp',
+  [
+    body('tipo').isIn(['email', 'telefono']).withMessage('tipo debe ser "email" o "telefono"'),
+    body('destino').isString().trim().notEmpty().withMessage('destino requerido'),
+    body('codigo').isString().isLength({ min: 6, max: 6 }).withMessage('codigo debe tener 6 dígitos'),
+  ],
+  validar,
+  ctrl.verificarOtp,
 );
 
 // POST /api/auth/registro — registro libre para trabajador_turnos (marketplace).
@@ -91,10 +116,13 @@ router.post(
     body('nombre').isString().trim().notEmpty().withMessage('Nombre requerido'),
     body('apellido').optional().isString().trim(),
     emailSanitizado,
+    body('telefono').isString().trim().notEmpty().withMessage('Teléfono requerido'),
     body('password')
       .isString()
       .isLength({ min: 8 })
       .withMessage('La contraseña debe tener al menos 8 caracteres'),
+    body('email_token').isString().notEmpty().withMessage('Token de verificación de email requerido'),
+    body('telefono_token').isString().notEmpty().withMessage('Token de verificación de teléfono requerido'),
   ],
   validar,
   ctrl.registrar

@@ -121,7 +121,10 @@ export const authApi = {
     nombre: string;
     apellido?: string;
     email: string;
+    telefono: string;
     password: string;
+    email_token: string;
+    telefono_token: string;
   }): Promise<LoginResponse> {
     return api.post<LoginResponse>(
       '/api/auth/registro',
@@ -150,6 +153,20 @@ export const authApi = {
       params,
       { authenticated: false },
     );
+  },
+
+  /** Envía un código OTP de 6 dígitos al email o teléfono indicado. */
+  enviarOtp(params: { tipo: 'email' | 'telefono'; destino: string }): Promise<null> {
+    return api.post<null>('/api/auth/enviar-otp', params, { authenticated: false });
+  },
+
+  /** Verifica el OTP. Si es correcto devuelve un token de verificación (JWT 15 min). */
+  verificarOtp(params: {
+    tipo: 'email' | 'telefono';
+    destino: string;
+    codigo: string;
+  }): Promise<{ token: string }> {
+    return api.post<{ token: string }>('/api/auth/verificar-otp', params, { authenticated: false });
   },
 
   /** Actualiza (o elimina) la foto de perfil del usuario autenticado. */

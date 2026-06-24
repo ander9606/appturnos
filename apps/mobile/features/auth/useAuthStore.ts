@@ -87,7 +87,10 @@ interface AuthState {
     nombre: string;
     apellido?: string;
     email: string;
+    telefono: string;
     password: string;
+    email_token: string;
+    telefono_token: string;
   }): Promise<void>;
 
   /** Actualiza el usuario en memoria y en SecureStore (tras edición de perfil) */
@@ -175,9 +178,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   // ── registrar ─────────────────────────────────────────────────────────
-  async registrar({ nombre, apellido, email, password }) {
+  async registrar({ nombre, apellido, email, telefono, password, email_token, telefono_token }) {
     const { access_token, refresh_token, usuario } = await authApi.registrar({
-      nombre, apellido, email, password,
+      nombre, apellido, email, telefono, password, email_token, telefono_token,
     });
     await secureTokenStore.setTokens(access_token, refresh_token);
     await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));

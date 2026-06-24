@@ -195,11 +195,11 @@ const AuthModel = {
    * Sin transacción: no hay tabla secundaria que actualizar.
    * @returns {Promise<number>} id del usuario creado.
    */
-  async registrarTrabajadorLibre({ nombre, apellido, email, password_hash }) {
+  async registrarTrabajadorLibre({ nombre, apellido, email, telefono, password_hash }) {
     const [res] = await pool.query(
-      `INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol)
-       VALUES (NULL, ?, ?, ?, ?, 'trabajador_turnos')`,
-      [nombre, apellido || null, email, password_hash]
+      `INSERT INTO usuarios (empresa_id, nombre, apellido, email, telefono, password_hash, rol)
+       VALUES (NULL, ?, ?, ?, ?, ?, 'trabajador_turnos')`,
+      [nombre, apellido || null, email, telefono || null, password_hash]
     );
     return res.insertId;
   },
