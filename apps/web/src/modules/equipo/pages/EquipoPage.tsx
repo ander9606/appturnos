@@ -32,9 +32,12 @@ export function EquipoPage() {
   const [tipoFiltro, setTipoFiltro] = useState<TipoTrabajador | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
   const [showInvitar, setShowInvitar] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useTrabajadores({ activo: estadoFiltro, tipo: tipoFiltro, limit: 200 });
-  const trabajadores: Trabajador[] = data?.data ?? [];
+  const { data, isLoading } = useTrabajadores({ activo: estadoFiltro, tipo: tipoFiltro, page, limit: 50 });
+  const inner = (data as { data?: { data?: Trabajador[]; pagination?: { page: number; limit: number; total: number } } } | undefined)?.data;
+  const trabajadores: Trabajador[] = inner?.data ?? [];
+  const pagination = inner?.pagination;
   const desactivar = useDesactivarTrabajador();
 
   const estadoTabs: { label: string; value: EstadoFiltro }[] = [
@@ -77,7 +80,7 @@ export function EquipoPage() {
           {estadoTabs.map(t => (
             <button
               key={String(t.value)}
-              onClick={() => setEstadoFiltro(t.value)}
+              onClick={() => { setEstadoFiltro(t.value); setPage(1); }}
               className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
                 estadoFiltro === t.value
                   ? 'border-primary text-primary'
@@ -90,7 +93,7 @@ export function EquipoPage() {
         </div>
         <select
           value={tipoFiltro ?? ''}
-          onChange={e => setTipoFiltro((e.target.value as TipoTrabajador) || undefined)}
+          onChange={e => { setTipoFiltro((e.target.value as TipoTrabajador) || undefined); setPage(1); }}
           className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
         >
           {tipoTabs.map(t => (
@@ -161,6 +164,28 @@ export function EquipoPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {pagination && pagination.total > pagination.limit && (
+        <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+          <span>{pagination.total} trabajadores · página {pagination.page} de {Math.ceil(pagination.total / pagination.limit)}</span>
+          <div className="flex gap-2">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(p => p - 1)}
+              className="px-3 py-1.5 border border-border rounded-lg disabled:opacity-40 hover:bg-muted transition-colors"
+            >
+              ← Anterior
+            </button>
+            <button
+              disabled={page >= Math.ceil(pagination.total / pagination.limit)}
+              onClick={() => setPage(p => p + 1)}
+              className="px-3 py-1.5 border border-border rounded-lg disabled:opacity-40 hover:bg-muted transition-colors"
+            >
+              Siguiente →
+            </button>
+          </div>
         </div>
       )}
 

@@ -32,20 +32,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { t } from '@/lib/i18n';
 import { ApiError, authApi } from '@api-client';
-
-const TIPO_LABEL: Record<string, string> = {
-  // tipos de trabajador
-  turnos:            'Trabajador de Turnos',
-  nomina:            'Trabajador de Nómina',
-  ambos:             'Trabajador de Turnos y Nómina',
-  // roles de gestor
-  jefe_turnos:       'Jefe de Turnos',
-  jefe_nomina:       'Jefe de Nómina',
-  nomina_gestor:     'Gestor de Nómina',
-  // roles completos (usuarios.rol)
-  trabajador_turnos: 'Trabajador de Turnos',
-  trabajador_nomina: 'Trabajador de Nómina',
-};
+import { TIPO_LABEL } from '@/lib/roleLabels';
 
 const { height } = Dimensions.get('window');
 

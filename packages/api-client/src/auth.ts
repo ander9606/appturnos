@@ -96,10 +96,7 @@ export const authApi = {
     return api.patch<null>('/api/auth/me/password', params);
   },
 
-  /**
-   * Verifica si una cédula existe y tiene invitación pendiente de empresa.
-   * Endpoint público — no requiere token.
-   */
+  /** Verifica si una cédula existe y tiene invitación pendiente. Endpoint público. */
   verificarCedula(cedula: string): Promise<{
     existe: boolean;
     tiene_cuenta?: boolean;
