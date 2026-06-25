@@ -256,6 +256,7 @@ const AsignacionesService = {
 
     await AsignacionesModel.registrarIngreso(dbEmpresaId, id, latitud, longitud);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.ingreso', {
+      external_ref: asignacion.oferta_external_ref || null,
       asignacion_id: id,
       oferta_id: asignacion.oferta_id,
       trabajador_id: asignacion.trabajador_id,
@@ -308,6 +309,7 @@ const AsignacionesService = {
 
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
+      external_ref: asignacion.oferta_external_ref || null,
       asignacion_id: id,
       oferta_id: asignacion.oferta_id,
       trabajador_id: asignacion.trabajador_id,

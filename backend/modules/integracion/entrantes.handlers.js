@@ -64,17 +64,24 @@ async function ordenCreada(empresaId, data) {
     : null;
   const externo_notas = [data.notas_para_operario, notasNomina].filter(Boolean).join('\n') || null;
 
-  // Puestos: solo si hay cupos gig > 0. Si no, el jefe_turnos los agrega desde App Turnos.
-  const puestos = cuposGig > 0
-    ? [
-        {
-          cargo_id: await cargoAuxiliarId(),
-          plazas: cuposGig,
-          tarifa_dia: tarifaSugerida,
-          notas: 'Plazas para trabajadores de turno (gig) — el jefe puede dividirlas por cargo',
-        },
-      ]
-    : [];
+  // Puestos: uno por tipo de cupo recibido. El jefe_turnos puede dividirlos por cargo.
+  const puestos = [];
+  if (cuposGig > 0) {
+    puestos.push({
+      cargo_id: await cargoAuxiliarId(),
+      plazas: cuposGig,
+      tarifa_dia: tarifaSugerida,
+      notas: 'Plazas para trabajadores de turno (gig) — el jefe puede dividirlas por cargo',
+    });
+  }
+  if ((data.cupos_custodio ?? 0) > 0) {
+    puestos.push({
+      cargo_id: await cargoAuxiliarId(), // ponytail: mismo cargo auxiliar — upgrade: cargo 'custodio' dedicado
+      plazas: data.cupos_custodio,
+      tarifa_dia: data.valor_dia_custodio || 0,
+      notas: 'Custodio/logística del evento — aplica a trabajadores nómina y gig',
+    });
+  }
 
   await OfertasModel.crear(
     empresaId,

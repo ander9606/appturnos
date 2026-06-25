@@ -19,6 +19,20 @@ Before writing any code, work through this hierarchy in order:
 
 **Testing:** non-trivial logic gets one minimal runnable check (assertion or small script — no frameworks). Trivial one-liners need none.
 
+## Database — MySQL ONLY
+
+**Never use PostgreSQL syntax.** The database is MySQL 8+. All migrations must use MySQL syntax:
+
+| Use this (MySQL) | Never this (PostgreSQL) |
+|---|---|
+| `INT AUTO_INCREMENT` | `SERIAL` / `GENERATED AS IDENTITY` |
+| `TINYINT(1)` | `BOOLEAN` (as column type) |
+| `ON DUPLICATE KEY UPDATE` | `ON CONFLICT DO UPDATE` |
+| `LAST_INSERT_ID()` | `RETURNING id` |
+| `SET @var = ...` | PL/pgSQL blocks |
+| `UUID()` | `gen_random_uuid()` |
+| `JSON_OBJECT(...)` | `jsonb_build_object(...)` |
+
 ## Commands
 
 ### Web (`apps/web/`)
