@@ -1,2 +1,2 @@
 ALTER TABLE usuarios
-  ADD COLUMN IF NOT EXISTS telefono VARCHAR(20) NULL AFTER email;
+  ADD COLUMN telefono VARCHAR(20) NULL AFTER email;

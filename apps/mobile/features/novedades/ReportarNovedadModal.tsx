@@ -4,7 +4,7 @@ import {
   ScrollView, Alert, ActivityIndicator, Image, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+// ponytail: lazy import — native module only loaded when handler runs, not at route discovery time
 import type { TipoNovedad } from '@api-client';
 import { useCrearNovedad } from './useNovedades';
 
@@ -34,6 +34,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
   const mutation = useCrearNovedad(asignacionId);
 
   const handlePickFoto = async () => {
+    const ImagePicker = await import('expo-image-picker');
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Permiso requerido', 'Permite el acceso a la galería para adjuntar una foto.');
@@ -50,6 +51,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
   };
 
   const handleTakePhoto = async () => {
+    const ImagePicker = await import('expo-image-picker');
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Permiso requerido', 'Permite el acceso a la cámara para tomar una foto.');
