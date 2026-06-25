@@ -127,6 +127,13 @@ const TrabajadorEmpresaService = {
       };
     }
 
+    const PushService = require('../notificaciones/push/push.service');
+    const pushInvitacion = () => PushService.enviarExpo(usuarioId, {
+      titulo: 'Nueva invitación de empresa',
+      mensaje: 'Una empresa te ha invitado a unirte. Revisa tus invitaciones.',
+      data: { tipo: 'invitacion_empresa', empresa_id: empresaId },
+    }).catch(() => {});
+
     // Ya tiene cuenta: crear relación.
     const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empresaId);
     if (existente) {
@@ -138,6 +145,7 @@ const TrabajadorEmpresaService = {
         trabajadorId,
         motivo: null,
       });
+      pushInvitacion();
       return TrabajadorEmpresaModel.obtenerPorId(existente.id);
     }
 
@@ -149,6 +157,7 @@ const TrabajadorEmpresaService = {
     });
     // Actualizar trabajador_id en la relación recién creada.
     await TrabajadorEmpresaModel.cambiarEstado(id, E.SOLICITADO_POR_EMPRESA, { trabajadorId });
+    pushInvitacion();
     return TrabajadorEmpresaModel.obtenerPorId(id);
   },
 

@@ -15,10 +15,10 @@ function getErrMsg(err: unknown) {
     : 'Error inesperado';
 }
 
-export function useTrabajadores(params?: { tipo?: TipoTrabajador; activo?: boolean; limit?: number }) {
+export function useTrabajadores(params?: { tipo?: TipoTrabajador; activo?: boolean; page?: number; limit?: number }) {
   return useQuery({
     queryKey: KEYS.lista(params),
-    queryFn: () => equipoApi.listar({ ...params, limit: params?.limit ?? 100 }),
+    queryFn: () => equipoApi.listar({ ...params, page: params?.page ?? 1, limit: params?.limit ?? 50 }),
     staleTime: 60_000,
   });
 }
