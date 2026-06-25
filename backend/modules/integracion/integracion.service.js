@@ -255,7 +255,7 @@ const IntegracionService = {
       if (evento.api_key) {
         headers['X-API-Key'] = evento.api_key;
       }
-      const resp = await fetch(evento.webhook_url, { method: 'POST', headers, body: cuerpo });
+      const resp = await fetch(evento.webhook_url, { method: 'POST', headers, body: cuerpo, signal: AbortSignal.timeout(10_000) });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       await IntegracionModel.marcarSalienteEnviado(evento.id, intentos);
     } catch (err) {
