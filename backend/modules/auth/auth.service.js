@@ -216,21 +216,6 @@ const AuthService = {
       }
     }
 
-    // Deferred push: if admin had pre-invited this worker (no account existed), notify now.
-    const { pool } = require('../../config/database');
-    const [invitaciones] = await pool.query(
-      `SELECT empresa_id FROM trabajador_empresa WHERE trabajador_id = ? AND estado = 'solicitado_por_empresa' LIMIT 5`,
-      [trabajador.id]
-    );
-    if (invitaciones.length > 0) {
-      const PushService = require('../notificaciones/push/push.service');
-      PushService.enviarExpo(usuarioId, {
-        titulo: 'Tienes invitaciones pendientes',
-        mensaje: `${invitaciones.length > 1 ? `${invitaciones.length} empresas te han invitado` : 'Una empresa te ha invitado'}. Revisa tus invitaciones.`,
-        data: { tipo: 'invitacion_empresa' },
-      }).catch(() => {});
-    }
-
     return { usuario_id: usuarioId, email, rol };
   },
 
