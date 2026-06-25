@@ -64,7 +64,8 @@ const AsignacionesModel = {
               a.hora_ingreso_real, a.hora_egreso_real,
               p.tarifa_dia,
               t.external_ref AS trabajador_external_ref,
-              t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido
+              t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+              t.tipo AS trabajador_tipo
        FROM asignaciones_turno a
        JOIN trabajadores t ON t.id = a.trabajador_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
