@@ -6,6 +6,8 @@ import {
   TokenPair,
   UpdateProfileParams,
   ChangePasswordParams,
+  OAuthLoginResponse,
+  OAuthVinculo,
 } from './types';
 
 export interface CrearGestorPayload {
@@ -108,6 +110,22 @@ export const authApi = {
   },
 
   /**
+   * Verifica si una cédula existe y tiene invitación pendiente de empresa.
+   * Endpoint público — no requiere token.
+   */
+  verificarCedula(cedula: string): Promise<{
+    existe: boolean;
+    tiene_cuenta?: boolean;
+    tipo?: string;
+    invitacion?: { empresa_nombre: string } | null;
+  }> {
+    return api.get(
+      `/api/auth/verificar-cedula?cedula=${encodeURIComponent(cedula)}`,
+      { authenticated: false },
+    );
+  },
+
+  /**
    * Activa la cuenta de un trabajador que aún no tiene login.
    * El trabajador debe existir en la BD con la cédula indicada.
    *
@@ -134,7 +152,10 @@ export const authApi = {
     nombre: string;
     apellido?: string;
     email: string;
+    telefono: string;
     password: string;
+    email_token: string;
+    telefono_token: string;
   }): Promise<LoginResponse> {
     return api.post<LoginResponse>(
       '/api/auth/registro',
@@ -163,6 +184,42 @@ export const authApi = {
       params,
       { authenticated: false },
     );
+  },
+
+  /**
+   * Login / registro vía OAuth (Google, etc.).
+   * El `idToken` proviene de expo-auth-session o el SDK nativo de Google.
+   */
+  loginConProvider(provider: string, idToken: string): Promise<OAuthLoginResponse> {
+    return api.post<OAuthLoginResponse>(
+      `/api/auth/oauth/${provider}`,
+      { id_token: idToken },
+      { authenticated: false },
+    );
+  },
+
+  /** Lista los proveedores OAuth vinculados a la cuenta autenticada. */
+  oauthVinculos(): Promise<OAuthVinculo[]> {
+    return api.get<OAuthVinculo[]>('/api/auth/oauth/vinculos');
+  },
+
+  /** Desvincula un proveedor OAuth de la cuenta autenticada. */
+  oauthDesvincular(provider: string): Promise<null> {
+    return api.delete<null>(`/api/auth/oauth/${provider}`);
+  },
+
+  /** Envía un código OTP de 6 dígitos al email o teléfono indicado. */
+  enviarOtp(params: { tipo: 'email' | 'telefono'; destino: string }): Promise<null> {
+    return api.post<null>('/api/auth/enviar-otp', params, { authenticated: false });
+  },
+
+  /** Verifica el OTP. Si es correcto devuelve un token de verificación (JWT 15 min). */
+  verificarOtp(params: {
+    tipo: 'email' | 'telefono';
+    destino: string;
+    codigo: string;
+  }): Promise<{ token: string }> {
+    return api.post<{ token: string }>('/api/auth/verificar-otp', params, { authenticated: false });
   },
 
   /** Actualiza (o elimina) la foto de perfil del usuario autenticado. */

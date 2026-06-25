@@ -41,7 +41,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const segments = useSegments();
   const status      = useAuthStore((s) => s.status);
-  const rol         = useAuthStore((s) => s.usuario?.rol);
+  const usuario     = useAuthStore((s) => s.usuario);
+  const rol         = usuario?.rol;
   const hasLaunched = useAuthStore((s) => s.hasLaunched);
   const rehydrate   = useAuthStore((s) => s.rehydrate);
 
@@ -74,27 +75,32 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (status === 'unknown') return; // still loading
 
-    const inAuthGroup  = segments[0] === '(auth)';
-    const inAdminGroup = segments[0] === '(admin)';
+    const inAuthGroup     = segments[0] === '(auth)';
+    const inAdminGroup    = segments[0] === '(admin)';
+    const inCompletarPerfil = segments[0] === 'completar-perfil';
 
     const isSuperAdmin = rol === 'super_admin';
     const welcomeRoute = hasLaunched ? '/(auth)/login' : '/(auth)/';
 
     if (status === 'authenticated') {
+      // OAuth users who registered without a phone must complete their profile first.
+      const needsPhone = !usuario?.telefono;
+      if (needsPhone && !inCompletarPerfil && !isSuperAdmin) {
+        router.replace('/completar-perfil');
+        return;
+      }
+
       if (isSuperAdmin && !inAdminGroup) {
-        // Super admin siempre va al panel de administración.
         router.replace('/(admin)');
-      } else if (!isSuperAdmin && inAuthGroup) {
-        // Usuarios normales autenticados salen del grupo auth.
+      } else if (!isSuperAdmin && (inAuthGroup || inCompletarPerfil) && !needsPhone) {
         router.replace('/(tabs)');
       } else if (!isSuperAdmin && inAdminGroup) {
-        // Un usuario no-super que llega al admin (no debería ocurrir) → tabs.
         router.replace('/(tabs)');
       }
     } else if (status === 'unauthenticated' && !inAuthGroup) {
       router.replace(welcomeRoute);
     }
-  }, [status, segments, rol, hasLaunched]);
+  }, [status, segments, rol, hasLaunched, usuario]);
 
   return <>{children}</>;
 }
@@ -137,6 +143,8 @@ export default function RootLayout() {
             <Stack.Screen name="liquidacion-eventual" options={{ title: 'Turnos eventuales' }} />
             {/* Notificaciones — inbox accesible desde la campana */}
             <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
+            {/* Completar perfil — usuarios OAuth sin teléfono registrado */}
+            <Stack.Screen name="completar-perfil" options={{ headerShown: false }} />
             {/* Directorio de empresas — trabajador_turnos */}
             <Stack.Screen name="directorio-empresas" options={{ title: 'Buscar empresa' }} />
             {/* Mis empresas — vínculos del trabajador */}

@@ -23,7 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+// ponytail: lazy import — native module only loaded when handler runs, not at route discovery time
 
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
@@ -268,6 +268,7 @@ export default function PerfilScreen() {
       {
         text: 'Tomar foto',
         onPress: async () => {
+          const ImagePicker = await import('expo-image-picker');
           const perm = await ImagePicker.requestCameraPermissionsAsync();
           if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la cámara.'); return; }
           const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
@@ -277,6 +278,7 @@ export default function PerfilScreen() {
       {
         text: 'Galería',
         onPress: async () => {
+          const ImagePicker = await import('expo-image-picker');
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
           if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la galería.'); return; }
           const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });

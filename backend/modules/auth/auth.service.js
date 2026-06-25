@@ -287,7 +287,7 @@ const AuthService = {
    * No requiere cédula ni empresa preexistente: cualquier persona puede
    * registrarse y luego solicitar vinculación a empresas desde el directorio.
    */
-  async registrarLibre({ nombre, apellido, email, password }) {
+  async registrarLibre({ nombre, apellido, email, telefono, password }) {
     const emailEnUso = await AuthModel.buscarUsuarioPorEmail(email);
     if (emailEnUso) {
       throw new AppError('El email ya está registrado', 409);
@@ -298,6 +298,7 @@ const AuthService = {
       nombre,
       apellido: apellido || null,
       email,
+      telefono: telefono || null,
       password_hash: passwordHash,
     });
 
