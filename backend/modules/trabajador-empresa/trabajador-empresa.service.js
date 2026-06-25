@@ -117,9 +117,14 @@ const TrabajadorEmpresaService = {
     }
 
     // Si no hay usuario aún, no podemos crear el link de trabajador_empresa todavía.
-    // Lo hacemos cuando active la cuenta.
+    // Guardamos el empresa_id en empresas_invitacion para que activarCuenta lo procese.
     if (!usuarioId) {
-      // Guardar marcador en trabajadores para que activarCuenta lo encuentre.
+      await pool.query(
+        `UPDATE trabajadores
+         SET empresas_invitacion = JSON_ARRAY_APPEND(COALESCE(empresas_invitacion, JSON_ARRAY()), '$', ?)
+         WHERE id = ?`,
+        [empresaId, trabajadorId]
+      );
       return {
         mensaje: 'Trabajador no tiene cuenta. Se creó la ficha. Al activar cuenta quedará vinculado.',
         trabajador_id: trabajadorId,

@@ -190,16 +190,16 @@ const AuthService = {
       throw err;
     }
 
-    // Crear solicitudes de vinculación para las empresas pre-seleccionadas.
+    const TrabajadorEmpresaModel = require('../trabajador-empresa/trabajador-empresa.model');
+    const ESTADOS = require('../../config/constants').ESTADOS_TRABAJADOR_EMPRESA;
+
+    // Crear solicitudes de vinculación para las empresas pre-seleccionadas (iniciadas por el trabajador).
     if (rol === ROLES.TRABAJADOR_TURNOS && trabajador.empresas_postulacion) {
-      const empresaIds = Array.isArray(trabajador.empresas_postulacion)
+      const postulaciones = Array.isArray(trabajador.empresas_postulacion)
         ? trabajador.empresas_postulacion
         : JSON.parse(trabajador.empresas_postulacion);
 
-      const TrabajadorEmpresaModel = require('../trabajador-empresa/trabajador-empresa.model');
-      const ESTADOS = require('../../config/constants').ESTADOS_TRABAJADOR_EMPRESA;
-
-      for (const empId of empresaIds) {
+      for (const empId of postulaciones) {
         try {
           const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empId);
           if (!existente) {
@@ -210,9 +210,38 @@ const AuthService = {
               iniciadoPor: 'trabajador',
             });
           }
-        } catch (_e) {
-          // Ignorar errores individuales — no bloquear la activación
-        }
+        } catch (_e) { /* no bloquear la activación */ }
+      }
+    }
+
+    // Crear invitaciones pendientes de empresa (admin invitó por cédula sin cuenta previa).
+    if (trabajador.empresas_invitacion) {
+      const invitaciones = Array.isArray(trabajador.empresas_invitacion)
+        ? trabajador.empresas_invitacion
+        : JSON.parse(trabajador.empresas_invitacion);
+
+      for (const empId of invitaciones) {
+        try {
+          const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empId);
+          if (!existente) {
+            const teId = await TrabajadorEmpresaModel.crear({
+              usuarioId,
+              empresaId: empId,
+              estado: ESTADOS.SOLICITADO_POR_EMPRESA,
+              iniciadoPor: 'empresa',
+            });
+            await TrabajadorEmpresaModel.cambiarEstado(teId, ESTADOS.SOLICITADO_POR_EMPRESA, { trabajadorId: trabajador.id });
+          }
+        } catch (_e) { /* no bloquear la activación */ }
+      }
+
+      if (invitaciones.length > 0) {
+        const PushService = require('../notificaciones/push/push.service');
+        PushService.enviarExpo(usuarioId, {
+          titulo: invitaciones.length > 1 ? `${invitaciones.length} empresas te han invitado` : 'Tienes una invitación pendiente',
+          mensaje: 'Revisa tus invitaciones en la app.',
+          data: { tipo: 'invitacion_empresa' },
+        }).catch(() => {});
       }
     }
 
