@@ -101,4 +101,7 @@ router.get(
   ctrl.publicEnSitio
 );
 
+// GET /api/integracion/public/trabajadores — lista de personal de turnos para sync
+router.get('/public/trabajadores', verificarApiKeyLogiq360, ctrl.publicTrabajadores);
+
 module.exports = router;

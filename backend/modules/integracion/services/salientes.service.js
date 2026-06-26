@@ -118,6 +118,24 @@ const SalientesService = {
     };
   },
 
+  /** Lista los trabajadores de turnos para que logiq360 los sincronice (pull). */
+  async publicTrabajadores(empresaId) {
+    const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
+    const trabajadores = await TrabajadoresModel.listarParaSyncLogiq360(empresaId);
+    return {
+      total: trabajadores.length,
+      trabajadores: trabajadores.map((t) => ({
+        nombre: t.nombre,
+        apellido: t.apellido || null,
+        email: t.email || null,
+        telefono: t.telefono || null,
+        cedula: t.cedula || null,
+        cargo: t.cargo || null,
+        tipo: t.tipo,
+      })),
+    };
+  },
+
   async publicEnSitio(empresaId, externalRef) {
     const OfertasModel = require('../../turnos/ofertas/ofertas.model');
     const AsignacionesModel = require('../../turnos/asignaciones/asignaciones.model');
