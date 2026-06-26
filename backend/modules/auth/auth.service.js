@@ -39,7 +39,9 @@ function perfilPublico(u) {
     apellido: u.apellido,
     foto_perfil: u.foto_perfil ?? null,
     email: u.email,
+    telefono: u.telefono ?? null,
     rol: u.rol,
+    has_password: !!u.password_hash,
   };
 }
 
