@@ -8,6 +8,7 @@ const PuntosMarcajeModel   = require('../../puntos-marcaje/puntos-marcaje.model'
 const EmpresasModel        = require('../../empresas/empresas.model');
 const CompensatoriosService = require('../compensatorios/compensatorios.service');
 const { calcularHoras }    = require('../../../utils/laboralUtils');
+const { haversineMetros }  = require('../../../utils/geoUtils');
 const AppError             = require('../../../utils/AppError');
 const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
 
@@ -21,18 +22,6 @@ async function resolverTrabajadorPropio(empresaId, usuarioId) {
     throw new AppError('Tu usuario no está vinculado a un trabajador activo', 403);
   }
   return trabajador.id;
-}
-
-/** Haversine distance in meters between two lat/lng pairs. */
-function haversineMetros(lat1, lon1, lat2, lon2) {
-  const R = 6_371_000;
-  const toRad = (v) => (v * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /** Validate geofence if the worker has tipo_marcacion = 'fijo'. */

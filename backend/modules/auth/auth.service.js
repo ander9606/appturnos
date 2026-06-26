@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 
 const AuthModel = require('./auth.model');
-const TokenService = require('../../utils/TokenService');
+const { generarAccessToken, generarRefreshToken, fechaExpiracionRefresh } = require('../../utils/TokenService');
 const AppError = require('../../utils/AppError');
 const { ROLES, LOGIN } = require('../../config/constants');
 
@@ -20,12 +20,12 @@ const ROL_POR_TIPO = {
 
 /** Construye el par de tokens y persiste el refresh token. */
 async function emitirTokens(usuario) {
-  const accessToken = TokenService.generarAccessToken(usuario);
-  const refreshToken = TokenService.generarRefreshToken();
+  const accessToken = generarAccessToken(usuario);
+  const refreshToken = generarRefreshToken();
   await AuthModel.guardarRefreshToken({
     usuario_id: usuario.id,
     token: refreshToken,
-    expira_at: TokenService.fechaExpiracionRefresh(),
+    expira_at: fechaExpiracionRefresh(),
   });
   return { access_token: accessToken, refresh_token: refreshToken };
 }
