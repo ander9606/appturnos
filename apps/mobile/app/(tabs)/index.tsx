@@ -197,7 +197,9 @@ export default function DashboardScreen() {
               { icon: 'person-add-outline'  as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') },
               { icon: 'link-outline'        as IoniconsName, label: 'logiq360',     onPress: () => router.push('/integracion/config') },
             ]
-          : []),
+          : [
+              { icon: 'pulse-outline'       as IoniconsName, label: 'Estado sync',  onPress: () => router.push('/integracion/estado') },
+            ]),
       ];
 
   const actions: Action[] = isWorker ? workerActions : managerActions;

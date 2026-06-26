@@ -13,6 +13,7 @@ const ctrl = require('./integracion.controller');
 const router = express.Router();
 
 const SOLO_ADMIN = [ROLES.ADMIN_EMPRESA];
+const VER_ESTADO = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
 
 // POST /api/integracion/eventos — webhook entrante de logiq360.
 // Autenticado por firma HMAC, no por JWT.
@@ -31,8 +32,11 @@ router.post(
 
 // El resto son endpoints de administración (JWT + rol admin_empresa).
 
-// GET /api/integracion/estado
-router.get('/estado', verificarToken, verificarRol(SOLO_ADMIN), ctrl.estado);
+// GET /api/integracion/estado — admin + jefe_turnos (lectura)
+router.get('/estado', verificarToken, verificarRol(VER_ESTADO), ctrl.estado);
+
+// POST /api/integracion/reintentar-fallidos
+router.post('/reintentar-fallidos', verificarToken, verificarRol(SOLO_ADMIN), ctrl.reintentarFallidos);
 
 // GET /api/integracion/configuracion
 router.get('/configuracion', verificarToken, verificarRol(SOLO_ADMIN), ctrl.obtenerConfig);

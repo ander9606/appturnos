@@ -94,4 +94,9 @@ export const integracionApi = {
       empleado_id: empleadoId,
     });
   },
+
+  /** Re-encola todos los eventos fallidos para que el worker los reintente. */
+  reintentarFallidos(): Promise<{ reintentados: number }> {
+    return api.post('/api/integracion/reintentar-fallidos', {});
+  },
 };

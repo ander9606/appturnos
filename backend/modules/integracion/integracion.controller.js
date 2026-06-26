@@ -65,12 +65,18 @@ async function vincularEmpleado(req, res) {
   res.json({ success: true, data, message: 'Trabajador vinculado' });
 }
 
+async function reintentarFallidos(req, res) {
+  const IntegracionModel = require('./integracion.model');
+  const reintentados = await IntegracionModel.reintentarFallidos(req.empresa_id);
+  res.json({ success: true, data: { reintentados }, message: `${reintentados} evento(s) re-encolados` });
+}
+
 async function publicPing(req, res) {
   res.json({ ok: true, empresa_id: req.empresa_id });
 }
 
 module.exports = {
   recibirEventos, estado, obtenerConfig, actualizarConfig, emparejar,
-  conciliacion, vincularEmpleado,
+  conciliacion, vincularEmpleado, reintentarFallidos,
   publicEstado, publicEnSitio, publicPing,
 };
