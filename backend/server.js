@@ -14,6 +14,9 @@ const { errorHandler, noEncontrado } = require('./middleware/errorHandler');
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
+// Confiar en el primer proxy (Caddy) para X-Forwarded-For y rate limiting correcto
+app.set('trust proxy', 1);
+
 // ─── Middleware base ──────────────────────────────────────────
 app.use(helmet());
 
@@ -95,6 +98,7 @@ app.get('/api/health', async (_req, res) => {
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/trabajadores', require('./modules/trabajadores/trabajadores.routes'));
 app.use('/api/turnos', require('./modules/turnos/turnos.routes'));
+app.use('/api/turnos/eventual', require('./modules/turnos-eventual/turnos-eventual.routes'));
 app.use('/api/nomina', require('./modules/nomina/nomina.routes'));
 app.use('/api/contratos', require('./modules/contratos/contratos.routes'));
 app.use('/api/notificaciones', require('./modules/notificaciones/notificaciones.routes'));
@@ -110,6 +114,10 @@ app.use('/api/cargos', require('./modules/cargos/cargos.routes'));
 app.use('/api/puntos-marcaje', require('./modules/puntos-marcaje/puntos-marcaje.routes'));
 // Panel de super_admin: gestión cross-tenant de empresas y reportes globales.
 app.use('/api/admin', require('./modules/admin/admin.routes'));
+// Novedades de turno: reportes de retraso, ausencia, incidente u otro por asignación.
+app.use('/api/novedades/asignaciones', require('./modules/novedades/novedades.routes'));
+// Webhooks de pagos: sin autenticación JWT, verificación HMAC interna.
+app.use('/api/webhooks/wompi', require('./modules/webhooks/wompi.routes'));
 
 // ─── Manejo de errores ────────────────────────────────────────
 app.use(noEncontrado);

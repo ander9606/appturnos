@@ -30,8 +30,10 @@ router.get(
     query('periodo_id').optional().isInt({ min: 1 }).withMessage('periodo_id inválido'),
     query('trabajador_id').optional().isInt({ min: 1 }).withMessage('trabajador_id inválido'),
     query('fecha').optional().isISO8601().withMessage('fecha inválida'),
+    query('fecha_desde').optional().isISO8601().withMessage('fecha_desde inválida'),
+    query('fecha_hasta').optional().isISO8601().withMessage('fecha_hasta inválida'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
+    query('limit').optional().isInt({ min: 1, max: 500 }).withMessage('limit inválido'),
   ],
   validar,
   ctrl.listar

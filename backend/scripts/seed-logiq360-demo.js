@@ -54,15 +54,10 @@ function ts(dateStr, time) { return `${dateStr} ${time}`; }
 
 async function upsertEmpresa(nombre, slug, nit) {
   const [[ex]] = await pool.query('SELECT id FROM empresas WHERE slug=?', [slug]);
-  if (ex) {
-    if (ex.id !== 1) throw new Error(`empresa "${nombre}" existe con id=${ex.id} pero logiq360 espera empresa_id=1. Limpia la DB y vuelve a correr el seed.`);
-    skip(`empresa "${nombre}" ya existe (id=${ex.id})`);
-    return ex.id;
-  }
-  // ponytail: fuerza id=1 para que coincida con tenant_id=1 de logiq360 — upgrade path: pasar tenant_id en el payload del webhook en vez de asumirlo
+  if (ex) { skip(`empresa "${nombre}" ya existe (id=${ex.id})`); return ex.id; }
   await pool.query(
-    `INSERT INTO empresas (id,nombre,slug,nit,ciudad,plan,acepta_postulaciones)
-     VALUES (1,?,?,?,'Bogotá D.C.','profesional',1)`,
+    `INSERT INTO empresas (nombre,slug,nit,ciudad,plan,acepta_postulaciones)
+     VALUES (?,?,?,'Bogotá D.C.','profesional',1)`,
     [nombre, slug, nit]
   );
   ok(`empresa "${nombre}" creada (id=1)`);
@@ -72,7 +67,8 @@ async function upsertEmpresa(nombre, slug, nit) {
 async function upsertUsuario(eId, nombre, apellido, email, rol, hash) {
   const [[ex]] = await pool.query('SELECT id FROM usuarios WHERE email=?', [email]);
   if (ex) { skip(`usuario ${email} ya existe (id=${ex.id})`); return ex.id; }
-  const empresaId = rol.startsWith('trabajador') ? null : eId;
+  // turnos workers son marketplace (multi-empresa) → null; nomina workers son tenant-specific → eId
+  const empresaId = rol === 'trabajador_nomina' ? eId : rol.startsWith('trabajador') ? null : eId;
   const [r] = await pool.query(
     `INSERT INTO usuarios (empresa_id,nombre,apellido,email,password_hash,rol,activo)
      VALUES (?,?,?,?,?,?,1)`,
@@ -144,8 +140,13 @@ async function main() {
   const hash = await bcrypt.hash(PASSWORD, 10);
   const adminId     = await upsertUsuario(eId, 'Andrés',    'Morales',  'admin@plataforma-prueba.co',    'admin_empresa',     hash);
   const jefeId      = await upsertUsuario(eId, 'Claudia',   'Restrepo', 'jefe@plataforma-prueba.co',     'jefe_turnos',       hash);
+  const jNominaId   = await upsertUsuario(eId, 'Roberto',   'Salcedo',  'jnomina@plataforma-prueba.co',  'jefe_nomina',       hash);
   const uDiegoId    = await upsertUsuario(eId, 'Diego',     'Herrera',  'diego@turnos.co',         'trabajador_turnos', hash);
   const uValentinaId= await upsertUsuario(eId, 'Valentina', 'Torres',   'valentina@turnos.co',     'trabajador_turnos', hash);
+  const uCarlosId   = await upsertUsuario(eId, 'Carlos',    'Ruiz',     'carlos@plataforma-prueba.co',   'trabajador_nomina', hash);
+  const uMariaId    = await upsertUsuario(eId, 'María',     'González', 'maria@plataforma-prueba.co',    'trabajador_nomina', hash);
+  const uAnaId      = await upsertUsuario(eId, 'Ana',       'Morales',  'ana@plataforma-prueba.co',      'trabajador_nomina', hash);
+  const uPedroId    = await upsertUsuario(eId, 'Pedro',     'Martínez', 'pedro@plataforma-prueba.co',    'trabajador_nomina', hash);
 
   // ── 3. Cargos del sistema ────────────────────────────────────────────────────
   section('3. Cargos del sistema (migración 016)');
@@ -169,6 +170,106 @@ async function main() {
 
   await asignarCargo(teD, auxId, adminId, 'auxiliar');
   await asignarCargo(teV, auxId, adminId, 'auxiliar');
+
+  // ── 4b. Trabajadores nómina ──────────────────────────────────────────────────
+  section('4b. Trabajadores nómina');
+
+  const nominaDefs = [
+    { uId: uCarlosId, nombre:'Carlos',  apellido:'Ruiz Pérez',     cedula:'4050607080', cargo:'Auxiliar de montaje',  salario:1_500_000 },
+    { uId: uMariaId,  nombre:'María',   apellido:'González Díaz',  cedula:'4050607081', cargo:'Auxiliar logístico',   salario:1_600_000 },
+    { uId: uAnaId,    nombre:'Ana',     apellido:'Morales Peña',   cedula:'4050607082', cargo:'Auxiliar logístico',   salario:1_600_000 },
+    { uId: uPedroId,  nombre:'Pedro',   apellido:'Martínez Silva', cedula:'4050607083', cargo:'Jefe de montaje',      salario:2_200_000 },
+  ];
+
+  const nominaTIds = [];
+  for (const w of nominaDefs) {
+    const tarifa = parseFloat((w.salario / 240).toFixed(4));
+    const [[tEx]] = await pool.query('SELECT id FROM trabajadores WHERE empresa_id=? AND cedula=?', [eId, w.cedula]);
+    if (tEx) { skip(`trabajador ${w.nombre} (id=${tEx.id})`); nominaTIds.push({ tId: tEx.id, snapshot: tarifa }); continue; }
+    const [r] = await pool.query(
+      `INSERT INTO trabajadores (empresa_id,usuario_id,nombre,apellido,cedula,email,tipo,cargo,salario_base,tarifa_hora,activo)
+       VALUES (?,?,?,?,?,?,'nomina',?,?,?,1)`,
+      [eId, w.uId, w.nombre, w.apellido, w.cedula, `${w.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')}@plataforma-prueba.co`, w.cargo, w.salario, tarifa]
+    );
+    ok(`trabajador ${w.nombre} ${w.apellido} (id=${r.insertId})`);
+    nominaTIds.push({ tId: r.insertId, snapshot: tarifa });
+  }
+
+  // Períodos relativos a hoy para que siempre cubran la fecha actual
+  const hoy   = new Date();
+  const mes   = hoy.getMonth() + 1;
+  const anio  = hoy.getFullYear();
+  const mesA  = mes === 1 ? 12 : mes - 1;
+  const anioA = mes === 1 ? anio - 1 : anio;
+  const pad   = (n) => String(n).padStart(2, '0');
+
+  const p1Inicio = `${anioA}-${pad(mesA)}-01`;
+  const p1Fin    = `${anioA}-${pad(mesA)}-15`;
+  const p2Inicio = `${anio}-${pad(mes)}-01`;
+  const p2Fin    = `${anio}-${pad(mes)}-30`;
+
+  // Período cerrado (mes anterior)
+  let p1Id;
+  const [[p1Ex]] = await pool.query(`SELECT id FROM periodos_nomina WHERE empresa_id=? AND fecha_inicio=?`, [eId, p1Inicio]);
+  if (p1Ex) { p1Id = p1Ex.id; skip(`período cerrado ya existe (id=${p1Id})`); }
+  else {
+    const [r] = await pool.query(
+      `INSERT INTO periodos_nomina (empresa_id,fecha_inicio,fecha_fin,tipo,estado) VALUES (?,?,?,'quincenal','cerrado')`,
+      [eId, p1Inicio, p1Fin]
+    );
+    p1Id = r.insertId; ok(`período cerrado creado ${p1Inicio}→${p1Fin} (id=${p1Id})`);
+  }
+
+  // Período abierto (mes actual, cubre todo el mes para no quedar fuera de rango)
+  let p2Id;
+  const [[p2Ex]] = await pool.query(`SELECT id FROM periodos_nomina WHERE empresa_id=? AND fecha_inicio=?`, [eId, p2Inicio]);
+  if (p2Ex) {
+    p2Id = p2Ex.id;
+    // Asegura que fecha_fin cubra hoy (puede haberse creado con fecha_fin pasada)
+    await pool.query(`UPDATE periodos_nomina SET fecha_fin=? WHERE id=?`, [p2Fin, p2Id]);
+    skip(`período abierto ya existe (id=${p2Id}) — fecha_fin actualizada a ${p2Fin}`);
+  } else {
+    const [r] = await pool.query(
+      `INSERT INTO periodos_nomina (empresa_id,fecha_inicio,fecha_fin,tipo,estado) VALUES (?,?,?,'quincenal','abierto')`,
+      [eId, p2Inicio, p2Fin]
+    );
+    p2Id = r.insertId; ok(`período abierto creado ${p2Inicio}→${p2Fin} (id=${p2Id})`);
+  }
+
+  // Registros diarios representativos (días fijos del mes anterior y primeros del actual)
+  const diasP1 = [
+    { f:`${anioA}-${pad(mesA)}-05`, e:'07:00:00', s:'15:00:00', fest:0, ord:8, xd:0, xn:0, noc:0, fes:0 },
+    { f:`${anioA}-${pad(mesA)}-06`, e:'07:00:00', s:'16:00:00', fest:0, ord:8, xd:1, xn:0, noc:0, fes:0 },
+    { f:`${anioA}-${pad(mesA)}-07`, e:'21:00:00', s:'05:00:00', fest:0, ord:0, xd:0, xn:2, noc:6, fes:0 },
+    { f:`${anioA}-${pad(mesA)}-08`, e:'07:00:00', s:'15:00:00', fest:1, ord:0, xd:0, xn:0, noc:0, fes:8 },
+  ];
+  const diasP2 = [
+    { f:`${anio}-${pad(mes)}-02`, e:'07:00:00', s:'15:00:00', fest:0, ord:8, xd:0, xn:0, noc:0, fes:0 },
+    { f:`${anio}-${pad(mes)}-03`, e:'07:00:00', s:'16:00:00', fest:0, ord:8, xd:1, xn:0, noc:0, fes:0 },
+  ];
+
+  let regCreados = 0, regOmitidos = 0;
+  for (const { tId, snapshot } of nominaTIds) {
+    for (const [pId, dias] of [[p1Id, diasP1], [p2Id, diasP2]]) {
+      for (const d of dias) {
+        const [[ex]] = await pool.query(
+          'SELECT id FROM registros_diarios WHERE empresa_id=? AND trabajador_id=? AND fecha=?', [eId, tId, d.f]
+        );
+        if (ex) { regOmitidos++; continue; }
+        await pool.query(
+          `INSERT INTO registros_diarios
+             (empresa_id,trabajador_id,periodo_id,fecha,hora_entrada,hora_salida,
+              horas_ordinarias,horas_extra_diurnas,horas_extra_nocturnas,
+              horas_nocturnas,horas_festivo,es_festivo,valor_hora_snapshot,aprobado_por)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [eId, tId, pId, d.f, d.e, d.s, d.ord, d.xd, d.xn, d.noc, d.fes, d.fest, snapshot, jNominaId]
+        );
+        regCreados++;
+      }
+    }
+  }
+  if (regCreados)  ok(`${regCreados} registros diarios creados`);
+  if (regOmitidos) skip(`${regOmitidos} registros omitidos`);
 
   // ── 5. Integración logiq360 ──────────────────────────────────────────────────
   section('5. Integración logiq360');
@@ -538,8 +639,13 @@ async function main() {
   process.stdout.write('  USUARIOS ─────────────────────────────────────────────────────\n');
   process.stdout.write('    admin@plataforma-prueba.co        admin_empresa\n');
   process.stdout.write('    jefe@plataforma-prueba.co         jefe_turnos\n');
-  process.stdout.write('    diego@turnos.co             trabajador_turnos  (ranking 5.0 ★★★★★)\n');
-  process.stdout.write('    valentina@turnos.co         trabajador_turnos  (ranking 2.0 ★★☆☆☆)\n\n');
+  process.stdout.write('    jnomina@plataforma-prueba.co      jefe_nomina\n');
+  process.stdout.write('    diego@turnos.co                   trabajador_turnos  (ranking 5.0 ★★★★★)\n');
+  process.stdout.write('    valentina@turnos.co               trabajador_turnos  (ranking 2.0 ★★☆☆☆)\n');
+  process.stdout.write('    carlos@plataforma-prueba.co       trabajador_nomina  (Auxiliar de montaje)\n');
+  process.stdout.write('    maria@plataforma-prueba.co        trabajador_nomina  (Auxiliar logístico)\n');
+  process.stdout.write('    ana@plataforma-prueba.co          trabajador_nomina  (Auxiliar logístico)\n');
+  process.stdout.write('    pedro@plataforma-prueba.co        trabajador_nomina  (Jefe de montaje)\n\n');
   process.stdout.write('  ESCENARIOS LOGIQ360 ──────────────────────────────────────────\n');
   process.stdout.write(`    [BORRADOR]    en ${d(2)}  Instalación Carpa IKEA            logiq360:orden:301\n`);
   process.stdout.write(`                  → jefe debe revisar puestos y publicar\n`);

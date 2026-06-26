@@ -7,10 +7,13 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { validateStep1 } from './utils';
 import type { WizardData, TipoDocumento, Sexo } from './types';
+import { authApi } from '@api-client';
+import { TIPO_LABEL } from '@/lib/roleLabels';
 
 // ── Local helpers ──────────────────────────────────────────────────────────
 
@@ -77,9 +80,31 @@ type Props = {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function Step1DatosPersonales({ data, onChange, onNext }: Props) {
-  const handleNext = () => {
+  const router = useRouter();
+
+  const handleNext = async () => {
     const err = validateStep1(data);
     if (err) { Alert.alert('Datos incompletos', err); return; }
+
+    if (data.cedula.length >= 4) {
+      try {
+        const res = await authApi.verificarCedula(data.cedula);
+        if (res.existe && res.invitacion) {
+          Alert.alert(
+            'Ya tienes una invitación',
+            `Tu cédula tiene una invitación pendiente de "${res.invitacion.empresa_nombre}" como ${TIPO_LABEL[res.tipo ?? ''] ?? res.tipo}.\n\nPara acceder, activa tu cuenta desde la pantalla de activación.`,
+            [
+              { text: 'Activar cuenta', onPress: () => router.replace('/(auth)/activar') },
+              { text: 'Cancelar', style: 'cancel' },
+            ],
+          );
+          return;
+        }
+      } catch {
+        // Si falla el check no bloqueamos el flujo
+      }
+    }
+
     onNext();
   };
 

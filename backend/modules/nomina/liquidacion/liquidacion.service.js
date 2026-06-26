@@ -20,6 +20,11 @@ const LiquidacionService = {
 
     const filas = await LiquidacionModel.resumenPorPeriodo(empresaId, periodoId);
 
+    // Salario mínimo proporcional al período (salario_base es mensual / 30 días conv.)
+    const diasPeriodo = Math.round(
+      (new Date(periodo.fecha_fin + 'T12:00:00Z') - new Date(periodo.fecha_inicio + 'T12:00:00Z')) / 86_400_000
+    ) + 1;
+
     let totalGeneral = 0;
     const lineas = filas.map((f) => {
       const desglose = {
@@ -29,12 +34,16 @@ const LiquidacionService = {
         horas_nocturnas: Number(f.horas_nocturnas) || 0,
         horas_festivo: Number(f.horas_festivo) || 0,
       };
-      // Use snapshot frozen at period-close time (Option A).
-      // Fallback to live salary only for open periods (backwards compatible).
       const vh = f.valor_hora_snapshot != null
         ? Number(f.valor_hora_snapshot)
         : valorHora(f);
-      const total = redondear(calcularPagoNomina(desglose, vh));
+      const pagoPorHoras = redondear(calcularPagoNomina(desglose, vh));
+
+      // Garantía: el trabajador no puede ganar menos que su salario proporcional al período.
+      const salarioMinPeriodo = redondear(Number(f.salario_base) / 30 * diasPeriodo);
+      const ajusteMinimo      = Math.max(0, redondear(salarioMinPeriodo - pagoPorHoras));
+      const total             = redondear(pagoPorHoras + ajusteMinimo);
+
       totalGeneral += total;
 
       return {
@@ -45,6 +54,9 @@ const LiquidacionService = {
         dias_registrados: f.dias_registrados,
         ...desglose,
         valor_hora: redondear(vh),
+        pago_por_horas: pagoPorHoras,
+        salario_minimo_periodo: salarioMinPeriodo,
+        ajuste_minimo: ajusteMinimo,
         total,
       };
     });

@@ -12,6 +12,7 @@ import React, { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Notifications from 'expo-notifications';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { registerPushNotifications } from '@/lib/pushNotifications';
@@ -39,9 +40,11 @@ const queryClient = new QueryClient({
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const segments = useSegments();
-  const status   = useAuthStore((s) => s.status);
-  const rol      = useAuthStore((s) => s.usuario?.rol);
-  const rehydrate = useAuthStore((s) => s.rehydrate);
+  const status      = useAuthStore((s) => s.status);
+  const usuario     = useAuthStore((s) => s.usuario);
+  const rol         = usuario?.rol;
+  const hasLaunched = useAuthStore((s) => s.hasLaunched);
+  const rehydrate   = useAuthStore((s) => s.rehydrate);
 
   // Rehydrate once on mount
   useEffect(() => {
@@ -55,29 +58,49 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [status]);
 
+  // Navigate to the relevant screen when the user taps a push notification
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const sub = Notifications.addNotificationResponseReceivedListener((response: any) => {
+      const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
+      if (data.asignacion_id) {
+        router.push(`/turno/${data.asignacion_id}`);
+      } else {
+        router.push('/notificaciones');
+      }
+    });
+    return () => sub.remove();
+  }, [status]);
+
   useEffect(() => {
     if (status === 'unknown') return; // still loading
 
-    const inAuthGroup  = segments[0] === '(auth)';
-    const inAdminGroup = segments[0] === '(admin)';
+    const inAuthGroup     = segments[0] === '(auth)';
+    const inAdminGroup    = segments[0] === '(admin)';
+    const inCompletarPerfil = segments[0] === 'completar-perfil';
 
     const isSuperAdmin = rol === 'super_admin';
+    const welcomeRoute = hasLaunched ? '/(auth)/login' : '/(auth)/';
 
     if (status === 'authenticated') {
+      // Solo usuarios OAuth sin contraseña deben agregar teléfono.
+      const needsPhone = !usuario?.has_password && !usuario?.telefono;
+      if (needsPhone && !inCompletarPerfil && !isSuperAdmin) {
+        router.replace('/completar-perfil');
+        return;
+      }
+
       if (isSuperAdmin && !inAdminGroup) {
-        // Super admin siempre va al panel de administración.
         router.replace('/(admin)');
-      } else if (!isSuperAdmin && inAuthGroup) {
-        // Usuarios normales autenticados salen del grupo auth.
+      } else if (!isSuperAdmin && (inAuthGroup || inCompletarPerfil) && !needsPhone) {
         router.replace('/(tabs)');
       } else if (!isSuperAdmin && inAdminGroup) {
-        // Un usuario no-super que llega al admin (no debería ocurrir) → tabs.
         router.replace('/(tabs)');
       }
     } else if (status === 'unauthenticated' && !inAuthGroup) {
-      router.replace('/(auth)/login');
+      router.replace(welcomeRoute);
     }
-  }, [status, segments, rol]);
+  }, [status, segments, rol, hasLaunched, usuario]);
 
   return <>{children}</>;
 }
@@ -100,6 +123,7 @@ export default function RootLayout() {
             <Stack.Screen name="postulaciones" options={{ headerShown: false }} />
             {/* Detail screens — slide from right */}
             <Stack.Screen name="turno/[id]"      options={{ headerShown: true }} />
+            <Stack.Screen name="oferta/[id]"     options={{ headerShown: true }} />
             <Stack.Screen name="trabajador/[id]" options={{ headerShown: true }} />
             {/* Modales — sube desde abajo */}
             <Stack.Screen name="turno/nuevo"          options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
@@ -109,9 +133,23 @@ export default function RootLayout() {
             <Stack.Screen name="integracion/config" options={{ title: 'Integración logiq360' }} />
             <Stack.Screen name="integracion/estado" options={{ title: 'Estado de la cola' }} />
             <Stack.Screen name="integracion/conciliacion" options={{ title: 'Conciliación de personal' }} />
-            {/* Marcaje — transición vertical (flujo de acción rápida) */}
+            {/* Marcaje turnos — transición vertical */}
             <Stack.Screen name="ingreso/[id]" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="egreso/[id]"  options={{ animation: 'slide_from_bottom' }} />
+            {/* Marcaje nómina — pantalla dedicada con contador */}
+            <Stack.Screen name="nomina-ingreso" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+            {/* Liquidación de turnos — gestores y admin */}
+            <Stack.Screen name="liquidacion-turnos" options={{ title: 'Liquidación de turnos' }} />
+            {/* Liquidación trimestral de turnos eventuales */}
+            <Stack.Screen name="liquidacion-eventual" options={{ title: 'Turnos eventuales' }} />
+            {/* Notificaciones — inbox accesible desde la campana */}
+            <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
+            {/* Completar perfil — usuarios OAuth sin teléfono registrado */}
+            <Stack.Screen name="completar-perfil" options={{ headerShown: false }} />
+            {/* Directorio de empresas — trabajador_turnos */}
+            <Stack.Screen name="directorio-empresas" options={{ title: 'Buscar empresa' }} />
+            {/* Mis empresas — vínculos del trabajador */}
+            <Stack.Screen name="mis-empresas" options={{ title: 'Mis empresas' }} />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

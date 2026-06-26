@@ -132,6 +132,17 @@ const IntegracionModel = {
     );
   },
 
+  /** Resetea eventos fallidos a pendiente para que el worker los reintente. */
+  async reintentarFallidos(empresaId) {
+    const [res] = await pool.query(
+      `UPDATE integration_events_out
+       SET estado = 'pendiente', proximo_intento = NOW(), intentos = 0, ultimo_error = NULL
+       WHERE empresa_id = ? AND estado = 'fallido'`,
+      [empresaId]
+    );
+    return res.affectedRows;
+  },
+
   /** Conteo de eventos por estado, para el endpoint de salud. */
   async estadisticas(empresaId) {
     const [salientes] = await pool.query(

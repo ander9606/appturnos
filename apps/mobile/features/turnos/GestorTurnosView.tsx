@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar, useNoPresentado } from '@/features/turnos/useTurnos';
 import { Badge } from '@/components/ui/Badge';
@@ -151,15 +152,11 @@ function PostulanteRow({
         </View>
       )}
 
-      {/* En progreso → chip + No se presentó */}
+      {/* En progreso → chip */}
       {isEnProgreso && (
-        <View className="flex-row items-center gap-2">
-          <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl">
-            <Ionicons name="time-outline" size={14} color="#3B82F6" />
-            <Text className="text-xs font-semibold text-info">En turno</Text>
-          </View>
-          <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
-            loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+        <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
+          <Ionicons name="time-outline" size={14} color="#3B82F6" />
+          <Text className="text-xs font-semibold text-info">En turno</Text>
         </View>
       )}
     </View>
@@ -182,6 +179,7 @@ function GestorOfertaItem({
   noPresentadoMutation: ReturnType<typeof useNoPresentado>;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
   const { data: detalle, isLoading: loadingDetalle } = useOferta(expanded ? oferta.id : null);
 
   const totalPlazas    = oferta.puestos.reduce((s, p) => s + p.plazas, 0);
@@ -257,6 +255,15 @@ function GestorOfertaItem({
             Postulantes
           </Text>
 
+          <TouchableOpacity
+            onPress={() => router.push(`/oferta/${oferta.id}` as any)}
+            className="flex-row items-center gap-1 mb-3"
+          >
+            <Ionicons name="information-circle-outline" size={14} color="#6366F1" />
+            <Text className="text-xs font-semibold text-primary">Ver detalles completos</Text>
+            <Ionicons name="chevron-forward" size={12} color="#6366F1" />
+          </TouchableOpacity>
+
           {loadingDetalle ? (
             <View className="py-4 items-center">
               <ActivityIndicator size="small" color="#FF5A3C" />
@@ -288,16 +295,17 @@ function GestorOfertaItem({
 
 interface Props {
   selectedDate: string;
+  filtroParaQuien?: 'turnos' | 'nomina' | 'ambos';
 }
 
-export function GestorTurnosView({ selectedDate }: Props) {
+export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
   const {
     data: resp,
     isLoading,
     isError,
     refetch,
     isRefetching,
-  } = useOfertas({ fecha: selectedDate, limit: 50 });
+  } = useOfertas({ fecha: selectedDate, limit: 50, para_quien: filtroParaQuien });
 
   const confirmarMutation     = useConfirmar();
   const rechazarMutation      = useRechazar();

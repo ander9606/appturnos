@@ -148,6 +148,31 @@ async function ordenCompletada(empresaId, data) {
   }
 }
 
+async function ordenCuposActualizados(empresaId, data) {
+  const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
+  if (!oferta) {
+    logger.warn(`[integracion] orden.cupos_actualizados: oferta externa no encontrada (${data.external_ref})`);
+    return;
+  }
+  const cuposGig = data.cupos_gig ?? data.cupos_sugeridos;
+  if (cuposGig == null) return;
+  // Actualiza el primer puesto gig (cargo auxiliar) — ponytail: un puesto gig por oferta
+  await pool.query(
+    `UPDATE oferta_puestos SET plazas = ?
+     WHERE oferta_id = ? AND cargo_id = (SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo = 'auxiliar' LIMIT 1)
+     ORDER BY id LIMIT 1`,
+    [cuposGig, oferta.id]
+  );
+  if (data.valor_dia_sugerido != null) {
+    await pool.query(
+      `UPDATE oferta_puestos SET tarifa_dia = ?
+       WHERE oferta_id = ? AND cargo_id = (SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo = 'auxiliar' LIMIT 1)
+       ORDER BY id LIMIT 1`,
+      [data.valor_dia_sugerido, oferta.id]
+    );
+  }
+}
+
 async function empleadoCreado(empresaId, data) {
   const campos = {
     nombre: data.nombre,
@@ -191,13 +216,14 @@ async function ordenFechaCambiadaV2(empresaId, data) {
 }
 
 const HANDLERS = {
-  'orden.creada': ordenCreada,
-  'orden.publicada': ordenPublicada,   // ← nuevo en payload v1.0
-  'orden.cancelada': ordenCancelada,
-  'orden.fecha_cambiada': ordenFechaCambiadaV2,
-  'orden.completada': ordenCompletada,
-  'empleado.creado': empleadoCreado,
-  'empleado.desactivado': empleadoDesactivado,
+  'orden.creada':           ordenCreada,
+  'orden.publicada':        ordenPublicada,
+  'orden.cancelada':        ordenCancelada,
+  'orden.fecha_cambiada':   ordenFechaCambiadaV2,
+  'orden.completada':       ordenCompletada,
+  'orden.cupos_actualizados': ordenCuposActualizados,
+  'empleado.creado':        empleadoCreado,
+  'empleado.desactivado':   empleadoDesactivado,
 };
 
 /**

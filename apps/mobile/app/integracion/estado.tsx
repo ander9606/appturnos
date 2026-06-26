@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { useEstadoIntegracion } from '@/features/integracion/useIntegracion';
+import { useEstadoIntegracion, useReintentarFallidos } from '@/features/integracion/useIntegracion';
 import { useTheme } from '@/lib/theme';
 import type { ConteoEstado } from '@api-client';
 
@@ -56,6 +56,7 @@ function SectionHeader({ title, icon }: { title: string; icon: React.ComponentPr
 export default function EstadoIntegracionScreen() {
   const theme = useTheme();
   const { data, isLoading, isRefetching, refetch, isError } = useEstadoIntegracion();
+  const reintentarM = useReintentarFallidos();
 
   if (isLoading) {
     return (
@@ -148,11 +149,26 @@ export default function EstadoIntegracionScreen() {
         )}
 
         {fallidos > 0 && (
-          <View className="mx-4 mt-3 flex-row items-center gap-2 bg-danger/10 border border-danger/30 rounded-xl px-4 py-3">
-            <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
-            <Text className="text-sm text-danger flex-1">
-              Hay {fallidos} evento{fallidos !== 1 ? 's' : ''} fallido{fallidos !== 1 ? 's' : ''}. Verifica la URL del webhook y que logiq360 esté accesible.
-            </Text>
+          <View className="mx-4 mt-3 bg-danger/10 border border-danger/30 rounded-xl px-4 py-3 gap-2">
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+              <Text className="text-sm text-danger flex-1">
+                {fallidos} evento{fallidos !== 1 ? 's' : ''} fallido{fallidos !== 1 ? 's' : ''}. Verifica la URL del webhook.
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => reintentarM.mutate()}
+              disabled={reintentarM.isPending}
+              className="self-start flex-row items-center gap-1.5 bg-danger/20 px-3 py-1.5 rounded-lg"
+            >
+              {reintentarM.isPending
+                ? <ActivityIndicator size="small" color="#EF4444" />
+                : <Ionicons name="refresh-outline" size={14} color="#EF4444" />
+              }
+              <Text className="text-xs font-semibold text-danger">
+                {reintentarM.isPending ? 'Re-encolando…' : 'Reintentar ahora'}
+              </Text>
+            </Pressable>
           </View>
         )}
 

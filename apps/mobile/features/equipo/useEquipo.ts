@@ -37,6 +37,14 @@ export function useTrabajador(id: number) {
   });
 }
 
+export function useMe() {
+  return useQuery({
+    queryKey: ['trabajadores', 'me'] as const,
+    queryFn: () => trabajadoresApi.me(),
+    staleTime: 60_000,
+  });
+}
+
 /** Busca un trabajador marketplace por cédula. Devuelve null si no existe. */
 export function useBuscarPorCedula(cedula: string) {
   return useQuery({
@@ -63,6 +71,18 @@ export function useActualizarTrabajador(id: number) {
   return useMutation({
     mutationFn: (payload: ActualizarTrabajadorPayload) =>
       trabajadoresApi.actualizar(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
+  });
+}
+
+export function useActualizarMarcacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, tipo_marcacion, punto_marcaje_id }: {
+      id: number;
+      tipo_marcacion: 'libre' | 'fijo';
+      punto_marcaje_id?: number | null;
+    }) => trabajadoresApi.actualizarMarcacion(id, { tipo_marcacion, punto_marcaje_id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
   });
 }

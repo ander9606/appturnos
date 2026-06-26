@@ -51,7 +51,9 @@ const RECARGOS = {
 };
 
 // Jornada y horario nocturno
-const JORNADA_ORDINARIA_HORAS = 8;
+const JORNADA_ORDINARIA_HORAS = 8;        // referencia diaria (no usada para extras)
+const JORNADA_SEMANAL_HORAS   = 42;       // umbral semanal ordinario → extra
+const HORAS_EXTRA_MAX_SEMANA  = 12;       // límite legal de horas extra por semana
 const HORA_INICIO_NOCTURNO = 21; // 21:00
 const HORA_FIN_NOCTURNO = 6; // 06:00
 
@@ -63,6 +65,13 @@ const HORAS_MES_NOMINA = 240;
 const LOGIN = {
   MAX_INTENTOS: 5,
   LOCKOUT_MINUTOS: 15,
+};
+
+/** Límites, features y precio por plan. max_trabajadores null = ilimitado. */
+const PLANES = {
+  basico:      { max_trabajadores: 10,   logiq360: false, precio_mes_cop: 80000  },
+  profesional: { max_trabajadores: 30,   logiq360: false, precio_mes_cop: 120000 },
+  empresarial: { max_trabajadores: null, logiq360: true,  precio_mes_cop: 150000 },
 };
 
 /** Estados del vínculo trabajador ↔ empresa (tabla trabajador_empresa). */
@@ -83,9 +92,12 @@ module.exports = {
   ESTADOS_PERIODO,
   RECARGOS,
   JORNADA_ORDINARIA_HORAS,
+  JORNADA_SEMANAL_HORAS,
+  HORAS_EXTRA_MAX_SEMANA,
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
   HORAS_MES_NOMINA,
   LOGIN,
   ESTADOS_TRABAJADOR_EMPRESA,
+  PLANES,
 };

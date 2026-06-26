@@ -66,6 +66,14 @@ export function useVincularEmpleado() {
   });
 }
 
+export function useReintentarFallidos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => integracionApi.reintentarFallidos(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: INTEGRACION_KEYS.estado }),
+  });
+}
+
 /** Genera un secret hex de 64 caracteres para usar como webhook key. */
 export function generarSecret(): string {
   return Array.from(

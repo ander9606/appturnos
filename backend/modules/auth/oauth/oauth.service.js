@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const { getProvider, listProviders } = require('./providers');
 const OAuthModel = require('./oauth.model');
 const AuthModel = require('../auth.model');
-const TokenService = require('../../../utils/TokenService');
+const { generarAccessToken, generarRefreshToken, fechaExpiracionRefresh } = require('../../../utils/TokenService');
 const AppError = require('../../../utils/AppError');
 const { ROLES } = require('../../../config/constants');
 const logger = require('../../../utils/logger');
@@ -15,12 +15,12 @@ const BCRYPT_ROUNDS = 12;
 
 /** Construye el par de tokens y persiste el refresh token (mismo patrón que auth.service). */
 async function emitirTokens(usuario) {
-  const accessToken = TokenService.generarAccessToken(usuario);
-  const refreshToken = TokenService.generarRefreshToken();
+  const accessToken = generarAccessToken(usuario);
+  const refreshToken = generarRefreshToken();
   await AuthModel.guardarRefreshToken({
     usuario_id: usuario.id,
     token: refreshToken,
-    expira_at: TokenService.fechaExpiracionRefresh(),
+    expira_at: fechaExpiracionRefresh(),
   });
   return { access_token: accessToken, refresh_token: refreshToken };
 }

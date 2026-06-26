@@ -78,6 +78,11 @@ export interface Asignacion {
   horas_nocturnas?: number;
   horas_festivo?: number;
   es_festivo?: number;
+  // Auditoría de acciones de gestores
+  rechazado_por: number | null;
+  rechazado_at: string | null;
+  cancelado_por: number | null;
+  cancelado_at: string | null;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;
@@ -105,6 +110,8 @@ export interface OfertaPuesto {
   notas: string | null;
 }
 
+export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
+
 export interface Oferta {
   id: number;
   empresa_id: number;
@@ -117,6 +124,7 @@ export interface Oferta {
   latitud: number | null;
   longitud: number | null;
   estado: EstadoOferta;
+  para_quien: ParaQuienOferta;
   creado_por: number;
   created_at: string;
   puestos: OfertaPuesto[];
@@ -131,6 +139,7 @@ export interface CrearOfertaPayload {
   lugar?: string;
   latitud?: number;
   longitud?: number;
+  para_quien?: ParaQuienOferta;
   puestos: Array<{
     cargo_id: number;
     plazas: number;
@@ -207,6 +216,7 @@ export const turnosApi = {
     fecha?: string;
     page?: number;
     limit?: number;
+    para_quien?: ParaQuienOferta;
   }): Promise<PaginatedResponse<Oferta>> {
     const qs = new URLSearchParams();
     if (params?.estado) qs.set('estado', params.estado);
@@ -214,6 +224,7 @@ export const turnosApi = {
     if (params?.fecha) qs.set('fecha', params.fecha);
     if (params?.page)  qs.set('page',  String(params.page));
     if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.para_quien) qs.set('para_quien', params.para_quien);
     const query = qs.toString() ? `?${qs}` : '';
     return api.get<PaginatedResponse<Oferta>>(`/api/turnos/ofertas${query}`);
   },
@@ -231,6 +242,17 @@ export const turnosApi = {
   /** Postular al turno en un puesto concreto. */
   aplicar(ofertaId: number, puestoId: number): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });
+  },
+
+  /**
+   * Asignación directa por gestor/admin: confirma al trabajador sin postulación previa.
+   * Solo para jefe_turnos y admin_empresa.
+   */
+  asignarDirecto(ofertaId: number, puestoId: number, trabajadorId: number): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/asignar`, {
+      puesto_id: puestoId,
+      trabajador_id: trabajadorId,
+    });
   },
 
   /** Retirar postulación de un puesto (solo cuando estado === 'pendiente'). */
@@ -310,6 +332,18 @@ export const turnosApi = {
    */
   cancelar(asignacionId: number): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/cancelar`, {});
+  },
+
+  /**
+   * Corrección manual de ingreso y/o egreso por gestor/admin (sin GPS ni firma).
+   * Recalcula horas_trabajadas si se proporcionan ambos extremos.
+   * Acepta ISO 8601: "2025-06-20T08:30:00" o "2025-06-20T08:30:00.000Z".
+   */
+  corregirAsignacion(
+    asignacionId: number,
+    datos: { hora_ingreso_real?: string; hora_egreso_real?: string }
+  ): Promise<Asignacion> {
+    return api.patch<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/corregir`, datos);
   },
 
   /**

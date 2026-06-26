@@ -1,0 +1,9 @@
+api.zaturno.app {
+	reverse_proxy api:3001
+}
+
+zaturno.app {
+	root * /srv/web
+	try_files {path} /index.html
+	file_server
+}

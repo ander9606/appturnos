@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 16"
+    "version": ">= 16",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -16,13 +17,17 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-staging.tudominio.com"
+        "EXPO_PUBLIC_API_URL": "https://api.zaturno.app"
       }
     },
     "production": {
       "autoIncrement": true,
+      "prebuildCommand": "npx expo prebuild --clean --platform android",
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.tudominio.com"
+        "EXPO_PUBLIC_API_URL": "https://api.zaturno.app"
       }
     }
   },

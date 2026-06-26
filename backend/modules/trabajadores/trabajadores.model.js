@@ -7,7 +7,18 @@ const { pool } = require('../../config/database');
  * Todas las consultas se filtran por empresa_id (aislamiento multi-tenant).
  */
 
-const COLUMNAS = `id, empresa_id, usuario_id, nombre, apellido, cedula,
+const COLUMNAS = `t.id, t.empresa_id, t.usuario_id, t.nombre, t.apellido, t.cedula,
+  t.tipo_documento, t.fecha_nacimiento, t.sexo,
+  t.contacto_emergencia_nombre, t.contacto_emergencia_tel,
+  t.telefono, t.email, t.tipo, t.cargo, t.tarifa_hora, t.salario_base, t.acepta_extras,
+  t.eps, t.afp, t.banco, t.tipo_cuenta, t.numero_cuenta,
+  t.ant_judiciales_fecha, t.ant_disciplinarios_fecha,
+  t.tipo_marcacion, t.punto_marcaje_id,
+  t.activo, t.external_ref, t.ranking, t.total_calificaciones, t.created_at,
+  u.foto_perfil`;
+
+// Alias para queries sin JOIN (uso interno donde ya no hay alias)
+const COLUMNAS_BARE = `id, empresa_id, usuario_id, nombre, apellido, cedula,
   tipo_documento, fecha_nacimiento, sexo,
   contacto_emergencia_nombre, contacto_emergencia_tel,
   telefono, email, tipo, cargo, tarifa_hora, salario_base, acepta_extras,
@@ -29,27 +40,25 @@ const CAMPOS_EDITABLES = [
 
 const TrabajadoresModel = {
   async listar(empresaId, { tipo, activo, limit, offset }) {
-    const where = ['empresa_id = ?'];
+    const where = ['t.empresa_id = ?'];
     const params = [empresaId];
-    if (tipo) {
-      where.push('tipo = ?');
-      params.push(tipo);
-    }
-    if (activo !== undefined) {
-      where.push('activo = ?');
-      params.push(activo ? 1 : 0);
-    }
+    if (tipo) { where.push('t.tipo = ?'); params.push(tipo); }
+    if (activo !== undefined) { where.push('t.activo = ?'); params.push(activo ? 1 : 0); }
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS} FROM trabajadores
+      `SELECT ${COLUMNAS}
+       FROM trabajadores t
+       LEFT JOIN usuarios u ON u.id = t.usuario_id
        WHERE ${whereSql}
-       ORDER BY apellido, nombre
+       ORDER BY t.apellido, t.nombre
        LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
+    // count uses bare table (no JOIN needed)
+    const bareWhere = whereSql.replace(/t\./g, '');
     const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM trabajadores WHERE ${whereSql}`,
+      `SELECT COUNT(*) AS total FROM trabajadores WHERE ${bareWhere}`,
       params
     );
     return { data: filas, total };
@@ -70,10 +79,28 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
+  async actualizarMarcacion(empresaId, id, { tipo_marcacion, punto_marcaje_id }) {
+    const [result] = await pool.query(
+      'UPDATE trabajadores SET tipo_marcacion = ?, punto_marcaje_id = ? WHERE id = ? AND empresa_id = ?',
+      [tipo_marcacion, punto_marcaje_id ?? null, id, empresaId]
+    );
+    if (!result.affectedRows) throw new (require('../../utils/AppError'))('Trabajador no encontrado', 404);
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS}
+       FROM trabajadores t
+       LEFT JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.id = ? AND t.empresa_id = ? LIMIT 1`,
+      [id, empresaId]
+    );
+    return filas[0];
+  },
+
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS} FROM trabajadores
-       WHERE id = ? AND empresa_id = ? LIMIT 1`,
+      `SELECT ${COLUMNAS}
+       FROM trabajadores t
+       LEFT JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.id = ? AND t.empresa_id = ? LIMIT 1`,
       [id, empresaId]
     );
     return filas[0] || null;
@@ -82,13 +109,17 @@ const TrabajadoresModel = {
   async obtenerPorUsuarioId(empresaId, usuarioId) {
     const [filas] = empresaId != null
       ? await pool.query(
-          `SELECT ${COLUMNAS} FROM trabajadores
-           WHERE usuario_id = ? AND empresa_id = ? AND activo = 1 LIMIT 1`,
+          `SELECT ${COLUMNAS}
+           FROM trabajadores t
+           LEFT JOIN usuarios u ON u.id = t.usuario_id
+           WHERE t.usuario_id = ? AND t.empresa_id = ? AND t.activo = 1 LIMIT 1`,
           [usuarioId, empresaId]
         )
       : await pool.query(
-          `SELECT ${COLUMNAS} FROM trabajadores
-           WHERE usuario_id = ? AND activo = 1 LIMIT 1`,
+          `SELECT ${COLUMNAS}
+           FROM trabajadores t
+           LEFT JOIN usuarios u ON u.id = t.usuario_id
+           WHERE t.usuario_id = ? AND t.activo = 1 LIMIT 1`,
           [usuarioId]
         );
     return filas[0] || null;
@@ -96,8 +127,10 @@ const TrabajadoresModel = {
 
   async obtenerPorExternalRef(empresaId, externalRef) {
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS} FROM trabajadores
-       WHERE external_ref = ? AND empresa_id = ? LIMIT 1`,
+      `SELECT ${COLUMNAS}
+       FROM trabajadores t
+       LEFT JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.external_ref = ? AND t.empresa_id = ? LIMIT 1`,
       [externalRef, empresaId]
     );
     return filas[0] || null;

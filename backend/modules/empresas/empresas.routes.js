@@ -49,7 +49,12 @@ router.patch(
     body('descripcion').optional({ values: 'falsy' }).isString().trim(),
     body('actividad').optional({ values: 'falsy' }).isString().trim(),
     body('logo_url').optional({ values: 'falsy' }).isURL().withMessage('logo_url debe ser una URL válida'),
+    body('telefono').optional({ values: 'falsy' }).isString().trim().isLength({ max: 30 }),
+    body('email_empresa').optional({ values: 'falsy' }).isEmail().withMessage('email_empresa debe ser un email válido')
+      .customSanitizer(v => v.trim().toLowerCase()),
+    body('direccion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 300 }),
     body('acepta_postulaciones').optional().isBoolean().withMessage('acepta_postulaciones debe ser booleano'),
+    body('tipo_liquidacion').optional().isIn(['mensual', 'quincenal', 'semanal']).withMessage('tipo_liquidacion inválido'),
   ],
   validar,
   ctrl.actualizarMiEmpresa

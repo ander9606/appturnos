@@ -40,6 +40,26 @@ export interface RegistroDiario {
   // Joined
   trabajador_nombre: string;
   trabajador_apellido: string;
+  advertencia?: string | null; // set by marcarSalida when weekly extra limit is near/exceeded
+}
+
+export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
+
+export interface DescansoCompensatorio {
+  id: number;
+  empresa_id: number;
+  trabajador_id: number;
+  periodo_id: number;
+  origen_fecha: string;       // YYYY-MM-DD — el domingo/festivo trabajado
+  origen_registro_id: number | null;
+  estado: EstadoCompensatorio;
+  fecha_asignada: string | null; // YYYY-MM-DD — asignada por el empleador
+  asignado_por: number | null;
+  asignado_en: string | null;
+  created_at: string;
+  // Joined
+  trabajador_nombre: string;
+  trabajador_apellido: string;
 }
 
 export interface LiquidacionLinea {
@@ -54,6 +74,9 @@ export interface LiquidacionLinea {
   horas_nocturnas: number;
   horas_festivo: number;
   valor_hora: number;
+  pago_por_horas: number;
+  salario_minimo_periodo: number;
+  ajuste_minimo: number;
   total: number;
 }
 
@@ -80,6 +103,9 @@ export interface TrabajadorNominaPerfil {
   id: number;
   nombre: string;
   apellido: string;
+  cargo: string | null;
+  empresa_nombre: string | null;
+  cargos: Array<{ id: number; nombre: string; codigo: string | null }>;
   tipo_marcacion: TipoMarcacion;
   punto_marcaje: PuntoMarcaje | null;
   salario_base: number | null;
@@ -121,6 +147,8 @@ export const nominaApi = {
     periodo_id?: number;
     trabajador_id?: number;
     fecha?: string;
+    fecha_desde?: string;
+    fecha_hasta?: string;
     page?: number;
     limit?: number;
   }) {
@@ -128,6 +156,8 @@ export const nominaApi = {
     if (params.periodo_id)    qs.set('periodo_id',    String(params.periodo_id));
     if (params.trabajador_id) qs.set('trabajador_id', String(params.trabajador_id));
     if (params.fecha)         qs.set('fecha',         params.fecha);
+    if (params.fecha_desde)   qs.set('fecha_desde',   params.fecha_desde);
+    if (params.fecha_hasta)   qs.set('fecha_hasta',   params.fecha_hasta);
     if (params.page)          qs.set('page',          String(params.page));
     if (params.limit)         qs.set('limit',         String(params.limit));
     const q = qs.toString() ? `?${qs}` : '';
@@ -168,6 +198,22 @@ export const nominaApi = {
 
   marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>(`/api/nomina/registros/${registroId}/marcar-salida`, datos ?? {});
+  },
+
+  // ── Compensatorios ────────────────────────────────────────────────────
+
+  /** Trabajador → solo los suyos; gestor → todos (filtrable por estado). */
+  listarCompensatorios(params?: { estado?: EstadoCompensatorio }): Promise<DescansoCompensatorio[]> {
+    const qs = params?.estado ? `?estado=${params.estado}` : '';
+    return api.get<DescansoCompensatorio[]>(`/api/nomina/compensatorios${qs}`);
+  },
+
+  /** Solo jefe_nomina / admin_empresa. */
+  asignarCompensatorio(id: number, fechaAsignada: string): Promise<DescansoCompensatorio> {
+    return api.put<DescansoCompensatorio>(
+      `/api/nomina/compensatorios/${id}/asignar`,
+      { fechaAsignada }
+    );
   },
 
   // ── Liquidación ───────────────────────────────────────────────────────

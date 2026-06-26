@@ -18,7 +18,7 @@
  */
 
 const {
-  JORNADA_ORDINARIA_HORAS,
+  JORNADA_SEMANAL_HORAS,
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
   HORAS_MES_NOMINA,
@@ -26,7 +26,6 @@ const {
 } = require('../config/constants');
 
 const MIN_POR_DIA = 24 * 60;
-const MIN_JORNADA = JORNADA_ORDINARIA_HORAS * 60;
 
 // ─────────────────────────────────────────────────────────────
 // Festivos
@@ -175,7 +174,12 @@ function redondear(horas) {
  *   total_horas: number
  * }}
  */
-function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo } = {}) {
+/**
+ * @param {number} [params.horasOrdinariasAcumuladas=0]
+ *   Horas ordinarias + nocturnas ya registradas esta semana (lunes–ayer).
+ *   Cuando se supera JORNADA_SEMANAL_HORAS el resto del turno pasa a extra.
+ */
+function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinariasAcumuladas = 0 } = {}) {
   const vacio = {
     horas_ordinarias: 0,
     horas_extra_diurnas: 0,
@@ -190,7 +194,7 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo } = {}) {
 
   const inicio = horaAMinutos(horaEntrada);
   let fin = horaAMinutos(horaSalida);
-  if (fin <= inicio) fin += MIN_POR_DIA; // cruza medianoche
+  if (fin < inicio) fin += MIN_POR_DIA; // cruza medianoche
 
   const totalMin = fin - inicio;
   if (totalMin <= 0) return vacio;
@@ -204,9 +208,12 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo } = {}) {
   let extraNocturnas = 0;
   let festivoMin = 0;
 
+  // Minutos ordinarios restantes para completar la jornada semanal (42 h).
+  const minOrdinarioRestante = Math.max(0, (JORNADA_SEMANAL_HORAS - horasOrdinariasAcumuladas) * 60);
+
   for (let m = inicio; m < fin; m++) {
-    const trabajados = m - inicio; // minutos acumulados de la jornada
-    const esOrdinario = trabajados < MIN_JORNADA;
+    const trabajados = m - inicio; // minutos acumulados del turno actual
+    const esOrdinario = trabajados < minOrdinarioRestante;
     const nocturno = esMinutoNocturno(m);
 
     if (festivo) {

@@ -1,51 +1,27 @@
 'use strict';
 
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
 
-/**
- * Generación de tokens de autenticación.
- *  - Access token: JWT firmado, vida corta (15m por defecto).
- *  - Refresh token: cadena aleatoria opaca, se persiste en `refresh_tokens`
- *    y rota en cada uso (ver 06-AUTH.md).
- */
-
 const ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '15m';
-const REFRESH_DIAS = Number(process.env.JWT_REFRESH_DIAS) || 7;
+const REFRESH_DIAS   = Number(process.env.JWT_REFRESH_DIAS) || 7;
 
-class TokenService {
-  /**
-   * Firma un access token JWT.
-   * @param {{id:number, empresa_id:number|null, rol:string, nombre:string}} usuario
-   *
-   * Para TRABAJADOR_TURNOS el claim `empresa_id` puede ser null: el usuario
-   * puede pertenecer a varias empresas (modelo marketplace). La lista de
-   * empresas activas se resuelve en runtime via `trabajador_empresa`.
-   */
-  static generarAccessToken(usuario) {
-    return jwt.sign(
-      {
-        sub: usuario.id,
-        empresa_id: usuario.empresa_id ?? null,
-        rol: usuario.rol,
-        nombre: usuario.nombre,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: ACCESS_EXPIRES }
-    );
-  }
-
-  /** Genera un refresh token opaco (128 caracteres hex). */
-  static generarRefreshToken() {
-    return crypto.randomBytes(64).toString('hex');
-  }
-
-  /** Fecha de expiración del refresh token (ahora + JWT_REFRESH_DIAS). */
-  static fechaExpiracionRefresh() {
-    const fecha = new Date();
-    fecha.setDate(fecha.getDate() + REFRESH_DIAS);
-    return fecha;
-  }
+function generarAccessToken(usuario) {
+  return jwt.sign(
+    { sub: usuario.id, empresa_id: usuario.empresa_id ?? null, rol: usuario.rol, nombre: usuario.nombre },
+    process.env.JWT_SECRET,
+    { expiresIn: ACCESS_EXPIRES }
+  );
 }
 
-module.exports = TokenService;
+function generarRefreshToken() {
+  return crypto.randomBytes(64).toString('hex');
+}
+
+function fechaExpiracionRefresh() {
+  const fecha = new Date();
+  fecha.setDate(fecha.getDate() + REFRESH_DIAS);
+  return fecha;
+}
+
+module.exports = { generarAccessToken, generarRefreshToken, fechaExpiracionRefresh };

@@ -16,7 +16,8 @@ import { secureTokenStore } from '@/lib/secureStore';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-const KEY_USUARIO = 'appturnos.usuario';
+const KEY_USUARIO      = 'appturnos.usuario';
+const KEY_HAS_LAUNCHED = 'appturnos.hasLaunched';
 
 const _envUrl = process.env.EXPO_PUBLIC_API_URL;
 if (!_envUrl) {
@@ -47,9 +48,13 @@ type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 interface AuthState {
   status: AuthStatus;
   usuario: UsuarioPerfil | null;
+  hasLaunched: boolean;
 
   /** Llama initApiClient + lee tokens del secure store al arrancar la app */
   rehydrate(): Promise<void>;
+
+  /** Marca que el usuario ya vio la pantalla de bienvenida */
+  markLaunched(): Promise<void>;
 
   /** Login normal con email + contraseña */
   login(email: string, password: string): Promise<void>;
@@ -61,13 +66,35 @@ interface AuthState {
     password: string;
   }): Promise<void>;
 
-  /** Registro libre para trabajador_turnos (marketplace) */
-  registrar(params: {
+  /** Registro público de empresa nueva + auto-login como admin_empresa */
+  registrarEmpresa(params: {
+    nombre_empresa: string;
+    nit?: string;
+    actividad?: string;
+    descripcion?: string;
+    telefono?: string;
+    email_empresa?: string;
+    direccion?: string;
+    ciudad?: string;
     nombre: string;
     apellido?: string;
     email: string;
     password: string;
   }): Promise<void>;
+
+  /** Registro libre para trabajador_turnos (marketplace) */
+  registrar(params: {
+    nombre: string;
+    apellido?: string;
+    email: string;
+    telefono: string;
+    password: string;
+    email_token: string;
+    telefono_token: string;
+  }): Promise<void>;
+
+  /** Login / registro vía Google OAuth. Devuelve `tipo` para que el caller sepa si fue registro. */
+  loginConGoogle(idToken: string): Promise<'login' | 'vinculacion' | 'registro'>;
 
   /** Actualiza el usuario en memoria y en SecureStore (tras edición de perfil) */
   setUsuario(usuario: UsuarioPerfil): Promise<void>;
@@ -81,6 +108,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>()((set, get) => ({
   status: 'unknown',
   usuario: null,
+  hasLaunched: false,
 
   // ── rehydrate ─────────────────────────────────────────────────────────
   async rehydrate() {
@@ -93,10 +121,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       },
     });
 
-    const [accessToken, cachedUsuario] = await Promise.all([
+    const [accessToken, cachedUsuario, launched] = await Promise.all([
       secureTokenStore.getAccessToken(),
       SecureStore.getItemAsync(KEY_USUARIO),
+      SecureStore.getItemAsync(KEY_HAS_LAUNCHED),
     ]);
+    if (launched) set({ hasLaunched: true });
 
     if (!accessToken) {
       set({ status: 'unauthenticated' });
@@ -140,20 +170,45 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     await get().login(email, password);
   },
 
-  // ── registrar ─────────────────────────────────────────────────────────
-  async registrar({ nombre, apellido, email, password }) {
-    const { access_token, refresh_token, usuario } = await authApi.registrar({
-      nombre, apellido, email, password,
+  // ── registrarEmpresa ──────────────────────────────────────────────────
+  async registrarEmpresa({ nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password }) {
+    const { access_token, refresh_token, usuario } = await authApi.registrarEmpresa({
+      nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password,
     });
     await secureTokenStore.setTokens(access_token, refresh_token);
     await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
     set({ status: 'authenticated', usuario });
   },
 
+  // ── registrar ─────────────────────────────────────────────────────────
+  async registrar({ nombre, apellido, email, telefono, password, email_token, telefono_token }) {
+    const { access_token, refresh_token, usuario } = await authApi.registrar({
+      nombre, apellido, email, telefono, password, email_token, telefono_token,
+    });
+    await secureTokenStore.setTokens(access_token, refresh_token);
+    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    set({ status: 'authenticated', usuario });
+  },
+
+  // ── loginConGoogle ────────────────────────────────────────────────────
+  async loginConGoogle(idToken) {
+    const { access_token, refresh_token, usuario, tipo } = await authApi.loginConProvider('google', idToken);
+    await secureTokenStore.setTokens(access_token, refresh_token);
+    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    set({ status: 'authenticated', usuario });
+    return tipo;
+  },
+
   // ── setUsuario ────────────────────────────────────────────────────────
   async setUsuario(usuario: UsuarioPerfil) {
     await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
     set({ usuario });
+  },
+
+  // ── markLaunched ──────────────────────────────────────────────────────
+  async markLaunched() {
+    await SecureStore.setItemAsync(KEY_HAS_LAUNCHED, '1');
+    set({ hasLaunched: true });
   },
 
   // ── logout ────────────────────────────────────────────────────────────

@@ -4,21 +4,14 @@ const { pool } = require('../../../config/database');
 
 /** Acceso a datos de registros diarios de nómina (tabla registros_diarios). */
 const RegistrosModel = {
-  async listar(empresaId, { periodoId, trabajadorId, fecha, limit, offset }) {
+  async listar(empresaId, { periodoId, trabajadorId, fecha, fechaDesde, fechaHasta, limit, offset }) {
     const where = ['r.empresa_id = ?'];
     const params = [empresaId];
-    if (periodoId) {
-      where.push('r.periodo_id = ?');
-      params.push(periodoId);
-    }
-    if (trabajadorId) {
-      where.push('r.trabajador_id = ?');
-      params.push(trabajadorId);
-    }
-    if (fecha) {
-      where.push('r.fecha = ?');
-      params.push(fecha);
-    }
+    if (periodoId)   { where.push('r.periodo_id = ?');    params.push(periodoId); }
+    if (trabajadorId){ where.push('r.trabajador_id = ?'); params.push(trabajadorId); }
+    if (fecha)       { where.push('r.fecha = ?');         params.push(fecha); }
+    if (fechaDesde)  { where.push('r.fecha >= ?');        params.push(fechaDesde); }
+    if (fechaHasta)  { where.push('r.fecha <= ?');        params.push(fechaHasta); }
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
@@ -123,6 +116,37 @@ const RegistrosModel = {
       ]
     );
     return res.affectedRows;
+  },
+
+  /**
+   * Suma horas ordinarias y extras de la semana actual (lunes → antes de hoy).
+   * Las horas festivo NO se cuentan en la semana en que se trabajaron; en cambio
+   * se acreditan en la semana en que se toma el compensatorio (fecha_asignada).
+   */
+  async sumarOrdinariasEnSemana(empresaId, trabajadorId, fechaLunes, fechaHoy) {
+    const [[work]] = await pool.query(
+      `SELECT COALESCE(SUM(horas_ordinarias + horas_nocturnas), 0)          AS ordinarias,
+              COALESCE(SUM(horas_extra_diurnas + horas_extra_nocturnas), 0) AS extras
+       FROM registros_diarios
+       WHERE empresa_id = ? AND trabajador_id = ?
+         AND fecha >= ? AND fecha < ?
+         AND hora_salida IS NOT NULL`,
+      [empresaId, trabajadorId, fechaLunes, fechaHoy]
+    );
+    // Horas del festivo original acreditadas esta semana vía compensatorio tomado/asignado
+    const [[comp]] = await pool.query(
+      `SELECT COALESCE(SUM(r.horas_festivo), 0) AS horas_comp
+       FROM descansos_compensatorios dc
+       JOIN registros_diarios r ON r.id = dc.origen_registro_id
+       WHERE dc.empresa_id = ? AND dc.trabajador_id = ?
+         AND dc.fecha_asignada >= ? AND dc.fecha_asignada < ?
+         AND dc.estado IN ('asignado', 'tomado')`,
+      [empresaId, trabajadorId, fechaLunes, fechaHoy]
+    );
+    return {
+      ordinarias: Number(work.ordinarias) + Number(comp.horas_comp),
+      extras:     Number(work.extras),
+    };
   },
 
   /** Reemplaza los campos recalculables del registro (corrección). */

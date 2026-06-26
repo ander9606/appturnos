@@ -6,7 +6,8 @@ const COLUMNAS_PUBLICAS = `id, nombre, slug, ciudad, plan,
   logo_url, descripcion, acepta_postulaciones, created_at`;
 
 const COLUMNAS_ADMIN = `id, nombre, slug, nit, ciudad, plan, actividad,
-  logo_url, descripcion, acepta_postulaciones, created_at`;
+  logo_url, descripcion, telefono, email_empresa, direccion, acepta_postulaciones,
+  tipo_liquidacion, created_at`;
 
 const EmpresasModel = {
   async listarDirectorio({ busqueda, ciudad, limit, offset }) {
@@ -49,7 +50,7 @@ const EmpresasModel = {
   },
 
   async actualizarPorAdmin(empresaId, datos) {
-    const CAMPOS = ['nombre', 'nit', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'acepta_postulaciones'];
+    const CAMPOS = ['nombre', 'nit', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion'];
     const sets = [];
     const params = [];
     for (const campo of CAMPOS) {

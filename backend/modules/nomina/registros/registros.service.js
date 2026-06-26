@@ -1,12 +1,16 @@
 'use strict';
 
-const RegistrosModel   = require('./registros.model');
-const PeriodosModel    = require('../periodos/periodos.model');
-const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
-const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
-const { calcularHoras } = require('../../../utils/laboralUtils');
-const AppError = require('../../../utils/AppError');
-const { ROLES }  = require('../../../config/constants');
+const RegistrosModel       = require('./registros.model');
+const PeriodosModel        = require('../periodos/periodos.model');
+const PeriodosService      = require('../periodos/periodos.service');
+const TrabajadoresModel    = require('../../trabajadores/trabajadores.model');
+const PuntosMarcajeModel   = require('../../puntos-marcaje/puntos-marcaje.model');
+const EmpresasModel        = require('../../empresas/empresas.model');
+const CompensatoriosService = require('../compensatorios/compensatorios.service');
+const { calcularHoras }    = require('../../../utils/laboralUtils');
+const { haversineMetros }  = require('../../../utils/geoUtils');
+const AppError             = require('../../../utils/AppError');
+const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
 
 /**
  * El trabajador_nomina solo opera sobre sus propios registros: se resuelve
@@ -18,18 +22,6 @@ async function resolverTrabajadorPropio(empresaId, usuarioId) {
     throw new AppError('Tu usuario no está vinculado a un trabajador activo', 403);
   }
   return trabajador.id;
-}
-
-/** Haversine distance in meters between two lat/lng pairs. */
-function haversineMetros(lat1, lon1, lat2, lon2) {
-  const R = 6_371_000;
-  const toRad = (v) => (v * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /** Validate geofence if the worker has tipo_marcacion = 'fijo'. */
@@ -52,6 +44,14 @@ async function validarGeofence(empresaId, trabajador, latitud, longitud) {
   }
 }
 
+/** ISO date of the Monday of the week containing isoDate. */
+function getLunesDeSemana(isoDate) {
+  const d = new Date(isoDate + 'T12:00:00Z');
+  const dow = d.getUTCDay(); // 0=dom…6=sab
+  d.setUTCDate(d.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+  return d.toISOString().slice(0, 10);
+}
+
 /** Returns today's date as 'YYYY-MM-DD' in local server time. */
 function hoyISO() {
   const d = new Date();
@@ -67,7 +67,7 @@ function ahoraHHMMSS() {
 }
 
 const RegistrosService = {
-  async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, page, limit }) {
+  async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, fecha_desde, fecha_hasta, page, limit }) {
     let trabajadorId = trabajador_id;
     if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
       trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
@@ -77,6 +77,8 @@ const RegistrosService = {
       periodoId: periodo_id,
       trabajadorId,
       fecha,
+      fechaDesde: fecha_desde,
+      fechaHasta: fecha_hasta,
       limit,
       offset,
     });
@@ -122,6 +124,17 @@ const RegistrosService = {
       novedad: datos.novedad || null,
       tipo_dia: 'ordinario',
     });
+
+    // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que marcarSalida.
+    // La unique constraint en origen_registro_id previene duplicados.
+    await CompensatoriosService.crearSiCorresponde(empresaId, {
+      trabajadorId,
+      periodoId: datos.periodo_id,
+      fecha: datos.fecha,
+      esFestivo: Boolean(horas.es_festivo),
+      registroId: id,
+    });
+
     return RegistrosModel.obtenerPorId(empresaId, id);
   },
 
@@ -167,15 +180,21 @@ const RegistrosService = {
       throw new AppError('Tu usuario no está vinculado a un trabajador activo', 403);
     }
 
-    let puntoMarcaje = null;
-    if (trabajador.punto_marcaje_id) {
-      puntoMarcaje = await PuntosMarcajeModel.obtenerPorId(empresaId, trabajador.punto_marcaje_id);
-    }
+    const [puntoMarcaje, empresa, cargos] = await Promise.all([
+      trabajador.punto_marcaje_id
+        ? PuntosMarcajeModel.obtenerPorId(empresaId, trabajador.punto_marcaje_id)
+        : Promise.resolve(null),
+      EmpresasModel.obtenerDetalle(empresaId),
+      TrabajadoresModel.listarCargos(trabajador.id),
+    ]);
 
     return {
       id: trabajador.id,
       nombre: trabajador.nombre,
       apellido: trabajador.apellido,
+      cargo: trabajador.cargo ?? null,
+      empresa_nombre: empresa?.nombre ?? null,
+      cargos,
       tipo_marcacion: trabajador.tipo_marcacion ?? 'libre',
       punto_marcaje: puntoMarcaje,
       salario_base: trabajador.salario_base,
@@ -191,7 +210,9 @@ const RegistrosService = {
     await validarGeofence(empresaId, trabajador, latitud, longitud);
 
     const hoy = hoyISO();
-    const periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
+    let periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
+    // Si no hay período abierto, auto-crear según tipo_liquidacion de la empresa.
+    if (!periodo) periodo = await PeriodosService.autoCrear(empresaId);
     if (!periodo) throw new AppError('No hay un período de nómina abierto para hoy', 409);
 
     const existing = await RegistrosModel.obtenerPorFecha(empresaId, trabajadorId, hoy);
@@ -229,11 +250,17 @@ const RegistrosService = {
       throw new AppError('El período ya está cerrado', 409);
     }
 
+    // Contexto semanal: horas ordinarias y extras ya registradas esta semana (lunes–ayer)
+    const lunes = getLunesDeSemana(registro.fecha);
+    const { ordinarias: ordinariasAcum, extras: extrasAcum } =
+      await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunes, registro.fecha);
+
     const horaSalida = ahoraHHMMSS();
     const horas = calcularHoras({
       horaEntrada: registro.hora_entrada,
       horaSalida,
       fecha: registro.fecha,
+      horasOrdinariasAcumuladas: ordinariasAcum,
     });
 
     const updated = await RegistrosModel.actualizarSalida(empresaId, registroId, {
@@ -242,7 +269,27 @@ const RegistrosService = {
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);
 
-    return RegistrosModel.obtenerPorId(empresaId, registroId);
+    // Descanso compensatorio automático si es festivo o domingo (Art. 179 CST)
+    await CompensatoriosService.crearSiCorresponde(empresaId, {
+      trabajadorId,
+      periodoId: registro.periodo_id,
+      fecha: registro.fecha,
+      esFestivo: Boolean(horas.es_festivo),
+      registroId,
+    });
+
+    const registroFinal = await RegistrosModel.obtenerPorId(empresaId, registroId);
+
+    // Advertencia de horas extra semanales
+    const totalExtras = extrasAcum + horas.horas_extra_diurnas + horas.horas_extra_nocturnas;
+    let advertencia = null;
+    if (totalExtras > HORAS_EXTRA_MAX_SEMANA) {
+      advertencia = `Superaste el límite de ${HORAS_EXTRA_MAX_SEMANA} h extra esta semana (total: ${totalExtras.toFixed(1)} h).`;
+    } else if (totalExtras >= HORAS_EXTRA_MAX_SEMANA - 2) {
+      advertencia = `Te quedan ${(HORAS_EXTRA_MAX_SEMANA - totalExtras).toFixed(1)} h extra disponibles esta semana.`;
+    }
+
+    return { ...registroFinal, advertencia };
   },
 };
 

@@ -7,7 +7,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ApiError } from '@api-client';
-import type { RegistroDiario, PeriodoNomina } from '@api-client';
+import type { RegistroDiario, PeriodoNomina, PuntoMarcaje } from '@api-client';
 import { toISODate } from '@/lib/formatters';
 import { useGeofence } from '@/features/turnos/useGeofence';
 import {
@@ -30,7 +30,8 @@ export interface NominaTrabajadorState {
   valorHora:       number;
   salarioBase:     number | null;
   tipoMarcacion:   'libre' | 'fijo';
-  puntoMarcaje:    { nombre: string; latitud: number; longitud: number; radio_metros: number } | null;
+  cargo:           string | null;
+  puntoMarcaje:    PuntoMarcaje | null;
 
   // Períodos
   periodos:               PeriodoNomina[];
@@ -66,6 +67,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const tipoMarcacion = perfil?.tipo_marcacion ?? 'libre';
   const puntoMarcaje  = perfil?.punto_marcaje ?? null;
   const salarioBase   = perfil?.salario_base ?? null;
+  const cargo         = perfil?.cargo ?? null;
   const valorHora     = getValorHora(salarioBase);
 
   // ── Períodos ───────────────────────────────────────────────────────────
@@ -146,7 +148,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
               const coords = tipoMarcacion === 'fijo' && geo.currentLocation
                 ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
                 : undefined;
-              await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
+              const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
+              if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
             } catch (err) {
               const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
               Alert.alert('Error', msg);
@@ -167,6 +170,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     valorHora,
     salarioBase,
     tipoMarcacion,
+    cargo,
     puntoMarcaje,
     periodos,
     periodoActivo,

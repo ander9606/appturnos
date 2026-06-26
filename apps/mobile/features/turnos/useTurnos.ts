@@ -28,11 +28,15 @@ export function useMisTurnos(opts: { enabled?: boolean } = {}) {
 }
 
 /** Lista de ofertas disponibles. */
-export function useOfertas(params?: Parameters<typeof turnosApi.listarOfertas>[0]) {
+export function useOfertas(
+  params?: Parameters<typeof turnosApi.listarOfertas>[0],
+  opts: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: QUERY_KEYS.ofertas(params),
     queryFn:  () => turnosApi.listarOfertas(params),
     staleTime: 30_000,
+    enabled:  opts.enabled ?? true,
   });
 }
 
@@ -79,6 +83,17 @@ export function useAsignacionesTrabajador(
       }),
     enabled:  trabajadorId !== null,
     staleTime: 60_000,
+  });
+}
+
+/** Asignaciones de hoy para el resumen del dashboard (gestores/admin). */
+export function useAsignacionesHoy(opts: { enabled?: boolean } = {}) {
+  const today = new Date().toISOString().slice(0, 10);
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ fecha: today }),
+    queryFn:  () => turnosApi.listarAsignaciones({ fecha: today, limit: 200 }),
+    staleTime: 30_000,
+    enabled:  opts.enabled ?? true,
   });
 }
 

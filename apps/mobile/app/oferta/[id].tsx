@@ -1,0 +1,361 @@
+import React from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  ActivityIndicator, Alert, Linking, Platform,
+} from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+
+import { useTheme }    from '@/lib/theme';
+import { useAuthStore } from '@/features/auth/useAuthStore';
+import {
+  useOferta, useMisTurnos, useAplicar,
+  useConfirmar, useRechazar, useCancelar, useNoPresentado,
+} from '@/features/turnos/useTurnos';
+import { Badge }   from '@/components/ui/Badge';
+import { Button }  from '@/components/ui/Button';
+import type { AsignacionResumen, EstadoAsignacion } from '@api-client';
+import { ApiError } from '@api-client';
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+
+const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function fmtDate(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} de ${SHORT_MONTHS[d.getMonth()]}`;
+}
+function fmtRange(start: string, end: string | null) {
+  const s = start.slice(0, 5).replace(/^0/, '');
+  return end ? `${s} – ${end.slice(0, 5).replace(/^0/, '')}` : s;
+}
+
+type BadgeVariant = 'warning' | 'success' | 'info' | 'default' | 'danger';
+const ESTADO_CFG: Record<EstadoAsignacion, { label: string; variant: BadgeVariant }> = {
+  pendiente:     { label: 'Pendiente',      variant: 'warning' },
+  confirmado:    { label: 'Confirmado',     variant: 'success' },
+  en_progreso:   { label: 'En progreso',    variant: 'info'    },
+  completado:    { label: 'Completado',     variant: 'default' },
+  no_presentado: { label: 'No se presentó', variant: 'danger'  },
+  cancelado:     { label: 'Cancelado',      variant: 'danger'  },
+};
+
+// ── PostulanteRow (gestores) ──────────────────────────────────────────────
+
+function PostulanteRow({
+  asignacion, ofertaId,
+  confirmarM, rechazarM, cancelarM, noPresentadoM,
+}: {
+  asignacion:    AsignacionResumen;
+  ofertaId:      number;
+  confirmarM:    ReturnType<typeof useConfirmar>;
+  rechazarM:     ReturnType<typeof useRechazar>;
+  cancelarM:     ReturnType<typeof useCancelar>;
+  noPresentadoM: ReturnType<typeof useNoPresentado>;
+}) {
+  const cfg       = ESTADO_CFG[asignacion.estado];
+  const isPending = asignacion.estado === 'pendiente';
+  const isConf    = asignacion.estado === 'confirmado';
+  const isEnProg  = asignacion.estado === 'en_progreso';
+  const isBusy    = confirmarM.isPending || rechazarM.isPending || cancelarM.isPending || noPresentadoM.isPending;
+  const nombre    = `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}`;
+
+  return (
+    <View className="py-2.5 border-b border-border gap-2">
+      <View className="flex-row items-center justify-between">
+        <Text className="text-sm font-medium text-foreground flex-1 mr-3" numberOfLines={1}>
+          {nombre}
+        </Text>
+        <Badge label={cfg.label} variant={cfg.variant} size="sm" />
+      </View>
+
+      {isPending && (
+        <View className="flex-row gap-2">
+          <Button label={rechazarM.isPending ? '…' : 'Rechazar'} variant="danger" size="sm"
+            loading={rechazarM.isPending} disabled={isBusy}
+            onPress={() => Alert.alert('Rechazar', `¿Rechazar a ${nombre}?`, [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Rechazar', style: 'destructive',
+                onPress: () => rechazarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
+            ])} />
+          <Button label={confirmarM.isPending ? '…' : 'Confirmar'} variant="success" size="sm"
+            loading={confirmarM.isPending} disabled={isBusy}
+            onPress={() => confirmarM.mutate({ asignacionId: asignacion.id, ofertaId })} />
+        </View>
+      )}
+
+      {isConf && (
+        <View className="flex-row items-center gap-2 flex-wrap">
+          <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
+            <Ionicons name="checkmark-circle" size={14} color="#059669" />
+            <Text className="text-xs font-semibold text-success">Aceptado</Text>
+          </View>
+          <Button label={cancelarM.isPending ? '…' : 'Cancelar'} variant="danger" size="sm"
+            loading={cancelarM.isPending} disabled={isBusy}
+            onPress={() => Alert.alert('Cancelar turno', `¿Cancelar el turno de ${nombre}?`, [
+              { text: 'Volver', style: 'cancel' },
+              { text: 'Cancelar turno', style: 'destructive',
+                onPress: () => cancelarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
+            ])} />
+          <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
+            loading={noPresentadoM.isPending} disabled={isBusy}
+            onPress={() => Alert.alert('No se presentó', `¿Marcar a ${nombre} como no presentado?`, [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Marcar ausente', style: 'destructive',
+                onPress: () => noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId }) },
+            ])} />
+        </View>
+      )}
+
+      {isEnProg && (
+        <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
+          <Ionicons name="time-outline" size={14} color="#3B82F6" />
+          <Text className="text-xs font-semibold text-info">En turno</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────
+
+export default function OfertaDetailScreen() {
+  const { id: idParam } = useLocalSearchParams<{ id: string }>();
+  const id    = idParam ? Number(idParam) : null;
+  const theme = useTheme();
+  const rol   = useAuthStore((s) => s.usuario?.rol);
+
+  const isGestor = rol === 'admin_empresa' || rol === 'jefe_turnos' || rol === 'jefe_nomina';
+  const isWorker = rol === 'trabajador_turnos' || rol === 'trabajador_nomina';
+
+  const { data: oferta, isLoading } = useOferta(id);
+  const { data: misTurnos }         = useMisTurnos({ enabled: isWorker });
+
+  const aplicarM       = useAplicar();
+  const confirmarM     = useConfirmar();
+  const rechazarM      = useRechazar();
+  const cancelarM      = useCancelar();
+  const noPresentadoM  = useNoPresentado();
+
+  const yaAplicado = isWorker
+    ? (misTurnos ?? []).some((a) => a.oferta_id === id)
+    : false;
+
+  const firstAvailablePuesto = oferta?.puestos.find(
+    (p) => p.plazas_cubiertas < p.plazas
+  );
+
+  const hasCoords = oferta?.latitud != null && oferta?.longitud != null;
+
+  function openInMaps() {
+    if (!hasCoords) return;
+    const lat   = oferta!.latitud!;
+    const lng   = oferta!.longitud!;
+    const label = encodeURIComponent(oferta?.lugar ?? 'Turno');
+    const url = Platform.select({
+      ios:     `maps://app?q=${label}&ll=${lat},${lng}`,
+      android: `geo:${lat},${lng}?q=${lat},${lng}(${label})`,
+    }) ?? `https://maps.google.com/?q=${lat},${lng}`;
+    Linking.openURL(url).catch(() =>
+      Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`)
+    );
+  }
+
+  async function handleAplicar() {
+    if (!firstAvailablePuesto) return;
+    try {
+      await aplicarM.mutateAsync({ ofertaId: id!, puestoId: firstAvailablePuesto.id });
+      Alert.alert('¡Postulación enviada!', 'El gestor revisará tu solicitud.');
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+        <Stack.Screen options={{ title: 'Detalle del turno', headerShown: true }} />
+        <ActivityIndicator size="large" color={theme.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!oferta) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6" edges={['bottom']}>
+        <Stack.Screen options={{ title: 'Detalle del turno', headerShown: true }} />
+        <Ionicons name="search-outline" size={48} color="#94A3B8" />
+        <Text className="text-base font-semibold text-foreground text-center">Turno no encontrado</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const totalPlazas    = oferta.puestos.reduce((s, p) => s + p.plazas, 0);
+  const plazasCubiertas = oferta.puestos.reduce((s, p) => s + p.plazas_cubiertas, 0);
+
+  return (
+    <>
+      <Stack.Screen options={{ title: oferta.titulo, headerShown: true }} />
+
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
+        <ScrollView contentContainerClassName="px-5 py-5 gap-4 pb-12" showsVerticalScrollIndicator={false}>
+
+          {/* ── Info principal ──────────────────────────────────── */}
+          <View className="bg-card rounded-3xl overflow-hidden"
+            style={{ elevation: 3, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
+            <View className="h-2 bg-primary-400" />
+            <View className="px-5 py-5 gap-3">
+              <View className="flex-row items-start justify-between gap-2">
+                <Text className="text-xl font-bold text-foreground flex-1 pr-2" numberOfLines={2}>
+                  {oferta.titulo}
+                </Text>
+                <View className="px-2.5 py-1 rounded-full bg-muted">
+                  <Text className="text-xs font-semibold text-muted-foreground">
+                    {plazasCubiertas}/{totalPlazas} plazas
+                  </Text>
+                </View>
+              </View>
+
+              {/* Fecha */}
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
+                  <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs text-muted-foreground">Fecha</Text>
+                  <Text className="text-sm font-medium text-foreground">{fmtDate(oferta.fecha)}</Text>
+                </View>
+              </View>
+
+              {/* Horario */}
+              <View className="flex-row items-center gap-3">
+                <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
+                  <Ionicons name="time-outline" size={16} color="#64748B" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs text-muted-foreground">Horario</Text>
+                  <Text className="text-sm font-medium text-foreground">
+                    {fmtRange(oferta.hora_inicio, oferta.hora_fin_estimada)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Lugar */}
+              {oferta.lugar && (
+                <View className="flex-row items-center gap-3">
+                  <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
+                    <Ionicons name="location-outline" size={16} color="#64748B" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs text-muted-foreground">Lugar</Text>
+                    <Text className="text-sm font-medium text-foreground">{oferta.lugar}</Text>
+                  </View>
+                  {hasCoords && (
+                    <TouchableOpacity onPress={openInMaps}
+                      className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted"
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="map-outline" size={14} color="#3B82F6" />
+                      <Text className="text-xs font-semibold text-info">Mapa</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* ── Descripción ─────────────────────────────────────── */}
+          {oferta.descripcion && (
+            <View className="bg-card rounded-2xl px-5 py-4 gap-2"
+              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="document-text-outline" size={14} color="#64748B" />
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Descripción
+                </Text>
+              </View>
+              <Text className="text-sm text-foreground leading-5">{oferta.descripcion}</Text>
+            </View>
+          )}
+
+          {/* ── Puestos / cargos ─────────────────────────────────── */}
+          <View className="bg-card rounded-2xl px-5 py-4 gap-3"
+            style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+            <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Cargos y tarifas
+            </Text>
+            {oferta.puestos.map((p) => (
+              <View key={p.id} className="flex-row items-center justify-between py-2 border-b border-border last:border-0">
+                <View className="flex-1 gap-0.5">
+                  <Text className="text-sm font-semibold text-foreground">{p.cargo_nombre}</Text>
+                  {p.notas && (
+                    <Text className="text-xs text-muted-foreground">{p.notas}</Text>
+                  )}
+                </View>
+                <View className="items-end gap-0.5">
+                  <Text className="text-sm font-bold text-success">
+                    ${p.tarifa_dia.toLocaleString('es-CO')}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {p.plazas_cubiertas}/{p.plazas} plazas
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* ── CTA trabajador: Aplicar ──────────────────────────── */}
+          {isWorker && (
+            <View>
+              {yaAplicado ? (
+                <View className="bg-info/10 rounded-2xl px-5 py-4 flex-row items-center gap-3">
+                  <Ionicons name="checkmark-circle-outline" size={22} color="#3B82F6" />
+                  <Text className="text-sm font-semibold text-info">Ya estás postulado a este turno</Text>
+                </View>
+              ) : firstAvailablePuesto ? (
+                <Button
+                  label={aplicarM.isPending ? 'Enviando postulación…' : 'Aplicar a este turno'}
+                  variant="primary"
+                  fullWidth
+                  loading={aplicarM.isPending}
+                  onPress={handleAplicar}
+                />
+              ) : (
+                <View className="bg-muted rounded-2xl px-5 py-4 items-center">
+                  <Text className="text-sm text-muted-foreground">No hay plazas disponibles</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── Postulantes (gestores) ───────────────────────────── */}
+          {isGestor && (
+            <View className="bg-card rounded-2xl px-5 py-4"
+              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                Postulantes
+              </Text>
+              {!oferta.asignaciones?.length ? (
+                <Text className="text-sm text-muted-foreground py-2">Sin postulantes aún.</Text>
+              ) : (
+                oferta.asignaciones.map((a) => (
+                  <PostulanteRow
+                    key={a.id}
+                    asignacion={a}
+                    ofertaId={oferta.id}
+                    confirmarM={confirmarM}
+                    rechazarM={rechazarM}
+                    cancelarM={cancelarM}
+                    noPresentadoM={noPresentadoM}
+                  />
+                ))
+              )}
+            </View>
+          )}
+
+        </ScrollView>
+      </SafeAreaView>
+    </>
+  );
+}

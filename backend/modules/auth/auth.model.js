@@ -21,7 +21,8 @@ const AuthModel = {
   /** Perfil público del usuario por id (sin password_hash). */
   async buscarUsuarioPorId(id) {
     const [filas] = await pool.query(
-      `SELECT id, empresa_id, nombre, apellido, email, rol, activo, created_at
+      `SELECT id, empresa_id, nombre, apellido, foto_perfil, email, telefono, rol, activo, created_at,
+              (password_hash IS NOT NULL) AS has_password
        FROM usuarios WHERE id = ? LIMIT 1`,
       [id]
     );
@@ -112,12 +113,13 @@ const AuthModel = {
 
   // ─── Actualización de perfil ────────────────────────────────
 
-  async actualizarPerfil(id, { nombre, apellido, email }) {
+  async actualizarPerfil(id, { nombre, apellido, email, telefono }) {
     const updates = [];
     const params = [];
-    if (nombre !== undefined) { updates.push('nombre = ?'); params.push(nombre); }
-    if (apellido !== undefined) { updates.push('apellido = ?'); params.push(apellido); }
-    if (email !== undefined) { updates.push('email = ?'); params.push(email); }
+    if (nombre    !== undefined) { updates.push('nombre = ?');    params.push(nombre); }
+    if (apellido  !== undefined) { updates.push('apellido = ?');  params.push(apellido); }
+    if (email     !== undefined) { updates.push('email = ?');     params.push(email); }
+    if (telefono  !== undefined) { updates.push('telefono = ?');  params.push(telefono); }
     if (updates.length === 0) return;
     params.push(id);
     await pool.query(`UPDATE usuarios SET ${updates.join(', ')} WHERE id = ?`, params);
@@ -138,6 +140,10 @@ const AuthModel = {
     );
   },
 
+  async actualizarFotoPerfil(id, fotoB64) {
+    await pool.query('UPDATE usuarios SET foto_perfil = ? WHERE id = ?', [fotoB64, id]);
+  },
+
   // ─── Activación de cuenta (trabajadores) ────────────────────
 
   /** Trabajadores activos con una cédula dada (puede haber más de uno). */
@@ -147,6 +153,30 @@ const AuthModel = {
       [cedula]
     );
     return filas;
+  },
+
+  /**
+   * Verifica si una cédula tiene invitación pendiente de empresa.
+   * Retorna null si no existe trabajador, o un objeto con los datos relevantes.
+   */
+  async verificarCedula(cedula) {
+    const [filas] = await pool.query(
+      `SELECT t.id, t.tipo, t.usuario_id,
+              u.rol       AS rol_usuario,
+              te.estado   AS estado_vinculo,
+              e.nombre    AS empresa_nombre
+       FROM trabajadores t
+       LEFT JOIN usuarios u ON u.id = t.usuario_id
+       LEFT JOIN trabajador_empresa te
+         ON te.trabajador_id = t.id
+         AND te.estado = 'solicitado_por_empresa'
+       LEFT JOIN empresas e ON e.id = te.empresa_id
+       WHERE t.cedula = ? AND t.activo = 1
+       ORDER BY te.id DESC
+       LIMIT 1`,
+      [cedula]
+    );
+    return filas[0] ?? null;
   },
 
   /**
@@ -191,13 +221,42 @@ const AuthModel = {
    * Sin transacción: no hay tabla secundaria que actualizar.
    * @returns {Promise<number>} id del usuario creado.
    */
-  async registrarTrabajadorLibre({ nombre, apellido, email, password_hash }) {
+  async registrarTrabajadorLibre({ nombre, apellido, email, telefono, password_hash }) {
     const [res] = await pool.query(
-      `INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol)
-       VALUES (NULL, ?, ?, ?, ?, 'trabajador_turnos')`,
-      [nombre, apellido || null, email, password_hash]
+      `INSERT INTO usuarios (empresa_id, nombre, apellido, email, telefono, password_hash, rol)
+       VALUES (NULL, ?, ?, ?, ?, ?, 'trabajador_turnos')`,
+      [nombre, apellido || null, email, telefono || null, password_hash]
     );
     return res.insertId;
+  },
+
+  /**
+   * Crea una empresa nueva y su primer usuario admin_empresa en una transacción.
+   * @returns {{ empresaId: number, usuarioId: number }}
+   */
+  async registrarEmpresa({ nombreEmpresa, slug, nit, descripcion, actividad, telefono, emailEmpresa, direccion, ciudad, nombre, apellido, email, passwordHash }) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [empRes] = await conn.query(
+        `INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico')`,
+        [nombreEmpresa, slug, nit || null, descripcion || null, actividad || null, telefono || null, emailEmpresa || null, direccion || null, ciudad || null]
+      );
+      const empresaId = empRes.insertId;
+      const [usrRes] = await conn.query(
+        `INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol)
+         VALUES (?, ?, ?, ?, ?, 'admin_empresa')`,
+        [empresaId, nombre, apellido || null, email, passwordHash]
+      );
+      await conn.commit();
+      return { empresaId, usuarioId: usrRes.insertId };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 
   /** Crea un usuario gestor (jefe_turnos, jefe_nomina, nomina) para una empresa. */

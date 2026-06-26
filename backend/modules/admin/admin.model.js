@@ -32,6 +32,7 @@ const AdminModel = {
     const [filas] = await pool.query(
       `SELECT
          e.id, e.nombre, e.slug, e.nit, e.ciudad, e.activo, e.plan,
+         e.suscripcion_vigente_hasta, e.suscripcion_origen,
          e.acepta_postulaciones, e.logo_url, e.descripcion, e.created_at,
          COUNT(DISTINCT t.id)  AS total_trabajadores,
          COUNT(DISTINCT u.id)  AS total_usuarios
@@ -58,6 +59,7 @@ const AdminModel = {
     const [filas] = await pool.query(
       `SELECT
          e.id, e.nombre, e.slug, e.nit, e.ciudad, e.activo, e.plan,
+         e.suscripcion_vigente_hasta, e.suscripcion_origen,
          e.acepta_postulaciones, e.logo_url, e.descripcion, e.created_at,
          COUNT(DISTINCT t.id)  AS total_trabajadores,
          COUNT(DISTINCT u.id)  AS total_usuarios,
@@ -108,6 +110,22 @@ const AdminModel = {
   /** Activa o desactiva una empresa. */
   async cambiarEstado(id, activo) {
     await pool.query('UPDATE empresas SET activo = ? WHERE id = ?', [activo ? 1 : 0, id]);
+  },
+
+  /**
+   * Actualiza la suscripción de una empresa.
+   * vigente_hasta null = acceso indefinido.
+   * Exportado para uso en Wompi webhook y logiq360 pairing.
+   */
+  async actualizarSuscripcion(id, { plan, vigente_hasta, origen }) {
+    const sets = [];
+    const vals = [];
+    if (plan !== undefined)        { sets.push('plan = ?');                     vals.push(plan); }
+    if (vigente_hasta !== undefined){ sets.push('suscripcion_vigente_hasta = ?'); vals.push(vigente_hasta); }
+    if (origen !== undefined)      { sets.push('suscripcion_origen = ?');        vals.push(origen); }
+    if (sets.length === 0) return;
+    vals.push(id);
+    await pool.query(`UPDATE empresas SET ${sets.join(', ')} WHERE id = ?`, vals);
   },
 
   /** Verifica si un slug ya existe (para validar unicidad al crear). */

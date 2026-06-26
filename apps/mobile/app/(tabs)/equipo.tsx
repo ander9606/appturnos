@@ -14,9 +14,11 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TextInput,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,9 +26,12 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { useTrabajadores } from '@/features/equipo/useEquipo';
+import { useTrabajadores, useMe } from '@/features/equipo/useEquipo';
 import { useMisEmpresas, useSolicitudes } from '@/features/empresas/useTrabajadorEmpresa';
+import { useMisTurnos } from '@/features/turnos/useTurnos';
+import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { COLORS } from '@/lib/designTokens';
+import { useTheme } from '@/lib/theme';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
 
@@ -34,70 +39,247 @@ import type { Trabajador, TipoTrabajador } from '@api-client';
 
 const MANAGE_ROLES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
 
-// ── Worker view ───────────────────────────────────────────────────────────
+// ── Nomina worker view — Mi empresa (singular) ───────────────────────────
 
-function WorkerView() {
-  const router = useRouter();
-  const rol    = useAuthStore((s) => s.usuario?.rol);
-  // Only trabajador_turnos can call mis-empresas; trabajador_nomina gets a 403
-  const { data, isLoading } = useMisEmpresas({ enabled: rol === 'trabajador_turnos' });
-  const activas     = data?.activas     ?? [];
-  const pendientes  = data?.pendientes  ?? [];
-  const invitaciones = data?.invitaciones ?? [];
+function MiEmpresaNominaView() {
+  const { data: perfil, isLoading } = useNominaPerfil();
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
+        <ActivityIndicator color="#64748B" />
+      </SafeAreaView>
+    );
+  }
+
+  const cargos = perfil?.cargos ?? [];
+  const cargoTexto = perfil?.cargo ?? null;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <View className="px-5 pt-4 pb-3">
-        <Text className="text-2xl font-bold text-foreground">Mis empresas</Text>
+        <Text className="text-2xl font-bold text-foreground">Mi empresa</Text>
         <Text className="text-sm text-muted-foreground mt-0.5">
-          Gestiona tus vínculos con empresas
+          Tu vínculo laboral actual
         </Text>
       </View>
 
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#FF5A3C" />
+      <View className="px-5 gap-3">
+        {/* Empresa */}
+        <View className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center gap-4">
+          <View className="w-12 h-12 rounded-2xl bg-primary/10 items-center justify-center">
+            <Ionicons name="business-outline" size={22} color="#FF5A3C" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-bold text-foreground">
+              {perfil?.empresa_nombre ?? '—'}
+            </Text>
+            <Text className="text-xs text-muted-foreground mt-0.5">Empresa empleadora</Text>
+          </View>
         </View>
-      ) : (
-        <View className="px-5 gap-3">
-          {/* Stats row */}
-          <View className="flex-row gap-3">
-            <View className="flex-1 bg-card rounded-2xl border border-border p-4 items-center">
-              <Text className="text-2xl font-bold text-success">{activas.length}</Text>
-              <Text className="text-xs text-muted-foreground mt-0.5">Activas</Text>
+
+        {/* Cargo de texto (campo libre del trabajador) */}
+        {cargoTexto && (
+          <View className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center gap-4">
+            <View className="w-12 h-12 rounded-2xl bg-blue-50 items-center justify-center">
+              <Ionicons name="briefcase-outline" size={22} color="#3B82F6" />
             </View>
-            <View className="flex-1 bg-card rounded-2xl border border-border p-4 items-center">
-              <Text className="text-2xl font-bold text-warning">{pendientes.length}</Text>
-              <Text className="text-xs text-muted-foreground mt-0.5">Pendientes</Text>
+            <View className="flex-1">
+              <Text className="text-base font-semibold text-foreground">{cargoTexto}</Text>
+              <Text className="text-xs text-muted-foreground mt-0.5">Cargo</Text>
             </View>
-            {invitaciones.length > 0 && (
-              <View className="flex-1 bg-primary-50 rounded-2xl border border-primary-200 p-4 items-center">
-                <Text className="text-2xl font-bold text-primary-500">{invitaciones.length}</Text>
-                <Text className="text-xs text-muted-foreground mt-0.5">Invitaciones</Text>
+          </View>
+        )}
+
+        {/* Cargos certificados (del catálogo de la empresa) */}
+        {cargos.length > 0 && (
+          <View className="bg-card rounded-2xl border border-border overflow-hidden">
+            <View className="px-5 py-3 border-b border-border">
+              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Cargos que desempeña
+              </Text>
+            </View>
+            {cargos.map((c, i) => (
+              <View
+                key={c.id}
+                className={`px-5 py-3 flex-row items-center gap-3 ${i > 0 ? 'border-t border-border' : ''}`}
+              >
+                <Ionicons name="checkmark-circle-outline" size={16} color="#22C55E" />
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-foreground">{c.nombre}</Text>
+                  {c.codigo && (
+                    <Text className="text-xs text-muted-foreground">{c.codigo}</Text>
+                  )}
+                </View>
               </View>
-            )}
+            ))}
+          </View>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+// ── Worker view — Mi perfil laboral ──────────────────────────────────────
+
+function WorkerView() {
+  const router  = useRouter();
+  const usuario = useAuthStore((s) => s.usuario);
+  const theme   = useTheme();
+
+  const { data: perfil, isLoading, refetch, isRefetching } = useMe();
+  const { data: turnos = [] } = useMisTurnos();
+
+  const completados = turnos.filter((t) => t.estado === 'completado').length;
+  const cargos      = perfil?.cargos      ?? [];
+  const experiencias = perfil?.experiencias ?? [];
+  const diplomas    = perfil?.diplomas     ?? [];
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
+        <ActivityIndicator color={theme.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} colors={[theme.primary]} />
+        }
+      >
+        {/* ── Hero ─────────────────────────────────────────────────── */}
+        <View className="pt-6 pb-8 px-6 rounded-b-[32px] items-center gap-3" style={{ backgroundColor: theme.primary }}>
+          <View className="w-20 h-20 rounded-full bg-white/20 items-center justify-center">
+            <Text className="text-3xl font-bold text-white">
+              {(usuario?.nombre?.[0] ?? '?').toUpperCase()}
+            </Text>
+          </View>
+          <View className="items-center gap-0.5">
+            <Text className="text-xl font-bold text-white">{usuario?.nombre} {perfil?.apellido ?? ''}</Text>
+            <Text className="text-sm text-white/70">{perfil?.cargo ?? 'Trabajador de turnos'}</Text>
+          </View>
+          {/* Ranking */}
+          {perfil?.ranking != null && (
+            <View className="flex-row items-center gap-1 bg-white/15 px-3 py-1.5 rounded-full">
+              <Ionicons name="star" size={14} color="#FCD34D" />
+              <Text className="text-sm font-bold text-white">{perfil.ranking.toFixed(1)}</Text>
+              <Text className="text-xs text-white/70">· {perfil.total_calificaciones} calif.</Text>
+            </View>
+          )}
+        </View>
+
+        <View className="px-5 pt-5 gap-4">
+
+          {/* ── Stats ─────────────────────────────────────────────── */}
+          <View className="flex-row gap-3">
+            <View className="flex-1 bg-card rounded-2xl border border-border p-4 items-center gap-0.5">
+              <Text className="text-2xl font-bold text-success">{completados}</Text>
+              <Text className="text-xs text-muted-foreground">Completados</Text>
+            </View>
+            <View className="flex-1 bg-card rounded-2xl border border-border p-4 items-center gap-0.5">
+              <Text className="text-2xl font-bold text-info">{cargos.length}</Text>
+              <Text className="text-xs text-muted-foreground">Cargos</Text>
+            </View>
+            <View className="flex-1 bg-card rounded-2xl border border-border p-4 items-center gap-0.5">
+              <Text className="text-2xl font-bold text-foreground">{experiencias.length}</Text>
+              <Text className="text-xs text-muted-foreground">Experiencias</Text>
+            </View>
           </View>
 
-          {/* CTA */}
+          {/* ── Cargos ───────────────────────────────────────────── */}
+          {cargos.length > 0 && (
+            <View className="bg-card rounded-2xl border border-border overflow-hidden">
+              <View className="px-5 py-3 border-b border-border">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cargos que desempeña</Text>
+              </View>
+              {cargos.map((c, i) => (
+                <View key={c.id} className={`px-5 py-3 flex-row items-center gap-3 ${i > 0 ? 'border-t border-border' : ''}`}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#22C55E" />
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-foreground">{c.nombre}</Text>
+                    {c.codigo && <Text className="text-xs text-muted-foreground">{c.codigo}</Text>}
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ── Experiencia ──────────────────────────────────────── */}
+          {experiencias.length > 0 && (
+            <View className="bg-card rounded-2xl border border-border overflow-hidden">
+              <View className="px-5 py-3 border-b border-border">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Experiencia laboral</Text>
+              </View>
+              {experiencias.map((e, i) => (
+                <View key={e.id} className={`px-5 py-3 gap-0.5 ${i > 0 ? 'border-t border-border' : ''}`}>
+                  <Text className="text-sm font-semibold text-foreground">{e.cargo}</Text>
+                  <Text className="text-xs text-muted-foreground">{e.empresa_nombre}</Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {e.fecha_inicio?.slice(0, 7)} – {e.fecha_fin?.slice(0, 7) ?? 'presente'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ── Diplomas ─────────────────────────────────────────── */}
+          {diplomas.length > 0 && (
+            <View className="bg-card rounded-2xl border border-border overflow-hidden">
+              <View className="px-5 py-3 border-b border-border">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Formación y diplomas</Text>
+              </View>
+              {diplomas.map((d, i) => (
+                <View key={d.id} className={`px-5 py-3 gap-0.5 ${i > 0 ? 'border-t border-border' : ''}`}>
+                  <Text className="text-sm font-semibold text-foreground">{d.titulo}</Text>
+                  <Text className="text-xs text-muted-foreground">{d.institucion}{d.anio ? ` · ${d.anio}` : ''}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* ── Datos de contacto / pago ─────────────────────────── */}
+          <View className="bg-card rounded-2xl border border-border overflow-hidden">
+            <View className="px-5 py-3 border-b border-border">
+              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mis datos</Text>
+            </View>
+            {[
+              { label: 'Teléfono',   value: perfil?.telefono,       icon: 'call-outline' as const },
+              { label: 'EPS',        value: perfil?.eps,            icon: 'medkit-outline' as const },
+              { label: 'AFP',        value: perfil?.afp,            icon: 'shield-outline' as const },
+              { label: 'Banco',      value: perfil?.banco,          icon: 'card-outline' as const },
+            ].filter((r) => r.value).map((row, i) => (
+              <View key={row.label} className={`px-5 py-3 flex-row items-center gap-3 ${i > 0 ? 'border-t border-border' : ''}`}>
+                <Ionicons name={row.icon} size={16} color="#94A3B8" />
+                <Text className="text-xs text-muted-foreground w-20">{row.label}</Text>
+                <Text className="text-sm text-foreground flex-1">{row.value}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* ── Empresas ─────────────────────────────────────────── */}
           <Pressable
             onPress={() => router.push('/mis-empresas')}
             className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
           >
             <View className="flex-row items-center gap-3">
-              <View className="w-10 h-10 rounded-xl bg-primary-50 items-center justify-center">
-                <Ionicons name="business-outline" size={20} color="#FF5A3C" />
+              <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: theme.primary + '18' }}>
+                <Ionicons name="business-outline" size={20} color={theme.primary} />
               </View>
               <View>
-                <Text className="text-sm font-semibold text-foreground">Gestionar vínculos</Text>
-                <Text className="text-xs text-muted-foreground mt-0.5">
-                  Solicitudes, invitaciones y empresas activas
-                </Text>
+                <Text className="text-sm font-semibold text-foreground">Mis empresas</Text>
+                <Text className="text-xs text-muted-foreground mt-0.5">Vínculos, solicitudes e invitaciones</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
           </Pressable>
+
         </View>
-      )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -155,7 +337,7 @@ export default function EquipoScreen() {
   // ── Vista trabajador ──────────────────────────────────────────────────
 
   if (!canManage) {
-    return <WorkerView />;
+    return usuario?.rol === 'trabajador_nomina' ? <MiEmpresaNominaView /> : <WorkerView />;
   }
 
   // ── Filtrado local por búsqueda ────────────────────────────────────────

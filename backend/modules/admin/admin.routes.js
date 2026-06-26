@@ -95,6 +95,39 @@ router.put(
   ctrl.actualizarEmpresa
 );
 
+// POST /api/admin/empresas/:id/link-pago
+router.post(
+  '/empresas/:id/link-pago',
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('plan').isIn(['basico', 'profesional', 'empresarial']).withMessage('plan requerido'),
+    body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
+  ],
+  validar,
+  ctrl.generarLinkPago
+);
+
+// PATCH /api/admin/empresas/:id/suscripcion
+router.patch(
+  '/empresas/:id/suscripcion',
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('plan').optional().isIn(['basico', 'profesional', 'empresarial']),
+    body('vigente_hasta').optional({ nullable: true }).custom((v) => {
+      if (v === null) return true;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error('vigente_hasta debe ser YYYY-MM-DD o null');
+      return true;
+    }),
+    body('origen').optional().isIn(['manual', 'wompi', 'logiq360']),
+  ],
+  validar,
+  ctrl.gestionarSuscripcion
+);
+
 // PATCH /api/admin/empresas/:id/estado
 router.patch(
   '/empresas/:id/estado',

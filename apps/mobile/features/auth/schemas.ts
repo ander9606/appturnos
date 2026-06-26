@@ -56,6 +56,10 @@ export const registroSchema = z
       .string({ required_error: 'El correo es obligatorio' })
       .email('Introduce un correo válido')
       .transform((v) => v.trim().toLowerCase()),
+    telefono: z
+      .string({ required_error: 'El teléfono es obligatorio' })
+      .min(7, 'Introduce un número de teléfono válido')
+      .transform((v) => v.trim()),
     password: z
       .string({ required_error: 'La contraseña es obligatoria' })
       .min(8, 'La contraseña debe tener al menos 8 caracteres'),
@@ -69,3 +73,12 @@ export const registroSchema = z
   });
 
 export type RegistroFormData = z.infer<typeof registroSchema>;
+
+export const otpSchema = z.object({
+  codigo: z
+    .string({ required_error: 'El código es obligatorio' })
+    .length(6, 'El código tiene 6 dígitos')
+    .regex(/^\d{6}$/, 'Solo dígitos'),
+});
+
+export type OtpFormData = z.infer<typeof otpSchema>;

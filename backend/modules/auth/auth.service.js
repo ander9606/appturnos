@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 
 const AuthModel = require('./auth.model');
-const TokenService = require('../../utils/TokenService');
+const { generarAccessToken, generarRefreshToken, fechaExpiracionRefresh } = require('../../utils/TokenService');
 const AppError = require('../../utils/AppError');
 const { ROLES, LOGIN } = require('../../config/constants');
 
@@ -20,12 +20,12 @@ const ROL_POR_TIPO = {
 
 /** Construye el par de tokens y persiste el refresh token. */
 async function emitirTokens(usuario) {
-  const accessToken = TokenService.generarAccessToken(usuario);
-  const refreshToken = TokenService.generarRefreshToken();
+  const accessToken = generarAccessToken(usuario);
+  const refreshToken = generarRefreshToken();
   await AuthModel.guardarRefreshToken({
     usuario_id: usuario.id,
     token: refreshToken,
-    expira_at: TokenService.fechaExpiracionRefresh(),
+    expira_at: fechaExpiracionRefresh(),
   });
   return { access_token: accessToken, refresh_token: refreshToken };
 }
@@ -37,8 +37,11 @@ function perfilPublico(u) {
     empresa_id: u.empresa_id,
     nombre: u.nombre,
     apellido: u.apellido,
+    foto_perfil: u.foto_perfil ?? null,
     email: u.email,
+    telefono: u.telefono ?? null,
     rol: u.rol,
+    has_password: !!u.password_hash,
   };
 }
 
@@ -126,6 +129,25 @@ const AuthService = {
    * Activa la cuenta de un trabajador que aún no tiene login.
    * Crea el usuario (rol según `trabajador.tipo`) y lo vincula.
    */
+  async verificarCedula(cedula) {
+    const fila = await AuthModel.verificarCedula(cedula);
+    if (!fila) return { existe: false };
+
+    // Determinar el label de tipo/rol más específico disponible
+    const tipo = fila.rol_usuario
+      ? (fila.rol_usuario === 'nomina' ? 'nomina_gestor' : fila.rol_usuario)
+      : fila.tipo;
+
+    return {
+      existe: true,
+      tiene_cuenta: !!fila.usuario_id,
+      tipo,
+      invitacion: fila.estado_vinculo === 'solicitado_por_empresa'
+        ? { empresa_nombre: fila.empresa_nombre }
+        : null,
+    };
+  },
+
   async activarCuenta({ cedula, email, password }) {
     const trabajadores = await AuthModel.buscarTrabajadoresPorCedula(cedula);
     if (trabajadores.length === 0) {
@@ -170,16 +192,16 @@ const AuthService = {
       throw err;
     }
 
-    // Crear solicitudes de vinculación para las empresas pre-seleccionadas.
+    const TrabajadorEmpresaModel = require('../trabajador-empresa/trabajador-empresa.model');
+    const ESTADOS = require('../../config/constants').ESTADOS_TRABAJADOR_EMPRESA;
+
+    // Crear solicitudes de vinculación para las empresas pre-seleccionadas (iniciadas por el trabajador).
     if (rol === ROLES.TRABAJADOR_TURNOS && trabajador.empresas_postulacion) {
-      const empresaIds = Array.isArray(trabajador.empresas_postulacion)
+      const postulaciones = Array.isArray(trabajador.empresas_postulacion)
         ? trabajador.empresas_postulacion
         : JSON.parse(trabajador.empresas_postulacion);
 
-      const TrabajadorEmpresaModel = require('../trabajador-empresa/trabajador-empresa.model');
-      const ESTADOS = require('../../config/constants').ESTADOS_TRABAJADOR_EMPRESA;
-
-      for (const empId of empresaIds) {
+      for (const empId of postulaciones) {
         try {
           const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empId);
           if (!existente) {
@@ -190,9 +212,38 @@ const AuthService = {
               iniciadoPor: 'trabajador',
             });
           }
-        } catch (_e) {
-          // Ignorar errores individuales — no bloquear la activación
-        }
+        } catch (_e) { /* no bloquear la activación */ }
+      }
+    }
+
+    // Crear invitaciones pendientes de empresa (admin invitó por cédula sin cuenta previa).
+    if (trabajador.empresas_invitacion) {
+      const invitaciones = Array.isArray(trabajador.empresas_invitacion)
+        ? trabajador.empresas_invitacion
+        : JSON.parse(trabajador.empresas_invitacion);
+
+      for (const empId of invitaciones) {
+        try {
+          const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empId);
+          if (!existente) {
+            const teId = await TrabajadorEmpresaModel.crear({
+              usuarioId,
+              empresaId: empId,
+              estado: ESTADOS.SOLICITADO_POR_EMPRESA,
+              iniciadoPor: 'empresa',
+            });
+            await TrabajadorEmpresaModel.cambiarEstado(teId, ESTADOS.SOLICITADO_POR_EMPRESA, { trabajadorId: trabajador.id });
+          }
+        } catch (_e) { /* no bloquear la activación */ }
+      }
+
+      if (invitaciones.length > 0) {
+        const PushService = require('../notificaciones/push/push.service');
+        PushService.enviarExpo(usuarioId, {
+          titulo: invitaciones.length > 1 ? `${invitaciones.length} empresas te han invitado` : 'Tienes una invitación pendiente',
+          mensaje: 'Revisa tus invitaciones en la app.',
+          data: { tipo: 'invitacion_empresa' },
+        }).catch(() => {});
       }
     }
 
@@ -210,6 +261,11 @@ const AuthService = {
       }
     }
     await AuthModel.actualizarPerfil(usuarioId, datos);
+    return AuthService.perfil(usuarioId);
+  },
+
+  async actualizarFoto(usuarioId, fotoB64) {
+    await AuthModel.actualizarFotoPerfil(usuarioId, fotoB64 || null);
     return AuthService.perfil(usuarioId);
   },
 
@@ -233,7 +289,7 @@ const AuthService = {
    * No requiere cédula ni empresa preexistente: cualquier persona puede
    * registrarse y luego solicitar vinculación a empresas desde el directorio.
    */
-  async registrarLibre({ nombre, apellido, email, password }) {
+  async registrarLibre({ nombre, apellido, email, telefono, password }) {
     const emailEnUso = await AuthModel.buscarUsuarioPorEmail(email);
     if (emailEnUso) {
       throw new AppError('El email ya está registrado', 409);
@@ -244,6 +300,7 @@ const AuthService = {
       nombre,
       apellido: apellido || null,
       email,
+      telefono: telefono || null,
       password_hash: passwordHash,
     });
 
@@ -265,6 +322,30 @@ const AuthService = {
         email,
         rol: ROLES.TRABAJADOR_TURNOS,
       },
+    };
+  },
+
+  /**
+   * Registro público de empresa nueva.
+   * Crea empresa + usuario admin_empresa en una transacción y devuelve tokens.
+   */
+  async registrarEmpresa({ nombreEmpresa, nit, descripcion, actividad, telefono, emailEmpresa, direccion, ciudad, nombre, apellido, email, password }) {
+    const existente = await AuthModel.buscarUsuarioPorEmail(email);
+    if (existente) throw new AppError('El email ya está registrado', 409);
+
+    const base = nombreEmpresa.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slug = `${base}-${crypto.randomBytes(3).toString('hex')}`;
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const { empresaId, usuarioId } = await AuthModel.registrarEmpresa({
+      nombreEmpresa, slug, nit, descripcion, actividad, telefono, emailEmpresa, direccion, ciudad, nombre, apellido, email, passwordHash,
+    });
+
+    const usuario = { id: usuarioId, empresa_id: empresaId, rol: ROLES.ADMIN_EMPRESA, nombre };
+    const tokens = await emitirTokens(usuario);
+    return {
+      ...tokens,
+      usuario: { id: usuarioId, empresa_id: empresaId, nombre, apellido: apellido || null, email, rol: ROLES.ADMIN_EMPRESA },
     };
   },
 

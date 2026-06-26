@@ -57,6 +57,36 @@ const AsignacionesService = {
   },
 
   async confirmar(empresaId, id) {
+    // Para trabajadores_nomina: verificar que el turno no solape con jornada ya registrada.
+    const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
+    if (asig) {
+      const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asig.trabajador_id);
+      if (trabajador?.rol === 'trabajador_nomina' || trabajador?.usuario_rol === 'trabajador_nomina') {
+        // Obtener detalle de la oferta para hora_inicio / hora_fin_estimada
+        const [[ofertaRow]] = await pool.query(
+          `SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada
+           FROM asignaciones_turno a
+           JOIN ofertas_turno o ON o.id = a.oferta_id
+           WHERE a.id = ? AND a.empresa_id = ?`,
+          [id, empresaId]
+        );
+        if (ofertaRow) {
+          const horaFin = ofertaRow.hora_fin_estimada || '23:59:00';
+          const [[solapado]] = await pool.query(
+            `SELECT id FROM registros_diarios
+             WHERE empresa_id = ? AND trabajador_id = ? AND fecha = ?
+               AND hora_entrada IS NOT NULL
+               AND hora_entrada < ? AND COALESCE(hora_salida,'23:59:00') > ?
+             LIMIT 1`,
+            [empresaId, asig.trabajador_id, ofertaRow.fecha, horaFin, ofertaRow.hora_inicio]
+          );
+          if (solapado) {
+            throw new AppError('Conflicto con jornada laboral registrada para ese día y horario', 409);
+          }
+        }
+      }
+    }
+
     const res = await AsignacionesModel.confirmar(empresaId, id);
     if (!res.ok) {
       const errores = {
@@ -106,8 +136,8 @@ const AsignacionesService = {
     return asignacion;
   },
 
-  async cancelar(empresaId, id) {
-    const res = await AsignacionesModel.cancelar(empresaId, id);
+  async cancelar(empresaId, id, gestorId) {
+    const res = await AsignacionesModel.cancelar(empresaId, id, gestorId);
     if (!res.ok) {
       const errores = {
         no_existe: ['Asignación no encontrada', 404],
@@ -143,8 +173,8 @@ const AsignacionesService = {
     return asignacion;
   },
 
-  async rechazar(empresaId, id) {
-    const res = await AsignacionesModel.rechazar(empresaId, id);
+  async rechazar(empresaId, id, gestorId) {
+    const res = await AsignacionesModel.rechazar(empresaId, id, gestorId);
     if (!res.ok) {
       const errores = {
         no_existe: ['Asignación no encontrada', 404],
@@ -226,10 +256,10 @@ const AsignacionesService = {
 
     await AsignacionesModel.registrarIngreso(dbEmpresaId, id, latitud, longitud);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.ingreso', {
-      external_ref: asignacion.oferta_external_ref || null,
+      external_ref:  asignacion.oferta_external_ref || null,
+      empleado_ref:  asignacion.trabajador_external_ref || null,
       asignacion_id: id,
-      oferta_id: asignacion.oferta_id,
-      trabajador_id: asignacion.trabajador_id,
+      hora_ingreso:  new Date().toISOString(),
       latitud,
       longitud,
     });
@@ -272,17 +302,125 @@ const AsignacionesService = {
       throw new AppError('Debes marcar el ingreso antes de marcar la salida', 409);
     }
 
+    const minutosTranscurridos = Math.floor((Date.now() - new Date(asignacion.hora_ingreso_real)) / 60_000);
+    if (minutosTranscurridos < 1) {
+      throw new AppError('Debes esperar al menos 1 minuto entre el ingreso y la salida', 422);
+    }
+
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
-      external_ref: asignacion.oferta_external_ref || null,
+      external_ref:  asignacion.oferta_external_ref || null,
+      empleado_ref:  asignacion.trabajador_external_ref || null,
       asignacion_id: id,
-      oferta_id: asignacion.oferta_id,
-      trabajador_id: asignacion.trabajador_id,
+      hora_egreso:   new Date().toISOString(),
     });
     // Si este egreso completó la oferta entera, emite costo_labor.calculado
     // a logiq360 y marca la oferta como completada (best-effort).
     await CostoLaborService.verificarYEmitir(dbEmpresaId, asignacion.oferta_id);
     return AsignacionesModel.obtenerPorId(dbEmpresaId, id);
+  },
+
+  /**
+   * Asignación directa por gestor/admin: crea la asignación confirmada sin que el
+   * trabajador tenga que postularse primero. Útil para cuadrar equipos rápido.
+   */
+  async asignarDirecto(empresaId, ofertaId, { puesto_id, trabajador_id }) {
+    const res = await AsignacionesModel.asignarDirecto(empresaId, ofertaId, puesto_id, trabajador_id);
+    if (!res.ok) {
+      const errores = {
+        oferta:    ['La oferta no está disponible para asignaciones', 409],
+        puesto:    ['El puesto no pertenece a esta oferta', 400],
+        lleno:     ['El puesto ya no tiene plazas disponibles', 409],
+        traslape:  ['El trabajador ya tiene un turno confirmado en ese horario', 409],
+        duplicado: ['El trabajador ya está asignado a este puesto', 409],
+      };
+      const [mensaje, codigo] = errores[res.motivo];
+      throw new AppError(mensaje, codigo);
+    }
+
+    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, res.asignacionId);
+    const detalles   = await AsignacionesModel.obtenerConDetalles(empresaId, res.asignacionId).catch(() => null);
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajador_id);
+
+    if (detalles) {
+      const fecha = fmtFechaCorta(detalles.oferta_fecha);
+      const hora  = detalles.hora_inicio?.slice(0, 5) ?? '';
+      const lugar = detalles.lugar ? ` · ${detalles.lugar}` : '';
+      const cargo = detalles.cargo_nombre ? ` como ${detalles.cargo_nombre}` : '';
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajador?.usuario_id,
+        tipo: 'postulacion.confirmada',
+        titulo: 'Turno asignado',
+        mensaje: `Fuiste asignado${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`,
+        data: { asignacion_id: res.asignacionId, oferta_id: ofertaId },
+      });
+
+      if (detalles.oferta_external_ref) {
+        await IntegracionService.emitir(empresaId, 'asignacion.confirmada', {
+          external_ref:  detalles.oferta_external_ref,
+          empleado_ref:  detalles.trabajador_external_ref || null,
+          nombre:        detalles.trabajador_nombre,
+          apellido:      detalles.trabajador_apellido,
+          rol:           detalles.cargo_codigo || 'operario',
+        });
+      }
+    }
+
+    return asignacion;
+  },
+
+  /**
+   * Corrección manual de ingreso y/o egreso por jefe_turnos / admin_empresa.
+   * No requiere GPS ni firma digital. Recalcula horas_trabajadas si ambos extremos están presentes.
+   * Estados permitidos: confirmado, en_progreso, completado.
+   */
+  async corregir(empresaId, id, usuarioId, { hora_ingreso_real, hora_egreso_real }) {
+    const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
+    if (!asig) throw new AppError('Asignación no encontrada', 404);
+    if (!['confirmado', 'en_progreso', 'completado'].includes(asig.estado)) {
+      throw new AppError('Solo se pueden corregir asignaciones confirmadas, en progreso o completadas', 409);
+    }
+
+    const horaIngreso = hora_ingreso_real !== undefined ? hora_ingreso_real : asig.hora_ingreso_real;
+    const horaEgreso  = hora_egreso_real  !== undefined ? hora_egreso_real  : asig.hora_egreso_real;
+
+    if (horaIngreso && horaEgreso && new Date(horaEgreso) <= new Date(horaIngreso)) {
+      throw new AppError('La hora de egreso debe ser posterior al ingreso', 422);
+    }
+
+    let estadoNuevo;
+    let horasTrabajadas;
+    if (horaIngreso && horaEgreso) {
+      estadoNuevo    = 'completado';
+      horasTrabajadas = (new Date(horaEgreso) - new Date(horaIngreso)) / 3_600_000;
+    } else if (horaIngreso) {
+      estadoNuevo    = 'en_progreso';
+      horasTrabajadas = null;
+    } else {
+      estadoNuevo    = 'confirmado';
+      horasTrabajadas = null;
+    }
+
+    await AsignacionesModel.corregir(empresaId, id, { horaIngreso, horaEgreso, horasTrabajadas, estado: estadoNuevo });
+
+    const resultado = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+
+    if (resultado?.oferta_external_ref) {
+      await IntegracionService.emitir(empresaId, 'trabajador.correccion_horas', {
+        external_ref:  resultado.oferta_external_ref,
+        empleado_ref:  resultado.trabajador_external_ref || null,
+        asignacion_id: id,
+        hora_ingreso:  horaIngreso ?? null,
+        hora_egreso:   horaEgreso  ?? null,
+      });
+    }
+
+    if (estadoNuevo === 'completado') {
+      await CostoLaborService.verificarYEmitir(empresaId, asig.oferta_id);
+    }
+
+    return resultado;
   },
 
   async marcarNoPresentado(empresaId, id) {
@@ -296,7 +434,7 @@ const AsignacionesService = {
       throw new AppError(mensaje, codigo);
     }
 
-    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, res.trabajador_id);
 
     if (trabajador) {
@@ -309,6 +447,12 @@ const AsignacionesService = {
         data: { asignacion_id: id, oferta_id: res.oferta_id },
       });
     }
+
+    await IntegracionService.emitir(empresaId, 'trabajador.no_presentado', {
+      external_ref: asignacion?.oferta_external_ref || null,
+      empleado_ref: asignacion?.trabajador_external_ref || null,
+      asignacion_id: id,
+    });
 
     return asignacion;
   },

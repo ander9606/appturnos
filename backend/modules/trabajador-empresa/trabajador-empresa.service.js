@@ -117,15 +117,27 @@ const TrabajadorEmpresaService = {
     }
 
     // Si no hay usuario aún, no podemos crear el link de trabajador_empresa todavía.
-    // Lo hacemos cuando active la cuenta.
+    // Guardamos el empresa_id en empresas_invitacion para que activarCuenta lo procese.
     if (!usuarioId) {
-      // Guardar marcador en trabajadores para que activarCuenta lo encuentre.
+      await pool.query(
+        `UPDATE trabajadores
+         SET empresas_invitacion = JSON_ARRAY_APPEND(COALESCE(empresas_invitacion, JSON_ARRAY()), '$', ?)
+         WHERE id = ?`,
+        [empresaId, trabajadorId]
+      );
       return {
         mensaje: 'Trabajador no tiene cuenta. Se creó la ficha. Al activar cuenta quedará vinculado.',
         trabajador_id: trabajadorId,
         pendiente_activacion: true,
       };
     }
+
+    const PushService = require('../notificaciones/push/push.service');
+    const pushInvitacion = () => PushService.enviarExpo(usuarioId, {
+      titulo: 'Nueva invitación de empresa',
+      mensaje: 'Una empresa te ha invitado a unirte. Revisa tus invitaciones.',
+      data: { tipo: 'invitacion_empresa', empresa_id: empresaId },
+    }).catch(() => {});
 
     // Ya tiene cuenta: crear relación.
     const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empresaId);
@@ -138,6 +150,7 @@ const TrabajadorEmpresaService = {
         trabajadorId,
         motivo: null,
       });
+      pushInvitacion();
       return TrabajadorEmpresaModel.obtenerPorId(existente.id);
     }
 
@@ -149,6 +162,7 @@ const TrabajadorEmpresaService = {
     });
     // Actualizar trabajador_id en la relación recién creada.
     await TrabajadorEmpresaModel.cambiarEstado(id, E.SOLICITADO_POR_EMPRESA, { trabajadorId });
+    pushInvitacion();
     return TrabajadorEmpresaModel.obtenerPorId(id);
   },
 

@@ -28,12 +28,12 @@ async function confirmar(req, res) {
 }
 
 async function cancelar(req, res) {
-  const data = await AsignacionesService.cancelar(req.empresa_id, Number(req.params.id));
+  const data = await AsignacionesService.cancelar(req.empresa_id, Number(req.params.id), req.usuario.sub);
   res.json({ success: true, data, message: 'Asignación cancelada' });
 }
 
 async function rechazar(req, res) {
-  const data = await AsignacionesService.rechazar(req.empresa_id, Number(req.params.id));
+  const data = await AsignacionesService.rechazar(req.empresa_id, Number(req.params.id), req.usuario.sub);
   res.json({ success: true, data, message: 'Postulación rechazada' });
 }
 
@@ -62,6 +62,16 @@ async function misTurnos(req, res) {
   res.json({ success: true, data, message: 'Mis turnos y postulaciones' });
 }
 
+async function corregir(req, res) {
+  const data = await AsignacionesService.corregir(
+    req.empresa_id,
+    Number(req.params.id),
+    req.usuario.sub,
+    req.body
+  );
+  res.json({ success: true, data, message: 'Asignación corregida' });
+}
+
 async function noPresentado(req, res) {
   const data = await AsignacionesService.marcarNoPresentado(
     req.empresa_id,
@@ -88,4 +98,4 @@ async function liquidacion(req, res) {
   res.json({ success: true, data });
 }
 
-module.exports = { listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, noPresentado, calificar, liquidacion };
+module.exports = { listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, corregir, noPresentado, calificar, liquidacion };
