@@ -266,7 +266,15 @@ export default function TurnosScreen() {
         <Text className="text-xl font-bold text-foreground">
           {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         </Text>
-        {null}
+        {isGestor && (
+          <TouchableOpacity
+            onPress={() => router.push('/liquidacion-turnos')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Liquidación de turnos"
+          >
+            <Ionicons name="cash-outline" size={22} color="#64748B" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
