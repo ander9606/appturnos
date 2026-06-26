@@ -67,11 +67,11 @@ const LOGIN = {
   LOCKOUT_MINUTOS: 15,
 };
 
-/** Límites y features por plan. max_trabajadores null = ilimitado. */
+/** Límites, features y precio por plan. max_trabajadores null = ilimitado. */
 const PLANES = {
-  basico:      { max_trabajadores: 10,  logiq360: false },
-  profesional: { max_trabajadores: 30,  logiq360: false },
-  empresarial: { max_trabajadores: null, logiq360: true  },
+  basico:      { max_trabajadores: 10,   logiq360: false, precio_mes_cop: 80000  },
+  profesional: { max_trabajadores: 30,   logiq360: false, precio_mes_cop: 120000 },
+  empresarial: { max_trabajadores: null, logiq360: true,  precio_mes_cop: 150000 },
 };
 
 /** Estados del vínculo trabajador ↔ empresa (tabla trabajador_empresa). */

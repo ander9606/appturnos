@@ -77,6 +77,17 @@ const AdminService = {
     return AdminModel.obtenerEmpresa(id);
   },
 
+  async generarLinkPago(id, { plan, meses = 1 }) {
+    const empresa = await AdminService.obtenerEmpresa(id);
+    const WompiService = require('../webhooks/wompi.service');
+    return WompiService.generarLinkPago({
+      empresaId: id,
+      nombreEmpresa: empresa.nombre,
+      plan,
+      meses,
+    });
+  },
+
   async gestionarSuscripcion(id, { plan, vigente_hasta, origen = 'manual' }) {
     const empresa = await AdminService.obtenerEmpresa(id); // throws 404 if not found
     const planesValidos = ['basico', 'profesional', 'empresarial'];

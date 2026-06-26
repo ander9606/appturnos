@@ -3,6 +3,9 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/database');
 const logger = require('../../utils/logger');
+const { PLANES } = require('../../config/constants');
+
+const WOMPI_API = 'https://production.wompi.co/v1';
 
 /**
  * Verificación de firma Wompi.
@@ -74,6 +77,56 @@ const WompiService = {
 
     logger.info(`Wompi: suscripcion empresa ${empresaId} extendida ${meses} mes(es) -> ${plan}`);
     return { ok: true, empresaId, plan, meses };
+  },
+
+  /**
+   * Genera un link de pago de Wompi para suscribir una empresa.
+   * Referencia: AT-{empresaId}-{plan}-{meses}
+   * El link expira en 7 días y es de un solo uso.
+   */
+  async generarLinkPago({ empresaId, nombreEmpresa, plan, meses = 1 }) {
+    const privateKey = process.env.WOMPI_PRIVATE_KEY;
+    if (!privateKey) throw new Error('WOMPI_PRIVATE_KEY no configurada');
+
+    const planCfg = PLANES[plan];
+    if (!planCfg) throw new Error(`Plan inválido: ${plan}`);
+
+    const amountCents = planCfg.precio_mes_cop * meses * 100;
+    const reference = `AT-${empresaId}-${plan}-${meses}`;
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19) + '.000Z';
+    const redirectUrl = process.env.WOMPI_REDIRECT_URL || 'https://appturnos.com';
+
+    const resp = await fetch(`${WOMPI_API}/payment_links`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${privateKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: `App Turnos — Plan ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
+        description: `Suscripción ${meses} mes(es) para ${nombreEmpresa}`,
+        single_use: true,
+        collect_shipping: false,
+        amount_in_cents: amountCents,
+        currency: 'COP',
+        redirect_url: redirectUrl,
+        reference,
+        expires_at: expiresAt,
+      }),
+    });
+
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      logger.error('Wompi generarLinkPago error:', json);
+      throw new Error(json?.error?.reason || `Wompi error HTTP ${resp.status}`);
+    }
+
+    return {
+      url: json.data?.permalink,
+      referencia: reference,
+      monto_cop: planCfg.precio_mes_cop * meses,
+      expira_at: expiresAt,
+    };
   },
 };
 

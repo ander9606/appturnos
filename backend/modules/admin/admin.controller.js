@@ -69,6 +69,19 @@ const AdminController = {
     }
   },
 
+  // POST /api/admin/empresas/:id/link-pago
+  async generarLinkPago(req, res, next) {
+    try {
+      const resultado = await AdminService.generarLinkPago(
+        Number(req.params.id),
+        req.body
+      );
+      res.json({ success: true, data: resultado, message: 'Link de pago generado' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // PATCH /api/admin/empresas/:id/suscripcion
   async gestionarSuscripcion(req, res, next) {
     try {

@@ -95,6 +95,20 @@ router.put(
   ctrl.actualizarEmpresa
 );
 
+// POST /api/admin/empresas/:id/link-pago
+router.post(
+  '/empresas/:id/link-pago',
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('plan').isIn(['basico', 'profesional', 'empresarial']).withMessage('plan requerido'),
+    body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
+  ],
+  validar,
+  ctrl.generarLinkPago
+);
+
 // PATCH /api/admin/empresas/:id/suscripcion
 router.patch(
   '/empresas/:id/suscripcion',
