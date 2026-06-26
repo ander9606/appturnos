@@ -55,6 +55,7 @@ const ConfiguracionService = {
     if (!url || !nonce) throw new AppError('Código de emparejamiento inválido', 400);
 
     const base = (process.env.PUBLIC_API_URL || '').replace(/\/$/, '');
+    if (!base) throw new AppError('PUBLIC_API_URL no está configurada en el servidor. Agrega la URL pública de Zaturno en el .env antes de emparejar.', 500);
     const appTurnosApiKey = 'at_' + crypto.randomBytes(32).toString('hex');
 
     const resp = await fetch(`${url.replace(/\/$/, '')}/api/integracion/emparejar/confirmar`, {
