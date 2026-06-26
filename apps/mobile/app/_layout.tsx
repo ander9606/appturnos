@@ -83,8 +83,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const welcomeRoute = hasLaunched ? '/(auth)/login' : '/(auth)/';
 
     if (status === 'authenticated') {
-      // OAuth users who registered without a phone must complete their profile first.
-      const needsPhone = !usuario?.telefono;
+      // Solo usuarios OAuth sin contraseña deben agregar teléfono.
+      const needsPhone = !usuario?.has_password && !usuario?.telefono;
       if (needsPhone && !inCompletarPerfil && !isSuperAdmin) {
         router.replace('/completar-perfil');
         return;
