@@ -42,15 +42,17 @@ export default function CompletarPerfilScreen() {
 
   const telefonoToken = React.useRef<string | null>(null);
 
+  const tel = () => telefono.trim().startsWith('+') ? telefono.trim() : `+57${telefono.trim()}`;
+
   const enviarOtp = async () => {
     if (telefono.trim().length < 7) {
-      setTelefonoErr('Introduce un número de teléfono válido (incluye código de país, ej. +57)');
+      setTelefonoErr('Introduce un número de teléfono válido');
       return;
     }
     setTelefonoErr(null);
     setLoading(true);
     try {
-      await authApi.enviarOtp({ tipo: 'telefono', destino: telefono.trim() });
+      await authApi.enviarOtp({ tipo: 'telefono', destino: tel() });
       setStep('otp');
     } catch (err) {
       setTelefonoErr((err as ApiError)?.message ?? 'No se pudo enviar el código. Intenta de nuevo.');
@@ -64,12 +66,11 @@ export default function CompletarPerfilScreen() {
     setOtpErr(null);
     setLoading(true);
     try {
-      const { token } = await authApi.verificarOtp({ tipo: 'telefono', destino: telefono.trim(), codigo: otp });
+      const { token } = await authApi.verificarOtp({ tipo: 'telefono', destino: tel(), codigo: otp });
       telefonoToken.current = token;
 
-      // Persist to backend and update local store
       const perfilActualizado = await authApi.updateProfile({
-        telefono: telefono.trim(),
+        telefono: tel(),
         telefono_token: token,
       });
       await setUsuario(perfilActualizado);
@@ -83,7 +84,7 @@ export default function CompletarPerfilScreen() {
 
   const reenviar = async () => {
     setResending(true);
-    try { await authApi.enviarOtp({ tipo: 'telefono', destino: telefono.trim() }); }
+    try { await authApi.enviarOtp({ tipo: 'telefono', destino: tel() }); }
     finally { setResending(false); }
   };
 
@@ -122,13 +123,12 @@ export default function CompletarPerfilScreen() {
             <View className="gap-4">
               <Input
                 label="Número de teléfono *"
-                placeholder="+57 300 000 0000"
+                placeholder="300 000 0000"
                 keyboardType="phone-pad"
                 autoCapitalize="none"
                 value={telefono}
                 onChangeText={setTelefono}
                 error={telefonoErr ?? undefined}
-                hint="Incluye el código de país, ej. +57"
               />
               <Button
                 label={loading ? 'Enviando…' : 'Enviar código'}
