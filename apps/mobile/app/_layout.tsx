@@ -123,6 +123,7 @@ export default function RootLayout() {
             <Stack.Screen name="postulaciones" options={{ headerShown: false }} />
             {/* Detail screens — slide from right */}
             <Stack.Screen name="turno/[id]"      options={{ headerShown: true }} />
+            <Stack.Screen name="oferta/[id]"     options={{ headerShown: true }} />
             <Stack.Screen name="trabajador/[id]" options={{ headerShown: true }} />
             {/* Modales — sube desde abajo */}
             <Stack.Screen name="turno/nuevo"          options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />

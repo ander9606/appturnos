@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar, useNoPresentado } from '@/features/turnos/useTurnos';
 import { Badge } from '@/components/ui/Badge';
@@ -182,6 +183,7 @@ function GestorOfertaItem({
   noPresentadoMutation: ReturnType<typeof useNoPresentado>;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
   const { data: detalle, isLoading: loadingDetalle } = useOferta(expanded ? oferta.id : null);
 
   const totalPlazas    = oferta.puestos.reduce((s, p) => s + p.plazas, 0);
@@ -256,6 +258,15 @@ function GestorOfertaItem({
           <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-3 mb-2">
             Postulantes
           </Text>
+
+          <TouchableOpacity
+            onPress={() => router.push(`/oferta/${oferta.id}` as any)}
+            className="flex-row items-center gap-1 mb-3"
+          >
+            <Ionicons name="information-circle-outline" size={14} color="#6366F1" />
+            <Text className="text-xs font-semibold text-primary">Ver detalles completos</Text>
+            <Ionicons name="chevron-forward" size={12} color="#6366F1" />
+          </TouchableOpacity>
 
           {loadingDetalle ? (
             <View className="py-4 items-center">

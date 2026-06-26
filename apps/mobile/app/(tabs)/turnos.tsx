@@ -150,7 +150,9 @@ export default function TurnosScreen() {
     const hayTraslape = turnosSolapan(item, turnosConfirmados);
 
     return (
-      <View
+      <TouchableOpacity
+        onPress={() => router.push(`/oferta/${item.id}` as any)}
+        activeOpacity={0.8}
         className="bg-card rounded-2xl overflow-hidden flex-row"
         style={{
           elevation: 2,
@@ -227,7 +229,7 @@ export default function TurnosScreen() {
             )}
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }, [aplicadosIds, aplicarMutation, turnosConfirmados]);
 
