@@ -39,9 +39,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const login  = useAuthStore((s) => s.login);
   const [serverError, setServerError] = React.useState<string | null>(null);
-  const { promptAsync: googleLogin, loading: googleLoading } = useGoogleAuth(
-    (msg) => setServerError(msg),
-  );
+  const { promptAsync: googleLogin, loading: googleLoading } = useGoogleAuth((msg) => setServerError(msg));
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -161,24 +159,10 @@ export default function LoginScreen() {
             size="lg"
           />
 
-          {/* Divisor */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>o también</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Google Sign-In */}
-          <TouchableOpacity
-            style={styles.googleBtn}
-            onPress={() => googleLogin()}
-            disabled={googleLoading}
-            activeOpacity={0.8}
-          >
+          <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>o también</Text><View style={styles.dividerLine} /></View>
+          <TouchableOpacity style={styles.googleBtn} onPress={googleLogin} disabled={googleLoading} activeOpacity={0.8}>
             <Ionicons name="logo-google" size={20} color="#4285F4" />
-            <Text style={styles.googleBtnText}>
-              {googleLoading ? 'Conectando…' : 'Continuar con Google'}
-            </Text>
+            <Text style={styles.googleBtnText}>{googleLoading ? 'Conectando…' : 'Continuar con Google'}</Text>
           </TouchableOpacity>
 
           {/* Links secundarios */}
@@ -267,24 +251,16 @@ const styles = StyleSheet.create({
   forgotWrap: { alignSelf: 'flex-end', marginTop: 10, marginBottom: 20 },
   forgotText: { fontSize: 13, fontWeight: '600', color: '#FF5A3C' },
 
-  // Divisor
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 20 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
-  dividerText: { fontSize: 12, color: '#94A3B8', fontWeight: '500' },
-
   // Links
   links:      { gap: 10 },
   linkRow:    { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' },
   linkLabel:  { fontSize: 13, color: '#94A3B8' },
   linkAction: { fontSize: 13, fontWeight: '700', color: '#FF5A3C' },
 
-  // Google button
-  googleBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 14,
-    paddingVertical: 13, backgroundColor: 'white',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
-  },
+  divider:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
+  dividerText: { fontSize: 12, color: '#94A3B8' },
+
+  googleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 14, paddingVertical: 14, backgroundColor: 'white', marginBottom: 20 },
   googleBtnText: { fontSize: 15, fontWeight: '600', color: '#0F172A' },
 });

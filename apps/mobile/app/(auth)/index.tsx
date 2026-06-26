@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Pressable,
-  TouchableOpacity,
   SafeAreaView,
   Dimensions,
   StyleSheet,
@@ -12,7 +11,6 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { useGoogleAuth } from '@/features/auth/useGoogleAuth';
 
 const { height } = Dimensions.get('window');
 
@@ -21,11 +19,6 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 export default function WelcomeScreen() {
   const router       = useRouter();
   const markLaunched = useAuthStore((s) => s.markLaunched);
-  const [googleErr, setGoogleErr] = React.useState<string | null>(null);
-  const { promptAsync: googleLogin, loading: googleLoading } = useGoogleAuth(
-    (msg) => setGoogleErr(msg),
-  );
-
   React.useEffect(() => { markLaunched(); }, []);
 
   return (
@@ -74,22 +67,6 @@ export default function WelcomeScreen() {
             variant="outline"
           />
         </View>
-
-        {/* Google Sign-In */}
-        {googleErr && (
-          <Text style={styles.googleErr}>{googleErr}</Text>
-        )}
-        <TouchableOpacity
-          style={styles.googleBtn}
-          onPress={() => { setGoogleErr(null); googleLogin(); }}
-          disabled={googleLoading}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="logo-google" size={20} color="#4285F4" />
-          <Text style={styles.googleBtnText}>
-            {googleLoading ? 'Conectando…' : 'Continuar con Google'}
-          </Text>
-        </TouchableOpacity>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -264,13 +241,4 @@ const styles = StyleSheet.create({
   footerText: { fontSize: 14, color: '#94A3B8' },
   footerLink: { fontSize: 15, fontWeight: '700', color: '#FF5A3C', marginTop: 4 },
 
-  googleBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 14,
-    paddingVertical: 14, backgroundColor: 'white',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
-  },
-  googleBtnText: { fontSize: 15, fontWeight: '600', color: '#0F172A' },
-  googleErr: { fontSize: 12, color: '#EF4444', textAlign: 'center', marginBottom: 4 },
 });
