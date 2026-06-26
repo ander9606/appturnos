@@ -83,6 +83,15 @@ const ConfiguracionService = {
       logiq360_tenant_id: b.tenant_id,
       logiq360_base_url: b.logiq360_base_url,
     });
+
+    // logiq360 cubre la suscripcion: plan empresarial indefinido
+    const AdminModel = require('../../admin/admin.model');
+    await AdminModel.actualizarSuscripcion(empresaId, {
+      plan: 'empresarial',
+      vigente_hasta: null,
+      origen: 'logiq360',
+    });
+
     return { conectado: true, logiq360_tenant_id: b.tenant_id };
   },
 };

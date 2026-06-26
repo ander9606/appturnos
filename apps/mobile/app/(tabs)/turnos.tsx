@@ -262,19 +262,10 @@ export default function TurnosScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
+      <View className="bg-card px-6 pt-4 pb-0 border-b border-border">
         <Text className="text-xl font-bold text-foreground">
           {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         </Text>
-        {isGestor && (
-          <TouchableOpacity
-            onPress={() => router.push('/liquidacion-turnos')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityLabel="Liquidación de turnos"
-          >
-            <Ionicons name="cash-outline" size={22} color="#64748B" />
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
@@ -296,6 +287,33 @@ export default function TurnosScreen() {
             selectedDate={selectedDate}
             filtroParaQuien={isJefeNomina ? 'nomina' : undefined}
           />
+
+          {/* FAB izquierdo — liquidar turnos (encima del +) */}
+          {!isJefeNomina && (
+            <TouchableOpacity
+              onPress={() => router.push('/liquidacion-turnos')}
+              activeOpacity={0.85}
+              style={{
+                position: 'absolute',
+                bottom: 92,
+                left: 20,
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: '#059669',
+                alignItems: 'center',
+                justifyContent: 'center',
+                elevation: 6,
+                shadowColor: '#059669',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.35,
+                shadowRadius: 8,
+              }}
+              accessibilityLabel="Liquidación de turnos"
+            >
+              <Ionicons name="cash-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
 
           {/* FAB izquierdo — crear turno */}
           <TouchableOpacity

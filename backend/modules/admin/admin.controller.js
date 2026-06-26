@@ -69,6 +69,19 @@ const AdminController = {
     }
   },
 
+  // PATCH /api/admin/empresas/:id/suscripcion
+  async gestionarSuscripcion(req, res, next) {
+    try {
+      const empresa = await AdminService.gestionarSuscripcion(
+        Number(req.params.id),
+        req.body
+      );
+      res.json({ success: true, data: empresa, message: 'Suscripción actualizada' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // GET /api/admin/reportes/global
   async reportesGlobales(req, res, next) {
     try {

@@ -67,6 +67,13 @@ const LOGIN = {
   LOCKOUT_MINUTOS: 15,
 };
 
+/** Límites y features por plan. max_trabajadores null = ilimitado. */
+const PLANES = {
+  basico:      { max_trabajadores: 10,  logiq360: false },
+  profesional: { max_trabajadores: 30,  logiq360: false },
+  empresarial: { max_trabajadores: null, logiq360: true  },
+};
+
 /** Estados del vínculo trabajador ↔ empresa (tabla trabajador_empresa). */
 const ESTADOS_TRABAJADOR_EMPRESA = {
   SOLICITADO_POR_TRABAJADOR: 'solicitado_por_trabajador',
@@ -92,4 +99,5 @@ module.exports = {
   HORAS_MES_NOMINA,
   LOGIN,
   ESTADOS_TRABAJADOR_EMPRESA,
+  PLANES,
 };

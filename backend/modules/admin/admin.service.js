@@ -77,6 +77,21 @@ const AdminService = {
     return AdminModel.obtenerEmpresa(id);
   },
 
+  async gestionarSuscripcion(id, { plan, vigente_hasta, origen = 'manual' }) {
+    const empresa = await AdminService.obtenerEmpresa(id); // throws 404 if not found
+    const planesValidos = ['basico', 'profesional', 'empresarial'];
+    if (plan && !planesValidos.includes(plan)) throw new AppError('plan inválido', 400);
+    // vigente_hasta null explícito = indefinido (super_admin override)
+    const vha = vigente_hasta === null ? null : vigente_hasta ? new Date(vigente_hasta) : undefined;
+    if (vha instanceof Date && isNaN(vha)) throw new AppError('vigente_hasta no es una fecha válida', 400);
+    await AdminModel.actualizarSuscripcion(id, {
+      plan: plan ?? empresa.plan,
+      vigente_hasta: vha instanceof Date ? vha.toISOString().slice(0, 10) : vha,
+      origen,
+    });
+    return AdminModel.obtenerEmpresa(id);
+  },
+
   // ── Reportes ──────────────────────────────────────────────────────────────
 
   async obtenerReportesGlobales() {

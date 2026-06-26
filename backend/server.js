@@ -116,6 +116,8 @@ app.use('/api/puntos-marcaje', require('./modules/puntos-marcaje/puntos-marcaje.
 app.use('/api/admin', require('./modules/admin/admin.routes'));
 // Novedades de turno: reportes de retraso, ausencia, incidente u otro por asignación.
 app.use('/api/novedades/asignaciones', require('./modules/novedades/novedades.routes'));
+// Webhooks de pagos: sin autenticación JWT, verificación HMAC interna.
+app.use('/api/webhooks/wompi', require('./modules/webhooks/wompi.routes'));
 
 // ─── Manejo de errores ────────────────────────────────────────
 app.use(noEncontrado);
