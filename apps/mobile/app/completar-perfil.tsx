@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,25 +19,26 @@ import type { ApiError } from '@api-client';
 export default function CompletarPerfilScreen() {
   const usuario    = useAuthStore((s) => s.usuario);
   const setUsuario = useAuthStore((s) => s.setUsuario);
+  const logout     = useAuthStore((s) => s.logout);
 
   const [telefono,    setTelefono]    = React.useState('');
-  const [telefonoErr, setTelefonoErr] = React.useState<string | null>(null);
+  const [error,       setError]       = React.useState<string | null>(null);
   const [loading,     setLoading]     = React.useState(false);
 
   const tel = () => telefono.trim().startsWith('+') ? telefono.trim() : `+57${telefono.trim()}`;
 
   const guardar = async () => {
     if (telefono.trim().length < 7) {
-      setTelefonoErr('Introduce un número de teléfono válido');
+      setError('Introduce un número de teléfono válido');
       return;
     }
-    setTelefonoErr(null);
+    setError(null);
     setLoading(true);
     try {
       const perfilActualizado = await authApi.updateProfile({ telefono: tel() });
       await setUsuario(perfilActualizado);
     } catch (err) {
-      setTelefonoErr((err as ApiError)?.message ?? 'No se pudo guardar. Intenta de nuevo.');
+      setError((err as ApiError)?.message ?? 'No se pudo guardar. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -63,7 +65,14 @@ export default function CompletarPerfilScreen() {
           </Text>
         </View>
 
-        <View className="flex-1 px-6 pt-8 pb-6 gap-5">
+        <View className="flex-1 px-6 pt-8 pb-6 gap-4">
+          {error && (
+            <View className="flex-row items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+              <Text className="flex-1 text-sm font-medium text-danger">{error}</Text>
+            </View>
+          )}
+
           <Input
             label="Número de teléfono *"
             placeholder="300 000 0000"
@@ -71,8 +80,8 @@ export default function CompletarPerfilScreen() {
             autoCapitalize="none"
             value={telefono}
             onChangeText={setTelefono}
-            error={telefonoErr ?? undefined}
           />
+
           <Button
             label={loading ? 'Guardando…' : 'Continuar'}
             onPress={guardar}
@@ -80,6 +89,10 @@ export default function CompletarPerfilScreen() {
             fullWidth
             size="lg"
           />
+
+          <TouchableOpacity onPress={logout} className="items-center py-3">
+            <Text className="text-sm text-muted-foreground">Cerrar sesión</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
