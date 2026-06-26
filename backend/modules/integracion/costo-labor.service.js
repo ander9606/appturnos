@@ -62,7 +62,7 @@ const CostoLaborService = {
       const resumen = completados.map((a) => ({
         empleado_ref: a.trabajador_external_ref || null,
         empleado_nombre: `${a.trabajador_nombre} ${a.trabajador_apellido || ''}`.trim(),
-        tipo_trabajador: a.trabajador_tipo || 'turnos', // 'nomina' | 'turnos' | 'ambos'
+        tipo_trabajador: ['nomina', 'turnos', 'ambos'].includes(a.trabajador_tipo) ? a.trabajador_tipo : 'turnos',
         // valor = pago_total = tarifa_dia × turnos completados (no depende de horas)
         valor: Number(a.pago_total) || 0,
         tarifa_dia: Number(a.tarifa_dia) || 0,

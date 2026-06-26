@@ -256,10 +256,10 @@ const AsignacionesService = {
 
     await AsignacionesModel.registrarIngreso(dbEmpresaId, id, latitud, longitud);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.ingreso', {
-      external_ref: asignacion.oferta_external_ref || null,
+      external_ref:  asignacion.oferta_external_ref || null,
+      empleado_ref:  asignacion.trabajador_external_ref || null,
       asignacion_id: id,
-      oferta_id: asignacion.oferta_id,
-      trabajador_id: asignacion.trabajador_id,
+      hora_ingreso:  new Date().toISOString(),
       latitud,
       longitud,
     });
@@ -309,10 +309,10 @@ const AsignacionesService = {
 
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
-      external_ref: asignacion.oferta_external_ref || null,
+      external_ref:  asignacion.oferta_external_ref || null,
+      empleado_ref:  asignacion.trabajador_external_ref || null,
       asignacion_id: id,
-      oferta_id: asignacion.oferta_id,
-      trabajador_id: asignacion.trabajador_id,
+      hora_egreso:   new Date().toISOString(),
     });
     // Si este egreso completó la oferta entera, emite costo_labor.calculado
     // a logiq360 y marca la oferta como completada (best-effort).
