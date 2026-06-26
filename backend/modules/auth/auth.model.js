@@ -21,7 +21,7 @@ const AuthModel = {
   /** Perfil público del usuario por id (sin password_hash). */
   async buscarUsuarioPorId(id) {
     const [filas] = await pool.query(
-      `SELECT id, empresa_id, nombre, apellido, foto_perfil, email, rol, activo, created_at
+      `SELECT id, empresa_id, nombre, apellido, foto_perfil, email, telefono, rol, activo, created_at
        FROM usuarios WHERE id = ? LIMIT 1`,
       [id]
     );
