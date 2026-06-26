@@ -116,6 +116,21 @@ const TrabajadoresModel = {
     return filas;
   },
 
+  /**
+   * Trabajadores activos que hacen turnos, para que logiq360 los sincronice
+   * a su tabla de empleados (pull). Incluye 'turnos' y 'ambos'.
+   */
+  async listarParaSyncLogiq360(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT nombre, apellido, email, telefono, cedula, cargo, tipo, external_ref
+       FROM trabajadores
+       WHERE empresa_id = ? AND activo = 1 AND tipo IN ('turnos', 'ambos')
+       ORDER BY nombre, apellido`,
+      [empresaId]
+    );
+    return filas;
+  },
+
   /** Fija el external_ref de un trabajador (vínculo de conciliación). */
   async vincularExternalRef(empresaId, trabajadorId, externalRef) {
     const [res] = await pool.query(

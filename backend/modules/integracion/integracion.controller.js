@@ -65,6 +65,11 @@ async function vincularEmpleado(req, res) {
   res.json({ success: true, data, message: 'Trabajador vinculado' });
 }
 
+async function publicTrabajadores(req, res) {
+  const data = await SalientesService.publicTrabajadores(req.empresa_id);
+  res.json({ success: true, data });
+}
+
 async function publicPing(req, res) {
   res.json({ ok: true, empresa_id: req.empresa_id });
 }
@@ -72,5 +77,5 @@ async function publicPing(req, res) {
 module.exports = {
   recibirEventos, estado, obtenerConfig, actualizarConfig, emparejar,
   conciliacion, vincularEmpleado,
-  publicEstado, publicEnSitio, publicPing,
+  publicEstado, publicEnSitio, publicTrabajadores, publicPing,
 };
