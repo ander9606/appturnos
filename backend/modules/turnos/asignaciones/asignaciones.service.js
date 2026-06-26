@@ -404,11 +404,23 @@ const AsignacionesService = {
 
     await AsignacionesModel.corregir(empresaId, id, { horaIngreso, horaEgreso, horasTrabajadas, estado: estadoNuevo });
 
+    const resultado = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+
+    if (resultado?.oferta_external_ref) {
+      await IntegracionService.emitir(empresaId, 'trabajador.correccion_horas', {
+        external_ref:  resultado.oferta_external_ref,
+        empleado_ref:  resultado.trabajador_external_ref || null,
+        asignacion_id: id,
+        hora_ingreso:  horaIngreso ?? null,
+        hora_egreso:   horaEgreso  ?? null,
+      });
+    }
+
     if (estadoNuevo === 'completado') {
       await CostoLaborService.verificarYEmitir(empresaId, asig.oferta_id);
     }
 
-    return AsignacionesModel.obtenerPorId(empresaId, id);
+    return resultado;
   },
 
   async marcarNoPresentado(empresaId, id) {
@@ -422,7 +434,7 @@ const AsignacionesService = {
       throw new AppError(mensaje, codigo);
     }
 
-    const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, res.trabajador_id);
 
     if (trabajador) {
@@ -435,6 +447,12 @@ const AsignacionesService = {
         data: { asignacion_id: id, oferta_id: res.oferta_id },
       });
     }
+
+    await IntegracionService.emitir(empresaId, 'trabajador.no_presentado', {
+      external_ref: asignacion?.oferta_external_ref || null,
+      empleado_ref: asignacion?.trabajador_external_ref || null,
+      asignacion_id: id,
+    });
 
     return asignacion;
   },
