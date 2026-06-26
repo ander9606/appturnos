@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
-import { useMisTurnos } from '@/features/turnos/useTurnos';
+import { useMisTurnos, useOfertas } from '@/features/turnos/useTurnos';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { usePeriodos, useNominaPerfil } from '@/features/nomina/useNomina';
 import { useCountNoLeidas } from '@/features/notificaciones/useNotificaciones';
@@ -59,6 +59,8 @@ export default function DashboardScreen() {
     : hour < 20 ? t('dashboard.greetingEvening')
     : t('dashboard.greetingNight');
 
+  const today = toISODate(new Date());
+
   // ── Data fetching ────────────────────────────────────────────────────────
 
   // Only trabajador_turnos gets the shift hero — managers/admin have no own shifts
@@ -83,6 +85,12 @@ export default function DashboardScreen() {
   const periodoAbierto = periodosData?.data?.[0] ?? null;
 
   const { data: nominaPerfil, refetch: refetchNominaPerfil } = useNominaPerfil();
+
+  const {
+    data: ofertasHoyData,
+    refetch: refetchOfertasHoy,
+  } = useOfertas({ fecha: today }, { enabled: isManager });
+
   const noLeidas = useCountNoLeidas();
 
   // ── Pull to refresh ──────────────────────────────────────────────────────
@@ -95,13 +103,12 @@ export default function DashboardScreen() {
       refetchEquipo(),
       refetchPeriodos(),
       isNomina ? refetchNominaPerfil() : Promise.resolve(),
+      isManager ? refetchOfertasHoy() : Promise.resolve(),
     ]);
     setRefreshing(false);
   }
 
   // ── Derive shift data ────────────────────────────────────────────────────
-
-  const today = toISODate(new Date());
 
   const turnoActivo = turnos.find((a) => a.estado === 'en_progreso') ?? null;
 
@@ -148,9 +155,9 @@ export default function DashboardScreen() {
         { value: periodoAbierto?.tipo ?? '—', label: 'Ciclo',          color: 'text-foreground' },
       ]
     : [
-        { value: totalEquipo ?? '…',                             label: t('dashboard.statEmployees'),   color: 'text-info' },
-        { value: turnosHoy.length > 0 ? turnosHoy.length : '—', label: t('dashboard.statShiftsToday'), color: 'text-foreground' },
-        { value: periodoAbierto ? '1' : '0',                     label: 'Período abierto',              color: periodoAbierto ? 'text-success' : 'text-muted-foreground' },
+        { value: totalEquipo ?? '…',                                                      label: t('dashboard.statEmployees'),   color: 'text-info' },
+        { value: ofertasHoyData?.pagination?.total ?? '…',                               label: t('dashboard.statShiftsToday'), color: 'text-foreground' },
+        { value: periodoAbierto ? '1' : '0',                                             label: 'Período abierto',              color: periodoAbierto ? 'text-success' : 'text-muted-foreground' },
       ];
 
   // ── Quick actions ────────────────────────────────────────────────────────

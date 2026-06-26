@@ -28,11 +28,15 @@ export function useMisTurnos(opts: { enabled?: boolean } = {}) {
 }
 
 /** Lista de ofertas disponibles. */
-export function useOfertas(params?: Parameters<typeof turnosApi.listarOfertas>[0]) {
+export function useOfertas(
+  params?: Parameters<typeof turnosApi.listarOfertas>[0],
+  opts: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: QUERY_KEYS.ofertas(params),
     queryFn:  () => turnosApi.listarOfertas(params),
     staleTime: 30_000,
+    enabled:  opts.enabled ?? true,
   });
 }
 
