@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   useRegistros, useCorregirRegistro, useCrearRegistro,
 } from '@/features/nomina/useNomina';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import {
   TIPO_DIA_LABEL, fmtHora, fmtFechaCorta,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
@@ -358,9 +359,11 @@ function CrearRegistroModal({
 function RegistroRow({
   registro,
   onEdit,
+  canEdit = true,
 }: {
   registro: RegistroDiario;
   onEdit: (r: RegistroDiario) => void;
+  canEdit?: boolean;
 }) {
   const d         = new Date(`${registro.fecha}T00:00:00`);
   const tipoDef   = TIPOS_DIA.find((t) => t.v === registro.tipo_dia);
@@ -403,9 +406,11 @@ function RegistroRow({
 
       <View className="items-end gap-1">
         <Text className="text-sm font-bold text-foreground">{totalHoras.toFixed(1)}h</Text>
-        <TouchableOpacity onPress={() => onEdit(registro)} hitSlop={8}>
-          <Ionicons name="pencil-outline" size={16} color="#64748B" />
-        </TouchableOpacity>
+        {canEdit && (
+          <TouchableOpacity onPress={() => onEdit(registro)} hitSlop={8}>
+            <Ionicons name="pencil-outline" size={16} color="#64748B" />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -421,10 +426,17 @@ type Seccion = {
 
 export default function RegistrosPeriodoScreen() {
   const theme = useTheme();
-  const { periodoId } = useLocalSearchParams<{ periodoId: string }>();
-  const numId = Number(periodoId);
+  const { periodoId, trabajadorId } = useLocalSearchParams<{ periodoId: string; trabajadorId?: string }>();
+  const numId        = Number(periodoId);
+  const numTrabId    = trabajadorId ? Number(trabajadorId) : undefined;
+  const rol          = useAuthStore((s) => s.usuario?.rol);
+  const canEdit      = rol !== 'nomina';
 
-  const { data, isLoading, isError, refetch } = useRegistros({ periodo_id: numId, limit: 500 });
+  const { data, isLoading, isError, refetch } = useRegistros({
+    periodo_id:    numId,
+    trabajador_id: numTrabId,
+    limit:         500,
+  });
   const [editando, setEditando] = useState<RegistroDiario | null>(null);
   const [creando,  setCreando]  = useState<CreandoState>(null);
 
@@ -450,7 +462,7 @@ export default function RegistrosPeriodoScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Registros del equipo', headerShown: true }} />
+        <Stack.Screen options={{ title: numTrabId ? 'Registros del trabajador' : 'Registros del equipo', headerShown: true }} />
         <ActivityIndicator size="large" color={theme.primary} />
       </SafeAreaView>
     );
@@ -459,7 +471,7 @@ export default function RegistrosPeriodoScreen() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-8" edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Registros del equipo', headerShown: true }} />
+        <Stack.Screen options={{ title: numTrabId ? 'Registros del trabajador' : 'Registros del equipo', headerShown: true }} />
         <Text className="text-base font-semibold text-foreground">No se pudieron cargar los registros</Text>
         <TouchableOpacity onPress={() => refetch()} className="mt-4">
           <Text className="text-primary font-semibold">Reintentar</Text>
@@ -470,7 +482,7 @@ export default function RegistrosPeriodoScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Registros del equipo', headerShown: true }} />
+      <Stack.Screen options={{ title: numTrabId ? 'Registros del trabajador' : 'Registros del equipo', headerShown: true }} />
 
       <EditarRegistroModal registro={editando} onClose={() => setEditando(null)} />
       <CrearRegistroModal  creando={creando}   periodoId={numId} onClose={() => setCreando(null)} />
@@ -490,7 +502,7 @@ export default function RegistrosPeriodoScreen() {
           sections={sections}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
-            <RegistroRow registro={item} onEdit={setEditando} />
+            <RegistroRow registro={item} onEdit={setEditando} canEdit={canEdit} />
           )}
           renderSectionHeader={({ section }) => (
             <View className="flex-row items-center gap-2 px-5 pt-5 pb-2">
@@ -499,13 +511,15 @@ export default function RegistrosPeriodoScreen() {
               </View>
               <Text className="text-sm font-semibold text-foreground flex-1">{section.title}</Text>
               <Text className="text-xs text-muted-foreground">· {section.data.length} días</Text>
-              <TouchableOpacity
-                onPress={() => setCreando({ trabajadorId: section.trabajadorId, nombre: section.title })}
-                hitSlop={8}
-                className="w-7 h-7 rounded-full bg-primary/10 items-center justify-center"
-              >
-                <Ionicons name="add" size={16} color="#6366F1" />
-              </TouchableOpacity>
+              {canEdit && (
+                <TouchableOpacity
+                  onPress={() => setCreando({ trabajadorId: section.trabajadorId, nombre: section.title })}
+                  hitSlop={8}
+                  className="w-7 h-7 rounded-full bg-primary/10 items-center justify-center"
+                >
+                  <Ionicons name="add" size={16} color="#6366F1" />
+                </TouchableOpacity>
+              )}
             </View>
           )}
           ItemSeparatorComponent={() => <View className="h-2" />}

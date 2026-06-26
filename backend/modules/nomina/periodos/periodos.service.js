@@ -180,6 +180,22 @@ const PeriodosService = {
       throw new AppError('Solo se puede liquidar un período cerrado', 409);
     }
     await PeriodosModel.liquidar(empresaId, id);
+
+    const destinatarios = await listarUsuariosNomina(empresaId);
+    if (destinatarios.length > 0) {
+      const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
+        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+      const fin = new Date(periodo.fecha_fin + 'T00:00:00')
+        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+      await NotificacionesService.notificarVarios(destinatarios, {
+        empresaId,
+        tipo: 'nomina.periodo_liquidado',
+        titulo: '¡Tu nómina fue pagada!',
+        mensaje: `El período ${inicio} – ${fin} fue liquidado. Revisa tu resumen en la app.`,
+        data: { periodo_id: id },
+      });
+    }
+
     return PeriodosModel.obtenerPorId(empresaId, id);
   },
 };

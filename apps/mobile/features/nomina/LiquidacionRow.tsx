@@ -3,24 +3,27 @@
  */
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import type { LiquidacionLinea } from '@api-client';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import type { LiquidacionLinea, DescansoCompensatorio } from '@api-client';
 import { getInitials } from '@/lib/formatters';
 import { avatarColorForId } from '@/lib/designTokens';
 
 interface LiquidacionRowProps {
   linea: LiquidacionLinea;
+  compensatorios?: DescansoCompensatorio[];
+  periodoId?: number;
 }
 
-export function LiquidacionRow({ linea }: LiquidacionRowProps) {
+export function LiquidacionRow({ linea, compensatorios = [], periodoId }: LiquidacionRowProps) {
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
 
   const totalHoras =
     linea.horas_ordinarias + linea.horas_extra_diurnas +
     linea.horas_extra_nocturnas + linea.horas_nocturnas + linea.horas_festivo;
 
-  const hasExtras =
-    linea.horas_extra_diurnas > 0 || linea.horas_extra_nocturnas > 0 ||
-    linea.horas_nocturnas > 0 || linea.horas_festivo > 0;
+  const extrasTotal = linea.horas_extra_diurnas + linea.horas_extra_nocturnas;
 
   return (
     <TouchableOpacity
@@ -41,7 +44,7 @@ export function LiquidacionRow({ linea }: LiquidacionRowProps) {
           </Text>
         </View>
 
-        {/* Name + days */}
+        {/* Name + days + badges */}
         <View className="flex-1 gap-0.5">
           <Text className="text-sm font-semibold text-foreground">
             {linea.nombre} {linea.apellido}
@@ -49,29 +52,45 @@ export function LiquidacionRow({ linea }: LiquidacionRowProps) {
           <Text className="text-xs text-muted-foreground">
             {linea.dias_registrados} días · {totalHoras.toFixed(1)}h totales
           </Text>
+          {(extrasTotal > 0 || compensatorios.length > 0) && (
+            <View className="flex-row gap-1.5 mt-0.5">
+              {extrasTotal > 0 && (
+                <View className="bg-primary/10 px-2 py-0.5 rounded-full">
+                  <Text className="text-[10px] font-semibold text-primary">
+                    ⚡ {extrasTotal.toFixed(1)}h extras
+                  </Text>
+                </View>
+              )}
+              {compensatorios.length > 0 && (
+                <View className="bg-purple-100 px-2 py-0.5 rounded-full">
+                  <Text className="text-[10px] font-semibold text-purple-600">
+                    {compensatorios.length} comp.
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
-        {/* Total pay */}
+        {/* Total pay + expand toggle */}
         <View className="items-end gap-1">
           <Text className="text-base font-bold text-success">
             ${linea.total.toLocaleString('es-CO')}
           </Text>
-          {hasExtras && (
-            <Text className="text-xs text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
-          )}
+          <Text className="text-xs text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
         </View>
       </View>
 
-      {/* ── Expanded: hour breakdown ──────────────────────────── */}
+      {/* ── Expanded: hour breakdown + link ──────────────────── */}
       {expanded && (
         <View className="px-4 pb-4 border-t border-border">
           <View className="flex-row flex-wrap gap-x-4 gap-y-2 mt-3">
             {[
-              { l: 'Ordinarias',   v: linea.horas_ordinarias,     c: 'text-foreground' },
-              { l: 'Extra diurna', v: linea.horas_extra_diurnas,  c: 'text-primary-500' },
-              { l: 'Extra noct.',  v: linea.horas_extra_nocturnas,c: 'text-primary-600' },
-              { l: 'Nocturnas',    v: linea.horas_nocturnas,      c: 'text-info' },
-              { l: 'Festivo',      v: linea.horas_festivo,        c: 'text-danger' },
+              { l: 'Ordinarias',   v: linea.horas_ordinarias,      c: 'text-foreground' },
+              { l: 'Extra diurna', v: linea.horas_extra_diurnas,   c: 'text-primary-500' },
+              { l: 'Extra noct.',  v: linea.horas_extra_nocturnas, c: 'text-primary-600' },
+              { l: 'Nocturnas',    v: linea.horas_nocturnas,       c: 'text-info' },
+              { l: 'Festivo',      v: linea.horas_festivo,         c: 'text-danger' },
             ].filter(item => item.v > 0).map((item) => (
               <View key={item.l} className="gap-0.5 min-w-[80px]">
                 <Text className="text-[10px] text-muted-foreground">{item.l}</Text>
@@ -87,6 +106,18 @@ export function LiquidacionRow({ linea }: LiquidacionRowProps) {
               </Text>
             </View>
           </View>
+          {periodoId && (
+            <TouchableOpacity
+              onPress={() => router.push(
+                `/registros-periodo?periodoId=${periodoId}&trabajadorId=${linea.trabajador_id}`
+              )}
+              className="flex-row items-center gap-1 mt-3"
+            >
+              <Ionicons name="calendar-outline" size={13} color="#6366F1" />
+              <Text className="text-xs font-semibold text-primary">Ver registros del período</Text>
+              <Ionicons name="chevron-forward" size={12} color="#6366F1" />
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </TouchableOpacity>

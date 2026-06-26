@@ -10,8 +10,8 @@ const ctrl = require('./liquidacion.controller');
 
 const router = express.Router();
 
-// Liquidación: solo admin_empresa y jefe_nomina (matriz de 06-AUTH.md).
-const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA];
+// Liquidación: contabilidad (nomina) puede ver pero no gestionar.
+const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA];
 const periodoParam = param('periodo_id').isInt({ min: 1 }).withMessage('periodo_id inválido');
 
 router.use(verificarToken);

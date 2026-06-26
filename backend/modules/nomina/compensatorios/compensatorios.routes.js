@@ -15,7 +15,7 @@ const ROLES_GESTOR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA];
 // GET /api/nomina/compensatorios?estado=pendiente
 router.get(
   '/',
-  verificarRol([...ROLES_GESTOR, ROLES.TRABAJADOR_NOMINA]),
+  verificarRol([...ROLES_GESTOR, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA]),
   query('estado').optional().isIn(['pendiente', 'asignado', 'tomado']),
   validarCampos,
   ctrl.listar

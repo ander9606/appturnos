@@ -29,6 +29,7 @@ import {
   usePeriodos, useLiquidacion,
   useLiquidarPeriodo,
 } from '@/features/nomina/useNomina';
+import { useCompensatoriosTodos } from '@/features/nomina/compensatorios/useCompensatorios';
 import { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { useRouter } from 'expo-router';
@@ -56,6 +57,7 @@ export default function NominaScreen() {
 function NominaGestorView() {
   const theme = useTheme();
   const router = useRouter();
+  const rol = useAuthStore((s) => s.usuario?.rol);
 
   const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } =
     usePeriodos();
@@ -73,6 +75,9 @@ function NominaGestorView() {
   } = useLiquidacion(activePeriodoId ?? null);
 
   const liquidarMutation = useLiquidarPeriodo();
+
+  // ponytail: carga todos los compensatorios de la empresa, filtra client-side por periodo+trabajador
+  const { data: allComp } = useCompensatoriosTodos();
 
   const onRefresh = useCallback(() => {
     refetchPeriodos();
@@ -118,7 +123,15 @@ function NominaGestorView() {
       <FlatList
         data={lineas}
         keyExtractor={(item) => String(item.trabajador_id)}
-        renderItem={({ item }) => <LiquidacionRow linea={item} />}
+        renderItem={({ item }) => (
+          <LiquidacionRow
+            linea={item}
+            periodoId={activePeriodoId}
+            compensatorios={(allComp ?? []).filter(
+              (c) => c.trabajador_id === item.trabajador_id && c.periodo_id === activePeriodoId
+            )}
+          />
+        )}
         contentContainerClassName="gap-2 pb-10"
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -203,7 +216,7 @@ function NominaGestorView() {
                     </Text>
                   </View>
                   <View className="flex-row gap-2">
-                    {activePeriodo.estado === 'cerrado' && (
+                    {activePeriodo.estado === 'cerrado' && rol !== 'nomina' && (
                       <TouchableOpacity
                         onPress={handleLiquidar}
                         disabled={liquidarMutation.isPending}
