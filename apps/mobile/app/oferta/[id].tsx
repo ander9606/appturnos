@@ -110,18 +110,9 @@ function PostulanteRow({
       )}
 
       {isEnProg && (
-        <View className="flex-row items-center gap-2">
-          <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl">
-            <Ionicons name="time-outline" size={14} color="#3B82F6" />
-            <Text className="text-xs font-semibold text-info">En turno</Text>
-          </View>
-          <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
-            loading={noPresentadoM.isPending} disabled={isBusy}
-            onPress={() => Alert.alert('No se presentó', `¿Marcar a ${nombre} como no presentado?`, [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Marcar ausente', style: 'destructive',
-                onPress: () => noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId }) },
-            ])} />
+        <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
+          <Ionicons name="time-outline" size={14} color="#3B82F6" />
+          <Text className="text-xs font-semibold text-info">En turno</Text>
         </View>
       )}
     </View>

@@ -152,15 +152,11 @@ function PostulanteRow({
         </View>
       )}
 
-      {/* En progreso → chip + No se presentó */}
+      {/* En progreso → chip */}
       {isEnProgreso && (
-        <View className="flex-row items-center gap-2">
-          <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl">
-            <Ionicons name="time-outline" size={14} color="#3B82F6" />
-            <Text className="text-xs font-semibold text-info">En turno</Text>
-          </View>
-          <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
-            loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+        <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
+          <Ionicons name="time-outline" size={14} color="#3B82F6" />
+          <Text className="text-xs font-semibold text-info">En turno</Text>
         </View>
       )}
     </View>
