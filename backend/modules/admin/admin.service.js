@@ -103,6 +103,19 @@ const AdminService = {
     return AdminModel.obtenerEmpresa(id);
   },
 
+  // ── Wompi eventos ─────────────────────────────────────────────────────────
+
+  async listarWompiEventos({ estado, page = 1, limit = 30 } = {}) {
+    const offset = (page - 1) * limit;
+    const { data, total } = await AdminModel.listarWompiEventos({ estado, limit, offset });
+    return { data, total, page, limit, pages: Math.ceil(total / limit) };
+  },
+
+  async reintentarWompiEvento(id) {
+    const WompiService = require('../webhooks/wompi.service');
+    return WompiService.reintentarEvento(id);
+  },
+
   // ── Reportes ──────────────────────────────────────────────────────────────
 
   async obtenerReportesGlobales() {

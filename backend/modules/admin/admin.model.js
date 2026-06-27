@@ -208,6 +208,26 @@ const AdminModel = {
       }, {}),
     };
   },
+
+  // ── Wompi eventos ─────────────────────────────────────────────────────────
+
+  async listarWompiEventos({ estado, limit, offset }) {
+    const where = estado ? 'WHERE estado = ?' : '';
+    const params = estado ? [estado, limit, offset] : [limit, offset];
+    const [rows] = await pool.query(
+      `SELECT id, transaction_id, referencia, empresa_id, plan, meses,
+              estado, intentos, error_detalle, created_at, procesado_at
+         FROM wompi_eventos ${where}
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?`,
+      params
+    );
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM wompi_eventos ${where}`,
+      estado ? [estado] : []
+    );
+    return { data: rows, total: Number(total) };
+  },
 };
 
 module.exports = AdminModel;

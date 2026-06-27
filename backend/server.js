@@ -144,6 +144,7 @@ async function iniciar() {
   // Worker que despacha la cola de webhooks salientes hacia logiq360.
   require('./modules/integracion/integracion.worker').iniciarWorker();
   require('./modules/suscripciones/suscripcion.worker').iniciarWorker();
+  require('./modules/webhooks/wompi.worker').iniciarWorker();
 
   const apagar = (senal) => {
     logger.info(`${senal} recibido, cerrando servidor...`);

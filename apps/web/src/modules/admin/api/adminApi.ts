@@ -25,4 +25,10 @@ export const adminApi = {
 
   generarLinkPago: (id: number, data: { plan: Plan; meses: number }) =>
     api.post(`/admin/empresas/${id}/link-pago`, data).then(r => r.data),
+
+  listarWompiEventos: (params?: { estado?: string; page?: number; limit?: number }) =>
+    api.get('/admin/wompi-eventos', { params }).then((r: any) => r.data),
+
+  reintentarWompiEvento: (id: number) =>
+    api.post(`/admin/wompi-eventos/${id}/reintentar`).then((r: any) => r.data),
 };

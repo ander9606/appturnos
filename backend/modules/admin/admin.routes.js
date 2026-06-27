@@ -141,4 +141,26 @@ router.patch(
   ctrl.cambiarEstadoEmpresa
 );
 
+// ── Wompi eventos ─────────────────────────────────────────────────────────
+
+// GET /api/admin/wompi-eventos
+router.get(
+  '/wompi-eventos',
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [query('estado').optional().isIn(['recibido', 'procesado', 'error', 'ignorado'])],
+  validar,
+  ctrl.listarWompiEventos
+);
+
+// POST /api/admin/wompi-eventos/:id/reintentar
+router.post(
+  '/wompi-eventos/:id/reintentar',
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [param('id').isInt({ min: 1 }).toInt()],
+  validar,
+  ctrl.reintentarWompiEvento
+);
+
 module.exports = router;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Building2, Users, Briefcase, Calendar, DollarSign,
-  Plus, Search, ToggleLeft, ToggleRight, ChevronRight,
+  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook,
 } from 'lucide-react';
 import { useReportesGlobales, useEmpresas, useCrearEmpresa, useCambiarEstadoEmpresa } from '../hooks/useAdmin';
 import type { EmpresaAdmin, Plan } from '../types';
@@ -51,6 +51,13 @@ export function SuperAdminPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground">Panel global</h1>
           <p className="text-sm text-muted-foreground">Zaturno · super admin</p>
+          <button
+            onClick={() => navigate('/admin/wompi-eventos')}
+            className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Webhook size={13} />
+            Eventos Wompi
+          </button>
         </div>
 
         {reportes && (

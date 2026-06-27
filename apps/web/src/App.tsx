@@ -15,6 +15,7 @@ import { ConfiguracionPage } from '@/modules/configuracion/pages/ConfiguracionPa
 import { IntegracionPage } from '@/modules/integracion/pages/IntegracionPage';
 import { SuperAdminPage } from '@/modules/admin/pages/SuperAdminPage';
 import { EmpresaDetailPage } from '@/modules/admin/pages/EmpresaDetailPage';
+import { WompiEventosPage } from '@/modules/admin/pages/WompiEventosPage';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="integracion" element={<IntegracionPage />} />
             <Route path="admin/empresas" element={<SuperAdminPage />} />
             <Route path="admin/empresas/:id" element={<EmpresaDetailPage />} />
+            <Route path="admin/wompi-eventos" element={<WompiEventosPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

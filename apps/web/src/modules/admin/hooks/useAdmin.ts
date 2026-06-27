@@ -80,3 +80,23 @@ export function useGenerarLinkPago(id: number) {
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }
+
+export function useWompiEventos(params?: { estado?: string; page?: number }) {
+  return useQuery({
+    queryKey: ['admin', 'wompi-eventos', params],
+    queryFn: () => adminApi.listarWompiEventos(params),
+    staleTime: 30_000,
+  });
+}
+
+export function useReintentarWompiEvento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => adminApi.reintentarWompiEvento(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'wompi-eventos'] });
+      toast.success('Evento reintentado con éxito');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
