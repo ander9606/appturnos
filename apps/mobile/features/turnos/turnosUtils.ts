@@ -38,11 +38,11 @@ export function getWeekDays(ref: Date = new Date()): WeekDay[] {
   });
 }
 
+const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000; // UTC-5, sin DST
+
 export function toISODate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+  const t = new Date(d.getTime() - BOGOTA_OFFSET_MS);
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
 }
 
 // ── Estado → visual ───────────────────────────────────────────────────────

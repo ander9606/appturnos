@@ -22,12 +22,13 @@ export function formatDateObj(date: Date): string {
   return `${d}/${m}/${y}`;
 }
 
-/** Date object → ISO "2026-05-21" usando fecha local (no UTC) */
+// Colombia = UTC-5, sin horario de verano
+const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+/** Date object → ISO "2026-05-21" en hora Bogotá (UTC-5), independiente del timezone del dispositivo */
 export function toISODate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  const t = new Date(date.getTime() - BOGOTA_OFFSET_MS);
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
 }
 
 /** "2026-05-21" → "Jue 21 May" */
