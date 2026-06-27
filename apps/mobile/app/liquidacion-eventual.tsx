@@ -12,6 +12,7 @@ import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { usePeriodoEventual, useLiquidacionEventual, useLiquidarEventual } from '@/features/turnos/useTurnosEventual';
+import { toISODate } from '@/features/turnos/turnosUtils';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import type { LineaLiquidacionEventual } from '@api-client';
@@ -63,7 +64,7 @@ export default function LiquidacionEventualScreen() {
   const lineas = liquidacion?.lineas ?? [];
   const totalGeneral = liquidacion?.total_general ?? 0;
 
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = toISODate(new Date());
   const puedeL = periodo && periodo.estado === 'abierto' && periodo.fecha_fin < hoy;
 
   function handleLiquidar() {
