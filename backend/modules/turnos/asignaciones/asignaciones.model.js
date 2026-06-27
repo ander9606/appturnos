@@ -675,6 +675,34 @@ const AsignacionesModel = {
     }
   },
 
+  /**
+   * Cierra masivamente todos los turnos en_progreso de una oferta,
+   * excluyendo los trabajadores en `excepcionesIds`.
+   * Reutiliza el mismo cálculo de horas capeado por hora_fin_estimada.
+   * @returns {number} cantidad de asignaciones cerradas
+   */
+  async cerrarMasivo(empresaId, ofertaId, excepcionesIds = []) {
+    const excClause = excepcionesIds.length
+      ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
+      : '';
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN oferta_puestos p ON p.id = a.puesto_id
+       SET a.hora_egreso_real = NOW(),
+           a.estado = 'completado',
+           a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
+               LEAST(NOW(), TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+           ) / 60,
+           a.pago_total = p.tarifa_dia
+       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
+         AND a.hora_ingreso_real IS NOT NULL
+         ${excClause}`,
+      [ofertaId, empresaId, ...excepcionesIds]
+    );
+    return res.affectedRows;
+  },
+
   /** Corrección manual de ingreso/egreso por un gestor (sin GPS ni firma). */
   async corregir(empresaId, id, { horaIngreso, horaEgreso, horasTrabajadas, estado }) {
     const [res] = await pool.query(

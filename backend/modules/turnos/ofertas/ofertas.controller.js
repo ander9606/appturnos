@@ -74,4 +74,14 @@ async function asignar(req, res) {
   res.status(201).json({ success: true, data, message: 'Trabajador asignado al turno' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, cancelar, aplicar, retirar, asignar };
+async function cerrar(req, res) {
+  const excepciones = (req.body.excepciones || []).map(Number);
+  const data = await AsignacionesService.cerrarMasivo(
+    req.empresa_id,
+    Number(req.params.id),
+    excepciones
+  );
+  res.json({ success: true, data, message: `Jornada cerrada: ${data.cerradas} turno(s) completados` });
+}
+
+module.exports = { listar, obtener, crear, actualizar, cancelar, aplicar, retirar, asignar, cerrar };

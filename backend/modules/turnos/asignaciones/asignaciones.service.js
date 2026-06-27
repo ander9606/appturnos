@@ -496,6 +496,50 @@ const AsignacionesService = {
   },
 
   /**
+   * Cierre masivo de jornada: completa todos los turnos en_progreso de una oferta.
+   * Los trabajador_id en `excepcionesIds` quedan en_progreso para cerrar solos (o en otro cierre).
+   */
+  async cerrarMasivo(empresaId, ofertaId, excepcionesIds = []) {
+    // Verificar que la oferta pertenece a la empresa.
+    const [[oferta]] = await pool.query(
+      'SELECT id FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
+      [ofertaId, empresaId]
+    );
+    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+
+    // Obtener usuarios a notificar antes de cerrar.
+    const excClause = excepcionesIds.length
+      ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
+      : '';
+    const [aNotificar] = await pool.query(
+      `SELECT t.usuario_id
+       FROM asignaciones_turno a
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
+         AND a.hora_ingreso_real IS NOT NULL ${excClause}`,
+      [ofertaId, empresaId, ...excepcionesIds]
+    );
+
+    const cerradas = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds);
+
+    // Notificación best-effort.
+    const usuarioIds = aNotificar.map((r) => r.usuario_id).filter(Boolean);
+    if (usuarioIds.length > 0) {
+      await NotificacionesService.notificarVarios(usuarioIds, {
+        empresaId,
+        tipo: 'turno.cerrado_gestor',
+        titulo: 'Jornada finalizada',
+        mensaje: 'El gestor cerró tu jornada. Revisa el resumen en tu perfil.',
+        data: { oferta_id: ofertaId },
+      }).catch(() => {});
+    }
+
+    await CostoLaborService.verificarYEmitir(empresaId, ofertaId);
+
+    return { cerradas, excluidos: excepcionesIds.length };
+  },
+
+  /**
    * Califica una asignación completada (1–5 estrellas). Actualiza el
    * ranking del trabajador y notifica al trabajador (best-effort).
    * Una asignación solo puede calificarse una vez.

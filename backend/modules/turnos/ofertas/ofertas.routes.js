@@ -126,6 +126,19 @@ router.post(
   ctrl.asignar
 );
 
+// POST /api/turnos/ofertas/:id/cerrar  — cierre masivo de jornada con excepciones opcionales
+router.post(
+  '/:id/cerrar',
+  verificarRol(GESTIONAR),
+  [
+    idParam,
+    body('excepciones').optional().isArray().withMessage('excepciones debe ser un array'),
+    body('excepciones.*').isInt({ min: 1 }).withMessage('cada excepción debe ser un trabajador_id entero'),
+  ],
+  validar,
+  ctrl.cerrar
+);
+
 // Sub-router de puestos: /api/turnos/ofertas/:id/puestos/...
 router.use('/:id/puestos', puestosRouter);
 
