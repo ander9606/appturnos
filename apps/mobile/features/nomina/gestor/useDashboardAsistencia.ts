@@ -12,11 +12,11 @@ import { useQueries } from '@tanstack/react-query';
 import { trabajadoresApi, nominaApi } from '@api-client';
 import type { Trabajador, RegistroDiario } from '@api-client';
 import { getJornadaLegalSemanal } from '../trabajador/nominaTrabajadorUtils';
-import { toISODate } from '@/lib/formatters';
+import { toISODate, bogotaToday } from '@/lib/formatters';
 
 // ── Helpers de fecha ───────────────────────────────────────────────────────
 
-function hoyISO() { return toISODate(new Date()); }
+function hoyISO() { return bogotaToday(); }
 
 function lunesDeSemanaISO() {
   const d = new Date();

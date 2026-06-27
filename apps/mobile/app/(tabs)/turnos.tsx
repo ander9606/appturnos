@@ -18,7 +18,7 @@ import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
-import { getWeekDays, toISODate } from '@/features/turnos/turnosUtils';
+import { getWeekDays, toISODate, bogotaToday } from '@/features/turnos/turnosUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
@@ -36,7 +36,7 @@ export default function TurnosScreen() {
   const isJefeNomina  = rol === 'jefe_nomina';
   const isNomina      = rol === 'trabajador_nomina';
   const theme    = useTheme();
-  const today    = useMemo(() => toISODate(new Date()), []);
+  const today    = useMemo(() => bogotaToday(), []);
 
   const { data: nominaPerfil } = useNominaPerfil();
   // trabajador_nomina siempre ve sus turnos eventuales; trabajador_turnos también

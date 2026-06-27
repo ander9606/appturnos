@@ -8,7 +8,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ApiError } from '@api-client';
 import type { RegistroDiario, PeriodoNomina, PuntoMarcaje } from '@api-client';
-import { toISODate } from '@/lib/formatters';
+import { bogotaToday } from '@/lib/formatters';
 import { useGeofence } from '@/features/turnos/useGeofence';
 import {
   usePeriodos,
@@ -16,6 +16,7 @@ import {
   useNominaPerfil,
   useMarcarEntrada,
   useMarcarSalida,
+  useSolicitarReingreso,
 } from '../useNomina';
 import {
   getValorHora,
@@ -50,9 +51,10 @@ export interface NominaTrabajadorState {
   fijoBloqueado: boolean;
 
   // Marcaje
-  isMutating: boolean;
-  handleEntrada: () => Promise<void>;
-  handleSalida:  () => void;
+  isMutating:       boolean;
+  handleEntrada:    () => Promise<void>;
+  handleSalida:     () => void;
+  handleReingreso:  () => void;
 
   // Loading / refresh
   loading:          boolean;
@@ -97,7 +99,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     [registros, valorHora],
   );
 
-  const todayISO = useMemo(() => toISODate(new Date()), []);
+  const todayISO = useMemo(() => bogotaToday(), []);
 
   const registroHoy = useMemo(
     () => registros.find((r) => r.fecha === todayISO) ?? null,
@@ -118,9 +120,10 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const fijoBloqueado = tipoMarcacion === 'fijo' && !geo.canMark;
 
   // ── Mutaciones ─────────────────────────────────────────────────────────
-  const entradaMutation = useMarcarEntrada();
-  const salidaMutation  = useMarcarSalida();
-  const isMutating      = entradaMutation.isPending || salidaMutation.isPending;
+  const entradaMutation   = useMarcarEntrada();
+  const salidaMutation    = useMarcarSalida();
+  const reingresoMutation = useSolicitarReingreso();
+  const isMutating        = entradaMutation.isPending || salidaMutation.isPending || reingresoMutation.isPending;
 
   const handleEntrada = useCallback(async () => {
     try {
@@ -160,6 +163,28 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     );
   }, [registroHoy, tipoMarcacion, geo.currentLocation, salidaMutation]);
 
+  const handleReingreso = useCallback(() => {
+    Alert.alert(
+      'Solicitar reingreso',
+      '¿Deseas pedir autorización al gestor para volver a ingresar hoy?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Solicitar',
+          onPress: async () => {
+            try {
+              await reingresoMutation.mutateAsync();
+              Alert.alert('Solicitud enviada', 'El gestor recibirá una notificación para aprobarte.');
+            } catch (err) {
+              const msg = err instanceof ApiError ? err.message : 'Error al enviar la solicitud';
+              Alert.alert('Error', msg);
+            }
+          },
+        },
+      ],
+    );
+  }, [reingresoMutation]);
+
   // ── Refresh ────────────────────────────────────────────────────────────
   const onRefresh = useCallback(() => {
     refetchPeriodos();
@@ -185,6 +210,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     isMutating,
     handleEntrada,
     handleSalida,
+    handleReingreso,
     loading,
     loadingRegistros,
     isRefetching,

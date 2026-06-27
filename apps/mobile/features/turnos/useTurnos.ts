@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi, cargosApi } from '@api-client';
 import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { toISODate } from '@/lib/formatters';
+import { bogotaToday } from '@/lib/formatters';
 
 // ── Query keys ────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ export function useAsignacionesTrabajador(
 
 /** Asignaciones de hoy para el resumen del dashboard (gestores/admin). */
 export function useAsignacionesHoy(opts: { enabled?: boolean } = {}) {
-  const today = toISODate(new Date());
+  const today = bogotaToday();
   return useQuery({
     queryKey: QUERY_KEYS.asignaciones({ fecha: today }),
     queryFn:  () => turnosApi.listarAsignaciones({ fecha: today, limit: 200 }),

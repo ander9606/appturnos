@@ -21,7 +21,7 @@ export function getWeekDays(ref: Date = new Date()): WeekDay[] {
   monday.setDate(ref.getDate() - ((dow + 6) % 7));
   monday.setHours(0, 0, 0, 0);
 
-  const today = toISODate(new Date());
+  const today = bogotaToday();
 
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
@@ -40,9 +40,18 @@ export function getWeekDays(ref: Date = new Date()): WeekDay[] {
 
 const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000; // UTC-5, sin DST
 
-export function toISODate(d: Date): string {
-  const t = new Date(d.getTime() - BOGOTA_OFFSET_MS);
+/** Fecha de HOY en Bogotá — independiente del timezone del dispositivo */
+export function bogotaToday(): string {
+  const t = new Date(Date.now() - BOGOTA_OFFSET_MS);
   return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** Date → "YYYY-MM-DD" usando partes de fecha locales del dispositivo */
+export function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 // ── Estado → visual ───────────────────────────────────────────────────────

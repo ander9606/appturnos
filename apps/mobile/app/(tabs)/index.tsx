@@ -26,7 +26,7 @@ import { useMisTurnos, useOfertas, useAsignacionesHoy } from '@/features/turnos/
 import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { usePeriodos, useNominaPerfil } from '@/features/nomina/useNomina';
 import { useCountNoLeidas } from '@/features/notificaciones/useNotificaciones';
-import { toISODate, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
+import { bogotaToday, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';
 import { StatCard }       from '@/components/ui/StatCard';
 import { ActiveShiftCard } from '@/features/dashboard/ActiveShiftCard';
@@ -59,7 +59,7 @@ export default function DashboardScreen() {
     : hour < 20 ? t('dashboard.greetingEvening')
     : t('dashboard.greetingNight');
 
-  const today = toISODate(new Date());
+  const today = bogotaToday();
 
   // ── Data fetching ────────────────────────────────────────────────────────
 
