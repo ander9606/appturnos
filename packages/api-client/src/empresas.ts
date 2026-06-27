@@ -59,4 +59,8 @@ export const empresasApi = {
   actualizarMiEmpresa(datos: ActualizarMiEmpresaPayload): Promise<Empresa> {
     return api.patch<Empresa>('/api/empresas/me', datos);
   },
+
+  obtenerSuscripcion(): Promise<{ activa: boolean; plan: string; vigente_hasta: string | null; dias_restantes: number | null }> {
+    return api.get('/api/empresas/suscripcion');
+  },
 };

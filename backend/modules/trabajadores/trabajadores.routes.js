@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./trabajadores.controller');
 
@@ -175,7 +176,7 @@ router.get(
 router.get('/:id', verificarRol(PUEDEN_VER), [idParam], validar, ctrl.obtener);
 
 // POST /api/trabajadores
-router.post('/', verificarRol(SOLO_ADMIN), reglasTrabajador({ parcial: false }), validar, ctrl.crear);
+router.post('/', verificarRol(SOLO_ADMIN), verificarSuscripcion, reglasTrabajador({ parcial: false }), validar, ctrl.crear);
 
 // PUT /api/trabajadores/:id
 router.put(

@@ -14,7 +14,10 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
+  Linking,
 } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { empresasApi } from '@api-client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -97,6 +100,14 @@ export default function DashboardScreen() {
   } = useAsignacionesHoy({ enabled: isManager });
 
   const noLeidas = useCountNoLeidas();
+
+  const { data: suscData } = useQuery({
+    queryKey: ['empresa', 'suscripcion'],
+    queryFn: () => empresasApi.obtenerSuscripcion(),
+    enabled: isManager,
+    staleTime: 5 * 60_000,
+  });
+  const suscVencida = isManager && suscData?.activa === false;
 
   // ── Pull to refresh ──────────────────────────────────────────────────────
 
@@ -220,6 +231,24 @@ export default function DashboardScreen() {
           />
         }
       >
+        {/* ── Banner suscripción vencida ──────────────────────────────── */}
+        {suscVencida && (
+          <Pressable
+            onPress={() => Linking.openURL('mailto:soporte@zaturno.app')}
+            className="mx-4 mt-4 flex-row items-center gap-3 bg-danger-light border border-danger/30 rounded-2xl px-4 py-3"
+            accessibilityRole="button"
+          >
+            <Ionicons name="alert-circle" size={20} color="#ef4444" />
+            <View className="flex-1">
+              <Text className="text-danger text-sm font-semibold">Suscripción vencida</Text>
+              <Text className="text-danger/80 text-xs mt-0.5">
+                Tienes 3 días de gracia. Toca aquí para renovar.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#ef4444" />
+          </Pressable>
+        )}
+
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View
           className="pt-4 pb-8 px-6 rounded-b-[32px] gap-1"

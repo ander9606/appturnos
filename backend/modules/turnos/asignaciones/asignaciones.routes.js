@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../../config/constants');
 const ctrl = require('./asignaciones.controller');
 
@@ -69,6 +70,7 @@ router.post('/:id/cancelar', verificarRol(GESTIONAR), [idParam], validar, ctrl.c
 router.post(
   '/:id/ingreso',
   verificarRol(TRABAJADOR),
+  verificarSuscripcion,
   [idParam, ...reglasCoordenadas],
   validar,
   ctrl.ingreso
@@ -78,6 +80,7 @@ router.post(
 router.post(
   '/:id/egreso',
   verificarRol(TRABAJADOR),
+  verificarSuscripcion,
   [idParam, body('firma_b64').isString().notEmpty().withMessage('firma_b64 requerida')],
   validar,
   ctrl.egreso

@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol, resolverEmpresasActivas } = require('../../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES, ESTADOS_OFERTA } = require('../../../config/constants');
 const ctrl = require('./ofertas.controller');
 const puestosRouter = require('./puestos/puestos.routes');
@@ -81,7 +82,7 @@ router.get(
 router.get('/:id', verificarRol(PUEDEN_VER), [idParam], validar, ctrl.obtener);
 
 // POST /api/turnos/ofertas
-router.post('/', verificarRol(GESTIONAR), reglasOferta({ parcial: false }), validar, ctrl.crear);
+router.post('/', verificarRol(GESTIONAR), verificarSuscripcion, reglasOferta({ parcial: false }), validar, ctrl.crear);
 
 // PUT /api/turnos/ofertas/:id
 router.put(
