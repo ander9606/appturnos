@@ -286,10 +286,13 @@ const AsignacionesModel = {
     const [res] = await pool.query(
       `UPDATE asignaciones_turno a
        JOIN oferta_puestos p ON p.id = a.puesto_id
+       JOIN ofertas_turno o  ON o.id = a.oferta_id
        SET a.hora_egreso_real = NOW(),
            a.firma_digital = ?,
            a.estado = 'completado',
-           a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, NOW()) / 60,
+           a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
+               LEAST(NOW(), TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+           ) / 60,
            a.pago_total = p.tarifa_dia
        WHERE a.id = ? AND a.empresa_id = ?
          AND a.estado = 'en_progreso'
