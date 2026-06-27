@@ -22,9 +22,12 @@ export function formatDateObj(date: Date): string {
   return `${d}/${m}/${y}`;
 }
 
-/** Date object → ISO "2026-05-21" */
+/** Date object → ISO "2026-05-21" usando fecha local (no UTC) */
 export function toISODate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 /** "2026-05-21" → "Jue 21 May" */

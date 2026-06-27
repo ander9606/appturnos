@@ -9,7 +9,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Asignacion } from '@api-client';
 import { Badge } from '@/components/ui/Badge';
-import { getEstadoConfig, fmtRange, fmtTime } from './turnosUtils';
+import { getEstadoConfig, fmtRange, fmtTime, toISODate } from './turnosUtils';
 
 interface ShiftCardProps {
   asignacion: Asignacion;
@@ -21,7 +21,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
   const config = getEstadoConfig(asignacion.estado);
 
   const isActive  = asignacion.estado === 'en_progreso';
-  const isToday   = asignacion.oferta_fecha === new Date().toISOString().split('T')[0];
+  const isToday   = asignacion.oferta_fecha === toISODate(new Date());
 
   return (
     <TouchableOpacity

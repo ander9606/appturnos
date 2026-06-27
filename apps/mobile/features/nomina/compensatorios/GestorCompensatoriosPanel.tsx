@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';
 import { useAsignarCompensatorio } from './useCompensatorios';
+import { toISODate } from '@/lib/formatters';
 
 interface Props {
   compensatorios: DescansoCompensatorio[];
@@ -71,7 +72,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
   }
 
   function confirmar() {
-    const iso = fecha.toISOString().slice(0, 10);
+    const iso = toISODate(fecha);
     Alert.alert(
       'Confirmar descanso',
       `¿Asignar el ${fmtFechaCorta(iso)} como descanso compensatorio para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
@@ -82,7 +83,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
     );
   }
 
-  const iso = fecha.toISOString().slice(0, 10);
+  const iso = toISODate(fecha);
 
   return (
     <View className="px-4 py-3 gap-2">

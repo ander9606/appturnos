@@ -11,6 +11,7 @@
  */
 
 import type { RegistroDiario, PeriodoNomina, TipoDia } from '@api-client';
+import { toISODate } from '@/lib/formatters';
 
 // ── Constantes ─────────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ function lunesDeSemana(fecha: string): string {
   const dia = d.getDay(); // 0=Dom
   const diff = dia === 0 ? -6 : 1 - dia;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().slice(0, 10);
+  return toISODate(d);
 }
 
 // ── Funciones públicas ─────────────────────────────────────────────────────

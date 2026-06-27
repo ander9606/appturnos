@@ -24,6 +24,7 @@ import {
   TIPO_DIA_LABEL, fmtHora, fmtFechaCorta,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { useTheme } from '@/lib/theme';
+import { toISODate } from '@/lib/formatters';
 import type { RegistroDiario, TipoDia } from '@api-client';
 
 // ── Constantes ────────────────────────────────────────────────────────────
@@ -205,7 +206,7 @@ function CrearRegistroModal({
       await crear.mutateAsync({
         periodo_id:    periodoId,
         trabajador_id: creando!.trabajadorId,
-        fecha:         fecha.toISOString().slice(0, 10),
+        fecha:         toISODate(fecha),
         hora_entrada:  fmtTime(horaEntrada),
         hora_salida:   horaSalida ? fmtTime(horaSalida) : undefined,
         novedad:       novedad.trim() || undefined,
@@ -248,7 +249,7 @@ function CrearRegistroModal({
             >
               <Ionicons name="calendar-outline" size={16} color="#64748B" />
               <Text className="text-sm text-foreground">
-                {fmtFechaCorta(fecha.toISOString().slice(0, 10))}
+                {fmtFechaCorta(toISODate(fecha))}
               </Text>
             </TouchableOpacity>
             {showFecha && (

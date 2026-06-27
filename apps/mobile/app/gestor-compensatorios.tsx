@@ -14,6 +14,7 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
+import { toISODate } from '@/lib/formatters';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import {
@@ -132,7 +133,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
   }
 
   function confirmar() {
-    const iso = fecha.toISOString().slice(0, 10);
+    const iso = toISODate(fecha);
     Alert.alert(
       'Confirmar descanso',
       `¿Asignar el ${fmtFechaCorta(iso)} como descanso para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
@@ -143,7 +144,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
     );
   }
 
-  const iso = fecha.toISOString().slice(0, 10);
+  const iso = toISODate(fecha);
 
   return (
     <View

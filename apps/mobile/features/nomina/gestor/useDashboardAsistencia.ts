@@ -12,26 +12,24 @@ import { useQueries } from '@tanstack/react-query';
 import { trabajadoresApi, nominaApi } from '@api-client';
 import type { Trabajador, RegistroDiario } from '@api-client';
 import { getJornadaLegalSemanal } from '../trabajador/nominaTrabajadorUtils';
+import { toISODate } from '@/lib/formatters';
 
 // ── Helpers de fecha ───────────────────────────────────────────────────────
 
-function hoyISO() {
-  const d = new Date();
-  return d.toISOString().slice(0, 10);
-}
+function hoyISO() { return toISODate(new Date()); }
 
 function lunesDeSemanaISO() {
   const d = new Date();
   const dia = d.getDay();
   d.setDate(d.getDate() - (dia === 0 ? 6 : dia - 1));
-  return d.toISOString().slice(0, 10);
+  return toISODate(d);
 }
 
 function domingoDeSemanaISO() {
   const d = new Date();
   const dia = d.getDay();
   d.setDate(d.getDate() + (dia === 0 ? 0 : 7 - dia));
-  return d.toISOString().slice(0, 10);
+  return toISODate(d);
 }
 
 // ── Tipos del dashboard ────────────────────────────────────────────────────
