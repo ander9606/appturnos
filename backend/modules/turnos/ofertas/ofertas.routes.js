@@ -71,6 +71,7 @@ router.get(
   [
     query('estado').optional().isIn(ESTADOS_OFERTA).withMessage('estado inválido'),
     query('fecha').optional().isISO8601().withMessage('fecha inválida'),
+    query('para_quien').optional().isIn(['turnos','nomina','ambos']).withMessage('para_quien inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
   ],

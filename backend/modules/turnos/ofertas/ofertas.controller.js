@@ -11,7 +11,7 @@ async function listar(req, res) {
   const { data, pagination } = await OfertasService.listar(
     req.empresa_id,
     req.usuario,
-    { fecha: req.query.fecha || undefined, estado: req.query.estado || undefined, disponibles, page, limit },
+    { fecha: req.query.fecha || undefined, estado: req.query.estado || undefined, disponibles, page, limit, paraQuien: req.query.para_quien || undefined },
     req.empresasActivas   // ← inyectado por resolverEmpresasActivas para TRABAJADOR_TURNOS
   );
   res.json({ success: true, data: { data, pagination } });
@@ -81,7 +81,7 @@ async function cerrar(req, res) {
     Number(req.params.id),
     excepciones
   );
-  res.json({ success: true, data, message: `Jornada cerrada: ${data.cerradas} turno(s) completados` });
+  res.json({ success: true, data, message: `Jornada cerrada: ${data.cerradas} completado(s), ${data.noPresentados} no presentado(s)` });
 }
 
 module.exports = { listar, obtener, crear, actualizar, cancelar, aplicar, retirar, asignar, cerrar };

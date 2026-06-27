@@ -36,6 +36,7 @@ export default function NominaIngresoScreen() {
     isMutating,
     handleEntrada,
     handleSalida,
+    handleReingreso,
     loading,
     isRefetching,
     onRefresh,
@@ -153,6 +154,22 @@ export default function NominaIngresoScreen() {
                 <Ionicons name="checkmark-circle" size={48} color="#16a34a" />
                 <Text className="text-sm font-bold text-success mt-1">Jornada completa</Text>
               </View>
+            ) : estadoHoy === 'reingreso_pendiente' ? (
+              <View
+                className="w-44 h-44 rounded-full items-center justify-center"
+                style={{ backgroundColor: '#f59e0b18', borderWidth: 3, borderColor: '#f59e0b44' }}
+              >
+                <Ionicons name="hourglass-outline" size={48} color="#f59e0b" />
+                <Text className="text-sm font-bold text-warning mt-1">Pendiente</Text>
+              </View>
+            ) : estadoHoy === 'reingreso_aprobado' ? (
+              <View
+                className="w-44 h-44 rounded-full items-center justify-center"
+                style={{ backgroundColor: '#16a34a18', borderWidth: 3, borderColor: '#16a34a44' }}
+              >
+                <Ionicons name="enter-outline" size={48} color="#16a34a" />
+                <Text className="text-sm font-bold text-success mt-1">Reingreso ok</Text>
+              </View>
             ) : (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
@@ -220,11 +237,46 @@ export default function NominaIngresoScreen() {
         )}
 
         {estadoHoy === 'jornada_completa' && (
-          <View className="rounded-2xl py-4 items-center" style={{ backgroundColor: '#16a34a20' }}>
-            <Text className="text-success font-semibold">
-              Jornada completada{registroHoy?.hora_salida ? ` · Salida ${fmtHora(registroHoy.hora_salida)}` : ''}
-            </Text>
+          <>
+            <View className="rounded-2xl py-4 items-center" style={{ backgroundColor: '#16a34a20' }}>
+              <Text className="text-success font-semibold">
+                Jornada completada{registroHoy?.hora_salida ? ` · Salida ${fmtHora(registroHoy.hora_salida)}` : ''}
+              </Text>
+            </View>
+            {periodoAbierto && (
+              <TouchableOpacity
+                onPress={handleReingreso}
+                disabled={isMutating}
+                className="rounded-2xl py-4 items-center border border-border"
+                accessibilityRole="button"
+                accessibilityLabel="Solicitar reingreso"
+              >
+                <Text className="text-muted-foreground font-medium">Solicitar reingreso</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
+
+        {estadoHoy === 'reingreso_pendiente' && (
+          <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: '#f59e0b20' }}>
+            <Text className="text-warning font-semibold text-center">Solicitud de reingreso enviada</Text>
+            <Text className="text-xs text-muted-foreground text-center">Esperando aprobación del gestor</Text>
           </View>
+        )}
+
+        {estadoHoy === 'reingreso_aprobado' && periodoAbierto && (
+          <TouchableOpacity
+            onPress={handleEntrada}
+            disabled={isMutating}
+            className="rounded-2xl py-5 items-center"
+            style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Marcar entrada (reingreso)"
+          >
+            {isMutating
+              ? <ActivityIndicator color="white" />
+              : <Text className="text-white text-lg font-bold">Marcar entrada (reingreso)</Text>}
+          </TouchableOpacity>
         )}
 
         {/* ── Info período ──────────────────────────────────── */}

@@ -25,6 +25,8 @@ import { useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 // ponytail: lazy import — native module only loaded when handler runs, not at route discovery time
 
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { authApi } from '@api-client';
@@ -251,6 +253,24 @@ export default function PerfilScreen() {
   const [editingPassword, setEditingPassword] = useState(false);
   const [loggingOut,      setLoggingOut]      = useState(false);
   const [uploadingFoto,   setUploadingFoto]   = useState(false);
+  const [bioSupported,    setBioSupported]    = useState(false);
+  const [bioEnabled,      setBioEnabled]      = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      LocalAuthentication.hasHardwareAsync(),
+      LocalAuthentication.isEnrolledAsync(),
+      SecureStore.getItemAsync('appturnos.biometric_enabled'),
+    ]).then(([hw, enrolled, pref]) => {
+      setBioSupported(hw && enrolled);
+      setBioEnabled(pref === '1');
+    });
+  }, []);
+
+  const handleToggleBio = async (val: boolean) => {
+    await SecureStore.setItemAsync('appturnos.biometric_enabled', val ? '1' : '0');
+    setBioEnabled(val);
+  };
 
   const { data: nominaPerfil } = useNominaPerfil();
   const actualizarExtrasMutation = useActualizarExtras();
@@ -453,6 +473,21 @@ export default function PerfilScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
               </Pressable>
+
+              {bioSupported && (
+                <View className="border-t border-border px-5 py-4 flex-row items-center justify-between">
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="finger-print" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Bloqueo biométrico</Text>
+                  </View>
+                  <Switch
+                    value={bioEnabled}
+                    onValueChange={handleToggleBio}
+                    trackColor={{ false: '#E2E8F0', true: theme.primary }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+              )}
             </View>
           )}
 

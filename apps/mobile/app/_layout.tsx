@@ -15,6 +15,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useBiometricLock } from '@/features/auth/useBiometricLock';
+import { BiometricLockScreen } from '@/features/auth/BiometricLockScreen';
 import { registerPushNotifications } from '@/lib/pushNotifications';
 
 // ── TanStack Query client ─────────────────────────────────────────────────
@@ -45,6 +47,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const rol         = usuario?.rol;
   const hasLaunched = useAuthStore((s) => s.hasLaunched);
   const rehydrate   = useAuthStore((s) => s.rehydrate);
+  const logout      = useAuthStore((s) => s.logout);
+  const { locked, supported, unlock } = useBiometricLock(status);
 
   // Rehydrate once on mount
   useEffect(() => {
@@ -102,7 +106,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [status, segments, rol, hasLaunched, usuario]);
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      {locked && supported && (
+        <BiometricLockScreen onUnlock={unlock} onLogout={logout} />
+      )}
+    </>
+  );
 }
 
 // ── Root layout ───────────────────────────────────────────────────────────
@@ -150,6 +161,8 @@ export default function RootLayout() {
             <Stack.Screen name="directorio-empresas" options={{ title: 'Buscar empresa' }} />
             {/* Mis empresas — vínculos del trabajador */}
             <Stack.Screen name="mis-empresas" options={{ title: 'Mis empresas' }} />
+            {/* Reingresos pendientes — jefe_nomina / admin_empresa */}
+            <Stack.Screen name="reingresos-pendientes" options={{ title: 'Reingresos pendientes' }} />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

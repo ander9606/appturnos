@@ -61,11 +61,26 @@ export function Button({
     onPress();
   };
 
+  const shadow = variant === 'primary' && !isDisabled ? {
+    shadowColor: '#FF5A3C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  } : variant === 'danger' && !isDisabled ? {
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  } : undefined;
+
   return (
     <TouchableOpacity
       {...rest}
       onPress={handlePress}
       disabled={isDisabled && !onPressDisabled}
+      style={shadow}
       className={[
         BASE,
         v.container,

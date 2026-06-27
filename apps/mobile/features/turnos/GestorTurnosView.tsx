@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar, useNoPresentado } from '@/features/turnos/useTurnos';
+import { bogotaToday } from '@/features/turnos/turnosUtils';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
@@ -46,6 +47,7 @@ const ESTADO_CONFIG: Record<EstadoAsignacion, { label: string; variant: BadgeVar
 function PostulanteRow({
   asignacion,
   ofertaId,
+  esPasado,
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
@@ -53,6 +55,7 @@ function PostulanteRow({
 }: {
   asignacion: AsignacionResumen;
   ofertaId: number;
+  esPasado: boolean;
   confirmarMutation:     ReturnType<typeof useConfirmar>;
   rechazarMutation:      ReturnType<typeof useRechazar>;
   cancelarMutation:      ReturnType<typeof useCancelar>;
@@ -93,18 +96,6 @@ function PostulanteRow({
     );
   }
 
-  function handleCancelar() {
-    Alert.alert(
-      'Cancelar asignación',
-      `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
-      [
-        { text: 'Volver', style: 'cancel' },
-        { text: 'Cancelar turno', style: 'destructive',
-          onPress: () => cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId }) },
-      ]
-    );
-  }
-
   function handleNoPresentado() {
     Alert.alert(
       'No se presentó',
@@ -127,37 +118,61 @@ function PostulanteRow({
         <Badge label={cfg.label} variant={cfg.variant} size="sm" />
       </View>
 
-      {/* Pendiente → Rechazar + Confirmar */}
-      {isPending && (
-        <View className="flex-row gap-2">
-          <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
-            loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
-          <Button label={isConfirming ? '…' : 'Confirmar'} variant="success" size="sm"
-            loading={isConfirming} disabled={isBusy}
-            onPress={() => confirmarMutation.mutate({ asignacionId: asignacion.id, ofertaId })} />
-        </View>
-      )}
-
-      {/* Confirmado → chip Aceptado + Cancelar + No se presentó */}
-      {isConfirmed && (
-        <View className="flex-row items-center gap-2 flex-wrap">
-          <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
-            <Ionicons name="checkmark-circle" size={14} color="#059669" />
-            <Text className="text-xs font-semibold text-success">Aceptado</Text>
-          </View>
-          <Button label={isCancelling ? '…' : 'Cancelar'} variant="danger" size="sm"
-            loading={isCancelling} disabled={isBusy} onPress={handleCancelar} />
+      {/* Evento pasado: solo "No vino" si aplica; sin confirmar/rechazar/cancelar */}
+      {esPasado ? (
+        (isConfirmed || isEnProgreso) ? (
           <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
             loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
-        </View>
-      )}
+        ) : isPending ? (
+          <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
+            loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
+        ) : null
+      ) : (
+        <>
+          {/* Pendiente → Rechazar + Confirmar */}
+          {isPending && (
+            <View className="flex-row gap-2">
+              <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
+                loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
+              <Button label={isConfirming ? '…' : 'Confirmar'} variant="success" size="sm"
+                loading={isConfirming} disabled={isBusy}
+                onPress={() => confirmarMutation.mutate({ asignacionId: asignacion.id, ofertaId })} />
+            </View>
+          )}
 
-      {/* En progreso → chip */}
-      {isEnProgreso && (
-        <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
-          <Ionicons name="time-outline" size={14} color="#3B82F6" />
-          <Text className="text-xs font-semibold text-info">En turno</Text>
-        </View>
+          {/* Confirmado → chip Aceptado + Cancelar + No se presentó */}
+          {isConfirmed && (
+            <View className="flex-row items-center gap-2 flex-wrap">
+              <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
+                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Text className="text-xs font-semibold text-success">Aceptado</Text>
+              </View>
+              <Button label={isCancelling ? '…' : 'Cancelar'} variant="danger" size="sm"
+                loading={isCancelling} disabled={isBusy}
+                onPress={() => {
+                  Alert.alert(
+                    'Cancelar asignación',
+                    `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
+                    [
+                      { text: 'Volver', style: 'cancel' },
+                      { text: 'Cancelar turno', style: 'destructive',
+                        onPress: () => cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId }) },
+                    ]
+                  );
+                }} />
+              <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
+                loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+            </View>
+          )}
+
+          {/* En progreso → chip */}
+          {isEnProgreso && (
+            <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
+              <Ionicons name="time-outline" size={14} color="#3B82F6" />
+              <Text className="text-xs font-semibold text-info">En turno</Text>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -167,12 +182,14 @@ function PostulanteRow({
 
 function GestorOfertaItem({
   oferta,
+  esPasado,
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
   noPresentadoMutation,
 }: {
   oferta: Oferta;
+  esPasado: boolean;
   confirmarMutation:    ReturnType<typeof useConfirmar>;
   rechazarMutation:     ReturnType<typeof useRechazar>;
   cancelarMutation:     ReturnType<typeof useCancelar>;
@@ -182,19 +199,20 @@ function GestorOfertaItem({
   const router = useRouter();
   const { data: detalle, isLoading: loadingDetalle } = useOferta(expanded ? oferta.id : null);
 
-  const totalPlazas    = oferta.puestos.reduce((s, p) => s + p.plazas, 0);
+  const totalPlazas     = oferta.puestos.reduce((s, p) => s + p.plazas, 0);
   const plazasCubiertas = oferta.puestos.reduce((s, p) => s + p.plazas_cubiertas, 0);
-  const pendientes = detalle?.asignaciones.filter((a) => a.estado === 'pendiente') ?? [];
+  const pendientes      = detalle?.asignaciones.filter((a) => a.estado === 'pendiente') ?? [];
   const tienePendientes = pendientes.length > 0;
 
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
       style={{
-        elevation: 2,
+        opacity: esPasado ? 0.72 : 1,
+        elevation: esPasado ? 0 : 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
+        shadowOpacity: esPasado ? 0 : 0.06,
         shadowRadius: 8,
       }}
     >
@@ -204,15 +222,18 @@ function GestorOfertaItem({
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
       >
-        <View className="w-1.5 bg-primary-400" />
+        <View className="w-1.5" style={{ backgroundColor: esPasado ? '#CBD5E1' : '#FF7150' }} />
 
         <View className="flex-1 px-4 py-4 gap-1.5">
-          {/* Title + estado */}
+          {/* Title + badge finalizado */}
           <View className="flex-row items-start justify-between gap-2">
             <Text className="text-base font-semibold text-foreground flex-1" numberOfLines={1}>
               {oferta.titulo}
             </Text>
-            <Text className="text-lg text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
+            <View className="flex-row items-center gap-2">
+              {esPasado && <Badge label="Finalizado" variant="default" size="sm" />}
+              <Text className="text-lg text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
+            </View>
           </View>
 
           {/* Date / time / location */}
@@ -235,13 +256,13 @@ function GestorOfertaItem({
             <Text className="text-xs text-muted-foreground">
               {plazasCubiertas}/{totalPlazas} plazas cubiertas
             </Text>
-            {!expanded && tienePendientes ? (
+            {!esPasado && !expanded && tienePendientes ? (
               <Badge
                 label={`${pendientes.length} pendiente${pendientes.length > 1 ? 's' : ''}`}
                 variant="warning"
                 size="sm"
               />
-            ) : !expanded && detalle ? (
+            ) : !esPasado && !expanded && detalle ? (
               <Badge label="Sin pendientes" variant="success" size="sm" />
             ) : null}
           </View>
@@ -252,7 +273,7 @@ function GestorOfertaItem({
       {expanded && (
         <View className="px-4 pb-4 border-t border-border mt-0">
           <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-3 mb-2">
-            Postulantes
+            {esPasado ? 'Historial de asistencia' : 'Postulantes'}
           </Text>
 
           <TouchableOpacity
@@ -270,7 +291,7 @@ function GestorOfertaItem({
             </View>
           ) : !detalle?.asignaciones.length ? (
             <Text className="text-sm text-muted-foreground py-2">
-              Sin postulantes aún.
+              Sin postulantes.
             </Text>
           ) : (
             detalle.asignaciones.map((a) => (
@@ -278,6 +299,7 @@ function GestorOfertaItem({
                 key={a.id}
                 asignacion={a}
                 ofertaId={oferta.id}
+                esPasado={esPasado}
                 confirmarMutation={confirmarMutation}
                 rechazarMutation={rechazarMutation}
                 cancelarMutation={cancelarMutation}
@@ -299,6 +321,9 @@ interface Props {
 }
 
 export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
+  const today      = useMemo(() => bogotaToday(), []);
+  const esPasado   = selectedDate < today;
+
   const {
     data: resp,
     isLoading,
@@ -311,6 +336,7 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
   const rechazarMutation      = useRechazar();
   const cancelarMutation      = useCancelar();
   const noPresentadoMutation  = useNoPresentado();
+
   const ofertas = resp?.data ?? [];
 
   if (isLoading) {
@@ -336,7 +362,14 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
       data={ofertas}
       keyExtractor={(item) => String(item.id)}
       renderItem={({ item }) => (
-        <GestorOfertaItem oferta={item} confirmarMutation={confirmarMutation} rechazarMutation={rechazarMutation} cancelarMutation={cancelarMutation} noPresentadoMutation={noPresentadoMutation} />
+        <GestorOfertaItem
+          oferta={item}
+          esPasado={esPasado}
+          confirmarMutation={confirmarMutation}
+          rechazarMutation={rechazarMutation}
+          cancelarMutation={cancelarMutation}
+          noPresentadoMutation={noPresentadoMutation}
+        />
       )}
       contentContainerClassName="px-5 py-4 gap-3"
       ListEmptyComponent={

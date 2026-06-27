@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Zaturno — Generador de íconos</title>
+  <style>
+    body { font-family: sans-serif; background: #1e293b; color: white; padding: 32px; }
+    canvas { display: block; margin: 16px 0; border-radius: 22%; }
+    button { background: #FF5A3C; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; margin-right: 12px; }
+    .label { font-size: 12px; color: #94a3b8; margin-top: 8px; }
+    .row { display: flex; gap: 48px; flex-wrap: wrap; }
+    .col { display: flex; flex-direction: column; align-items: center; }
+  </style>
+</head>
+<body>
+  <h2>Zaturno — Generador de íconos de app</h2>
+  <p>Carga la fuente y luego descarga los dos archivos PNG para reemplazar <code>assets/</code>.</p>
+  <button onclick="generate()">Generar y descargar</button>
+  <br><br>
+  <div class="row">
+    <div class="col">
+      <canvas id="icon" width="256" height="256"></canvas>
+      <div class="label">icon.png (iOS / general) — 1024×1024</div>
+    </div>
+    <div class="col">
+      <canvas id="adaptive" width="256" height="256" style="background: #FF5A3C; border-radius: 50%;"></canvas>
+      <div class="label">adaptive-icon.png (Android foreground) — 1024×1024</div>
+    </div>
+  </div>
+
+  <script>
+    // Ionicons "planet" glyph: codepoint 62659 (0xF4C3)
+    const PLANET_CHAR = String.fromCodePoint(62659);
+    // Relative path from scripts/ to the TTF
+    const FONT_PATH = '../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf';
+
+    async function loadFont() {
+      const font = new FontFace('Ionicons', `url("${FONT_PATH}")`);
+      await font.load();
+      document.fonts.add(font);
+    }
+
+    function drawIcon(canvas, size, withBg) {
+      // Draw at preview size, will export at 1024
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, size, size);
+
+      if (withBg) {
+        // Rounded-rect background (iOS clips to squircle, but we bake a square)
+        ctx.fillStyle = '#FF5A3C';
+        ctx.fillRect(0, 0, size, size);
+      }
+
+      // Planet glyph — white, centered
+      const fontSize = size * 0.52;
+      ctx.font = `${fontSize}px Ionicons`;
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(PLANET_CHAR, size / 2, size / 2 + fontSize * 0.06);
+    }
+
+    function exportCanvas(id, filename, size) {
+      // Render at full 1024px
+      const offscreen = document.createElement('canvas');
+      offscreen.width = offscreen.height = size;
+      const ctx = offscreen.getContext('2d');
+
+      const withBg = id === 'icon';
+      if (withBg) {
+        ctx.fillStyle = '#FF5A3C';
+        ctx.fillRect(0, 0, size, size);
+      }
+
+      const fontSize = size * 0.52;
+      ctx.font = `${fontSize}px Ionicons`;
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(PLANET_CHAR, size / 2, size / 2 + fontSize * 0.06);
+
+      offscreen.toBlob(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+      }, 'image/png');
+    }
+
+    async function generate() {
+      await loadFont();
+
+      // Draw previews
+      drawIcon(document.getElementById('icon'), 256, true);
+      drawIcon(document.getElementById('adaptive'), 256, false);
+
+      // Download full-res
+      setTimeout(() => {
+        exportCanvas('icon', 'icon.png', 1024);
+        setTimeout(() => exportCanvas('adaptive', 'adaptive-icon.png', 1024), 500);
+      }, 100);
+    }
+
+    // Auto-preview on load
+    loadFont().then(() => {
+      drawIcon(document.getElementById('icon'), 256, true);
+      drawIcon(document.getElementById('adaptive'), 256, false);
+    });
+  </script>
+</body>
+</html>

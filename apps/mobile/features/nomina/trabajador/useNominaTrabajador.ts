@@ -173,7 +173,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
           text: 'Solicitar',
           onPress: async () => {
             try {
-              await reingresoMutation.mutateAsync();
+              await reingresoMutation.mutateAsync(undefined);
               Alert.alert('Solicitud enviada', 'El gestor recibirá una notificación para aprobarte.');
             } catch (err) {
               const msg = err instanceof ApiError ? err.message : 'Error al enviar la solicitud';

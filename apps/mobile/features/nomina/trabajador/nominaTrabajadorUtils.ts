@@ -45,7 +45,9 @@ export type EstadoHoy =
   | 'sin_periodo'
   | 'sin_registro'
   | 'en_jornada'
-  | 'jornada_completa';
+  | 'jornada_completa'
+  | 'reingreso_pendiente'   // solicitud enviada, esperando aprobación del gestor
+  | 'reingreso_aprobado';   // aprobado, puede marcar nueva entrada
 
 export type TipoAlertaDia = 'sin_salida';
 
@@ -208,7 +210,7 @@ export function calcularResumenPeriodo(
   };
 }
 
-/** Estado del día actual según el registro de hoy. */
+/** Estado del día actual según el registro de hoy y la solicitud de reingreso activa. */
 export function getEstadoHoy(
   registroHoy: RegistroDiario | null,
   hayPeriodoAbierto: boolean,
@@ -216,6 +218,8 @@ export function getEstadoHoy(
   if (!hayPeriodoAbierto)         return 'sin_periodo';
   if (!registroHoy?.hora_entrada) return 'sin_registro';
   if (!registroHoy.hora_salida)   return 'en_jornada';
+  if (registroHoy.reingreso_estado === 'aprobado')  return 'reingreso_aprobado';
+  if (registroHoy.reingreso_estado === 'pendiente') return 'reingreso_pendiente';
   return 'jornada_completa';
 }
 

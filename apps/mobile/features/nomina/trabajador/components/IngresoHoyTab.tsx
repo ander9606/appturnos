@@ -217,7 +217,13 @@ export function IngresoHoyTab({
         >
           <View className="flex-row items-center gap-2">
             <Ionicons
-              name={estadoHoy === 'en_jornada' ? 'timer-outline' : estadoHoy === 'jornada_completa' ? 'checkmark-circle-outline' : 'log-in-outline'}
+              name={
+                estadoHoy === 'en_jornada'         ? 'timer-outline'            :
+                estadoHoy === 'jornada_completa'   ? 'checkmark-circle-outline' :
+                estadoHoy === 'reingreso_pendiente'? 'hourglass-outline'         :
+                estadoHoy === 'reingreso_aprobado' ? 'enter-outline'             :
+                'log-in-outline'
+              }
               size={22}
               color="white"
             />
@@ -226,6 +232,10 @@ export function IngresoHoyTab({
                 ? `En jornada · ${registroHoy?.hora_entrada ? calcularElapsedLabel(registroHoy.hora_entrada) : '—'}`
                 : estadoHoy === 'jornada_completa'
                 ? 'Jornada completada'
+                : estadoHoy === 'reingreso_pendiente'
+                ? 'Reingreso en espera'
+                : estadoHoy === 'reingreso_aprobado'
+                ? 'Reingreso aprobado'
                 : 'Marcar entrada'}
             </Text>
           </View>

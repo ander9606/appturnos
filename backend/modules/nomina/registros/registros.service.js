@@ -1,15 +1,18 @@
 'use strict';
 
-const RegistrosModel       = require('./registros.model');
-const PeriodosModel        = require('../periodos/periodos.model');
-const PeriodosService      = require('../periodos/periodos.service');
-const TrabajadoresModel    = require('../../trabajadores/trabajadores.model');
-const PuntosMarcajeModel   = require('../../puntos-marcaje/puntos-marcaje.model');
-const EmpresasModel        = require('../../empresas/empresas.model');
-const CompensatoriosService = require('../compensatorios/compensatorios.service');
-const { calcularHoras }    = require('../../../utils/laboralUtils');
-const { haversineMetros }  = require('../../../utils/geoUtils');
-const AppError             = require('../../../utils/AppError');
+const RegistrosModel            = require('./registros.model');
+const SolicitudesReingresoModel = require('./solicitudes-reingreso.model');
+const PeriodosModel             = require('../periodos/periodos.model');
+const PeriodosService           = require('../periodos/periodos.service');
+const TrabajadoresModel         = require('../../trabajadores/trabajadores.model');
+const PuntosMarcajeModel        = require('../../puntos-marcaje/puntos-marcaje.model');
+const EmpresasModel             = require('../../empresas/empresas.model');
+const CompensatoriosService     = require('../compensatorios/compensatorios.service');
+const NotificacionesService     = require('../../notificaciones/notificaciones.service');
+const { pool }                  = require('../../../config/database');
+const { calcularHoras }         = require('../../../utils/laboralUtils');
+const { haversineMetros }       = require('../../../utils/geoUtils');
+const AppError                  = require('../../../utils/AppError');
 const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
 
 /**
@@ -52,18 +55,29 @@ function getLunesDeSemana(isoDate) {
   return d.toISOString().slice(0, 10);
 }
 
-/** Returns today's date as 'YYYY-MM-DD' in local server time. */
+/** Returns today's date as 'YYYY-MM-DD' in Colombia time (UTC-5, no DST). */
 function hoyISO() {
-  const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
+  const t = new Date(Date.now() - 5 * 3_600_000);
+  return t.toISOString().slice(0, 10);
 }
 
 /** Returns current time as 'HH:MM:SS'. */
 function ahoraHHMMSS() {
   const d = new Date();
   return d.toTimeString().slice(0, 8);
+}
+
+async function _notificarDecisionReingreso(empresaId, solicitudId, tipo, titulo, mensaje) {
+  const [[sol]] = await pool.query(
+    'SELECT sr.*, t.usuario_id FROM solicitudes_reingreso sr JOIN trabajadores t ON t.id = sr.trabajador_id WHERE sr.id = ?',
+    [solicitudId]
+  );
+  if (sol?.usuario_id) {
+    await NotificacionesService.notificar({
+      empresaId, usuarioId: sol.usuario_id, tipo, titulo, mensaje,
+      data: { solicitud_id: solicitudId },
+    });
+  }
 }
 
 const RegistrosService = {
@@ -143,6 +157,10 @@ const RegistrosService = {
     const registro = await RegistrosModel.obtenerPorId(empresaId, id);
     if (!registro) throw new AppError('Registro no encontrado', 404);
 
+    if (registro.sesiones > 1) {
+      throw new AppError('No se puede corregir manualmente un registro con múltiples sesiones. Contacta al administrador del sistema.', 422);
+    }
+
     const periodo = await PeriodosModel.obtenerPorId(empresaId, registro.periodo_id);
     if (periodo.estado !== 'abierto') {
       throw new AppError('No se puede corregir un registro de un período cerrado', 409);
@@ -217,7 +235,22 @@ const RegistrosService = {
 
     const existing = await RegistrosModel.obtenerPorFecha(empresaId, trabajadorId, hoy);
     if (existing) {
-      if (existing.hora_entrada) throw new AppError('Ya marcaste tu entrada hoy', 409);
+      // Jornada en progreso — ya marcó entrada pero no salida.
+      if (existing.hora_entrada && !existing.hora_salida) {
+        throw new AppError('Ya marcaste tu entrada hoy', 409);
+      }
+      // Jornada completa — requiere solicitud de reingreso aprobada.
+      if (existing.hora_entrada && existing.hora_salida) {
+        const solicitud = await SolicitudesReingresoModel.obtenerActivaPorRegistro(empresaId, existing.id);
+        if (!solicitud || solicitud.estado !== 'aprobado') {
+          throw new AppError('El reingreso debe ser autorizado por el gestor', 403);
+        }
+        const reiniciado = await RegistrosModel.iniciarReingreso(empresaId, existing.id, ahoraHHMMSS());
+        if (reiniciado === 0) throw new AppError('No se pudo iniciar el reingreso', 409);
+        await SolicitudesReingresoModel.marcarUsada(solicitud.id);
+        return RegistrosModel.obtenerPorId(empresaId, existing.id);
+      }
+      // Registro sin hora_entrada (edge case).
       const updated = await RegistrosModel.actualizarEntrada(empresaId, existing.id, ahoraHHMMSS());
       if (updated === 0) throw new AppError('Ya marcaste tu entrada hoy', 409);
       return RegistrosModel.obtenerPorId(empresaId, existing.id);
@@ -256,12 +289,33 @@ const RegistrosService = {
       await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunes, registro.fecha);
 
     const horaSalida = ahoraHHMMSS();
-    const horas = calcularHoras({
+
+    // En sesiones > 1 los horas_* del registro ya contienen los totales de sesiones previas.
+    // Se incluyen en el acumulador para que calcularHoras clasifique esta sesión correctamente
+    // (si la sesión 1 agotó las ordinarias semanales, la 2 debe contar como extras).
+    const ordinariasBase = ordinariasAcum +
+      (registro.sesiones > 1
+        ? Number(registro.horas_ordinarias) + Number(registro.horas_nocturnas)
+        : 0);
+
+    const horasSesion = calcularHoras({
       horaEntrada: registro.hora_entrada,
       horaSalida,
       fecha: registro.fecha,
-      horasOrdinariasAcumuladas: ordinariasAcum,
+      horasOrdinariasAcumuladas: ordinariasBase,
     });
+
+    // Totales del día = sesiones previas + esta sesión.
+    const horas = registro.sesiones > 1
+      ? {
+          horas_ordinarias:      Number(registro.horas_ordinarias)      + horasSesion.horas_ordinarias,
+          horas_extra_diurnas:   Number(registro.horas_extra_diurnas)   + horasSesion.horas_extra_diurnas,
+          horas_extra_nocturnas: Number(registro.horas_extra_nocturnas) + horasSesion.horas_extra_nocturnas,
+          horas_nocturnas:       Number(registro.horas_nocturnas)       + horasSesion.horas_nocturnas,
+          horas_festivo:         Number(registro.horas_festivo)         + horasSesion.horas_festivo,
+          es_festivo:            horasSesion.es_festivo,
+        }
+      : horasSesion;
 
     const updated = await RegistrosModel.actualizarSalida(empresaId, registroId, {
       hora_salida: horaSalida,
@@ -290,6 +344,62 @@ const RegistrosService = {
     }
 
     return { ...registroFinal, advertencia };
+  },
+  // ── Reingreso ────────────────────────────────────────────────────────────
+
+  /** Trabajador solicita un segundo ingreso al día; queda pendiente de aprobación. */
+  async solicitarReingreso(empresaId, usuario, { motivo } = {}) {
+    const trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
+
+    const registro = await RegistrosModel.obtenerPorFecha(empresaId, trabajadorId, hoyISO());
+    if (!registro?.hora_salida) {
+      throw new AppError('Solo puedes solicitar reingreso después de marcar la salida', 409);
+    }
+
+    const activa = await SolicitudesReingresoModel.obtenerActivaPorRegistro(empresaId, registro.id);
+    if (activa) {
+      throw new AppError('Ya tienes una solicitud de reingreso pendiente o aprobada', 409);
+    }
+
+    const id = await SolicitudesReingresoModel.crear(empresaId, registro.id, trabajadorId, motivo);
+
+    // Notificar a gestores de nómina.
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
+    const [gestores] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa') AND activo = 1`,
+      [empresaId]
+    );
+    if (gestores.length > 0) {
+      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+        empresaId,
+        tipo: 'reingreso.solicitado',
+        titulo: 'Solicitud de reingreso',
+        mensaje: `${trabajador.nombre} ${trabajador.apellido} solicita reingreso para hoy.`,
+        data: { solicitud_id: id, registro_id: registro.id },
+      }).catch(() => {});
+    }
+
+    return { id, registro_id: registro.id };
+  },
+
+  async listarReingresosPendientes(empresaId) {
+    return SolicitudesReingresoModel.listarPendientes(empresaId);
+  },
+
+  async aprobarReingreso(empresaId, gestorId, solicitudId) {
+    if (!await SolicitudesReingresoModel.aprobar(empresaId, solicitudId, gestorId))
+      throw new AppError('Solicitud no encontrada o ya fue procesada', 404);
+    await _notificarDecisionReingreso(empresaId, solicitudId,
+      'reingreso.aprobado', 'Reingreso aprobado',
+      'Tu solicitud de reingreso fue aprobada. Ya puedes marcar tu entrada.');
+  },
+
+  async rechazarReingreso(empresaId, gestorId, solicitudId) {
+    if (!await SolicitudesReingresoModel.rechazar(empresaId, solicitudId, gestorId))
+      throw new AppError('Solicitud no encontrada o ya fue procesada', 404);
+    await _notificarDecisionReingreso(empresaId, solicitudId,
+      'reingreso.rechazado', 'Reingreso no autorizado',
+      'Tu solicitud de reingreso fue rechazada por el gestor.');
   },
 };
 

@@ -28,14 +28,24 @@ import type { Notificacion } from '@api-client';
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
-  'postulacion.confirmada': 'checkmark-circle-outline',
-  'asignacion.cancelada':   'close-circle-outline',
-  'postulacion.rechazada':  'close-circle-outline',
-  'turno.ingreso':          'log-in-outline',
-  'calificacion.recibida':  'star-outline',
-  'asignacion.no_presentado': 'alert-circle-outline',
-  'periodo.abierto':        'folder-open-outline',
-  'periodo.cerrado':        'lock-closed-outline',
+  'postulacion.confirmada':      'checkmark-circle-outline',
+  'asignacion.cancelada':        'close-circle-outline',
+  'postulacion.rechazada':       'close-circle-outline',
+  'turno.ingreso':               'log-in-outline',
+  'turno.cerrado_gestor':        'checkmark-done-outline',
+  'turno.no_presentado_gestor':  'alert-circle-outline',
+  'calificacion.recibida':       'star-outline',
+  'asignacion.no_presentado':    'alert-circle-outline',
+  'nomina.periodo_abierto':      'folder-open-outline',
+  'nomina.periodo_liquidado':    'cash-outline',
+  'oferta.nueva':                'megaphone-outline',
+  'oferta.modificada':           'create-outline',
+  'oferta.cancelada':            'close-circle-outline',
+  'oferta.personal_incompleto':  'people-outline',
+  'novedad_turno':               'chatbubble-outline',
+  'reingreso.solicitado':        'refresh-circle-outline',
+  'reingreso.aprobado':          'checkmark-circle-outline',
+  'reingreso.rechazado':         'close-circle-outline',
 };
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {
@@ -57,6 +67,7 @@ function destino(n: Notificacion): string | null {
   if (!n.data) return null;
   const d = n.data as Record<string, unknown>;
   if (d.asignacion_id) return `/turno/${d.asignacion_id}`;
+  if (d.oferta_id)     return `/oferta/${d.oferta_id}`;
   return null;
 }
 

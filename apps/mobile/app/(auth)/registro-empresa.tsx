@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Pressable,
   Dimensions,
   StyleSheet,
 } from 'react-native';
@@ -104,14 +103,6 @@ export default function RegistroEmpresaScreen() {
         <View style={styles.header}>
           <View style={styles.circle1} />
           <View style={styles.circle2} />
-
-          {/* Botón back */}
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
-          >
-            <Ionicons name="chevron-back" size={22} color="white" />
-          </Pressable>
 
           <View style={styles.logoBox}>
             <Ionicons name="briefcase" size={38} color="white" />
@@ -364,12 +355,6 @@ const styles = StyleSheet.create({
   circle2: {
     position: 'absolute', width: 160, height: 160, borderRadius: 80,
     backgroundColor: 'rgba(255,255,255,0.05)', bottom: -20, left: -40,
-  },
-  backBtn: {
-    position: 'absolute', top: 52, left: 16,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center', justifyContent: 'center',
   },
   logoBox: {
     width: 76, height: 76, borderRadius: 24,

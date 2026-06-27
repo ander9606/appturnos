@@ -12,7 +12,6 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
-import type { LocationObject } from 'expo-location';
 
 import {
   haversineMeters,
@@ -55,7 +54,8 @@ export function useGeofence({
   const [permissionDenied, setPermission] = useState(false);
   const [currentLocation, setLocation]    = useState<{ lat: number; lng: number } | null>(null);
 
-  const subRef = useRef<Location.LocationSubscription | null>(null);
+  // ponytail: polling instead of watchPositionAsync — avoids expo-keep-awake crash on some devices
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasTargets = targets !== null && targets.length > 0;
 
@@ -67,6 +67,24 @@ export function useGeofence({
 
     let cancelled = false;
 
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        if (cancelled) return;
+        const { latitude: lat, longitude: lng } = loc.coords;
+        setLocation({ lat, lng });
+        let minDist = Infinity;
+        for (const t of targets!) {
+          const d = haversineMeters(lat, lng, t.lat, t.lng);
+          if (d < minDist) minDist = d;
+        }
+        setDistanceM(minDist === Infinity ? null : minDist);
+      } catch {
+        // location unavailable — keep last known value
+      }
+    };
+
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (cancelled) return;
@@ -77,33 +95,13 @@ export function useGeofence({
       }
 
       setPermission(false);
-
-      subRef.current = await Location.watchPositionAsync(
-        {
-          accuracy: Location.Accuracy.High,
-          distanceInterval: 5,
-          timeInterval: 5_000,
-        },
-        (loc: LocationObject) => {
-          if (cancelled) return;
-          const { latitude: lat, longitude: lng } = loc.coords;
-          setLocation({ lat, lng });
-
-          // Find minimum distance across all valid targets
-          let minDist = Infinity;
-          for (const t of targets!) {
-            const d = haversineMeters(lat, lng, t.lat, t.lng);
-            if (d < minDist) minDist = d;
-          }
-          setDistanceM(minDist === Infinity ? null : minDist);
-        },
-      );
+      await poll();
+      intervalRef.current = setInterval(poll, 5_000);
     })();
 
     return () => {
       cancelled = true;
-      subRef.current?.remove();
-      subRef.current = null;
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, hasTargets]);

@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }    from '@/lib/theme';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { bogotaToday } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado,
@@ -45,11 +46,12 @@ const ESTADO_CFG: Record<EstadoAsignacion, { label: string; variant: BadgeVarian
 // ── PostulanteRow (gestores) ──────────────────────────────────────────────
 
 function PostulanteRow({
-  asignacion, ofertaId,
+  asignacion, ofertaId, esPasado,
   confirmarM, rechazarM, cancelarM, noPresentadoM,
 }: {
   asignacion:    AsignacionResumen;
   ofertaId:      number;
+  esPasado:      boolean;
   confirmarM:    ReturnType<typeof useConfirmar>;
   rechazarM:     ReturnType<typeof useRechazar>;
   cancelarM:     ReturnType<typeof useCancelar>;
@@ -71,34 +73,8 @@ function PostulanteRow({
         <Badge label={cfg.label} variant={cfg.variant} size="sm" />
       </View>
 
-      {isPending && (
-        <View className="flex-row gap-2">
-          <Button label={rechazarM.isPending ? '…' : 'Rechazar'} variant="danger" size="sm"
-            loading={rechazarM.isPending} disabled={isBusy}
-            onPress={() => Alert.alert('Rechazar', `¿Rechazar a ${nombre}?`, [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Rechazar', style: 'destructive',
-                onPress: () => rechazarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
-            ])} />
-          <Button label={confirmarM.isPending ? '…' : 'Confirmar'} variant="success" size="sm"
-            loading={confirmarM.isPending} disabled={isBusy}
-            onPress={() => confirmarM.mutate({ asignacionId: asignacion.id, ofertaId })} />
-        </View>
-      )}
-
-      {isConf && (
-        <View className="flex-row items-center gap-2 flex-wrap">
-          <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
-            <Ionicons name="checkmark-circle" size={14} color="#059669" />
-            <Text className="text-xs font-semibold text-success">Aceptado</Text>
-          </View>
-          <Button label={cancelarM.isPending ? '…' : 'Cancelar'} variant="danger" size="sm"
-            loading={cancelarM.isPending} disabled={isBusy}
-            onPress={() => Alert.alert('Cancelar turno', `¿Cancelar el turno de ${nombre}?`, [
-              { text: 'Volver', style: 'cancel' },
-              { text: 'Cancelar turno', style: 'destructive',
-                onPress: () => cancelarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
-            ])} />
+      {esPasado ? (
+        (isConf || isEnProg) ? (
           <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
             loading={noPresentadoM.isPending} disabled={isBusy}
             onPress={() => Alert.alert('No se presentó', `¿Marcar a ${nombre} como no presentado?`, [
@@ -106,14 +82,60 @@ function PostulanteRow({
               { text: 'Marcar ausente', style: 'destructive',
                 onPress: () => noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId }) },
             ])} />
-        </View>
-      )}
-
-      {isEnProg && (
-        <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
-          <Ionicons name="time-outline" size={14} color="#3B82F6" />
-          <Text className="text-xs font-semibold text-info">En turno</Text>
-        </View>
+        ) : isPending ? (
+          <Button label={rechazarM.isPending ? '…' : 'Rechazar'} variant="danger" size="sm"
+            loading={rechazarM.isPending} disabled={isBusy}
+            onPress={() => Alert.alert('Rechazar', `¿Rechazar a ${nombre}?`, [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Rechazar', style: 'destructive',
+                onPress: () => rechazarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
+            ])} />
+        ) : null
+      ) : (
+        <>
+          {isPending && (
+            <View className="flex-row gap-2">
+              <Button label={rechazarM.isPending ? '…' : 'Rechazar'} variant="danger" size="sm"
+                loading={rechazarM.isPending} disabled={isBusy}
+                onPress={() => Alert.alert('Rechazar', `¿Rechazar a ${nombre}?`, [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Rechazar', style: 'destructive',
+                    onPress: () => rechazarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
+                ])} />
+              <Button label={confirmarM.isPending ? '…' : 'Confirmar'} variant="success" size="sm"
+                loading={confirmarM.isPending} disabled={isBusy}
+                onPress={() => confirmarM.mutate({ asignacionId: asignacion.id, ofertaId })} />
+            </View>
+          )}
+          {isConf && (
+            <View className="flex-row items-center gap-2 flex-wrap">
+              <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
+                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Text className="text-xs font-semibold text-success">Aceptado</Text>
+              </View>
+              <Button label={cancelarM.isPending ? '…' : 'Cancelar'} variant="danger" size="sm"
+                loading={cancelarM.isPending} disabled={isBusy}
+                onPress={() => Alert.alert('Cancelar turno', `¿Cancelar el turno de ${nombre}?`, [
+                  { text: 'Volver', style: 'cancel' },
+                  { text: 'Cancelar turno', style: 'destructive',
+                    onPress: () => cancelarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
+                ])} />
+              <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
+                loading={noPresentadoM.isPending} disabled={isBusy}
+                onPress={() => Alert.alert('No se presentó', `¿Marcar a ${nombre} como no presentado?`, [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Marcar ausente', style: 'destructive',
+                    onPress: () => noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId }) },
+                ])} />
+            </View>
+          )}
+          {isEnProg && (
+            <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
+              <Ionicons name="time-outline" size={14} color="#3B82F6" />
+              <Text className="text-xs font-semibold text-info">En turno</Text>
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -132,6 +154,7 @@ export default function OfertaDetailScreen() {
 
   const { data: oferta, isLoading } = useOferta(id);
   const { data: misTurnos }         = useMisTurnos({ enabled: isWorker });
+  const esPasado = oferta ? oferta.fecha < bogotaToday() : false;
 
   const aplicarM       = useAplicar();
   const confirmarM     = useConfirmar();
@@ -205,7 +228,7 @@ export default function OfertaDetailScreen() {
           {/* ── Info principal ──────────────────────────────────── */}
           <View className="bg-card rounded-3xl overflow-hidden"
             style={{ elevation: 3, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
-            <View className="h-2 bg-primary-400" />
+            <View className="h-2" style={{ backgroundColor: esPasado ? '#CBD5E1' : '#FF7150' }} />
             <View className="px-5 py-5 gap-3">
               <View className="flex-row items-start justify-between gap-2">
                 <Text className="text-xl font-bold text-foreground flex-1 pr-2" numberOfLines={2}>
@@ -308,7 +331,12 @@ export default function OfertaDetailScreen() {
           {/* ── CTA trabajador: Aplicar ──────────────────────────── */}
           {isWorker && (
             <View>
-              {yaAplicado ? (
+              {esPasado ? (
+                <View className="bg-muted rounded-2xl px-5 py-4 flex-row items-center gap-3">
+                  <Ionicons name="time-outline" size={20} color="#94A3B8" />
+                  <Text className="text-sm text-muted-foreground">Evento finalizado</Text>
+                </View>
+              ) : yaAplicado ? (
                 <View className="bg-info/10 rounded-2xl px-5 py-4 flex-row items-center gap-3">
                   <Ionicons name="checkmark-circle-outline" size={22} color="#3B82F6" />
                   <Text className="text-sm font-semibold text-info">Ya estás postulado a este turno</Text>
@@ -334,16 +362,17 @@ export default function OfertaDetailScreen() {
             <View className="bg-card rounded-2xl px-5 py-4"
               style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
               <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                Postulantes
+                {esPasado ? 'Historial de asistencia' : 'Postulantes'}
               </Text>
               {!oferta.asignaciones?.length ? (
-                <Text className="text-sm text-muted-foreground py-2">Sin postulantes aún.</Text>
+                <Text className="text-sm text-muted-foreground py-2">Sin postulantes.</Text>
               ) : (
                 oferta.asignaciones.map((a) => (
                   <PostulanteRow
                     key={a.id}
                     asignacion={a}
                     ofertaId={oferta.id}
+                    esPasado={esPasado}
                     confirmarM={confirmarM}
                     rechazarM={rechazarM}
                     cancelarM={cancelarM}

@@ -18,7 +18,7 @@ import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
-import { getWeekDays, toISODate, bogotaToday } from '@/features/turnos/turnosUtils';
+import { getDateRange, toISODate, bogotaToday } from '@/features/turnos/turnosUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
@@ -42,34 +42,11 @@ export default function TurnosScreen() {
   // trabajador_nomina siempre ve sus turnos eventuales; trabajador_turnos también
   const isWorker = rol === 'trabajador_turnos' || isNomina;
 
-  const [weekRef,      setWeekRef]      = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab,    setActiveTab]    = useState<ActiveTab>(() => isWorker ? 'mis_turnos' : 'disponibles');
 
-  const weekDays  = useMemo(() => getWeekDays(weekRef), [weekRef]);
-  const weekLabel = useMemo(() => buildWeekLabel(weekDays), [weekDays]);
-
-  const goToPrevWeek = useCallback(() => {
-    setWeekRef((prev: Date) => {
-      const d = new Date(prev);
-      d.setDate(d.getDate() - 7);
-      const days = getWeekDays(d);
-      const todayDay = days.find(day => day.isoDate === today);
-      setSelectedDate(todayDay ? today : days[0].isoDate);
-      return d;
-    });
-  }, [today]);
-
-  const goToNextWeek = useCallback(() => {
-    setWeekRef((prev: Date) => {
-      const d = new Date(prev);
-      d.setDate(d.getDate() + 7);
-      const days = getWeekDays(d);
-      const todayDay = days.find(day => day.isoDate === today);
-      setSelectedDate(todayDay ? today : days[0].isoDate);
-      return d;
-    });
-  }, [today]);
+  // ponytail: static range, no pagination state needed
+  const allDays = useMemo(() => getDateRange(7, 42), []);
 
   // ── Data ──────────────────────────────────────────────────────────────
   const {
@@ -96,12 +73,13 @@ export default function TurnosScreen() {
 
   // ── Derived ───────────────────────────────────────────────────────────
 
-  /** Días del trabajador que tienen al menos una asignación */
+  /** Días que tienen al menos un turno (propio) o una oferta disponible */
   const datesWithShifts = useMemo(() => {
     const set = new Set<string>();
     misTurnos?.forEach((a) => set.add(a.oferta_fecha));
+    ofertasResp?.data?.forEach((o) => set.add(o.fecha));
     return set;
-  }, [misTurnos]);
+  }, [misTurnos, ofertasResp]);
 
   /** Asignaciones del día seleccionado */
   const turnosDelDia = useMemo(() => {
@@ -142,12 +120,13 @@ export default function TurnosScreen() {
   ), []);
 
   const renderOfertaCard = useCallback(({ item }: { item: Oferta }) => {
+    const esPasado = item.fecha < today;
     const yaAplicado = aplicadosIds.has(item.id);
     const plazasLibres = item.puestos?.reduce((s, p) => s + (p.plazas - p.plazas_cubiertas), 0) ?? 0;
     const tarifaMin = item.puestos?.length > 0 ? Math.min(...item.puestos.map(p => p.tarifa_dia)) : 0;
     const hayVariasTarifas = item.puestos?.length > 1 && item.puestos.some(p => p.tarifa_dia !== tarifaMin);
     const firstAvailablePuesto = item.puestos?.find(p => p.plazas_cubiertas < p.plazas);
-    const hayTraslape = turnosSolapan(item, turnosConfirmados);
+    const hayTraslape = !esPasado && turnosSolapan(item, turnosConfirmados);
 
     return (
       <TouchableOpacity
@@ -155,28 +134,34 @@ export default function TurnosScreen() {
         activeOpacity={0.8}
         className="bg-card rounded-2xl overflow-hidden flex-row"
         style={{
-          elevation: 2,
+          elevation: esPasado ? 0 : 2,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.06,
+          shadowOpacity: esPasado ? 0 : 0.06,
           shadowRadius: 8,
+          opacity: esPasado ? 0.65 : 1,
         }}
       >
         {/* Accent bar */}
-        <View className={`w-1.5 ${hayTraslape ? 'bg-warning' : 'bg-primary-400'}`} />
+        <View
+          className="w-1.5"
+          style={{ backgroundColor: esPasado ? '#CBD5E1' : hayTraslape ? '#F59E0B' : '#FF7150' }}
+        />
 
         <View className="flex-1 px-4 py-4 gap-2">
           <View className="flex-row items-start justify-between gap-2">
             <Text className="text-base font-semibold text-foreground flex-1" numberOfLines={1}>
               {item.titulo}
             </Text>
-            {plazasLibres > 0 && (
+            {esPasado ? (
+              <Badge label="Pasado" variant="default" size="sm" />
+            ) : plazasLibres > 0 ? (
               <Badge
                 label={`${plazasLibres} libre${plazasLibres > 1 ? 's' : ''}`}
                 variant={plazasLibres <= 2 ? 'warning' : 'info'}
                 size="sm"
               />
-            )}
+            ) : null}
           </View>
 
           {hayTraslape && (
@@ -212,10 +197,12 @@ export default function TurnosScreen() {
           </View>
 
           <View className="flex-row items-center justify-between mt-1">
-            <Text className="text-sm font-semibold text-success">
+            <Text className={`text-sm font-semibold ${esPasado ? 'text-muted-foreground' : 'text-success'}`}>
               {hayVariasTarifas ? 'Desde ' : ''}${tarifaMin.toLocaleString('es-CO')} / turno
             </Text>
-            {yaAplicado ? (
+            {esPasado ? (
+              <Text className="text-xs text-muted-foreground">Evento finalizado</Text>
+            ) : yaAplicado ? (
               <Badge label="Ya postulado" variant="info" size="sm" />
             ) : (
               <Button
@@ -231,7 +218,7 @@ export default function TurnosScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [aplicadosIds, aplicarMutation, turnosConfirmados]);
+  }, [aplicadosIds, aplicarMutation, turnosConfirmados, today]);
 
   // ── Empty states ──────────────────────────────────────────────────────
 
@@ -270,13 +257,10 @@ export default function TurnosScreen() {
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
       <WeekStrip
-        days={weekDays}
+        days={allDays}
         selectedDate={selectedDate}
         datesWithShifts={datesWithShifts}
         onSelectDate={setSelectedDate}
-        weekLabel={weekLabel}
-        onPrevWeek={goToPrevWeek}
-        onNextWeek={goToNextWeek}
         primaryColor={theme.primary}
       />
 
@@ -494,22 +478,6 @@ export default function TurnosScreen() {
 
 const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-const FULL_MONTHS  = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-import type { WeekDay } from '@/features/turnos/turnosUtils';
-
-function buildWeekLabel(days: WeekDay[]): string {
-  const first = days[0];
-  const last  = days[6];
-  const year  = first.date.getFullYear();
-  const thisYear = new Date().getFullYear();
-  const yearSuffix = year !== thisYear ? ` ${year}` : '';
-
-  if (first.date.getMonth() === last.date.getMonth()) {
-    return `${FULL_MONTHS[first.date.getMonth()]}${yearSuffix}`;
-  }
-  return `${first.dayNum} ${SHORT_MONTHS[first.date.getMonth()]} – ${last.dayNum} ${SHORT_MONTHS[last.date.getMonth()]}${yearSuffix}`;
-}
 
 function formatShortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);

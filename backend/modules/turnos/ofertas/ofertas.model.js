@@ -296,6 +296,41 @@ const OfertasModel = {
     return res.affectedRows;
   },
 
+  /**
+   * Ofertas próximas (en las próximas `horasAntes` horas) con personal incompleto
+   * y que aún no han disparado la alerta. Incluye IDs de gestores a notificar.
+   */
+  async listarProximasConPersonalIncompleto(horasAntes = 24) {
+    const [filas] = await pool.query(
+      `SELECT o.id, o.empresa_id, o.titulo, o.fecha, o.hora_inicio,
+              SUM(p.plazas) AS total_plazas,
+              SUM(p.plazas_cubiertas) AS cubiertas,
+              JSON_ARRAYAGG(u.id) AS gestor_ids
+       FROM ofertas_turno o
+       JOIN oferta_puestos p ON p.oferta_id = o.id
+       JOIN usuarios u ON u.empresa_id = o.empresa_id
+                      AND u.rol IN ('jefe_turnos', 'admin_empresa')
+                      AND u.activo = 1
+       WHERE o.estado IN ('abierta', 'publicada')
+         AND o.alerta_personal_enviada = 0
+         AND TIMESTAMP(o.fecha, o.hora_inicio) BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL ? HOUR)
+       GROUP BY o.id, o.empresa_id, o.titulo, o.fecha, o.hora_inicio
+       HAVING SUM(p.plazas_cubiertas) < SUM(p.plazas)`,
+      [horasAntes]
+    );
+    return filas.map((f) => ({
+      ...f,
+      gestor_ids: typeof f.gestor_ids === 'string' ? JSON.parse(f.gestor_ids) : (f.gestor_ids ?? []),
+    }));
+  },
+
+  async marcarAlertaEnviada(id) {
+    await pool.query(
+      'UPDATE ofertas_turno SET alerta_personal_enviada = 1 WHERE id = ?',
+      [id]
+    );
+  },
+
   async cancelar(empresaId, id) {
     const conn = await pool.getConnection();
     try {

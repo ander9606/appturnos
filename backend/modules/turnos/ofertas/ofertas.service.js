@@ -57,7 +57,7 @@ async function validarAceptaExtras(usuario) {
 }
 
 const OfertasService = {
-  async listar(empresaId, usuario, { fecha, estado, disponibles, page, limit }, empresasActivas) {
+  async listar(empresaId, usuario, { fecha, estado, disponibles, page, limit, paraQuien }, empresasActivas) {
     const offset = (page - 1) * limit;
 
     if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
@@ -81,7 +81,7 @@ const OfertasService = {
 
     const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
     const { data, total } = await OfertasModel.listar(empresaId, {
-      fecha, estado, disponibles, antiguedadMinMin, limit, offset,
+      fecha, estado, disponibles, antiguedadMinMin, paraQuien, limit, offset,
     });
     return { data, pagination: { page, limit, total } };
   },
@@ -258,6 +258,10 @@ const OfertasService = {
     if (!oferta) throw new AppError('Oferta no encontrada o aún no disponible', 404);
     if (oferta.estado !== 'abierta' && oferta.estado !== 'publicada') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
+    }
+    const hoyBogota = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    if (oferta.fecha < hoyBogota) {
+      throw new AppError('No puedes postularte a un turno que ya pasó', 409);
     }
 
     // Puesto existe y pertenece a la oferta.

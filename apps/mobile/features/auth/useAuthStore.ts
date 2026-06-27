@@ -13,6 +13,7 @@ import Constants from 'expo-constants';
 
 import { authApi, initApiClient, type UsuarioPerfil } from '@api-client';
 import { secureTokenStore } from '@/lib/secureStore';
+import { unregisterPushNotifications } from '@/lib/pushNotifications';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -213,6 +214,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
   // ── logout ────────────────────────────────────────────────────────────
   async logout() {
+    unregisterPushNotifications(); // best-effort, fire-and-forget
     const refreshToken = await secureTokenStore.getRefreshToken();
     if (refreshToken) {
       // Fire-and-forget — even if it fails we clear local state

@@ -43,6 +43,15 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 const WORKER_ROLES = ['trabajador_turnos', 'trabajador_nomina'];
 const MANAGE_ROLES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
 
+const ROL_LABEL: Record<string, string> = {
+  admin_empresa:      'Administrador',
+  jefe_turnos:        'Jefe de Turnos',
+  jefe_nomina:        'Jefe de Nómina',
+  nomina:             'Nómina',
+  trabajador_turnos:  'Trabajador · Turnos',
+  trabajador_nomina:  'Trabajador · Nómina',
+};
+
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
@@ -275,8 +284,8 @@ export default function DashboardScreen() {
               )}
             </Pressable>
           </View>
-          <Text className="text-white/60 text-xs capitalize">
-            {usuario?.rol?.replace(/_/g, ' ')}
+          <Text className="text-white/60 text-xs">
+            {ROL_LABEL[usuario?.rol ?? ''] ?? usuario?.rol?.replace(/_/g, ' ')}
           </Text>
         </View>
 

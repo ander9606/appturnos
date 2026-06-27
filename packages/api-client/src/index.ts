@@ -40,6 +40,8 @@ export type {
   TrabajadorNominaPerfil,
   DescansoCompensatorio,
   EstadoCompensatorio,
+  SolicitudReingreso,
+  EstadoSolicitudReingreso,
 } from './nomina';
 export { turnosApi, ESTADOS_ASIGNACION } from './turnos';
 export type {

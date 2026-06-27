@@ -53,4 +53,27 @@ async function marcarSalida(req, res) {
   res.json({ success: true, data, message: 'Salida registrada' });
 }
 
-module.exports = { listar, crear, corregir, obtenerMiPerfil, marcarEntrada, marcarSalida };
+async function solicitarReingreso(req, res) {
+  const data = await RegistrosService.solicitarReingreso(req.empresa_id, req.usuario, req.body);
+  res.status(201).json({ success: true, data, message: 'Solicitud de reingreso enviada al gestor' });
+}
+
+async function listarReingresosPendientes(req, res) {
+  const data = await RegistrosService.listarReingresosPendientes(req.empresa_id);
+  res.json({ success: true, data });
+}
+
+async function aprobarReingreso(req, res) {
+  await RegistrosService.aprobarReingreso(req.empresa_id, req.usuario.sub, Number(req.params.id));
+  res.json({ success: true, data: null, message: 'Reingreso aprobado' });
+}
+
+async function rechazarReingreso(req, res) {
+  await RegistrosService.rechazarReingreso(req.empresa_id, req.usuario.sub, Number(req.params.id));
+  res.json({ success: true, data: null, message: 'Reingreso rechazado' });
+}
+
+module.exports = {
+  listar, crear, corregir, obtenerMiPerfil, marcarEntrada, marcarSalida,
+  solicitarReingreso, listarReingresosPendientes, aprobarReingreso, rechazarReingreso,
+};

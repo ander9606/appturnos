@@ -39,12 +39,6 @@ export default function WelcomeScreen() {
         <Text style={styles.appName}>Zaturno</Text>
         <Text style={styles.appSub}>Gestión de turnos y nómina{'\n'}para tu empresa</Text>
 
-        {/* Indicadores */}
-        <View style={styles.dots}>
-          {[0, 1, 2].map(i => (
-            <View key={i} style={[styles.dot, i === 1 && styles.dotActive]} />
-          ))}
-        </View>
       </View>
 
       {/* ── Contenido ── */}
@@ -176,10 +170,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 22,
   },
-  dots: { flexDirection: 'row', gap: 6, marginTop: 20 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.4)' },
-  dotActive: { width: 22, backgroundColor: 'white' },
-
   content: {
     flex: 1,
     paddingHorizontal: 20,

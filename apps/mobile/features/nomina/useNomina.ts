@@ -144,3 +144,36 @@ export function useMarcarSalida() {
     },
   });
 }
+
+export function useSolicitarReingreso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (motivo?: string) => nominaApi.solicitarReingreso({ motivo }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
+  });
+}
+
+export function useReingresosPendientes() {
+  return useQuery({
+    queryKey: ['reingresos-pendientes'] as const,
+    queryFn: () => nominaApi.listarReingresosPendientes(),
+    staleTime: 15_000,
+    refetchInterval: 15_000,
+  });
+}
+
+export function useAprobarReingreso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => nominaApi.aprobarReingreso(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reingresos-pendientes'] }),
+  });
+}
+
+export function useRechazarReingreso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => nominaApi.rechazarReingreso(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['reingresos-pendientes'] }),
+  });
+}

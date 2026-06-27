@@ -507,25 +507,31 @@ const AsignacionesService = {
     );
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
 
-    // Obtener usuarios a notificar antes de cerrar.
+    // Recopilar usuarios a notificar (antes de mutar) — dos grupos distintos.
     const excClause = excepcionesIds.length
       ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
       : '';
-    const [aNotificar] = await pool.query(
-      `SELECT t.usuario_id
-       FROM asignaciones_turno a
+    const [enProgreso] = await pool.query(
+      `SELECT t.usuario_id FROM asignaciones_turno a
        JOIN trabajadores t ON t.id = a.trabajador_id
        WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL ${excClause}`,
       [ofertaId, empresaId, ...excepcionesIds]
     );
+    const [confirmados] = await pool.query(
+      `SELECT t.usuario_id FROM asignaciones_turno a
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'confirmado'
+         ${excClause}`,
+      [ofertaId, empresaId, ...excepcionesIds]
+    );
 
-    const cerradas = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds);
+    const { cerradas, noPresentados } = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds);
 
-    // Notificación best-effort.
-    const usuarioIds = aNotificar.map((r) => r.usuario_id).filter(Boolean);
-    if (usuarioIds.length > 0) {
-      await NotificacionesService.notificarVarios(usuarioIds, {
+    // Notificaciones best-effort — mensajes distintos por grupo.
+    const idsCerrados = enProgreso.map((r) => r.usuario_id).filter(Boolean);
+    if (idsCerrados.length > 0) {
+      await NotificacionesService.notificarVarios(idsCerrados, {
         empresaId,
         tipo: 'turno.cerrado_gestor',
         titulo: 'Jornada finalizada',
@@ -533,10 +539,20 @@ const AsignacionesService = {
         data: { oferta_id: ofertaId },
       }).catch(() => {});
     }
+    const idsAusentes = confirmados.map((r) => r.usuario_id).filter(Boolean);
+    if (idsAusentes.length > 0) {
+      await NotificacionesService.notificarVarios(idsAusentes, {
+        empresaId,
+        tipo: 'turno.no_presentado_gestor',
+        titulo: 'Marcado como no presentado',
+        mensaje: 'No registraste tu ingreso al turno. Fuiste marcado como no presentado.',
+        data: { oferta_id: ofertaId },
+      }).catch(() => {});
+    }
 
     await CostoLaborService.verificarYEmitir(empresaId, ofertaId);
 
-    return { cerradas, excluidos: excepcionesIds.length };
+    return { cerradas, noPresentados, excluidos: excepcionesIds.length };
   },
 
   /**

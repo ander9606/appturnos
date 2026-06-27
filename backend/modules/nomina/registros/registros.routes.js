@@ -84,6 +84,40 @@ router.post(
   ctrl.marcarSalida
 );
 
+// POST /api/nomina/registros/reingreso  — trabajador solicita reingreso del día
+router.post(
+  '/reingreso',
+  verificarRol(MARCAR),
+  [body('motivo').optional({ values: 'falsy' }).isString().isLength({ max: 255 })],
+  validar,
+  ctrl.solicitarReingreso
+);
+
+// GET /api/nomina/registros/reingresos/pendientes  — gestor lista solicitudes pendientes
+router.get(
+  '/reingresos/pendientes',
+  verificarRol(CORREGIR),
+  ctrl.listarReingresosPendientes
+);
+
+// POST /api/nomina/registros/reingresos/:id/aprobar
+router.post(
+  '/reingresos/:id/aprobar',
+  verificarRol(CORREGIR),
+  [idParam],
+  validar,
+  ctrl.aprobarReingreso
+);
+
+// POST /api/nomina/registros/reingresos/:id/rechazar
+router.post(
+  '/reingresos/:id/rechazar',
+  verificarRol(CORREGIR),
+  [idParam],
+  validar,
+  ctrl.rechazarReingreso
+);
+
 // PUT /api/nomina/registros/:id  (corregir)
 router.put(
   '/:id',

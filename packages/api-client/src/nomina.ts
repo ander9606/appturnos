@@ -24,9 +24,11 @@ export interface RegistroDiario {
   trabajador_id: number;
   periodo_id: number;
   fecha: string;           // YYYY-MM-DD
-  hora_entrada: string | null; // HH:MM:SS
+  hora_entrada: string | null; // HH:MM:SS — entrada de la sesión activa
   hora_salida: string | null;
-  horas_ordinarias: number;
+  sesiones: number;            // cantidad de sesiones del día (1 = normal, 2+ = con reingreso)
+  hora_entrada_inicial: string | null; // HH:MM:SS — primer ingreso del día (no cambia en reingresos)
+  horas_ordinarias: number;    // totales acumulados de todas las sesiones
   horas_extra_diurnas: number;
   horas_extra_nocturnas: number;
   horas_nocturnas: number;
@@ -41,6 +43,27 @@ export interface RegistroDiario {
   trabajador_nombre: string;
   trabajador_apellido: string;
   advertencia?: string | null; // set by marcarSalida when weekly extra limit is near/exceeded
+  reingreso_estado?: 'pendiente' | 'aprobado' | null; // solicitud activa del día
+}
+
+export type EstadoSolicitudReingreso = 'pendiente' | 'aprobado' | 'rechazado' | 'usado';
+
+export interface SolicitudReingreso {
+  id: number;
+  empresa_id: number;
+  registro_id: number;
+  trabajador_id: number;
+  estado: EstadoSolicitudReingreso;
+  motivo: string | null;
+  aprobado_por: number | null;
+  aprobado_at: string | null;
+  created_at: string;
+  // Joined (en listarPendientes)
+  trabajador_nombre?: string;
+  trabajador_apellido?: string;
+  fecha?: string;
+  hora_entrada?: string | null;
+  hora_salida?: string | null;
 }
 
 export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
@@ -198,6 +221,24 @@ export const nominaApi = {
 
   marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>(`/api/nomina/registros/${registroId}/marcar-salida`, datos ?? {});
+  },
+
+  // ── Reingreso ─────────────────────────────────────────────────────────
+
+  solicitarReingreso(datos?: { motivo?: string }): Promise<{ id: number; registro_id: number }> {
+    return api.post('/api/nomina/registros/reingreso', datos ?? {});
+  },
+
+  listarReingresosPendientes(): Promise<SolicitudReingreso[]> {
+    return api.get<SolicitudReingreso[]>('/api/nomina/registros/reingresos/pendientes');
+  },
+
+  aprobarReingreso(id: number): Promise<void> {
+    return api.post(`/api/nomina/registros/reingresos/${id}/aprobar`);
+  },
+
+  rechazarReingreso(id: number): Promise<void> {
+    return api.post(`/api/nomina/registros/reingresos/${id}/rechazar`);
   },
 
   // ── Compensatorios ────────────────────────────────────────────────────

@@ -14,6 +14,24 @@ export interface WeekDay {
   isToday: boolean;
 }
 
+/** Flat range of days around today for the scrollable date strip. */
+export function getDateRange(daysBack = 7, daysAhead = 42): WeekDay[] {
+  const today = bogotaToday();
+  const [y, mo, d] = today.split('-').map(Number);
+  return Array.from({ length: daysBack + daysAhead }, (_, i) => {
+    const dt = new Date(y, mo - 1, d - daysBack + i, 12); // noon avoids DST shift
+    const iso = toISODate(dt);
+    return {
+      date:       dt,
+      isoDate:    iso,
+      dayLabel:   SHORT_DAYS[dt.getDay()],
+      dayNum:     dt.getDate(),
+      monthLabel: SHORT_MONTHS[dt.getMonth()],
+      isToday:    iso === today,
+    };
+  });
+}
+
 /** Returns the 7 days of the week containing `ref` (Mon → Sun). */
 export function getWeekDays(ref: Date = new Date()): WeekDay[] {
   const dow = ref.getDay(); // 0=Sun

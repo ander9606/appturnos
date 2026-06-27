@@ -15,9 +15,16 @@ const RegistrosModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT r.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido
+      `SELECT r.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+              sr.estado AS reingreso_estado
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
+       LEFT JOIN solicitudes_reingreso sr
+         ON sr.id = (
+           SELECT id FROM solicitudes_reingreso
+           WHERE registro_id = r.id AND estado IN ('pendiente','aprobado')
+           ORDER BY created_at DESC LIMIT 1
+         )
        WHERE ${whereSql}
        ORDER BY r.fecha DESC, t.apellido
        LIMIT ? OFFSET ?`,
@@ -40,7 +47,16 @@ const RegistrosModel = {
 
   async obtenerPorFecha(empresaId, trabajadorId, fecha) {
     const [filas] = await pool.query(
-      'SELECT * FROM registros_diarios WHERE empresa_id = ? AND trabajador_id = ? AND fecha = ? LIMIT 1',
+      `SELECT r.*, sr.estado AS reingreso_estado
+       FROM registros_diarios r
+       LEFT JOIN solicitudes_reingreso sr
+         ON sr.id = (
+           SELECT id FROM solicitudes_reingreso
+           WHERE registro_id = r.id AND estado IN ('pendiente','aprobado')
+           ORDER BY created_at DESC LIMIT 1
+         )
+       WHERE r.empresa_id = ? AND r.trabajador_id = ? AND r.fecha = ?
+       LIMIT 1`,
       [empresaId, trabajadorId, fecha]
     );
     return filas[0] || null;
@@ -77,13 +93,28 @@ const RegistrosModel = {
   async crearConEntrada(empresaId, d) {
     const [res] = await pool.query(
       `INSERT INTO registros_diarios
-         (empresa_id, trabajador_id, periodo_id, fecha, hora_entrada,
+         (empresa_id, trabajador_id, periodo_id, fecha, hora_entrada, hora_entrada_inicial,
           horas_ordinarias, horas_extra_diurnas, horas_extra_nocturnas,
           horas_nocturnas, horas_festivo, es_festivo)
-       VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0)`,
-      [empresaId, d.trabajador_id, d.periodo_id, d.fecha, d.hora_entrada]
+       VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0)`,
+      [empresaId, d.trabajador_id, d.periodo_id, d.fecha, d.hora_entrada, d.hora_entrada]
     );
     return res.insertId;
+  },
+
+  /**
+   * Inicia una nueva sesión del día tras un reingreso aprobado.
+   * Los horas_* acumuladas de la sesión anterior se preservan;
+   * hora_entrada se resetea a la nueva entrada y hora_salida se limpia.
+   */
+  async iniciarReingreso(empresaId, id, horaEntrada) {
+    const [res] = await pool.query(
+      `UPDATE registros_diarios
+       SET hora_entrada = ?, hora_salida = NULL, sesiones = sesiones + 1
+       WHERE id = ? AND empresa_id = ? AND hora_salida IS NOT NULL`,
+      [horaEntrada, id, empresaId]
+    );
+    return res.affectedRows;
   },
 
   /** Set hora_entrada on an existing registro that has none yet (race-condition safe). */

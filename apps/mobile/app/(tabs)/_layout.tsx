@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { t } from '@/lib/i18n';
@@ -10,11 +11,14 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
 function TabIcon({ name, focused, color }: { name: IoniconsName; focused: boolean; color: string }) {
   return (
-    <Ionicons
-      name={focused ? name.replace('-outline', '') as IoniconsName : name}
-      size={22}
-      color={color}
-    />
+    <View style={{ alignItems: 'center', gap: 3 }}>
+      <Ionicons
+        name={focused ? name.replace('-outline', '') as IoniconsName : name}
+        size={22}
+        color={color}
+      />
+      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: focused ? color : 'transparent' }} />
+    </View>
   );
 }
 

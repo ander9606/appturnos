@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   type TextInputProps,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -50,9 +51,11 @@ export const Input = forwardRef<TextInput, InputProps>(
               className="absolute right-3 top-0 bottom-0 items-center justify-center px-1"
               accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             >
-              <Text className="text-lg text-muted-foreground">
-                {showPassword ? '🙈' : '👁️'}
-              </Text>
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color="#94A3B8"
+              />
             </TouchableOpacity>
           )}
         </View>

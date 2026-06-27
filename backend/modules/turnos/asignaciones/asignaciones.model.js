@@ -676,16 +676,19 @@ const AsignacionesModel = {
   },
 
   /**
-   * Cierra masivamente todos los turnos en_progreso de una oferta,
-   * excluyendo los trabajadores en `excepcionesIds`.
-   * Reutiliza el mismo cálculo de horas capeado por hora_fin_estimada.
-   * @returns {number} cantidad de asignaciones cerradas
+   * Cierre masivo de jornada para una oferta.
+   * - en_progreso (sin excepción) → completado (horas capeadas por hora_fin_estimada)
+   * - confirmado  (sin excepción) → no_presentado + devuelve plaza al puesto
+   * - excepciones                 → intactos en cualquier estado
+   * @returns {{ cerradas: number, noPresentados: number }}
    */
   async cerrarMasivo(empresaId, ofertaId, excepcionesIds = []) {
     const excClause = excepcionesIds.length
       ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
       : '';
-    const [res] = await pool.query(
+
+    // 1. en_progreso → completado
+    const [resComp] = await pool.query(
       `UPDATE asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
@@ -700,7 +703,40 @@ const AsignacionesModel = {
          ${excClause}`,
       [ofertaId, empresaId, ...excepcionesIds]
     );
-    return res.affectedRows;
+
+    // 2. confirmado → no_presentado (obtener IDs antes de mutar para devolver plazas)
+    const [ausentes] = await pool.query(
+      `SELECT a.id, a.puesto_id FROM asignaciones_turno a
+       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'confirmado'
+         ${excClause}`,
+      [ofertaId, empresaId, ...excepcionesIds]
+    );
+
+    let noPresentados = 0;
+    if (ausentes.length > 0) {
+      const ids = ausentes.map((r) => r.id);
+      await pool.query(
+        `UPDATE asignaciones_turno SET estado = 'no_presentado'
+         WHERE id IN (${ids.map(() => '?').join(',')})`,
+        ids
+      );
+
+      // Devolver plazas: decrementar por la cantidad de ausentes por puesto.
+      const porPuesto = ausentes.reduce((acc, r) => {
+        acc[r.puesto_id] = (acc[r.puesto_id] || 0) + 1;
+        return acc;
+      }, {});
+      for (const [puestoId, cant] of Object.entries(porPuesto)) {
+        await pool.query(
+          'UPDATE oferta_puestos SET plazas_cubiertas = GREATEST(0, plazas_cubiertas - ?) WHERE id = ?',
+          [cant, puestoId]
+        );
+      }
+
+      noPresentados = ausentes.length;
+    }
+
+    return { cerradas: resComp.affectedRows, noPresentados };
   },
 
   /** Corrección manual de ingreso/egreso por un gestor (sin GPS ni firma). */

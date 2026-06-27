@@ -15,7 +15,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Pressable,
   Dimensions,
   StyleSheet,
 } from 'react-native';
@@ -79,13 +78,6 @@ export default function LoginScreen() {
         <View style={styles.header}>
           <View style={styles.circle1} />
           <View style={styles.circle2} />
-
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
-          >
-            <Ionicons name="chevron-back" size={22} color="white" />
-          </Pressable>
 
           <View style={styles.logoBox}>
             <Ionicons name="planet" size={40} color="white" />
@@ -159,7 +151,7 @@ export default function LoginScreen() {
             size="lg"
           />
 
-          <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>o también</Text><View style={styles.dividerLine} /></View>
+          <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>O continúa con</Text><View style={styles.dividerLine} /></View>
           <TouchableOpacity style={styles.googleBtn} onPress={googleLogin} disabled={googleLoading} activeOpacity={0.8}>
             <Ionicons name="logo-google" size={20} color="#4285F4" />
             <Text style={styles.googleBtnText}>{googleLoading ? 'Conectando…' : 'Continuar con Google'}</Text>
@@ -217,12 +209,6 @@ const styles = StyleSheet.create({
   circle2: {
     position: 'absolute', width: 180, height: 180, borderRadius: 90,
     backgroundColor: 'rgba(255,255,255,0.05)', bottom: 0, left: -50,
-  },
-  backBtn: {
-    position: 'absolute', top: 52, left: 16,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center', justifyContent: 'center',
   },
   logoBox: {
     width: 82, height: 82, borderRadius: 26,
