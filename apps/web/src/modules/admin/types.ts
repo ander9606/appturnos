@@ -1,5 +1,7 @@
 export type Plan = 'basico' | 'profesional' | 'empresarial';
 
+export type OrigenSuscripcion = 'manual' | 'wompi' | 'logiq360';
+
 export interface EmpresaAdmin {
   id: number;
   nombre: string;
@@ -8,6 +10,8 @@ export interface EmpresaAdmin {
   ciudad: string | null;
   activo: boolean | number;
   plan: Plan;
+  suscripcion_vigente_hasta: string | null;
+  suscripcion_origen: OrigenSuscripcion;
   acepta_postulaciones: boolean | number;
   logo_url: string | null;
   descripcion: string | null;

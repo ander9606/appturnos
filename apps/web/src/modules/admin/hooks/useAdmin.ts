@@ -60,3 +60,23 @@ export function useCambiarEstadoEmpresa() {
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }
+
+export function useGestionarSuscripcion(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { plan?: Plan; vigente_hasta?: string | null; origen?: string }) =>
+      adminApi.gestionarSuscripcion(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'empresa', id] });
+      toast.success('Suscripción actualizada');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useGenerarLinkPago(id: number) {
+  return useMutation({
+    mutationFn: (data: { plan: Plan; meses: number }) => adminApi.generarLinkPago(id, data),
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}

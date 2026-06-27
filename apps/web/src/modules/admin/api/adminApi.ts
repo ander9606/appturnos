@@ -19,4 +19,10 @@ export const adminApi = {
 
   cambiarEstado: (id: number, activo: boolean) =>
     api.patch(`/admin/empresas/${id}/estado`, { activo }).then(r => r.data),
+
+  gestionarSuscripcion: (id: number, data: { plan?: Plan; vigente_hasta?: string | null; origen?: string }) =>
+    api.patch(`/admin/empresas/${id}/suscripcion`, data).then(r => r.data),
+
+  generarLinkPago: (id: number, data: { plan: Plan; meses: number }) =>
+    api.post(`/admin/empresas/${id}/link-pago`, data).then(r => r.data),
 };
