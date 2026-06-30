@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/axios';
-import type { Plan } from '../types';
+import type { EmpresaAdmin, Plan } from '../types';
 
 export const adminApi = {
   getReportes: () =>
@@ -9,7 +9,7 @@ export const adminApi = {
     api.get('/admin/empresas', { params }).then(r => r.data),
 
   obtenerEmpresa: (id: number) =>
-    api.get(`/admin/empresas/${id}`).then(r => r.data),
+    api.get<{ data: EmpresaAdmin }>(`/admin/empresas/${id}`).then(r => r.data),
 
   crearEmpresa: (data: { nombre: string; slug: string; nit?: string; ciudad?: string; plan?: Plan; descripcion?: string }) =>
     api.post('/admin/empresas', data).then(r => r.data),
