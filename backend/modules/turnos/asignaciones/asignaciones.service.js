@@ -1,6 +1,7 @@
 'use strict';
 
 const AsignacionesModel = require('./asignaciones.model');
+const ContratosModel    = require('../../contratos/contratos.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const { pool } = require('../../../config/database');
@@ -308,6 +309,13 @@ const AsignacionesService = {
     }
 
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
+
+    // Firmar el minicontrato diario con la misma firma del egreso (best-effort)
+    const contrato = await ContratosModel.obtenerPorAsignacion(dbEmpresaId, id);
+    if (contrato && !contrato.firmado_trabajador && firma_b64) {
+      await ContratosModel.firmar(dbEmpresaId, contrato.id, firma_b64).catch(() => null);
+    }
+
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
       external_ref:  asignacion.oferta_external_ref || null,
       empleado_ref:  asignacion.trabajador_external_ref || null,

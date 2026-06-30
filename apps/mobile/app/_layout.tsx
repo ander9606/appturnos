@@ -9,10 +9,14 @@
 import '../global.css';
 
 import React, { useEffect } from 'react';
+import { LogBox } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
+
+// ponytail: expo-router activa keep-awake internamente en dev; falla en Android emulator — ruido inofensivo
+LogBox.ignoreLogs(['Unable to activate keep awake']);
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useBiometricLock } from '@/features/auth/useBiometricLock';
@@ -94,9 +98,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Forzar aceptación de T&C antes de usar la app
+      const inTerminos = segments[0] === 'terminos';
+      const needsTerminos = !isSuperAdmin && !usuario?.terminos_aceptados_at;
+      if (needsTerminos && !inTerminos && !inCompletarPerfil && !needsPhone) {
+        router.replace('/terminos');
+        return;
+      }
+
       if (isSuperAdmin && !inAdminGroup) {
         router.replace('/(admin)');
-      } else if (!isSuperAdmin && (inAuthGroup || inCompletarPerfil) && !needsPhone) {
+      } else if (!isSuperAdmin && (inAuthGroup || inCompletarPerfil || inTerminos) && !needsPhone && !needsTerminos) {
         router.replace('/(tabs)');
       } else if (!isSuperAdmin && inAdminGroup) {
         router.replace('/(tabs)');
@@ -163,6 +175,17 @@ export default function RootLayout() {
             <Stack.Screen name="mis-empresas" options={{ title: 'Mis empresas' }} />
             {/* Reingresos pendientes — jefe_nomina / admin_empresa */}
             <Stack.Screen name="reingresos-pendientes" options={{ title: 'Reingresos pendientes' }} />
+            {/* Disponibilidad semanal — trabajadores */}
+            <Stack.Screen name="disponibilidad" options={{ title: 'Mi disponibilidad' }} />
+            {/* Ausencias — trabajadores y gestores */}
+            <Stack.Screen name="ausencias" options={{ title: 'Ausencias' }} />
+            <Stack.Screen name="ausencia-nueva" options={{ title: 'Solicitar ausencia', animation: 'slide_from_bottom', presentation: 'modal' }} />
+            {/* Contratos diarios — trabajador_turnos */}
+            <Stack.Screen name="mis-contratos" options={{ title: 'Mis contratos' }} />
+            <Stack.Screen name="contrato/[id]" options={{ title: 'Contrato' }} />
+            {/* Legal */}
+            <Stack.Screen name="terminos" options={{ headerShown: false }} />
+            <Stack.Screen name="privacidad" options={{ title: 'Política de privacidad' }} />
           </Stack>
         </AuthGuard>
       </QueryClientProvider>

@@ -22,11 +22,19 @@ const AuthModel = {
   async buscarUsuarioPorId(id) {
     const [filas] = await pool.query(
       `SELECT id, empresa_id, nombre, apellido, foto_perfil, email, telefono, rol, activo, created_at,
+              terminos_aceptados_at,
               (password_hash IS NOT NULL) AS has_password
        FROM usuarios WHERE id = ? LIMIT 1`,
       [id]
     );
     return filas[0] || null;
+  },
+
+  async aceptarTerminos(usuarioId) {
+    await pool.query(
+      'UPDATE usuarios SET terminos_aceptados_at = NOW() WHERE id = ? AND terminos_aceptados_at IS NULL',
+      [usuarioId]
+    );
   },
 
   // ─── Refresh tokens ─────────────────────────────────────────

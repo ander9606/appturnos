@@ -84,4 +84,14 @@ async function cerrar(req, res) {
   res.json({ success: true, data, message: `Jornada cerrada: ${data.cerradas} completado(s), ${data.noPresentados} no presentado(s)` });
 }
 
-module.exports = { listar, obtener, crear, actualizar, cancelar, aplicar, retirar, asignar, cerrar };
+async function duplicar(req, res) {
+  const data = await OfertasService.duplicar(
+    req.empresa_id,
+    Number(req.params.id),
+    req.body.fecha,
+    req.usuario.sub
+  );
+  res.status(201).json({ success: true, data, message: 'Oferta duplicada' });
+}
+
+module.exports = { listar, obtener, crear, actualizar, cancelar, aplicar, retirar, asignar, cerrar, duplicar };

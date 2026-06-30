@@ -112,6 +112,11 @@ async function verificarOtp(req, res) {
   res.json({ success: true, data: { token }, message: 'Verificado' });
 }
 
+async function aceptarTerminos(req, res) {
+  const data = await AuthService.aceptarTerminos(req.usuario.sub);
+  res.json({ success: true, data, message: 'Términos aceptados' });
+}
+
 module.exports = { login, refresh, logout, me, verificarCedula, activarCuenta, registrar,
   registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, crearGestor,
-  listarGestores, setActivoGestor, enviarOtp, verificarOtp };
+  listarGestores, setActivoGestor, enviarOtp, verificarOtp, aceptarTerminos };

@@ -129,6 +129,26 @@ const TrabajadoresService = {
       await TrabajadoresModel.desactivar(empresaId, id);
     }
   },
+
+  // ── Disponibilidad ────────────────────────────────────────────────────────
+
+  async resolverIdPorUsuario(empresaId, usuarioId) {
+    const t = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuarioId);
+    if (!t) throw new AppError('Perfil de trabajador no encontrado', 404);
+    return t.id;
+  },
+
+  async obtenerDisponibilidad(empresaId, trabajadorId) {
+    return TrabajadoresModel.obtenerDisponibilidad(empresaId, trabajadorId);
+  },
+
+  async guardarDisponibilidad(empresaId, trabajadorId, slots) {
+    if (!Array.isArray(slots)) throw new AppError('slots debe ser un array', 400);
+    for (const s of slots) {
+      if (s.dia_semana < 0 || s.dia_semana > 6) throw new AppError('dia_semana inválido (0-6)', 400);
+    }
+    await TrabajadoresModel.guardarDisponibilidad(empresaId, trabajadorId, slots);
+  },
 };
 
 module.exports = TrabajadoresService;

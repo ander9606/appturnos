@@ -28,6 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTrabajadores, useMe } from '@/features/equipo/useEquipo';
 import { useMisEmpresas, useSolicitudes } from '@/features/empresas/useTrabajadorEmpresa';
+import { useAusenciasPendientesCount } from '@/features/ausencias/useAusencias';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { COLORS } from '@/lib/designTokens';
@@ -326,8 +327,10 @@ export default function EquipoScreen() {
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
-  const { data: solicitudesData = [] } = useSolicitudes(); // undefined → backend default: both pending states
+  const { data: solicitudesData = [] } = useSolicitudes();
   const pendientesCount = solicitudesData.length;
+  const { data: ausenciasPendientes } = useAusenciasPendientesCount();
+  const ausenciasCount = ausenciasPendientes?.total ?? 0;
 
   const { data, isLoading, isError, refetch } = useTrabajadores({
     tipo:   filtro !== 'todos' ? filtro : undefined,
@@ -392,6 +395,18 @@ export default function EquipoScreen() {
               count={pendientesCount}
               onPress={() => router.push('/solicitudes')}
             />
+          )}
+          {/* Ausencias pendientes badge — todos los gestores */}
+          {canManage && ausenciasCount > 0 && (
+            <Pressable
+              onPress={() => router.push('/ausencias')}
+              className="flex-row items-center gap-1.5 bg-warning/10 border border-warning/30 rounded-full px-3 py-1.5"
+            >
+              <Ionicons name="calendar-clear-outline" size={13} color="#D97706" />
+              <Text className="text-xs font-semibold text-warning">
+                {ausenciasCount} ausencia{ausenciasCount > 1 ? 's' : ''} pendiente{ausenciasCount > 1 ? 's' : ''}
+              </Text>
+            </Pressable>
           )}
         </View>
       </View>

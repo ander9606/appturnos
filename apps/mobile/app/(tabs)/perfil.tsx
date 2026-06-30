@@ -6,7 +6,7 @@
  * - Cambiar su contraseña
  * - Cerrar sesión
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -530,6 +530,16 @@ export default function PerfilScreen() {
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                 </Pressable>
+                <Pressable
+                  onPress={() => router.push('/disponibilidad')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="calendar-clear-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Mi disponibilidad</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
               </>
             )}
 
@@ -721,6 +731,62 @@ export default function PerfilScreen() {
               </View>
             </>
           )}
+
+          {/* ── Mis ausencias + contratos (trabajadores) ─────────── */}
+          {(isTrabajadorTurnos || isTrabajadorNomina) && (
+            <>
+              <SectionHeader title="Ausencias y contratos" />
+              <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
+                <Pressable
+                  onPress={() => router.push('/ausencias')}
+                  className="px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="calendar-clear-outline" size={16} color="#64748B" />
+                    <Text className="text-sm font-medium text-foreground">Mis ausencias</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                </Pressable>
+                {isTrabajadorTurnos && (
+                  <Pressable
+                    onPress={() => router.push('/mis-contratos')}
+                    className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                  >
+                    <View className="flex-row items-center gap-3">
+                      <Ionicons name="document-text-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Mis contratos</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </Pressable>
+                )}
+              </View>
+            </>
+          )}
+
+          {/* ── Legal ────────────────────────────────────────────── */}
+          <SectionHeader title="Legal" />
+          <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
+            <Pressable
+              onPress={() => router.push('/terminos')}
+              className="px-5 py-4 flex-row items-center justify-between active:opacity-70"
+            >
+              <View className="flex-row items-center gap-3">
+                <Ionicons name="shield-checkmark-outline" size={16} color="#64748B" />
+                <Text className="text-sm font-medium text-foreground">Términos y condiciones</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/privacidad')}
+              className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+            >
+              <View className="flex-row items-center gap-3">
+                <Ionicons name="lock-closed-outline" size={16} color="#64748B" />
+                <Text className="text-sm font-medium text-foreground">Política de privacidad</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            </Pressable>
+          </View>
 
           {/* ── Cerrar sesión ────────────────────────────────────── */}
           <Pressable

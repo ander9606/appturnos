@@ -303,6 +303,13 @@ const OfertasService = {
     return AsignacionesModel.obtenerPorId(empresaOfertaId, id);
   },
 
+  async duplicar(empresaId, id, nuevaFecha, creadoPor) {
+    const original = await OfertasModel.obtenerPorId(empresaId, id);
+    if (!original) throw new AppError('Oferta no encontrada', 404);
+    const nuevaId = await OfertasModel.duplicar(empresaId, id, nuevaFecha, creadoPor);
+    return OfertasModel.obtenerPorId(empresaId, nuevaId);
+  },
+
   /** Retira la postulación del trabajador autenticado de un puesto (si sigue pendiente). */
   async retirar(empresaId, ofertaId, puestoId, usuarioId, empresasActivas) {
     if (!puestoId) throw new AppError('puesto_id requerido', 400);

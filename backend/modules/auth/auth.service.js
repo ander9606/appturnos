@@ -42,6 +42,7 @@ function perfilPublico(u) {
     telefono: u.telefono ?? null,
     rol: u.rol,
     has_password: !!u.password_hash,
+    terminos_aceptados_at: u.terminos_aceptados_at ?? null,
   };
 }
 
@@ -123,6 +124,11 @@ const AuthService = {
     const usuario = await AuthModel.buscarUsuarioPorId(usuarioId);
     if (!usuario) throw new AppError('Usuario no encontrado', 404);
     return perfilPublico(usuario);
+  },
+
+  async aceptarTerminos(usuarioId) {
+    await AuthModel.aceptarTerminos(usuarioId);
+    return AuthService.perfil(usuarioId);
   },
 
   /**

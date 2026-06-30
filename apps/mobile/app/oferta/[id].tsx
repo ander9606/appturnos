@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Linking, Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +13,7 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar,
-  useConfirmar, useRechazar, useCancelar, useNoPresentado,
+  useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,
 } from '@/features/turnos/useTurnos';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
@@ -161,6 +162,9 @@ export default function OfertaDetailScreen() {
   const rechazarM      = useRechazar();
   const cancelarM      = useCancelar();
   const noPresentadoM  = useNoPresentado();
+  const duplicarM      = useDuplicarOferta();
+
+  const [showDuplicarPicker, setShowDuplicarPicker] = useState(false);
 
   const yaAplicado = isWorker
     ? (misTurnos ?? []).some((a) => a.oferta_id === id)
@@ -355,6 +359,38 @@ export default function OfertaDetailScreen() {
                 </View>
               )}
             </View>
+          )}
+
+          {/* ── Duplicar oferta (gestores) ──────────────────────── */}
+          {isGestor && (
+            <>
+              <Button
+                label={duplicarM.isPending ? 'Duplicando…' : 'Duplicar a otra fecha'}
+                variant="secondary"
+                fullWidth
+                loading={duplicarM.isPending}
+                onPress={() => setShowDuplicarPicker(true)}
+              />
+              {showDuplicarPicker && (
+                <DateTimePicker
+                  mode="date"
+                  display="default"
+                  minimumDate={new Date()}
+                  value={new Date()}
+                  onChange={async (_, date) => {
+                    setShowDuplicarPicker(false);
+                    if (!date || !id) return;
+                    const fecha = date.toISOString().slice(0, 10);
+                    try {
+                      const nueva = await duplicarM.mutateAsync({ ofertaId: id, fecha });
+                      Alert.alert('Oferta duplicada', `"${nueva.titulo}" creada para el ${fecha}.`);
+                    } catch {
+                      Alert.alert('Error', 'No se pudo duplicar la oferta.');
+                    }
+                  }}
+                />
+              )}
+            </>
           )}
 
           {/* ── Postulantes (gestores) ───────────────────────────── */}

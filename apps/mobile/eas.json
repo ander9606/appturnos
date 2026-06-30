@@ -24,7 +24,7 @@
       "autoIncrement": true,
       "prebuildCommand": "npx expo prebuild --clean --platform android",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.zaturno.app"

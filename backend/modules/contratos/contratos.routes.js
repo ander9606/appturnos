@@ -17,11 +17,28 @@ const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
 router.use(verificarToken);
 
+// GET /api/contratos — historial del trabajador autenticado
+router.get('/', verificarRol([ROLES.TRABAJADOR_TURNOS]), ctrl.listar);
+
+// GET /api/contratos/asignacion/:asignacionId
+router.get(
+  '/asignacion/:asignacionId',
+  verificarRol(VER),
+  [param('asignacionId').isInt({ min: 1 }).withMessage('asignacionId inválido')],
+  validar,
+  ctrl.obtenerPorAsignacion
+);
+
 // GET /api/contratos/:id
 router.get('/:id', verificarRol(VER), [idParam], validar, ctrl.obtener);
 
-// GET /api/contratos/:id/pdf
-router.get('/:id/pdf', verificarRol(VER), [idParam], validar, ctrl.pdf);
+// GET /api/contratos/:id/pdf — acepta ?token= para descarga desde app móvil
+router.get('/:id/pdf', (req, res, next) => {
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+}, verificarRol(VER), [idParam], validar, ctrl.pdf);
 
 // POST /api/contratos/:id/firmar
 router.post(

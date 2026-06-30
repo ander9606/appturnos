@@ -103,10 +103,26 @@ async function actualizarMarcacion(req, res) {
   res.json({ success: true, data });
 }
 
+async function obtenerDisponibilidad(req, res) {
+  const trabajadorId = req.params.id
+    ? Number(req.params.id)
+    : await TrabajadoresService.resolverIdPorUsuario(req.empresa_id, req.usuario.sub);
+  const data = await TrabajadoresService.obtenerDisponibilidad(req.empresa_id, trabajadorId);
+  res.json({ success: true, data });
+}
+
+async function guardarDisponibilidad(req, res) {
+  const trabajadorId = await TrabajadoresService.resolverIdPorUsuario(req.empresa_id, req.usuario.sub);
+  await TrabajadoresService.guardarDisponibilidad(req.empresa_id, trabajadorId, req.body.slots);
+  const data = await TrabajadoresService.obtenerDisponibilidad(req.empresa_id, trabajadorId);
+  res.json({ success: true, data });
+}
+
 module.exports = {
   listar, obtener, buscarPorCedula, crear, actualizar, eliminar,
   obtenerMe, actualizarMe, actualizarExtras,
   crearExperiencia, eliminarExperiencia,
   crearDiploma, eliminarDiploma,
   actualizarMarcacion,
+  obtenerDisponibilidad, guardarDisponibilidad,
 };

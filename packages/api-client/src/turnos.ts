@@ -239,6 +239,11 @@ export const turnosApi = {
     return api.post<Oferta>('/api/turnos/ofertas', payload);
   },
 
+  /** Duplica una oferta a una nueva fecha (copia título, horario, lugar y puestos). */
+  duplicarOferta(ofertaId: number, fecha: string): Promise<Oferta> {
+    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/duplicar`, { fecha });
+  },
+
   /** Postular al turno en un puesto concreto. */
   aplicar(ofertaId: number, puestoId: number): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });

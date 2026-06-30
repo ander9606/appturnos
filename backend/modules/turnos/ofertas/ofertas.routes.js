@@ -141,6 +141,15 @@ router.post(
   ctrl.cerrar
 );
 
+// POST /api/turnos/ofertas/:id/duplicar  — copia la oferta a una nueva fecha
+router.post(
+  '/:id/duplicar',
+  verificarRol(GESTIONAR),
+  [idParam, body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)')],
+  validar,
+  ctrl.duplicar
+);
+
 // Sub-router de puestos: /api/turnos/ofertas/:id/puestos/...
 router.use('/:id/puestos', puestosRouter);
 

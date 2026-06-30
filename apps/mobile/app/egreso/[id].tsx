@@ -213,9 +213,9 @@ export default function EgresoScreen() {
             <Text className="text-sm text-muted-foreground">{t('egreso.firmaHint')}</Text>
 
             <View className="flex-row items-center gap-2 bg-info/10 rounded-xl px-4 py-3">
-              <Ionicons name="lock-closed-outline" size={16} color="#3B82F6" />
+              <Ionicons name="document-text-outline" size={16} color="#3B82F6" />
               <Text className="text-xs text-info flex-1">
-                La firma digital confirma que has completado tu jornada laboral.
+                Tu firma confirma la salida y queda registrada en el contrato diario de este turno.
               </Text>
             </View>
           </View>

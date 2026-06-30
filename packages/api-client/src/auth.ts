@@ -225,4 +225,9 @@ export const authApi = {
   setActivoGestor(id: number, activo: boolean): Promise<null> {
     return api.patch<null>(`/api/auth/gestores/${id}/activo`, { activo });
   },
+
+  /** Registra la aceptación de términos y condiciones del usuario. */
+  aceptarTerminos(): Promise<UsuarioPerfil> {
+    return api.patch<UsuarioPerfil>('/api/auth/me/terminos');
+  },
 };

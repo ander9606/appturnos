@@ -285,6 +285,16 @@ export function useNoPresentado() {
   });
 }
 
+/** Duplicar una oferta existente a una nueva fecha (gestores). */
+export function useDuplicarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, fecha }: { ofertaId: number; fecha: string }) =>
+      turnosApi.duplicarOferta(ofertaId, fecha),
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() }),
+  });
+}
+
 /** Catálogo de cargos (sistema + custom de la empresa). */
 export function useCargos() {
   return useQuery({

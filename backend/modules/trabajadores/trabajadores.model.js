@@ -383,6 +383,44 @@ const TrabajadoresModel = {
     );
     return res.affectedRows;
   },
+
+  // ── Disponibilidad ────────────────────────────────────────────────────────
+
+  async obtenerDisponibilidad(empresaId, trabajadorId) {
+    const [filas] = await pool.query(
+      'SELECT id, dia_semana, hora_inicio, hora_fin, activo FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ? ORDER BY dia_semana',
+      [empresaId, trabajadorId]
+    );
+    return filas;
+  },
+
+  /**
+   * Upsert masivo: recibe array de { dia_semana, hora_inicio, hora_fin, activo }.
+   * Reemplaza todos los slots del trabajador en la empresa de una sola vez.
+   */
+  async guardarDisponibilidad(empresaId, trabajadorId, slots) {
+    if (!slots.length) return;
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query(
+        'DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?',
+        [empresaId, trabajadorId]
+      );
+      for (const s of slots) {
+        await conn.query(
+          'INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)',
+          [empresaId, trabajadorId, s.dia_semana, s.hora_inicio, s.hora_fin, s.activo ? 1 : 0]
+        );
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
 };
 
 module.exports = TrabajadoresModel;

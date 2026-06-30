@@ -3,6 +3,18 @@
 const ContratosService = require('./contratos.service');
 const { generarContratoPdf } = require('../../utils/contratoPdf');
 
+async function listar(req, res) {
+  const data = await ContratosService.listarMisContratos(req.empresa_id, req.usuario);
+  res.json({ success: true, data, message: 'Mis contratos' });
+}
+
+async function obtenerPorAsignacion(req, res) {
+  const data = await ContratosService.obtenerPorAsignacion(
+    req.empresa_id, Number(req.params.asignacionId), req.usuario
+  );
+  res.json({ success: true, data, message: 'Contrato de asignación' });
+}
+
 async function obtener(req, res) {
   const data = await ContratosService.obtener(req.empresa_id, Number(req.params.id), req.usuario);
   res.json({ success: true, data, message: 'Detalle del contrato' });
@@ -32,4 +44,4 @@ async function pdf(req, res) {
   generarContratoPdf(contrato, res);
 }
 
-module.exports = { obtener, firmar, pdf };
+module.exports = { listar, obtenerPorAsignacion, obtener, firmar, pdf };

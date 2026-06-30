@@ -331,6 +331,50 @@ const OfertasModel = {
     );
   },
 
+  /**
+   * Copia una oferta a una nueva fecha, con plazas_cubiertas = 0 en todos los puestos.
+   */
+  async duplicar(empresaId, id, nuevaFecha, creadoPor) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [[original]] = await conn.query(
+        'SELECT * FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
+        [id, empresaId]
+      );
+      if (!original) { await conn.rollback(); return null; }
+
+      const [res] = await conn.query(
+        `INSERT INTO ofertas_turno
+           (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
+            lugar, latitud, longitud, estado, para_quien, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+        [
+          empresaId, original.titulo, original.descripcion, nuevaFecha,
+          original.hora_inicio, original.hora_fin_estimada,
+          original.lugar, original.latitud, original.longitud,
+          original.para_quien, creadoPor,
+        ]
+      );
+      const nuevaId = res.insertId;
+
+      await conn.query(
+        `INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas)
+         SELECT ?, cargo_id, plazas, tarifa_dia, notas FROM oferta_puestos WHERE oferta_id = ?`,
+        [nuevaId, id]
+      );
+
+      await conn.commit();
+      return nuevaId;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
   async cancelar(empresaId, id) {
     const conn = await pool.getConnection();
     try {

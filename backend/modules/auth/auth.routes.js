@@ -203,6 +203,9 @@ router.patch(
   ctrl.setActivoGestor
 );
 
+// PATCH /api/auth/me/terminos — aceptar términos y condiciones
+router.patch('/me/terminos', verificarToken, ctrl.aceptarTerminos);
+
 // Sub-router OAuth — POST /api/auth/oauth/:provider, etc.
 router.use('/oauth', require('./oauth/oauth.routes'));
 

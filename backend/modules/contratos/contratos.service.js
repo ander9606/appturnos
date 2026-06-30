@@ -2,13 +2,10 @@
 
 const ContratosModel = require('./contratos.model');
 const IntegracionService = require('../integracion/integracion.service');
+const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
 const { ROLES } = require('../../config/constants');
 
-/**
- * Un trabajador solo puede acceder a su propio contrato; admin y
- * jefe_turnos acceden a cualquiera de su empresa.
- */
 function verificarAcceso(contrato, usuario) {
   if (
     usuario.rol === ROLES.TRABAJADOR_TURNOS &&
@@ -19,6 +16,19 @@ function verificarAcceso(contrato, usuario) {
 }
 
 const ContratosService = {
+  async listarMisContratos(empresaId, usuario) {
+    const trabajadorId = await TrabajadoresModel.resolverIdPorUsuario(empresaId, usuario.sub);
+    if (!trabajadorId) throw new AppError('Trabajador no encontrado', 404);
+    return ContratosModel.listarPorTrabajador(empresaId, trabajadorId);
+  },
+
+  async obtenerPorAsignacion(empresaId, asignacionId, usuario) {
+    const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
+    if (!contrato) throw new AppError('Contrato no encontrado', 404);
+    verificarAcceso(contrato, usuario);
+    return contrato;
+  },
+
   async obtener(empresaId, id, usuario) {
     const contrato = await ContratosModel.obtenerPorId(empresaId, id);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);

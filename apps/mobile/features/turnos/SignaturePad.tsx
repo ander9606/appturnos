@@ -31,6 +31,8 @@ interface SignaturePadProps {
   onClose: () => void;
   onConfirm: (base64: string) => void;
   loading?: boolean;
+  confirmLabel?: string;
+  subtitle?: string;
 }
 
 // ── SVG export ────────────────────────────────────────────────────────────
@@ -72,6 +74,8 @@ export function SignaturePad({
   onClose,
   onConfirm,
   loading = false,
+  confirmLabel = 'Confirmar salida',
+  subtitle = 'Dibuja tu firma para confirmar la salida y firmar el contrato',
 }: SignaturePadProps) {
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [canvasSize, setCanvasSize] = useState({ w: 300, h: 180 });
@@ -157,7 +161,7 @@ export function SignaturePad({
           <View>
             <Text className="text-lg font-bold text-foreground">Firma digital</Text>
             <Text className="text-sm text-muted-foreground mt-0.5">
-              Dibuja tu firma para confirmar la salida
+              {subtitle}
             </Text>
           </View>
           <TouchableOpacity
@@ -227,7 +231,7 @@ export function SignaturePad({
               style={{ flex: 1 }}
             />
             <Button
-              label={loading ? 'Guardando…' : 'Confirmar salida'}
+              label={loading ? 'Guardando…' : confirmLabel}
               variant="primary"
               size="md"
               loading={loading}

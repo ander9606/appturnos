@@ -3,6 +3,14 @@ import type { TipoTrabajador } from './types';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
+export interface DisponibilidadSlot {
+  id?: number;
+  dia_semana: number; // 0=dom, 1=lun, ..., 6=sab
+  hora_inicio: string; // HH:MM
+  hora_fin: string;    // HH:MM
+  activo: boolean;
+}
+
 export type TipoDocumento = 'CC' | 'CE' | 'PAS';
 export type SexoTrabajador = 'M' | 'F' | 'otro';
 export type TipoCuenta = 'ahorros' | 'corriente';
@@ -204,4 +212,16 @@ export const trabajadoresApi = {
 
   eliminarDiploma: (dipId: number): Promise<void> =>
     api.delete<void>(`/api/trabajadores/me/diplomas/${dipId}`),
+
+  /** Disponibilidad semanal propia (trabajador). */
+  obtenerDisponibilidad: (): Promise<DisponibilidadSlot[]> =>
+    api.get<DisponibilidadSlot[]>('/api/trabajadores/me/disponibilidad'),
+
+  /** Guardar disponibilidad semanal (reemplaza todos los slots). */
+  guardarDisponibilidad: (slots: DisponibilidadSlot[]): Promise<DisponibilidadSlot[]> =>
+    api.put<DisponibilidadSlot[]>('/api/trabajadores/me/disponibilidad', { slots }),
+
+  /** Gestor: ver disponibilidad de un trabajador específico (read-only). */
+  obtenerDisponibilidadTrabajador: (id: number): Promise<DisponibilidadSlot[]> =>
+    api.get<DisponibilidadSlot[]>(`/api/trabajadores/${id}/disponibilidad`),
 };

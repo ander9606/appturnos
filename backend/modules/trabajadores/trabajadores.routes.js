@@ -205,4 +205,31 @@ router.patch(
 // DELETE /api/trabajadores/:id  (soft delete)
 router.delete('/:id', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.eliminar);
 
+// GET  /api/trabajadores/me/disponibilidad — trabajador ve su disponibilidad
+router.get('/me/disponibilidad', verificarRol(CUALQUIER_TRABAJADOR), ctrl.obtenerDisponibilidad);
+
+// PUT  /api/trabajadores/me/disponibilidad — trabajador guarda sus slots (reemplaza todos)
+router.put(
+  '/me/disponibilidad',
+  verificarRol(CUALQUIER_TRABAJADOR),
+  [
+    body('slots').isArray().withMessage('slots debe ser un array'),
+    body('slots.*.dia_semana').isInt({ min: 0, max: 6 }).withMessage('dia_semana inválido (0-6)'),
+    body('slots.*.hora_inicio').matches(/^\d{2}:\d{2}$/).withMessage('hora_inicio inválida (HH:MM)'),
+    body('slots.*.hora_fin').matches(/^\d{2}:\d{2}$/).withMessage('hora_fin inválida (HH:MM)'),
+    body('slots.*.activo').isBoolean().withMessage('activo debe ser booleano'),
+  ],
+  validar,
+  ctrl.guardarDisponibilidad
+);
+
+// GET  /api/trabajadores/:id/disponibilidad — gestor ve disponibilidad de un trabajador (read-only)
+router.get(
+  '/:id/disponibilidad',
+  verificarRol(PUEDEN_VER),
+  [idParam],
+  validar,
+  ctrl.obtenerDisponibilidad
+);
+
 module.exports = router;

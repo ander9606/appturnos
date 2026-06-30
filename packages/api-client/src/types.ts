@@ -23,6 +23,7 @@ export interface UsuarioPerfil {
   telefono: string | null;
   rol: Rol;
   has_password: boolean; // false → usuario solo OAuth, debe completar perfil con teléfono
+  terminos_aceptados_at: string | null;
 }
 
 export interface OAuthLoginResponse extends LoginResponse {
