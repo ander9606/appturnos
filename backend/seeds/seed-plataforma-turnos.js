@@ -138,17 +138,17 @@ async function main() {
     const hashPwd = await bcrypt.hash('Demo1234!', 10);
 
     const uLuisId = await ins(conn, 'usuarios', {
-      empresa_id: null, nombre: 'Luis', apellido: 'Herrera',
+      empresa_id: empresaId, nombre: 'Luis', apellido: 'Herrera',
       email: 'luis.herrera@plataforma-prueba.co',
       password_hash: hashPwd, rol: 'trabajador_turnos',
     });
     const uSofiaId = await ins(conn, 'usuarios', {
-      empresa_id: null, nombre: 'Sofía', apellido: 'Reyes',
+      empresa_id: empresaId, nombre: 'Sofía', apellido: 'Reyes',
       email: 'sofia.reyes@plataforma-prueba.co',
       password_hash: hashPwd, rol: 'trabajador_turnos',
     });
     const uCamiloId = await ins(conn, 'usuarios', {
-      empresa_id: null, nombre: 'Camilo', apellido: 'Torres',
+      empresa_id: empresaId, nombre: 'Camilo', apellido: 'Torres',
       email: 'camilo.torres@plataforma-prueba.co',
       password_hash: hashPwd, rol: 'trabajador_turnos',
     });
