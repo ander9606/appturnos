@@ -82,3 +82,34 @@ export const otpSchema = z.object({
 });
 
 export type OtpFormData = z.infer<typeof otpSchema>;
+
+// ── Recuperar contraseña ─────────────────────────────────────────────────
+
+export const recuperarEmailSchema = z.object({
+  email: z
+    .string({ required_error: 'El correo es obligatorio' })
+    .email('Introduce un correo válido')
+    .transform((v) => v.trim().toLowerCase()),
+});
+
+export type RecuperarEmailFormData = z.infer<typeof recuperarEmailSchema>;
+
+export const recuperarPasswordSchema = z
+  .object({
+    codigo: z
+      .string({ required_error: 'El código es obligatorio' })
+      .length(6, 'El código tiene 6 dígitos')
+      .regex(/^\d{6}$/, 'Solo dígitos'),
+    password: z
+      .string({ required_error: 'La contraseña es obligatoria' })
+      .min(8, 'La contraseña debe tener al menos 8 caracteres'),
+    confirmPassword: z
+      .string({ required_error: 'Confirma tu contraseña' })
+      .min(1, 'Confirma tu contraseña'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  });
+
+export type RecuperarPasswordFormData = z.infer<typeof recuperarPasswordSchema>;

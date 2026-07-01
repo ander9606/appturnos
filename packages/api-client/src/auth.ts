@@ -230,4 +230,9 @@ export const authApi = {
   aceptarTerminos(): Promise<UsuarioPerfil> {
     return api.patch<UsuarioPerfil>('/api/auth/me/terminos');
   },
+
+  /** Restablece la contraseña usando el token de verificación OTP del email. */
+  resetPassword(params: { email: string; password: string; email_token: string }): Promise<null> {
+    return api.post<null>('/api/auth/reset-password', params, { authenticated: false });
+  },
 };

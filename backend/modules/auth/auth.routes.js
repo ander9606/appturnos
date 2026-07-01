@@ -206,6 +206,21 @@ router.patch(
 // PATCH /api/auth/me/terminos — aceptar términos y condiciones
 router.patch('/me/terminos', verificarToken, ctrl.aceptarTerminos);
 
+// POST /api/auth/reset-password — restablecer contraseña vía OTP de email (sin sesión)
+router.post(
+  '/reset-password',
+  [
+    emailSanitizado,
+    body('password')
+      .isString()
+      .isLength({ min: 8 })
+      .withMessage('La contraseña debe tener al menos 8 caracteres'),
+    body('email_token').isString().notEmpty().withMessage('Token de verificación de email requerido'),
+  ],
+  validar,
+  ctrl.resetPassword
+);
+
 // Sub-router OAuth — POST /api/auth/oauth/:provider, etc.
 router.use('/oauth', require('./oauth/oauth.routes'));
 

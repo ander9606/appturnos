@@ -13,6 +13,7 @@ export default function AuthLayout() {
       <Stack.Screen name="activar" />
       <Stack.Screen name="registro" />
       <Stack.Screen name="registro-empresa" />
+      <Stack.Screen name="recuperar" />
     </Stack>
   );
 }

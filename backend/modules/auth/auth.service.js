@@ -291,6 +291,19 @@ const AuthService = {
   },
 
   /**
+   * Restablece la contraseña de una cuenta sin sesión activa, usando un
+   * token de verificación OTP de email (mismo mecanismo que el registro).
+   */
+  async resetPassword(email, passwordNueva) {
+    const usuario = await AuthModel.buscarUsuarioPorEmail(email);
+    if (!usuario) throw new AppError('No existe una cuenta con este correo', 404);
+
+    const nuevoHash = await bcrypt.hash(passwordNueva, BCRYPT_ROUNDS);
+    await AuthModel.actualizarPassword(usuario.id, nuevoHash);
+    await AuthModel.revocarRefreshTokensDeUsuario(usuario.id);
+  },
+
+  /**
    * Registro libre para trabajador_turnos (modelo marketplace).
    * No requiere cédula ni empresa preexistente: cualquier persona puede
    * registrarse y luego solicitar vinculación a empresas desde el directorio.

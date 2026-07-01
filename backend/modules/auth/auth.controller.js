@@ -117,6 +117,14 @@ async function aceptarTerminos(req, res) {
   res.json({ success: true, data, message: 'Términos aceptados' });
 }
 
+/** Restablece la contraseña vía OTP de email (sin sesión). */
+async function resetPassword(req, res) {
+  const { email, password, email_token } = req.body;
+  VerificacionSvc.validarTokenVerificacion(email_token, 'email', email);
+  await AuthService.resetPassword(email, password);
+  res.json({ success: true, data: null, message: 'Contraseña actualizada. Inicia sesión con tu nueva contraseña.' });
+}
+
 module.exports = { login, refresh, logout, me, verificarCedula, activarCuenta, registrar,
   registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, crearGestor,
-  listarGestores, setActivoGestor, enviarOtp, verificarOtp, aceptarTerminos };
+  listarGestores, setActivoGestor, enviarOtp, verificarOtp, aceptarTerminos, resetPassword };
