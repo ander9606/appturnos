@@ -68,6 +68,8 @@ jobs:
               if docker compose --env-file backend/.env exec -T api wget -qO- http://localhost:3001/api/health > /dev/null 2>&1; then
                 echo "→ Logs de migraciones:"
                 docker compose --env-file backend/.env logs api --tail 30 2>&1 | grep -iE "migra|aplica|pendiente|error|warn" || true
+                echo "→ Reseed tenant de pruebas..."
+                docker compose --env-file backend/.env exec -T api node seeds/seed-plataforma-turnos.js
                 echo "✅ Deploy completado"
                 exit 0
               fi
