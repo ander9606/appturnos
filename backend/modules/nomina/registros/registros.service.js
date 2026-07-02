@@ -61,10 +61,10 @@ function hoyISO() {
   return t.toISOString().slice(0, 10);
 }
 
-/** Returns current time as 'HH:MM:SS'. */
+/** Returns current time as 'HH:MM:SS' in Colombia time (UTC-5), independiente del TZ del proceso. */
 function ahoraHHMMSS() {
-  const d = new Date();
-  return d.toTimeString().slice(0, 8);
+  const t = new Date(Date.now() - 5 * 3_600_000);
+  return t.toISOString().slice(11, 19);
 }
 
 async function _notificarDecisionReingreso(empresaId, solicitudId, tipo, titulo, mensaje) {

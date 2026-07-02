@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../../config/database');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 
 /**
  * Acceso a datos de ofertas de turno (tabla ofertas_turno).
@@ -301,6 +302,8 @@ const OfertasModel = {
    * y que aún no han disparado la alerta. Incluye IDs de gestores a notificar.
    */
   async listarProximasConPersonalIncompleto(horasAntes = 24) {
+    const ahora = ahoraColombiaSQL();
+    const limite = ahoraColombiaSQL(horasAntes * 3_600_000);
     const [filas] = await pool.query(
       `SELECT o.id, o.empresa_id, o.titulo, o.fecha, o.hora_inicio,
               SUM(p.plazas) AS total_plazas,
@@ -313,10 +316,10 @@ const OfertasModel = {
                       AND u.activo = 1
        WHERE o.estado IN ('abierta', 'publicada')
          AND o.alerta_personal_enviada = 0
-         AND TIMESTAMP(o.fecha, o.hora_inicio) BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL ? HOUR)
+         AND TIMESTAMP(o.fecha, o.hora_inicio) BETWEEN ? AND ?
        GROUP BY o.id, o.empresa_id, o.titulo, o.fecha, o.hora_inicio
        HAVING SUM(p.plazas_cubiertas) < SUM(p.plazas)`,
-      [horasAntes]
+      [ahora, limite]
     );
     return filas.map((f) => ({
       ...f,

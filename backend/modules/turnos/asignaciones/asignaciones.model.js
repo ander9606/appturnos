@@ -3,6 +3,7 @@
 const { pool } = require('../../../config/database');
 const ContratosModel = require('../../contratos/contratos.model');
 const { recalcularRanking } = require('../../../utils/rankingUtils');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 
 /**
  * Acceso a datos de asignaciones de turno (tabla asignaciones_turno).
@@ -264,10 +265,10 @@ const AsignacionesModel = {
   async registrarIngreso(empresaId, id, latitud, longitud) {
     const [res] = await pool.query(
       `UPDATE asignaciones_turno
-       SET hora_ingreso_real = NOW(), latitud_ingreso = ?, longitud_ingreso = ?,
+       SET hora_ingreso_real = ?, latitud_ingreso = ?, longitud_ingreso = ?,
            estado = 'en_progreso'
        WHERE id = ? AND empresa_id = ? AND estado = 'confirmado'`,
-      [latitud, longitud, id, empresaId]
+      [ahoraColombiaSQL(), latitud, longitud, id, empresaId]
     );
     // affectedRows = 0 means another concurrent request already marked ingreso
     if (res.affectedRows === 0) {
@@ -283,21 +284,22 @@ const AsignacionesModel = {
    * (no la oferta — desde la migración 013 la tarifa vive por puesto).
    */
   async registrarEgreso(empresaId, id, firmaB64) {
+    const ahora = ahoraColombiaSQL();
     const [res] = await pool.query(
       `UPDATE asignaciones_turno a
        JOIN oferta_puestos p ON p.id = a.puesto_id
        JOIN ofertas_turno o  ON o.id = a.oferta_id
-       SET a.hora_egreso_real = NOW(),
+       SET a.hora_egreso_real = ?,
            a.firma_digital = ?,
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-               LEAST(NOW(), TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+               LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
            ) / 60,
            a.pago_total = p.tarifa_dia
        WHERE a.id = ? AND a.empresa_id = ?
          AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL`,
-      [firmaB64, id, empresaId]
+      [ahora, firmaB64, ahora, id, empresaId]
     );
     // affectedRows = 0 means concurrent egreso, missing ingreso, or invalid state
     if (res.affectedRows === 0) {
@@ -688,20 +690,21 @@ const AsignacionesModel = {
       : '';
 
     // 1. en_progreso → completado
+    const ahora = ahoraColombiaSQL();
     const [resComp] = await pool.query(
       `UPDATE asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
-       SET a.hora_egreso_real = NOW(),
+       SET a.hora_egreso_real = ?,
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-               LEAST(NOW(), TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+               LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
            ) / 60,
            a.pago_total = p.tarifa_dia
        WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL
          ${excClause}`,
-      [ofertaId, empresaId, ...excepcionesIds]
+      [ahora, ahora, ofertaId, empresaId, ...excepcionesIds]
     );
 
     // 2. confirmado → no_presentado (obtener IDs antes de mutar para devolver plazas)
