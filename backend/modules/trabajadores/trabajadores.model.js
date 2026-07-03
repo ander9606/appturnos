@@ -139,7 +139,7 @@ const TrabajadoresModel = {
   /** Trabajadores activos aún no vinculados a un empleado de logiq360. */
   async listarSinVincularLogiq360(empresaId) {
     const [filas] = await pool.query(
-      `SELECT id, nombre, apellido, cedula, external_ref
+      `SELECT id, nombre, apellido, email, cedula, external_ref
        FROM trabajadores
        WHERE empresa_id = ? AND activo = 1
          AND (external_ref IS NULL OR external_ref NOT LIKE 'logiq360:empleado:%')
