@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const IntegracionModel = require('../integracion.model');
 const AppError = require('../../../utils/AppError');
+const logger = require('../../../utils/logger');
 
 const ConfiguracionService = {
   /** Config sin exponer los secretos en claro. */
@@ -92,7 +93,18 @@ const ConfiguracionService = {
       origen: 'logiq360',
     });
 
-    return { conectado: true, logiq360_tenant_id: b.tenant_id };
+    // Conciliación automática por email: misma empresa, un tenant en cada app.
+    // Best-effort — si logiq360 aún no tiene el personal sincronizado, se
+    // completará al abrir la pantalla de Conciliación (self-heal).
+    let autoVinculados = 0;
+    try {
+      const ConciliacionService = require('./conciliacion.service');
+      ({ auto_vinculados: autoVinculados } = await ConciliacionService.autovincular(empresaId));
+    } catch (err) {
+      logger.error('[integracion] autovincular tras emparejar falló:', err.message);
+    }
+
+    return { conectado: true, logiq360_tenant_id: b.tenant_id, auto_vinculados: autoVinculados };
   },
 };
 

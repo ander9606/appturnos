@@ -40,6 +40,34 @@ const IntegracionService = require('./integracion.service');
   const sinMatch = r.pendientes.find((p) => p.id === 2);
   assert.strictEqual(sinMatch.sugerencia, null);
 
+  // ── emparejarPorEmail(): puro — match exacto por email, resto por nombre ──
+  const ConciliacionService = require('./services/conciliacion.service');
+  const pure = ConciliacionService.emparejarPorEmail(
+    [{ id: 1, nombre: 'A', apellido: 'B', email: 'a@x.com' }, { id: 2, nombre: 'C', apellido: 'D', email: null }],
+    [{ id: 9, nombre: 'A', apellido: 'B', email: 'A@X.com' }]
+  );
+  assert.deepStrictEqual(pure.links, [{ trabajadorId: 1, empleadoId: 9 }], 'auto-vínculo por email (case-insensitive)');
+  assert.strictEqual(pure.restantes.length, 1);
+  assert.strictEqual(pure.restantes[0].id, 2, 'sin email queda pendiente');
+
+  // ── conciliacion(): auto-vincula por email y deja pendientes solo los que no matchean ──
+  TrabajadoresModel.listarSinVincularLogiq360 = async () => ([
+    { id: 5, nombre: 'Ana', apellido: 'Gómez', email: 'ana@x.com', cedula: '5', external_ref: null },
+    { id: 6, nombre: 'NoMatch', apellido: 'Zz', email: 'zz@x.com', cedula: '6', external_ref: null },
+  ]);
+  global.fetch = async () => ({ ok: true, json: async () => ({ data: [
+    { id: 90, nombre: 'Ana', apellido: 'Gomez', email: 'ANA@x.com' },
+  ] }) });
+  const linksHechos = [];
+  TrabajadoresModel.vincularExternalRef = async (empresaId, trabajadorId, externalRef) => {
+    linksHechos.push({ trabajadorId, externalRef }); return 1;
+  };
+  const r2 = await IntegracionService.conciliacion(7);
+  assert.strictEqual(r2.auto_vinculados, 1, 'Ana se auto-vincula por email');
+  assert.deepStrictEqual(linksHechos, [{ trabajadorId: 5, externalRef: 'logiq360:empleado:90' }]);
+  assert.strictEqual(r2.pendientes.length, 1, 'solo queda el que no matchea por email');
+  assert.strictEqual(r2.pendientes[0].id, 6);
+
   // ── vincularEmpleado(): fija external_ref logiq360:empleado:<id> ──
   let vinculo = null;
   TrabajadoresModel.vincularExternalRef = async (empresaId, trabajadorId, externalRef) => {
