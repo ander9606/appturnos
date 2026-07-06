@@ -11,8 +11,10 @@ import { useTheme } from '@/lib/theme';
 export default function TerminosScreen() {
   const router  = useRouter();
   const theme   = useTheme();
+  const usuario = useAuthStore((s) => s.usuario);
   const rehydrate = useAuthStore((s) => s.rehydrate);
   const [scrolled, setScrolled] = useState(false);
+  const yaAceptados = !!usuario?.terminos_aceptados_at;
 
   const aceptar = useMutation({
     mutationFn: () => authApi.aceptarTerminos(),
@@ -49,19 +51,30 @@ export default function TerminosScreen() {
         </ScrollView>
 
         <View className="px-6 py-4 border-t border-border gap-3">
-          {!scrolled && (
-            <Text className="text-xs text-center text-muted-foreground">
-              Desplázate hasta el final para aceptar
-            </Text>
+          {yaAceptados ? (
+            <Button
+              label="Volver"
+              variant="primary"
+              fullWidth
+              onPress={() => router.back()}
+            />
+          ) : (
+            <>
+              {!scrolled && (
+                <Text className="text-xs text-center text-muted-foreground">
+                  Desplázate hasta el final para aceptar
+                </Text>
+              )}
+              <Button
+                label={aceptar.isPending ? 'Aceptando…' : 'Acepto los términos y condiciones'}
+                variant="primary"
+                fullWidth
+                loading={aceptar.isPending}
+                disabled={!scrolled}
+                onPress={() => aceptar.mutate()}
+              />
+            </>
           )}
-          <Button
-            label={aceptar.isPending ? 'Aceptando…' : 'Acepto los términos y condiciones'}
-            variant="primary"
-            fullWidth
-            loading={aceptar.isPending}
-            disabled={!scrolled}
-            onPress={() => aceptar.mutate()}
-          />
         </View>
       </View>
     </SafeAreaView>

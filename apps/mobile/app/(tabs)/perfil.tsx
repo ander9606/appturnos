@@ -26,7 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 // ponytail: lazy import — native module only loaded when handler runs, not at route discovery time
 
 import * as LocalAuthentication from 'expo-local-authentication';
-import * as SecureStore from 'expo-secure-store';
+import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { authApi } from '@api-client';

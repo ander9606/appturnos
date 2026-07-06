@@ -43,20 +43,20 @@ export default function WelcomeScreen() {
 
       {/* ── Contenido ── */}
       <View style={styles.content}>
-        <Text style={styles.question}>¿Cómo quieres continuar?</Text>
+        <Text style={styles.question}>¿Eres trabajador o tienes una empresa?</Text>
 
         <View style={styles.cards}>
           <OptionCard
             icon="person"
             title="Soy trabajador"
-            description="Activa tu cuenta o inicia sesión para ver tus turnos y nómina"
+            description="Marca tus turnos y consulta tu nómina"
             onPress={() => router.push('/(auth)/activar')}
             variant="filled"
           />
           <OptionCard
             icon="briefcase"
             title="Tengo una empresa"
-            description="Registra tu empresa o inicia sesión como administrador"
+            description="Administra empleados, turnos y nómina"
             onPress={() => router.push('/(auth)/registro-empresa')}
             variant="outline"
           />

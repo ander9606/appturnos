@@ -108,7 +108,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
       if (isSuperAdmin && !inAdminGroup) {
         router.replace('/(admin)');
-      } else if (!isSuperAdmin && (inAuthGroup || inCompletarPerfil || inTerminos) && !needsPhone && !needsTerminos) {
+      } else if (!isSuperAdmin && (inAuthGroup || inCompletarPerfil) && !needsPhone && !needsTerminos) {
         router.replace('/(tabs)');
       } else if (!isSuperAdmin && inAdminGroup) {
         router.replace('/(tabs)');

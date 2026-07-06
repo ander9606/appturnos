@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { trabajadorSchema, TIPO_OPTIONS, type TrabajadorFormValues } from './schemas';
+import { trabajadorSchema, TIPO_OPTIONS, TIPO_HINTS, type TrabajadorFormValues } from './schemas';
 import { Input } from '@/components/ui/Input';
 
 // ── Props ─────────────────────────────────────────────────────────────────
@@ -102,30 +102,37 @@ export function TrabajadorForm({
             control={control}
             name="tipo"
             render={({ field }) => (
-              <View className="flex-row gap-2">
-                {TIPO_OPTIONS.map(({ value, label }) => {
-                  const active = field.value === value;
-                  return (
-                    <Pressable
-                      key={value}
-                      onPress={() => field.onChange(value)}
-                      className={`flex-1 h-11 rounded-xl items-center justify-center border ${
-                        active
-                          ? 'bg-primary border-primary'
-                          : 'bg-card border-border'
-                      }`}
-                    >
-                      <Text
-                        className={`text-sm font-semibold ${
-                          active ? 'text-white' : 'text-muted-foreground'
+              <>
+                <View className="flex-row gap-2">
+                  {TIPO_OPTIONS.map(({ value, label }) => {
+                    const active = field.value === value;
+                    return (
+                      <Pressable
+                        key={value}
+                        onPress={() => field.onChange(value)}
+                        className={`flex-1 h-11 rounded-xl items-center justify-center border ${
+                          active
+                            ? 'bg-primary border-primary'
+                            : 'bg-card border-border'
                         }`}
                       >
-                        {label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                        <Text
+                          className={`text-sm font-semibold ${
+                            active ? 'text-white' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {field.value && (
+                  <Text className="text-xs text-muted-foreground mt-1.5">
+                    {TIPO_HINTS[field.value]}
+                  </Text>
+                )}
+              </>
             )}
           />
           {errors.tipo && (

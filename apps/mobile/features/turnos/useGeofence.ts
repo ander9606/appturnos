@@ -43,6 +43,7 @@ interface GeofenceResult {
   status: GeofenceStatus;
   canMark: boolean;
   permissionDenied: boolean;
+  locationUnavailable: boolean;
   currentLocation: { lat: number; lng: number } | null;
 }
 
@@ -52,6 +53,7 @@ export function useGeofence({
 }: UseGeofenceOptions): GeofenceResult {
   const [distanceM, setDistanceM]         = useState<number | null>(null);
   const [permissionDenied, setPermission] = useState(false);
+  const [locationUnavailable, setUnavailable] = useState(false);
   const [currentLocation, setLocation]    = useState<{ lat: number; lng: number } | null>(null);
 
   // ponytail: polling instead of watchPositionAsync — avoids expo-keep-awake crash on some devices
@@ -67,21 +69,34 @@ export function useGeofence({
 
     let cancelled = false;
 
+    const aplicarFix = (lat: number, lng: number) => {
+      setLocation({ lat, lng });
+      let minDist = Infinity;
+      for (const t of targets!) {
+        const d = haversineMeters(lat, lng, t.lat, t.lng);
+        if (d < minDist) minDist = d;
+      }
+      setDistanceM(minDist === Infinity ? null : minDist);
+      setUnavailable(false);
+    };
+
     const poll = async () => {
       if (cancelled) return;
       try {
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         if (cancelled) return;
-        const { latitude: lat, longitude: lng } = loc.coords;
-        setLocation({ lat, lng });
-        let minDist = Infinity;
-        for (const t of targets!) {
-          const d = haversineMeters(lat, lng, t.lat, t.lng);
-          if (d < minDist) minDist = d;
-        }
-        setDistanceM(minDist === Infinity ? null : minDist);
+        aplicarFix(loc.coords.latitude, loc.coords.longitude);
       } catch {
-        // location unavailable — keep last known value
+        // Google Play Services a veces no entrega un fix "fresco" (GPS débil, emulador, etc.)
+        // — se usa el último conocido por el SO como respaldo antes de declarar indisponible.
+        try {
+          const last = await Location.getLastKnownPositionAsync({});
+          if (cancelled) return;
+          if (last) aplicarFix(last.coords.latitude, last.coords.longitude);
+          else setUnavailable(true);
+        } catch {
+          if (!cancelled) setUnavailable(true);
+        }
       }
     };
 
@@ -128,5 +143,5 @@ export function useGeofence({
   // canMark: inside/near geofence of any target, OR no geofence required
   const canMark = !hasTargets || status === 'inside' || status === 'near';
 
-  return { distanceM, status, canMark, permissionDenied, currentLocation };
+  return { distanceM, status, canMark, permissionDenied, locationUnavailable, currentLocation };
 }

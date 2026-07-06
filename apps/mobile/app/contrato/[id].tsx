@@ -8,7 +8,7 @@ import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
-import * as SecureStore from 'expo-secure-store';
+import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import * as WebBrowser from 'expo-web-browser';
 import { contratosApi } from '@api-client';
 import { SignaturePad } from '@/features/turnos/SignaturePad';

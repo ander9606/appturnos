@@ -34,8 +34,8 @@ import { StarRating }      from '@/features/turnos/StarRating';
 import { TrabajadorForm }  from '@/features/equipo/TrabajadorForm';
 import type { TrabajadorFormValues } from '@/features/equipo/schemas';
 import type { Asignacion } from '@api-client';
-import { getInitials }       from '@/lib/formatters';
-import { avatarColorForId, COLORS } from '@/lib/designTokens';
+import { COLORS } from '@/lib/designTokens';
+import { Avatar } from '@/components/ui/Avatar';
 
 const TIPO_LABELS: Record<string, string> = {
   turnos: 'Turnos',
@@ -234,9 +234,10 @@ export default function TrabajadorDetailScreen() {
 
   // ── Detail view ───────────────────────────────────────────────────────
 
-  const avatarBg = avatarColorForId(t.id);
-
-  const salarioLabel = t.tarifa_hora != null
+  // Los trabajadores 'turnos' no tienen tarifa fija: cobran por turno aceptado (tarifa_dia de la oferta).
+  const salarioLabel = t.tipo === 'turnos'
+    ? 'Por turno aceptado'
+    : t.tarifa_hora != null
     ? `$${Number(t.tarifa_hora).toLocaleString('es-CO')} / hora`
     : t.salario_base != null
     ? `$${Number(t.salario_base).toLocaleString('es-CO')} / mes`
@@ -260,13 +261,8 @@ export default function TrabajadorDetailScreen() {
       >
         {/* Hero */}
         <View className="items-center pt-8 pb-6 px-4">
-          <View
-            className="w-20 h-20 rounded-full items-center justify-center mb-3"
-            style={{ backgroundColor: avatarBg }}
-          >
-            <Text className="text-white font-bold text-2xl">
-              {getInitials(t.nombre, t.apellido)}
-            </Text>
+          <View className="mb-3">
+            <Avatar id={t.id} nombre={t.nombre} apellido={t.apellido} fotoB64={t.foto_perfil} size={80} expandable />
           </View>
           <Text className="text-xl font-bold text-foreground">
             {t.nombre} {t.apellido}

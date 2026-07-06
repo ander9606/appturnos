@@ -507,7 +507,7 @@ export default function CargosScreen() {
                       </Text>
                     )}
                     <Text className="text-xs text-muted-foreground">
-                      {p.latitud.toFixed(5)}, {p.longitud.toFixed(5)}  ·  Radio: {p.radio_metros} m
+                      {Number(p.latitud).toFixed(5)}, {Number(p.longitud).toFixed(5)}  ·  Radio: {p.radio_metros} m
                     </Text>
                   </View>
                   {selected && <Ionicons name="checkmark" size={18} color={COLORS.info} />}

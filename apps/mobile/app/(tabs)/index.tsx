@@ -32,9 +32,11 @@ import { useCountNoLeidas } from '@/features/notificaciones/useNotificaciones';
 import { bogotaToday, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';
 import { StatCard }       from '@/components/ui/StatCard';
+import { Avatar }         from '@/components/ui/Avatar';
 import { ActiveShiftCard } from '@/features/dashboard/ActiveShiftCard';
 import { NextShiftCard }   from '@/features/dashboard/NextShiftCard';
 import { NoShiftCard }     from '@/features/dashboard/NoShiftCard';
+import { fmtPeriodo }      from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -164,7 +166,7 @@ export default function DashboardScreen() {
 
   const stats: { value: string | number; label: string; color: string; onPress?: () => void }[] = isNomina
     ? [
-        { value: periodoAbierto ? '✓' : '—', label: 'Período activo', color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
+        { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—', label: 'Período', color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
         { value: nominaPerfil?.acepta_extras ? '✓' : '—',             label: 'Extras activos', color: nominaPerfil?.acepta_extras ? 'text-info' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
         { value: turnosHoy.length > 0 ? turnosHoy.length : '—',       label: 'Extras hoy', color: 'text-foreground', onPress: () => router.push('/(tabs)/turnos') },
       ]
@@ -177,13 +179,13 @@ export default function DashboardScreen() {
     : isJefeNomina
     ? [
         { value: totalEquipo ?? '…',          label: 'Empleados',      color: 'text-info',                                                              onPress: () => router.push('/(tabs)/equipo') },
-        { value: periodoAbierto ? '✓' : '—',  label: 'Período activo', color: periodoAbierto ? 'text-success' : 'text-muted-foreground',                onPress: () => router.push('/(tabs)/nomina') },
+        { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—',  label: 'Período', color: periodoAbierto ? 'text-success' : 'text-muted-foreground',                onPress: () => router.push('/(tabs)/nomina') },
         { value: periodoAbierto?.tipo ?? '—', label: 'Ciclo',          color: 'text-foreground',                                                        onPress: () => router.push('/(tabs)/nomina') },
       ]
     : [
         { value: totalEquipo ?? '…',                                                                                                                                                                      label: t('dashboard.statEmployees'),   color: 'text-info',       onPress: () => router.push('/(tabs)/equipo') },
         { value: ofertasHoyData?.pagination?.total ?? '…', label: t('dashboard.statShiftsToday'), color: 'text-foreground', onPress: () => router.push('/(tabs)/turnos') },
-        { value: periodoAbierto ? `${new Date(periodoAbierto.fecha_inicio + 'T00:00:00').getDate()}–${new Date(periodoAbierto.fecha_fin + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}` : '—', label: 'Período', color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
+        { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—', label: 'Período', color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
       ];
 
   // ── Quick actions ────────────────────────────────────────────────────────
@@ -265,9 +267,19 @@ export default function DashboardScreen() {
         >
           <Text className="text-white/80 text-sm font-medium">{greeting}</Text>
           <View className="flex-row items-center justify-between">
-            <Text className="text-white text-2xl font-bold">
-              {usuario?.nombre ?? '…'}
-            </Text>
+            <View className="flex-row items-center gap-2 flex-1">
+              <Avatar
+                id={usuario?.id}
+                nombre={usuario?.nombre}
+                apellido={usuario?.apellido}
+                fotoB64={usuario?.foto_perfil}
+                size={36}
+                expandable
+              />
+              <Text className="text-white text-2xl font-bold" numberOfLines={1}>
+                {usuario?.nombre ?? '…'}
+              </Text>
+            </View>
             <Pressable
               onPress={() => router.push('/notificaciones')}
               className="w-10 h-10 rounded-xl bg-white/20 items-center justify-center"

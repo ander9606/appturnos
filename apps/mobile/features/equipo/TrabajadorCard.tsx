@@ -19,7 +19,10 @@ interface Props {
 export function TrabajadorCard({ trabajador: t, onPress }: Props) {
   const { id, nombre, apellido, cargo, email, tipo, activo, tarifa_hora, salario_base, foto_perfil } = t;
 
-  const salarioLabel = tarifa_hora != null
+  // Los trabajadores 'turnos' no tienen tarifa fija: cobran por turno aceptado (tarifa_dia de la oferta).
+  const salarioLabel = tipo === 'turnos'
+    ? null
+    : tarifa_hora != null
     ? `$${Number(tarifa_hora).toLocaleString('es-CO')} / h`
     : salario_base != null
     ? `$${Number(salario_base).toLocaleString('es-CO')} / mes`

@@ -18,12 +18,23 @@ import {
   calcularElapsedMinutes,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { fmtHora } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
 import { useTheme } from '@/lib/theme';
 import { formatCOP } from '@/lib/formatters';
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 
 const BREAK_INTERVAL_MIN = 240; // 4 horas
+
+const TIPO_PERIODO_LABEL: Record<'semanal' | 'quincenal' | 'mensual', string> = {
+  semanal: 'Semana',
+  quincenal: 'Quincena',
+  mensual: 'Mes',
+};
+
+function fmtCorta(fecha: string) {
+  return new Date(fecha + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+}
 
 export default function NominaIngresoScreen() {
   const router = useRouter();
@@ -40,6 +51,9 @@ export default function NominaIngresoScreen() {
     loading,
     isRefetching,
     onRefresh,
+    tipoMarcacion,
+    geo,
+    fijoBloqueado,
   } = useNominaTrabajador();
 
   // ── Contador actualizado cada minuto ─────────────────────────────────────
@@ -100,10 +114,8 @@ export default function NominaIngresoScreen() {
           <Text className="text-white text-lg font-bold">Marcaje de jornada</Text>
           {periodoActivo && (
             <Text className="text-white/70 text-xs">
-              Período{' '}
-              {new Date(periodoActivo.fecha_inicio + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
-              {' – '}
-              {new Date(periodoActivo.fecha_fin + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
+              {TIPO_PERIODO_LABEL[periodoActivo.tipo]}{' '}
+              {fmtCorta(periodoActivo.fecha_inicio)} – {fmtCorta(periodoActivo.fecha_fin)}
             </Text>
           )}
         </View>
@@ -205,11 +217,21 @@ export default function NominaIngresoScreen() {
           </View>
         )}
 
+        {/* ── Geofence (solo tipo_marcacion = 'fijo') ────────── */}
+        {tipoMarcacion === 'fijo' && (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado') && (
+          <GeoFenceIndicator
+            distanceM={geo.distanceM}
+            status={geo.status}
+            permissionDenied={geo.permissionDenied}
+            locationUnavailable={geo.locationUnavailable}
+          />
+        )}
+
         {/* ── Botón de marcaje ──────────────────────────────── */}
         {estadoHoy === 'sin_registro' && periodoAbierto && (
           <TouchableOpacity
             onPress={handleEntrada}
-            disabled={isMutating}
+            disabled={isMutating || fijoBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
@@ -267,7 +289,7 @@ export default function NominaIngresoScreen() {
         {estadoHoy === 'reingreso_aprobado' && periodoAbierto && (
           <TouchableOpacity
             onPress={handleEntrada}
-            disabled={isMutating}
+            disabled={isMutating || fijoBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
@@ -279,8 +301,8 @@ export default function NominaIngresoScreen() {
           </TouchableOpacity>
         )}
 
-        {/* ── Info período ──────────────────────────────────── */}
-        {periodoActivo && (
+        {/* ── Info período (solo si no está abierto — el rango ya se ve en el header) ── */}
+        {periodoActivo && periodoActivo.estado !== 'abierto' && (
           <View className="bg-card border border-border rounded-2xl px-4 py-3 gap-1">
             <View className="flex-row items-center gap-2">
               <Ionicons name="information-circle-outline" size={15} color="#64748B" />
@@ -289,9 +311,7 @@ export default function NominaIngresoScreen() {
               </Text>
             </View>
             <Text className="text-xs text-muted-foreground">
-              {periodoActivo.estado === 'abierto'
-                ? 'Puedes marcar entrada y salida mientras el período esté abierto.'
-                : periodoActivo.estado === 'cerrado'
+              {periodoActivo.estado === 'cerrado'
                 ? 'El período fue cerrado. Las horas ya no se pueden modificar y están pendientes de pago.'
                 : 'Este período ya fue liquidado (pagado).'}
             </Text>

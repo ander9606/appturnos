@@ -40,3 +40,15 @@ export const TIPO_OPTIONS: { value: TrabajadorFormValues['tipo']; label: string 
   { value: 'nomina', label: 'Nómina'  },
   { value: 'ambos',  label: 'Ambos'   },
 ];
+
+/**
+ * Aceptar turnos extra ya depende del rol (trabajador_nomina) y del flag
+ * acepta_extras, no de `tipo`. El único efecto real de 'ambos' hoy es exponer
+ * al trabajador de nómina también al marketplace externo logiq360 (ver
+ * TrabajadoresModel.listarParaSyncLogiq360).
+ */
+export const TIPO_HINTS: Record<TrabajadorFormValues['tipo'], string> = {
+  turnos: 'Sin salario fijo: cobra por cada turno que acepta.',
+  nomina: 'Salario fijo. Puede tomar turnos extra dentro de la app si activa esa opción.',
+  ambos:  'Salario fijo + visible para logiq360 como disponible para turnos externos.',
+};

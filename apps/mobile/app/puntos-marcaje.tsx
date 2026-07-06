@@ -27,8 +27,8 @@ import type { PuntoMarcaje, ApiError } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function formatCoord(v: number, decimals = 6) {
-  return v.toFixed(decimals);
+function formatCoord(v: number | string, decimals = 6) {
+  return Number(v).toFixed(decimals);
 }
 
 // ── Form ──────────────────────────────────────────────────────────────────

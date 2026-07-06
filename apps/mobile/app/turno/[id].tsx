@@ -118,7 +118,7 @@ export default function TurnoDetailScreen() {
     return null;
   }, [asignacion?.geofence_info]);
 
-  const { distanceM, status: geoStatus, canMark, permissionDenied, currentLocation } = useGeofence({
+  const { distanceM, status: geoStatus, canMark, permissionDenied, locationUnavailable, currentLocation } = useGeofence({
     targets: geofenceTargets,
     enabled: asignacion?.estado === 'confirmado',
   });
@@ -489,6 +489,7 @@ export default function TurnoDetailScreen() {
                 distanceM={distanceM}
                 status={geoStatus}
                 permissionDenied={permissionDenied}
+                locationUnavailable={locationUnavailable}
               />
 
               {dentroVentana && !canMark && distanceM !== null && (

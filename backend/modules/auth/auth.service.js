@@ -41,7 +41,7 @@ function perfilPublico(u) {
     email: u.email,
     telefono: u.telefono ?? null,
     rol: u.rol,
-    has_password: !!u.password_hash,
+    has_password: !!(u.password_hash ?? u.has_password),
     terminos_aceptados_at: u.terminos_aceptados_at ?? null,
   };
 }

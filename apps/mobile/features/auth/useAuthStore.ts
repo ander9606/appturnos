@@ -7,18 +7,25 @@
  * - Ser la única fuente de verdad sobre si el usuario está autenticado
  */
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 import { authApi, initApiClient, type UsuarioPerfil } from '@api-client';
-import { secureTokenStore } from '@/lib/secureStore';
+import { secureTokenStore, webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { unregisterPushNotifications } from '@/lib/pushNotifications';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const KEY_USUARIO      = 'appturnos.usuario';
 const KEY_HAS_LAUNCHED = 'appturnos.hasLaunched';
+
+// ponytail: SecureStore (Keychain/Keystore) tiene un límite práctico de ~2048 bytes.
+// foto_perfil es un avatar en base64 que puede superarlo por sí solo, así que no se
+// cachea — se vuelve a traer del server en el fetch de fondo de rehydrate().
+// Upgrade path: si se necesita offline-first para la foto, mover este cache a AsyncStorage.
+function cacheUsuario(usuario: UsuarioPerfil) {
+  return SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify({ ...usuario, foto_perfil: null }));
+}
 
 const _envUrl = process.env.EXPO_PUBLIC_API_URL;
 if (!_envUrl) {
@@ -147,7 +154,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     // Validate token with the server in the background
     try {
       const usuario = await authApi.me();
-      await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+      await cacheUsuario(usuario);
       set({ status: 'authenticated', usuario });
     } catch {
       // Token may be expired; tryRefresh inside apiFetch will handle it.
@@ -159,7 +166,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   async login(email, password) {
     const { access_token, refresh_token, usuario } = await authApi.login(email, password);
     await secureTokenStore.setTokens(access_token, refresh_token);
-    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    await cacheUsuario(usuario);
     set({ status: 'authenticated', usuario });
   },
 
@@ -177,7 +184,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password,
     });
     await secureTokenStore.setTokens(access_token, refresh_token);
-    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    await cacheUsuario(usuario);
     set({ status: 'authenticated', usuario });
   },
 
@@ -187,7 +194,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       nombre, apellido, email, telefono, password, email_token, telefono_token,
     });
     await secureTokenStore.setTokens(access_token, refresh_token);
-    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    await cacheUsuario(usuario);
     set({ status: 'authenticated', usuario });
   },
 
@@ -195,14 +202,14 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   async loginConGoogle(idToken) {
     const { access_token, refresh_token, usuario, tipo } = await authApi.loginConProvider('google', idToken);
     await secureTokenStore.setTokens(access_token, refresh_token);
-    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    await cacheUsuario(usuario);
     set({ status: 'authenticated', usuario });
     return tipo;
   },
 
   // ── setUsuario ────────────────────────────────────────────────────────
   async setUsuario(usuario: UsuarioPerfil) {
-    await SecureStore.setItemAsync(KEY_USUARIO, JSON.stringify(usuario));
+    await cacheUsuario(usuario);
     set({ usuario });
   },
 

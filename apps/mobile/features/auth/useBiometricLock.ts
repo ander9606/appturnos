@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState, Platform, type AppStateStatus } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
-import * as SecureStore from 'expo-secure-store';
+import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
+
+const isWeb = Platform.OS === 'web';
 
 const KEY = 'appturnos.biometric_enabled';
 type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
@@ -13,6 +15,8 @@ export function useBiometricLock(authStatus: AuthStatus) {
   const appStateRef = useRef(AppState.currentState);
 
   useEffect(() => {
+    // ponytail: no biometrics/SecureStore on web — feature stays off there.
+    if (isWeb) return;
     (async () => {
       const [hw, enrolled, pref] = await Promise.all([
         LocalAuthentication.hasHardwareAsync(),
@@ -49,6 +53,7 @@ export function useBiometricLock(authStatus: AuthStatus) {
   };
 
   const setEnabled = async (val: boolean) => {
+    if (isWeb) return;
     await SecureStore.setItemAsync(KEY, val ? '1' : '0');
     setEnabledSt(val);
     if (!val) setLocked(false);

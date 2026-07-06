@@ -16,6 +16,7 @@ interface GeoFenceIndicatorProps {
   distanceM: number | null;
   status: GeofenceStatus;
   permissionDenied?: boolean;
+  locationUnavailable?: boolean;
 }
 
 const STATUS_CONFIG: Record<
@@ -33,6 +34,7 @@ export function GeoFenceIndicator({
   distanceM,
   status,
   permissionDenied = false,
+  locationUnavailable = false,
 }: GeoFenceIndicatorProps) {
   if (permissionDenied) {
     return (
@@ -42,6 +44,20 @@ export function GeoFenceIndicator({
           <Text className="text-sm font-semibold text-amber-700">Permiso de ubicación requerido</Text>
           <Text className="text-xs text-amber-600 mt-0.5">
             Ve a Ajustes → AppTurnos → Ubicación para habilitarlo.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (locationUnavailable && distanceM === null) {
+    return (
+      <View className="bg-danger-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
+        <Ionicons name="warning-outline" size={20} color="#991B1B" />
+        <View className="flex-1">
+          <Text className="text-sm font-semibold text-danger">No se pudo obtener tu ubicación</Text>
+          <Text className="text-xs text-danger opacity-80 mt-0.5">
+            Verifica que el GPS esté activado. Reintentando cada 5 s…
           </Text>
         </View>
       </View>
