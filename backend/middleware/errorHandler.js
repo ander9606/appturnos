@@ -1,5 +1,6 @@
 'use strict';
 
+const Sentry = require('../instrument');
 const AppError = require('../utils/AppError');
 const logger = require('../utils/logger');
 
@@ -40,6 +41,7 @@ function errorHandler(err, req, res, _next) {
 
   if (!esOperacional) {
     logger.error(`${req.method} ${req.originalUrl}`, err.stack || err.message);
+    Sentry.captureException(err);
   }
 
   const cuerpo = {

@@ -1,6 +1,6 @@
 'use strict';
 
-require('dotenv').config();
+require('./instrument'); // primero: instrumenta express/http y carga el .env
 
 const express = require('express');
 const helmet = require('helmet');

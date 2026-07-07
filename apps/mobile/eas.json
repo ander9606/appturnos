@@ -18,7 +18,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.zaturno.app"
+        "EXPO_PUBLIC_API_URL": "https://api.zaturno.app",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://a3220f0cc0934d193c873f1d2b7317e0@o4511691270258688.ingest.us.sentry.io/4511691954257920"
       }
     },
     "production": {
@@ -29,7 +30,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.zaturno.app"
+        "EXPO_PUBLIC_API_URL": "https://api.zaturno.app",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://a3220f0cc0934d193c873f1d2b7317e0@o4511691270258688.ingest.us.sentry.io/4511691954257920"
       }
     }
   },

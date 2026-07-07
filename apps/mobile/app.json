@@ -54,7 +54,8 @@
       ],
       "expo-local-authentication",
       "@react-native-community/datetimepicker",
-      "expo-web-browser"
+      "expo-web-browser",
+      "@sentry/react-native"
     ],
     "privacyPolicyUrl": "https://zaturno.app/privacidad",
     "experiments": {

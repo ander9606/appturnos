@@ -14,9 +14,17 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
+import * as Sentry from '@sentry/react-native';
 
 // ponytail: expo-router activa keep-awake internamente en dev; falla en Android emulator — ruido inofensivo
 LogBox.ignoreLogs(['Unable to activate keep awake']);
+
+if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    tracesSampleRate: 0, // ponytail: solo error monitoring, sin tracing/profiling — subir si hace falta
+  });
+}
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useBiometricLock } from '@/features/auth/useBiometricLock';
@@ -130,7 +138,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 // ── Root layout ───────────────────────────────────────────────────────────
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
@@ -192,3 +200,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);
