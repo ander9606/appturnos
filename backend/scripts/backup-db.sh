@@ -15,7 +15,7 @@ mkdir -p "$BACKUP_DIR"
 cd "$(dirname "$0")/../.."
 
 docker compose --env-file backend/.env exec -T db \
-  sh -c 'exec mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --single-transaction --routines "$MYSQL_DATABASE"' \
+  sh -c 'exec mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" --single-transaction --routines --no-tablespaces "$MYSQL_DATABASE"' \
   | gzip > "$BACKUP_DIR/app_turnos_${STAMP}.sql.gz"
 
 find "$BACKUP_DIR" -name 'app_turnos_*.sql.gz' -mtime "+$RETENTION_DAYS" -delete
