@@ -117,10 +117,16 @@ const RegistrosService = {
       throw new AppError('La fecha está fuera del rango del período', 422);
     }
 
+    // Mismo criterio que marcarSalida(): el tope de ordinarias es semanal, no por día.
+    const lunesCrear = getLunesDeSemana(datos.fecha);
+    const { ordinarias: ordinariasAcumCrear } =
+      await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunesCrear, datos.fecha);
+
     const horas = calcularHoras({
       horaEntrada: datos.hora_entrada,
       horaSalida: datos.hora_salida,
       fecha: datos.fecha,
+      horasOrdinariasAcumuladas: ordinariasAcumCrear,
     });
 
     const id = await RegistrosModel.crear(empresaId, {
@@ -171,7 +177,14 @@ const RegistrosService = {
     const horaSalida =
       datos.hora_salida !== undefined ? datos.hora_salida : registro.hora_salida;
 
-    const horas = calcularHoras({ horaEntrada, horaSalida, fecha: registro.fecha });
+    // Mismo criterio que marcarSalida(): el tope de ordinarias es semanal, no por día.
+    const lunesCorregir = getLunesDeSemana(registro.fecha);
+    const { ordinarias: ordinariasAcumCorregir } =
+      await RegistrosModel.sumarOrdinariasEnSemana(empresaId, registro.trabajador_id, lunesCorregir, registro.fecha);
+
+    const horas = calcularHoras({
+      horaEntrada, horaSalida, fecha: registro.fecha, horasOrdinariasAcumuladas: ordinariasAcumCorregir,
+    });
 
     await RegistrosModel.actualizar(empresaId, id, {
       hora_entrada: horaEntrada || null,

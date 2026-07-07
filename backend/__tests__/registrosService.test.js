@@ -74,6 +74,7 @@ describe('RegistrosService.crear', () => {
     });
     RegistrosModel.crear.mockResolvedValue(77);
     RegistrosModel.obtenerPorId.mockResolvedValue({ id: 77, horas_ordinarias: 8 });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
 
     const result = await RegistrosService.crear(1, GESTOR, {
       trabajador_id: 5,
@@ -103,6 +104,37 @@ describe('RegistrosService.crear', () => {
         // trabajador_id omitido
       })
     ).rejects.toMatchObject({ statusCode: 422 });
+  });
+});
+
+// ── corregir ──────────────────────────────────────────────────────────────────
+
+describe('RegistrosService.corregir', () => {
+  test('usa el acumulado semanal, no solo el día — evita subpagar horas extra', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue({
+      id: 99,
+      trabajador_id: 5,
+      periodo_id: 1,
+      fecha: '2026-06-12',
+      hora_entrada: '07:00',
+      hora_salida: '17:00', // 10 h
+      sesiones: 1,
+    });
+    PeriodosModel.obtenerPorId.mockResolvedValue({ id: 1, estado: 'abierto' });
+    // Ya trabajó 34h ordinarias esta semana → solo quedan 8h de cupo ordinario.
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 34, extras: 0 });
+    RegistrosModel.actualizar.mockResolvedValue(1);
+
+    await RegistrosService.corregir(1, GESTOR, 99, {});
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      1,
+      99,
+      expect.objectContaining({
+        horas_ordinarias: 8,
+        horas_extra_diurnas: 2,
+      })
+    );
   });
 });
 

@@ -144,20 +144,26 @@ describe('calcularHoras — jornada normal (no festivo)', () => {
     expect(r.horas_extra_nocturnas).toBe(0);
   });
 
-  test('10 horas diurnas → 8 ordinarias + 2 extra diurnas', () => {
-    const r = calcularHoras({ horaEntrada: '07:00', horaSalida: '17:00', esFestivo: false });
+  test('10 horas diurnas, semana ya con 34h ordinarias → 8 ordinarias + 2 extra diurnas', () => {
+    // El tope de ordinarias es semanal (42h), no por turno — con 34h ya acumuladas
+    // esta semana, quedan 8h de cupo ordinario antes de pasar a extra.
+    const r = calcularHoras({
+      horaEntrada: '07:00', horaSalida: '17:00', esFestivo: false, horasOrdinariasAcumuladas: 34,
+    });
     expect(r.horas_ordinarias).toBe(8);
     expect(r.horas_extra_diurnas).toBe(2);
     expect(r.horas_nocturnas).toBe(0);
     expect(r.horas_extra_nocturnas).toBe(0);
   });
 
-  test('12 horas cruzando nocturno → extra diurnas + extra nocturnas', () => {
-    // 14:00 – 02:00 (12 h)
-    // ordinarias diurnas: 14–21 = 7 h (1h falta para la jornada)
+  test('12 horas cruzando nocturno, semana ya con 34h ordinarias → extra diurnas + extra nocturnas', () => {
+    // 14:00 – 02:00 (12 h), con 8h de cupo ordinario restante esta semana (34h + 8h = 42h)
+    // ordinarias diurnas: 14–21 = 7 h (1h falta para agotar el cupo)
     // ordinarias nocturnas: 21–22 = 1 h
     // extra nocturnas: 22–02 = 4 h
-    const r = calcularHoras({ horaEntrada: '14:00', horaSalida: '02:00', esFestivo: false });
+    const r = calcularHoras({
+      horaEntrada: '14:00', horaSalida: '02:00', esFestivo: false, horasOrdinariasAcumuladas: 34,
+    });
     expect(r.total_horas).toBeCloseTo(12, 1);
     expect(r.horas_ordinarias).toBeCloseTo(7, 1);
     expect(r.horas_nocturnas).toBeCloseTo(1, 1);
