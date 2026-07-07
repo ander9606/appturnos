@@ -12,6 +12,11 @@ on:
     paths:
       - 'apps/mobile/**'
       - 'packages/api-client/**'
+  workflow_dispatch:
+    inputs:
+      group_id:
+        description: 'Update group ID a promover a producción (lo imprime el job de OTA → staging)'
+        required: true
 
 jobs:
   # ── Type check (corre en PR y en push a main) ──────────────────
@@ -38,10 +43,10 @@ jobs:
         run: npm run type-check
 
   # ── OTA Update (solo en push a main) ──────────────────────────
-  # Actualiza el bundle JS en producción sin pasar por las tiendas.
-  # Solo aplica a cambios de código JS/TS — no a cambios nativos.
+  # Publica el bundle JS al canal de staging — no llega a usuarios reales
+  # todavía. Solo aplica a cambios de código JS/TS, no a cambios nativos.
   ota-update:
-    name: OTA Update → producción
+    name: OTA Update → staging
     needs: ci
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -64,15 +69,51 @@ jobs:
       - name: Instalar EAS CLI
         run: npm install -g eas-cli
 
-      - name: OTA Update — rama production
+      - name: OTA Update — rama staging
         run: |
           eas update \
-            --branch production \
+            --branch staging \
             --message "${{ github.event.head_commit.message }}" \
             --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+
+  # ── Promover a producción (manual) ────────────────────────────
+  # Dispara desde GitHub Actions → "Run workflow", pasando el group_id que
+  # imprime el paso "OTA Update — rama staging" de arriba. Republica el
+  # MISMO bundle ya probado en staging — no recompila desde el código actual.
+  ota-promote-production:
+    name: Promover staging → producción
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Republicar grupo probado en staging → producción
+        run: |
+          eas update:republish \
+            --group "${{ github.event.inputs.group_id }}" \
+            --channel production \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
 # ──────────────────────────────────────────────────────────────────
 # NOTA: Build nativo (cuando cambias dependencias o app.json)
