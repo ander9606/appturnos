@@ -64,7 +64,7 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
   const hasExtra = t.pago_extra > 0;
   return (
     <TouchableOpacity
-      onPress={() => router.push(`/turno/${t.asignacion_id}` as `/${string}`)}
+      onPress={() => router.push(`/turno/${t.asignacion_id}`)}
       activeOpacity={0.7}
       className="py-3 border-b border-border last:border-b-0"
     >

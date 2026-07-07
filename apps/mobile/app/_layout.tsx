@@ -88,7 +88,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const inCompletarPerfil = segments[0] === 'completar-perfil';
 
     const isSuperAdmin = rol === 'super_admin';
-    const welcomeRoute = hasLaunched ? '/(auth)/login' : '/(auth)/';
+    const welcomeRoute = hasLaunched ? '/(auth)/login' : '/(auth)';
 
     if (status === 'authenticated') {
       // Solo usuarios OAuth sin contraseña deben agregar teléfono.

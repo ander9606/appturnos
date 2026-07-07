@@ -35,9 +35,7 @@ jobs:
         run: npm ci
 
       - name: Type check
-        run: npm run type-check || true
-        # `|| true` porque hay errores pre-existentes en archivos (admin)
-        # por configuración de tsconfig. Remover cuando se corrijan.
+        run: npm run type-check
 
   # ── OTA Update (solo en push a main) ──────────────────────────
   # Actualiza el bundle JS en producción sin pasar por las tiendas.

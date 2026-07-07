@@ -37,7 +37,7 @@ describe('buildFecha', () => {
   const base = (overrides: Partial<WizardData>): WizardData => ({
     titulo: '', descripcion: '', dia: '1', mes: '6', anio: '2026',
     hora_inicio_h: '', hora_inicio_m: '', hora_fin_h: '', hora_fin_m: '',
-    lugar: '', latitud: null, longitud: null, puestos: [],
+    lugar: '', latitud: null, longitud: null, para_quien: 'turnos', puestos: [],
     ...overrides,
   });
 
@@ -190,7 +190,7 @@ describe('validateStep1', () => {
     dia: '15', mes: '6', anio: '2026',
     hora_inicio_h: '7', hora_inicio_m: '0',
     hora_fin_h: '', hora_fin_m: '',
-    lugar: '', latitud: null, longitud: null, puestos: [],
+    lugar: '', latitud: null, longitud: null, para_quien: 'turnos', puestos: [],
   };
 
   it('returns null for valid step-1 data', () => {
