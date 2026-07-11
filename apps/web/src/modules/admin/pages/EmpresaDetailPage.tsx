@@ -22,11 +22,10 @@ const ORIGEN_BADGE: Record<OrigenSuscripcion, string> = {
   logiq360: 'bg-success-light text-success',
 };
 
-const PRECIOS: Record<Plan, number> = {
-  basico: 80000,
-  profesional: 120000,
-  empresarial: 150000,
-};
+// Precio único mensual (COP) para empresas sin integración logiq360 activa —
+// ver backend/config/constants.js PRECIO_MENSUAL_COP. El plan ya no afecta el precio,
+// solo límites de features (max_trabajadores).
+const PRECIO_MENSUAL_COP = 129000;
 
 function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(s));
@@ -113,6 +112,14 @@ export function EmpresaDetailPage() {
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                   {activo ? 'Activa' : 'Inactiva'}
                 </span>
+                {empresa.logiq360_conectado && (
+                  <span
+                    className="px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success"
+                    title="Integración activa con logiq360 — no paga suscripción"
+                  >
+                    Conectada a logiq360
+                  </span>
+                )}
               </div>
               <p className="text-sm text-muted-foreground font-mono">{empresa.slug}</p>
               {empresa.descripcion && <p className="text-sm text-muted-foreground mt-1">{empresa.descripcion}</p>}
@@ -171,6 +178,11 @@ export function EmpresaDetailPage() {
               {empresa.suscripcion_origen ?? 'manual'}
             </span>
           </div>
+          {empresa.logiq360_conectado && (
+            <p className="text-xs text-muted-foreground mb-3">
+              Gratis por integración activa con logiq360 — no depende de "Vence" abajo.
+            </p>
+          )}
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mb-0">
             <InfoRow label="Plan"  value={PLAN_LABEL[empresa.plan as Plan]} />
             <InfoRow
@@ -198,9 +210,9 @@ export function EmpresaDetailPage() {
                 onChange={e => { setLinkPlan(e.target.value as Plan); setLinkUrl(''); }}
                 className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background text-foreground"
               >
-                <option value="basico">Básico — {fmtCOP(PRECIOS.basico)}/mes</option>
-                <option value="profesional">Profesional — {fmtCOP(PRECIOS.profesional)}/mes</option>
-                <option value="empresarial">Empresarial — {fmtCOP(PRECIOS.empresarial)}/mes</option>
+                <option value="basico">Básico — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
+                <option value="profesional">Profesional — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
+                <option value="empresarial">Empresarial — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
               </select>
             </div>
             <div className="w-24">
@@ -216,7 +228,7 @@ export function EmpresaDetailPage() {
           </div>
 
           <p className="text-xs text-muted-foreground mb-3">
-            Total: <span className="font-semibold text-foreground">{fmtCOP(PRECIOS[linkPlan] * linkMeses)}</span>
+            Total: <span className="font-semibold text-foreground">{fmtCOP(PRECIO_MENSUAL_COP * linkMeses)}</span>
           </p>
 
           {linkUrl ? (

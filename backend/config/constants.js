@@ -74,7 +74,11 @@ const PLANES = {
   empresarial: { max_trabajadores: null },
 };
 
-/** Precio mensual fijo para empresas no vinculadas a logiq360 (suscripcion_origen !== 'logiq360'). */
+/**
+ * Precio mensual fijo para empresas sin integración activa con logiq360.
+ * Empresas con integracion_config.activo=1 y api_key configurada no pagan
+ * (ver middleware/verificarSuscripcion.js) — ya no hay precios escalonados por plan.
+ */
 const SUSCRIPCION_ESTANDAR_COP = 129000;
 
 /** Días de acceso gratuito al registrarse antes de exigir el pago (empresas no-logiq360). */

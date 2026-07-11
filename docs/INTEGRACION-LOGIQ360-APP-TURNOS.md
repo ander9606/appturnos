@@ -46,6 +46,8 @@ orden.fecha_cambiada  ──────────────►  Actualizar 
 orden.completada      ──────────────►  Cerrar oferta_turno
 empleado.creado       ──────────────►  (opcional) Crear trabajador
 empleado.desactivado  ──────────────►  (opcional) Desactivar trabajador
+integracion.activada     ───────────►  Sincroniza integracion_config.activo = 1
+integracion.desactivada  ───────────►  Sincroniza integracion_config.activo = 0
 
 
 ENTRADAS (App Turnos → logiq360):
@@ -287,6 +289,34 @@ await IntegracionTurnosService.emitirEvento(tenantId, {
 > **NOTA:** El email es el campo de sincronización. Si en App Turnos ya existe un  
 > trabajador con ese email, se vinculan. Si no existe, se crea.  
 > La contraseña NO se sincroniza — el trabajador recibe invitación por email.
+
+---
+
+### EVENTO: `integracion.activada` / `integracion.desactivada`
+
+**Cuándo se dispara:** Un operador de logiq360 conecta o desconecta a este cliente
+de Zaturno desde el panel de integraciones (`integraciones_turnos.activo`).
+
+**Por qué existe:** La facturación de Zaturno decide si una empresa usa la app
+gratis derivándolo en vivo de `integracion_config.activo` + `api_key`. Sin este
+evento, si logiq360 desconecta a un cliente de su lado, Zaturno nunca se entera y
+el cliente sigue con acceso gratis indefinidamente. Estos dos eventos cierran ese
+loop: App Turnos sincroniza su propio `integracion_config.activo` al recibirlos.
+
+**Se acepta aunque la integración esté marcada inactiva del lado de App Turnos**
+(a diferencia del resto de eventos, que requieren `integracion_config.activo=1`)
+— de lo contrario `integracion.activada` nunca podría reactivar nada.
+
+```json
+{
+  "event_id": "...",
+  "event_type": "integracion.desactivada",
+  "version": "1.0",
+  "data": {}
+}
+```
+
+> No lleva datos de negocio — solo anuncia el cambio de estado del toggle.
 
 ---
 
@@ -908,6 +938,8 @@ logiq360 → App Turnos   Webhook      orden.fecha_cambiada                    �
 logiq360 → App Turnos   Webhook      orden.completada                        ⬜
 logiq360 → App Turnos   Webhook      empleado.creado                         ⬜ (opt-in)
 logiq360 → App Turnos   Webhook      empleado.desactivado                    ⬜ (opt-in)
+logiq360 → App Turnos   Webhook      integracion.activada                    ✅
+logiq360 → App Turnos   Webhook      integracion.desactivada                 ✅
 
 App Turnos → logiq360   Webhook      trabajador.ingreso                      ✅
 App Turnos → logiq360   Webhook      trabajador.egreso                       ✅
@@ -950,6 +982,21 @@ App Turnos NUNCA envía a logiq360:
 ---
 
 ## CHANGELOG
+
+### v1.2 — Sincronización de facturación (integracion.activada / integracion.desactivada)
+
+Zaturno pasó de un flag manual de "empresa logiq360" a derivar la gratuidad en vivo
+de `integracion_config.activo` + `api_key`. Precio único para empresas no conectadas:
+$129.000 COP/mes (ya no hay planes básico/profesional/empresarial escalonados en
+precio — el plan sigue existiendo solo para límites de features).
+
+Se agregan dos eventos nuevos, salientes desde logiq360, para que ambos lados queden
+sincronizados cuando un operador conecta/desconecta un cliente desde el panel de
+integraciones: `integracion.activada`, `integracion.desactivada`. Ver detalle arriba.
+
+**Para logiq360, este cambio agrega dos eventos opcionales de emitir, pero se
+recomienda enviarlos siempre que cambie el toggle** — sin ellos, la desconexión de
+un cliente no tiene forma de reflejarse del lado de Zaturno.
 
 ### v1.1 — Puestos por oferta (cargo + tarifa + plazas)
 

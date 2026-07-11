@@ -45,15 +45,40 @@ const IntegracionModel = {
 
   /**
    * Resuelve el empresa_id de App Turnos a partir del tenant_id de logiq360.
-   * Fallback retrocompatible: si nadie ha emparejado con ese tenant, asume que
-   * empresa_id == tenant_id (comportamiento previo al pairing).
+   * No filtra por activo: el mapeo tenant↔empresa debe resolverse igual aunque
+   * la integración esté pausada (p.ej. para recibir el evento integracion.activada
+   * que la reactiva). Fallback retrocompatible: si nadie ha emparejado con ese
+   * tenant, asume que empresa_id == tenant_id (comportamiento previo al pairing).
    */
   async empresaIdPorTenantLogiq360(tenantId) {
     const [filas] = await pool.query(
-      'SELECT empresa_id FROM integracion_config WHERE logiq360_tenant_id = ? AND activo = 1 LIMIT 1',
+      'SELECT empresa_id FROM integracion_config WHERE logiq360_tenant_id = ? LIMIT 1',
       [tenantId]
     );
     return filas[0]?.empresa_id ?? tenantId;
+  },
+
+  /**
+   * true si la empresa tiene la integración activa y api_key configurada.
+   * Fuente única de verdad para "esta empresa usa Zaturno gratis vía logiq360" —
+   * se evalúa en vivo en cada request (ver middleware/verificarSuscripcion.js),
+   * nunca se cachea en empresas.plan/suscripcion_vigente_hasta.
+   */
+  async estaConectado(empresaId) {
+    const [filas] = await pool.query(
+      'SELECT activo, api_key FROM integracion_config WHERE empresa_id = ? LIMIT 1',
+      [empresaId]
+    );
+    const fila = filas[0];
+    return !!(fila && fila.activo === 1 && fila.api_key);
+  },
+
+  /** Activa/desactiva la integración (usado por los handlers de integracion.activada/desactivada). */
+  async actualizarActivo(empresaId, activo) {
+    await pool.query(
+      'UPDATE integracion_config SET activo = ? WHERE empresa_id = ?',
+      [activo ? 1 : 0, empresaId]
+    );
   },
 
   // ─── Eventos entrantes ──────────────────────────────────────

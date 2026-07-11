@@ -6,8 +6,7 @@ const AppError = require('../../utils/AppError');
 
 /** Fuente de verdad de "es logiq360": conexión activa con api_key, no una etiqueta manual. */
 async function tieneIntegracionLogiq360Activa(empresaId) {
-  const cfg = await IntegracionModel.obtenerConfig(empresaId);
-  return Boolean(cfg?.activo && cfg?.api_key);
+  return IntegracionModel.estaConectado(empresaId);
 }
 
 const EmpresasService = {
@@ -65,6 +64,7 @@ const EmpresasService = {
       vigente_hasta: e.suscripcion_vigente_hasta,
       dias_restantes: diasRestantes,
       origen: esLogiq360 ? 'logiq360' : 'directo',
+      logiq360_conectado: esLogiq360,
     };
   },
 };

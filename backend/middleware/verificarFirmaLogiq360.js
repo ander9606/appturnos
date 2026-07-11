@@ -21,9 +21,11 @@ async function verificarFirmaLogiq360(req, _res, next) {
   const tenantId = req.body?.tenant_id;
   if (tenantId) {
     // Resolver por el mapeo del pairing; fallback a empresa_id == tenant_id (legacy).
+    // No filtra por activo: el secreto debe seguir siendo válido con la integración
+    // pausada, para poder verificar el propio evento integracion.activada que la reactiva.
     const [rows] = await pool.query(
       `SELECT incoming_secret FROM integracion_config
-       WHERE (logiq360_tenant_id = ? OR empresa_id = ?) AND activo = 1
+       WHERE (logiq360_tenant_id = ? OR empresa_id = ?)
        ORDER BY (logiq360_tenant_id = ?) DESC LIMIT 1`,
       [tenantId, tenantId, tenantId]
     );
