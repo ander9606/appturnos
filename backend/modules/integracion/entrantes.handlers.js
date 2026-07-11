@@ -4,7 +4,17 @@ const { pool } = require('../../config/database');
 const OfertasModel = require('../turnos/ofertas/ofertas.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const IntegracionModel = require('./integracion.model');
+const NotificacionesService = require('../notificaciones/notificaciones.service');
 const logger = require('../../utils/logger');
+
+/** admin_empresa activos de la empresa — destinatarios de avisos de facturación. */
+async function usuarioIdsAdminEmpresa(empresaId) {
+  const [filas] = await pool.query(
+    "SELECT id AS usuario_id FROM usuarios WHERE empresa_id = ? AND rol = 'admin_empresa' AND activo = 1",
+    [empresaId]
+  );
+  return filas.map((f) => f.usuario_id);
+}
 
 /**
  * Resuelve el id del cargo "auxiliar" del sistema (seed de migración 012).
@@ -224,10 +234,28 @@ async function ordenFechaCambiadaV2(empresaId, data) {
  */
 async function integracionActivada(empresaId) {
   await IntegracionModel.actualizarActivo(empresaId, true);
+  const destinatarios = await usuarioIdsAdminEmpresa(empresaId);
+  if (destinatarios.length > 0) {
+    await NotificacionesService.notificarVarios(destinatarios, {
+      empresaId,
+      tipo: 'integracion.activada',
+      titulo: 'Conectados de nuevo con logiq360',
+      mensaje: 'Tu integración con logiq360 volvió a estar activa: Zaturno es gratis mientras siga conectada.',
+    });
+  }
 }
 
 async function integracionDesactivada(empresaId) {
   await IntegracionModel.actualizarActivo(empresaId, false);
+  const destinatarios = await usuarioIdsAdminEmpresa(empresaId);
+  if (destinatarios.length > 0) {
+    await NotificacionesService.notificarVarios(destinatarios, {
+      empresaId,
+      tipo: 'integracion.desactivada',
+      titulo: 'Se desconectó tu integración con logiq360',
+      mensaje: 'Ya no tienes la integración activa con logiq360, así que Zaturno deja de ser gratis. Tienes 3 días de gracia para renovar tu suscripción.',
+    });
+  }
 }
 
 const HANDLERS = {

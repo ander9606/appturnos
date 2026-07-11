@@ -35,16 +35,19 @@ const AdminModel = {
          e.suscripcion_vigente_hasta, e.suscripcion_origen,
          e.acepta_postulaciones, e.logo_url, e.descripcion, e.created_at,
          COUNT(DISTINCT t.id)  AS total_trabajadores,
-         COUNT(DISTINCT u.id)  AS total_usuarios
+         COUNT(DISTINCT u.id)  AS total_usuarios,
+         (MAX(ic.activo) = 1 AND MAX(ic.api_key) IS NOT NULL) AS logiq360_conectado
        FROM empresas e
        LEFT JOIN trabajadores t ON t.empresa_id = e.id
        LEFT JOIN usuarios u     ON u.empresa_id = e.id
+       LEFT JOIN integracion_config ic ON ic.empresa_id = e.id
        WHERE ${whereSql}
        GROUP BY e.id
        ORDER BY e.nombre
        LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
+    filas.forEach((f) => { f.logiq360_conectado = Boolean(f.logiq360_conectado); });
 
     const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) AS total FROM empresas e WHERE ${whereSql}`,
@@ -54,7 +57,12 @@ const AdminModel = {
     return { data: filas, total };
   },
 
-  /** Detalle de una empresa con sus métricas. */
+  /**
+   * Detalle de una empresa con sus métricas.
+   * logiq360_conectado se deriva en vivo de integracion_config (misma condición
+   * que IntegracionModel.estaConectado) — no de suscripcion_origen, que ya no se
+   * otorga automáticamente al emparejar y puede quedar desactualizado.
+   */
   async obtenerEmpresa(id) {
     const [filas] = await pool.query(
       `SELECT
@@ -64,18 +72,22 @@ const AdminModel = {
          COUNT(DISTINCT t.id)  AS total_trabajadores,
          COUNT(DISTINCT u.id)  AS total_usuarios,
          COUNT(DISTINCT ot.id) AS total_ofertas,
-         COUNT(DISTINCT pn.id) AS total_periodos
+         COUNT(DISTINCT pn.id) AS total_periodos,
+         (MAX(ic.activo) = 1 AND MAX(ic.api_key) IS NOT NULL) AS logiq360_conectado
        FROM empresas e
        LEFT JOIN trabajadores t  ON t.empresa_id = e.id
        LEFT JOIN usuarios u      ON u.empresa_id = e.id
        LEFT JOIN ofertas_turno ot ON ot.empresa_id = e.id
        LEFT JOIN periodos_nomina pn ON pn.empresa_id = e.id
+       LEFT JOIN integracion_config ic ON ic.empresa_id = e.id
        WHERE e.id = ?
        GROUP BY e.id
        LIMIT 1`,
       [id]
     );
-    return filas[0] || null;
+    const fila = filas[0];
+    if (fila) fila.logiq360_conectado = Boolean(fila.logiq360_conectado);
+    return fila || null;
   },
 
   /** Crea una nueva empresa. Devuelve el id insertado. */

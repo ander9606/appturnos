@@ -63,4 +63,9 @@ export const empresasApi = {
   obtenerSuscripcion(): Promise<{ activa: boolean; plan: string; vigente_hasta: string | null; dias_restantes: number | null; logiq360_conectado: boolean }> {
     return api.get('/api/empresas/suscripcion');
   },
+
+  /** Autoservicio: admin_empresa genera su propio link de pago Wompi (precio único). */
+  pagar(): Promise<{ url: string; referencia: string; monto_cop: number; expira_at: string }> {
+    return api.post('/api/empresas/pagar');
+  },
 };

@@ -112,6 +112,14 @@ export function EmpresaDetailPage() {
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                   {activo ? 'Activa' : 'Inactiva'}
                 </span>
+                {empresa.logiq360_conectado && (
+                  <span
+                    className="px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success"
+                    title="Integración activa con logiq360 — no paga suscripción"
+                  >
+                    Conectada a logiq360
+                  </span>
+                )}
               </div>
               <p className="text-sm text-muted-foreground font-mono">{empresa.slug}</p>
               {empresa.descripcion && <p className="text-sm text-muted-foreground mt-1">{empresa.descripcion}</p>}
@@ -165,6 +173,11 @@ export function EmpresaDetailPage() {
               {empresa.suscripcion_origen ?? 'manual'}
             </span>
           </div>
+          {empresa.logiq360_conectado && (
+            <p className="text-xs text-muted-foreground mb-3">
+              Gratis por integración activa con logiq360 — no depende de "Vence" abajo.
+            </p>
+          )}
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mb-0">
             <InfoRow label="Plan"  value={PLAN_LABEL[empresa.plan as Plan]} />
             <InfoRow

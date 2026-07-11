@@ -7,6 +7,8 @@ const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { ROLES } = require('../../config/constants');
 const IntegracionModel = require('../integracion/integracion.model');
+const WompiService = require('../webhooks/wompi.service');
+const AppError = require('../../utils/AppError');
 const ctrl = require('./empresas.controller');
 
 const router = express.Router();
@@ -61,6 +63,27 @@ router.get('/suscripcion', verificarToken, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/empresas/pagar — admin_empresa genera su propio link de pago (autoservicio,
+// reemplaza el flujo de "escribe a soporte"). Precio único, ver PRECIO_MENSUAL_COP.
+async function pagar(req, res, next) {
+  try {
+    const empresaId = req.usuario.empresa_id;
+    if (await IntegracionModel.estaConectado(empresaId)) {
+      return next(new AppError('Tu empresa usa Zaturno gratis vía tu integración con logiq360 — no necesitas pagar', 400));
+    }
+    const [[e]] = await require('../../config/database').pool.query(
+      'SELECT nombre, plan FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    if (!e) return next(new AppError('Empresa no encontrada', 404));
+    const data = await WompiService.generarLinkPago({
+      empresaId, nombreEmpresa: e.nombre, plan: e.plan, meses: 1,
+    });
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+}
+router.post('/pagar', verificarToken, verificarRol(SOLO_ADMIN), pagar);
+
 // GET /api/empresas/me — admin_empresa ve su propia empresa (campos completos)
 // Debe ir ANTES de /:id para que Express no interprete "me" como un ID.
 router.get('/me', verificarToken, verificarRol(SOLO_ADMIN), ctrl.miEmpresa);
@@ -99,3 +122,4 @@ router.get(
 );
 
 module.exports = router;
+module.exports.pagar = pagar; // exportado para test unitario directo

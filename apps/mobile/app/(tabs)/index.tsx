@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { empresasApi } from '@api-client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -118,7 +119,30 @@ export default function DashboardScreen() {
     enabled: isManager,
     staleTime: 5 * 60_000,
   });
-  const suscVencida = isManager && suscData?.activa === false;
+  const suscVencida       = isManager && suscData?.activa === false;
+  const logiq360Conectado = isManager && suscData?.logiq360_conectado === true;
+  // Aviso suave de renovación próxima — no aplica si logiq360 cubre la cuenta.
+  const suscPorVencer =
+    isManager && !logiq360Conectado && suscData?.activa === true &&
+    suscData?.dias_restantes !== null && (suscData?.dias_restantes ?? 99) <= 3;
+
+  const [pagando, setPagando] = useState(false);
+  async function iniciarRenovacion() {
+    if (!isAdmin) {
+      // Solo el admin_empresa puede pagar — el resto solo puede avisarle.
+      Linking.openURL('mailto:soporte@zaturno.app');
+      return;
+    }
+    setPagando(true);
+    try {
+      const { url } = await empresasApi.pagar();
+      if (url) await WebBrowser.openBrowserAsync(url);
+    } catch {
+      Linking.openURL('mailto:soporte@zaturno.app');
+    } finally {
+      setPagando(false);
+    }
+  }
 
   // ── Pull to refresh ──────────────────────────────────────────────────────
 
@@ -245,7 +269,8 @@ export default function DashboardScreen() {
         {/* ── Banner suscripción vencida ──────────────────────────────── */}
         {suscVencida && (
           <Pressable
-            onPress={() => Linking.openURL('mailto:soporte@zaturno.app')}
+            onPress={iniciarRenovacion}
+            disabled={pagando}
             className="mx-4 mt-4 flex-row items-center gap-3 bg-danger-light border border-danger/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
@@ -258,6 +283,37 @@ export default function DashboardScreen() {
             </View>
             <Ionicons name="chevron-forward" size={16} color="#ef4444" />
           </Pressable>
+        )}
+
+        {/* ── Banner aviso suave: vence pronto (no aplica si logiq360 cubre) ── */}
+        {!suscVencida && suscPorVencer && (
+          <Pressable
+            onPress={iniciarRenovacion}
+            disabled={pagando}
+            className="mx-4 mt-4 flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3"
+            accessibilityRole="button"
+          >
+            <Ionicons name="time-outline" size={20} color="#d97706" />
+            <View className="flex-1">
+              <Text className="text-warning text-sm font-semibold">Tu suscripción vence pronto</Text>
+              <Text className="text-warning/80 text-xs mt-0.5">
+                Quedan {suscData?.dias_restantes} día{suscData?.dias_restantes === 1 ? '' : 's'}. Toca aquí para renovar.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#d97706" />
+          </Pressable>
+        )}
+
+        {/* ── Aviso informativo: gratis vía logiq360 ──────────────────── */}
+        {logiq360Conectado && (
+          <View
+            className="mx-4 mt-4 flex-row items-center gap-3 bg-success-light border border-success/30 rounded-2xl px-4 py-3"
+          >
+            <Ionicons name="link" size={20} color="#16a34a" />
+            <Text className="text-success text-sm font-medium flex-1">
+              Usas Zaturno gratis por tu integración activa con logiq360.
+            </Text>
+          </View>
         )}
 
         {/* ── Header ──────────────────────────────────────────────────── */}

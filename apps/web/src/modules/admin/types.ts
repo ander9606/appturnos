@@ -20,6 +20,8 @@ export interface EmpresaAdmin {
   total_usuarios: number;
   total_ofertas?: number;
   total_periodos?: number;
+  /** Derivado en vivo de integracion_config — no confundir con suscripcion_origen. */
+  logiq360_conectado: boolean;
 }
 
 export type EstadoWompiEvento = 'recibido' | 'procesado' | 'error' | 'ignorado';

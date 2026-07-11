@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Building2, Users, Briefcase, Calendar, DollarSign,
-  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook,
+  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook, Link2,
 } from 'lucide-react';
 import { useReportesGlobales, useEmpresas, useCrearEmpresa, useCambiarEstadoEmpresa } from '../hooks/useAdmin';
 import type { EmpresaAdmin, Plan } from '../types';
@@ -195,6 +195,14 @@ export function SuperAdminPage() {
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${PLAN_BADGE[e.plan]}`}>
                         {PLAN_LABEL[e.plan]}
                       </span>
+                      {e.logiq360_conectado && (
+                        <span
+                          className="inline-block ml-1.5 align-text-bottom"
+                          title="Conectada a logiq360 — no paga suscripción"
+                        >
+                          <Link2 size={13} className="text-success" />
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{e.total_trabajadores}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{e.total_usuarios}</td>
