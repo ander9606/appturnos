@@ -60,7 +60,7 @@ export const empresasApi = {
     return api.patch<Empresa>('/api/empresas/me', datos);
   },
 
-  obtenerSuscripcion(): Promise<{ activa: boolean; plan: string; vigente_hasta: string | null; dias_restantes: number | null }> {
+  obtenerSuscripcion(): Promise<{ activa: boolean; plan: string; vigente_hasta: string | null; dias_restantes: number | null; logiq360_conectado: boolean }> {
     return api.get('/api/empresas/suscripcion');
   },
 };

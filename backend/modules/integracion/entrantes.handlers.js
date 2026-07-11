@@ -3,6 +3,7 @@
 const { pool } = require('../../config/database');
 const OfertasModel = require('../turnos/ofertas/ofertas.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
+const IntegracionModel = require('./integracion.model');
 const logger = require('../../utils/logger');
 
 /**
@@ -215,6 +216,20 @@ async function ordenFechaCambiadaV2(empresaId, data) {
   }
 }
 
+/**
+ * integracion.activada / integracion.desactivada — logiq360 anuncia que un
+ * operador conectó/desconectó a este cliente de su lado. Sincroniza el propio
+ * integracion_config.activo para que la facturación (verificarSuscripcion)
+ * refleje el estado real sin depender de que alguien lo actualice a mano.
+ */
+async function integracionActivada(empresaId) {
+  await IntegracionModel.actualizarActivo(empresaId, true);
+}
+
+async function integracionDesactivada(empresaId) {
+  await IntegracionModel.actualizarActivo(empresaId, false);
+}
+
 const HANDLERS = {
   'orden.creada':           ordenCreada,
   'orden.publicada':        ordenPublicada,
@@ -224,6 +239,8 @@ const HANDLERS = {
   'orden.cupos_actualizados': ordenCuposActualizados,
   'empleado.creado':        empleadoCreado,
   'empleado.desactivado':   empleadoDesactivado,
+  'integracion.activada':   integracionActivada,
+  'integracion.desactivada': integracionDesactivada,
 };
 
 /**

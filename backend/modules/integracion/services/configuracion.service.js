@@ -85,13 +85,10 @@ const ConfiguracionService = {
       logiq360_base_url: b.logiq360_base_url,
     });
 
-    // logiq360 cubre la suscripcion: plan empresarial indefinido
-    const AdminModel = require('../../admin/admin.model');
-    await AdminModel.actualizarSuscripcion(empresaId, {
-      plan: 'empresarial',
-      vigente_hasta: null,
-      origen: 'logiq360',
-    });
+    // La gratuidad ya NO se otorga aquí de forma permanente: se deriva en vivo de
+    // integracion_config.activo + api_key en cada request (ver IntegracionModel.estaConectado
+    // y middleware/verificarSuscripcion.js). Guardar aquí un vigente_hasta=null fijo dejaría
+    // a la empresa gratis para siempre aunque logiq360 la desconecte más tarde.
 
     // Conciliación automática por email: misma empresa, un tenant en cada app.
     // Best-effort — si logiq360 aún no tiene el personal sincronizado, se

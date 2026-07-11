@@ -6,6 +6,7 @@ const { body, query, param } = require('express-validator');
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { ROLES } = require('../../config/constants');
+const IntegracionModel = require('../integracion/integracion.model');
 const ctrl = require('./empresas.controller');
 
 const router = express.Router();
@@ -41,13 +42,22 @@ router.get('/suscripcion', verificarToken, async (req, res, next) => {
       [req.usuario.empresa_id]
     );
     if (!e) return next(require('../../utils/AppError')('Empresa no encontrada', 404));
+
+    const logiq360Conectado = await IntegracionModel.estaConectado(req.usuario.empresa_id);
+    if (logiq360Conectado) {
+      return res.json({
+        success: true,
+        data: { activa: true, plan: e.plan, vigente_hasta: null, dias_restantes: null, logiq360_conectado: true },
+      });
+    }
+
     const hoy = new Date();
     const vence = e.suscripcion_vigente_hasta ? new Date(e.suscripcion_vigente_hasta) : null;
     const limite = vence ? new Date(vence) : null;
     if (limite) limite.setDate(limite.getDate() + 3);
     const activa = !vence || limite >= hoy;
     const diasRestantes = vence ? Math.ceil((vence - hoy) / 86400000) : null;
-    res.json({ success: true, data: { activa, plan: e.plan, vigente_hasta: e.suscripcion_vigente_hasta, dias_restantes: diasRestantes } });
+    res.json({ success: true, data: { activa, plan: e.plan, vigente_hasta: e.suscripcion_vigente_hasta, dias_restantes: diasRestantes, logiq360_conectado: false } });
   } catch (err) { next(err); }
 });
 

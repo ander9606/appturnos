@@ -5,6 +5,10 @@ const entrantesHandlers = require('../entrantes.handlers');
 const logger = require('../../../utils/logger');
 const AppError = require('../../../utils/AppError');
 
+// integracion.activada/desactivada anuncian el propio cambio de `activo` — deben
+// aceptarse aunque la integración esté marcada inactiva, o nunca podría reactivarse.
+const EVENTOS_SISTEMA = new Set(['integracion.activada', 'integracion.desactivada']);
+
 const EntrantesService = {
   /**
    * Recibe un evento de logiq360: registra (deduplicando por event_id)
@@ -12,7 +16,10 @@ const EntrantesService = {
    */
   async recibirEvento({ empresaId, eventId, tipoEvento, payload }) {
     const cfg = await IntegracionModel.obtenerConfig(empresaId);
-    if (!cfg || !cfg.activo) {
+    if (!cfg) {
+      throw new AppError('Integración no configurada para este tenant', 403);
+    }
+    if (!cfg.activo && !EVENTOS_SISTEMA.has(tipoEvento)) {
       throw new AppError('Integración no activa para este tenant', 403);
     }
 

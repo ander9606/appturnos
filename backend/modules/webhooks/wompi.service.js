@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/database');
 const logger   = require('../../utils/logger');
-const { PLANES } = require('../../config/constants');
+const { PRECIO_MENSUAL_COP } = require('../../config/constants');
 
 const WOMPI_API = 'https://production.wompi.co/v1';
 
@@ -155,10 +155,9 @@ const WompiService = {
     const privateKey = process.env.WOMPI_PRIVATE_KEY;
     if (!privateKey) throw new Error('WOMPI_PRIVATE_KEY no configurada');
 
-    const planCfg = PLANES[plan];
-    if (!planCfg) throw new Error(`Plan invalido: ${plan}`);
+    if (!/^(basico|profesional|empresarial)$/.test(plan)) throw new Error(`Plan invalido: ${plan}`);
 
-    const amountCents = planCfg.precio_mes_cop * meses * 100;
+    const amountCents = PRECIO_MENSUAL_COP * meses * 100;
     const reference   = `AT-${empresaId}-${plan}-${meses}`;
     const expiresAt   = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19) + '.000Z';
     const redirectUrl = process.env.WOMPI_REDIRECT_URL || 'https://zaturno.app';
@@ -185,7 +184,7 @@ const WompiService = {
       throw new Error(json?.error?.reason || `Wompi error HTTP ${resp.status}`);
     }
 
-    return { url: json.data?.permalink, referencia: reference, monto_cop: planCfg.precio_mes_cop * meses, expira_at: expiresAt };
+    return { url: json.data?.permalink, referencia: reference, monto_cop: PRECIO_MENSUAL_COP * meses, expira_at: expiresAt };
   },
 };
 
