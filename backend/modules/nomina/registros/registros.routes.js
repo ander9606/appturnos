@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../../config/constants');
 const ctrl = require('./registros.controller');
 
@@ -40,9 +41,13 @@ router.get(
 );
 
 // POST /api/nomina/registros
+// verificarSuscripcion aquí: es la creación manual de un registro (herramienta
+// de gestor), no el marcaje propio del trabajador — eso vive en marcar-entrada/
+// marcar-salida más abajo, que a propósito NO llevan este gate.
 router.post(
   '/',
   verificarRol(CREAR),
+  verificarSuscripcion,
   [
     body('periodo_id').isInt({ min: 1 }).withMessage('periodo_id es obligatorio'),
     body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)'),

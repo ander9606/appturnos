@@ -21,6 +21,16 @@ export function useUpdateEmpresa() {
   });
 }
 
+export function useSuscripcion(enabled = true) {
+  return useQuery({ queryKey: ['config', 'suscripcion'], queryFn: configuracionApi.getSuscripcion, staleTime: 60_000, enabled });
+}
+export function usePagarSuscripcion() {
+  return useMutation({
+    mutationFn: configuracionApi.pagarSuscripcion,
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function usePuntos() {
   return useQuery({ queryKey: ['config', 'puntos'], queryFn: configuracionApi.getPuntos, staleTime: 60_000 });
 }
