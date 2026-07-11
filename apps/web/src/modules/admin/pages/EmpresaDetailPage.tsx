@@ -126,7 +126,12 @@ export function EmpresaDetailPage() {
             </div>
           </div>
           <button
-            onClick={() => cambiarEstado.mutate({ id: empresa.id, activo: !activo })}
+            onClick={() => {
+              const msg = activo
+                ? `¿Desactivar ${empresa.nombre}? Todos sus usuarios y trabajadores perderán acceso.`
+                : `¿Activar ${empresa.nombre}?`;
+              if (window.confirm(msg)) cambiarEstado.mutate({ id: empresa.id, activo: !activo });
+            }}
             disabled={cambiarEstado.isPending}
             className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl border transition-colors disabled:opacity-50 ${
               activo
@@ -227,17 +232,25 @@ export function EmpresaDetailPage() {
           </p>
 
           {linkUrl ? (
-            <div className="flex gap-2">
-              <input
-                readOnly
-                value={linkUrl}
-                className="flex-1 text-xs border border-border rounded-lg px-3 py-2 bg-muted font-mono truncate"
-              />
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <input
+                  readOnly
+                  value={linkUrl}
+                  className="flex-1 text-xs border border-border rounded-lg px-3 py-2 bg-muted font-mono truncate"
+                />
+                <button
+                  onClick={handleCopiar}
+                  className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors"
+                >
+                  {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                </button>
+              </div>
               <button
-                onClick={handleCopiar}
-                className="flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors"
+                onClick={() => setLinkUrl('')}
+                className="text-xs text-muted-foreground hover:text-foreground self-start transition-colors"
               >
-                {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                Generar nuevo link
               </button>
             </div>
           ) : (

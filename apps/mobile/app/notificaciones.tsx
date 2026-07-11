@@ -3,7 +3,7 @@
  * Accesible desde la campana del header en cualquier tab.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,7 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'reingreso.solicitado':        'refresh-circle-outline',
   'reingreso.aprobado':          'checkmark-circle-outline',
   'reingreso.rechazado':         'close-circle-outline',
+  'suscripcion.pago_rechazado':  'card-outline',
 };
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {
@@ -80,9 +81,11 @@ export default function NotificacionesScreen() {
   const { data, isLoading, isRefetching, refetch } = useNotificaciones();
   const { mutate: marcarLeida } = useMarcarLeida();
   const { mutate: marcarTodas, isPending: marcandoTodas } = useMarcarTodasLeidas();
+  const [soloNoLeidas, setSoloNoLeidas] = useState(false);
 
-  const notificaciones = data?.data ?? [];
+  const todas = data?.data ?? [];
   const noLeidas = data?.no_leidas ?? 0;
+  const notificaciones = soloNoLeidas ? todas.filter((n) => !n.leida) : todas;
 
   const handleTap = useCallback((n: Notificacion) => {
     if (!n.leida) marcarLeida(n.id);
@@ -162,6 +165,28 @@ export default function NotificacionesScreen() {
             </Text>
           </TouchableOpacity>
         )}
+      </View>
+
+      {/* Filtro Todas / No leídas */}
+      <View className="flex-row gap-2 px-5 py-3 border-b border-border">
+        {([
+          { key: false, label: 'Todas' },
+          { key: true, label: 'No leídas' },
+        ] as const).map((f) => {
+          const active = soloNoLeidas === f.key;
+          return (
+            <TouchableOpacity
+              key={String(f.key)}
+              onPress={() => setSoloNoLeidas(f.key)}
+              className={`px-3 py-1.5 rounded-full border ${active ? 'border-transparent' : 'border-border'}`}
+              style={active ? { backgroundColor: theme.primary } : undefined}
+            >
+              <Text className={`text-xs font-semibold ${active ? 'text-white' : 'text-muted-foreground'}`}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {isLoading ? (

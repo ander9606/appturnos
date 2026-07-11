@@ -24,6 +24,7 @@ import {
 } from '@/features/turnos/useTurnos';
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import { COLORS } from '@/lib/designTokens';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { Cargo, CrearCargoPayload, ActualizarCargoPayload, ApiError } from '@api-client';
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -74,6 +75,9 @@ export default function CargosScreen() {
   const puntosFijos   = puntos.filter((p) => p.tipo === 'fijo');
 
   const puntoSeleccionado = puntos.find((p) => p.id === form.punto_marcaje_id) ?? null;
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
+  if (denied) return denied;
 
   function openCreate() {
     setEditingCargo(null);

@@ -178,7 +178,7 @@ export default function SolicitudesScreen() {
   // undefined → backend default = IN ('solicitado_por_trabajador', 'solicitado_por_empresa')
   // 'activo'  → vínculo ya aprobado
   const estadoFiltro = tab === 'aprobadas' ? 'activo' : undefined;
-  const { data = [], isLoading, refetch } = useSolicitudes(estadoFiltro);
+  const { data = [], isLoading, isRefetching, refetch } = useSolicitudes(estadoFiltro);
 
   const aprobar  = useAprobar();
   const rechazar = useRechazarVinculo();
@@ -241,7 +241,7 @@ export default function SolicitudesScreen() {
       />
 
       <ScrollView
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingVertical: 16, paddingBottom: 40 }}
       >

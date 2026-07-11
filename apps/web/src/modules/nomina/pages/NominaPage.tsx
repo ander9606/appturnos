@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router';
 import { Plus, ChevronRight } from 'lucide-react';
 import { usePeriodos, useCrearPeriodo, useCerrarPeriodo, useLiquidarPeriodo } from '../hooks/useNomina';
 import type { EstadoPeriodo, TipoPeriodo, Periodo } from '../types';
+import { ErrorState } from '@/shared/components/ErrorState';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
@@ -24,8 +26,9 @@ export function NominaPage() {
   const navigate = useNavigate();
   const [filtroEstado, setFiltroEstado] = useState<EstadoPeriodo | undefined>(undefined);
   const [showModal, setShowModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'cerrar' | 'liquidar'; periodo: Periodo } | null>(null);
 
-  const { data, isLoading } = usePeriodos(filtroEstado);
+  const { data, isLoading, isError, error, refetch } = usePeriodos(filtroEstado);
   const periodos: Periodo[] = data?.data ?? [];
 
   const cerrar = useCerrarPeriodo();
@@ -68,6 +71,8 @@ export function NominaPage() {
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+      ) : isError ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : periodos.length === 0 ? (
         <p className="text-muted-foreground text-sm py-8 text-center">No hay períodos</p>
       ) : (
@@ -97,11 +102,7 @@ export function NominaPage() {
                     <div className="flex items-center gap-2 justify-end">
                       {p.estado === 'abierto' && (
                         <button
-                          onClick={() => {
-                            if (window.confirm('¿Cerrar este período? Se congelarán los valores hora.')) {
-                              cerrar.mutate(p.id);
-                            }
-                          }}
+                          onClick={() => setConfirmAction({ type: 'cerrar', periodo: p })}
                           disabled={cerrar.isPending}
                           className="text-xs border border-border hover:bg-muted px-2 py-1 rounded-lg transition-colors"
                         >
@@ -110,11 +111,7 @@ export function NominaPage() {
                       )}
                       {p.estado === 'cerrado' && (
                         <button
-                          onClick={() => {
-                            if (window.confirm('¿Marcar este período como liquidado?')) {
-                              liquidar.mutate(p.id);
-                            }
-                          }}
+                          onClick={() => setConfirmAction({ type: 'liquidar', periodo: p })}
                           disabled={liquidar.isPending}
                           className="text-xs border border-amber-300 text-warning hover:bg-warning-light px-2 py-1 rounded-lg transition-colors"
                         >
@@ -137,6 +134,25 @@ export function NominaPage() {
       )}
 
       {showModal && <NuevoPeriodoModal onClose={() => setShowModal(false)} />}
+
+      {confirmAction && (
+        <ConfirmModal
+          title={confirmAction.type === 'cerrar' ? 'Cerrar período' : 'Liquidar período'}
+          detail={
+            confirmAction.type === 'cerrar'
+              ? `Se congelará el valor hora de todos los registros de ${fmtDate(confirmAction.periodo.fecha_inicio)} — ${fmtDate(confirmAction.periodo.fecha_fin)}. Ya no se podrán editar registros de este período.`
+              : `Se marcará como pagado el período ${fmtDate(confirmAction.periodo.fecha_inicio)} — ${fmtDate(confirmAction.periodo.fecha_fin)}. Esta acción no se puede deshacer.`
+          }
+          confirmLabel={confirmAction.type === 'cerrar' ? 'Cerrar período' : 'Marcar liquidado'}
+          pending={confirmAction.type === 'cerrar' ? cerrar.isPending : liquidar.isPending}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => {
+            const { type, periodo } = confirmAction;
+            const mutation = type === 'cerrar' ? cerrar : liquidar;
+            mutation.mutate(periodo.id, { onSuccess: () => setConfirmAction(null) });
+          }}
+        />
+      )}
     </div>
   );
 }

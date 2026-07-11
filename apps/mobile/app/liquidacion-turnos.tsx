@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLiquidacionTurnos } from '@/features/turnos/useTurnos';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurnoLinea } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -260,6 +261,9 @@ export default function LiquidacionTurnosScreen() {
     () => trabajadores.reduce((s, w) => s + w.pago_total, 0),
     [trabajadores]
   );
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
+  if (denied) return denied;
 
   return (
     <>

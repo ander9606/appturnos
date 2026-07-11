@@ -21,6 +21,7 @@ import {
   useCompensatoriosTodos,
   useAsignarCompensatorio,
 } from '@/features/nomina/compensatorios/useCompensatorios';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 type Filtro = 'todos' | 'pendiente' | 'asignado';
 
@@ -38,6 +39,9 @@ export default function GestorCompensatoriosScreen() {
 
   const pendientes = todos.filter((c) => c.estado === 'pendiente').length;
   const lista = filtro === 'todos' ? todos : todos.filter((c) => c.estado === filtro);
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_nomina']);
+  if (denied) return denied;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>

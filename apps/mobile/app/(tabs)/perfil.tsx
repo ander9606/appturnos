@@ -31,6 +31,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { authApi } from '@api-client';
 import { t } from '@/lib/i18n';
+import { showToast } from '@/lib/toast';
 import type { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { useNominaPerfil, useActualizarExtras } from '@/features/nomina/useNomina';
@@ -330,7 +331,7 @@ export default function PerfilScreen() {
     onSuccess: (data) => {
       setUsuario(data);
       setEditingDatos(false);
-      Alert.alert('', t('perfil.successDatos'));
+      showToast(t('perfil.successDatos'));
     },
     onError: (err: ApiError) => {
       Alert.alert('Error', err.message ?? t('common.error'));
@@ -342,7 +343,7 @@ export default function PerfilScreen() {
       authApi.changePassword({ password_actual: params.actual, password_nueva: params.nueva }),
     onSuccess: async () => {
       setEditingPassword(false);
-      Alert.alert('', t('perfil.successPassword'));
+      showToast(t('perfil.successPassword'));
       await logout();
     },
     onError: (err: ApiError) => {

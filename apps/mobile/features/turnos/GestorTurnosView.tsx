@@ -15,6 +15,7 @@ import { bogotaToday } from '@/features/turnos/turnosUtils';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -328,6 +329,7 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
     data: resp,
     isLoading,
     isError,
+    error,
     refetch,
     isRefetching,
   } = useOfertas({ fecha: selectedDate, limit: 50, para_quien: filtroParaQuien });
@@ -351,7 +353,9 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
     return (
       <View className="flex-1 items-center justify-center gap-3 px-6">
         <Text className="text-4xl">⚠️</Text>
-        <Text className="text-base font-semibold text-foreground">Error al cargar turnos</Text>
+        <Text className="text-base font-semibold text-foreground">
+          {apiErrorMessage(error, 'Error al cargar turnos')}
+        </Text>
         <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
       </View>
     );

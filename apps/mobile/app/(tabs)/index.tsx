@@ -15,12 +15,12 @@ import {
   Pressable,
   RefreshControl,
   Linking,
+  Alert,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { empresasApi } from '@api-client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -121,27 +121,27 @@ export default function DashboardScreen() {
   });
   const suscVencida       = isManager && suscData?.activa === false;
   const logiq360Conectado = isManager && suscData?.logiq360_conectado === true;
+  // Solo admin_empresa puede pagar, y solo si la empresa no la factura logiq360.
+  const puedeAutopagar    = isAdmin && !logiq360Conectado;
   // Aviso suave de renovación próxima — no aplica si logiq360 cubre la cuenta.
   const suscPorVencer =
     isManager && !logiq360Conectado && suscData?.activa === true &&
     suscData?.dias_restantes !== null && (suscData?.dias_restantes ?? 99) <= 3;
 
-  const [pagando, setPagando] = useState(false);
-  async function iniciarRenovacion() {
+  const pagarMutation = useMutation({
+    mutationFn: () => empresasApi.generarLinkPago(),
+    // Link hospedado por Wompi, se abre en el navegador del sistema — no un webview embebido.
+    onSuccess: (data) => Linking.openURL(data.url),
+    onError: () => Alert.alert('No se pudo generar el link de pago', 'Intenta de nuevo o contacta a soporte.'),
+  });
+
+  function iniciarRenovacion() {
     if (!isAdmin) {
       // Solo el admin_empresa puede pagar — el resto solo puede avisarle.
       Linking.openURL('mailto:soporte@zaturno.app');
       return;
     }
-    setPagando(true);
-    try {
-      const { url } = await empresasApi.pagar();
-      if (url) await WebBrowser.openBrowserAsync(url);
-    } catch {
-      Linking.openURL('mailto:soporte@zaturno.app');
-    } finally {
-      setPagando(false);
-    }
+    pagarMutation.mutate();
   }
 
   // ── Pull to refresh ──────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ export default function DashboardScreen() {
         {suscVencida && (
           <Pressable
             onPress={iniciarRenovacion}
-            disabled={pagando}
+            disabled={pagarMutation.isPending}
             className="mx-4 mt-4 flex-row items-center gap-3 bg-danger-light border border-danger/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
@@ -278,7 +278,11 @@ export default function DashboardScreen() {
             <View className="flex-1">
               <Text className="text-danger text-sm font-semibold">Suscripción vencida</Text>
               <Text className="text-danger/80 text-xs mt-0.5">
-                Tienes 3 días de gracia. Toca aquí para renovar.
+                {puedeAutopagar
+                  ? pagarMutation.isPending
+                    ? 'Generando link de pago…'
+                    : 'Tienes 3 días de gracia. Toca aquí para pagar y renovar.'
+                  : 'Tienes 3 días de gracia. Toca aquí para renovar.'}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#ef4444" />
@@ -289,7 +293,7 @@ export default function DashboardScreen() {
         {!suscVencida && suscPorVencer && (
           <Pressable
             onPress={iniciarRenovacion}
-            disabled={pagando}
+            disabled={pagarMutation.isPending}
             className="mx-4 mt-4 flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >

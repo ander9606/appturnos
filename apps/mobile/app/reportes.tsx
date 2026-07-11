@@ -17,6 +17,7 @@ import { reportesApi } from '@api-client';
 import type { AsistenciaTurno, AsistenciaNomina, CostoNominaDetalle } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { formatDate, formatCOP, toISODate } from '@/lib/formatters';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 // ── Rango presets ─────────────────────────────────────────────────────────
 
@@ -146,6 +147,9 @@ export default function ReportesScreen() {
     () => (asistencia.data?.turnos ?? []).reduce((s, t) => s + t.no_presentados, 0),
     [asistencia.data]
   );
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina']);
+  if (denied) return denied;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>

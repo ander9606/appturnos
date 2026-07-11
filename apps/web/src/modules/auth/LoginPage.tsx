@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Calendar } from 'lucide-react';
 import { useAuthStore } from './authStore';
 import type { Rol } from './authStore';
+import { homeForRol } from './roleHome';
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -39,7 +40,7 @@ export function LoginPage() {
       );
       const { accessToken, refreshToken, usuario } = res.data.data;
       login(usuario, accessToken, refreshToken);
-      navigate('/', { replace: true });
+      navigate(homeForRol(usuario.rol), { replace: true });
     } catch (err: unknown) {
       const msg = axios.isAxiosError(err)
         ? (err.response?.data?.message as string | undefined) ?? 'Error al iniciar sesión'

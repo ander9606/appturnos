@@ -4,6 +4,7 @@ dist/
 web-build/
 .env
 *.local
+google-service-account.json
 ios/
 android/
 

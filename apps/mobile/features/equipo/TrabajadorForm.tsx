@@ -2,7 +2,7 @@
  * TrabajadorForm — shared create/edit form.
  * Uses React Hook Form + Zod. Caller owns the submit handler.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,8 @@ interface TrabajadorFormProps {
   onSubmit: (data: TrabajadorFormValues) => Promise<void>;
   submitLabel?: string;
   submittingLabel?: string;
+  /** Avisa al padre si el formulario tiene cambios sin guardar (para confirmar antes de descartar). */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -33,11 +35,12 @@ export function TrabajadorForm({
   onSubmit,
   submitLabel = 'Guardar',
   submittingLabel = 'Guardando…',
+  onDirtyChange,
 }: TrabajadorFormProps) {
   const {
     control,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<TrabajadorFormValues>({
     resolver: zodResolver(trabajadorSchema),
     defaultValues: {
@@ -45,6 +48,10 @@ export function TrabajadorForm({
       ...defaultValues,
     },
   });
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   return (
     <KeyboardAvoidingView

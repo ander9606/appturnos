@@ -285,7 +285,7 @@ export function OfertaDetailPage() {
                                 Confirmar
                               </button>
                               <button
-                                onClick={() => rechazar.mutate(a.id)}
+                                onClick={() => { if (window.confirm('¿Rechazar esta postulación?')) rechazar.mutate(a.id); }}
                                 className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
                               >
                                 Rechazar
@@ -294,7 +294,7 @@ export function OfertaDetailPage() {
                           )}
                           {a.estado === 'confirmado' && (
                             <button
-                              onClick={() => cancelarAsig.mutate(a.id)}
+                              onClick={() => { if (window.confirm('¿Cancelar esta asignación confirmada?')) cancelarAsig.mutate(a.id); }}
                               className="text-xs text-muted-foreground hover:bg-muted px-2 py-1 rounded transition-colors"
                             >
                               Cancelar

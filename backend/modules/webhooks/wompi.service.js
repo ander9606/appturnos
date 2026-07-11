@@ -3,15 +3,18 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/database');
 const logger   = require('../../utils/logger');
-const { PRECIO_MENSUAL_COP } = require('../../config/constants');
+const { SUSCRIPCION_ESTANDAR_COP } = require('../../config/constants');
+const NotificacionesService = require('../notificaciones/notificaciones.service');
+
+const ESTADOS_RECHAZO = ['DECLINED', 'VOIDED', 'ERROR'];
 
 const WOMPI_API = 'https://production.wompi.co/v1';
 
 function verificarFirma(payload) {
   const secret = process.env.WOMPI_EVENTS_SECRET;
   if (!secret) {
-    logger.warn('WOMPI_EVENTS_SECRET no configurado — verificacion omitida');
-    return true;
+    logger.error('WOMPI_EVENTS_SECRET no configurado — evento de pago rechazado (fail-closed)');
+    return false;
   }
   const { signature } = payload;
   if (!signature?.properties || !signature?.checksum) return false;
@@ -65,6 +68,26 @@ async function marcarError(eventoId, err) {
   logger.error(`Wompi: error evento ${eventoId}: ${err.message}`);
 }
 
+/** Avisa a los admin_empresa de la empresa que un intento de pago fue rechazado. Best-effort. */
+async function notificarPagoRechazado({ empresaId, plan, meses }, wompiStatus) {
+  try {
+    const [admins] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol = 'admin_empresa' AND activo = 1`,
+      [empresaId]
+    );
+    if (admins.length === 0) return;
+    await NotificacionesService.notificarVarios(admins.map((a) => a.id), {
+      empresaId,
+      tipo: 'suscripcion.pago_rechazado',
+      titulo: 'Pago rechazado',
+      mensaje: `El pago de la suscripción (plan ${plan}, ${meses} mes${meses !== 1 ? 'es' : ''}) fue rechazado por Wompi. Genera un nuevo link de pago para renovar.`,
+      data: { plan, meses, wompi_status: wompiStatus },
+    });
+  } catch (err) {
+    logger.error(`Wompi: no se pudo notificar pago rechazado (empresa ${empresaId}):`, err.message);
+  }
+}
+
 const WompiService = {
   /**
    * Procesa un evento entrante de Wompi.
@@ -83,9 +106,10 @@ const WompiService = {
     const transactionId = tx?.id;
     if (!transactionId) return { ok: true, razon: 'sin_transaction_id' };
 
-    const parsed = (payload.event === 'transaction.updated' && tx?.status === 'APPROVED')
-      ? parsearReferencia(tx.reference)
-      : null;
+    const esActualizacion = payload.event === 'transaction.updated';
+    // Parseamos la referencia para cualquier estado, no solo APPROVED —
+    // así un rechazo también queda vinculado a la empresa que intentó pagar.
+    const parsed = esActualizacion ? parsearReferencia(tx.reference) : null;
 
     // Persistir primero — si ya existe, ignorar (idempotencia)
     const [ins] = await pool.query(
@@ -99,19 +123,24 @@ const WompiService = {
     if (ins.affectedRows === 0) return { ok: true, razon: 'duplicado' };
     const eventoId = ins.insertId;
 
-    // Determinar si hay que procesar
-    const ignorar = payload.event !== 'transaction.updated' || tx.status !== 'APPROVED' || !parsed;
-    if (ignorar) {
-      await pool.query(`UPDATE wompi_eventos SET estado = 'ignorado' WHERE id = ?`, [eventoId]);
-      return { ok: true, razon: 'ignorado' };
+    if (esActualizacion && tx.status === 'APPROVED' && parsed) {
+      try {
+        return await activarSuscripcion(eventoId, parsed);
+      } catch (err) {
+        await marcarError(eventoId, err);
+        return { ok: false, razon: 'error_db' };
+      }
     }
 
-    try {
-      return await activarSuscripcion(eventoId, parsed);
-    } catch (err) {
-      await marcarError(eventoId, err);
-      return { ok: false, razon: 'error_db' };
+    if (esActualizacion && parsed && ESTADOS_RECHAZO.includes(tx.status)) {
+      await pool.query(`UPDATE wompi_eventos SET estado = 'rechazado' WHERE id = ?`, [eventoId]);
+      await notificarPagoRechazado(parsed, tx.status);
+      return { ok: true, razon: 'rechazado' };
     }
+
+    // Evento irrelevante: otro tipo de evento, o transaction.updated sin referencia parseable.
+    await pool.query(`UPDATE wompi_eventos SET estado = 'ignorado' WHERE id = ?`, [eventoId]);
+    return { ok: true, razon: 'ignorado' };
   },
 
   /** Reintenta un evento en estado 'error' (llamado por el worker o el admin). */
@@ -150,14 +179,18 @@ const WompiService = {
     return ok;
   },
 
-  /** Genera un link de pago de Wompi. Referencia AT-{empresaId}-{plan}-{meses}. */
-  async generarLinkPago({ empresaId, nombreEmpresa, plan, meses = 1 }) {
+  /**
+   * Genera un link de pago de Wompi. Referencia AT-{empresaId}-{plan}-{meses}.
+   * Precio fijo (SUSCRIPCION_ESTANDAR_COP) para toda empresa no-logiq360 — `plan`
+   * no afecta el monto, pero SÍ debe ser uno de los valores del ENUM `empresas.plan`
+   * (basico/profesional/empresarial): parsearReferencia() y activarSuscripcion()
+   * lo leen de vuelta del webhook y lo escriben tal cual en esa columna.
+   */
+  async generarLinkPago({ empresaId, nombreEmpresa, plan = 'basico', meses = 1 }) {
     const privateKey = process.env.WOMPI_PRIVATE_KEY;
     if (!privateKey) throw new Error('WOMPI_PRIVATE_KEY no configurada');
 
-    if (!/^(basico|profesional|empresarial)$/.test(plan)) throw new Error(`Plan invalido: ${plan}`);
-
-    const amountCents = PRECIO_MENSUAL_COP * meses * 100;
+    const amountCents = SUSCRIPCION_ESTANDAR_COP * meses * 100;
     const reference   = `AT-${empresaId}-${plan}-${meses}`;
     const expiresAt   = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19) + '.000Z';
     const redirectUrl = process.env.WOMPI_REDIRECT_URL || 'https://zaturno.app';
@@ -184,7 +217,7 @@ const WompiService = {
       throw new Error(json?.error?.reason || `Wompi error HTTP ${resp.status}`);
     }
 
-    return { url: json.data?.permalink, referencia: reference, monto_cop: PRECIO_MENSUAL_COP * meses, expira_at: expiresAt };
+    return { url: json.data?.permalink, referencia: reference, monto_cop: SUSCRIPCION_ESTANDAR_COP * meses, expira_at: expiresAt };
   },
 };
 

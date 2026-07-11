@@ -20,6 +20,7 @@ import { useTheme } from '@/lib/theme';
 import { getInitials } from '@/lib/formatters';
 import { useTrabajadores, useActualizarMarcacion } from '@/features/equipo/useEquipo';
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { Trabajador, PuntoMarcaje } from '@api-client';
 
 // ── Fila de trabajador ────────────────────────────────────────────────────────
@@ -180,6 +181,9 @@ export default function AsignacionesLugarScreen() {
 
   const isLoading = loadingT || loadingP;
   const onRefresh = () => { refetchT(); refetchP(); };
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_nomina']);
+  if (denied) return denied;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>

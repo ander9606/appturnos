@@ -96,22 +96,31 @@ export default function AusenciasScreen() {
             </View>
             {a.motivo ? <Text className="text-xs text-muted-foreground">{a.motivo}</Text> : null}
 
-            {isGestor && a.estado === 'pendiente' && (
-              <View className="flex-row gap-2 mt-1">
-                <TouchableOpacity
-                  onPress={() => handleResolver(a, 'rechazada')}
-                  className="flex-1 items-center py-2 rounded-xl bg-danger/10"
-                >
-                  <Text className="text-xs font-semibold text-danger">Rechazar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleResolver(a, 'aprobada')}
-                  className="flex-1 items-center py-2 rounded-xl bg-success/10"
-                >
-                  <Text className="text-xs font-semibold text-success">Aprobar</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            {isGestor && a.estado === 'pendiente' && (() => {
+              const resolvingThis = resolverM.isPending && resolverM.variables?.id === a.id;
+              return (
+                <View className="flex-row gap-2 mt-1">
+                  <TouchableOpacity
+                    onPress={() => handleResolver(a, 'rechazada')}
+                    disabled={resolverM.isPending}
+                    className="flex-1 items-center py-2 rounded-xl bg-danger/10 disabled:opacity-40"
+                  >
+                    {resolvingThis
+                      ? <ActivityIndicator size="small" color="#DC2626" />
+                      : <Text className="text-xs font-semibold text-danger">Rechazar</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleResolver(a, 'aprobada')}
+                    disabled={resolverM.isPending}
+                    className="flex-1 items-center py-2 rounded-xl bg-success/10 disabled:opacity-40"
+                  >
+                    {resolvingThis
+                      ? <ActivityIndicator size="small" color="#16A34A" />
+                      : <Text className="text-xs font-semibold text-success">Aprobar</Text>}
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
           </View>
         )}
       />

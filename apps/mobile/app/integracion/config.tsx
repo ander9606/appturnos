@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useIntegracionConfig, useActualizarIntegracion, useEmparejar } from '@/features/integracion/useIntegracion';
 import { useTheme } from '@/lib/theme';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -59,6 +60,9 @@ export default function IntegracionConfigScreen() {
   useEffect(() => {
     if (cfg) setActivo(Boolean(cfg.activo));
   }, [cfg]);
+
+  const denied = useRoleGuard(['admin_empresa']);
+  if (denied) return denied;
 
   async function handleEmparejar() {
     const codigo = codigoPair.trim();

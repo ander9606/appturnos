@@ -32,6 +32,7 @@ import { useAusenciasPendientesCount } from '@/features/ausencias/useAusencias';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { COLORS } from '@/lib/designTokens';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { useTheme } from '@/lib/theme';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
@@ -332,7 +333,7 @@ export default function EquipoScreen() {
   const { data: ausenciasPendientes } = useAusenciasPendientesCount();
   const ausenciasCount = ausenciasPendientes?.total ?? 0;
 
-  const { data, isLoading, isError, refetch } = useTrabajadores({
+  const { data, isLoading, isError, error, isRefetching, refetch } = useTrabajadores({
     tipo:   filtro !== 'todos' ? filtro : undefined,
     activo: showInactive ? undefined : true,
   });
@@ -463,7 +464,9 @@ export default function EquipoScreen() {
       ) : isError ? (
         <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="warning-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
-          <Text className="text-base font-semibold text-foreground">Error al cargar</Text>
+          <Text className="text-base font-semibold text-foreground">
+            {apiErrorMessage(error, 'Error al cargar')}
+          </Text>
           <Pressable onPress={() => refetch()} className="mt-4">
             <Text className="text-primary font-semibold">Reintentar</Text>
           </Pressable>
@@ -473,6 +476,9 @@ export default function EquipoScreen() {
           data={trabajadores}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#FF5A3C" />
+          }
           renderItem={({ item }: { item: Trabajador }) => (
             <TrabajadorCard
               trabajador={item}

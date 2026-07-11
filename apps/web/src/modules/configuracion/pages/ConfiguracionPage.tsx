@@ -1,24 +1,34 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
   useEmpresa, useUpdateEmpresa,
   usePuntos, useCreatePunto, useUpdatePunto, useDeletePunto,
   useCargos, useCreateCargo, useUpdateCargo, useDeleteCargo,
   useGestores, useCreateGestor, useToggleGestor,
+  useSuscripcion, usePagarSuscripcion,
 } from '../hooks/useConfiguracion';
-import type { PuntoMarcaje, Cargo, Gestor } from '../types';
+import { useAuthStore } from '@/modules/auth/authStore';
+import type { PuntoMarcaje, Cargo, Gestor, LinkPago } from '../types';
 
-type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores';
+type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores' | 'plan';
 
 const ROLES_GESTOR = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
 
+const TABS_VALIDOS: Tab[] = ['empresa', 'puntos', 'cargos', 'gestores', 'plan'];
+
 export function ConfiguracionPage() {
-  const [tab, setTab] = useState<Tab>('empresa');
+  const [searchParams] = useSearchParams();
+  const tabInicial = TABS_VALIDOS.find(t => t === searchParams.get('tab')) ?? 'empresa';
+  const [tab, setTab] = useState<Tab>(tabInicial);
+  const usuario = useAuthStore(s => s.usuario);
   const tabs: { label: string; value: Tab }[] = [
     { label: 'Empresa', value: 'empresa' },
     { label: 'Puntos de marcaje', value: 'puntos' },
     { label: 'Cargos', value: 'cargos' },
     { label: 'Gestores', value: 'gestores' },
+    // Billing es responsabilidad del dueño de la empresa, no de los demás gestores.
+    ...(usuario?.rol === 'admin_empresa' ? [{ label: 'Mi plan', value: 'plan' as Tab }] : []),
   ];
 
   return (
@@ -41,6 +51,7 @@ export function ConfiguracionPage() {
       {tab === 'puntos' && <PuntosTab />}
       {tab === 'cargos' && <CargosTab />}
       {tab === 'gestores' && <GestoresTab />}
+      {tab === 'plan' && <PlanTab />}
     </div>
   );
 }
@@ -425,6 +436,122 @@ function GestoresTab() {
             </div>
           </form>
         </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ── Mi plan ── */
+const PLAN_LABEL: Record<string, string> = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial' };
+
+function fmtDate(s: string) {
+  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(s));
+}
+function fmtCOP(n: number) {
+  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+}
+
+function PlanTab() {
+  const { data, isLoading } = useSuscripcion();
+  const pagar = usePagarSuscripcion();
+  const [meses, setMeses] = useState(1);
+  const [link, setLink] = useState<LinkPago | null>(null);
+  const s = data?.data;
+
+  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (!s) return null;
+
+  const handleGenerar = async () => {
+    const res = await pagar.mutateAsync(meses);
+    setLink(res.data);
+  };
+
+  return (
+    <div className="max-w-2xl flex flex-col gap-6">
+      <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-semibold text-foreground">Mi plan</h2>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.activa ? 'bg-success-light text-success' : 'bg-danger-light text-danger'}`}>
+            {s.activa ? 'Activa' : 'Vencida'}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase mb-1">Plan actual</p>
+            <p className="font-medium text-foreground">{PLAN_LABEL[s.plan] ?? s.plan}</p>
+          </div>
+          {s.origen === 'logiq360' ? (
+            <div>
+              <p className="text-xs text-muted-foreground uppercase mb-1">Origen</p>
+              <p className="font-medium text-foreground">Integración logiq360</p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase mb-1">Vence</p>
+                <p className="font-medium text-foreground">{s.vigente_hasta ? fmtDate(s.vigente_hasta) : 'Sin vencimiento'}</p>
+              </div>
+              {s.dias_restantes !== null && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase mb-1">Días restantes</p>
+                  <p className={`font-medium ${s.dias_restantes <= 7 ? 'text-danger' : 'text-foreground'}`}>{s.dias_restantes}</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        {s.origen === 'logiq360' && (
+          <p className="text-xs text-muted-foreground mt-4">
+            Tu suscripción se gestiona a través de tu integración con logiq360 — no necesitas pagarla aquí.
+          </p>
+        )}
+      </div>
+
+      {s.origen !== 'logiq360' && (
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Renovar suscripción</h2>
+          {link ? (
+            <div className="flex flex-col gap-2">
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-primary hover:text-primary-600 font-medium break-all"
+              >
+                {link.url}
+              </a>
+              <p className="text-xs text-muted-foreground">
+                Válido hasta {fmtDate(link.expira_at)} · {fmtCOP(link.monto_cop)}
+              </p>
+              <button
+                onClick={() => setLink(null)}
+                className="text-xs text-muted-foreground hover:text-foreground self-start transition-colors"
+              >
+                Generar nuevo link
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-3 items-end">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">Meses</label>
+                <select
+                  value={meses}
+                  onChange={e => setMeses(Number(e.target.value))}
+                  className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                >
+                  {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <button
+                onClick={handleGenerar}
+                disabled={pagar.isPending}
+                className="text-sm font-medium px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
+              >
+                {pagar.isPending ? 'Generando...' : 'Generar link de pago'}
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

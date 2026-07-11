@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useReportesGlobales, useEmpresas, useCrearEmpresa, useCambiarEstadoEmpresa } from '../hooks/useAdmin';
 import type { EmpresaAdmin, Plan } from '../types';
+import { ErrorState } from '@/shared/components/ErrorState';
 
 const PLAN_BADGE: Record<Plan, string> = {
   basico: 'bg-muted text-muted-foreground',
@@ -33,7 +34,7 @@ export function SuperAdminPage() {
   const { data: reportesData } = useReportesGlobales();
   const reportes = reportesData?.data;
 
-  const { data: empresasData, isLoading } = useEmpresas({
+  const { data: empresasData, isLoading, isError, error, refetch } = useEmpresas({
     busqueda: busqueda || undefined,
     plan: planFiltro,
     activo: activoFiltro,
@@ -168,6 +169,8 @@ export function SuperAdminPage() {
 
         {isLoading ? (
           <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        ) : isError ? (
+          <ErrorState error={error} onRetry={refetch} />
         ) : empresas.length === 0 ? (
           <p className="text-muted-foreground text-sm py-8 text-center">Sin resultados</p>
         ) : (
@@ -217,7 +220,12 @@ export function SuperAdminPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
                         <button
-                          onClick={() => cambiarEstado.mutate({ id: e.id, activo: !e.activo })}
+                          onClick={() => {
+                            const msg = e.activo
+                              ? `¿Desactivar ${e.nombre}? Todos sus usuarios y trabajadores perderán acceso.`
+                              : `¿Activar ${e.nombre}?`;
+                            if (window.confirm(msg)) cambiarEstado.mutate({ id: e.id, activo: !e.activo });
+                          }}
                           disabled={cambiarEstado.isPending}
                           className="text-muted-foreground/50 hover:text-primary transition-colors disabled:opacity-50"
                           title={e.activo ? 'Desactivar' : 'Activar'}

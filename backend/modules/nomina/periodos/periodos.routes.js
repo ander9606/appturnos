@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES, ESTADOS_PERIODO } = require('../../../config/constants');
 const ctrl = require('./periodos.controller');
 
@@ -36,6 +37,7 @@ router.get(
 router.post(
   '/',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [
     body('fecha_inicio').isISO8601().withMessage('fecha_inicio inválida (YYYY-MM-DD)'),
     body('fecha_fin').isISO8601().withMessage('fecha_fin inválida (YYYY-MM-DD)'),

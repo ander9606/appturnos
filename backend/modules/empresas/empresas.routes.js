@@ -6,9 +6,6 @@ const { body, query, param } = require('express-validator');
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { ROLES } = require('../../config/constants');
-const IntegracionModel = require('../integracion/integracion.model');
-const WompiService = require('../webhooks/wompi.service');
-const AppError = require('../../utils/AppError');
 const ctrl = require('./empresas.controller');
 
 const router = express.Router();
@@ -37,52 +34,20 @@ router.get(
 );
 
 // GET /api/empresas/suscripcion — cualquier rol autenticado consulta el estado de su suscripción
-router.get('/suscripcion', verificarToken, async (req, res, next) => {
-  try {
-    const [[e]] = await require('../../config/database').pool.query(
-      'SELECT plan, suscripcion_vigente_hasta FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
-      [req.usuario.empresa_id]
-    );
-    if (!e) return next(require('../../utils/AppError')('Empresa no encontrada', 404));
+router.get('/suscripcion', verificarToken, ctrl.obtenerSuscripcion);
 
-    const logiq360Conectado = await IntegracionModel.estaConectado(req.usuario.empresa_id);
-    if (logiq360Conectado) {
-      return res.json({
-        success: true,
-        data: { activa: true, plan: e.plan, vigente_hasta: null, dias_restantes: null, logiq360_conectado: true },
-      });
-    }
-
-    const hoy = new Date();
-    const vence = e.suscripcion_vigente_hasta ? new Date(e.suscripcion_vigente_hasta) : null;
-    const limite = vence ? new Date(vence) : null;
-    if (limite) limite.setDate(limite.getDate() + 3);
-    const activa = !vence || limite >= hoy;
-    const diasRestantes = vence ? Math.ceil((vence - hoy) / 86400000) : null;
-    res.json({ success: true, data: { activa, plan: e.plan, vigente_hasta: e.suscripcion_vigente_hasta, dias_restantes: diasRestantes, logiq360_conectado: false } });
-  } catch (err) { next(err); }
-});
-
-// POST /api/empresas/pagar — admin_empresa genera su propio link de pago (autoservicio,
-// reemplaza el flujo de "escribe a soporte"). Precio único, ver PRECIO_MENSUAL_COP.
-async function pagar(req, res, next) {
-  try {
-    const empresaId = req.usuario.empresa_id;
-    if (await IntegracionModel.estaConectado(empresaId)) {
-      return next(new AppError('Tu empresa usa Zaturno gratis vía tu integración con logiq360 — no necesitas pagar', 400));
-    }
-    const [[e]] = await require('../../config/database').pool.query(
-      'SELECT nombre, plan FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
-      [empresaId]
-    );
-    if (!e) return next(new AppError('Empresa no encontrada', 404));
-    const data = await WompiService.generarLinkPago({
-      empresaId, nombreEmpresa: e.nombre, plan: e.plan, meses: 1,
-    });
-    res.json({ success: true, data });
-  } catch (err) { next(err); }
-}
-router.post('/pagar', verificarToken, verificarRol(SOLO_ADMIN), pagar);
+// POST /api/empresas/suscripcion/pagar — admin_empresa genera su propio link de pago Wompi.
+// Empresas con integracion_config activa (logiq360) quedan excluidas — 409, ver empresas.service.js.
+router.post(
+  '/suscripcion/pagar',
+  verificarToken,
+  verificarRol(SOLO_ADMIN),
+  [
+    body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
+  ],
+  validar,
+  ctrl.generarLinkPago
+);
 
 // GET /api/empresas/me — admin_empresa ve su propia empresa (campos completos)
 // Debe ir ANTES de /:id para que Express no interprete "me" como un ID.
@@ -122,4 +87,3 @@ router.get(
 );
 
 module.exports = router;
-module.exports.pagar = pagar; // exportado para test unitario directo

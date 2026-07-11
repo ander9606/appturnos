@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
+const { TRIAL_DIAS_GRATIS } = require('../../config/constants');
 
 /**
  * Acceso a datos del módulo de autenticación.
@@ -247,9 +248,9 @@ const AuthModel = {
     try {
       await conn.beginTransaction();
       const [empRes] = await conn.query(
-        `INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico')`,
-        [nombreEmpresa, slug, nit || null, descripcion || null, actividad || null, telefono || null, emailEmpresa || null, direccion || null, ciudad || null]
+        `INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))`,
+        [nombreEmpresa, slug, nit || null, descripcion || null, actividad || null, telefono || null, emailEmpresa || null, direccion || null, ciudad || null, TRIAL_DIAS_GRATIS]
       );
       const empresaId = empRes.insertId;
       const [usrRes] = await conn.query(
