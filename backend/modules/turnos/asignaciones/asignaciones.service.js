@@ -94,6 +94,7 @@ const AsignacionesService = {
         no_existe: ['Asignación no encontrada', 404],
         estado:    ['La asignación no está pendiente de confirmación', 409],
         oferta:    ['La oferta ya no está disponible para confirmar', 409],
+        vencida:   ['No puedes confirmar un turno cuya fecha ya pasó', 409],
         lleno:     ['La oferta ya no tiene plazas disponibles', 409],
         traslape:  ['El trabajador ya tiene un turno confirmado en ese horario', 409],
       };

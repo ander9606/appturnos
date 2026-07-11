@@ -12,12 +12,19 @@ import { Step4Empresas } from '@/features/equipo/perfil/Step4Empresas';
 import { INITIAL } from '@/features/equipo/perfil/types';
 import { buildFecha, buildMesAnio } from '@/features/equipo/perfil/utils';
 import type { WizardData } from '@/features/equipo/perfil/types';
+import { useRoleGuard } from '@/components/RoleGuard';
+import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
 
 export default function NuevoTrabajadorScreen() {
   const router = useRouter();
-  const { mutateAsync } = useCrearTrabajador();
+  const { mutateAsync, isSuccess } = useCrearTrabajador();
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(INITIAL);
+
+  useConfirmDiscard(!isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL));
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina']);
+  if (denied) return denied;
 
   const isNomina = data.tipo === 'nomina';
   const totalSteps = isNomina ? 3 : 4;

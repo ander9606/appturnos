@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, UserX, UserPlus } from 'lucide-react';
+import { Plus, UserX, UserPlus, Search } from 'lucide-react';
 import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador, useInvitarTrabajador } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
+import { ErrorState } from '@/shared/components/ErrorState';
 import type { TipoTrabajador, Trabajador } from '../types';
 
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
@@ -33,12 +34,26 @@ export function EquipoPage() {
   const [showCrear, setShowCrear] = useState(false);
   const [showInvitar, setShowInvitar] = useState(false);
   const [page, setPage] = useState(1);
+  const [busqueda, setBusqueda] = useState('');
 
-  const { data, isLoading } = useTrabajadores({ activo: estadoFiltro, tipo: tipoFiltro, page, limit: 50 });
+  const { data, isLoading, isError, error, refetch } = useTrabajadores({ activo: estadoFiltro, tipo: tipoFiltro, page, limit: 50 });
   const inner = (data as { data?: { data?: Trabajador[]; pagination?: { page: number; limit: number; total: number } } } | undefined)?.data;
-  const trabajadores: Trabajador[] = inner?.data ?? [];
   const pagination = inner?.pagination;
   const desactivar = useDesactivarTrabajador();
+
+  // ponytail: filtro client-side sobre la página cargada — el backend no expone
+  // búsqueda por texto todavía. Upgrade path: si una empresa supera 50 trabajadores
+  // activos con frecuencia, mover esto a un parámetro `busqueda` en el endpoint.
+  const term = busqueda.trim().toLowerCase();
+  const trabajadores: Trabajador[] = (inner?.data ?? []).filter((t) => {
+    if (!term) return true;
+    return (
+      t.nombre.toLowerCase().includes(term) ||
+      t.apellido.toLowerCase().includes(term) ||
+      (t.cedula?.toLowerCase().includes(term) ?? false) ||
+      (t.cargo?.toLowerCase().includes(term) ?? false)
+    );
+  });
 
   const estadoTabs: { label: string; value: EstadoFiltro }[] = [
     { label: 'Activos', value: true },
@@ -100,10 +115,21 @@ export function EquipoPage() {
             <option key={String(t.value)} value={t.value ?? ''}>{t.label}</option>
           ))}
         </select>
+        <div className="relative ml-auto">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre, cédula o cargo..."
+            className="border border-border rounded-lg pl-8 pr-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
       </div>
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+      ) : isError ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : trabajadores.length === 0 ? (
         <p className="text-muted-foreground text-sm py-8 text-center">No hay trabajadores</p>
       ) : (

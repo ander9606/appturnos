@@ -12,6 +12,7 @@ import { Step3Revisar }    from '@/features/turnos/crear/Step3Revisar';
 import { buildFecha, buildTime } from '@/features/turnos/crear/utils';
 import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
+import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
 import type { WizardData } from '@/features/turnos/crear/types';
 
 const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar'];
@@ -23,6 +24,8 @@ export default function NuevoTurnoScreen() {
   const [data, setData] = useState<WizardData>(INITIAL);
 
   const crearMutation = useCrearOferta();
+
+  useConfirmDiscard(!crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL));
 
   const patch = useCallback((p: Partial<WizardData>) => {
     setData((prev) => ({ ...prev, ...p }));
@@ -66,7 +69,7 @@ export default function NuevoTurnoScreen() {
           headerShown: true,
           headerTitle: TITLES[step - 1],
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Cancelar',
+          headerBackTitle: 'Salir',
           headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,

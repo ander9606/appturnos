@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useConciliacion, useVincularEmpleado } from '@/features/integracion/useIntegracion';
 import { useTheme } from '@/lib/theme';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { TrabajadorPendiente, CandidatoLogiq360 } from '@api-client';
 
 function PendienteCard({
@@ -93,6 +94,8 @@ export default function ConciliacionScreen() {
   const theme = useTheme();
   const { data, isLoading, isRefetching, refetch } = useConciliacion();
   const { mutateAsync: vincular, isPending } = useVincularEmpleado();
+  const denied = useRoleGuard(['admin_empresa']);
+  if (denied) return denied;
 
   async function handleVincular(trabajadorId: number, empleadoId: number) {
     try {

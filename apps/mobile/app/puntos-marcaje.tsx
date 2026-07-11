@@ -23,6 +23,7 @@ import {
   useEliminarPuntoMarcaje,
 } from '@/features/turnos/usePuntosMarcaje';
 import { COLORS } from '@/lib/designTokens';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { PuntoMarcaje, ApiError } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -66,6 +67,9 @@ export default function PuntosMarcajeScreen() {
 
   const fijosPuntos  = puntos.filter((p) => p.tipo === 'fijo');
   const zonalesPuntos = puntos.filter((p) => p.tipo === 'zonal');
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
+  if (denied) return denied;
 
   function openCreate() {
     setEditingPunto(null);

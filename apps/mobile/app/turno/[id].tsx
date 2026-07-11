@@ -39,6 +39,7 @@ import { Badge }               from '@/components/ui/Badge';
 import { Button }              from '@/components/ui/Button';
 import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
 import { ApiError }            from '@api-client';
+import { showToast }           from '@/lib/toast';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -179,7 +180,7 @@ export default function TurnoDetailScreen() {
     try {
       await ingresoMutation.mutateAsync({ id: asignacion.id, lat, lng });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Ingreso registrado', 'Tu llegada ha sido confirmada.');
+      showToast('Ingreso registrado — tu llegada ha sido confirmada.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar el ingreso.';
       Alert.alert('Error', msg);
@@ -192,7 +193,7 @@ export default function TurnoDetailScreen() {
       await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64 });
       setSignatureVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Salida registrada', '¡Turno completado! Buen trabajo.');
+      showToast('Salida registrada — ¡turno completado, buen trabajo!');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
       Alert.alert('Error', msg);
@@ -208,7 +209,7 @@ export default function TurnoDetailScreen() {
         comentario: comentario.trim() || undefined,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Calificación guardada', '');
+      showToast('Calificación guardada.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo guardar la calificación.';
       Alert.alert('Error', msg);

@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
 import type { Asignacion, Oferta } from '@api-client';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ export default function TurnosScreen() {
     data: misTurnos,
     isLoading: loadingMios,
     isError: errorMios,
+    error: errMios,
     refetch: refetchMios,
     isRefetching: refetchingMios,
   } = useMisTurnos({ enabled: isWorker });
@@ -249,10 +251,51 @@ export default function TurnosScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <View className="bg-card px-6 pt-4 pb-0 border-b border-border">
+      <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
         <Text className="text-xl font-bold text-foreground">
           {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         </Text>
+        {isGestor && (
+          <View className="flex-row items-center gap-1 pb-2">
+            {!isJefeNomina && (
+              <TouchableOpacity
+                onPress={() => router.push('/liquidacion-turnos')}
+                accessibilityLabel="Liquidación de turnos"
+                className="p-2 active:opacity-60"
+              >
+                <Ionicons name="cash-outline" size={22} color={theme.primary} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => router.push('/postulaciones')}
+              accessibilityLabel="Ver postulaciones"
+              className="p-2 active:opacity-60"
+              style={{ position: 'relative' }}
+            >
+              <Ionicons name="people" size={22} color={theme.primary} />
+              {pendientesCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  minWidth: 16,
+                  height: 16,
+                  borderRadius: 8,
+                  backgroundColor: '#EF4444',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 3,
+                  borderWidth: 1.5,
+                  borderColor: '#fff',
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700', lineHeight: 12 }}>
+                    {pendientesCount > 99 ? '99+' : pendientesCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
@@ -272,61 +315,9 @@ export default function TurnosScreen() {
             filtroParaQuien={isJefeNomina ? 'nomina' : undefined}
           />
 
-          {/* FAB izquierdo — liquidar turnos (encima del +) */}
-          {!isJefeNomina && (
-            <TouchableOpacity
-              onPress={() => router.push('/liquidacion-turnos')}
-              activeOpacity={0.85}
-              style={{
-                position: 'absolute',
-                bottom: 92,
-                left: 20,
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: '#059669',
-                alignItems: 'center',
-                justifyContent: 'center',
-                elevation: 6,
-                shadowColor: '#059669',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.35,
-                shadowRadius: 8,
-              }}
-              accessibilityLabel="Liquidación de turnos"
-            >
-              <Ionicons name="cash-outline" size={24} color="#fff" />
-            </TouchableOpacity>
-          )}
-
-          {/* FAB izquierdo — crear turno */}
+          {/* FAB — crear turno (única acción flotante; liquidación y postulaciones viven en el header) */}
           <TouchableOpacity
             onPress={() => router.push('/turno/nuevo')}
-            activeOpacity={0.85}
-            style={{
-              position: 'absolute',
-              bottom: 24,
-              left: 20,
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: theme.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              elevation: 6,
-              shadowColor: theme.primary,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.35,
-              shadowRadius: 8,
-            }}
-            accessibilityLabel="Crear turno"
-          >
-            <Ionicons name="add" size={28} color="#fff" />
-          </TouchableOpacity>
-
-          {/* FAB derecho — postulaciones pendientes */}
-          <TouchableOpacity
-            onPress={() => router.push('/postulaciones')}
             activeOpacity={0.85}
             style={{
               position: 'absolute',
@@ -344,29 +335,9 @@ export default function TurnosScreen() {
               shadowOpacity: 0.35,
               shadowRadius: 8,
             }}
-            accessibilityLabel="Ver postulaciones"
+            accessibilityLabel="Crear turno"
           >
-            <Ionicons name="people" size={24} color="#fff" />
-            {pendientesCount > 0 && (
-              <View style={{
-                position: 'absolute',
-                top: -4,
-                right: -4,
-                minWidth: 20,
-                height: 20,
-                borderRadius: 10,
-                backgroundColor: '#EF4444',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingHorizontal: 4,
-                borderWidth: 2,
-                borderColor: '#fff',
-              }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700', lineHeight: 13 }}>
-                  {pendientesCount > 99 ? '99+' : pendientesCount}
-                </Text>
-              </View>
-            )}
+            <Ionicons name="add" size={28} color="#fff" />
           </TouchableOpacity>
         </View>
       ) : (
@@ -423,7 +394,9 @@ export default function TurnosScreen() {
             ) : errorMios ? (
               <View className="flex-1 items-center justify-center gap-3 px-6">
                 <Ionicons name="warning-outline" size={48} color="#94A3B8" />
-                <Text className="text-base font-semibold text-foreground">Error al cargar turnos</Text>
+                <Text className="text-base font-semibold text-foreground">
+                  {apiErrorMessage(errMios, 'Error al cargar turnos')}
+                </Text>
                 <Button label="Reintentar" onPress={() => refetchMios()} variant="secondary" />
               </View>
             ) : (

@@ -22,13 +22,14 @@ export interface EmpresaAdmin {
   total_periodos?: number;
 }
 
-export type EstadoWompiEvento = 'recibido' | 'procesado' | 'error' | 'ignorado';
+export type EstadoWompiEvento = 'recibido' | 'procesado' | 'error' | 'ignorado' | 'rechazado';
 
 export interface WompiEvento {
   id: number;
   transaction_id: string;
   referencia: string | null;
   empresa_id: number | null;
+  empresa_nombre: string | null;
   plan: Plan | null;
   meses: number | null;
   estado: EstadoWompiEvento;

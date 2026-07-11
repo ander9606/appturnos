@@ -20,6 +20,7 @@ import {
   useRegistros, useCorregirRegistro, useCrearRegistro,
 } from '@/features/nomina/useNomina';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useRoleGuard } from '@/components/RoleGuard';
 import {
   TIPO_DIA_LABEL, fmtHora, fmtFechaCorta,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
@@ -459,6 +460,9 @@ export default function RegistrosPeriodoScreen() {
       .sort((a, b) => a.nombre.localeCompare(b.nombre))
       .map((g) => ({ title: g.nombre, trabajadorId: g.trabajadorId, data: g.registros }));
   }, [registros]);
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_nomina', 'nomina']);
+  if (denied) return denied;
 
   if (isLoading) {
     return (

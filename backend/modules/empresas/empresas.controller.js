@@ -38,4 +38,15 @@ async function actualizarMiEmpresa(req, res) {
   res.json({ success: true, data, message: 'Empresa actualizada' });
 }
 
-module.exports = { directorio, detalle, miEmpresa, actualizarMiEmpresa };
+async function generarLinkPago(req, res) {
+  const { meses } = req.body;
+  const data = await EmpresasService.generarLinkPago(req.empresa_id, { meses });
+  res.json({ success: true, data, message: 'Link de pago generado' });
+}
+
+async function obtenerSuscripcion(req, res) {
+  const data = await EmpresasService.estadoSuscripcion(req.empresa_id);
+  res.json({ success: true, data });
+}
+
+module.exports = { directorio, detalle, miEmpresa, actualizarMiEmpresa, generarLinkPago, obtenerSuscripcion };

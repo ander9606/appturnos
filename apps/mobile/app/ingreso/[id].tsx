@@ -29,6 +29,7 @@ import { fmtRange }                        from '@/features/turnos/turnosUtils';
 import { ApiError, puntosMarcajeApi }      from '@api-client';
 import type { PuntoMarcaje }               from '@api-client';
 import { t }                               from '@/lib/i18n';
+import { showToast }                       from '@/lib/toast';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -101,11 +102,8 @@ export default function IngresoScreen() {
         lng: currentLocation?.lng ?? 0,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        t('ingreso.success'),
-        t('ingreso.successSub'),
-        [{ text: 'OK', onPress: () => router.back() }],
-      );
+      showToast(t('ingreso.success'));
+      router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar el ingreso.';
       Alert.alert('Error', msg);

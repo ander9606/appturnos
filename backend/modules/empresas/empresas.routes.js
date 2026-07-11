@@ -34,22 +34,20 @@ router.get(
 );
 
 // GET /api/empresas/suscripcion — cualquier rol autenticado consulta el estado de su suscripción
-router.get('/suscripcion', verificarToken, async (req, res, next) => {
-  try {
-    const [[e]] = await require('../../config/database').pool.query(
-      'SELECT plan, suscripcion_vigente_hasta FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
-      [req.usuario.empresa_id]
-    );
-    if (!e) return next(require('../../utils/AppError')('Empresa no encontrada', 404));
-    const hoy = new Date();
-    const vence = e.suscripcion_vigente_hasta ? new Date(e.suscripcion_vigente_hasta) : null;
-    const limite = vence ? new Date(vence) : null;
-    if (limite) limite.setDate(limite.getDate() + 3);
-    const activa = !vence || limite >= hoy;
-    const diasRestantes = vence ? Math.ceil((vence - hoy) / 86400000) : null;
-    res.json({ success: true, data: { activa, plan: e.plan, vigente_hasta: e.suscripcion_vigente_hasta, dias_restantes: diasRestantes } });
-  } catch (err) { next(err); }
-});
+router.get('/suscripcion', verificarToken, ctrl.obtenerSuscripcion);
+
+// POST /api/empresas/suscripcion/pagar — admin_empresa genera su propio link de pago Wompi.
+// Empresas con integracion_config activa (logiq360) quedan excluidas — 409, ver empresas.service.js.
+router.post(
+  '/suscripcion/pagar',
+  verificarToken,
+  verificarRol(SOLO_ADMIN),
+  [
+    body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
+  ],
+  validar,
+  ctrl.generarLinkPago
+);
 
 // GET /api/empresas/me — admin_empresa ve su propia empresa (campos completos)
 // Debe ir ANTES de /:id para que Express no interprete "me" como un ID.

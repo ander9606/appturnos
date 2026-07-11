@@ -22,6 +22,7 @@ import {
   type EstadoAsistencia,
 } from '@/features/nomina/gestor/useDashboardAsistencia';
 import { TIPO_DIA_LABEL } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 // ── Config visual por estado ──────────────────────────────────────────────
 
@@ -162,6 +163,9 @@ export default function DashboardAsistenciaScreen() {
   const d = new Date(`${hoy}T12:00:00`);
   const labelHoy = `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
   const presentes = contadores.enJornada + contadores.completos;
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina']);
+  if (denied) return denied;
 
   if (isLoading) {
     return (

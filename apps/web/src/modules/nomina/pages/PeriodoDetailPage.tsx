@@ -6,6 +6,7 @@ import {
   useCorregirRegistro, useCrearRegistro,
 } from '../hooks/useNomina';
 import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea } from '../types';
+import { ErrorState } from '@/shared/components/ErrorState';
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
@@ -36,10 +37,10 @@ export function PeriodoDetailPage() {
   const [corrigiendoId, setCorrigiendoId] = useState<number | null>(null);
   const [showCrear, setShowCrear] = useState(false);
 
-  const { data: periodosData } = usePeriodos();
+  const { data: periodosData, isLoading: loadingPeriodos } = usePeriodos();
   const periodo = (periodosData?.data ?? []).find((p: { id: number }) => p.id === periodoId);
 
-  const { data: registrosData, isLoading: loadingReg } = useRegistros({ periodo_id: periodoId });
+  const { data: registrosData, isLoading: loadingReg, isError: errorReg, error: errReg, refetch: refetchReg } = useRegistros({ periodo_id: periodoId });
   const registros: Registro[] = registrosData?.data ?? [];
 
   const { data: liqData, isLoading: loadingLiq } = useLiquidacion(
@@ -66,14 +67,29 @@ export function PeriodoDetailPage() {
 
   const corrigiendo = corrigiendoId !== null ? registros.find(r => r.id === corrigiendoId) : null;
 
+  const volverBtn = (
+    <button
+      onClick={() => navigate('/nomina')}
+      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+    >
+      <ArrowLeft size={16} /> Volver a Nómina
+    </button>
+  );
+
+  if (!loadingPeriodos && !periodo) {
+    return (
+      <div>
+        {volverBtn}
+        <p className="text-muted-foreground text-sm py-8 text-center">
+          Este período no existe o fue eliminado.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <button
-        onClick={() => navigate('/nomina')}
-        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
-      >
-        <ArrowLeft size={16} /> Volver a Nómina
-      </button>
+      {volverBtn}
 
       {periodo && (
         <div className="bg-card border border-border rounded-xl p-4 mb-6 flex items-center gap-4">
@@ -124,6 +140,8 @@ export function PeriodoDetailPage() {
 
           {loadingReg ? (
             <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+          ) : errorReg ? (
+            <ErrorState error={errReg} onRetry={refetchReg} />
           ) : registrosFiltrados.length === 0 ? (
             <p className="text-muted-foreground text-sm py-8 text-center">Sin registros</p>
           ) : (

@@ -25,6 +25,7 @@ import { Button }        from '@/components/ui/Button';
 import { fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
 import { ApiError }      from '@api-client';
 import { t }             from '@/lib/i18n';
+import { showToast }     from '@/lib/toast';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -68,11 +69,8 @@ export default function EgresoScreen() {
       await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64 });
       setSignatureVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        t('egreso.success'),
-        t('egreso.successSub'),
-        [{ text: 'OK', onPress: () => router.back() }],
-      );
+      showToast(t('egreso.success'));
+      router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
       Alert.alert('Error', msg);

@@ -18,6 +18,7 @@ import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@api-client';
 import { COLORS } from '@/lib/designTokens';
 import type { CrearGestorPayload, CrearGestorResult, ApiError } from '@api-client';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -56,6 +57,9 @@ export default function CrearGestorScreen() {
   const mutation = useMutation({
     mutationFn: (payload: CrearGestorPayload) => authApi.crearGestor(payload),
   });
+
+  const denied = useRoleGuard(['admin_empresa']);
+  if (denied) return denied;
 
   function handleCrear() {
     if (!nombre.trim()) {

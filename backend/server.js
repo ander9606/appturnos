@@ -131,6 +131,10 @@ async function iniciar() {
     process.exit(1);
   }
 
+  if (!process.env.WOMPI_EVENTS_SECRET && process.env.NODE_ENV === 'production') {
+    logger.error('WOMPI_EVENTS_SECRET no configurado en producción — el webhook de Wompi rechazará todos los eventos de pago. Configura esta variable.');
+  }
+
   try {
     await verificarConexion();
   } catch (err) {

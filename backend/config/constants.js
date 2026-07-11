@@ -67,12 +67,18 @@ const LOGIN = {
   LOCKOUT_MINUTOS: 15,
 };
 
-/** Límites, features y precio por plan. max_trabajadores null = ilimitado. */
+/** Límites de trabajadores por plan (feature-gating). max_trabajadores null = ilimitado. */
 const PLANES = {
-  basico:      { max_trabajadores: 10,   logiq360: false, precio_mes_cop: 80000  },
-  profesional: { max_trabajadores: 30,   logiq360: false, precio_mes_cop: 120000 },
-  empresarial: { max_trabajadores: null, logiq360: true,  precio_mes_cop: 150000 },
+  basico:      { max_trabajadores: 10 },
+  profesional: { max_trabajadores: 30 },
+  empresarial: { max_trabajadores: null },
 };
+
+/** Precio mensual fijo para empresas no vinculadas a logiq360 (suscripcion_origen !== 'logiq360'). */
+const SUSCRIPCION_ESTANDAR_COP = 129000;
+
+/** Días de acceso gratuito al registrarse antes de exigir el pago (empresas no-logiq360). */
+const TRIAL_DIAS_GRATIS = 14;
 
 /** Estados del vínculo trabajador ↔ empresa (tabla trabajador_empresa). */
 const ESTADOS_TRABAJADOR_EMPRESA = {
@@ -100,4 +106,6 @@ module.exports = {
   LOGIN,
   ESTADOS_TRABAJADOR_EMPRESA,
   PLANES,
+  SUSCRIPCION_ESTANDAR_COP,
+  TRIAL_DIAS_GRATIS,
 };

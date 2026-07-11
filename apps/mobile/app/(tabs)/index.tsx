@@ -15,8 +15,9 @@ import {
   Pressable,
   RefreshControl,
   Linking,
+  Alert,
 } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { empresasApi } from '@api-client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -119,6 +120,14 @@ export default function DashboardScreen() {
     staleTime: 5 * 60_000,
   });
   const suscVencida = isManager && suscData?.activa === false;
+  // Solo admin_empresa puede pagar, y solo si la empresa no la factura logiq360.
+  const puedeAutopagar = usuario?.rol === 'admin_empresa' && suscData?.origen !== 'logiq360';
+  const pagarMutation = useMutation({
+    mutationFn: () => empresasApi.generarLinkPago(),
+    // Link hospedado por Wompi, se abre en el navegador del sistema — no un webview embebido.
+    onSuccess: (data) => Linking.openURL(data.url),
+    onError: () => Alert.alert('No se pudo generar el link de pago', 'Intenta de nuevo o contacta a soporte.'),
+  });
 
   // ── Pull to refresh ──────────────────────────────────────────────────────
 
@@ -245,7 +254,12 @@ export default function DashboardScreen() {
         {/* ── Banner suscripción vencida ──────────────────────────────── */}
         {suscVencida && (
           <Pressable
-            onPress={() => Linking.openURL('mailto:soporte@zaturno.app')}
+            onPress={() =>
+              puedeAutopagar
+                ? pagarMutation.mutate()
+                : Linking.openURL('mailto:soporte@zaturno.app')
+            }
+            disabled={pagarMutation.isPending}
             className="mx-4 mt-4 flex-row items-center gap-3 bg-danger-light border border-danger/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
@@ -253,7 +267,11 @@ export default function DashboardScreen() {
             <View className="flex-1">
               <Text className="text-danger text-sm font-semibold">Suscripción vencida</Text>
               <Text className="text-danger/80 text-xs mt-0.5">
-                Tienes 3 días de gracia. Toca aquí para renovar.
+                {puedeAutopagar
+                  ? pagarMutation.isPending
+                    ? 'Generando link de pago…'
+                    : 'Tienes 3 días de gracia. Toca aquí para pagar y renovar.'
+                  : 'Tienes 3 días de gracia. Toca aquí para renovar.'}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#ef4444" />

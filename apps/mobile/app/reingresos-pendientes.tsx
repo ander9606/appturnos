@@ -15,6 +15,7 @@ import {
   useAprobarReingreso,
   useRechazarReingreso,
 } from '@/features/nomina/useNomina';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 function ReingresoItem({ item }: { item: SolicitudReingreso }) {
   const aprobarMutation  = useAprobarReingreso();
@@ -111,6 +112,8 @@ function ReingresoItem({ item }: { item: SolicitudReingreso }) {
 export default function ReingresosPendientesScreen() {
   const theme = useTheme();
   const { data = [], isLoading, isRefetching, refetch } = useReingresosPendientes();
+  const denied = useRoleGuard(['admin_empresa', 'jefe_nomina']);
+  if (denied) return denied;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>

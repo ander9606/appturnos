@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useEstadoIntegracion, useReintentarFallidos } from '@/features/integracion/useIntegracion';
 import { useTheme } from '@/lib/theme';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { ConteoEstado } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -57,6 +58,8 @@ export default function EstadoIntegracionScreen() {
   const theme = useTheme();
   const { data, isLoading, isRefetching, refetch, isError } = useEstadoIntegracion();
   const reintentarM = useReintentarFallidos();
+  const denied = useRoleGuard(['admin_empresa']);
+  if (denied) return denied;
 
   if (isLoading) {
     return (

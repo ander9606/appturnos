@@ -16,6 +16,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as Sentry from '@sentry/react-native';
 
+import { useAuthStore } from '@/features/auth/useAuthStore';
+import { useBiometricLock } from '@/features/auth/useBiometricLock';
+import { BiometricLockScreen } from '@/features/auth/BiometricLockScreen';
+import { registerPushNotifications } from '@/lib/pushNotifications';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { StatusBanner } from '@/components/ui/StatusBanner';
+import { Toast } from '@/components/ui/Toast';
+
 // ponytail: expo-router activa keep-awake internamente en dev; falla en Android emulator — ruido inofensivo
 LogBox.ignoreLogs(['Unable to activate keep awake']);
 
@@ -25,11 +33,6 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
     tracesSampleRate: 0, // ponytail: solo error monitoring, sin tracing/profiling — subir si hace falta
   });
 }
-
-import { useAuthStore } from '@/features/auth/useAuthStore';
-import { useBiometricLock } from '@/features/auth/useBiometricLock';
-import { BiometricLockScreen } from '@/features/auth/BiometricLockScreen';
-import { registerPushNotifications } from '@/lib/pushNotifications';
 
 // ── TanStack Query client ─────────────────────────────────────────────────
 
@@ -142,6 +145,9 @@ function RootLayout() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
+      <ErrorBoundary>
+        <StatusBanner />
+        <Toast />
         <AuthGuard>
           {/* Default: header visible, slide from right.
               Only exceptions are registered explicitly. */}
@@ -196,6 +202,7 @@ function RootLayout() {
             <Stack.Screen name="privacidad" options={{ title: 'Política de privacidad' }} />
           </Stack>
         </AuthGuard>
+      </ErrorBoundary>
       </QueryClientProvider>
     </SafeAreaProvider>
   );

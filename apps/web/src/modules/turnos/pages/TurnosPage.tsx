@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, XCircle } from 'lucide-react';
 import { useOfertas, useCrearOferta, useCancelarOferta } from '../hooks/useTurnos';
 import type { EstadoOferta, Oferta } from '../types';
+import { ErrorState } from '@/shared/components/ErrorState';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -35,7 +36,7 @@ export function TurnosPage() {
   const [estado, setEstado] = useState<EstadoOferta | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
 
-  const { data, isLoading } = useOfertas({ estado, limit: 100 });
+  const { data, isLoading, isError, error, refetch } = useOfertas({ estado, limit: 100 });
   const ofertas: Oferta[] = data?.data ?? [];
   const cancelar = useCancelarOferta();
 
@@ -69,6 +70,8 @@ export function TurnosPage() {
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+      ) : isError ? (
+        <ErrorState error={error} onRetry={refetch} />
       ) : ofertas.length === 0 ? (
         <p className="text-muted-foreground text-sm py-8 text-center">No hay ofertas</p>
       ) : (

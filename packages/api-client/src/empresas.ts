@@ -60,7 +60,11 @@ export const empresasApi = {
     return api.patch<Empresa>('/api/empresas/me', datos);
   },
 
-  obtenerSuscripcion(): Promise<{ activa: boolean; plan: string; vigente_hasta: string | null; dias_restantes: number | null }> {
+  obtenerSuscripcion(): Promise<{ activa: boolean; plan: string; vigente_hasta: string | null; dias_restantes: number | null; origen: 'logiq360' | 'directo' }> {
     return api.get('/api/empresas/suscripcion');
+  },
+
+  generarLinkPago(payload: { meses?: number } = {}): Promise<{ url: string; referencia: string; monto_cop: number; expira_at: string }> {
+    return api.post('/api/empresas/suscripcion/pagar', payload);
   },
 };

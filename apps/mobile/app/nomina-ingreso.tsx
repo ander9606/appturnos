@@ -21,6 +21,7 @@ import { fmtHora } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
 import { useTheme } from '@/lib/theme';
 import { formatCOP } from '@/lib/formatters';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 // ── Constantes ───────────────────────────────────────────────────────────────
 
@@ -91,6 +92,9 @@ export default function NominaIngresoScreen() {
     : null;
 
   const periodoAbierto = periodoActivo?.estado === 'abierto';
+
+  const denied = useRoleGuard(['trabajador_nomina']);
+  if (denied) return denied;
 
   if (loading) {
     return (

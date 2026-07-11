@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useBuscarPorCedula } from '@/features/equipo/useEquipo';
 import { useInvitar } from '@/features/empresas/useTrabajadorEmpresa';
 import { COLORS } from '@/lib/designTokens';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { ApiError } from '@api-client';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -42,6 +43,8 @@ export default function InvitarTrabajadorScreen() {
 
   const { data: trabajador, isFetching, isError, error } = useBuscarPorCedula(debouncedCedula);
   const invitar = useInvitar();
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina']);
+  if (denied) return denied;
 
   const notFound = isError && (error as ApiError)?.status === 404 && debouncedCedula.length >= 5;
   const canSend  = !!trabajador && !isFetching;

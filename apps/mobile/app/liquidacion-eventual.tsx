@@ -15,6 +15,7 @@ import { usePeriodoEventual, useLiquidacionEventual, useLiquidarEventual } from 
 import { bogotaToday } from '@/features/turnos/turnosUtils';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { LineaLiquidacionEventual } from '@api-client';
 
 const TRIMESTRE_LABELS: Record<1 | 2 | 3 | 4, string> = {
@@ -66,6 +67,9 @@ export default function LiquidacionEventualScreen() {
 
   const hoy = bogotaToday();
   const puedeL = periodo && periodo.estado === 'abierto' && periodo.fecha_fin < hoy;
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
+  if (denied) return denied;
 
   function handleLiquidar() {
     if (!periodo) return;

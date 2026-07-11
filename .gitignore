@@ -14,6 +14,7 @@ logs/
 dist/
 build/
 .expo/
+*.tsbuildinfo
 
 # Coverage
 coverage/

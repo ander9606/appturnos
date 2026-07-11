@@ -68,6 +68,22 @@ const EmpresasModel = {
     return res.affectedRows;
   },
 
+  async obtenerParaPago(empresaId) {
+    const [filas] = await pool.query(
+      'SELECT id, nombre FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return filas[0] || null;
+  },
+
+  async obtenerEstadoSuscripcion(empresaId) {
+    const [filas] = await pool.query(
+      'SELECT plan, suscripcion_vigente_hasta FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return filas[0] || null;
+  },
+
   async obtenerPorSlug(slug) {
     const [filas] = await pool.query(
       'SELECT id, nombre, slug, activo FROM empresas WHERE slug = ? LIMIT 1',

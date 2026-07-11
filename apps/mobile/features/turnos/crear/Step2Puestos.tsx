@@ -40,7 +40,21 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
   };
 
   const removePuesto = (key: string) => {
-    onChange({ puestos: data.puestos.filter((p) => p.key !== key) });
+    const puesto = data.puestos.find((p) => p.key === key);
+    const doRemove = () => onChange({ puestos: data.puestos.filter((p) => p.key !== key) });
+
+    if (puesto?.tarifa_dia) {
+      Alert.alert(
+        '¿Quitar este rol?',
+        `Perderás la tarifa y plazas que ya cargaste para ${puesto.cargo_nombre}.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Quitar', style: 'destructive', onPress: doRemove },
+        ],
+      );
+      return;
+    }
+    doRemove();
   };
 
   const updatePuesto = (key: string, patch: Partial<PuestoInput>) => {

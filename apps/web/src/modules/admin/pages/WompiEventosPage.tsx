@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { RefreshCw, AlertCircle, CheckCircle2, Clock, MinusCircle } from 'lucide-react';
+import { Link } from 'react-router';
+import { RefreshCw, AlertCircle, CheckCircle2, Clock, MinusCircle, XCircle } from 'lucide-react';
 import { useWompiEventos, useReintentarWompiEvento } from '../hooks/useAdmin';
 import type { EstadoWompiEvento, WompiEvento } from '../types';
 
 const ESTADO_CONFIG: Record<EstadoWompiEvento, { label: string; icon: React.ReactNode; cls: string }> = {
   procesado: { label: 'Procesado', icon: <CheckCircle2 size={14} />, cls: 'text-success bg-success-light' },
   error:     { label: 'Error',     icon: <AlertCircle size={14} />,  cls: 'text-danger bg-danger-light' },
+  rechazado: { label: 'Rechazado', icon: <XCircle size={14} />,      cls: 'text-danger bg-danger-light' },
   recibido:  { label: 'Recibido',  icon: <Clock size={14} />,        cls: 'text-warning bg-warning-light' },
   ignorado:  { label: 'Ignorado',  icon: <MinusCircle size={14} />,  cls: 'text-muted-foreground bg-muted' },
 };
@@ -34,6 +36,17 @@ function EventoRow({ ev, onReintentar, isPending }: { ev: WompiEvento; onReinten
       >
         <td className="px-4 py-3 text-sm font-mono text-muted-foreground">{ev.id}</td>
         <td className="px-4 py-3"><EstadoBadge estado={ev.estado} /></td>
+        <td className="px-4 py-3 text-sm">
+          {ev.empresa_id ? (
+            <Link
+              to={`/admin/empresas/${ev.empresa_id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-primary hover:text-primary-600 font-medium"
+            >
+              {ev.empresa_nombre ?? `Empresa #${ev.empresa_id}`}
+            </Link>
+          ) : '—'}
+        </td>
         <td className="px-4 py-3 text-sm font-mono truncate max-w-[160px]" title={ev.transaction_id}>{ev.transaction_id}</td>
         <td className="px-4 py-3 text-sm">{ev.referencia ?? '—'}</td>
         <td className="px-4 py-3 text-sm text-center">{ev.intentos}</td>
@@ -54,7 +67,7 @@ function EventoRow({ ev, onReintentar, isPending }: { ev: WompiEvento; onReinten
       </tr>
       {open && ev.error_detalle && (
         <tr className="border-b border-border bg-danger-light/30">
-          <td colSpan={8} className="px-4 py-2">
+          <td colSpan={9} className="px-4 py-2">
             <p className="text-xs font-mono text-danger">{ev.error_detalle}</p>
           </td>
         </tr>
@@ -66,6 +79,7 @@ function EventoRow({ ev, onReintentar, isPending }: { ev: WompiEvento; onReinten
 const ESTADOS: Array<{ value: EstadoWompiEvento | ''; label: string }> = [
   { value: '', label: 'Todos' },
   { value: 'error', label: 'Error' },
+  { value: 'rechazado', label: 'Rechazado' },
   { value: 'procesado', label: 'Procesado' },
   { value: 'ignorado', label: 'Ignorado' },
   { value: 'recibido', label: 'Recibido' },
@@ -83,7 +97,7 @@ export function WompiEventosPage() {
   const pages: number = data?.data?.pages ?? 1;
 
   return (
-    <div className="p-6 space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground">Eventos Wompi</h1>
@@ -112,6 +126,7 @@ export function WompiEventosPage() {
             <tr>
               <th className="px-4 py-3 text-left">ID</th>
               <th className="px-4 py-3 text-left">Estado</th>
+              <th className="px-4 py-3 text-left">Empresa</th>
               <th className="px-4 py-3 text-left">Transaction ID</th>
               <th className="px-4 py-3 text-left">Referencia</th>
               <th className="px-4 py-3 text-center">Intentos</th>
@@ -122,9 +137,9 @@ export function WompiEventosPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Cargando...</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Cargando...</td></tr>
             ) : eventos.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Sin eventos</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Sin eventos</td></tr>
             ) : (
               eventos.map(ev => (
                 <EventoRow

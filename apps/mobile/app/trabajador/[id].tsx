@@ -66,6 +66,7 @@ export default function TrabajadorDetailScreen() {
   const canRate  = usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos';
 
   const [editing, setEditing] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
   // Calificación inline: id de la asignación que se está calificando
   const [ratingId,       setRatingId]       = useState<number | null>(null);
   const [ratingStars,    setRatingStars]    = useState(5);
@@ -88,10 +89,25 @@ export default function TrabajadorDetailScreen() {
 
   // ── Header right button (edit toggle) ────────────────────────────────
 
+  function toggleEditing() {
+    if (editing && formDirty) {
+      Alert.alert(
+        '¿Descartar cambios?',
+        'Vas a perder lo que editaste en este formulario.',
+        [
+          { text: 'Seguir editando', style: 'cancel' },
+          { text: 'Descartar', style: 'destructive', onPress: () => { setFormDirty(false); setEditing(false); } },
+        ],
+      );
+      return;
+    }
+    setEditing((v) => !v);
+  }
+
   const headerRight = isAdmin && t && t.activo
     ? () => (
         <Pressable
-          onPress={() => setEditing((v) => !v)}
+          onPress={toggleEditing}
           hitSlop={10}
           className="pr-1"
         >
@@ -227,6 +243,7 @@ export default function TrabajadorDetailScreen() {
           onSubmit={handleUpdate}
           submitLabel="Guardar cambios"
           submittingLabel="Guardando…"
+          onDirtyChange={setFormDirty}
         />
       </SafeAreaView>
     );

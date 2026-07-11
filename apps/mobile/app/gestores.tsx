@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authApi } from '@api-client';
 import type { Gestor } from '@api-client';
 import { useTheme } from '@/lib/theme';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -133,9 +134,12 @@ export default function GestoresScreen() {
   const theme  = useTheme();
   const router = useRouter();
   const { data: gestores = [], isLoading, refetch, isRefetching } = useGestores();
+  const denied = useRoleGuard(['admin_empresa']);
 
   const activos   = gestores.filter((g) => g.activo);
   const inactivos = gestores.filter((g) => !g.activo);
+
+  if (denied) return denied;
 
   if (isLoading) {
     return (
