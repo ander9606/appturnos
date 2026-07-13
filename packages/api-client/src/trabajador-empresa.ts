@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { TipoDocumento, Experiencia, Diploma } from './trabajadores';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,13 @@ export interface MisEmpresasResponse {
   archivadas: Vinculo[];
 }
 
+export interface PerfilPrevio {
+  cedula: string | null;
+  tipo_documento: TipoDocumento | null;
+  experiencias: Experiencia[];
+  diplomas: Diploma[];
+}
+
 export interface SolicitudAdmin {
   id: number;
   usuario_id: number;
@@ -45,6 +53,10 @@ export interface SolicitudAdmin {
   usuario_nombre: string;
   usuario_apellido: string | null;
   usuario_email: string;
+  usuario_telefono: string | null;
+  usuario_foto_perfil: string | null;
+  /** Cédula/experiencia/diplomas si ya tiene ficha activa en otra empresa; null si es su primera. */
+  perfil_previo: PerfilPrevio | null;
 }
 
 // ── API ───────────────────────────────────────────────────────────────────

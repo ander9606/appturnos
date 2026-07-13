@@ -257,9 +257,31 @@ const TrabajadorEmpresaService = {
     };
   },
 
-  /** Solicitudes pendientes para una empresa (panel del jefe de turnos). */
+  /**
+   * Solicitudes pendientes para una empresa (panel del jefe de turnos).
+   * Adjunta perfil_previo: cédula/experiencia/diplomas si el usuario ya
+   * tiene una ficha activa en OTRA empresa (mismo patrón cross-empresa
+   * que usa TrabajadoresService.me()) — nada que mostrar si es su primera empresa.
+   */
   async solicitudesPorEmpresa(empresaId, estado) {
-    return TrabajadorEmpresaModel.listarPorEmpresa(empresaId, estado || null);
+    const filas = await TrabajadorEmpresaModel.listarPorEmpresa(empresaId, estado || null);
+    return Promise.all(filas.map(async (fila) => {
+      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, fila.usuario_id);
+      if (!trabajador) return { ...fila, perfil_previo: null };
+      const [experiencias, diplomas] = await Promise.all([
+        TrabajadoresModel.listarExperiencias(trabajador.id),
+        TrabajadoresModel.listarDiplomas(trabajador.id),
+      ]);
+      return {
+        ...fila,
+        perfil_previo: {
+          cedula: trabajador.cedula,
+          tipo_documento: trabajador.tipo_documento,
+          experiencias,
+          diplomas,
+        },
+      };
+    }));
   },
 };
 

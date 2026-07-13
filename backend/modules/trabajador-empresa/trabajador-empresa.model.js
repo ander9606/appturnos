@@ -73,7 +73,8 @@ const TrabajadorEmpresaModel = {
       `SELECT te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
               te.estado, te.iniciado_por, te.fecha_solicitud,
               u.nombre AS usuario_nombre, u.apellido AS usuario_apellido,
-              u.email AS usuario_email
+              u.email AS usuario_email, u.telefono AS usuario_telefono,
+              u.foto_perfil AS usuario_foto_perfil
        FROM trabajador_empresa te
        INNER JOIN usuarios u ON u.id = te.usuario_id
        WHERE te.empresa_id = ? ${estadoSql}

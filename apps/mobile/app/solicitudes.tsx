@@ -29,6 +29,8 @@ import {
   useRechazarVinculo,
 } from '@/features/empresas/useTrabajadorEmpresa';
 import type { SolicitudAdmin } from '@api-client';
+import { useRoleGuard } from '@/components/RoleGuard';
+import { Avatar } from '@/components/ui/Avatar';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -37,8 +39,10 @@ function fmtFecha(iso: string) {
   return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function getInitials(nombre?: string, apellido?: string): string {
-  return ((nombre?.[0] ?? '') + (apellido?.[0] ?? '')).toUpperCase() || '?';
+function fmtFechaCorta(iso: string | null) {
+  if (!iso) return 'actualidad';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -114,15 +118,21 @@ function SolicitudCard({
 
   const cfg = estadoConfig[solicitud.estado] ?? estadoConfig.archivado;
 
+  const perfil = solicitud.perfil_previo;
+  const experienciasVisibles = perfil?.experiencias.slice(0, 3) ?? [];
+  const experienciasRestantes = (perfil?.experiencias.length ?? 0) - experienciasVisibles.length;
+
   return (
     <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden">
       <View className="flex-row items-center gap-3 px-4 pt-4 pb-3">
-        {/* Avatar */}
-        <View className="w-11 h-11 rounded-full bg-primary-50 items-center justify-center">
-          <Text className="text-sm font-bold text-primary-500">
-            {getInitials(solicitud.usuario_nombre ?? undefined, solicitud.usuario_apellido ?? undefined)}
-          </Text>
-        </View>
+        <Avatar
+          nombre={solicitud.usuario_nombre}
+          apellido={solicitud.usuario_apellido}
+          fotoB64={solicitud.usuario_foto_perfil}
+          id={solicitud.usuario_id}
+          size={44}
+          expandable
+        />
 
         {/* Info */}
         <View className="flex-1">
@@ -130,6 +140,9 @@ function SolicitudCard({
             {solicitud.usuario_nombre} {solicitud.usuario_apellido}
           </Text>
           <Text className="text-xs text-muted-foreground mt-0.5">{solicitud.usuario_email}</Text>
+          {solicitud.usuario_telefono && (
+            <Text className="text-xs text-muted-foreground mt-0.5">{solicitud.usuario_telefono}</Text>
+          )}
           <Text className="text-xs text-muted-foreground mt-0.5">
             {fmtFecha(solicitud.fecha_solicitud)}
           </Text>
@@ -140,6 +153,33 @@ function SolicitudCard({
           <Text className="text-xs font-semibold" style={{ color: cfg.color }}>{cfg.label}</Text>
         </View>
       </View>
+
+      {/* Perfil previo — cédula/experiencia si ya trabaja en otra empresa del marketplace */}
+      {perfil && (
+        <View className="mx-4 mb-3 bg-background border border-border rounded-xl px-3 py-2.5 gap-1">
+          <Text className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+            Ya tiene perfil en el marketplace
+          </Text>
+          {perfil.cedula && (
+            <Text className="text-xs text-foreground">
+              {perfil.tipo_documento ?? 'CC'} {perfil.cedula}
+            </Text>
+          )}
+          {experienciasVisibles.map((exp) => (
+            <Text key={exp.id} className="text-xs text-muted-foreground">
+              {exp.cargo} · {exp.empresa_nombre} ({fmtFechaCorta(exp.fecha_inicio)} – {fmtFechaCorta(exp.fecha_fin)})
+            </Text>
+          ))}
+          {experienciasRestantes > 0 && (
+            <Text className="text-xs text-muted-foreground italic">+{experienciasRestantes} más</Text>
+          )}
+          {(perfil.diplomas.length > 0) && (
+            <Text className="text-xs text-muted-foreground">
+              {perfil.diplomas.length} diploma{perfil.diplomas.length !== 1 ? 's' : ''} registrado{perfil.diplomas.length !== 1 ? 's' : ''}
+            </Text>
+          )}
+        </View>
+      )}
 
       {/* Acciones — solo para pendientes */}
       {isPending && (
@@ -182,6 +222,9 @@ export default function SolicitudesScreen() {
 
   const aprobar  = useAprobar();
   const rechazar = useRechazarVinculo();
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
+  if (denied) return denied;
 
   const term = search.trim().toLowerCase();
   const solicitudes = data.filter((s) => {

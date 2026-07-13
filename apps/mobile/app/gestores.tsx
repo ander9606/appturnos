@@ -15,19 +15,22 @@ import { authApi } from '@api-client';
 import type { Gestor } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const ROL_LABELS: Record<string, string> = {
-  jefe_turnos: 'Jefe de Turnos',
-  jefe_nomina: 'Jefe de Nómina',
-  nomina:      'Nómina',
+  admin_empresa: 'Administrador',
+  jefe_turnos:   'Jefe de Turnos',
+  jefe_nomina:   'Jefe de Nómina',
+  nomina:        'Nómina',
 };
 
 const ROL_COLORS: Record<string, string> = {
-  jefe_turnos: '#3B82F6',
-  jefe_nomina: '#8B5CF6',
-  nomina:      '#10B981',
+  admin_empresa: '#DC2626',
+  jefe_turnos:   '#3B82F6',
+  jefe_nomina:   '#8B5CF6',
+  nomina:        '#10B981',
 };
 
 // ── Hooks ─────────────────────────────────────────────────────────────────
@@ -67,7 +70,7 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
           style: gestor.activo ? 'destructive' : 'default',
           onPress: () => toggleMutation.mutate(
             { id: gestor.id, activo: !gestor.activo },
-            { onError: () => Alert.alert('Error', 'No se pudo actualizar el estado.') }
+            { onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el estado.')) }
           ),
         },
       ]
@@ -114,12 +117,15 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
           {toggleMutation.isPending ? (
             <ActivityIndicator size="small" color="#64748B" />
           ) : (
-            <Pressable onPress={handleToggle} className="p-1 active:opacity-60">
-              <Ionicons
-                name={gestor.activo ? 'toggle' : 'toggle-outline'}
-                size={24}
-                color={gestor.activo ? '#10B981' : '#94A3B8'}
-              />
+            <Pressable
+              onPress={handleToggle}
+              className={`px-3 py-1.5 rounded-lg border active:opacity-60 ${
+                gestor.activo ? 'border-danger' : 'border-success'
+              }`}
+            >
+              <Text className={`text-xs font-semibold ${gestor.activo ? 'text-danger' : 'text-success'}`}>
+                {gestor.activo ? 'Desactivar' : 'Activar'}
+              </Text>
             </Pressable>
           )}
         </View>
@@ -152,20 +158,7 @@ export default function GestoresScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-      <Stack.Screen
-        options={{
-          title: 'Gestores',
-          headerShown: true,
-          headerRight: () => (
-            <Pressable
-              onPress={() => router.push('/crear-gestor')}
-              className="mr-2 active:opacity-60"
-            >
-              <Ionicons name="person-add-outline" size={22} color={theme.primary} />
-            </Pressable>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ title: 'Gestores', headerShown: true }} />
 
       <ScrollView
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 48 }}
@@ -210,6 +203,23 @@ export default function GestoresScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* FAB — siempre visible, no solo en el estado vacío */}
+      <Pressable
+        onPress={() => router.push('/crear-gestor')}
+        accessibilityLabel="Crear gestor"
+        className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center active:opacity-80"
+        style={{
+          backgroundColor: theme.primary,
+          shadowColor: '#FF5A3C',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.35,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
+      >
+        <Ionicons name="person-add" size={22} color="#fff" />
+      </Pressable>
     </SafeAreaView>
   );
 }

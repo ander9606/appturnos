@@ -148,7 +148,7 @@ function PostulanteRow({
                 <Ionicons name="checkmark-circle" size={14} color="#059669" />
                 <Text className="text-xs font-semibold text-success">Aceptado</Text>
               </View>
-              <Button label={isCancelling ? '…' : 'Cancelar'} variant="danger" size="sm"
+              <Button label={isCancelling ? '…' : 'Cancelar'} variant="secondary" size="sm"
                 loading={isCancelling} disabled={isBusy}
                 onPress={() => {
                   Alert.alert(

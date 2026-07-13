@@ -24,6 +24,7 @@ import { NominaTurnosView }       from '@/features/nomina/NominaTurnosView';
 import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView';
 import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
+import { Button }                 from '@/components/ui/Button';
 import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import {
   usePeriodos, useLiquidacion,
@@ -217,15 +218,19 @@ function NominaGestorView() {
                   </View>
                   <View className="flex-row gap-2">
                     {activePeriodo.estado === 'cerrado' && rol !== 'nomina' && (
-                      <TouchableOpacity
-                        onPress={handleLiquidar}
-                        disabled={liquidarMutation.isPending}
-                        className="flex-1 bg-success-light border border-green-200 rounded-2xl py-3 items-center"
-                      >
-                        <Text className="text-sm font-semibold text-success">
-                          {liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar período'}
-                        </Text>
-                      </TouchableOpacity>
+                      <View className="flex-1 gap-1">
+                        <Button
+                          label={liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar período'}
+                          variant="success"
+                          size="lg"
+                          fullWidth
+                          loading={liquidarMutation.isPending}
+                          onPress={handleLiquidar}
+                        />
+                        {!liquidarMutation.isPending && (
+                          <Text className="text-xs text-muted-foreground text-center">No se puede deshacer</Text>
+                        )}
+                      </View>
                     )}
                     {activePeriodo.estado === 'liquidado' && (
                       <View className="flex-1 bg-muted rounded-2xl py-3 items-center">
@@ -234,6 +239,10 @@ function NominaGestorView() {
                     )}
                   </View>
                 </View>
+              )}
+
+              {activePeriodo && (
+                <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Hoy</Text>
               )}
 
               {activePeriodo && (
@@ -249,49 +258,58 @@ function NominaGestorView() {
                 </TouchableOpacity>
               )}
 
-              <TouchableOpacity
-                onPress={() => router.push('/dashboard-asistencia')}
-                className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Ionicons name="people-outline" size={16} color="#64748B" />
-                  <Text className="text-sm font-medium text-foreground">Asistencia hoy</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-              </TouchableOpacity>
+              {/* Estas 4 pantallas no admiten el rol 'nomina' (solo lectura) — no mostrar accesos que llevan a "Sin acceso" */}
+              {rol !== 'nomina' && (
+                <>
+                  <TouchableOpacity
+                    onPress={() => router.push('/dashboard-asistencia')}
+                    className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="people-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Asistencia hoy</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => router.push('/reingresos-pendientes')}
-                className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Ionicons name="enter-outline" size={16} color="#64748B" />
-                  <Text className="text-sm font-medium text-foreground">Reingresos pendientes</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-              </TouchableOpacity>
+                  <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Aprobaciones</Text>
 
-              <TouchableOpacity
-                onPress={() => router.push('/gestor-compensatorios')}
-                className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Ionicons name="calendar-outline" size={16} color="#64748B" />
-                  <Text className="text-sm font-medium text-foreground">Descansos compensatorios</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => router.push('/reingresos-pendientes')}
+                    className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="enter-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Reingresos pendientes</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => router.push('/asignaciones-lugar')}
-                className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
-              >
-                <View className="flex-row items-center gap-2">
-                  <Ionicons name="location-outline" size={16} color="#64748B" />
-                  <Text className="text-sm font-medium text-foreground">Asignaciones de lugar</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => router.push('/gestor-compensatorios')}
+                    className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Descansos compensatorios</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+
+                  <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Configuración</Text>
+
+                  <TouchableOpacity
+                    onPress={() => router.push('/asignaciones-lugar')}
+                    className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="location-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Asignaciones de lugar</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+                </>
+              )}
 
               <Text className="text-sm font-semibold text-foreground">
                 Detalle por empleado

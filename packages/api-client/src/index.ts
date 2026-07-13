@@ -15,6 +15,7 @@ export type {
   Vinculo,
   MisEmpresasResponse,
   SolicitudAdmin,
+  PerfilPrevio,
   EstadoVinculo,
 } from './trabajador-empresa';
 export type {
