@@ -73,6 +73,19 @@ const IntegracionModel = {
     return !!(fila && fila.activo === 1 && fila.api_key);
   },
 
+  /**
+   * Todas las integraciones ya emparejadas (con base_url y api_key), sin filtrar
+   * por activo — la reconciliación periódica las necesita justo para detectar
+   * cuándo ese campo quedó desincronizado. Ver services/reconciliacion.service.js.
+   */
+  async listarConfiguradas() {
+    const [filas] = await pool.query(
+      `SELECT empresa_id, activo, api_key, logiq360_base_url FROM integracion_config
+       WHERE logiq360_base_url IS NOT NULL AND api_key IS NOT NULL`
+    );
+    return filas;
+  },
+
   /** Activa/desactiva la integración (usado por los handlers de integracion.activada/desactivada). */
   async actualizarActivo(empresaId, activo) {
     await pool.query(

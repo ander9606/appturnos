@@ -573,6 +573,28 @@ GET /api/v1/public/ordenes/{external_ref}/productos
    (para que el operario sepa qué armar y cómo)
 ```
 
+```
+GET /api/v1/public/ping
+Header: X-API-Key: at_live_xxxxx
+
+Response 200: { "success": true, "data": { "activo": true } }
+Response 401/402: la api_key ya no autentica (activo=0 del lado de logiq360,
+                    o el plan dejó de incluir la integración)
+```
+
+**Reconciliación periódica (v1.3):** App Turnos llama este ping una vez al día
+(worker `integracion.worker.js`, ver `services/reconciliacion.service.js`) para
+cada empresa emparejada, y compara la respuesta contra su propio
+`integracion_config.activo`. Si difieren, se autocorrige reprocesando
+`integracion.activada`/`integracion.desactivada` como si el evento acabara de
+llegar — la misma lógica de actualizar + notificar, sin duplicarla. Esto cierra
+la ventana en la que ese webhook se pierde tras agotar sus 5 reintentos: los
+webhooks siguen siendo la vía rápida, pero el ping es la garantía de fondo de
+que ambos lados no queden desincronizados indefinidamente.
+Solo un 200 o un 401/402 mueven el estado local; cualquier otro error (5xx,
+timeout, red caída) se ignora ese ciclo para no marcar como "desconectado" a un
+cliente por una caída transitoria de logiq360.
+
 ---
 
 ### logiq360 → App Turnos
@@ -982,6 +1004,16 @@ App Turnos NUNCA envía a logiq360:
 ---
 
 ## CHANGELOG
+
+### v1.3 — Reconciliación periódica de la conexión
+
+Los webhooks `integracion.activada`/`integracion.desactivada` (v1.2) se pueden
+perder para siempre si App Turnos está caído más de ~1 hora (agotan sus 5
+reintentos y quedan `descartado`). Se agrega `GET /api/v1/public/ping` en
+logiq360 — App Turnos lo consulta una vez al día por cada empresa emparejada y
+se autocorrige si su `integracion_config.activo` no coincide con lo que ping
+reporta. Ver detalle en PARTE 3. Requiere que logiq360 tenga el endpoint
+desplegado; no requiere ningún cambio adicional de logiq360 más allá de eso.
 
 ### v1.2 — Sincronización de facturación (integracion.activada / integracion.desactivada)
 
