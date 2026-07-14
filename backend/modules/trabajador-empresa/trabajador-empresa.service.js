@@ -265,23 +265,29 @@ const TrabajadorEmpresaService = {
    */
   async solicitudesPorEmpresa(empresaId, estado) {
     const filas = await TrabajadorEmpresaModel.listarPorEmpresa(empresaId, estado || null);
-    return Promise.all(filas.map(async (fila) => {
-      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, fila.usuario_id);
+
+    const usuarioIds = filas.map((f) => f.usuario_id);
+    const trabajadoresPorUsuario = await TrabajadoresModel.obtenerPorUsuarioIds(usuarioIds);
+
+    const trabajadorIds = [...trabajadoresPorUsuario.values()].map((t) => t.id);
+    const [experienciasPorTrabajador, diplomasPorTrabajador] = await Promise.all([
+      TrabajadoresModel.listarExperienciasPorTrabajadores(trabajadorIds),
+      TrabajadoresModel.listarDiplomasPorTrabajadores(trabajadorIds),
+    ]);
+
+    return filas.map((fila) => {
+      const trabajador = trabajadoresPorUsuario.get(fila.usuario_id);
       if (!trabajador) return { ...fila, perfil_previo: null };
-      const [experiencias, diplomas] = await Promise.all([
-        TrabajadoresModel.listarExperiencias(trabajador.id),
-        TrabajadoresModel.listarDiplomas(trabajador.id),
-      ]);
       return {
         ...fila,
         perfil_previo: {
           cedula: trabajador.cedula,
           tipo_documento: trabajador.tipo_documento,
-          experiencias,
-          diplomas,
+          experiencias: experienciasPorTrabajador.get(trabajador.id) || [],
+          diplomas: diplomasPorTrabajador.get(trabajador.id) || [],
         },
       };
-    }));
+    });
   },
 };
 

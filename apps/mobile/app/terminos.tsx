@@ -98,7 +98,7 @@ Recopilamos los siguientes datos para prestar el servicio:
 • Firma electrónica en contratos diarios (almacenada como imagen codificada).
 • Datos laborales y salariales proporcionados por la empresa empleadora.
 
-El tratamiento de datos personales se rige por la Ley 1581 de 2012 (habeas data). Consulta nuestra política de privacidad en https://zaturno.app/privacidad.
+El tratamiento de datos personales se rige por la Ley 1581 de 2012 (habeas data). Consulta nuestra política de privacidad completa en esta app, en Perfil → Política de privacidad.
 
 4. USO ACEPTABLE
 No puedes usar Zaturno para actividades ilegales, suplantar identidades o interferir con el servicio. El acceso es personal e intransferible.

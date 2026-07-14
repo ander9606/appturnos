@@ -38,6 +38,16 @@ const CAMPOS_EDITABLES = [
   'external_ref',
 ];
 
+/** Agrupa filas con columna trabajador_id en un Map<trabajador_id, filas[]>. */
+function agruparPorTrabajador(filas) {
+  const porTrabajador = new Map();
+  for (const fila of filas) {
+    if (!porTrabajador.has(fila.trabajador_id)) porTrabajador.set(fila.trabajador_id, []);
+    porTrabajador.get(fila.trabajador_id).push(fila);
+  }
+  return porTrabajador;
+}
+
 const TrabajadoresModel = {
   async listar(empresaId, { tipo, activo, limit, offset }) {
     const where = ['t.empresa_id = ?'];
@@ -127,6 +137,24 @@ const TrabajadoresModel = {
           [usuarioId]
         );
     return filas[0] || null;
+  },
+
+  /** Batch de obtenerPorUsuarioId(null, ...) — evita N+1 al listar solicitudes de varias empresas. */
+  async obtenerPorUsuarioIds(usuarioIds) {
+    if (usuarioIds.length === 0) return new Map();
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS}
+       FROM trabajadores t
+       LEFT JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.usuario_id IN (?) AND t.activo = 1
+       ORDER BY t.id DESC`,
+      [usuarioIds]
+    );
+    const porUsuario = new Map();
+    for (const fila of filas) {
+      if (!porUsuario.has(fila.usuario_id)) porUsuario.set(fila.usuario_id, fila);
+    }
+    return porUsuario;
   },
 
   async obtenerPorExternalRef(empresaId, externalRef) {
@@ -291,6 +319,16 @@ const TrabajadoresModel = {
     return filas;
   },
 
+  /** Batch de listarExperiencias — evita N+1 al listar solicitudes de varias empresas. */
+  async listarExperienciasPorTrabajadores(trabajadorIds) {
+    if (trabajadorIds.length === 0) return new Map();
+    const [filas] = await pool.query(
+      'SELECT * FROM trabajador_experiencias WHERE trabajador_id IN (?) ORDER BY fecha_inicio DESC',
+      [trabajadorIds]
+    );
+    return agruparPorTrabajador(filas);
+  },
+
   async crearExperiencia(trabajadorId, { empresa_nombre, cargo, fecha_inicio, fecha_fin }) {
     const [res] = await pool.query(
       `INSERT INTO trabajador_experiencias (trabajador_id, empresa_nombre, cargo, fecha_inicio, fecha_fin)
@@ -319,6 +357,16 @@ const TrabajadoresModel = {
       [trabajadorId]
     );
     return filas;
+  },
+
+  /** Batch de listarDiplomas — evita N+1 al listar solicitudes de varias empresas. */
+  async listarDiplomasPorTrabajadores(trabajadorIds) {
+    if (trabajadorIds.length === 0) return new Map();
+    const [filas] = await pool.query(
+      'SELECT * FROM trabajador_diplomas WHERE trabajador_id IN (?) ORDER BY anio DESC, id DESC',
+      [trabajadorIds]
+    );
+    return agruparPorTrabajador(filas);
   },
 
   async crearDiploma(trabajadorId, { titulo, institucion, anio }) {
