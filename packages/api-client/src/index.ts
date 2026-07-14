@@ -64,6 +64,8 @@ export type {
 export { turnosEventualApi } from './turnosEventual';
 export type {
   PeriodoTurnoEventual,
+  PeriodosEventualActivos,
+  SegmentoTurnoEventual,
   LineaLiquidacionEventual,
   LiquidacionEventualResponse,
 } from './turnosEventual';

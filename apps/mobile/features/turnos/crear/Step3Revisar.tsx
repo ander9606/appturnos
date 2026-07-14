@@ -45,6 +45,13 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing }: Props) {
         {data.lugar ? (
           <SummaryRow icon="location-outline" label="Lugar" value={data.lugar} />
         ) : null}
+        {data.encargado_nombre ? (
+          <SummaryRow
+            icon="person-outline"
+            label="Encargado en el punto"
+            value={data.encargado_telefono ? `${data.encargado_nombre} · ${data.encargado_telefono}` : data.encargado_nombre}
+          />
+        ) : null}
         {data.latitud !== null ? (
           <SummaryRow
             icon="navigate-outline"

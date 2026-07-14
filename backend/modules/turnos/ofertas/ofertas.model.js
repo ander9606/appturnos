@@ -10,7 +10,7 @@ const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-  lugar, latitud, longitud, estado, para_quien,
+  lugar, latitud, longitud, encargado_nombre, encargado_telefono, estado, para_quien,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
@@ -48,6 +48,8 @@ const CAMPOS_EDITABLES = [
   'lugar',
   'latitud',
   'longitud',
+  'encargado_nombre',
+  'encargado_telefono',
   'para_quien',
 ];
 
@@ -238,9 +240,9 @@ const OfertasModel = {
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
            (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-            lugar, latitud, longitud,
+            lugar, latitud, longitud, encargado_nombre, encargado_telefono,
             estado, para_quien, external_ref, alquiler_ref, externo_notas, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresaId,
           datos.titulo,
@@ -251,6 +253,8 @@ const OfertasModel = {
           datos.lugar ?? null,
           datos.latitud ?? null,
           datos.longitud ?? null,
+          datos.encargado_nombre ?? null,
+          datos.encargado_telefono ?? null,
           datos.estado ?? 'abierta',
           datos.para_quien ?? 'turnos',
           datos.external_ref ?? null,

@@ -1,14 +1,23 @@
 import { api } from './client';
 
+export type SegmentoTurnoEventual = 'nomina' | 'turnos';
+
 export interface PeriodoTurnoEventual {
   id: number;
   empresa_id: number;
-  anio: number;
-  trimestre: 1 | 2 | 3 | 4;
+  segmento: SegmentoTurnoEventual;
+  tipo: 'mensual' | 'quincenal' | 'semanal' | 'trimestral';
   fecha_inicio: string; // YYYY-MM-DD
   fecha_fin: string;
   estado: 'abierto' | 'liquidado';
   created_at: string;
+}
+
+export interface PeriodosEventualActivos {
+  /** Trabajadores de nómina con turnos recurrentes ocasionales — ciclo trimestral. */
+  nomina: PeriodoTurnoEventual;
+  /** Personal de apoyo 100% turnos — sigue el ciclo de liquidación de la empresa. */
+  turnos: PeriodoTurnoEventual;
 }
 
 export interface LineaLiquidacionEventual {
@@ -26,8 +35,8 @@ export interface LiquidacionEventualResponse {
 }
 
 export const turnosEventualApi = {
-  periodoActivo(): Promise<PeriodoTurnoEventual> {
-    return api.get<PeriodoTurnoEventual>('/api/turnos/eventual/periodo-activo');
+  periodoActivo(): Promise<PeriodosEventualActivos> {
+    return api.get<PeriodosEventualActivos>('/api/turnos/eventual/periodo-activo');
   },
 
   liquidacion(periodoId: number): Promise<LiquidacionEventualResponse> {

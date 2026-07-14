@@ -71,6 +71,9 @@ function InfoRow({ icon, label, value }: { icon: IoniconsName; label: string; va
 
 const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const LIQUIDACION_LABELS: Record<string, string> = {
+  mensual: 'Mensual', quincenal: 'Quincenal', semanal: 'Semanal',
+};
 function fmtDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   return `${SHORT_DAYS[d.getDay()]}, ${d.getDate()} de ${SHORT_MONTHS[d.getMonth()]}`;
@@ -256,7 +259,9 @@ export default function TurnoDetailScreen() {
           lugar, tarifa_dia, hora_ingreso_real, hora_egreso_real,
           horas_trabajadas, pago_total,
           calificacion, calificacion_comentario,
-          oferta_descripcion, oferta_externo_notas } = asignacion;
+          oferta_descripcion, oferta_externo_notas,
+          empresa_nombre, empresa_tipo_liquidacion,
+          encargado_nombre, encargado_telefono } = asignacion;
 
   const hasMapCoords = asignacion.latitud != null && asignacion.longitud != null;
 
@@ -292,6 +297,15 @@ export default function TurnoDetailScreen() {
             />
 
             <View className="px-5 py-5 gap-1">
+              {empresa_nombre && (
+                <View className="flex-row items-center gap-1.5 mb-1">
+                  <Ionicons name="business-outline" size={12} color="#94A3B8" />
+                  <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    {empresa_nombre}
+                  </Text>
+                </View>
+              )}
+
               <View className="flex-row items-start justify-between">
                 <Text className="text-xl font-bold text-foreground flex-1 pr-3" numberOfLines={2}>
                   {oferta_titulo}
@@ -329,7 +343,38 @@ export default function TurnoDetailScreen() {
                   </View>
                 )}
 
+                {/* Encargado en el punto — a quién buscar/llamar al llegar */}
+                {encargado_nombre && (
+                  <View className="flex-row items-start gap-3 py-3 border-b border-border">
+                    <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
+                      <Ionicons name="person-outline" size={16} color="#64748B" />
+                    </View>
+                    <View className="flex-1 gap-0.5">
+                      <Text className="text-xs text-muted-foreground">Encargado en el punto</Text>
+                      <Text className="text-sm font-medium text-foreground">{encargado_nombre}</Text>
+                    </View>
+                    {encargado_telefono && (
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(`tel:${encargado_telefono}`)}
+                        className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted mt-0.5"
+                        accessibilityLabel={`Llamar a ${encargado_nombre}`}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="call-outline" size={14} color="#3B82F6" />
+                        <Text className="text-xs font-semibold text-info">Llamar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
                 <InfoRow icon="cash-outline" label="Tarifa" value={`$${tarifa_dia.toLocaleString('es-CO')} / turno`} />
+                {empresa_tipo_liquidacion && (
+                  <InfoRow
+                    icon="calendar-number-outline"
+                    label="Pago"
+                    value={LIQUIDACION_LABELS[empresa_tipo_liquidacion] ?? empresa_tipo_liquidacion}
+                  />
+                )}
               </View>
             </View>
           </View>

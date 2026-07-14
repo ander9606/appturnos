@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes } from '@/features/turnos/useTurnos';
-import { usePeriodoEventual } from '@/features/turnos/useTurnosEventual';
+import { usePeriodosEventual } from '@/features/turnos/useTurnosEventual';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
@@ -62,7 +62,8 @@ export default function TurnosScreen() {
   } = useMisTurnos({ enabled: isWorker });
 
   const { data: pendientesResp } = usePostulacionesPendientes({ enabled: isGestor });
-  const { data: periodoEventual } = usePeriodoEventual();
+  const { data: periodosEventual } = usePeriodosEventual();
+  const periodoEventual = periodosEventual?.nomina;
   const pendientesCount = pendientesResp?.data?.length ?? 0;
 
   const {

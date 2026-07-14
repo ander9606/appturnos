@@ -1,32 +1,64 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   ActivityIndicator,
   Alert,
+  Pressable,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-import { usePeriodoEventual, useLiquidacionEventual, useLiquidarEventual } from '@/features/turnos/useTurnosEventual';
+import { usePeriodosEventual, useLiquidacionEventual, useLiquidarEventual } from '@/features/turnos/useTurnosEventual';
 import { bogotaToday } from '@/features/turnos/turnosUtils';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
-import type { LineaLiquidacionEventual } from '@api-client';
+import type { LineaLiquidacionEventual, SegmentoTurnoEventual } from '@api-client';
 
-const TRIMESTRE_LABELS: Record<1 | 2 | 3 | 4, string> = {
-  1: 'Ene – Mar',
-  2: 'Abr – Jun',
-  3: 'Jul – Sep',
-  4: 'Oct – Dic',
+const TIPO_LABELS: Record<'mensual' | 'quincenal' | 'semanal' | 'trimestral', string> = {
+  mensual: 'Período mensual',
+  quincenal: 'Período quincenal',
+  semanal: 'Período semanal',
+  trimestral: 'Período trimestral',
 };
+
+const SEGMENTO_LABELS: Record<SegmentoTurnoEventual, string> = {
+  turnos: 'Personal de apoyo',
+  nomina: 'Nómina (extra)',
+};
+
+function SegmentoToggle({ value, onChange }: { value: SegmentoTurnoEventual; onChange: (v: SegmentoTurnoEventual) => void }) {
+  const opciones: SegmentoTurnoEventual[] = ['turnos', 'nomina'];
+  return (
+    <View className="flex-row bg-violet-50 rounded-2xl p-1 mx-5 mt-2 mb-1">
+      {opciones.map((op) => (
+        <Pressable
+          key={op}
+          onPress={() => onChange(op)}
+          className={`flex-1 py-2 rounded-xl items-center ${value === op ? 'bg-violet-700' : ''}`}
+        >
+          <Text className={`text-sm font-semibold ${value === op ? 'text-white' : 'text-violet-700'}`}>
+            {SEGMENTO_LABELS[op]}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 
 function cop(n: number): string {
   return '$' + Math.round(n).toLocaleString('es-CO');
+}
+
+function formatRango(inicio: string, fin: string): string {
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+  const i = new Date(inicio + 'T00:00:00').toLocaleDateString('es-CO', opts);
+  const f = new Date(fin + 'T00:00:00').toLocaleDateString('es-CO', opts);
+  return `${i} – ${f}`;
 }
 
 function LineaRow({ item }: { item: LineaLiquidacionEventual }) {
@@ -57,7 +89,9 @@ function LineaRow({ item }: { item: LineaLiquidacionEventual }) {
 
 export default function LiquidacionEventualScreen() {
   const theme = useTheme();
-  const { data: periodo, isLoading: loadingPeriodo, refetch: refetchPeriodo } = usePeriodoEventual();
+  const [segmento, setSegmento] = useState<SegmentoTurnoEventual>('turnos');
+  const { data: periodos, isLoading: loadingPeriodo, refetch: refetchPeriodo } = usePeriodosEventual();
+  const periodo = periodos?.[segmento];
   const { data: liquidacion, isLoading: loadingLiq, refetch: refetchLiq, isRefetching } = useLiquidacionEventual(periodo?.id ?? null);
   const liquidarMutation = useLiquidarEventual();
 
@@ -74,7 +108,7 @@ export default function LiquidacionEventualScreen() {
   function handleLiquidar() {
     if (!periodo) return;
     Alert.alert(
-      'Liquidar trimestre',
+      'Liquidar período',
       `¿Confirmar el pago de ${cop(totalGeneral)} a ${lineas.length} trabajador${lineas.length !== 1 ? 'es' : ''}? Esta acción no se puede deshacer.`,
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -98,6 +132,7 @@ export default function LiquidacionEventualScreen() {
       />
 
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
+        <SegmentoToggle value={segmento} onChange={setSegmento} />
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#7C3AED" />
@@ -106,7 +141,7 @@ export default function LiquidacionEventualScreen() {
           <View className="flex-1 items-center justify-center gap-3 px-8">
             <Ionicons name="calendar-outline" size={48} color="#CBD5E1" />
             <Text className="text-base font-semibold text-foreground text-center">Sin período activo</Text>
-            <Text className="text-sm text-muted-foreground text-center">No hay un período trimestral abierto para tu empresa.</Text>
+            <Text className="text-sm text-muted-foreground text-center">No hay un período abierto para tu empresa.</Text>
           </View>
         ) : (
           <FlatList
@@ -129,10 +164,10 @@ export default function LiquidacionEventualScreen() {
                   <View className="flex-row items-center justify-between">
                     <View>
                       <Text className="text-xs text-violet-500 uppercase tracking-wide font-medium">
-                        Trimestre {periodo.trimestre} · {periodo.anio}
+                        {TIPO_LABELS[periodo.tipo]}
                       </Text>
                       <Text className="text-lg font-bold text-violet-700">
-                        {TRIMESTRE_LABELS[periodo.trimestre as 1 | 2 | 3 | 4]}
+                        {formatRango(periodo.fecha_inicio, periodo.fecha_fin)}
                       </Text>
                     </View>
                     <View className={`px-3 py-1.5 rounded-xl ${periodo.estado === 'abierto' ? 'bg-green-100' : 'bg-gray-100'}`}>
@@ -168,7 +203,7 @@ export default function LiquidacionEventualScreen() {
                 <Ionicons name="briefcase-outline" size={48} color="#CBD5E1" />
                 <Text className="text-base font-semibold text-foreground text-center">Sin turnos eventuales</Text>
                 <Text className="text-sm text-muted-foreground text-center">
-                  No hay turnos completados en este trimestre.
+                  No hay turnos completados en este período.
                 </Text>
               </View>
             }
@@ -176,7 +211,7 @@ export default function LiquidacionEventualScreen() {
               puedeL ? (
                 <View className="mt-4 gap-1">
                   <Button
-                    label={liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar trimestre'}
+                    label={liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar período'}
                     variant="primary"
                     size="lg"
                     fullWidth

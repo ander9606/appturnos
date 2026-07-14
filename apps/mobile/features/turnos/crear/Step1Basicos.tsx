@@ -104,6 +104,29 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         />
       </View>
 
+      <View className="gap-1.5">
+        <Text className="text-sm font-semibold text-foreground">Encargado en el punto</Text>
+        <Text className="text-xs text-muted-foreground -mt-1">
+          A quién debe buscar o llamar el trabajador al llegar (opcional)
+        </Text>
+        <TextInput
+          className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
+          placeholder="Nombre del encargado"
+          placeholderTextColor="#94A3B8"
+          value={data.encargado_nombre}
+          onChangeText={(t) => onChange({ encargado_nombre: t })}
+          returnKeyType="next"
+        />
+        <TextInput
+          className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
+          placeholder="Teléfono del encargado"
+          placeholderTextColor="#94A3B8"
+          value={data.encargado_telefono}
+          onChangeText={(t) => onChange({ encargado_telefono: t })}
+          keyboardType="phone-pad"
+        />
+      </View>
+
       {/* Destinatarios */}
       <View className="gap-2">
         <Text className="text-sm font-semibold text-foreground">Destinatarios</Text>

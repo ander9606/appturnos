@@ -37,6 +37,8 @@ function reglasOferta({ parcial }) {
     body('para_quien').optional().isIn(['turnos','nomina','ambos']).withMessage('para_quien inválido'),
     body('descripcion').optional({ values: 'falsy' }).isString(),
     body('lugar').optional({ values: 'falsy' }).isString(),
+    body('encargado_nombre').optional({ values: 'falsy' }).isString().trim().isLength({ max: 150 }),
+    body('encargado_telefono').optional({ values: 'falsy' }).isString().trim().isLength({ max: 20 }),
     body('latitud')
       .optional({ values: 'falsy' })
       .isFloat({ min: -90, max: 90 })

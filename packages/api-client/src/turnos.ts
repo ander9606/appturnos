@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { TipoLiquidacion } from './empresas';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,8 @@ export interface Asignacion {
   created_at: string;
   /** Solo presente en listarPorUsuario (feed "Mis Turnos" multi-empresa del trabajador). */
   empresa_nombre?: string;
+  /** Solo presente en obtenerConDetalles (detalle de una asignación). */
+  empresa_tipo_liquidacion?: TipoLiquidacion;
   // Joined from ofertas_turno
   oferta_titulo: string;
   oferta_descripcion: string | null;
@@ -64,6 +67,8 @@ export interface Asignacion {
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
+  encargado_nombre: string | null;
+  encargado_telefono: string | null;
   // Joined from oferta_puestos
   tarifa_dia: number;
   puesto_id?: number;
@@ -127,6 +132,8 @@ export interface Oferta {
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
+  encargado_nombre: string | null;
+  encargado_telefono: string | null;
   estado: EstadoOferta;
   para_quien: ParaQuienOferta;
   creado_por: number;
@@ -143,6 +150,8 @@ export interface CrearOfertaPayload {
   lugar?: string;
   latitud?: number;
   longitud?: number;
+  encargado_nombre?: string;
+  encargado_telefono?: string;
   para_quien?: ParaQuienOferta;
   puestos: Array<{
     cargo_id: number;

@@ -6,7 +6,8 @@ const QK = {
   liquidacion: (id: number) => ['turnos-eventual', 'liquidacion', id] as const,
 };
 
-export function usePeriodoEventual() {
+/** Devuelve los dos períodos activos: 'nomina' (trimestral) y 'turnos' (ciclo de la empresa). */
+export function usePeriodosEventual() {
   return useQuery({
     queryKey: QK.periodo,
     queryFn:  () => turnosEventualApi.periodoActivo(),
