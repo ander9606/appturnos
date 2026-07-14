@@ -17,22 +17,25 @@ async function usuarioIdsAdminEmpresa(empresaId) {
 }
 
 /**
- * Resuelve el id del cargo "auxiliar" del sistema (seed de migración 012).
+ * Resuelve el id de un cargo de sistema por código (seeds de migraciones 012/052).
  * Se cachea en memoria del proceso porque no cambia: el seed se inserta una
  * sola vez y no hay endpoint que modifique cargos del sistema.
  */
-let _cargoAuxiliarId = null;
-async function cargoAuxiliarId() {
-  if (_cargoAuxiliarId) return _cargoAuxiliarId;
+const _cargoSistemaIds = {};
+async function cargoSistemaId(codigo) {
+  if (_cargoSistemaIds[codigo]) return _cargoSistemaIds[codigo];
   const [[row]] = await pool.query(
-    "SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo = 'auxiliar' LIMIT 1"
+    'SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo = ? LIMIT 1',
+    [codigo]
   );
   if (!row) {
-    throw new Error("Cargo de sistema 'auxiliar' no encontrado (¿faltó migración 012?)");
+    throw new Error(`Cargo de sistema '${codigo}' no encontrado (¿faltó la migración que lo crea?)`);
   }
-  _cargoAuxiliarId = row.id;
-  return _cargoAuxiliarId;
+  _cargoSistemaIds[codigo] = row.id;
+  return _cargoSistemaIds[codigo];
 }
+const cargoAuxiliarId = () => cargoSistemaId('auxiliar');
+const cargoCustodioId = () => cargoSistemaId('custodio');
 
 /**
  * Handlers de eventos entrantes de logiq360 → App Turnos (ver 05-INTEGRACION.md).
@@ -87,7 +90,7 @@ async function ordenCreada(empresaId, data) {
   }
   if ((data.cupos_custodio ?? 0) > 0) {
     puestos.push({
-      cargo_id: await cargoAuxiliarId(), // ponytail: mismo cargo auxiliar — upgrade: cargo 'custodio' dedicado
+      cargo_id: await cargoCustodioId(),
       plazas: data.cupos_custodio,
       tarifa_dia: data.valor_dia_custodio || 0,
       notas: 'Custodio/logística del evento — aplica a trabajadores nómina y gig',

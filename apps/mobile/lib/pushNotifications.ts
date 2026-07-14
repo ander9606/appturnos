@@ -2,8 +2,9 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { notificacionesApi } from '@api-client';
+import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 
-let _token: string | null = null; // ponytail: module-level cache — upgrade path: SecureStore si el proceso se mata entre registro y logout
+const KEY_PUSH_TOKEN = 'appturnos.push_token';
 
 // ponytail: setNotificationHandler sí funciona en Expo Go (solo aplica a notificaciones locales)
 Notifications.setNotificationHandler({
@@ -41,7 +42,7 @@ export async function registerPushNotifications(): Promise<void> {
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
     const { data: token } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
-    _token = token;
+    await SecureStore.setItemAsync(KEY_PUSH_TOKEN, token);
     await notificacionesApi.registrarExpoToken(token);
   } catch {
     // Push notifications are non-critical — silently ignore errors.
@@ -49,7 +50,8 @@ export async function registerPushNotifications(): Promise<void> {
 }
 
 export async function unregisterPushNotifications(): Promise<void> {
-  if (!_token) return;
-  await notificacionesApi.desregistrarExpoToken(_token).catch(() => {});
-  _token = null;
+  const token = await SecureStore.getItemAsync(KEY_PUSH_TOKEN);
+  if (!token) return;
+  await notificacionesApi.desregistrarExpoToken(token).catch(() => {});
+  await SecureStore.deleteItemAsync(KEY_PUSH_TOKEN);
 }
