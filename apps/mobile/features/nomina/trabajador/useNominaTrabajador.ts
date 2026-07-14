@@ -54,13 +54,15 @@ export interface NominaTrabajadorState {
   isMutating:       boolean;
   handleEntrada:    () => Promise<void>;
   handleSalida:     () => void;
-  handleReingreso:  () => void;
+  handleReingreso:  (motivo?: string) => Promise<void>;
 
   // Loading / refresh
   loading:          boolean;
   loadingRegistros: boolean;
   isRefetching:     boolean;
   onRefresh:        () => void;
+  isError:          boolean;
+  error:            unknown;
 }
 
 export function useNominaTrabajador(): NominaTrabajadorState {
@@ -76,6 +78,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const {
     data: periodosResp,
     isLoading: loading,
+    isError: periodosError,
+    error: periodosErrorObj,
     refetch: refetchPeriodos,
   } = usePeriodos('abierto');
 
@@ -163,26 +167,16 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     );
   }, [registroHoy, tipoMarcacion, geo.currentLocation, salidaMutation]);
 
-  const handleReingreso = useCallback(() => {
-    Alert.alert(
-      'Solicitar reingreso',
-      '¿Deseas pedir autorización al gestor para volver a ingresar hoy?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Solicitar',
-          onPress: async () => {
-            try {
-              await reingresoMutation.mutateAsync(undefined);
-              Alert.alert('Solicitud enviada', 'El gestor recibirá una notificación para aprobarte.');
-            } catch (err) {
-              const msg = err instanceof ApiError ? err.message : 'Error al enviar la solicitud';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ],
-    );
+  // La confirmación (con explicación + motivo opcional) vive en la pantalla, en un
+  // modal propio — un Alert nativo no permite pedir texto de forma consistente en iOS/Android.
+  const handleReingreso = useCallback(async (motivo?: string) => {
+    try {
+      await reingresoMutation.mutateAsync(motivo);
+      Alert.alert('Solicitud enviada', 'El gestor recibirá una notificación para aprobarte.');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Error al enviar la solicitud';
+      Alert.alert('Error', msg);
+    }
   }, [reingresoMutation]);
 
   // ── Refresh ────────────────────────────────────────────────────────────
@@ -215,5 +209,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     loadingRegistros,
     isRefetching,
     onRefresh,
+    isError: periodosError,
+    error: periodosErrorObj,
   };
 }

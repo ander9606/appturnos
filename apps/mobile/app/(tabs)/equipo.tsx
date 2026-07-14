@@ -375,21 +375,6 @@ export default function EquipoScreen() {
           )}
         </View>
         <View className="items-end gap-1">
-          {/* Toggle inactivos */}
-          <Pressable
-            onPress={() => setShowInactive((v) => !v)}
-            className={`rounded-full px-3 py-1.5 border ${
-              showInactive ? 'bg-danger/10 border-danger' : 'bg-card border-border'
-            }`}
-          >
-            <Text
-              className={`text-xs font-semibold ${
-                showInactive ? 'text-danger' : 'text-muted-foreground'
-              }`}
-            >
-              {showInactive ? 'Mostrando inactivos' : 'Solo activos'}
-            </Text>
-          </Pressable>
           {/* Solicitudes badge — admin y jefe_turnos */}
           {canInvitar && (
             <SolicitudesBadge
@@ -432,29 +417,48 @@ export default function EquipoScreen() {
         </View>
       </View>
 
-      {/* Tipo filter pills */}
-      <View className="flex-row gap-2 px-4 pb-3">
-        {FILTROS.map(({ key, label }) => {
-          const active = filtro === key;
-          return (
-            <Pressable
-              key={key}
-              onPress={() => setFiltro(key)}
-              className={`rounded-full px-3 py-1.5 border ${
-                active ? 'bg-primary border-primary' : 'bg-card border-border'
-              }`}
-            >
-              <Text
-                className={`text-xs font-semibold ${
-                  active ? 'text-white' : 'text-muted-foreground'
+      {/* Filtros: tipo + estado */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pb-3">
+        <View className="flex-row items-center gap-2 px-4">
+          {FILTROS.map(({ key, label }) => {
+            const active = filtro === key;
+            return (
+              <Pressable
+                key={key}
+                onPress={() => setFiltro(key)}
+                className={`rounded-full px-3 py-1.5 border ${
+                  active ? 'bg-primary border-primary' : 'bg-card border-border'
                 }`}
               >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Text
+                  className={`text-xs font-semibold ${
+                    active ? 'text-white' : 'text-muted-foreground'
+                  }`}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+
+          <View className="w-px h-4 bg-border mx-0.5" />
+
+          <Pressable
+            onPress={() => setShowInactive((v) => !v)}
+            className={`rounded-full px-3 py-1.5 border ${
+              showInactive ? 'bg-danger/10 border-danger' : 'bg-card border-border'
+            }`}
+          >
+            <Text
+              className={`text-xs font-semibold ${
+                showInactive ? 'text-danger' : 'text-muted-foreground'
+              }`}
+            >
+              {showInactive ? 'Mostrando inactivos' : 'Solo activos'}
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
 
       {/* List */}
       {isLoading ? (
@@ -506,6 +510,7 @@ export default function EquipoScreen() {
       {isAdmin && (
         <Pressable
           onPress={() => router.push('/trabajador/nuevo')}
+          accessibilityLabel="Nuevo trabajador"
           className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-lg active:bg-primary/80"
           style={{
             shadowColor: '#FF5A3C',
@@ -521,6 +526,7 @@ export default function EquipoScreen() {
       {isJefeTurnos && (
         <Pressable
           onPress={() => router.push('/invitar-trabajador')}
+          accessibilityLabel="Invitar trabajador por cédula"
           className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-info items-center justify-center shadow-lg active:opacity-80"
           style={{
             shadowColor: '#3B82F6',

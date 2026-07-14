@@ -183,8 +183,8 @@ router.post(
     body('apellido').optional().isString().trim(),
     emailSanitizado,
     body('rol')
-      .isIn(['jefe_turnos', 'jefe_nomina', 'nomina'])
-      .withMessage('Rol inválido. Usa: jefe_turnos, jefe_nomina o nomina'),
+      .isIn(['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'])
+      .withMessage('Rol inválido. Usa: admin_empresa, jefe_turnos, jefe_nomina o nomina'),
   ],
   validar,
   ctrl.crearGestor

@@ -36,6 +36,7 @@ import type { TrabajadorFormValues } from '@/features/equipo/schemas';
 import type { Asignacion } from '@api-client';
 import { COLORS } from '@/lib/designTokens';
 import { Avatar } from '@/components/ui/Avatar';
+import { useRoleGuard } from '@/components/RoleGuard';
 
 const TIPO_LABELS: Record<string, string> = {
   turnos: 'Turnos',
@@ -86,6 +87,9 @@ export default function TrabajadorDetailScreen() {
   const turnosRecientes = (asignacionesData?.data ?? [])
     .filter((a) => a.estado === 'completado' || a.estado === 'no_presentado')
     .slice(0, 5);
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina']);
+  if (denied) return denied;
 
   // ── Header right button (edit toggle) ────────────────────────────────
 

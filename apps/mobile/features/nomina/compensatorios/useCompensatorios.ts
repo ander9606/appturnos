@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { nominaApi } from '@api-client';
 
-export function useCompensatoriosPendientes() {
+/** Compensatorios propios del trabajador_nomina (pendientes y asignados) — no solo pendientes,
+ * o el banner de "descanso ya asignado" nunca tendría datos que mostrar. */
+export function useMisCompensatorios() {
   return useQuery({
-    queryKey: ['compensatorios', 'pendiente'],
-    queryFn: () => nominaApi.listarCompensatorios({ estado: 'pendiente' }),
+    queryKey: ['compensatorios', 'propios'],
+    queryFn: () => nominaApi.listarCompensatorios(),
     staleTime: 60_000,
   });
 }

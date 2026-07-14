@@ -47,6 +47,9 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'reingreso.aprobado':          'checkmark-circle-outline',
   'reingreso.rechazado':         'close-circle-outline',
   'suscripcion.pago_rechazado':  'card-outline',
+  'ausencia.nueva':              'calendar-clear-outline',
+  'ausencia.resuelta':           'calendar-outline',
+  'nomina.compensatorio_asignado': 'sunny-outline',
 };
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {
@@ -67,8 +70,12 @@ function fmtDate(iso: string): string {
 function destino(n: Notificacion): string | null {
   if (!n.data) return null;
   const d = n.data as Record<string, unknown>;
-  if (d.asignacion_id) return `/turno/${d.asignacion_id}`;
-  if (d.oferta_id)     return `/oferta/${d.oferta_id}`;
+  if (d.asignacion_id)   return `/turno/${d.asignacion_id}`;
+  if (d.oferta_id)       return `/oferta/${d.oferta_id}`;
+  if (d.ausencia_id)     return '/ausencias';
+  if (d.periodo_id)      return '/(tabs)/nomina';
+  if (d.compensatorio_id) return '/(tabs)/nomina';
+  if (d.solicitud_id && n.tipo.startsWith('reingreso.')) return '/nomina-ingreso';
   return null;
 }
 

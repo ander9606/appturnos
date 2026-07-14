@@ -25,7 +25,7 @@ import { useAsignacion, useMarcarIngreso } from '@/features/turnos/useTurnos';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }               from '@/features/turnos/GeoFenceIndicator';
 import { Button }                          from '@/components/ui/Button';
-import { fmtRange }                        from '@/features/turnos/turnosUtils';
+import { fmtRange, getEstadoConfig }       from '@/features/turnos/turnosUtils';
 import { ApiError, puntosMarcajeApi }      from '@api-client';
 import type { PuntoMarcaje }               from '@api-client';
 import { t }                               from '@/lib/i18n';
@@ -138,7 +138,7 @@ export default function IngresoScreen() {
           Este turno no está disponible para registrar ingreso
         </Text>
         <Text className="text-sm text-muted-foreground text-center">
-          Estado actual: {asignacion.estado}
+          Estado actual: {getEstadoConfig(asignacion.estado).label}
         </Text>
         <Button label="Volver" onPress={() => router.back()} variant="secondary" />
       </SafeAreaView>

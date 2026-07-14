@@ -24,6 +24,12 @@ const ESTADO_VARIANT: Record<string, 'warning' | 'success' | 'danger'> = {
   rechazada:  'danger',
 };
 
+const ESTADO_LABEL: Record<string, string> = {
+  pendiente:  'Pendiente',
+  aprobada:   'Aprobada',
+  rechazada:  'Rechazada',
+};
+
 const GESTORES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina'];
 
 export default function AusenciasScreen() {
@@ -92,7 +98,7 @@ export default function AusenciasScreen() {
                 <Text className="text-sm font-semibold text-foreground">{TIPO_LABEL[a.tipo] ?? a.tipo}</Text>
                 <Text className="text-xs text-muted-foreground">{a.fecha_inicio} → {a.fecha_fin}</Text>
               </View>
-              <Badge label={a.estado} variant={ESTADO_VARIANT[a.estado] ?? 'default'} size="sm" />
+              <Badge label={ESTADO_LABEL[a.estado] ?? a.estado} variant={ESTADO_VARIANT[a.estado] ?? 'default'} size="sm" />
             </View>
             {a.motivo ? <Text className="text-xs text-muted-foreground">{a.motivo}</Text> : null}
 

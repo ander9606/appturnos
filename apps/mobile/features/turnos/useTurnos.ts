@@ -296,11 +296,12 @@ export function useDuplicarOferta() {
 }
 
 /** Catálogo de cargos (sistema + custom de la empresa). */
-export function useCargos() {
+export function useCargos(enabled = true) {
   return useQuery({
     queryKey: QUERY_KEYS.cargos,
     queryFn:  () => cargosApi.listar(),
     staleTime: 5 * 60_000,
+    enabled,
   });
 }
 

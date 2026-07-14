@@ -3,6 +3,7 @@
 const CompensatoriosModel = require('./compensatorios.model');
 const RegistrosModel      = require('../registros/registros.model');
 const TrabajadoresModel   = require('../../trabajadores/trabajadores.model');
+const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError            = require('../../../utils/AppError');
 const { ROLES }           = require('../../../config/constants');
 
@@ -93,6 +94,18 @@ const CompensatoriosService = {
     }
 
     await CompensatoriosModel.marcarTomado(empresaId, compensatorioId);
+
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, comp.trabajador_id);
+    if (trabajador?.usuario_id) {
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajador.usuario_id,
+        tipo: 'nomina.compensatorio_asignado',
+        titulo: 'Descanso compensatorio asignado',
+        mensaje: `El ${fechaAsignada} no tienes que asistir a laborar — es tu compensatorio por el ${comp.origen_fecha}.`,
+        data: { compensatorio_id: compensatorioId },
+      });
+    }
 
     return CompensatoriosModel.obtenerPorId(empresaId, compensatorioId);
   },

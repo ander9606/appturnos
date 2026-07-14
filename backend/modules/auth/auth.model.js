@@ -278,23 +278,41 @@ const AuthModel = {
     return res.insertId;
   },
 
-  /** Lista todos los gestores (jefe_turnos, jefe_nomina, nomina) de la empresa. */
+  /** Lista todos los gestores (admin_empresa, jefe_turnos, jefe_nomina, nomina) de la empresa. */
   async listarGestores(empresaId) {
     const [filas] = await pool.query(
       `SELECT id, nombre, apellido, email, rol, activo, created_at
        FROM usuarios
-       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'jefe_nomina', 'nomina')
+       WHERE empresa_id = ? AND rol IN ('admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina')
        ORDER BY nombre`,
       [empresaId]
     );
     return filas;
   },
 
+  /** Cuenta admin_empresa activos — usado para no dejar la empresa sin ningún admin. */
+  async contarAdminsActivos(empresaId) {
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM usuarios WHERE empresa_id = ? AND rol = 'admin_empresa' AND activo = 1`,
+      [empresaId]
+    );
+    return Number(total);
+  },
+
+  /** Rol de un gestor puntual — usado para validar antes de desactivar. */
+  async obtenerRolGestor(empresaId, gestorId) {
+    const [[fila]] = await pool.query(
+      `SELECT rol FROM usuarios WHERE id = ? AND empresa_id = ? LIMIT 1`,
+      [gestorId, empresaId]
+    );
+    return fila?.rol ?? null;
+  },
+
   /** Activa o desactiva un gestor. Retorna true si se actualizó. */
   async setActivoGestor(empresaId, gestorId, activo) {
     const [res] = await pool.query(
       `UPDATE usuarios SET activo = ?
-       WHERE id = ? AND empresa_id = ? AND rol IN ('jefe_turnos', 'jefe_nomina', 'nomina')`,
+       WHERE id = ? AND empresa_id = ? AND rol IN ('admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina')`,
       [activo ? 1 : 0, gestorId, empresaId]
     );
     return res.affectedRows > 0;

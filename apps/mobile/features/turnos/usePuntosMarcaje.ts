@@ -6,11 +6,12 @@ export const PM_KEYS = {
   lista: ['puntos-marcaje'] as const,
 };
 
-export function usePuntosMarcaje() {
+export function usePuntosMarcaje(enabled = true) {
   return useQuery({
     queryKey: PM_KEYS.lista,
     queryFn:  () => puntosMarcajeApi.listar(),
     staleTime: 5 * 60_000,
+    enabled,
   });
 }
 

@@ -12,19 +12,21 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
 import { formatShortDate } from '@/lib/formatters';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
+import { Button } from '@/components/ui/Button';
 import { RegistroCard } from '../RegistroCard';
 import { PeriodoHeaderCard } from './components/PeriodoHeaderCard';
 import { ResumenCards } from './components/ResumenCards';
 import { IngresoHoyTab } from './components/IngresoHoyTab';
 import { useNominaTrabajador } from './useNominaTrabajador';
 import { calcularResumenPeriodo, analizarDia } from './nominaTrabajadorUtils';
-import { useCompensatoriosPendientes } from '../compensatorios/useCompensatorios';
+import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
 
 type ActiveTab = 'hoy' | 'nomina';
 
 export function NominaTrabajadorView() {
   const theme = useTheme();
-  const { data: compensatorios = [] } = useCompensatoriosPendientes();
+  const { data: compensatorios = [] } = useMisCompensatorios();
   const [activeTab, setActiveTab] = useState<ActiveTab>('hoy');
 
   const {
@@ -45,6 +47,8 @@ export function NominaTrabajadorView() {
     loadingRegistros,
     isRefetching,
     onRefresh,
+    isError,
+    error,
   } = useNominaTrabajador();
 
   // Resumen solo de esta semana (para la card semanal del header)
@@ -69,6 +73,18 @@ export function NominaTrabajadorView() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
         <ActivityIndicator size="large" color={theme.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
+        <Ionicons name="warning-outline" size={48} color="#94A3B8" />
+        <Text className="text-base font-semibold text-foreground">
+          {apiErrorMessage(error, 'Error al cargar tu nómina')}
+        </Text>
+        <Button label="Reintentar" onPress={onRefresh} variant="secondary" />
       </SafeAreaView>
     );
   }

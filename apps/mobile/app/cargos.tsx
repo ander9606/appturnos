@@ -247,10 +247,11 @@ export default function CargosScreen() {
                       </View>
                     </View>
 
-                    <View className="flex-row items-center gap-1.5">
+                    <View className="flex-row items-center gap-4">
                       <Pressable
                         onPress={() => openEdit(cargo)}
                         hitSlop={8}
+                        accessibilityLabel="Editar cargo"
                         className="w-8 h-8 rounded-full bg-muted items-center justify-center active:opacity-70"
                       >
                         <Ionicons name="pencil-outline" size={15} color="#64748B" />
@@ -258,7 +259,8 @@ export default function CargosScreen() {
                       <Pressable
                         onPress={() => handleEliminar(cargo)}
                         hitSlop={8}
-                        className="w-8 h-8 rounded-full bg-danger/10 items-center justify-center active:opacity-70"
+                        accessibilityLabel="Eliminar cargo"
+                        className="w-8 h-8 rounded-full bg-danger/10 border border-danger/30 items-center justify-center active:opacity-70"
                         disabled={eliminarMutation.isPending}
                       >
                         <Ionicons name="trash-outline" size={15} color={COLORS.danger} />
@@ -274,6 +276,7 @@ export default function CargosScreen() {
         {/* FAB */}
         <Pressable
           onPress={openCreate}
+          accessibilityLabel="Nuevo cargo"
           className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center active:opacity-80"
           style={{
             backgroundColor: COLORS.info,

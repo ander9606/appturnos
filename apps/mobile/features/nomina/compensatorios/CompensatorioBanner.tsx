@@ -9,14 +9,22 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';
+import { bogotaToday } from '@/lib/formatters';
 
 interface Props {
   compensatorios: DescansoCompensatorio[];
 }
 
 export function CompensatorioBanner({ compensatorios }: Props) {
+  const hoy = bogotaToday();
   const pendientes = compensatorios.filter((c) => c.estado === 'pendiente');
-  const asignados  = compensatorios.filter((c) => c.estado === 'asignado');
+  // ponytail: el backend pasa de 'asignado' a 'tomado' en el mismo request al crear el
+  // registro del día (compensatorios.service.js asignar()) — 'asignado' nunca queda
+  // observable. Con fecha futura, un 'tomado' es en realidad un descanso próximo, no pasado.
+  // Upgrade path: si el backend separa ambos pasos, volver a filtrar por estado==='asignado'.
+  const asignados = compensatorios.filter(
+    (c) => c.estado === 'tomado' && c.fecha_asignada && c.fecha_asignada >= hoy
+  );
 
   if (pendientes.length === 0 && asignados.length === 0) return null;
 

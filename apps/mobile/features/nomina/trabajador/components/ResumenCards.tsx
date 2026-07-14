@@ -111,7 +111,7 @@ export function ResumenCards({
                     <SemanaRow key={s.inicioSemana} semana={s} valorHora={valorHora} />
                   ))}
                   <Text className="text-[10px] text-muted-foreground mt-0.5">
-                    Límite según Ley 2101 para {new Date().getFullYear()}: {getJornadaLegalSemanal(new Date().getFullYear())}h/semana.
+                    Jornada máxima legal en {new Date().getFullYear()}: {getJornadaLegalSemanal(new Date().getFullYear())}h/semana.
                     Las horas extra solo se generan al superar este límite.
                   </Text>
                 </View>

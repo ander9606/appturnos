@@ -375,6 +375,15 @@ const AuthService = {
 
   /** Activa o desactiva un gestor de la empresa. */
   async setActivoGestor(empresaId, gestorId, activo) {
+    if (!activo) {
+      const rol = await AuthModel.obtenerRolGestor(empresaId, gestorId);
+      if (rol === ROLES.ADMIN_EMPRESA) {
+        const admins = await AuthModel.contarAdminsActivos(empresaId);
+        if (admins <= 1) {
+          throw new AppError('No puedes desactivar al único administrador de la empresa', 409);
+        }
+      }
+    }
     const actualizado = await AuthModel.setActivoGestor(empresaId, gestorId, activo);
     if (!actualizado) throw new AppError('Gestor no encontrado', 404);
   },

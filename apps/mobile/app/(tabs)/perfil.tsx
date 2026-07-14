@@ -496,7 +496,8 @@ export default function PerfilScreen() {
           <SectionHeader title={t('perfil.cuenta')} />
 
           <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
-            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos && !isAdmin && !isTrabajadorNomina} />
+            {/* isTrabajadorNomina no agrega filas en esta tarjeta — "Rol" queda como última fila para ese rol */}
+            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos && !isAdmin} />
 
             {/* ── Trabajador Turnos — accesos rápidos ──────────────── */}
             {isTrabajadorTurnos && (

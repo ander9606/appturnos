@@ -14,7 +14,7 @@ export interface CrearGestorPayload {
   nombre: string;
   apellido?: string;
   email: string;
-  rol: 'jefe_turnos' | 'jefe_nomina' | 'nomina';
+  rol: 'admin_empresa' | 'jefe_turnos' | 'jefe_nomina' | 'nomina';
 }
 
 export interface CrearGestorResult {
@@ -31,7 +31,7 @@ export interface Gestor {
   nombre: string;
   apellido: string | null;
   email: string;
-  rol: 'jefe_turnos' | 'jefe_nomina' | 'nomina';
+  rol: 'admin_empresa' | 'jefe_turnos' | 'jefe_nomina' | 'nomina';
   activo: boolean;
   created_at: string;
 }

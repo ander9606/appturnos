@@ -107,6 +107,9 @@ const TrabajadoresModel = {
   },
 
   async obtenerPorUsuarioId(empresaId, usuarioId) {
+    // Sin empresaId, un usuario puede tener varias filas activas (una por empresa
+    // vinculada) — ORDER BY evita que MySQL devuelva una fila arbitraria; la más
+    // reciente es la mejor aproximación a "la empresa donde trabaja ahora".
     const [filas] = empresaId != null
       ? await pool.query(
           `SELECT ${COLUMNAS}
@@ -119,7 +122,8 @@ const TrabajadoresModel = {
           `SELECT ${COLUMNAS}
            FROM trabajadores t
            LEFT JOIN usuarios u ON u.id = t.usuario_id
-           WHERE t.usuario_id = ? AND t.activo = 1 LIMIT 1`,
+           WHERE t.usuario_id = ? AND t.activo = 1
+           ORDER BY t.id DESC LIMIT 1`,
           [usuarioId]
         );
     return filas[0] || null;

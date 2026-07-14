@@ -21,6 +21,31 @@ function fmtFechaCorta(isoDate) {
   return `${DIAS[d.getDay()]} ${d.getDate()} ${MESES[d.getMonth()]}`;
 }
 
+/**
+ * Busca un turno confirmado/en curso que se solape en horario para el mismo USUARIO,
+ * sin importar la empresa. `trabajador_id` es una fila por vínculo empresa-trabajador,
+ * así que el traslape del modelo (dentro de una sola empresa) no alcanza a ver esto —
+ * un trabajador_turnos suele trabajar para varias empresas a la vez.
+ */
+async function buscarSolapeOtraEmpresa(usuarioId, excluirAsignacionId, fecha, horaInicio, horaFinEstimada) {
+  const horaFin = horaFinEstimada || '23:59:59';
+  const [[fila]] = await pool.query(
+    `SELECT a.id
+     FROM asignaciones_turno a
+     JOIN ofertas_turno o ON o.id = a.oferta_id
+     JOIN trabajadores t2 ON t2.id = a.trabajador_id
+     WHERE t2.usuario_id = ?
+       AND a.id != ?
+       AND a.estado IN ('confirmado', 'en_progreso')
+       AND o.fecha = ?
+       AND o.hora_inicio < ?
+       AND COALESCE(o.hora_fin_estimada, '23:59:59') > ?
+     LIMIT 1`,
+    [usuarioId, excluirAsignacionId ?? 0, fecha, horaFin, horaInicio]
+  );
+  return Boolean(fila);
+}
+
 /** Resuelve el trabajador vinculado al usuario autenticado. */
 async function resolverTrabajador(empresaId, usuarioId) {
   const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuarioId);
@@ -58,32 +83,45 @@ const AsignacionesService = {
   },
 
   async confirmar(empresaId, id) {
-    // Para trabajadores_nomina: verificar que el turno no solape con jornada ya registrada.
     const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
     if (asig) {
       const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asig.trabajador_id);
-      if (trabajador?.rol === 'trabajador_nomina' || trabajador?.usuario_rol === 'trabajador_nomina') {
-        // Obtener detalle de la oferta para hora_inicio / hora_fin_estimada
-        const [[ofertaRow]] = await pool.query(
-          `SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada
-           FROM asignaciones_turno a
-           JOIN ofertas_turno o ON o.id = a.oferta_id
-           WHERE a.id = ? AND a.empresa_id = ?`,
-          [id, empresaId]
+      const rolTrabajador = trabajador?.rol || trabajador?.usuario_rol;
+
+      // Ambos chequeos necesitan fecha/hora de la oferta — se piden una sola vez.
+      const necesitaChequeo = rolTrabajador === 'trabajador_nomina' || rolTrabajador === 'trabajador_turnos';
+      const ofertaRow = necesitaChequeo
+        ? (await pool.query(
+            `SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada
+             FROM asignaciones_turno a
+             JOIN ofertas_turno o ON o.id = a.oferta_id
+             WHERE a.id = ? AND a.empresa_id = ?`,
+            [id, empresaId]
+          ))[0][0]
+        : null;
+
+      if (ofertaRow && rolTrabajador === 'trabajador_nomina') {
+        // La misma empresa no puede tenerlo en jornada de nómina y en turno a la vez.
+        const horaFin = ofertaRow.hora_fin_estimada || '23:59:00';
+        const [[solapado]] = await pool.query(
+          `SELECT id FROM registros_diarios
+           WHERE empresa_id = ? AND trabajador_id = ? AND fecha = ?
+             AND hora_entrada IS NOT NULL
+             AND hora_entrada < ? AND COALESCE(hora_salida,'23:59:00') > ?
+           LIMIT 1`,
+          [empresaId, asig.trabajador_id, ofertaRow.fecha, horaFin, ofertaRow.hora_inicio]
         );
-        if (ofertaRow) {
-          const horaFin = ofertaRow.hora_fin_estimada || '23:59:00';
-          const [[solapado]] = await pool.query(
-            `SELECT id FROM registros_diarios
-             WHERE empresa_id = ? AND trabajador_id = ? AND fecha = ?
-               AND hora_entrada IS NOT NULL
-               AND hora_entrada < ? AND COALESCE(hora_salida,'23:59:00') > ?
-             LIMIT 1`,
-            [empresaId, asig.trabajador_id, ofertaRow.fecha, horaFin, ofertaRow.hora_inicio]
-          );
-          if (solapado) {
-            throw new AppError('Conflicto con jornada laboral registrada para ese día y horario', 409);
-          }
+        if (solapado) {
+          throw new AppError('Conflicto con jornada laboral registrada para ese día y horario', 409);
+        }
+      }
+
+      if (ofertaRow && rolTrabajador === 'trabajador_turnos' && trabajador.usuario_id) {
+        const solapado = await buscarSolapeOtraEmpresa(
+          trabajador.usuario_id, id, ofertaRow.fecha, ofertaRow.hora_inicio, ofertaRow.hora_fin_estimada
+        );
+        if (solapado) {
+          throw new AppError('Ya tienes un turno confirmado en otra empresa en ese horario', 409);
         }
       }
     }
@@ -334,6 +372,23 @@ const AsignacionesService = {
    * trabajador tenga que postularse primero. Útil para cuadrar equipos rápido.
    */
   async asignarDirecto(empresaId, ofertaId, { puesto_id, trabajador_id }) {
+    const trabajadorPrevio = await TrabajadoresModel.obtenerPorId(empresaId, trabajador_id);
+    const rolPrevio = trabajadorPrevio?.rol || trabajadorPrevio?.usuario_rol;
+    if (rolPrevio === 'trabajador_turnos' && trabajadorPrevio.usuario_id) {
+      const [[ofertaRow]] = await pool.query(
+        `SELECT fecha, hora_inicio, hora_fin_estimada FROM ofertas_turno WHERE id = ? AND empresa_id = ?`,
+        [ofertaId, empresaId]
+      );
+      if (ofertaRow) {
+        const solapado = await buscarSolapeOtraEmpresa(
+          trabajadorPrevio.usuario_id, null, ofertaRow.fecha, ofertaRow.hora_inicio, ofertaRow.hora_fin_estimada
+        );
+        if (solapado) {
+          throw new AppError('Este trabajador ya tiene un turno confirmado en otra empresa en ese horario', 409);
+        }
+      }
+    }
+
     const res = await AsignacionesModel.asignarDirecto(empresaId, ofertaId, puesto_id, trabajador_id);
     if (!res.ok) {
       const errores = {

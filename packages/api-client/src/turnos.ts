@@ -52,6 +52,8 @@ export interface Asignacion {
   longitud_ingreso: number | null;
   firma_digital: string | null;
   created_at: string;
+  /** Solo presente en listarPorUsuario (feed "Mis Turnos" multi-empresa del trabajador). */
+  empresa_nombre?: string;
   // Joined from ofertas_turno
   oferta_titulo: string;
   oferta_descripcion: string | null;
@@ -115,6 +117,8 @@ export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
 export interface Oferta {
   id: number;
   empresa_id: number;
+  /** Solo presente en el feed agregado multi-empresa (listarOfertas para trabajador_turnos). */
+  empresa_nombre?: string;
   titulo: string;
   descripcion: string | null;
   fecha: string; // YYYY-MM-DD

@@ -46,17 +46,32 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
 
       {/* ── Content ─────────────────────────────────────────────────── */}
       <View className="flex-1 px-4 py-4 gap-2">
+        {/* Empresa (solo presente en el feed multi-empresa) */}
+        {asignacion.empresa_nombre && (
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="business-outline" size={11} color="#94A3B8" />
+            <Text className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide" numberOfLines={1}>
+              {asignacion.empresa_nombre}
+            </Text>
+          </View>
+        )}
+
         {/* Top row: title + badge */}
         <View className="flex-row items-start justify-between gap-2">
           <View className="flex-1 gap-0.5">
             <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
               {asignacion.oferta_titulo}
             </Text>
-            {showDate && (
-              <Text className="text-xs text-muted-foreground">
-                {formatShortDate(asignacion.oferta_fecha)}
-              </Text>
-            )}
+            <View className="flex-row items-center gap-2 flex-wrap">
+              {showDate && (
+                <Text className="text-xs text-muted-foreground">
+                  {formatShortDate(asignacion.oferta_fecha)}
+                </Text>
+              )}
+              {asignacion.cargo_nombre && (
+                <Text className="text-xs text-muted-foreground">{asignacion.cargo_nombre}</Text>
+              )}
+            </View>
           </View>
           <Badge label={config.label} variant={config.badgeVariant} size="sm" />
         </View>

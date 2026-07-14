@@ -101,11 +101,18 @@ export default function ContratoScreen() {
         options={{
           title: contrato.numero_contrato,
           headerTitleStyle: { fontSize: 15, fontWeight: '700' },
-          headerRight: isGestor ? () => (
-            <TouchableOpacity onPress={handleDescargar} hitSlop={10} style={{ marginRight: 4 }}>
+          // El trabajador puede descargar su propio contrato firmado — el backend
+          // ya restringe /contratos/:id/pdf a admin_empresa/jefe_turnos/trabajador dueño.
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={handleDescargar}
+              hitSlop={10}
+              accessibilityLabel="Descargar PDF"
+              style={{ marginRight: 4 }}
+            >
               <Ionicons name="download-outline" size={22} color="#FF5A3C" />
             </TouchableOpacity>
-          ) : undefined,
+          ),
         }}
       />
 
@@ -114,6 +121,20 @@ export default function ContratoScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* ── Resumen en lenguaje simple ─────────────────────── */}
+          {!isGestor && (
+            <View style={s.summaryBox}>
+              <Ionicons name="information-circle" size={18} color="#2563EB" style={{ marginTop: 1 }} />
+              <Text style={s.summaryText}>
+                {firmado ? 'Firmaste un' : 'Vas a firmar un'} contrato por un día, el{' '}
+                <Text style={s.summaryEmphasized}>{fmtLegal(contrato.fecha)}</Text>, de{' '}
+                <Text style={s.summaryEmphasized}>{fmtH(contrato.hora_inicio)}</Text> a{' '}
+                <Text style={s.summaryEmphasized}>{fmtH(contrato.hora_fin_estimada)}</Text>, por{' '}
+                <Text style={s.summaryEmphasized}>{formatCOP(contrato.valor_dia)}</Text>.
+              </Text>
+            </View>
+          )}
+
           {/* ── Papel ───────────────────────────────────────────── */}
           <View style={s.paper}>
 
@@ -259,6 +280,27 @@ function Clausula({ num, titulo, children }: { num: string; titulo: string; chil
 // ── styles ────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
+  // Resumen en lenguaje simple, antes del texto legal
+  summaryBox: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+  },
+  summaryText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#1E3A8A',
+  },
+  summaryEmphasized: {
+    fontWeight: '700',
+  },
+
   paper: {
     backgroundColor: '#FFFEFB',
     borderRadius: 14,

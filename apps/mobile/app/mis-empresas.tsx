@@ -26,6 +26,7 @@ import {
   useMisEmpresas,
   useAceptar,
   useRechazarVinculo,
+  useSolicitar,
 } from '@/features/empresas/useTrabajadorEmpresa';
 import type { Vinculo } from '@api-client';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -178,6 +179,50 @@ function InvitacionCard({
   );
 }
 
+function ArchivadaCard({
+  vinculo, onReactivar, loading,
+}: {
+  vinculo: Vinculo;
+  onReactivar: (empresaId: number) => void;
+  loading: boolean;
+}) {
+  const rechazado = vinculo.estado === 'rechazado';
+  return (
+    <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden opacity-90">
+      <View className="flex-row items-center gap-3 p-4">
+        <View className="w-11 h-11 rounded-xl bg-muted items-center justify-center">
+          <Ionicons name="business-outline" size={20} color="#94A3B8" />
+        </View>
+        <View className="flex-1">
+          <Text className="text-base font-semibold text-foreground">{vinculo.empresa_nombre}</Text>
+          <Text className="text-xs text-muted-foreground mt-0.5">
+            {rechazado ? 'Solicitud rechazada' : 'Vínculo archivado'}
+            {vinculo.fecha_resuelto ? ` · ${fmtFecha(vinculo.fecha_resuelto)}` : ''}
+          </Text>
+          {vinculo.motivo_rechazo && (
+            <Text className="text-xs text-muted-foreground mt-1 italic" numberOfLines={2}>
+              "{vinculo.motivo_rechazo}"
+            </Text>
+          )}
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={() => onReactivar(vinculo.empresa_id)}
+        disabled={loading}
+        className="border-t border-border px-4 py-3 flex-row items-center justify-center gap-1.5 active:opacity-70"
+      >
+        {loading
+          ? <ActivityIndicator size="small" color="#FF5A3C" />
+          : <>
+              <Ionicons name="refresh-outline" size={14} color="#FF5A3C" />
+              <Text className="text-sm font-semibold text-primary-500">Volver a solicitar</Text>
+            </>
+        }
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ── Screen ─────────────────────────────────────────────────────────────────
 
 export default function MisEmpresasScreen() {
@@ -187,9 +232,11 @@ export default function MisEmpresasScreen() {
   const { data, isLoading, refetch } = useMisEmpresas();
   const aceptar    = useAceptar();
   const rechazar   = useRechazarVinculo();
+  const solicitar  = useSolicitar();
 
   const activas      = data?.activas      ?? [];
   const pendientes   = data?.pendientes   ?? [];
+  const archivadas   = data?.archivadas   ?? [];
   const invitaciones = data?.invitaciones ?? [];
 
   const handleAceptar = async (id: number) => {
@@ -203,21 +250,24 @@ export default function MisEmpresasScreen() {
     }
   };
 
-  const handleRechazar = (id: number) => {
+  const handleRechazar = (id: number, tipo: 'cancelar' | 'rechazar' = 'rechazar') => {
+    const esCancelar = tipo === 'cancelar';
     Alert.alert(
-      'Rechazar solicitud',
-      '¿Estás seguro de que deseas rechazar esta solicitud o invitación?',
+      esCancelar ? 'Cancelar solicitud' : 'Rechazar invitación',
+      esCancelar
+        ? '¿Estás seguro de que deseas cancelar tu solicitud para unirte a esta empresa?'
+        : '¿Estás seguro de que deseas rechazar esta invitación?',
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Volver', style: 'cancel' },
         {
-          text: 'Rechazar',
+          text: esCancelar ? 'Cancelar solicitud' : 'Rechazar',
           style: 'destructive',
           onPress: async () => {
             setActionLoadingId(id);
             try {
               await rechazar.mutateAsync({ id });
             } catch {
-              Alert.alert('Error', 'No se pudo rechazar');
+              Alert.alert('Error', esCancelar ? 'No se pudo cancelar' : 'No se pudo rechazar');
             } finally {
               setActionLoadingId(null);
             }
@@ -226,6 +276,13 @@ export default function MisEmpresasScreen() {
       ],
     );
   };
+
+  const handleReactivar = (empresaId: number) => {
+    solicitar.mutate(empresaId, {
+      onError: () => Alert.alert('Error', 'No se pudo enviar la solicitud.'),
+    });
+  };
+  const reactivandoEmpresaId = solicitar.isPending ? solicitar.variables : null;
 
   const total = activas.length + pendientes.length + invitaciones.length;
 
@@ -308,7 +365,22 @@ export default function MisEmpresasScreen() {
               <SolicitudCard
                 key={v.id}
                 vinculo={v}
-                onCancelar={handleRechazar}
+                onCancelar={(id) => handleRechazar(id, 'cancelar')}
+              />
+            ))}
+          </View>
+        )}
+
+        {/* Archivadas / rechazadas — antes se pedían y se descartaban en silencio */}
+        {archivadas.length > 0 && (
+          <View className="mb-2">
+            <SectionHeader title="Historial" count={archivadas.length} />
+            {archivadas.map((v) => (
+              <ArchivadaCard
+                key={v.id}
+                vinculo={v}
+                onReactivar={handleReactivar}
+                loading={reactivandoEmpresaId === v.empresa_id}
               />
             ))}
           </View>

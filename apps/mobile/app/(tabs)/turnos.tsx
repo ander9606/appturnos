@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -45,6 +46,7 @@ export default function TurnosScreen() {
 
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab,    setActiveTab]    = useState<ActiveTab>(() => isWorker ? 'mis_turnos' : 'disponibles');
+  const [searchOfertas, setSearchOfertas] = useState('');
 
   // ponytail: static range, no pagination state needed
   const allDays = useMemo(() => getDateRange(7, 42), []);
@@ -66,6 +68,8 @@ export default function TurnosScreen() {
   const {
     data: ofertasResp,
     isLoading: loadingOfertas,
+    isError: errorOfertas,
+    error: errOfertas,
     refetch: refetchOfertas,
     isRefetching: refetchingOfertas,
   } = useOfertas({ disponibles: true });
@@ -103,6 +107,17 @@ export default function TurnosScreen() {
   );
 
   const ofertas = ofertasResp?.data ?? [];
+
+  const ofertasFiltradas = useMemo(() => {
+    const term = searchOfertas.trim().toLowerCase();
+    if (!term) return ofertas;
+    return ofertas.filter((o) =>
+      o.titulo.toLowerCase().includes(term) ||
+      (o.empresa_nombre?.toLowerCase().includes(term) ?? false) ||
+      (o.lugar?.toLowerCase().includes(term) ?? false) ||
+      (o.puestos ?? []).some((p) => p.cargo_nombre.toLowerCase().includes(term))
+    );
+  }, [ofertas, searchOfertas]);
 
   const isRefreshing = refetchingMios || refetchingOfertas;
 
@@ -151,6 +166,15 @@ export default function TurnosScreen() {
         />
 
         <View className="flex-1 px-4 py-4 gap-2">
+          {item.empresa_nombre && (
+            <View className="flex-row items-center gap-1">
+              <Ionicons name="business-outline" size={12} color="#94A3B8" />
+              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide" numberOfLines={1}>
+                {item.empresa_nombre}
+              </Text>
+            </View>
+          )}
+
           <View className="flex-row items-start justify-between gap-2">
             <Text className="text-base font-semibold text-foreground flex-1" numberOfLines={1}>
               {item.titulo}
@@ -165,6 +189,15 @@ export default function TurnosScreen() {
               />
             ) : null}
           </View>
+
+          {(firstAvailablePuesto ?? item.puestos?.[0])?.cargo_nombre && (
+            <View className="flex-row items-center gap-1 -mt-1">
+              <Ionicons name="briefcase-outline" size={12} color="#64748B" />
+              <Text className="text-xs text-muted-foreground">
+                {(firstAvailablePuesto ?? item.puestos?.[0])?.cargo_nombre}
+              </Text>
+            </View>
+          )}
 
           {hayTraslape && (
             <View className="flex-row items-center gap-1.5 bg-warning/10 rounded-xl px-2.5 py-1.5">
@@ -206,14 +239,15 @@ export default function TurnosScreen() {
               <Text className="text-xs text-muted-foreground">Evento finalizado</Text>
             ) : yaAplicado ? (
               <Badge label="Ya postulado" variant="info" size="sm" />
+            ) : !firstAvailablePuesto ? (
+              <Badge label="Sin plazas" variant="default" size="sm" />
             ) : (
               <Button
                 label={aplicarMutation.isPending ? 'Aplicando…' : 'Aplicar'}
                 variant="primary"
                 size="sm"
                 loading={aplicarMutation.isPending}
-                disabled={!firstAvailablePuesto}
-                onPress={() => firstAvailablePuesto && aplicarMutation.mutate({ ofertaId: item.id, puestoId: firstAvailablePuesto.id })}
+                onPress={() => aplicarMutation.mutate({ ofertaId: item.id, puestoId: firstAvailablePuesto.id })}
               />
             )}
           </View>
@@ -266,34 +300,36 @@ export default function TurnosScreen() {
                 <Ionicons name="cash-outline" size={22} color={theme.primary} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              onPress={() => router.push('/postulaciones')}
-              accessibilityLabel="Ver postulaciones"
-              className="p-2 active:opacity-60"
-              style={{ position: 'relative' }}
-            >
-              <Ionicons name="people" size={22} color={theme.primary} />
-              {pendientesCount > 0 && (
-                <View style={{
-                  position: 'absolute',
-                  top: 2,
-                  right: 2,
-                  minWidth: 16,
-                  height: 16,
-                  borderRadius: 8,
-                  backgroundColor: '#EF4444',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 3,
-                  borderWidth: 1.5,
-                  borderColor: '#fff',
-                }}>
-                  <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700', lineHeight: 12 }}>
-                    {pendientesCount > 99 ? '99+' : pendientesCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            {!isJefeNomina && (
+              <TouchableOpacity
+                onPress={() => router.push('/postulaciones')}
+                accessibilityLabel="Ver postulaciones"
+                className="p-2 active:opacity-60"
+                style={{ position: 'relative' }}
+              >
+                <Ionicons name="people" size={22} color={theme.primary} />
+                {pendientesCount > 0 && (
+                  <View style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    backgroundColor: '#EF4444',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingHorizontal: 3,
+                    borderWidth: 1.5,
+                    borderColor: '#fff',
+                  }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700', lineHeight: 12 }}>
+                      {pendientesCount > 99 ? '99+' : pendientesCount}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -346,19 +382,21 @@ export default function TurnosScreen() {
           {isNomina && (
             <TouchableOpacity
               onPress={() => periodoEventual && router.push('/liquidacion-eventual')}
-              activeOpacity={0.8}
+              activeOpacity={periodoEventual ? 0.8 : 1}
+              disabled={!periodoEventual}
               className="mx-5 mt-3 bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex-row items-center gap-3"
+              style={{ opacity: periodoEventual ? 1 : 0.6 }}
             >
               <Ionicons name="briefcase-outline" size={20} color="#7C3AED" />
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-violet-700">Turnos eventuales · Pago trimestral</Text>
-                {periodoEventual && (
-                  <Text className="text-xs text-violet-500 mt-0.5">
-                    {periodoEventual.estado === 'abierto' ? `Período abierto hasta ${periodoEventual.fecha_fin}` : 'Período liquidado'}
-                  </Text>
-                )}
+                <Text className="text-xs text-violet-500 mt-0.5">
+                  {periodoEventual
+                    ? (periodoEventual.estado === 'abierto' ? `Período abierto hasta ${periodoEventual.fecha_fin}` : 'Período liquidado')
+                    : 'Aún no hay período eventual abierto'}
+                </Text>
               </View>
-              <Ionicons name="chevron-forward-outline" size={16} color="#7C3AED" />
+              {periodoEventual && <Ionicons name="chevron-forward-outline" size={16} color="#7C3AED" />}
             </TouchableOpacity>
           )}
 
@@ -422,13 +460,64 @@ export default function TurnosScreen() {
               <View className="flex-1 items-center justify-center">
                 <ActivityIndicator size="large" color={theme.primary} />
               </View>
+            ) : errorOfertas ? (
+              <View className="flex-1 items-center justify-center gap-3 px-6">
+                <Ionicons name="warning-outline" size={48} color="#94A3B8" />
+                <Text className="text-base font-semibold text-foreground">
+                  {apiErrorMessage(errOfertas, 'Error al cargar ofertas')}
+                </Text>
+                <Button label="Reintentar" onPress={() => refetchOfertas()} variant="secondary" />
+              </View>
             ) : (
               <FlatList
-                data={ofertas}
+                data={ofertasFiltradas}
                 keyExtractor={(item) => String(item.id)}
                 renderItem={renderOfertaCard}
                 contentContainerClassName="px-5 py-4 gap-3"
-                ListEmptyComponent={<EmptyOfertas />}
+                ListHeaderComponent={
+                  ofertas.length > 0 ? (
+                    <>
+                      {!isNomina && (
+                        <TouchableOpacity
+                          onPress={() => router.push('/mis-empresas')}
+                          className="flex-row items-center gap-2 bg-info/10 rounded-xl px-3 py-2 mb-3"
+                        >
+                          <Ionicons name="information-circle-outline" size={15} color="#3B82F6" />
+                          <Text className="text-xs text-info flex-1">
+                            Ves las ofertas antes o después según tu calificación en cada empresa.
+                          </Text>
+                          <Text className="text-xs font-semibold text-info">Ver</Text>
+                        </TouchableOpacity>
+                      )}
+                      <View className="flex-row items-center bg-card border border-border rounded-xl px-3 h-10 mb-3">
+                        <Ionicons name="search-outline" size={15} color="#64748B" style={{ marginRight: 8 }} />
+                        <TextInput
+                          className="flex-1 text-sm text-foreground"
+                          placeholder="Buscar por empresa, cargo o lugar…"
+                          placeholderTextColor="#94A3B8"
+                          value={searchOfertas}
+                          onChangeText={setSearchOfertas}
+                          autoCorrect={false}
+                        />
+                        {searchOfertas.length > 0 && (
+                          <TouchableOpacity onPress={() => setSearchOfertas('')} hitSlop={8}>
+                            <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </>
+                  ) : null
+                }
+                ListEmptyComponent={
+                  searchOfertas.trim() ? (
+                    <View className="items-center justify-center py-16 gap-2">
+                      <Ionicons name="search-outline" size={40} color="#94A3B8" />
+                      <Text className="text-sm text-muted-foreground text-center">
+                        Sin resultados para "{searchOfertas}"
+                      </Text>
+                    </View>
+                  ) : <EmptyOfertas />
+                }
                 refreshControl={
                   <RefreshControl
                     refreshing={isRefreshing}

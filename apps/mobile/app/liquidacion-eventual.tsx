@@ -174,7 +174,7 @@ export default function LiquidacionEventualScreen() {
             }
             ListFooterComponent={
               puedeL ? (
-                <View className="mt-4">
+                <View className="mt-4 gap-1">
                   <Button
                     label={liquidarMutation.isPending ? 'Liquidando…' : 'Liquidar trimestre'}
                     variant="primary"
@@ -183,6 +183,9 @@ export default function LiquidacionEventualScreen() {
                     loading={liquidarMutation.isPending}
                     onPress={handleLiquidar}
                   />
+                  {!liquidarMutation.isPending && (
+                    <Text className="text-xs text-muted-foreground text-center">No se puede deshacer</Text>
+                  )}
                 </View>
               ) : null
             }

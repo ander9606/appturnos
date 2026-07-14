@@ -5,6 +5,8 @@ web-build/
 .env
 *.local
 google-service-account.json
+google-services.json
+*firebase-adminsdk*.json
 ios/
 android/
 

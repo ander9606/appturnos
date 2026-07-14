@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
+import { apiErrorMessage } from '@/lib/apiErrorMessage';
+import { Button } from '@/components/ui/Button';
 import { getQuincena as getQuincenaRange, getPrevQuincena } from './quincenaUtils';
 import type { Asignacion } from '@api-client';
 
@@ -48,7 +50,7 @@ export function NominaTurnosView() {
   const theme  = useTheme();
   const router = useRouter();
 
-  const { data: turnos, isLoading, refetch, isRefetching } = useMisTurnos();
+  const { data: turnos, isLoading, isError, error, refetch, isRefetching } = useMisTurnos();
 
   const hoy = useMemo(() => new Date(), []);
   const quincenaActual  = useMemo(() => getQuincenaRange(hoy), [hoy]);
@@ -78,6 +80,18 @@ export function NominaTurnosView() {
     [turnosQuincena]
   );
 
+  // Desglose por empresa — solo aporta valor cuando trabajó para más de una en la quincena.
+  const porEmpresa = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const a of turnosQuincena) {
+      const nombre = a.empresa_nombre ?? 'Otra empresa';
+      map.set(nombre, (map.get(nombre) ?? 0) + (Number(a.pago_total) || 0));
+    }
+    return Array.from(map.entries())
+      .map(([empresa, pago]) => ({ empresa, pago }))
+      .sort((a, b) => b.pago - a.pago);
+  }, [turnosQuincena]);
+
   const onRefresh = useCallback(() => { refetch(); }, [refetch]);
 
   const renderItem = useCallback(({ item }: { item: Asignacion }) => {
@@ -94,9 +108,9 @@ export function NominaTurnosView() {
             <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
               {item.oferta_titulo}
             </Text>
-            {(item as any).empresa_nombre && (
+            {item.empresa_nombre && (
               <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-                {(item as any).empresa_nombre}
+                {item.empresa_nombre}
               </Text>
             )}
           </View>
@@ -198,6 +212,18 @@ export function NominaTurnosView() {
     );
   }
 
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
+        <Ionicons name="warning-outline" size={48} color="#94A3B8" />
+        <Text className="text-base font-semibold text-foreground">
+          {apiErrorMessage(error, 'Error al cargar turnos')}
+        </Text>
+        <Button label="Reintentar" onPress={() => refetch()} variant="secondary" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <FlatList
@@ -261,6 +287,23 @@ export function NominaTurnosView() {
                 </View>
               </View>
             </View>
+
+            {/* Desglose por empresa — solo si trabajó para más de una en la quincena */}
+            {porEmpresa.length > 1 && (
+              <View className="mx-5 bg-card border border-border rounded-2xl px-4 py-3 gap-2">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                  Por empresa
+                </Text>
+                {porEmpresa.map(({ empresa, pago }) => (
+                  <View key={empresa} className="flex-row items-center justify-between">
+                    <Text className="text-sm text-foreground flex-1" numberOfLines={1}>{empresa}</Text>
+                    <Text className="text-sm font-semibold text-foreground">
+                      ${pago.toLocaleString('es-CO')}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <View className="px-5">
               <Text className="text-sm font-semibold text-foreground">

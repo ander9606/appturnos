@@ -35,20 +35,15 @@ export function NextShiftCard({ turno, primaryColor, onPress, onIngreso }: NextS
         {turno.lugar ? `  ·  ${turno.lugar}` : ''}
       </Text>
 
-      <View className="flex-row gap-2 mt-1">
+      <View className="flex-row items-center gap-3 mt-1">
         <Pressable
           onPress={(e) => { e.stopPropagation(); onIngreso(); }}
-          className="flex-1 rounded-xl py-2 items-center active:opacity-70"
-          style={{ backgroundColor: primaryColor + '1A' }}
+          className="flex-[2] rounded-xl py-3 items-center active:opacity-80"
+          style={{ backgroundColor: primaryColor }}
         >
-          <Text className="text-xs font-semibold" style={{ color: primaryColor }}>
-            Marcar Entrada
-          </Text>
+          <Text className="text-sm font-bold text-white">Marcar Entrada</Text>
         </Pressable>
-        <Pressable
-          onPress={onPress}
-          className="flex-1 border border-border rounded-xl py-2 items-center active:opacity-70"
-        >
+        <Pressable onPress={onPress} className="active:opacity-60">
           <Text className="text-muted-foreground text-xs font-semibold">Ver detalle →</Text>
         </Pressable>
       </View>

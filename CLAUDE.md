@@ -194,7 +194,7 @@ Single locale `es-CO`. All user-visible strings go through `t('key')` from `lib/
 
 | Role | Description |
 |---|---|
-| `super_admin` | Cross-tenant, not used in mobile |
+| `super_admin` | Cross-tenant. Has its own mobile panel (`app/(admin)/`), separate from the `(tabs)` layout used by every other role |
 | `admin_empresa` | Full access: CRUD workers, close/liquidate periods |
 | `jefe_turnos` | Manage shifts and offers |
 | `jefe_nomina` | Manage payroll periods |

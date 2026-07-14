@@ -6,9 +6,12 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Cargo } from '@api-client';
+import { useCrearCargo } from '@/features/turnos/useTurnos';
 
 type Props = {
   visible: boolean;
@@ -20,6 +23,7 @@ type Props = {
 
 export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Props) {
   const [search, setSearch] = useState('');
+  const crearCargo = useCrearCargo();
 
   const filtered = useMemo(
     () =>
@@ -30,6 +34,19 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
       ),
     [cargos, usedIds, search],
   );
+
+  const nombreNuevo = search.trim();
+  const yaExiste = cargos.some((c) => c.nombre.toLowerCase() === nombreNuevo.toLowerCase());
+
+  function handleCrear() {
+    crearCargo.mutate(
+      { nombre: nombreNuevo },
+      {
+        onSuccess: (cargo) => { onSelect(cargo); onClose(); setSearch(''); },
+        onError: () => Alert.alert('Error', 'No se pudo crear el cargo.'),
+      },
+    );
+  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -53,15 +70,34 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
             />
           </View>
 
+          {nombreNuevo.length > 0 && !yaExiste && (
+            <TouchableOpacity
+              className="mx-5 mb-3 flex-row items-center gap-3 bg-primary-50 border border-primary-200 rounded-2xl px-4 py-3 active:opacity-70"
+              onPress={handleCrear}
+              disabled={crearCargo.isPending}
+            >
+              {crearCargo.isPending ? (
+                <ActivityIndicator size="small" color="#FF5A3C" />
+              ) : (
+                <Ionicons name="add-circle" size={20} color="#FF5A3C" />
+              )}
+              <Text className="text-sm font-semibold text-primary-600 flex-1">
+                Crear cargo "{nombreNuevo}"
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <FlatList
             data={filtered}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
             ItemSeparatorComponent={() => <View className="h-px bg-border" />}
             ListEmptyComponent={
-              <Text className="text-sm text-muted-foreground text-center py-8">
-                {usedIds.size === cargos.length ? 'Ya agregaste todos los cargos' : 'Sin resultados'}
-              </Text>
+              nombreNuevo.length === 0 ? (
+                <Text className="text-sm text-muted-foreground text-center py-8">
+                  {usedIds.size === cargos.length ? 'Ya agregaste todos los cargos' : 'Sin resultados'}
+                </Text>
+              ) : null
             }
             renderItem={({ item }) => (
               <TouchableOpacity

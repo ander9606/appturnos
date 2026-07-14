@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Alert, ActivityIndicator, TouchableOpacity, ScrollView, Modal, TextInput, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,7 @@ import { useNominaTrabajador } from '@/features/nomina/trabajador/useNominaTraba
 import {
   calcularElapsedLabel,
   calcularElapsedMinutes,
+  calcularValorExtraDia,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { fmtHora } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
@@ -55,7 +56,23 @@ export default function NominaIngresoScreen() {
     tipoMarcacion,
     geo,
     fijoBloqueado,
+    valorHora,
   } = useNominaTrabajador();
+
+  // El sueldo es fijo por período — no tiene sentido mostrar "ganaste $X hoy" para
+  // horas ordinarias. Lo único que sí varía día a día y vale la pena mostrar es el
+  // recargo de horas extra, si las hubo.
+  const montoExtraHoy = registroHoy ? calcularValorExtraDia(registroHoy, valorHora) : 0;
+
+  // ── Modal de reingreso ────────────────────────────────────────────────────
+  const [showReingresoModal, setShowReingresoModal] = useState(false);
+  const [motivoReingreso, setMotivoReingreso] = useState('');
+
+  function confirmarReingreso() {
+    setShowReingresoModal(false);
+    handleReingreso(motivoReingreso.trim() || undefined);
+    setMotivoReingreso('');
+  }
 
   // ── Contador actualizado cada minuto ─────────────────────────────────────
 
@@ -264,14 +281,19 @@ export default function NominaIngresoScreen() {
 
         {estadoHoy === 'jornada_completa' && (
           <>
-            <View className="rounded-2xl py-4 items-center" style={{ backgroundColor: '#16a34a20' }}>
+            <View className="rounded-2xl py-4 items-center gap-1" style={{ backgroundColor: '#16a34a20' }}>
               <Text className="text-success font-semibold">
                 Jornada completada{registroHoy?.hora_salida ? ` · Salida ${fmtHora(registroHoy.hora_salida)}` : ''}
               </Text>
+              {montoExtraHoy > 0 && (
+                <Text className="text-success text-sm">
+                  +{formatCOP(montoExtraHoy)} en horas extra hoy
+                </Text>
+              )}
             </View>
             {periodoAbierto && (
               <TouchableOpacity
-                onPress={handleReingreso}
+                onPress={() => setShowReingresoModal(true)}
                 disabled={isMutating}
                 className="rounded-2xl py-4 items-center border border-border"
                 accessibilityRole="button"
@@ -322,6 +344,55 @@ export default function NominaIngresoScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* ── Modal: solicitar reingreso ─────────────────────────── */}
+      <Modal visible={showReingresoModal} animationType="slide" transparent onRequestClose={() => setShowReingresoModal(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 justify-end"
+        >
+          <View className="bg-black/40 flex-1 justify-end">
+            <View className="bg-background rounded-t-3xl p-5 gap-4">
+              <Text className="text-base font-bold text-foreground">Solicitar reingreso</Text>
+              <Text className="text-sm text-muted-foreground">
+                Úsalo si ya marcaste salida pero necesitas volver a tu punto de trabajo hoy mismo
+                (por ejemplo, olvidaste algo o te llamaron de vuelta). Tu jefe de nómina o
+                administrador debe aprobarlo antes de que puedas marcar entrada de nuevo.
+              </Text>
+              <View>
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+                  Motivo (opcional)
+                </Text>
+                <TextInput
+                  value={motivoReingreso}
+                  onChangeText={setMotivoReingreso}
+                  placeholder="Ej. Olvidé unos documentos, debo volver por ellos"
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  numberOfLines={3}
+                  className="bg-card border border-border rounded-2xl px-4 py-3 text-base text-foreground"
+                  style={{ minHeight: 80, textAlignVertical: 'top' }}
+                />
+              </View>
+              <View className="flex-row gap-2">
+                <TouchableOpacity
+                  onPress={() => { setShowReingresoModal(false); setMotivoReingreso(''); }}
+                  className="flex-1 h-12 rounded-2xl items-center justify-center border border-border active:opacity-70"
+                >
+                  <Text className="text-sm font-semibold text-muted-foreground">Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={confirmarReingreso}
+                  className="flex-1 h-12 rounded-2xl items-center justify-center active:opacity-80"
+                  style={{ backgroundColor: theme.primary }}
+                >
+                  <Text className="text-sm font-semibold text-white">Enviar solicitud</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }

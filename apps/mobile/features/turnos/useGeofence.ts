@@ -11,6 +11,7 @@
  *  - permissionDenied: true si el usuario rechazó el permiso
  */
 import { useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import * as Location from 'expo-location';
 
 import {
@@ -100,22 +101,35 @@ export function useGeofence({
       }
     };
 
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (cancelled) return;
-
+    const startIfGranted = async (status: Location.PermissionStatus) => {
       if (status !== 'granted') {
         setPermission(true);
         return;
       }
-
       setPermission(false);
+      if (intervalRef.current) return; // already polling
       await poll();
       intervalRef.current = setInterval(poll, 5_000);
+    };
+
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (cancelled) return;
+      await startIfGranted(status);
     })();
+
+    // ponytail: no re-prompt on resume, just re-check silently — request*Async only shows
+    // a system dialog when status is undetermined, so this is safe to call repeatedly.
+    const sub = AppState.addEventListener('change', async (next) => {
+      if (next !== 'active' || cancelled) return;
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (cancelled) return;
+      await startIfGranted(status);
+    });
 
     return () => {
       cancelled = true;
+      sub.remove();
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

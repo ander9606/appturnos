@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
 
 import { authApi } from '@api-client';
 import { COLORS } from '@/lib/designTokens';
@@ -41,6 +42,12 @@ const ROL_OPTIONS: { value: CrearGestorPayload['rol']; label: string; desc: stri
     desc: 'Visualiza nómina y equipo',
     icon: 'document-text-outline',
   },
+  {
+    value: 'admin_empresa',
+    label: 'Administrador (socio)',
+    desc: 'Acceso total, igual al tuyo — para un co-dueño',
+    icon: 'shield-checkmark-outline',
+  },
 ];
 
 // ── Screen ────────────────────────────────────────────────────────────────
@@ -53,6 +60,7 @@ export default function CrearGestorScreen() {
   const [email,    setEmail]    = useState('');
   const [rol,      setRol]      = useState<CrearGestorPayload['rol']>('jefe_turnos');
   const [resultado, setResultado] = useState<CrearGestorResult | null>(null);
+  const [copiado, setCopiado] = useState(false);
 
   const mutation = useMutation({
     mutationFn: (payload: CrearGestorPayload) => authApi.crearGestor(payload),
@@ -61,16 +69,7 @@ export default function CrearGestorScreen() {
   const denied = useRoleGuard(['admin_empresa']);
   if (denied) return denied;
 
-  function handleCrear() {
-    if (!nombre.trim()) {
-      Alert.alert('Campo requerido', 'El nombre es obligatorio.');
-      return;
-    }
-    if (!email.trim()) {
-      Alert.alert('Campo requerido', 'El email es obligatorio.');
-      return;
-    }
-
+  function crear() {
     mutation.mutate(
       { nombre: nombre.trim(), apellido: apellido.trim() || undefined, email: email.trim(), rol },
       {
@@ -87,10 +86,43 @@ export default function CrearGestorScreen() {
     );
   }
 
+  function handleCrear() {
+    if (!nombre.trim()) {
+      Alert.alert('Campo requerido', 'El nombre es obligatorio.');
+      return;
+    }
+    if (!email.trim()) {
+      Alert.alert('Campo requerido', 'El email es obligatorio.');
+      return;
+    }
+
+    if (rol === 'admin_empresa') {
+      Alert.alert(
+        '¿Dar acceso total?',
+        `${nombre.trim()} tendrá el mismo nivel de acceso que tú: podrá gestionar trabajadores, nómina, otros gestores y la configuración de la empresa. Úsalo solo para un socio de confianza.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Confirmar', onPress: crear },
+        ],
+      );
+      return;
+    }
+
+    crear();
+  }
+
   // ── Success state ────────────────────────────────────────────────────────
 
   if (resultado) {
     const rolLabel = ROL_OPTIONS.find((r) => r.value === resultado.rol)?.label ?? resultado.rol;
+
+    async function handleCopiar() {
+      await Clipboard.setStringAsync(
+        `Email: ${resultado!.email}\nContraseña temporal: ${resultado!.password_temporal}`,
+      );
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    }
 
     return (
       <>
@@ -129,6 +161,21 @@ export default function CrearGestorScreen() {
                   {resultado.password_temporal}
                 </Text>
               </View>
+
+              <Pressable
+                onPress={handleCopiar}
+                className="flex-row items-center justify-center gap-1.5 mt-3 h-11 rounded-xl border active:opacity-70"
+                style={{ borderColor: copiado ? '#16A34A' : COLORS.info }}
+              >
+                <Ionicons
+                  name={copiado ? 'checkmark' : 'copy-outline'}
+                  size={16}
+                  color={copiado ? '#16A34A' : COLORS.info}
+                />
+                <Text className="text-sm font-semibold" style={{ color: copiado ? '#16A34A' : COLORS.info }}>
+                  {copiado ? 'Copiado' : 'Copiar email y contraseña'}
+                </Text>
+              </Pressable>
 
               <View className="flex-row items-start gap-2 mt-3">
                 <Ionicons name="alert-circle-outline" size={14} color="#D97706" style={{ marginTop: 1 }} />

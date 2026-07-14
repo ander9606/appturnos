@@ -26,7 +26,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
-import { useMisTurnos, useOfertas, useAsignacionesHoy } from '@/features/turnos/useTurnos';
+import { useMisTurnos, useOfertas, useAsignacionesHoy, useCargos } from '@/features/turnos/useTurnos';
+import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
 import { usePeriodos, useNominaPerfil } from '@/features/nomina/useNomina';
 import { useCountNoLeidas } from '@/features/notificaciones/useNotificaciones';
@@ -37,6 +38,7 @@ import { Avatar }         from '@/components/ui/Avatar';
 import { ActiveShiftCard } from '@/features/dashboard/ActiveShiftCard';
 import { NextShiftCard }   from '@/features/dashboard/NextShiftCard';
 import { NoShiftCard }     from '@/features/dashboard/NoShiftCard';
+import { SetupChecklist }  from '@/features/dashboard/SetupChecklist';
 import { fmtPeriodo }      from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -78,14 +80,19 @@ export default function DashboardScreen() {
 
   // ── Data fetching ────────────────────────────────────────────────────────
 
-  // Only trabajador_turnos gets the shift hero — managers/admin have no own shifts
+  const { data: nominaPerfil, refetch: refetchNominaPerfil } = useNominaPerfil();
+
+  // Only trabajador_turnos gets the shift hero — managers/admin have no own shifts.
+  // trabajador_nomina con "acepta_extras" también necesita esta data para el stat "Extras hoy",
+  // aunque no vea el hero de turnos (showShifts controla eso por separado).
   const showShifts = isWorker && !isNomina;
+  const necesitaExtrasHoy = isNomina && Boolean(nominaPerfil?.acepta_extras);
 
   const {
     data: turnos = [],
     isLoading: turnosLoading,
     refetch: refetchTurnos,
-  } = useMisTurnos({ enabled: showShifts });
+  } = useMisTurnos({ enabled: showShifts || necesitaExtrasHoy });
 
   const {
     data: equipoData,
@@ -99,8 +106,6 @@ export default function DashboardScreen() {
   } = usePeriodos('abierto');
   const periodoAbierto = periodosData?.data?.[0] ?? null;
 
-  const { data: nominaPerfil, refetch: refetchNominaPerfil } = useNominaPerfil();
-
   const {
     data: ofertasHoyData,
     refetch: refetchOfertasHoy,
@@ -110,6 +115,11 @@ export default function DashboardScreen() {
     data: asignacionesHoy,
     refetch: refetchAsignacionesHoy,
   } = useAsignacionesHoy({ enabled: isManager });
+
+  // ── Checklist de primeros pasos (solo admin_empresa) ─────────────────────
+  const { data: cargosData }   = useCargos(isAdmin);
+  const { data: puntosData }   = usePuntosMarcaje(isAdmin);
+  const { data: todasOfertas } = useOfertas({ limit: 1 }, { enabled: isAdmin });
 
   const noLeidas = useCountNoLeidas();
 
@@ -150,7 +160,7 @@ export default function DashboardScreen() {
   async function onRefresh() {
     setRefreshing(true);
     await Promise.all([
-      showShifts ? refetchTurnos() : Promise.resolve(),
+      (showShifts || necesitaExtrasHoy) ? refetchTurnos() : Promise.resolve(),
       refetchEquipo(),
       refetchPeriodos(),
       isNomina ? refetchNominaPerfil() : Promise.resolve(),
@@ -222,8 +232,9 @@ export default function DashboardScreen() {
         { icon: 'calendar-outline', label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
       ]
     : [
-        { icon: 'calendar-outline', label: 'Mis Turnos', onPress: () => router.push('/(tabs)/turnos') },
-        { icon: 'wallet-outline',   label: 'Quincena',   onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'calendar-outline', label: 'Mis Turnos',     onPress: () => router.push('/(tabs)/turnos') },
+        { icon: 'wallet-outline',   label: 'Quincena',       onPress: () => router.push('/(tabs)/nomina') },
+        { icon: 'star-outline',     label: 'Mi calificación', onPress: () => router.push('/mis-empresas') },
       ];
 
   const managerActions: Action[] = isJefeNomina
@@ -241,6 +252,8 @@ export default function DashboardScreen() {
           ? [
               { icon: 'cash-outline'        as IoniconsName, label: 'Liq. turnos',  onPress: () => router.push('/liquidacion-turnos') },
               { icon: 'person-add-outline'  as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') },
+              { icon: 'briefcase-outline'   as IoniconsName, label: 'Cargos',       onPress: () => router.push('/cargos') },
+              { icon: 'location-outline'    as IoniconsName, label: 'Puntos marcaje', onPress: () => router.push('/puntos-marcaje') },
               { icon: 'link-outline'        as IoniconsName, label: 'logiq360',     onPress: () => router.push('/integracion/config') },
             ]
           : [
@@ -318,6 +331,18 @@ export default function DashboardScreen() {
               Usas Zaturno gratis por tu integración activa con logiq360.
             </Text>
           </View>
+        )}
+
+        {/* ── Checklist de primeros pasos (solo admin_empresa) ──────────── */}
+        {isAdmin && (
+          <SetupChecklist
+            steps={[
+              { label: 'Crea un cargo',                 done: (cargosData?.length ?? 0) > 0,     onPress: () => router.push('/cargos') },
+              { label: 'Agrega un punto de marcaje',     done: (puntosData?.length ?? 0) > 0,     onPress: () => router.push('/puntos-marcaje') },
+              { label: 'Agrega tu primer trabajador',    done: (totalEquipo ?? 0) > 0,            onPress: () => router.push('/trabajador/nuevo') },
+              { label: 'Publica tu primer turno',        done: (todasOfertas?.pagination?.total ?? 0) > 0, onPress: () => router.push('/turno/nuevo') },
+            ]}
+          />
         )}
 
         {/* ── Header ──────────────────────────────────────────────────── */}

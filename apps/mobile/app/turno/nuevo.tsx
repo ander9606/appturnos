@@ -13,6 +13,7 @@ import { buildFecha, buildTime } from '@/features/turnos/crear/utils';
 import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
 import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { WizardData } from '@/features/turnos/crear/types';
 
 const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar'];
@@ -30,6 +31,9 @@ export default function NuevoTurnoScreen() {
   const patch = useCallback((p: Partial<WizardData>) => {
     setData((prev) => ({ ...prev, ...p }));
   }, []);
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina']);
+  if (denied) return denied;
 
   const handlePublish = async () => {
     const payload = {

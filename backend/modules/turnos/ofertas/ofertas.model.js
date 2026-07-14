@@ -162,11 +162,15 @@ const OfertasModel = {
        AND te.usuario_id = ?
        AND te.estado = 'activo'
       LEFT JOIN trabajadores t ON t.id = te.trabajador_id AND t.activo = 1
+      JOIN empresas e ON e.id = o.empresa_id
     `;
     const colsAliased = COLUMNAS.split(',').map((c) => `o.${c.trim()}`).join(', ');
 
+    // Feed agregado de varias empresas — a diferencia de listar()/obtener() (donde el
+    // gestor ya sabe en qué empresa está), acá el nombre es indispensable para distinguir
+    // de un vistazo de qué empresa es cada oferta.
     const [filas] = await pool.query(
-      `SELECT ${colsAliased}, ${PUESTOS_JSON_ALIAS}
+      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}
        FROM ofertas_turno o
        ${joinSql}
        WHERE ${whereSql}

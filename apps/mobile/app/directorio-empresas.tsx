@@ -26,11 +26,14 @@ import { useSolicitar, useMisEmpresas } from '@/features/empresas/useTrabajadorE
 
 // ── Company card ─────────────────────────────────────────────────────────────
 
-type CardState = 'disponible' | 'solicitada' | 'activa' | 'cerrada';
+type CardState = 'disponible' | 'solicitada' | 'activa' | 'cerrada' | 'archivada';
 
-function getCardState(emp: EmpresaDirectorio, vinculadasIds: Set<number>, solicitadasIds: Set<number>): CardState {
+function getCardState(
+  emp: EmpresaDirectorio, vinculadasIds: Set<number>, solicitadasIds: Set<number>, archivadasIds: Set<number>,
+): CardState {
   if (vinculadasIds.has(emp.id))  return 'activa';
   if (solicitadasIds.has(emp.id)) return 'solicitada';
+  if (archivadasIds.has(emp.id))  return 'archivada';
   if (!emp.acepta_postulaciones)  return 'cerrada';
   return 'disponible';
 }
@@ -40,6 +43,7 @@ const CARD_STYLES: Record<CardState, { border: string; bg: string; label: string
   solicitada: { border: 'border-success/30',  bg: 'bg-success/5',  label: 'Enviada',    labelColor: 'text-success',     labelBg: 'bg-success/10' },
   activa:     { border: 'border-success/30',  bg: 'bg-success/5',  label: 'Vinculada',  labelColor: 'text-success',     labelBg: 'bg-success/10' },
   cerrada:    { border: 'border-border',      bg: 'bg-muted/40',   label: 'Cerrada',    labelColor: 'text-muted-foreground', labelBg: 'bg-muted' },
+  archivada:  { border: 'border-warning/30',  bg: 'bg-card',       label: 'Solicitar de nuevo', labelColor: 'text-warning', labelBg: 'bg-warning/10' },
 };
 
 function EmpresaCard({
@@ -52,7 +56,7 @@ function EmpresaCard({
   onPress: () => void;
 }) {
   const s = CARD_STYLES[estado];
-  const disabled = estado !== 'disponible';
+  const disabled = estado !== 'disponible' && estado !== 'archivada';
 
   return (
     <Pressable
@@ -80,7 +84,7 @@ function EmpresaCard({
 
       {/* State pill */}
       <View className={`rounded-xl px-3 py-1.5 ${s.labelBg}`}>
-        {estado === 'disponible' ? (
+        {estado === 'disponible' || estado === 'archivada' ? (
           <Text className={`text-xs font-semibold ${s.labelColor}`}>{s.label}</Text>
         ) : estado === 'activa' ? (
           <Ionicons name="checkmark-circle" size={18} color="#059669" />
@@ -154,6 +158,9 @@ export default function DirectorioEmpresasScreen() {
     ...(misData?.pendientes ?? []).map((v) => v.empresa_id),
     ...requestedIds,
   ]);
+  const archivadasIds = new Set<number>(
+    (misData?.archivadas ?? []).map((v) => v.empresa_id),
+  );
 
   const handleSolicitar = useCallback(async (emp: EmpresaDirectorio) => {
     Alert.alert(
@@ -180,7 +187,9 @@ export default function DirectorioEmpresasScreen() {
     );
   }, [solicitar, qc]);
 
-  const disponibles = empresas.filter((e) => e.acepta_postulaciones && !vinculadasIds.has(e.id) && !solicitadasIds.has(e.id)).length;
+  const disponibles = empresas.filter((e) =>
+    e.acepta_postulaciones && !vinculadasIds.has(e.id) && !solicitadasIds.has(e.id) && !archivadasIds.has(e.id)
+  ).length;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
@@ -244,7 +253,7 @@ export default function DirectorioEmpresasScreen() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
-            const estado = getCardState(item, vinculadasIds, solicitadasIds);
+            const estado = getCardState(item, vinculadasIds, solicitadasIds, archivadasIds);
             return (
               <EmpresaCard
                 emp={item}

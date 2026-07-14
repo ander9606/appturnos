@@ -33,7 +33,8 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
   const analisis     = analizarDia(registro, valorHora);
   const tipoDiaLabel = TIPO_DIA_LABEL[registro.tipo_dia] ?? null;
   const esEspecial   = tipoDiaLabel !== null;
-  const canExpand    = analisis.tieneExtras || registro.novedad;
+  const sinSalida    = Boolean(registro.hora_entrada) && !registro.hora_salida;
+  const canExpand    = analisis.tieneExtras || registro.novedad || sinSalida;
 
   const d = new Date(`${registro.fecha}T00:00:00`);
 
@@ -156,6 +157,12 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
       {/* ── Panel expandido: desglose detallado ─────────────── */}
       {expanded && (
         <View className="px-4 pb-3 border-t border-border gap-2 pt-2">
+          {sinSalida && (
+            <Text className="text-xs text-amber-700">
+              Este registro quedó sin hora de salida. No puedes corregirlo tú mismo — pídele a tu
+              jefe de nómina o administrador que lo edite desde el panel de gestión.
+            </Text>
+          )}
           {analisis.tieneExtras && (
             <View className="flex-row flex-wrap gap-x-4 gap-y-1">
               {Number(registro.horas_ordinarias) > 0 && (

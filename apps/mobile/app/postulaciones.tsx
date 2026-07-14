@@ -25,6 +25,7 @@ import {
 } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui/Button';
+import { useRoleGuard } from '@/components/RoleGuard';
 import type { Asignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -248,6 +249,9 @@ export default function PostulacionesScreen() {
   const total = sections.reduce((s, sec) => s + sec.data.reduce((s2, g) => s2 + g.asignaciones.length, 0), 0);
 
   const onRefresh = useCallback(() => { refetch(); }, [refetch]);
+
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
+  if (denied) return denied;
 
   if (isLoading) {
     return (

@@ -88,7 +88,11 @@ export function PeriodoHeaderCard({
           </View>
         )}
 
-        <TouchableOpacity onPress={() => setVisible((v) => !v)} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => setVisible((v) => !v)}
+          hitSlop={8}
+          accessibilityLabel={visible ? 'Ocultar salario' : 'Mostrar salario'}
+        >
           <Ionicons name={visible ? 'eye-off-outline' : 'eye-outline'} size={18} color="rgba(255,255,255,0.8)" />
         </TouchableOpacity>
       </View>

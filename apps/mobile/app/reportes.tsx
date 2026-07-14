@@ -6,12 +6,13 @@
  */
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, Pressable, ActivityIndicator,
+  View, Text, ScrollView, Pressable, ActivityIndicator, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { reportesApi } from '@api-client';
 import type { AsistenciaTurno, AsistenciaNomina, CostoNominaDetalle } from '@api-client';
@@ -126,12 +127,28 @@ function CostoRow({ d }: { d: CostoNominaDetalle }) {
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
+const CUSTOM = -1;
+
 export default function ReportesScreen() {
   const theme   = useTheme();
   const presets = useMemo(buildPresets, []);
   const [presetIdx, setPresetIdx] = useState(0);
 
-  const { desde, hasta } = presets[presetIdx];
+  const today = useMemo(() => new Date(), []);
+  const [customDesde, setCustomDesde] = useState(today);
+  const [customHasta, setCustomHasta] = useState(today);
+  const [pickerAbierto, setPickerAbierto] = useState<'desde' | 'hasta' | null>(null);
+
+  const { desde, hasta } = presetIdx === CUSTOM
+    ? { desde: toISODate(customDesde), hasta: toISODate(customHasta) }
+    : presets[presetIdx];
+
+  function onChangeFecha(campo: 'desde' | 'hasta', _: DateTimePickerEvent, selected?: Date) {
+    if (Platform.OS === 'android') setPickerAbierto(null);
+    if (!selected) return;
+    if (campo === 'desde') setCustomDesde(selected);
+    else setCustomHasta(selected);
+  }
 
   const asistencia = useAsistencia(desde, hasta);
   const costos     = useCostos(desde, hasta);
@@ -176,8 +193,50 @@ export default function ReportesScreen() {
               </Text>
             </Pressable>
           ))}
+          <Pressable
+            onPress={() => setPresetIdx(CUSTOM)}
+            className="flex-1 h-9 rounded-xl items-center justify-center active:opacity-70"
+            style={{ backgroundColor: presetIdx === CUSTOM ? theme.primary : '#F1F5F9' }}
+          >
+            <Text
+              className="text-xs font-semibold"
+              style={{ color: presetIdx === CUSTOM ? '#fff' : '#64748B' }}
+            >
+              Personalizado
+            </Text>
+          </Pressable>
         </View>
-        <Text className="text-xs text-muted-foreground text-center mb-6">
+
+        {presetIdx === CUSTOM && (
+          <View className="flex-row gap-2 mb-2">
+            <Pressable
+              onPress={() => setPickerAbierto('desde')}
+              className="flex-1 h-10 rounded-xl bg-muted items-center justify-center flex-row gap-1.5"
+            >
+              <Ionicons name="calendar-outline" size={14} color="#64748B" />
+              <Text className="text-xs text-foreground">Desde {formatDate(toISODate(customDesde))}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setPickerAbierto('hasta')}
+              className="flex-1 h-10 rounded-xl bg-muted items-center justify-center flex-row gap-1.5"
+            >
+              <Ionicons name="calendar-outline" size={14} color="#64748B" />
+              <Text className="text-xs text-foreground">Hasta {formatDate(toISODate(customHasta))}</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {pickerAbierto && (
+          <DateTimePicker
+            value={pickerAbierto === 'desde' ? customDesde : customHasta}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            maximumDate={today}
+            onChange={(e, d) => onChangeFecha(pickerAbierto, e, d)}
+          />
+        )}
+
+        <Text className="text-xs text-muted-foreground text-center mb-6 mt-2">
           {formatDate(desde)} – {formatDate(hasta)}
         </Text>
 

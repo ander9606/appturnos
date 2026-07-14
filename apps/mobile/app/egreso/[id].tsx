@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAsignacion, useMarcarEgreso } from '@/features/turnos/useTurnos';
 import { SignaturePad }  from '@/features/turnos/SignaturePad';
 import { Button }        from '@/components/ui/Button';
-import { fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
+import { fmtRange, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { ApiError }      from '@api-client';
 import { t }             from '@/lib/i18n';
 import { showToast }     from '@/lib/toast';
@@ -105,7 +105,7 @@ export default function EgresoScreen() {
           Debes registrar el ingreso antes de marcar la salida
         </Text>
         <Text className="text-sm text-muted-foreground text-center">
-          Estado actual: {asignacion.estado}
+          Estado actual: {getEstadoConfig(asignacion.estado).label}
         </Text>
         <Button label="Volver" onPress={() => router.back()} variant="secondary" />
       </SafeAreaView>
