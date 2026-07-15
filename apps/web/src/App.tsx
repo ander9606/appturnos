@@ -4,6 +4,8 @@ import { ProtectedRoute, RoleRoute } from '@/modules/auth/ProtectedRoute';
 import { Layout } from '@/shared/components/Layout';
 import { WelcomePage } from '@/pages/WelcomePage';
 import { RegistroEmpresaPage } from '@/pages/RegistroEmpresaPage';
+import { PrivacidadPage } from '@/pages/PrivacidadPage';
+import { TerminosPage } from '@/pages/TerminosPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { NominaPage } from '@/modules/nomina/pages/NominaPage';
 import { PeriodoDetailPage } from '@/modules/nomina/pages/PeriodoDetailPage';
@@ -25,6 +27,8 @@ export default function App() {
         <Route path="/bienvenida" element={<WelcomePage />} />
         <Route path="/registro" element={<RegistroEmpresaPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/privacidad" element={<PrivacidadPage />} />
+        <Route path="/terminos" element={<TerminosPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_nomina', 'jefe_turnos', 'nomina']} />}>
