@@ -69,6 +69,11 @@ async function cambiarPassword(req, res) {
   res.json({ success: true, data: null, message: 'Contraseña actualizada. Inicia sesión de nuevo.' });
 }
 
+async function eliminarCuenta(req, res) {
+  await AuthService.eliminarCuenta(req.usuario.sub, req.usuario.rol, req.empresa_id, req.body.password);
+  res.json({ success: true, data: null, message: 'Cuenta eliminada.' });
+}
+
 async function registrarEmpresa(req, res) {
   const { nombre_empresa, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad,
           nombre, apellido, email, password, email_token, telefono_token } = req.body;
@@ -126,5 +131,5 @@ async function resetPassword(req, res) {
 }
 
 module.exports = { login, refresh, logout, me, verificarCedula, activarCuenta, registrar,
-  registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, crearGestor,
+  registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, eliminarCuenta, crearGestor,
   listarGestores, setActivoGestor, enviarOtp, verificarOtp, aceptarTerminos, resetPassword };

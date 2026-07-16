@@ -96,6 +96,15 @@ export const authApi = {
     return api.patch<null>('/api/auth/me/password', params);
   },
 
+  /**
+   * Elimina (anonimiza) la cuenta del usuario autenticado. El historial de
+   * turnos/nómina/contratos se conserva por obligación legal, sin datos
+   * identificables. Acción irreversible — requiere la contraseña actual.
+   */
+  eliminarCuenta(password: string): Promise<null> {
+    return api.delete<null>('/api/auth/me', { password });
+  },
+
   /** Verifica si una cédula existe y tiene invitación pendiente. Endpoint público. */
   verificarCedula(cedula: string): Promise<{
     existe: boolean;

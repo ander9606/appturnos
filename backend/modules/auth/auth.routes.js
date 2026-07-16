@@ -173,6 +173,15 @@ router.patch(
   ctrl.cambiarPassword
 );
 
+// DELETE /api/auth/me — eliminar (anonimizar) la propia cuenta
+router.delete(
+  '/me',
+  verificarToken,
+  [body('password').notEmpty().withMessage('Contraseña requerida')],
+  validar,
+  ctrl.eliminarCuenta
+);
+
 // POST /api/auth/crear-gestor — admin_empresa crea un usuario gestor en su empresa
 router.post(
   '/crear-gestor',

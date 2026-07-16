@@ -44,6 +44,11 @@ Conservamos los datos mientras la cuenta esté activa y hasta 5 años después d
 7. DERECHOS DEL TITULAR
 Conforme a la Ley 1581 de 2012 puedes solicitar acceso, corrección, actualización, supresión o portabilidad de tus datos enviando un correo a soporte@zaturno.app.
 
+Puedes eliminar tu cuenta directamente desde la app (Perfil → Eliminar cuenta) o escribiendo a soporte@zaturno.app. Al hacerlo:
+• Anonimizamos tu nombre, cédula, teléfono, correo, foto, fecha de nacimiento, contacto de emergencia, EPS/AFP y datos bancarios — dejan de estar asociados a tu identidad.
+• Conservamos el historial de turnos trabajados, contratos firmados, pagos y calificaciones de forma anonimizada, por la obligación legal de retención de nómina descrita en la sección anterior (hasta 5 años).
+• No podrás volver a iniciar sesión con esa cuenta. Esta acción no se puede deshacer.
+
 8. SEGURIDAD
 Implementamos cifrado en tránsito (TLS), almacenamiento seguro de tokens (Keystore/SecureStore) y control de acceso por roles para proteger tus datos.
 

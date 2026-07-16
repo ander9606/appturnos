@@ -151,11 +151,15 @@ export default function LoginScreen() {
             size="lg"
           />
 
-          <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>O continúa con</Text><View style={styles.dividerLine} /></View>
-          <TouchableOpacity style={styles.googleBtn} onPress={() => googleLogin()} disabled={googleLoading} activeOpacity={0.8}>
-            <Ionicons name="logo-google" size={20} color="#4285F4" />
-            <Text style={styles.googleBtnText}>{googleLoading ? 'Conectando…' : 'Continuar con Google'}</Text>
-          </TouchableOpacity>
+          {!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB && !!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID && (
+            <>
+              <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>O continúa con</Text><View style={styles.dividerLine} /></View>
+              <TouchableOpacity style={styles.googleBtn} onPress={() => googleLogin()} disabled={googleLoading} activeOpacity={0.8}>
+                <Ionicons name="logo-google" size={20} color="#4285F4" />
+                <Text style={styles.googleBtnText}>{googleLoading ? 'Conectando…' : 'Continuar con Google'}</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* Links secundarios */}
           <View style={styles.links}>

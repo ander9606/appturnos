@@ -317,6 +317,99 @@ const AuthModel = {
     );
     return res.affectedRows > 0;
   },
+
+  // ─── Eliminar cuenta ─────────────────────────────────────────
+
+  /** Todas las fichas de trabajador de un usuario, en cualquier empresa (sin FK formal). */
+  async listarTrabajadorIdsPorUsuario(usuarioId) {
+    const [filas] = await pool.query(
+      'SELECT id FROM trabajadores WHERE usuario_id = ?',
+      [usuarioId]
+    );
+    return filas.map((f) => f.id);
+  },
+
+  /** true si alguna de estas fichas tiene un turno confirmado o en curso. */
+  async tieneAsignacionActiva(trabajadorIds) {
+    if (trabajadorIds.length === 0) return false;
+    const placeholders = trabajadorIds.map(() => '?').join(',');
+    const [[fila]] = await pool.query(
+      `SELECT id FROM asignaciones_turno
+       WHERE trabajador_id IN (${placeholders}) AND estado IN ('confirmado', 'en_progreso')
+       LIMIT 1`,
+      trabajadorIds
+    );
+    return !!fila;
+  },
+
+  /**
+   * Anonimiza al usuario y todas sus fichas de trabajador; borra estado
+   * operativo sin valor legal (sesiones, tokens push, CV autodeclarado,
+   * disponibilidad, OTPs). Conserva intacto el historial de turnos, nómina
+   * y contratos — es el registro legal de la empresa empleadora, no del
+   * trabajador (ver PONYTAIL-DEBT / política de privacidad §6-7).
+   */
+  async eliminarCuenta(usuarioId, trabajadorIds, passwordHashInutil) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [[usuario]] = await conn.query(
+        'SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1',
+        [usuarioId]
+      );
+
+      await conn.query(
+        `UPDATE usuarios
+         SET nombre = 'Usuario', apellido = 'eliminado',
+             email = CONCAT('eliminado_', id, '@zaturno.app'),
+             telefono = NULL, foto_perfil = NULL,
+             password_hash = ?, activo = 0
+         WHERE id = ?`,
+        [passwordHashInutil, usuarioId]
+      );
+
+      if (trabajadorIds.length > 0) {
+        const placeholders = trabajadorIds.map(() => '?').join(',');
+        await conn.query(
+          `UPDATE trabajadores
+           SET nombre = 'Usuario', apellido = 'eliminado',
+               cedula = NULL, telefono = NULL, email = NULL,
+               tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL,
+               contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL,
+               eps = NULL, afp = NULL,
+               banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL,
+               ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL,
+               activo = 0
+           WHERE id IN (${placeholders})`,
+          trabajadorIds
+        );
+        await conn.query(`DELETE FROM trabajador_experiencias WHERE trabajador_id IN (${placeholders})`, trabajadorIds);
+        await conn.query(`DELETE FROM trabajador_diplomas WHERE trabajador_id IN (${placeholders})`, trabajadorIds);
+        await conn.query(`DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (${placeholders})`, trabajadorIds);
+      }
+
+      await conn.query('DELETE FROM refresh_tokens WHERE usuario_id = ?', [usuarioId]);
+      await conn.query('DELETE FROM intentos_login WHERE usuario_id = ?', [usuarioId]);
+      await conn.query('DELETE FROM notificaciones WHERE usuario_id = ?', [usuarioId]);
+      await conn.query('DELETE FROM push_subscriptions WHERE usuario_id = ?', [usuarioId]);
+      await conn.query('DELETE FROM expo_push_tokens WHERE usuario_id = ?', [usuarioId]);
+      await conn.query('DELETE FROM usuarios_oauth WHERE usuario_id = ?', [usuarioId]);
+
+      const destinos = [usuario?.email, usuario?.telefono].filter(Boolean);
+      if (destinos.length > 0) {
+        const destPh = destinos.map(() => '?').join(',');
+        await conn.query(`DELETE FROM codigos_verificacion WHERE destino IN (${destPh})`, destinos);
+      }
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
 };
 
 module.exports = AuthModel;

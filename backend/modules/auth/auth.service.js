@@ -291,6 +291,46 @@ const AuthService = {
   },
 
   /**
+   * Elimina (anonimiza) la cuenta del propio usuario. Conserva el historial
+   * de turnos/nómina/contratos — es el registro legal de la empresa
+   * empleadora, no del trabajador. Ver política de privacidad §6-7.
+   */
+  async eliminarCuenta(usuarioId, rol, empresaId, password) {
+    const hash = await AuthModel.obtenerPasswordHash(usuarioId);
+    if (!hash) throw new AppError('Usuario no encontrado', 404);
+
+    const ok = await bcrypt.compare(password, hash);
+    if (!ok) throw new AppError('La contraseña es incorrecta', 400);
+
+    if (rol === ROLES.ADMIN_EMPRESA) {
+      const admins = await AuthModel.contarAdminsActivos(empresaId);
+      if (admins <= 1) {
+        throw new AppError('No puedes eliminar tu cuenta siendo la única administradora de la empresa', 409);
+      }
+    }
+
+    const trabajadorIds = await AuthModel.listarTrabajadorIdsPorUsuario(usuarioId);
+    const tieneActiva = await AuthModel.tieneAsignacionActiva(trabajadorIds);
+    if (tieneActiva) {
+      throw new AppError(
+        'Tienes turnos confirmados o en curso. Complétalos o espera a que se resuelvan antes de eliminar tu cuenta.',
+        409
+      );
+    }
+
+    // Cierra los vínculos activos con empresas antes de anonimizar (reutiliza
+    // la misma validación de permisos que ya usa el trabajador para archivar).
+    const TrabajadorEmpresaService = require('../trabajador-empresa/trabajador-empresa.service');
+    const { activas } = await TrabajadorEmpresaService.misEmpresas(usuarioId);
+    for (const relacion of activas) {
+      await TrabajadorEmpresaService.archivar(usuarioId, rol, relacion.id);
+    }
+
+    const passwordHashInutil = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
+    await AuthModel.eliminarCuenta(usuarioId, trabajadorIds, passwordHashInutil);
+  },
+
+  /**
    * Restablece la contraseña de una cuenta sin sesión activa, usando un
    * token de verificación OTP de email (mismo mecanismo que el registro).
    */

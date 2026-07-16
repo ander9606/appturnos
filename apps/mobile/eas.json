@@ -19,7 +19,10 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.zaturno.app",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://a3220f0cc0934d193c873f1d2b7317e0@o4511691270258688.ingest.us.sentry.io/4511691954257920"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://a3220f0cc0934d193c873f1d2b7317e0@o4511691270258688.ingest.us.sentry.io/4511691954257920",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "983031197089-vv1njq7f1l3uq9vakd257shh5ihiprdn.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
@@ -31,7 +34,9 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.zaturno.app",
-        "EXPO_PUBLIC_SENTRY_DSN": "https://a3220f0cc0934d193c873f1d2b7317e0@o4511691270258688.ingest.us.sentry.io/4511691954257920"
+        "EXPO_PUBLIC_SENTRY_DSN": "https://a3220f0cc0934d193c873f1d2b7317e0@o4511691270258688.ingest.us.sentry.io/4511691954257920",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "983031197089-vv1njq7f1l3uq9vakd257shh5ihiprdn.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com"
       }
     }
   },

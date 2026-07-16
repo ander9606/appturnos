@@ -236,6 +236,65 @@ function ChangePasswordForm({
   );
 }
 
+// ── Delete Account Form ────────────────────────────────────────────────────
+
+function DeleteAccountForm({
+  onConfirm,
+  onCancel,
+  loading,
+}: {
+  onConfirm: (password: string) => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  const [password, setPassword] = useState('');
+
+  return (
+    <View className="bg-card rounded-2xl mx-5 border border-danger/30 overflow-hidden">
+      <View className="px-5 py-4 border-b border-border">
+        <Text className="text-sm font-semibold text-danger">Confirmar eliminación de cuenta</Text>
+        <Text className="text-xs text-muted-foreground mt-1">
+          Ingresa tu contraseña actual para confirmar. Esta acción no se puede deshacer.
+        </Text>
+      </View>
+
+      <View className="px-5 py-3">
+        <Text className="text-xs text-muted-foreground mb-1">Contraseña</Text>
+        <TextInput
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          className="text-sm text-foreground"
+          placeholder="Tu contraseña actual"
+          placeholderTextColor="#94A3B8"
+          autoCorrect={false}
+          autoCapitalize="none"
+        />
+      </View>
+
+      <View className="flex-row gap-3 px-5 py-4 border-t border-border">
+        <Pressable
+          onPress={onCancel}
+          className="flex-1 h-11 rounded-xl border border-border items-center justify-center active:opacity-70"
+        >
+          <Text className="text-sm font-semibold text-muted-foreground">{t('perfil.cancelar')}</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => onConfirm(password)}
+          disabled={loading || !password}
+          className="flex-1 h-11 rounded-xl bg-danger items-center justify-center active:opacity-80 disabled:opacity-50"
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text className="text-sm font-semibold text-white">Eliminar cuenta</Text>
+          )}
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function PerfilScreen() {
@@ -252,6 +311,7 @@ export default function PerfilScreen() {
 
   const [editingDatos,    setEditingDatos]    = useState(false);
   const [editingPassword, setEditingPassword] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [loggingOut,      setLoggingOut]      = useState(false);
   const [uploadingFoto,   setUploadingFoto]   = useState(false);
   const [bioSupported,    setBioSupported]    = useState(false);
@@ -351,6 +411,16 @@ export default function PerfilScreen() {
     },
   });
 
+  const eliminarCuentaMutation = useMutation({
+    mutationFn: (password: string) => authApi.eliminarCuenta(password),
+    onSuccess: async () => {
+      await logout();
+    },
+    onError: (err: ApiError) => {
+      Alert.alert('No se pudo eliminar la cuenta', err.message ?? t('common.error'));
+    },
+  });
+
   // ── Actions ────────────────────────────────────────────────────────────
 
   const handleLogout = () => {
@@ -367,6 +437,17 @@ export default function PerfilScreen() {
             await logout();
           },
         },
+      ],
+    );
+  };
+
+  const handleEliminarCuenta = () => {
+    Alert.alert(
+      'Eliminar cuenta',
+      'Vamos a anonimizar tu nombre, cédula, teléfono, correo y demás datos de contacto — dejarán de estar asociados a ti. Por obligación legal de nómina, conservamos (de forma anonimizada) tu historial de turnos trabajados, contratos y pagos hasta por 5 años. No podrás volver a iniciar sesión con esta cuenta. Esta acción no se puede deshacer.',
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: 'Continuar', style: 'destructive', onPress: () => setDeletingAccount(true) },
       ],
     );
   };
@@ -804,6 +885,23 @@ export default function PerfilScreen() {
               </Text>
             )}
           </Pressable>
+
+          {/* ── Zona de peligro ────────────────────────────────────── */}
+          <SectionHeader title="Zona de peligro" />
+          {deletingAccount ? (
+            <DeleteAccountForm
+              onConfirm={(password) => eliminarCuentaMutation.mutate(password)}
+              onCancel={() => setDeletingAccount(false)}
+              loading={eliminarCuentaMutation.isPending}
+            />
+          ) : (
+            <Pressable
+              onPress={handleEliminarCuenta}
+              className="mx-5 h-14 rounded-2xl bg-danger/10 border border-danger/30 items-center justify-center active:opacity-80"
+            >
+              <Text className="text-base font-semibold text-danger">Eliminar cuenta</Text>
+            </Pressable>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
