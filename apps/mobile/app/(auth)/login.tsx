@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   forgotText: { fontSize: 13, fontWeight: '600', color: '#FF5A3C' },
 
   // Links
-  links:      { gap: 10 },
+  links:      { gap: 10, marginTop: 24 },
   linkRow:    { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' },
   linkLabel:  { fontSize: 13, color: '#94A3B8' },
   linkAction: { fontSize: 13, fontWeight: '700', color: '#FF5A3C' },

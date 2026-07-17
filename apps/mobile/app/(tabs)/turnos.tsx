@@ -296,24 +296,24 @@ export default function TurnosScreen() {
               <TouchableOpacity
                 onPress={() => router.push('/liquidacion-turnos')}
                 accessibilityLabel="Liquidación de turnos"
-                className="p-2 active:opacity-60"
+                className="p-3 active:opacity-60"
               >
-                <Ionicons name="cash-outline" size={22} color={theme.primary} />
+                <Ionicons name="cash-outline" size={26} color={theme.primary} />
               </TouchableOpacity>
             )}
             {!isJefeNomina && (
               <TouchableOpacity
                 onPress={() => router.push('/postulaciones')}
                 accessibilityLabel="Ver postulaciones"
-                className="p-2 active:opacity-60"
+                className="p-3 active:opacity-60"
                 style={{ position: 'relative' }}
               >
-                <Ionicons name="people" size={22} color={theme.primary} />
+                <Ionicons name="people" size={26} color={theme.primary} />
                 {pendientesCount > 0 && (
                   <View style={{
                     position: 'absolute',
-                    top: 2,
-                    right: 2,
+                    top: 0,
+                    right: 0,
                     minWidth: 16,
                     height: 16,
                     borderRadius: 8,

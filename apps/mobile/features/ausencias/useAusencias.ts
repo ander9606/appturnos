@@ -12,11 +12,12 @@ export function useAusencias(params: { estado?: EstadoAusencia } = {}) {
   });
 }
 
-export function useAusenciasPendientesCount() {
+export function useAusenciasPendientesCount(enabled = true) {
   return useQuery({
     queryKey: [KEY, 'pendientes-count'],
     queryFn: () => ausenciasApi.contarPendientes(),
     staleTime: 60_000,
+    enabled,
   });
 }
 

@@ -49,11 +49,12 @@ export function useRechazarVinculo() {
 
 // ── Admin hooks ───────────────────────────────────────────────────────────
 
-export function useSolicitudes(estado?: string) {
+export function useSolicitudes(estado?: string, enabled = true) {
   return useQuery({
     queryKey: TE_KEYS.solicitudes(estado),
     queryFn: () => trabajadorEmpresaApi.solicitudes(estado),
     staleTime: 30_000,
+    enabled,
   });
 }
 

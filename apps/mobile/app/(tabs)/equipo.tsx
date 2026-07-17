@@ -328,14 +328,15 @@ export default function EquipoScreen() {
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
-  const { data: solicitudesData = [] } = useSolicitudes();
+  const { data: solicitudesData = [] } = useSolicitudes(undefined, canManage);
   const pendientesCount = solicitudesData.length;
-  const { data: ausenciasPendientes } = useAusenciasPendientesCount();
+  const { data: ausenciasPendientes } = useAusenciasPendientesCount(canManage);
   const ausenciasCount = ausenciasPendientes?.total ?? 0;
 
   const { data, isLoading, isError, error, isRefetching, refetch } = useTrabajadores({
-    tipo:   filtro !== 'todos' ? filtro : undefined,
-    activo: showInactive ? undefined : true,
+    tipo:    filtro !== 'todos' ? filtro : undefined,
+    activo:  showInactive ? undefined : true,
+    enabled: canManage,
   });
 
   // ── Vista trabajador ──────────────────────────────────────────────────
@@ -418,7 +419,7 @@ export default function EquipoScreen() {
       </View>
 
       {/* Filtros: tipo + estado */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pb-3">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pb-1">
         <View className="flex-row items-center gap-2 px-4">
           {FILTROS.map(({ key, label }) => {
             const active = filtro === key;
@@ -426,12 +427,12 @@ export default function EquipoScreen() {
               <Pressable
                 key={key}
                 onPress={() => setFiltro(key)}
-                className={`rounded-full px-3 py-1.5 border ${
+                className={`rounded-full px-4 py-2 border ${
                   active ? 'bg-primary border-primary' : 'bg-card border-border'
                 }`}
               >
                 <Text
-                  className={`text-xs font-semibold ${
+                  className={`text-sm font-semibold ${
                     active ? 'text-white' : 'text-muted-foreground'
                   }`}
                 >
@@ -445,12 +446,12 @@ export default function EquipoScreen() {
 
           <Pressable
             onPress={() => setShowInactive((v) => !v)}
-            className={`rounded-full px-3 py-1.5 border ${
+            className={`rounded-full px-4 py-2 border ${
               showInactive ? 'bg-danger/10 border-danger' : 'bg-card border-border'
             }`}
           >
             <Text
-              className={`text-xs font-semibold ${
+              className={`text-sm font-semibold ${
                 showInactive ? 'text-danger' : 'text-muted-foreground'
               }`}
             >
