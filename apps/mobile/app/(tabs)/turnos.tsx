@@ -40,7 +40,7 @@ export default function TurnosScreen() {
   const theme    = useTheme();
   const today    = useMemo(() => bogotaToday(), []);
 
-  const { data: nominaPerfil } = useNominaPerfil();
+  const { data: nominaPerfil } = useNominaPerfil(isNomina);
   // trabajador_nomina siempre ve sus turnos eventuales; trabajador_turnos también
   const isWorker = rol === 'trabajador_turnos' || isNomina;
 

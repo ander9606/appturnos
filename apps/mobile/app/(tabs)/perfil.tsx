@@ -333,7 +333,7 @@ export default function PerfilScreen() {
     setBioEnabled(val);
   };
 
-  const { data: nominaPerfil } = useNominaPerfil();
+  const { data: nominaPerfil } = useNominaPerfil(isTrabajadorNomina);
   const actualizarExtrasMutation = useActualizarExtras();
 
   const handleToggleExtras = (val: boolean) => {

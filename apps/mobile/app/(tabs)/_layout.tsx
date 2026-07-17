@@ -29,7 +29,7 @@ export default function TabsLayout() {
   const primaryColor  = isNomina ? THEME_COLORS.nomina.primary : THEME_COLORS.turnos.primary;
   const nominaLabel   = rol === 'trabajador_turnos' ? t('tabs.quincena') : t('tabs.nomina');
 
-  const { data: nominaPerfil } = useNominaPerfil();
+  const { data: nominaPerfil } = useNominaPerfil(isNomina);
   const aceptaExtras = isNomina ? Boolean(nominaPerfil?.acepta_extras) : false;
   const turnosTabHref = isNomina
     ? (aceptaExtras ? undefined : null)   // show only if acepta_extras

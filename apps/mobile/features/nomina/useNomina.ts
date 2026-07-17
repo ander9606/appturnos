@@ -111,11 +111,12 @@ export function useLiquidarPeriodo() {
 
 // ── Marcaje en tiempo real ────────────────────────────────────────────────
 
-export function useNominaPerfil() {
+export function useNominaPerfil(enabled = true) {
   return useQuery({
     queryKey: ['nomina-perfil'] as const,
     queryFn: () => nominaApi.obtenerMiPerfil(),
     staleTime: 300_000,
+    enabled,
   });
 }
 

@@ -46,7 +46,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const hasLaunched = useAuthStore((s) => s.hasLaunched);
   const rehydrate   = useAuthStore((s) => s.rehydrate);
   const logout      = useAuthStore((s) => s.logout);
-  const { locked, supported, unlock } = useBiometricLock(status);
+  const { locked, supported, unlock, authenticating } = useBiometricLock(status);
 
   // Rehydrate once on mount
   useEffect(() => {
@@ -116,7 +116,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     <>
       {children}
       {locked && supported && (
-        <BiometricLockScreen onUnlock={unlock} onLogout={logout} />
+        <BiometricLockScreen onUnlock={unlock} onLogout={logout} authenticating={authenticating} />
       )}
     </>
   );

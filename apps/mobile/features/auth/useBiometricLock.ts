@@ -12,7 +12,11 @@ export function useBiometricLock(authStatus: AuthStatus) {
   const [locked,    setLocked]     = useState(false);
   const [supported, setSupported]  = useState(false);
   const [enabled,   setEnabledSt]  = useState(false);
+  const [authenticating, setAuthenticating] = useState(false);
   const appStateRef = useRef(AppState.currentState);
+  // Evita llamar authenticateAsync dos veces en paralelo (auto-prompt al montar +
+  // toque manual del botón) — el diálogo nativo se cuelga con dos prompts concurrentes.
+  const authenticatingRef = useRef(false);
 
   useEffect(() => {
     // ponytail: no biometrics/SecureStore on web — feature stays off there.
@@ -44,12 +48,22 @@ export function useBiometricLock(authStatus: AuthStatus) {
   }, [supported, enabled, authStatus]);
 
   const unlock = async (): Promise<boolean> => {
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Confirma tu identidad',
-      fallbackLabel: 'Usar PIN',
-    });
-    if (result.success) setLocked(false);
-    return result.success;
+    if (authenticatingRef.current) return false;
+    authenticatingRef.current = true;
+    setAuthenticating(true);
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Confirma tu identidad',
+        fallbackLabel: 'Usar PIN',
+      });
+      if (result.success) setLocked(false);
+      return result.success;
+    } catch {
+      return false;
+    } finally {
+      authenticatingRef.current = false;
+      setAuthenticating(false);
+    }
   };
 
   const setEnabled = async (val: boolean) => {
@@ -59,5 +73,5 @@ export function useBiometricLock(authStatus: AuthStatus) {
     if (!val) setLocked(false);
   };
 
-  return { locked, supported, enabled, unlock, setEnabled };
+  return { locked, supported, enabled, unlock, setEnabled, authenticating };
 }

@@ -80,7 +80,7 @@ export default function DashboardScreen() {
 
   // ── Data fetching ────────────────────────────────────────────────────────
 
-  const { data: nominaPerfil, refetch: refetchNominaPerfil } = useNominaPerfil();
+  const { data: nominaPerfil, refetch: refetchNominaPerfil } = useNominaPerfil(isNomina);
 
   // Only trabajador_turnos gets the shift hero — managers/admin have no own shifts.
   // trabajador_nomina con "acepta_extras" también necesita esta data para el stat "Extras hoy",

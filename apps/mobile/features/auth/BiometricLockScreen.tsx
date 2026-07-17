@@ -6,9 +6,10 @@ import { useTheme } from '@/lib/theme';
 interface Props {
   onUnlock: () => Promise<boolean>;
   onLogout: () => Promise<void>;
+  authenticating: boolean;
 }
 
-export function BiometricLockScreen({ onUnlock, onLogout }: Props) {
+export function BiometricLockScreen({ onUnlock, onLogout, authenticating }: Props) {
   const theme = useTheme();
 
   // Auto-prompt on mount so the user doesn't have to tap manually
@@ -28,10 +29,13 @@ export function BiometricLockScreen({ onUnlock, onLogout }: Props) {
 
         <Pressable
           onPress={onUnlock}
-          className="w-full h-12 rounded-2xl items-center justify-center active:opacity-80 mt-2"
+          disabled={authenticating}
+          className="w-full h-12 rounded-2xl items-center justify-center active:opacity-80 mt-2 disabled:opacity-60"
           style={{ backgroundColor: theme.primary }}
         >
-          <Text className="text-white font-semibold">Usar biometría / PIN</Text>
+          <Text className="text-white font-semibold">
+            {authenticating ? 'Verificando…' : 'Usar biometría / PIN'}
+          </Text>
         </Pressable>
 
         <Pressable onPress={onLogout} className="active:opacity-60 py-1">
