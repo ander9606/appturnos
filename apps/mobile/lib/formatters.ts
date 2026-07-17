@@ -30,9 +30,9 @@ export function toISODate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-// Colombia = UTC-5, sin DST. Necesario para saber qué día es HOY en Bogotá
+// Colombia = UTC-5, sin DST. Necesario para saber qué día/hora es en Bogotá
 // independientemente del timezone configurado en el dispositivo.
-const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
+export const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
 
 /** Fecha de HOY en Bogotá (UTC-5), ignorando el timezone del dispositivo */
 export function bogotaToday(): string {

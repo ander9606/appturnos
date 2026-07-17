@@ -13,7 +13,7 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar,
-  useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,
+  useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta, useCancelarOferta,
 } from '@/features/turnos/useTurnos';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
@@ -146,12 +146,15 @@ function PostulanteRow({
 
 export default function OfertaDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string }>();
-  const id    = idParam ? Number(idParam) : null;
-  const theme = useTheme();
+  const id     = idParam ? Number(idParam) : null;
+  const router = useRouter();
+  const theme  = useTheme();
   const rol   = useAuthStore((s) => s.usuario?.rol);
 
   const isGestor = rol === 'admin_empresa' || rol === 'jefe_turnos' || rol === 'jefe_nomina';
   const isWorker = rol === 'trabajador_turnos' || rol === 'trabajador_nomina';
+  // Backend restringe cancelar oferta a admin_empresa/jefe_turnos (no jefe_nomina).
+  const puedeCancelarOferta = rol === 'admin_empresa' || rol === 'jefe_turnos';
 
   const { data: oferta, isLoading } = useOferta(id);
   const { data: misTurnos }         = useMisTurnos({ enabled: isWorker });
@@ -163,6 +166,7 @@ export default function OfertaDetailScreen() {
   const cancelarM      = useCancelar();
   const noPresentadoM  = useNoPresentado();
   const duplicarM      = useDuplicarOferta();
+  const cancelarOfertaM = useCancelarOferta();
 
   const [showDuplicarPicker, setShowDuplicarPicker] = useState(false);
 
@@ -391,6 +395,34 @@ export default function OfertaDetailScreen() {
                 />
               )}
             </>
+          )}
+
+          {/* ── Cancelar oferta (admin_empresa / jefe_turnos) ────── */}
+          {puedeCancelarOferta && oferta.estado !== 'cancelada' && oferta.estado !== 'completada' && (
+            <Button
+              label={cancelarOfertaM.isPending ? 'Cancelando…' : 'Cancelar oferta'}
+              variant="danger"
+              fullWidth
+              loading={cancelarOfertaM.isPending}
+              onPress={() => Alert.alert(
+                'Cancelar oferta',
+                `Se cancelará "${oferta.titulo}" y se notificará a los trabajadores postulados o asignados. Esta acción no se puede deshacer.`,
+                [
+                  { text: 'Volver', style: 'cancel' },
+                  {
+                    text: 'Cancelar oferta', style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await cancelarOfertaM.mutateAsync(oferta.id);
+                        router.back();
+                      } catch (err) {
+                        Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
+                      }
+                    },
+                  },
+                ],
+              )}
+            />
           )}
 
           {/* ── Postulantes (gestores) ───────────────────────────── */}

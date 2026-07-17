@@ -11,6 +11,7 @@ const CompensatoriosService     = require('../compensatorios/compensatorios.serv
 const NotificacionesService     = require('../../notificaciones/notificaciones.service');
 const { pool }                  = require('../../../config/database');
 const { calcularHoras }         = require('../../../utils/laboralUtils');
+const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
 const { haversineMetros }       = require('../../../utils/geoUtils');
 const AppError                  = require('../../../utils/AppError');
 const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
@@ -57,14 +58,12 @@ function getLunesDeSemana(isoDate) {
 
 /** Returns today's date as 'YYYY-MM-DD' in Colombia time (UTC-5, no DST). */
 function hoyISO() {
-  const t = new Date(Date.now() - 5 * 3_600_000);
-  return t.toISOString().slice(0, 10);
+  return ahoraColombiaSQL().slice(0, 10);
 }
 
 /** Returns current time as 'HH:MM:SS' in Colombia time (UTC-5), independiente del TZ del proceso. */
 function ahoraHHMMSS() {
-  const t = new Date(Date.now() - 5 * 3_600_000);
-  return t.toISOString().slice(11, 19);
+  return ahoraColombiaSQL().slice(11, 19);
 }
 
 async function _notificarDecisionReingreso(empresaId, solicitudId, tipo, titulo, mensaje) {

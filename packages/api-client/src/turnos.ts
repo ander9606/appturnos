@@ -257,6 +257,11 @@ export const turnosApi = {
     return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/duplicar`, { fecha });
   },
 
+  /** Cancela una oferta completa (todos sus puestos) y notifica a los postulados/asignados. */
+  cancelarOferta(ofertaId: number): Promise<null> {
+    return api.delete<null>(`/api/turnos/ofertas/${ofertaId}`);
+  },
+
   /** Postular al turno en un puesto concreto. */
   aplicar(ofertaId: number, puestoId: number): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });

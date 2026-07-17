@@ -36,7 +36,7 @@ module.exports = {
         border: '#E2E8F0',
       },
       fontFamily: {
-        sans: ['Inter', 'System'],
+        sans: ['System'],
       },
       borderRadius: {
         sm:   '4px',

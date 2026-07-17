@@ -295,6 +295,18 @@ export function useDuplicarOferta() {
   });
 }
 
+/** Cancelar una oferta completa — libera todas las plazas y notifica a los asignados. */
+export function useCancelarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ofertaId: number) => turnosApi.cancelarOferta(ofertaId),
+    onSuccess: (_data, ofertaId) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+    },
+  });
+}
+
 /** Catálogo de cargos (sistema + custom de la empresa). */
 export function useCargos(enabled = true) {
   return useQuery({

@@ -11,7 +11,7 @@
  */
 
 import type { RegistroDiario, PeriodoNomina, TipoDia } from '@api-client';
-import { toISODate } from '@/lib/formatters';
+import { toISODate, BOGOTA_OFFSET_MS } from '@/lib/formatters';
 
 // ── Constantes ─────────────────────────────────────────────────────────────
 
@@ -226,24 +226,35 @@ export function getEstadoHoy(
   return 'jornada_completa';
 }
 
-/** Tiempo transcurrido desde hora_entrada ("HH:MM" o "HH:MM:SS") hasta ahora. */
-export function calcularElapsedLabel(horaEntrada: string): string {
+/**
+ * Minutos transcurridos desde hora_entrada ("HH:MM" u "HH:MM:SS", hora Bogotá
+ * — así la guarda el backend) hasta ahora. Ancla ambos lados a hora Bogotá vía
+ * aritmética UTC (mismo truco que bogotaToday()) en vez de new Date(y,m,d,hh,mm),
+ * que se interpreta en el timezone del DISPOSITIVO — si el celular no tiene
+ * configurado America/Bogota, esa construcción reintroduce el desfase de 5h.
+ */
+function minutosTranscurridosDesde(horaEntrada: string): number {
   const parts = horaEntrada.split(':').map(Number);
   const hh = parts[0];
   const mm = parts[1] ?? 0;
-  if (isNaN(hh) || isNaN(mm)) return '—';
+  if (isNaN(hh) || isNaN(mm)) return NaN;
 
-  const now = new Date();
-  // Build a Date for today at the given time in the DEVICE's local timezone so
-  // both sides of the subtraction are in the same reference frame.
-  const entrada = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
-  let diffMs = now.getTime() - entrada.getTime();
-  // Clamp to [0, 24h) — handles midnight crossing and protects against a
-  // server/device timezone skew that would produce a large spurious elapsed.
+  const nowBogota = new Date(Date.now() - BOGOTA_OFFSET_MS); // getUTC* == hora Bogotá
+  const entradaBogota = Date.UTC(
+    nowBogota.getUTCFullYear(), nowBogota.getUTCMonth(), nowBogota.getUTCDate(),
+    hh, mm, 0, 0,
+  );
+  let diffMs = nowBogota.getTime() - entradaBogota;
+  // Clamp a [0, 24h) — cruce de medianoche.
   if (diffMs < 0) diffMs += 24 * 3_600_000;
   if (diffMs >= 24 * 3_600_000) diffMs -= 24 * 3_600_000;
+  return Math.floor(diffMs / 60_000);
+}
 
-  const totalMin = Math.floor(diffMs / 60_000);
+/** Tiempo transcurrido desde hora_entrada hasta ahora, formateado ("1h 23m", "45m"). */
+export function calcularElapsedLabel(horaEntrada: string): string {
+  const totalMin = minutosTranscurridosDesde(horaEntrada);
+  if (isNaN(totalMin)) return '—';
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   if (h === 0) return `${m}m`;
@@ -253,15 +264,8 @@ export function calcularElapsedLabel(horaEntrada: string): string {
 
 /** Minutos transcurridos desde hora_entrada hasta ahora (para lógica de descanso). */
 export function calcularElapsedMinutes(horaEntrada: string): number {
-  const parts = horaEntrada.split(':').map(Number);
-  const hh = parts[0];
-  const mm = parts[1] ?? 0;
-  if (isNaN(hh) || isNaN(mm)) return 0;
-  const now = new Date();
-  const entrada = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
-  let diffMs = now.getTime() - entrada.getTime();
-  if (diffMs < 0) diffMs += 24 * 3_600_000;
-  return Math.floor(diffMs / 60_000);
+  const totalMin = minutosTranscurridosDesde(horaEntrada);
+  return isNaN(totalMin) ? 0 : totalMin;
 }
 
 // ── Formatters ──────────────────────────────────────────────────────────────
