@@ -64,18 +64,32 @@ async function main() {
   console.log('🌱 Seed trabajadores_turnos → Plataforma de Prueba S.A.S…');
 
   try {
-    // ── 0. Empresa y jefe ────────────────────────────────────────────────
-    const [[empresa]] = await conn.execute(
-      `SELECT id FROM empresas WHERE nombre LIKE '%Plataforma de Prueba%' LIMIT 1`
+    // ── 0. Empresa y jefe (se crean si no existen — autosuficiente) ───────
+    const [[empresaExistente]] = await conn.execute(
+      `SELECT id FROM empresas WHERE slug = 'plataforma-prueba' OR nombre LIKE '%Plataforma de Prueba%' LIMIT 1`
     );
-    if (!empresa) throw new Error('Empresa "Plataforma de Prueba S.A.S" no encontrada. Ejecutá las migraciones primero.');
-    const empresaId = empresa.id;
+    let empresaId = empresaExistente?.id;
+    if (!empresaId) {
+      empresaId = await ins(conn, 'empresas', {
+        nombre: 'Plataforma de Prueba S.A.S', slug: 'plataforma-prueba',
+        ciudad: 'Bogotá D.C.', plan: 'profesional', acepta_postulaciones: 1,
+        descripcion: 'Empresa demo del marketplace de trabajadores por turnos',
+      });
+      console.log(`  ✓ Empresa creada: id=${empresaId}`);
+    }
 
-    const [[jefe]] = await conn.execute(
+    const [[jefeExistente]] = await conn.execute(
       `SELECT id FROM usuarios WHERE empresa_id = ? AND rol = 'jefe_turnos' LIMIT 1`, [empresaId]
     );
-    if (!jefe) throw new Error('No hay jefe_turnos en esa empresa.');
-    const jefeId = jefe.id;
+    let jefeId = jefeExistente?.id;
+    if (!jefeId) {
+      jefeId = await ins(conn, 'usuarios', {
+        empresa_id: empresaId, nombre: 'Jefe', apellido: 'Plataforma',
+        email: 'jefe@plataforma-prueba.co',
+        password_hash: await bcrypt.hash('Demo1234!', 10), rol: 'jefe_turnos',
+      });
+      console.log(`  ✓ jefe_turnos creado: id=${jefeId}`);
+    }
 
     // ── 1. Limpiar runs anteriores de este seed ──────────────────────────
     await conn.execute('SET FOREIGN_KEY_CHECKS = 0');
