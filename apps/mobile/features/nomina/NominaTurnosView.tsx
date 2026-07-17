@@ -241,9 +241,19 @@ export function NominaTurnosView() {
             {/* ── Header ──────────────────────────────────────────── */}
             <View className="pt-4 pb-6 px-6 rounded-b-[28px] gap-3"
               style={{ backgroundColor: theme.primary }}>
-              <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
-                Mis Turnos
-              </Text>
+              <View className="flex-row items-center justify-between">
+                <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
+                  Mis Turnos
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.push('/historial-ganancias')}
+                  className="flex-row items-center gap-1"
+                  hitSlop={8}
+                >
+                  <Text className="text-white/80 text-xs font-semibold">Historial</Text>
+                  <Ionicons name="chevron-forward" size={13} color="rgba(255,255,255,0.8)" />
+                </TouchableOpacity>
+              </View>
 
               {/* Selector quincena */}
               <View className="flex-row items-center gap-2">

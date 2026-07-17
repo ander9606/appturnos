@@ -18,7 +18,16 @@ export function StatusBanner() {
 
   useEffect(() => {
     const cache = queryClient.getQueryCache();
-    const check = () => setHasQueryError(cache.getAll().some((q) => q.state.status === 'error'));
+    const check = () => {
+      const failed = cache.getAll().filter((q) => q.state.status === 'error');
+      if (failed.length > 0) {
+        console.warn('[StatusBanner] queries en error:', failed.map((q) => ({
+          key: q.queryKey,
+          error: q.state.error instanceof Error ? q.state.error.message : q.state.error,
+        })));
+      }
+      setHasQueryError(failed.length > 0);
+    };
     check();
     return cache.subscribe(check);
   }, [queryClient]);

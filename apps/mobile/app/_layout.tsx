@@ -11,7 +11,7 @@ import '../global.css';
 import React, { useEffect } from 'react';
 import { LogBox } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as Sentry from '@sentry/react-native';
@@ -20,6 +20,7 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useBiometricLock } from '@/features/auth/useBiometricLock';
 import { BiometricLockScreen } from '@/features/auth/BiometricLockScreen';
 import { registerPushNotifications } from '@/lib/pushNotifications';
+import { queryClient } from '@/lib/queryClient';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
@@ -33,24 +34,6 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
     tracesSampleRate: 0, // ponytail: solo error monitoring, sin tracing/profiling — subir si hace falta
   });
 }
-
-// ── TanStack Query client ─────────────────────────────────────────────────
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,        // 1 minute — workers in the field need fresh-enough data
-      retry: (failureCount, error: unknown) => {
-        // Don't retry on auth errors or client errors
-        if (error && typeof error === 'object' && 'status' in error) {
-          const status = (error as { status: number }).status;
-          if (status >= 400 && status < 500) return false;
-        }
-        return failureCount < 2;
-      },
-    },
-  },
-});
 
 // ── Auth guard ────────────────────────────────────────────────────────────
 
@@ -179,6 +162,8 @@ function RootLayout() {
             <Stack.Screen name="liquidacion-turnos" options={{ title: 'Liquidación de turnos' }} />
             {/* Liquidación trimestral de turnos eventuales */}
             <Stack.Screen name="liquidacion-eventual" options={{ title: 'Turnos eventuales' }} />
+            {/* Historial de ganancias — trabajador_turnos / trabajador_nomina */}
+            <Stack.Screen name="historial-ganancias" options={{ title: 'Historial de ganancias' }} />
             {/* Notificaciones — inbox accesible desde la campana */}
             <Stack.Screen name="notificaciones" options={{ title: 'Notificaciones' }} />
             {/* Completar perfil — usuarios OAuth sin teléfono registrado */}

@@ -13,6 +13,7 @@ import Constants from 'expo-constants';
 import { authApi, initApiClient, type UsuarioPerfil } from '@api-client';
 import { secureTokenStore, webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { unregisterPushNotifications } from '@/lib/pushNotifications';
+import { queryClient } from '@/lib/queryClient';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -231,6 +232,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       secureTokenStore.clearTokens(),
       SecureStore.deleteItemAsync(KEY_USUARIO),
     ]);
+    queryClient.clear(); // evita que datos/errores de esta sesión se filtren a la siguiente cuenta
     set({ status: 'unauthenticated', usuario: null });
   },
 }));

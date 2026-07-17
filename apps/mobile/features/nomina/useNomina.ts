@@ -34,6 +34,15 @@ export function useRegistros(params: {
   });
 }
 
+/** Últimos registros del trabajador autenticado, sin filtrar por período — para el historial de ganancias. */
+export function useRegistrosHistorial() {
+  return useQuery({
+    queryKey: ['registros', 'historial'] as const,
+    queryFn:  () => nominaApi.listarRegistros({ limit: 500 }),
+    staleTime: 60_000,
+  });
+}
+
 export function useLiquidacion(periodoId: number | null) {
   return useQuery({
     queryKey: NOMINA_KEYS.liquidacion(periodoId!),

@@ -8,6 +8,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
@@ -26,6 +27,7 @@ type ActiveTab = 'hoy' | 'nomina';
 
 export function NominaTrabajadorView() {
   const theme = useTheme();
+  const router = useRouter();
   const { data: compensatorios = [] } = useMisCompensatorios();
   const [activeTab, setActiveTab] = useState<ActiveTab>('hoy');
 
@@ -182,9 +184,19 @@ export function NominaTrabajadorView() {
                   onSeleccionarPeriodo={setPeriodoSeleccionado}
                   valorHora={valorHora}
                 />
-                <Text className="text-sm font-semibold text-foreground mt-1">
-                  Registros del período
-                </Text>
+                <View className="flex-row items-center justify-between mt-1">
+                  <Text className="text-sm font-semibold text-foreground">
+                    Registros del período
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => router.push('/historial-ganancias')}
+                    className="flex-row items-center gap-1"
+                    hitSlop={8}
+                  >
+                    <Text className="text-xs font-semibold" style={{ color: theme.primary }}>Historial</Text>
+                    <Ionicons name="chevron-forward" size={12} color={theme.primary} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           }

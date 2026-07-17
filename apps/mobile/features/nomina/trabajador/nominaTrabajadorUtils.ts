@@ -112,9 +112,12 @@ export function getValorHora(salarioBase: number | null): number {
 
 /** Pesos ADICIONALES al salario base generados por un registro. */
 export function calcularValorExtraDia(r: RegistroDiario, valorHora: number): number {
-  if (valorHora <= 0) return 0;
+  // Períodos cerrados congelan el valor/hora vigente al cierre (migración 010b) —
+  // usarlo evita que un cambio posterior de salario distorsione el historial.
+  const vh = r.valor_hora_snapshot ?? valorHora;
+  if (vh <= 0) return 0;
   return Math.round(
-    valorHora * (
+    vh * (
       RECARGO_EXTRA.NOCTURNA       * Number(r.horas_nocturnas)      +
       RECARGO_EXTRA.EXTRA_DIURNA   * Number(r.horas_extra_diurnas)  +
       RECARGO_EXTRA.EXTRA_NOCTURNA * Number(r.horas_extra_nocturnas) +
