@@ -7,10 +7,11 @@
  * Uso: node backend/seeds/seed.js
  *
  * Usuarios creados (contraseña: Demo1234! para todos):
- *   admin@demo.co         — admin_empresa
- *   jefe@demo.co          — jefe_turnos  (recibe notificaciones de ingreso)
- *   juan.garcia@demo.co   — trabajador_turnos
- *   maria.lopez@demo.co   — trabajador_turnos
+ *   admin@demo.co          — admin_empresa
+ *   jefe@demo.co           — jefe_turnos  (recibe notificaciones de ingreso)
+ *   juan.garcia@demo.co    — trabajador_turnos
+ *   maria.lopez@demo.co    — trabajador_turnos
+ *   pedro.ramirez@demo.co  — trabajador_nomina (período quincenal abierto, 5 días registrados)
  *
  * Turnos de Juan García:
  *   1. pendiente   — Corferias en 3 días
@@ -79,6 +80,8 @@ async function main() {
       await conn.execute(`DELETE FROM asignaciones_turno     WHERE empresa_id = ?`, [empresaDemoId]);
       await conn.execute(`DELETE FROM oferta_puestos         WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)`, [empresaDemoId]);
       await conn.execute(`DELETE FROM ofertas_turno          WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM registros_diarios      WHERE empresa_id = ?`, [empresaDemoId]);
+      await conn.execute(`DELETE FROM periodos_nomina        WHERE empresa_id = ?`, [empresaDemoId]);
       await conn.execute(`DELETE FROM trabajador_cargos      WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?)`, [empresaDemoId]);
       await conn.execute(`DELETE FROM trabajador_empresa     WHERE empresa_id = ?`, [empresaDemoId]);
       await conn.execute(`DELETE FROM puntos_marcaje         WHERE empresa_id = ?`, [empresaDemoId]);
@@ -130,6 +133,13 @@ async function main() {
     });
     console.log(`  ✓ Usuarios trabajadores: juan=${uJuanId}, maria=${uMariaId}`);
 
+    // Trabajador de nómina — empresa_id fijo (no es marketplace, es planta).
+    const uPedroId = await ins(conn, 'usuarios', {
+      empresa_id: empresaId, nombre: 'Pedro', apellido: 'Ramírez',
+      email: 'pedro.ramirez@demo.co', password_hash: hashPwd, rol: 'trabajador_nomina',
+    });
+    console.log(`  ✓ Usuario nómina: pedro=${uPedroId}`);
+
     // ── 4. Trabajadores ───────────────────────────────────────────────────
     const tJuanId = await ins(conn, 'trabajadores', {
       empresa_id: empresaId, usuario_id: uJuanId,
@@ -145,6 +155,14 @@ async function main() {
     });
     console.log(`  ✓ Trabajadores: juan=${tJuanId}, maria=${tMariaId}`);
 
+    const tPedroId = await ins(conn, 'trabajadores', {
+      empresa_id: empresaId, usuario_id: uPedroId,
+      nombre: 'Pedro', apellido: 'Ramírez', cedula: '1040506070',
+      telefono: '3157654321', email: 'pedro.ramirez@demo.co',
+      tipo: 'nomina', cargo: 'Operario de bodega', salario_base: 1800000,
+    });
+    console.log(`  ✓ Trabajador nómina: pedro=${tPedroId}`);
+
     // ── 5. Vínculos trabajador_empresa ────────────────────────────────────
     const teJuanId = await ins(conn, 'trabajador_empresa', {
       usuario_id: uJuanId, empresa_id: empresaId, trabajador_id: tJuanId,
@@ -155,6 +173,11 @@ async function main() {
       usuario_id: uMariaId, empresa_id: empresaId, trabajador_id: tMariaId,
       estado: 'activo', iniciado_por: 'empresa',
       fecha_resuelto: datetimeStr(addDays(now, -25)),
+    });
+    await ins(conn, 'trabajador_empresa', {
+      usuario_id: uPedroId, empresa_id: empresaId, trabajador_id: tPedroId,
+      estado: 'activo', iniciado_por: 'empresa',
+      fecha_resuelto: datetimeStr(addDays(now, -60)),
     });
     console.log('  ✓ Vínculos trabajador_empresa');
 
@@ -367,16 +390,36 @@ async function main() {
     });
     console.log('  ✓ Cargos de trabajadores asignados');
 
+    // ── 11. Nómina de Pedro — período quincenal abierto + 5 días registrados ─
+    const periodoId = await ins(conn, 'periodos_nomina', {
+      empresa_id: empresaId,
+      fecha_inicio: dateStr(addDays(now, -10)),
+      fecha_fin: dateStr(addDays(now, 5)),
+      tipo: 'quincenal', estado: 'abierto',
+    });
+    for (let i = 5; i >= 1; i--) {
+      const esFestivo = i === 3; // un día con recargo festivo para variedad
+      await ins(conn, 'registros_diarios', {
+        empresa_id: empresaId, trabajador_id: tPedroId, periodo_id: periodoId,
+        fecha: dateStr(addDays(now, -i)),
+        hora_entrada: '07:00:00', hora_salida: '15:00:00',
+        horas_ordinarias: 8, es_festivo: esFestivo ? 1 : 0,
+        horas_festivo: esFestivo ? 8 : 0,
+      });
+    }
+    console.log(`  ✓ Nómina Pedro: período=${periodoId}, 5 registros diarios`);
+
     // ── Resumen ────────────────────────────────────────────────────────────
     console.log('\n✅ Seed completado.\n');
     console.log('─────────────────────────────────────────────────────');
     console.log('  URL backend:   http://localhost:3001');
     console.log('  Contraseña:    Demo1234!');
     console.log('');
-    console.log('  admin@demo.co        → admin_empresa');
-    console.log('  jefe@demo.co         → jefe_turnos');
-    console.log('  juan.garcia@demo.co  → trabajador_turnos');
-    console.log('  maria.lopez@demo.co  → trabajador_turnos');
+    console.log('  admin@demo.co          → admin_empresa');
+    console.log('  jefe@demo.co           → jefe_turnos');
+    console.log('  juan.garcia@demo.co    → trabajador_turnos');
+    console.log('  maria.lopez@demo.co    → trabajador_turnos');
+    console.log('  pedro.ramirez@demo.co  → trabajador_nomina (período abierto, 5 días registrados)');
     console.log('');
     console.log('  Turnos de Juan García:');
     console.log('    • pendiente    — Corferias (en 3 días)');
