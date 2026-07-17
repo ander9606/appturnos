@@ -11,12 +11,24 @@
  *   EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID  — Android client ID (para build nativo)
  */
 import React from 'react';
+import { Platform } from 'react-native';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from './useAuthStore';
 
 // Requerido por expo-auth-session para cerrar el popup del navegador correctamente.
 WebBrowser.maybeCompleteAuthSession();
+
+// Google solo acepta el esquema "reverso" del client ID nativo como redirect URI
+// (com.googleusercontent.apps.<client_id>:/...) — el default de expo-auth-session
+// usa el package name de la app, que Google rechaza con "custom URI scheme is not
+// enabled for your Android client". Ese mismo esquema debe estar en app.json → scheme.
+const nativeClientId = Platform.OS === 'ios'
+  ? process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS
+  : process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID;
+const redirectUri = nativeClientId
+  ? `com.googleusercontent.apps.${nativeClientId.replace('.apps.googleusercontent.com', '')}:/oauthredirect`
+  : undefined;
 
 export function useGoogleAuth(onError?: (msg: string) => void) {
   const loginConGoogle = useAuthStore((s) => s.loginConGoogle);
@@ -26,6 +38,7 @@ export function useGoogleAuth(onError?: (msg: string) => void) {
     clientId:         process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB,
     iosClientId:      process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,
     androidClientId:  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID,
+    ...(redirectUri ? { redirectUri } : {}),
   });
 
   React.useEffect(() => {

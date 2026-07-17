@@ -7,9 +7,10 @@
  * Uso: node backend/seeds/seed-plataforma-turnos.js
  *
  * Usuarios creados (contraseña: Demo1234!):
- *   luis.herrera@plataforma-prueba.co   — trabajador_turnos
- *   sofia.reyes@plataforma-prueba.co    — trabajador_turnos
- *   camilo.torres@plataforma-prueba.co  — trabajador_turnos
+ *   luis.herrera@plataforma-prueba.co    — trabajador_turnos
+ *   sofia.reyes@plataforma-prueba.co     — trabajador_turnos
+ *   camilo.torres@plataforma-prueba.co   — trabajador_turnos
+ *   andrea.salazar@plataforma-prueba.co  — trabajador_nomina (período quincenal abierto, 5 días registrados)
  *
  * Asignaciones de Luis Herrera:
  *   1. pendiente    — Bodega Norte (en 4 días)
@@ -82,6 +83,7 @@ async function main() {
       'luis.herrera@plataforma-prueba.co',
       'sofia.reyes@plataforma-prueba.co',
       'camilo.torres@plataforma-prueba.co',
+      'andrea.salazar@plataforma-prueba.co',
     ];
     const placeholders = emails.map(() => '?').join(',');
     const [[{ cnt }]] = await conn.execute(
@@ -111,6 +113,20 @@ async function main() {
           );
         }
         await conn.execute(`DELETE FROM asignaciones_turno WHERE trabajador_id IN (${tPh})`, tIds);
+
+        // Nómina (Andrea) — borrar registros y el período que le pertenece
+        // exclusivamente, para no acumular períodos duplicados en cada deploy.
+        const [prows] = await conn.execute(
+          `SELECT DISTINCT periodo_id FROM registros_diarios WHERE trabajador_id IN (${tPh})`, tIds
+        );
+        await conn.execute(`DELETE FROM registros_diarios WHERE trabajador_id IN (${tPh})`, tIds);
+        if (prows.length) {
+          const pPh = prows.map(() => '?').join(',');
+          await conn.execute(
+            `DELETE FROM periodos_nomina WHERE id IN (${pPh})`, prows.map((r) => r.periodo_id)
+          );
+        }
+
         await conn.execute(`DELETE FROM trabajador_empresa  WHERE trabajador_id IN (${tPh})`, tIds);
         await conn.execute(`DELETE FROM trabajadores        WHERE id            IN (${tPh})`, tIds);
       }
@@ -152,6 +168,11 @@ async function main() {
       email: 'camilo.torres@plataforma-prueba.co',
       password_hash: hashPwd, rol: 'trabajador_turnos',
     });
+    const uAndreaId = await ins(conn, 'usuarios', {
+      empresa_id: empresaId, nombre: 'Andrea', apellido: 'Salazar',
+      email: 'andrea.salazar@plataforma-prueba.co',
+      password_hash: hashPwd, rol: 'trabajador_nomina',
+    });
 
     const tLuisId = await ins(conn, 'trabajadores', {
       empresa_id: empresaId, usuario_id: uLuisId,
@@ -171,7 +192,13 @@ async function main() {
       telefono: '3142345678', email: 'camilo.torres@plataforma-prueba.co',
       tipo: 'turnos', cargo: 'Conductor', tarifa_hora: 18000, ranking: 4.0,
     });
-    console.log(`  ✓ Trabajadores: luis=${tLuisId}, sofia=${tSofiaId}, camilo=${tCamiloId}`);
+    const tAndreaId = await ins(conn, 'trabajadores', {
+      empresa_id: empresaId, usuario_id: uAndreaId,
+      nombre: 'Andrea', apellido: 'Salazar', cedula: '1067890123',
+      telefono: '3178901234', email: 'andrea.salazar@plataforma-prueba.co',
+      tipo: 'nomina', cargo: 'Auxiliar administrativo', salario_base: 1800000,
+    });
+    console.log(`  ✓ Trabajadores: luis=${tLuisId}, sofia=${tSofiaId}, camilo=${tCamiloId}, andrea=${tAndreaId}`);
 
     // ── 5. Vínculos trabajador_empresa ───────────────────────────────────
     const teLuisId = await ins(conn, 'trabajador_empresa', {
@@ -188,6 +215,11 @@ async function main() {
       usuario_id: uCamiloId, empresa_id: empresaId, trabajador_id: tCamiloId,
       estado: 'activo', iniciado_por: 'empresa',
       fecha_resuelto: datetimeStr(addDays(now, -45)),
+    });
+    await ins(conn, 'trabajador_empresa', {
+      usuario_id: uAndreaId, empresa_id: empresaId, trabajador_id: tAndreaId,
+      estado: 'activo', iniciado_por: 'empresa',
+      fecha_resuelto: datetimeStr(addDays(now, -90)),
     });
 
     // Cargo asignado a Luis
@@ -369,6 +401,25 @@ async function main() {
 
     console.log('  ✓ Asignaciones creadas');
 
+    // ── 8. Nómina de Andrea — período quincenal abierto + 5 días registrados ─
+    const periodoId = await ins(conn, 'periodos_nomina', {
+      empresa_id: empresaId,
+      fecha_inicio: dateStr(addDays(now, -10)),
+      fecha_fin: dateStr(addDays(now, 5)),
+      tipo: 'quincenal', estado: 'abierto',
+    });
+    for (let i = 5; i >= 1; i--) {
+      const esFestivo = i === 3; // un día con recargo festivo para variedad
+      await ins(conn, 'registros_diarios', {
+        empresa_id: empresaId, trabajador_id: tAndreaId, periodo_id: periodoId,
+        fecha: dateStr(addDays(now, -i)),
+        hora_entrada: '07:00:00', hora_salida: '15:00:00',
+        horas_ordinarias: 8, es_festivo: esFestivo ? 1 : 0,
+        horas_festivo: esFestivo ? 8 : 0,
+      });
+    }
+    console.log(`  ✓ Nómina Andrea: período=${periodoId}, 5 registros diarios`);
+
     console.log('\n✅ Seed completado.\n');
     console.log('─────────────────────────────────────────────────────────────────');
     console.log('  Empresa: Plataforma de Prueba S.A.S   Contraseña: Demo1234!');
@@ -386,6 +437,9 @@ async function main() {
     console.log('  camilo.torres@plataforma-prueba.co  → trabajador_turnos');
     console.log('    • cancelado   — Feria Expo (hace 3 días)');
     console.log('    • confirmado  — Descargue El Dorado (en 3 días)');
+    console.log('');
+    console.log('  andrea.salazar@plataforma-prueba.co → trabajador_nomina');
+    console.log('    • período quincenal abierto, 5 días registrados (uno festivo)');
     console.log('─────────────────────────────────────────────────────────────────\n');
 
   } catch (err) {

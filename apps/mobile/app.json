@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "appturnos",
+    "scheme": ["appturnos", "com.googleusercontent.apps.983031197089-vv1njq7f1l3uq9vakd257shh5ihiprdn"],
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
