@@ -145,10 +145,9 @@ export const authApi = {
     nombre: string;
     apellido?: string;
     email: string;
-    telefono: string;
+    telefono?: string;
     password: string;
     email_token: string;
-    telefono_token: string;
   }): Promise<LoginResponse> {
     return api.post<LoginResponse>(
       '/api/auth/registro',

@@ -45,9 +45,8 @@ async function activarCuenta(req, res) {
 
 /** Registro libre para trabajador_turnos (modelo marketplace). */
 async function registrar(req, res) {
-  const { nombre, apellido, email, telefono, password, email_token, telefono_token } = req.body;
+  const { nombre, apellido, email, telefono, password, email_token } = req.body;
   VerificacionSvc.validarTokenVerificacion(email_token, 'email', email);
-  VerificacionSvc.validarTokenVerificacion(telefono_token, 'telefono', telefono);
   const data = await AuthService.registrarLibre({ nombre, apellido, email, telefono, password });
   res.status(201).json({ success: true, data, message: 'Cuenta creada. ¡Bienvenido!' });
 }

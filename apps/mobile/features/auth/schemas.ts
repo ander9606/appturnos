@@ -57,9 +57,9 @@ export const registroSchema = z
       .email('Introduce un correo válido')
       .transform((v) => v.trim().toLowerCase()),
     telefono: z
-      .string({ required_error: 'El teléfono es obligatorio' })
-      .min(7, 'Introduce un número de teléfono válido')
-      .transform((v) => v.trim()),
+      .string()
+      .optional()
+      .transform((v) => v?.trim() || undefined),
     password: z
       .string({ required_error: 'La contraseña es obligatoria' })
       .min(8, 'La contraseña debe tener al menos 8 caracteres'),

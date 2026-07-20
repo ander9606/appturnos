@@ -41,9 +41,8 @@ export default function RegistroScreen() {
   const [step, setStep] = React.useState<'datos' | 'otp'>('datos');
   const [serverError, setServerError] = React.useState<string | null>(null);
 
-  // tokens devueltos por verificar-otp
-  const emailTokenRef    = React.useRef<string | null>(null);
-  const telefonoTokenRef = React.useRef<string | null>(null);
+  // token devuelto por verificar-otp
+  const emailTokenRef = React.useRef<string | null>(null);
 
   // saved form values to pass to step 2
   const formDataRef = React.useRef<RegistroFormData | null>(null);
@@ -57,55 +56,46 @@ export default function RegistroScreen() {
   const onSubmitDatos = async (data: RegistroFormData) => {
     setServerError(null);
     try {
-      await Promise.all([
-        authApi.enviarOtp({ tipo: 'email',    destino: data.email }),
-        authApi.enviarOtp({ tipo: 'telefono', destino: data.telefono }),
-      ]);
+      await authApi.enviarOtp({ tipo: 'email', destino: data.email });
       formDataRef.current = data;
       setStep('otp');
     } catch (err) {
       const e = err as ApiError;
-      setServerError(e?.message ?? 'No se pudo enviar los códigos. Intenta de nuevo.');
+      setServerError(e?.message ?? 'No se pudo enviar el código. Intenta de nuevo.');
     }
   };
 
   // ── Paso 2: OTP ──────────────────────────────────────────────────────────
-  const form2 = useForm<{ emailOtp: OtpFormData; telefonoOtp: OtpFormData }>({
-    defaultValues: { emailOtp: { codigo: '' }, telefonoOtp: { codigo: '' } },
+  const form2 = useForm<{ emailOtp: OtpFormData }>({
+    defaultValues: { emailOtp: { codigo: '' } },
   });
 
   // Individual field errors handled via state for simplicity
-  const [otpEmailError,    setOtpEmailError]    = React.useState<string | null>(null);
-  const [otpTelError,      setOtpTelError]      = React.useState<string | null>(null);
-  const [emailVerified,    setEmailVerified]    = React.useState(false);
-  const [telefonoVerified, setTelefonoVerified] = React.useState(false);
-  const [isVerifying,      setIsVerifying]      = React.useState(false);
-  const [isCreating,       setIsCreating]       = React.useState(false);
-  const [resendingEmail,   setResendingEmail]   = React.useState(false);
-  const [resendingTel,     setResendingTel]     = React.useState(false);
+  const [otpEmailError,  setOtpEmailError]  = React.useState<string | null>(null);
+  const [emailVerified,  setEmailVerified]  = React.useState(false);
+  const [isVerifying,    setIsVerifying]    = React.useState(false);
+  const [isCreating,     setIsCreating]     = React.useState(false);
+  const [resendingEmail, setResendingEmail] = React.useState(false);
 
-  const [emailOtp,    setEmailOtp]    = React.useState('');
-  const [telefonoOtp, setTelefonoOtp] = React.useState('');
+  const [emailOtp, setEmailOtp] = React.useState('');
 
   const data = formDataRef.current!;
 
-  const verificarAmbos = async () => {
-    if (!emailVerified || !telefonoVerified) {
-      setServerError('Verifica ambos códigos antes de continuar.');
+  const crearCuenta = async () => {
+    if (!emailVerified || !emailTokenRef.current) {
+      setServerError('Verifica el código antes de continuar.');
       return;
     }
-    if (!emailTokenRef.current || !telefonoTokenRef.current) return;
     setServerError(null);
     setIsCreating(true);
     try {
       await registrar({
-        nombre:          data.nombre,
-        apellido:        data.apellido,
-        email:           data.email,
-        telefono:        data.telefono,
-        password:        data.password,
-        email_token:     emailTokenRef.current,
-        telefono_token:  telefonoTokenRef.current,
+        nombre:      data.nombre,
+        apellido:    data.apellido,
+        email:       data.email,
+        telefono:    data.telefono,
+        password:    data.password,
+        email_token: emailTokenRef.current,
       });
     } catch (err) {
       const e = err as ApiError;
@@ -131,31 +121,10 @@ export default function RegistroScreen() {
     }
   };
 
-  const verificarTelefono = async () => {
-    if (telefonoOtp.length !== 6) { setOtpTelError('El código tiene 6 dígitos'); return; }
-    setOtpTelError(null);
-    setIsVerifying(true);
-    try {
-      const { token } = await authApi.verificarOtp({ tipo: 'telefono', destino: data.telefono, codigo: telefonoOtp });
-      telefonoTokenRef.current = token;
-      setTelefonoVerified(true);
-    } catch (err) {
-      setOtpTelError((err as ApiError)?.message ?? 'Código incorrecto');
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
   const reenviarEmail = async () => {
     setResendingEmail(true);
     try { await authApi.enviarOtp({ tipo: 'email', destino: data.email }); }
     finally { setResendingEmail(false); }
-  };
-
-  const reenviarTelefono = async () => {
-    setResendingTel(true);
-    try { await authApi.enviarOtp({ tipo: 'telefono', destino: data.telefono }); }
-    finally { setResendingTel(false); }
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -185,7 +154,7 @@ export default function RegistroScreen() {
           <Text className="text-sm text-white/80 mt-1 px-8 text-center">
             {step === 'datos'
               ? 'Regístrate para aplicar a turnos en empresas del directorio'
-              : 'Ingresa los códigos que enviamos a tu correo y teléfono'}
+              : 'Ingresa el código que enviamos a tu correo'}
           </Text>
           {/* Step dots */}
           <View className="flex-row gap-2 mt-4">
@@ -268,7 +237,7 @@ export default function RegistroScreen() {
                 name="telefono"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
-                    label="Teléfono *"
+                    label="Teléfono (opcional)"
                     placeholder="+57 300 000 0000"
                     keyboardType="phone-pad"
                     autoCapitalize="none"
@@ -277,7 +246,6 @@ export default function RegistroScreen() {
                     onChangeText={onChange}
                     onBlur={onBlur}
                     error={form1.formState.errors.telefono?.message}
-                    hint="Incluye el código de país, ej. +57"
                   />
                 )}
               />
@@ -402,63 +370,11 @@ export default function RegistroScreen() {
                 )}
               </View>
 
-              {/* Teléfono OTP */}
-              <View className="bg-card border border-border rounded-2xl p-4 gap-3">
-                <View className="flex-row items-center gap-2">
-                  <Ionicons
-                    name={telefonoVerified ? 'checkmark-circle' : 'phone-portrait-outline'}
-                    size={20}
-                    color={telefonoVerified ? '#22c55e' : '#6b7280'}
-                  />
-                  <Text className="text-sm font-semibold text-foreground">
-                    Código de teléfono
-                  </Text>
-                </View>
-                <Text className="text-xs text-muted-foreground">
-                  Enviado a <Text className="font-medium">{data.telefono}</Text>
-                </Text>
-                {!telefonoVerified ? (
-                  <>
-                    <Input
-                      label=""
-                      placeholder="000000"
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      value={telefonoOtp}
-                      onChangeText={setTelefonoOtp}
-                      error={otpTelError ?? undefined}
-                    />
-                    <View className="flex-row gap-2">
-                      <View className="flex-1">
-                        <Button
-                          label={isVerifying ? 'Verificando…' : 'Verificar'}
-                          onPress={verificarTelefono}
-                          loading={isVerifying}
-                          size="sm"
-                          fullWidth
-                        />
-                      </View>
-                      <TouchableOpacity
-                        onPress={reenviarTelefono}
-                        disabled={resendingTel}
-                        className="justify-center px-3"
-                      >
-                        <Text className="text-xs text-primary-500 font-medium">
-                          {resendingTel ? 'Reenviando…' : 'Reenviar'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                ) : (
-                  <Text className="text-sm text-success font-medium">✓ Teléfono verificado</Text>
-                )}
-              </View>
-
               <Button
                 label={isCreating ? 'Creando cuenta…' : 'Crear cuenta'}
-                onPress={verificarAmbos}
+                onPress={crearCuenta}
                 loading={isCreating}
-                disabled={!emailVerified || !telefonoVerified}
+                disabled={!emailVerified}
                 fullWidth
                 size="lg"
               />

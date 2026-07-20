@@ -97,10 +97,9 @@ interface AuthState {
     nombre: string;
     apellido?: string;
     email: string;
-    telefono: string;
+    telefono?: string;
     password: string;
     email_token: string;
-    telefono_token: string;
   }): Promise<void>;
 
   /** Login / registro vía Google OAuth. Devuelve `tipo` para que el caller sepa si fue registro. */
@@ -193,9 +192,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   // ── registrar ─────────────────────────────────────────────────────────
-  async registrar({ nombre, apellido, email, telefono, password, email_token, telefono_token }) {
+  async registrar({ nombre, apellido, email, telefono, password, email_token }) {
     const { access_token, refresh_token, usuario } = await authApi.registrar({
-      nombre, apellido, email, telefono, password, email_token, telefono_token,
+      nombre, apellido, email, telefono, password, email_token,
     });
     await secureTokenStore.setTokens(access_token, refresh_token);
     await cacheUsuario(usuario);

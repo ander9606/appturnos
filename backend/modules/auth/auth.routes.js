@@ -112,20 +112,21 @@ router.post(
 );
 
 // POST /api/auth/registro — registro libre para trabajador_turnos (marketplace).
-// No requiere cédula ni empresa preexistente.
+// No requiere cédula ni empresa preexistente. Solo se verifica el email por
+// OTP — el teléfono queda como dato de contacto opcional sin verificar
+// (SMS tiene costo por mensaje; se retoma si hace falta más adelante).
 router.post(
   '/registro',
   [
     body('nombre').isString().trim().notEmpty().withMessage('Nombre requerido'),
     body('apellido').optional().isString().trim(),
     emailSanitizado,
-    body('telefono').isString().trim().notEmpty().withMessage('Teléfono requerido'),
+    body('telefono').optional({ values: 'falsy' }).isString().trim(),
     body('password')
       .isString()
       .isLength({ min: 8 })
       .withMessage('La contraseña debe tener al menos 8 caracteres'),
     body('email_token').isString().notEmpty().withMessage('Token de verificación de email requerido'),
-    body('telefono_token').isString().notEmpty().withMessage('Token de verificación de teléfono requerido'),
   ],
   validar,
   ctrl.registrar
