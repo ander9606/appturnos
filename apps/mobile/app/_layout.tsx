@@ -96,7 +96,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       // Forzar aceptación de T&C antes de usar la app
       const inTerminos = segments[0] === 'terminos';
       const needsTerminos = !isSuperAdmin && !usuario?.terminos_aceptados_at;
-      if (needsTerminos && !inTerminos && !inCompletarPerfil && !needsPhone) {
+      if (needsTerminos && !inTerminos && !needsPhone) {
         router.replace('/terminos');
         return;
       }
