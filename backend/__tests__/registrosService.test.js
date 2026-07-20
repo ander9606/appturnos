@@ -1,5 +1,8 @@
 'use strict';
 
+jest.mock('../config/database', () => ({
+  pool: { query: jest.fn().mockResolvedValue([[]]) },
+}));
 jest.mock('../modules/nomina/registros/registros.model');
 jest.mock('../modules/nomina/periodos/periodos.model');
 jest.mock('../modules/trabajadores/trabajadores.model');
