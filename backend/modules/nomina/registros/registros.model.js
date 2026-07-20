@@ -110,7 +110,7 @@ const RegistrosModel = {
   async iniciarReingreso(empresaId, id, horaEntrada) {
     const [res] = await pool.query(
       `UPDATE registros_diarios
-       SET hora_entrada = ?, hora_salida = NULL, sesiones = sesiones + 1
+       SET hora_entrada = ?, hora_salida = NULL, sesiones = sesiones + 1, alerta_extra_enviada = 0
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NOT NULL`,
       [horaEntrada, id, empresaId]
     );
@@ -178,6 +178,23 @@ const RegistrosModel = {
       ordinarias: Number(work.ordinarias) + Number(comp.horas_comp),
       extras:     Number(work.extras),
     };
+  },
+
+  /** Jornadas activas (con entrada, sin salida) que aún no dispararon la alerta de horas extra. Cross-tenant — usado por el worker. */
+  async listarActivosSinAlertaExtra() {
+    const [filas] = await pool.query(
+      `SELECT r.id, r.empresa_id, r.trabajador_id, r.fecha, r.hora_entrada,
+              r.horas_ordinarias, r.horas_nocturnas, r.sesiones,
+              t.nombre, t.apellido
+       FROM registros_diarios r
+       JOIN trabajadores t ON t.id = r.trabajador_id
+       WHERE r.hora_entrada IS NOT NULL AND r.hora_salida IS NULL AND r.alerta_extra_enviada = 0`
+    );
+    return filas;
+  },
+
+  async marcarAlertaExtraEnviada(id) {
+    await pool.query('UPDATE registros_diarios SET alerta_extra_enviada = 1 WHERE id = ?', [id]);
   },
 
   /** Reemplaza los campos recalculables del registro (corrección). */

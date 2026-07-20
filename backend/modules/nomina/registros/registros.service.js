@@ -294,6 +294,22 @@ const RegistrosService = {
       fecha: hoy,
       hora_entrada: ahoraHHMMSS(),
     });
+
+    // Notifica a gestores de nómina que el trabajador marcó entrada (best-effort).
+    const [gestoresEntrada] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
+      [empresaId]
+    );
+    if (gestoresEntrada.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresEntrada.map((g) => g.id), {
+        empresaId,
+        tipo: 'nomina.entrada',
+        titulo: 'Entrada registrada',
+        mensaje: `${trabajador.nombre} ${trabajador.apellido} marcó entrada.`,
+        data: { registro_id: id, trabajador_id: trabajadorId },
+      }).catch(() => {});
+    }
+
     return RegistrosModel.obtenerPorId(empresaId, id);
   },
 
@@ -354,6 +370,21 @@ const RegistrosService = {
       ...horas,
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);
+
+    // Notifica a gestores de nómina que el trabajador marcó salida (best-effort).
+    const [gestoresSalida] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
+      [empresaId]
+    );
+    if (gestoresSalida.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresSalida.map((g) => g.id), {
+        empresaId,
+        tipo: 'nomina.salida',
+        titulo: 'Salida registrada',
+        mensaje: `${trabajador.nombre} ${trabajador.apellido} marcó salida.`,
+        data: { registro_id: registroId, trabajador_id: trabajadorId },
+      }).catch(() => {});
+    }
 
     // Descanso compensatorio automático si es festivo o domingo (Art. 179 CST)
     await CompensatoriosService.crearSiCorresponde(empresaId, {

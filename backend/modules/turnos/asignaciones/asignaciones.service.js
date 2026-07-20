@@ -349,6 +349,25 @@ const AsignacionesService = {
 
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
 
+    // Notifica a jefes de turno y admin que el trabajador marcó salida (best-effort).
+    const [gestoresEgreso] = await pool.query(
+      `SELECT id FROM usuarios
+       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
+      [dbEmpresaId]
+    );
+    if (gestoresEgreso.length > 0) {
+      await NotificacionesService.notificarVarios(
+        gestoresEgreso.map((g) => g.id),
+        {
+          empresaId: dbEmpresaId,
+          tipo: 'turno.egreso',
+          titulo: 'Trabajador marcó salida',
+          mensaje: `${trabajador.nombre} ${trabajador.apellido} registró su salida del turno.`,
+          data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
+        }
+      );
+    }
+
     // Firmar el minicontrato diario con la misma firma del egreso (best-effort)
     const contrato = await ContratosModel.obtenerPorAsignacion(dbEmpresaId, id);
     if (contrato && !contrato.firmado_trabajador && firma_b64) {

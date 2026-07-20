@@ -151,6 +151,7 @@ async function iniciar() {
   require('./modules/suscripciones/suscripcion.worker').iniciarWorker();
   require('./modules/webhooks/wompi.worker').iniciarWorker();
   require('./modules/turnos/turnos.worker').iniciarWorker();
+  require('./modules/nomina/registros/registros.worker').iniciarWorker();
 
   const apagar = (senal) => {
     logger.info(`${senal} recibido, cerrando servidor...`);

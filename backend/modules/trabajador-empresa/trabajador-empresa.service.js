@@ -3,10 +3,24 @@
 const TrabajadorEmpresaModel = require('./trabajador-empresa.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const EmpresasModel = require('../empresas/empresas.model');
+const NotificacionesService = require('../notificaciones/notificaciones.service');
 const AppError = require('../../utils/AppError');
 const { ROLES, ESTADOS_TRABAJADOR_EMPRESA } = require('../../config/constants');
 
 const E = ESTADOS_TRABAJADOR_EMPRESA;
+
+/** admin_empresa + jefe_turnos activos de la empresa — gestionan solicitudes de vinculación. */
+async function notificarGestores(empresaId, base) {
+  const { pool } = require('../../config/database');
+  const [gestores] = await pool.query(
+    `SELECT id FROM usuarios
+     WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
+    [empresaId]
+  );
+  if (gestores.length > 0) {
+    await NotificacionesService.notificarVarios(gestores.map((g) => g.id), { empresaId, ...base });
+  }
+}
 
 /**
  * Crea o reutiliza la ficha de trabajadores para el usuario en la empresa dada.
@@ -69,6 +83,12 @@ const TrabajadorEmpresaService = {
       await TrabajadorEmpresaModel.cambiarEstado(existente.id, E.SOLICITADO_POR_TRABAJADOR, {
         motivo: null,
       });
+      await notificarGestores(empresaId, {
+        tipo: 'trabajador_empresa.solicitud',
+        titulo: 'Nueva solicitud de vinculación',
+        mensaje: `Un trabajador quiere unirse a ${empresa.nombre}. Revisa las solicitudes pendientes.`,
+        data: { relacion_id: existente.id },
+      });
       return TrabajadorEmpresaModel.obtenerPorId(existente.id);
     }
 
@@ -77,6 +97,12 @@ const TrabajadorEmpresaService = {
       empresaId,
       estado: E.SOLICITADO_POR_TRABAJADOR,
       iniciadoPor: 'trabajador',
+    });
+    await notificarGestores(empresaId, {
+      tipo: 'trabajador_empresa.solicitud',
+      titulo: 'Nueva solicitud de vinculación',
+      mensaje: `Un trabajador quiere unirse a ${empresa.nombre}. Revisa las solicitudes pendientes.`,
+      data: { relacion_id: id },
     });
     return TrabajadorEmpresaModel.obtenerPorId(id);
   },
@@ -132,12 +158,14 @@ const TrabajadorEmpresaService = {
       };
     }
 
-    const PushService = require('../notificaciones/push/push.service');
-    const pushInvitacion = () => PushService.enviarExpo(usuarioId, {
+    const notificarInvitacion = () => NotificacionesService.notificar({
+      empresaId,
+      usuarioId,
+      tipo: 'invitacion_empresa',
       titulo: 'Nueva invitación de empresa',
       mensaje: 'Una empresa te ha invitado a unirte. Revisa tus invitaciones.',
-      data: { tipo: 'invitacion_empresa', empresa_id: empresaId },
-    }).catch(() => {});
+      data: { empresa_id: empresaId },
+    });
 
     // Ya tiene cuenta: crear relación.
     const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empresaId);
@@ -150,7 +178,7 @@ const TrabajadorEmpresaService = {
         trabajadorId,
         motivo: null,
       });
-      pushInvitacion();
+      await notificarInvitacion();
       return TrabajadorEmpresaModel.obtenerPorId(existente.id);
     }
 
@@ -181,6 +209,16 @@ const TrabajadorEmpresaService = {
 
     const trabajadorId = await vincularTrabajador(relacion.usuario_id, empresaId);
     await TrabajadorEmpresaModel.cambiarEstado(relacionId, E.ACTIVO, { trabajadorId });
+
+    const empresa = await EmpresasModel.obtenerDetalle(empresaId);
+    await NotificacionesService.notificar({
+      empresaId,
+      usuarioId: relacion.usuario_id,
+      tipo: 'trabajador_empresa.aprobado',
+      titulo: 'Solicitud aprobada',
+      mensaje: `${empresa?.nombre ?? 'La empresa'} aceptó tu solicitud. Ya eres parte del equipo.`,
+      data: { relacion_id: relacionId },
+    });
     return TrabajadorEmpresaModel.obtenerPorId(relacionId);
   },
 
@@ -200,6 +238,16 @@ const TrabajadorEmpresaService = {
       relacion.trabajador_id ||
       (await vincularTrabajador(usuarioId, relacion.empresa_id));
     await TrabajadorEmpresaModel.cambiarEstado(relacionId, E.ACTIVO, { trabajadorId });
+
+    const { pool } = require('../../config/database');
+    const [[u]] = await pool.query('SELECT nombre, apellido FROM usuarios WHERE id = ? LIMIT 1', [usuarioId]);
+    const nombre = u ? `${u.nombre} ${u.apellido || ''}`.trim() : 'Un trabajador';
+    await notificarGestores(relacion.empresa_id, {
+      tipo: 'trabajador_empresa.aceptada',
+      titulo: 'Invitación aceptada',
+      mensaje: `${nombre} aceptó tu invitación y ya es parte del equipo.`,
+      data: { relacion_id: relacionId },
+    });
     return TrabajadorEmpresaModel.obtenerPorId(relacionId);
   },
 
