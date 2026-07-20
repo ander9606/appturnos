@@ -181,12 +181,12 @@ export const authApi = {
 
   /**
    * Login / registro vía OAuth (Google, etc.).
-   * El `idToken` proviene de expo-auth-session o el SDK nativo de Google.
+   * El `idToken` proviene del SDK nativo de Google.
    */
   loginConProvider(provider: string, idToken: string): Promise<OAuthLoginResponse> {
     return api.post<OAuthLoginResponse>(
       `/api/auth/oauth/${provider}`,
-      { id_token: idToken },
+      { token: idToken },
       { authenticated: false },
     );
   },

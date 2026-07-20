@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": ["appturnos", "com.googleusercontent.apps.983031197089-vv1njq7f1l3uq9vakd257shh5ihiprdn"],
+    "scheme": "appturnos",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -65,7 +65,8 @@
           "photosPermission": "Zaturno necesita acceso a tus fotos para adjuntarlas a los reportes de novedades."
         }
       ],
-      "expo-location"
+      "expo-location",
+      "@react-native-google-signin/google-signin"
     ],
     "privacyPolicyUrl": "https://zaturno.app/privacidad",
     "experiments": {

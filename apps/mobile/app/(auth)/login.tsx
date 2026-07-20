@@ -38,7 +38,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const login  = useAuthStore((s) => s.login);
   const [serverError, setServerError] = React.useState<string | null>(null);
-  const { promptAsync: googleLogin, loading: googleLoading } = useGoogleAuth((msg) => setServerError(msg));
+  const { signIn: googleLogin, loading: googleLoading } = useGoogleAuth((msg) => setServerError(msg));
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -151,7 +151,7 @@ export default function LoginScreen() {
             size="lg"
           />
 
-          {!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB && !!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID && (
+          {!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB && (
             <>
               <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>O continúa con</Text><View style={styles.dividerLine} /></View>
               <TouchableOpacity style={styles.googleBtn} onPress={() => googleLogin()} disabled={googleLoading} activeOpacity={0.8}>

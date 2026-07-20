@@ -1,61 +1,53 @@
 /**
- * Hook que encapsula el flujo OAuth con Google vía expo-auth-session.
+ * Hook que encapsula el login con Google vía el SDK nativo
+ * (@react-native-google-signin/google-signin).
+ *
+ * A diferencia de expo-auth-session, este SDK valida por SHA-1 + package name
+ * registrados en Google Cloud Console — no requiere redirect URIs ni el
+ * Client ID de Android en el código (Play Services lo resuelve por la firma
+ * de la app). Solo hace falta el webClientId, el mismo que usa el backend
+ * para verificar el id_token.
  *
  * Uso:
- *   const { promptAsync, loading } = useGoogleAuth();
- *   <Button onPress={promptAsync} label="Continuar con Google" loading={loading} />
+ *   const { signIn, loading } = useGoogleAuth();
+ *   <Button onPress={signIn} label="Continuar con Google" loading={loading} />
  *
- * Variables de entorno requeridas en apps/mobile/.env:
- *   EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB      — web client ID (para Expo Go / navegador)
- *   EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS      — iOS client ID (para build nativo)
- *   EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID  — Android client ID (para build nativo)
+ * Variable de entorno requerida en apps/mobile/.env:
+ *   EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB — web client ID
  */
 import React from 'react';
-import { Platform } from 'react-native';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, isSuccessResponse, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAuthStore } from './useAuthStore';
 
-// Requerido por expo-auth-session para cerrar el popup del navegador correctamente.
-WebBrowser.maybeCompleteAuthSession();
-
-// Google solo acepta el esquema "reverso" del client ID nativo como redirect URI
-// (com.googleusercontent.apps.<client_id>:/...) — el default de expo-auth-session
-// usa el package name de la app, que Google rechaza con "custom URI scheme is not
-// enabled for your Android client". Ese mismo esquema debe estar en app.json → scheme.
-const nativeClientId = Platform.OS === 'ios'
-  ? process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS
-  : process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID;
-const redirectUri = nativeClientId
-  ? `com.googleusercontent.apps.${nativeClientId.replace('.apps.googleusercontent.com', '')}:/oauthredirect`
-  : undefined;
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB,
+});
 
 export function useGoogleAuth(onError?: (msg: string) => void) {
   const loginConGoogle = useAuthStore((s) => s.loginConGoogle);
   const [loading, setLoading] = React.useState(false);
 
-  const [, response, promptAsync] = Google.useAuthRequest({
-    clientId:         process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB,
-    iosClientId:      process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,
-    androidClientId:  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID,
-    ...(redirectUri ? { redirectUri } : {}),
-  });
-
-  React.useEffect(() => {
-    if (!response) return;
-    if (response.type !== 'success') return;
-
-    const idToken = response.authentication?.idToken;
-    if (!idToken) {
-      onError?.('Google no devolvió un id_token. Revisa los Client IDs configurados.');
-      return;
-    }
-
+  const signIn = React.useCallback(async () => {
     setLoading(true);
-    loginConGoogle(idToken)
-      .catch((err) => onError?.(err?.message ?? 'Error al autenticar con Google.'))
-      .finally(() => setLoading(false));
-  }, [response]);
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      if (!isSuccessResponse(response)) return; // usuario canceló
 
-  return { promptAsync, loading };
+      const idToken = response.data.idToken;
+      if (!idToken) {
+        onError?.('Google no devolvió un id_token. Revisa el Client ID configurado.');
+        return;
+      }
+
+      await loginConGoogle(idToken);
+    } catch (err) {
+      if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) return;
+      onError?.(err instanceof Error ? err.message : 'Error al autenticar con Google.');
+    } finally {
+      setLoading(false);
+    }
+  }, [loginConGoogle, onError]);
+
+  return { signIn, loading };
 }
