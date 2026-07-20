@@ -18,7 +18,7 @@ import {
   Alert,
 } from 'react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { empresasApi } from '@api-client';
+import { empresasApi, ApiError } from '@api-client';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -40,6 +40,7 @@ import { NextShiftCard }   from '@/features/dashboard/NextShiftCard';
 import { NoShiftCard }     from '@/features/dashboard/NoShiftCard';
 import { SetupChecklist }  from '@/features/dashboard/SetupChecklist';
 import { fmtPeriodo }      from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { formatShortDate } from '@/lib/formatters';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -148,7 +149,8 @@ export default function DashboardScreen() {
     mutationFn: () => empresasApi.generarLinkPago(),
     // Link hospedado por Wompi, se abre en el navegador del sistema — no un webview embebido.
     onSuccess: (data) => Linking.openURL(data.url),
-    onError: () => Alert.alert('No se pudo generar el link de pago', 'Intenta de nuevo o contacta a soporte.'),
+    onError: (error: ApiError) =>
+      Alert.alert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
   });
 
   function iniciarRenovacion() {
@@ -501,6 +503,22 @@ export default function DashboardScreen() {
             ))}
           </View>
         </View>
+
+        {/* ── Estado de suscripción (discreto, solo caso normal activa) ── */}
+        {isManager && !logiq360Conectado && !suscVencida && !suscPorVencer && suscData?.activa && (
+          <Pressable
+            onPress={iniciarRenovacion}
+            disabled={pagarMutation.isPending}
+            className="flex-row items-center justify-center gap-1.5 mx-4 mt-4 py-2 rounded-full bg-card border border-border active:opacity-60"
+            accessibilityRole="button"
+          >
+            <Ionicons name="checkmark-circle-outline" size={13} color="#9CA3AF" />
+            <Text className="text-xs text-muted-foreground">
+              Suscripción activa
+              {suscData.vigente_hasta ? ` · vence el ${formatShortDate(suscData.vigente_hasta)}` : ''}
+            </Text>
+          </Pressable>
+        )}
 
         {/* ── Próximos turnos (workers) ────────────────────────────────── */}
         {showShifts && proximos.length > 0 && (

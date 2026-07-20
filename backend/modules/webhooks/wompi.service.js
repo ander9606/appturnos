@@ -212,12 +212,14 @@ const WompiService = {
     });
 
     const json = await resp.json().catch(() => ({}));
-    if (!resp.ok) {
+    if (!resp.ok || !json.data?.id) {
       logger.error('Wompi generarLinkPago error:', json);
       throw new Error(json?.error?.reason || `Wompi error HTTP ${resp.status}`);
     }
 
-    return { url: json.data?.permalink, referencia: reference, monto_cop: SUSCRIPCION_ESTANDAR_COP * meses, expira_at: expiresAt };
+    // La API de creación no devuelve la URL pública — se construye a partir del id.
+    const url = `https://checkout.wompi.co/l/${json.data.id}`;
+    return { url, referencia: reference, monto_cop: SUSCRIPCION_ESTANDAR_COP * meses, expira_at: expiresAt };
   },
 };
 
