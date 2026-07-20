@@ -59,7 +59,14 @@ export default function RegistroEmpresaScreen() {
   const [otpError, setOtpError] = React.useState<string | null>(null);
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [isResending, setIsResending] = React.useState(false);
+  const [resendCooldown, setResendCooldown] = React.useState(0);
   const formDataRef = React.useRef<Form | null>(null);
+
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -76,16 +83,21 @@ export default function RegistroEmpresaScreen() {
       await authApi.enviarOtp({ tipo: 'email', destino: data.email });
       formDataRef.current = data;
       setStep('otp');
+      setResendCooldown(30);
     } catch (err) {
       setServerError(err instanceof ApiError ? err.message : 'No se pudo enviar el código. Intenta de nuevo.');
     }
   };
 
   const reenviarCodigo = async () => {
-    if (!formDataRef.current) return;
+    if (!formDataRef.current || resendCooldown > 0) return;
     setIsResending(true);
     try {
       await authApi.enviarOtp({ tipo: 'email', destino: formDataRef.current.email });
+      // El código anterior queda invalidado — limpiar para que no reintenten uno viejo.
+      setOtp('');
+      setOtpError(null);
+      setResendCooldown(30);
     } finally {
       setIsResending(false);
     }
@@ -118,7 +130,7 @@ export default function RegistroEmpresaScreen() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) setServerError('El email ya está registrado.');
-        else setOtpError(err.message);
+        else { setOtpError(err.message); setOtp(''); }
       } else {
         setServerError('Error inesperado. Intenta de nuevo.');
       }
@@ -383,9 +395,9 @@ export default function RegistroEmpresaScreen() {
               />
 
               <View style={styles.otpActions}>
-                <TouchableOpacity onPress={reenviarCodigo} disabled={isResending}>
-                  <Text style={styles.footerLink}>
-                    {isResending ? 'Reenviando…' : 'Reenviar código'}
+                <TouchableOpacity onPress={reenviarCodigo} disabled={isResending || resendCooldown > 0}>
+                  <Text style={[styles.footerLink, resendCooldown > 0 && { color: '#94A3B8' }]}>
+                    {isResending ? 'Reenviando…' : resendCooldown > 0 ? `Reenviar código (${resendCooldown}s)` : 'Reenviar código'}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setStep('datos')}>

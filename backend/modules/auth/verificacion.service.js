@@ -33,9 +33,15 @@ async function enviarOtp(tipo, destino) {
     );
 
     if (tipo === 'email') {
+      // Hora en el asunto: evita que Gmail/Outlook agrupen varios códigos en
+      // un mismo hilo y oculten el más reciente — cada envío se ve como
+      // mensaje nuevo y distinguible.
+      const horaEnvio = new Date().toLocaleTimeString('es-CO', {
+        hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota',
+      });
       await enviarEmail({
         to:      destino,
-        subject: 'Tu código de verificación — Zaturnos',
+        subject: `Tu código de verificación (${horaEnvio}) — Zaturnos`,
         html: `
           <p>Tu código de verificación es:</p>
           <h2 style="letter-spacing:6px;font-size:36px;">${codigo}</h2>
@@ -64,7 +70,9 @@ async function verificarOtp(tipo, destino, codigo) {
       [tipo, destino],
     );
 
-    if (!rows.length) throw new AppError('No hay un código activo para este destino.', 400);
+    if (!rows.length) {
+      throw new AppError('Ese código ya no es válido. Usa el del correo más reciente, o toca "Reenviar código".', 400);
+    }
 
     const row = rows[0];
 
