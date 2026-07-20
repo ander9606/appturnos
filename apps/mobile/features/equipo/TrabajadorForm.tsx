@@ -59,6 +59,9 @@ export function TrabajadorForm({
 
   const tipo = useWatch({ control, name: 'tipo' });
   const muestraSalario = tipo !== 'turnos'; // turnos cobra por oferta_puestos.tarifa_dia, no por salario fijo
+  // turnos ya tiene "Cargos certificados" (trabajador_cargos) en la ficha del
+  // trabajador — mostrar acá también este picker era redundante.
+  const muestraCargo = tipo !== 'turnos';
 
   const { data: cargos = [] } = useCargos();
   const cargosActivos = cargos.filter((c) => c.activo);
@@ -218,7 +221,9 @@ export function TrabajadorForm({
           />
         </View>
 
-        {/* Cargo — select sobre el catálogo de la empresa, no texto libre */}
+        {/* Cargo — select sobre el catálogo de la empresa; oculto en turnos, que
+            ya gestiona esto vía "Cargos certificados" en la ficha del trabajador */}
+        {muestraCargo && (
         <View className="mb-4">
           <Text className="text-sm font-semibold text-foreground mb-1">Cargo</Text>
           <Controller
@@ -303,6 +308,7 @@ export function TrabajadorForm({
             <Text className="text-xs text-danger mt-1">{errors.cargo.message}</Text>
           )}
         </View>
+        )}
 
         {/* Salario — solo aplica a nómina/ambos; turnos cobra por tarifa del puesto */}
         {muestraSalario && (
