@@ -57,6 +57,12 @@ function MiEmpresaNominaView() {
   const cargos = perfil?.cargos ?? [];
   const cargoTexto = perfil?.cargo ?? null;
 
+  const MARCACION_LABELS: Record<string, string> = {
+    libre: 'Libre — cualquier ubicación',
+    fijo: 'Punto fijo',
+    zonal: 'Zonal — varios puntos habilitados',
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <View className="px-5 pt-4 pb-3">
@@ -79,6 +85,49 @@ function MiEmpresaNominaView() {
             <Text className="text-xs text-muted-foreground mt-0.5">Empresa empleadora</Text>
           </View>
         </View>
+
+        {/* Marcación — tipo asignado y, si aplica, punto(s) donde puede marcar */}
+        {perfil?.tipo_marcacion && (
+          <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
+            <View className="flex-row items-center gap-4">
+              <View className="w-12 h-12 rounded-2xl bg-violet-50 items-center justify-center">
+                <Ionicons name="location-outline" size={22} color="#7C3AED" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-foreground">
+                  {MARCACION_LABELS[perfil.tipo_marcacion] ?? perfil.tipo_marcacion}
+                </Text>
+                <Text className="text-xs text-muted-foreground mt-0.5">Tipo de marcación</Text>
+              </View>
+            </View>
+
+            {perfil.tipo_marcacion === 'fijo' && (
+              perfil.punto_marcaje ? (
+                <View className="flex-row items-center gap-2 pl-1">
+                  <Ionicons name="pin-outline" size={14} color="#64748B" />
+                  <Text className="text-sm text-foreground flex-1">{perfil.punto_marcaje.nombre}</Text>
+                </View>
+              ) : (
+                <Text className="text-xs text-danger pl-1">Sin punto asignado — avisa a tu empresa</Text>
+              )
+            )}
+
+            {perfil.tipo_marcacion === 'zonal' && (
+              perfil.puntos_zonales.length > 0 ? (
+                <View className="gap-1.5">
+                  {perfil.puntos_zonales.map((p) => (
+                    <View key={p.id} className="flex-row items-center gap-2 pl-1">
+                      <Ionicons name="pin-outline" size={14} color="#64748B" />
+                      <Text className="text-sm text-foreground flex-1">{p.nombre}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text className="text-xs text-danger pl-1">Sin zonas habilitadas — avisa a tu empresa</Text>
+              )
+            )}
+          </View>
+        )}
 
         {/* Cargo de texto (campo libre del trabajador) */}
         {cargoTexto && (
