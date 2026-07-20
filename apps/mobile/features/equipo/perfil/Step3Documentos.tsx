@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,11 +8,12 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { useCargos } from '@/features/turnos/useTurnos';
+import { useCargos, useCrearCargo } from '@/features/turnos/useTurnos';
 import { validateStep3, uid, buildMesAnio } from './utils';
 import type { WizardData, ExperienciaInput, DiplomaInput } from './types';
 
@@ -206,6 +207,9 @@ type Props = {
 
 export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
   const { data: cargos, isLoading: cargosLoading } = useCargos();
+  const crearCargo = useCrearCargo();
+  const [nuevoCargoModal, setNuevoCargoModal] = useState(false);
+  const [nuevoCargoNombre, setNuevoCargoNombre] = useState('');
 
   const handleNext = () => {
     const err = validateStep3(data);
@@ -252,7 +256,25 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
         : [...data.cargo_ids, id],
     });
 
+  const handleCrearCargo = async () => {
+    const nombre = nuevoCargoNombre.trim();
+    if (!nombre) return;
+    try {
+      const cargo = await crearCargo.mutateAsync({ nombre });
+      onChange({ cargo_ids: [...data.cargo_ids, cargo.id] });
+      setNuevoCargoNombre('');
+      setNuevoCargoModal(false);
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: string }).message)
+          : 'No se pudo crear el cargo.';
+      Alert.alert('Error', msg);
+    }
+  };
+
   return (
+    <>
     <ScrollView
       contentContainerClassName="px-5 py-4 gap-5 pb-10"
       keyboardShouldPersistTaps="handled"
@@ -333,7 +355,16 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
       ))}
 
       {/* Cargos certificados */}
-      <SectionDivider label="CARGOS CERTIFICADOS" />
+      <View className="flex-row items-center justify-between">
+        <SectionDivider label="CARGOS CERTIFICADOS" />
+        <TouchableOpacity
+          onPress={() => setNuevoCargoModal(true)}
+          className="flex-row items-center gap-1 px-3 py-1.5 bg-primary-50 rounded-xl"
+        >
+          <Ionicons name="add" size={16} color="#FF5A3C" />
+          <Text className="text-sm font-semibold text-primary-500">Crear cargo</Text>
+        </TouchableOpacity>
+      </View>
       <Text className="text-xs text-muted-foreground -mt-2">
         Selecciona los cargos del catálogo para los que este trabajador está habilitado.
       </Text>
@@ -375,5 +406,42 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
         </View>
       </View>
     </ScrollView>
+
+    {/* ── Modal: crear cargo rápido ──────────────────────────────────── */}
+    <Modal
+      visible={nuevoCargoModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setNuevoCargoModal(false)}
+    >
+      <View className="flex-1 bg-background px-6 pt-8">
+        <View className="flex-row items-center justify-between mb-6">
+          <Text className="text-lg font-bold text-foreground">Nuevo cargo</Text>
+          <Pressable onPress={() => setNuevoCargoModal(false)} hitSlop={8}>
+            <Ionicons name="close" size={24} color="#64748B" />
+          </Pressable>
+        </View>
+        <Input
+          label="Nombre *"
+          placeholder="Ej. Auxiliar de bodega"
+          value={nuevoCargoNombre}
+          onChangeText={setNuevoCargoNombre}
+          autoCapitalize="sentences"
+          autoFocus
+        />
+        <View className="mt-6">
+          <Button
+            label={crearCargo.isPending ? 'Creando…' : 'Crear y seleccionar'}
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={crearCargo.isPending}
+            disabled={!nuevoCargoNombre.trim()}
+            onPress={handleCrearCargo}
+          />
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }

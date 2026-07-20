@@ -21,7 +21,7 @@ export default function NuevoTrabajadorScreen() {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>(INITIAL);
 
-  useConfirmDiscard(!isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL));
+  const allowLeave = useConfirmDiscard(!isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL));
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina']);
   if (denied) return denied;
@@ -66,7 +66,9 @@ export default function NuevoTrabajadorScreen() {
           anio:        d.anio ? parseInt(d.anio, 10) : null,
         })),
         empresa_ids: data.empresa_ids.length ? data.empresa_ids : undefined,
+        cargo_ids: data.cargo_ids.length ? data.cargo_ids : undefined,
       });
+      allowLeave();
       router.replace(`/trabajador/${t.id}`);
     } catch (err: unknown) {
       const msg =

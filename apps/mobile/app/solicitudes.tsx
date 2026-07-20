@@ -231,11 +231,12 @@ export default function SolicitudesScreen() {
   const asignarCargo = useAsignarCargoAVinculo();
   const cargosActivos = cargos.filter((c) => c.activo);
 
-  // Modal "elegir cargo" — se abre al aprobar; el vínculo solo se activa
-  // una vez que se eligió y asignó un cargo.
+  // Modal "elegir cargos" — se abre al aprobar; el vínculo solo se activa
+  // una vez que se eligió y certificó al menos un cargo.
   const [cargoModalId, setCargoModalId]           = useState<number | null>(null);
   const [vinculoAprobadoId, setVinculoAprobadoId] = useState<number | null>(null);
-  const [selectedCargoId, setSelectedCargoId]     = useState<number | null>(null);
+  const [selectedCargoIds, setSelectedCargoIds]   = useState<number[]>([]);
+  const [cargosAsignados, setCargosAsignados]     = useState<number[]>([]); // ok en intentos previos, para reintentar sin repetir
   const [cargoError, setCargoError]               = useState<string | null>(null);
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
@@ -257,12 +258,18 @@ export default function SolicitudesScreen() {
   const handleAprobar = (id: number) => {
     setCargoModalId(id);
     setVinculoAprobadoId(null);
-    setSelectedCargoId(null);
+    setSelectedCargoIds([]);
+    setCargosAsignados([]);
     setCargoError(null);
   };
 
+  const toggleCargoSeleccionado = (id: number) =>
+    setSelectedCargoIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+
   const handleConfirmarCargo = async () => {
-    if (!cargoModalId || !selectedCargoId) return;
+    if (!cargoModalId || selectedCargoIds.length === 0) return;
     setLoadingId(cargoModalId);
     setCargoError(null);
     try {
@@ -274,7 +281,13 @@ export default function SolicitudesScreen() {
         vinculoId = vinculo.id;
         setVinculoAprobadoId(vinculoId);
       }
-      await asignarCargo.mutateAsync({ vinculoId, cargoId: selectedCargoId });
+      // Solo los que faltan — si un intento previo falló a mitad de camino,
+      // no se re-asignan los que ya quedaron guardados.
+      const pendientes = selectedCargoIds.filter((id) => !cargosAsignados.includes(id));
+      for (const cargoId of pendientes) {
+        await asignarCargo.mutateAsync({ vinculoId, cargoId });
+        setCargosAsignados((prev) => [...prev, cargoId]);
+      }
       setCargoModalId(null);
     } catch (err) {
       setCargoError((err as ApiError)?.message ?? 'No se pudo completar la acción.');
@@ -386,10 +399,10 @@ export default function SolicitudesScreen() {
       <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
         <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
           <View className="flex-1">
-            <Text className="text-base font-bold text-foreground">Asignar cargo</Text>
+            <Text className="text-base font-bold text-foreground">Asignar cargos</Text>
             {solicitudEnModal && (
               <Text className="text-xs text-muted-foreground mt-0.5">
-                Para aprobar a {solicitudEnModal.usuario_nombre}, elegí el cargo que va a desempeñar.
+                Para aprobar a {solicitudEnModal.usuario_nombre}, elegí los cargos que va a desempeñar.
               </Text>
             )}
           </View>
@@ -417,10 +430,10 @@ export default function SolicitudesScreen() {
             </View>
           }
           renderItem={({ item }) => {
-            const selected = selectedCargoId === item.id;
+            const selected = selectedCargoIds.includes(item.id);
             return (
               <Pressable
-                onPress={() => setSelectedCargoId(item.id)}
+                onPress={() => toggleCargoSeleccionado(item.id)}
                 className={`flex-row items-center gap-3 rounded-2xl border px-4 py-3 mb-2 active:opacity-70 ${
                   selected ? 'border-primary-500 bg-primary-50' : 'bg-card border-border'
                 }`}
@@ -445,14 +458,14 @@ export default function SolicitudesScreen() {
         <View className="px-5 pb-4 pt-2">
           <TouchableOpacity
             onPress={handleConfirmarCargo}
-            disabled={!selectedCargoId || asignandoCargo}
+            disabled={selectedCargoIds.length === 0 || asignandoCargo}
             className="h-14 rounded-2xl items-center justify-center bg-primary-500 active:opacity-80 disabled:opacity-40"
           >
             {asignandoCargo ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text className="text-base font-semibold text-white">
-                {vinculoAprobadoId ? 'Reintentar asignación' : 'Aprobar y asignar cargo'}
+                {vinculoAprobadoId ? 'Reintentar asignación' : `Aprobar y certificar (${selectedCargoIds.length})`}
               </Text>
             )}
           </TouchableOpacity>

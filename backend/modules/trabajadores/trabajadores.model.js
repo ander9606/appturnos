@@ -221,8 +221,8 @@ const TrabajadoresModel = {
             contacto_emergencia_nombre, contacto_emergencia_tel,
             eps, afp, banco, tipo_cuenta, numero_cuenta,
             ant_judiciales_fecha, ant_disciplinarios_fecha,
-            empresas_postulacion, external_ref)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            empresas_postulacion, cargos_iniciales, external_ref, creado_por)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           empresaId,
           datos.nombre,
@@ -247,7 +247,9 @@ const TrabajadoresModel = {
           datos.ant_judiciales_fecha ?? null,
           datos.ant_disciplinarios_fecha ?? null,
           datos.empresa_ids?.length ? JSON.stringify(datos.empresa_ids) : null,
+          datos.cargo_ids?.length ? JSON.stringify(datos.cargo_ids) : null,
           datos.external_ref ?? null,
+          datos.creado_por ?? null,
         ]
       );
       const trabajadorId = res.insertId;
@@ -307,6 +309,14 @@ const TrabajadoresModel = {
       [id, empresaId]
     );
     return res.affectedRows;
+  },
+
+  /** Borra la fila. Falla con FK (ER_ROW_IS_REFERENCED_2) si tiene asignaciones, registros o calificaciones. */
+  async eliminarDefinitivo(empresaId, id) {
+    await pool.query(
+      'DELETE FROM trabajadores WHERE id = ? AND empresa_id = ?',
+      [id, empresaId]
+    );
   },
 
   // ── Experiencias ──────────────────────────────────────────────────────────

@@ -32,7 +32,10 @@ async function obtener(req, res) {
 }
 
 async function crear(req, res) {
-  const data = await TrabajadoresService.crear(req.empresa_id, req.body);
+  const data = await TrabajadoresService.crear(req.empresa_id, {
+    ...req.body,
+    creado_por: req.usuario.sub,
+  });
   res.status(201).json({ success: true, data, message: 'Trabajador creado' });
 }
 
@@ -48,6 +51,11 @@ async function actualizar(req, res) {
 async function eliminar(req, res) {
   await TrabajadoresService.eliminar(req.empresa_id, Number(req.params.id));
   res.json({ success: true, data: null, message: 'Trabajador desactivado' });
+}
+
+async function eliminarDefinitivo(req, res) {
+  await TrabajadoresService.eliminarDefinitivo(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data: null, message: 'Trabajador eliminado' });
 }
 
 async function buscarPorCedula(req, res) {
@@ -119,7 +127,7 @@ async function guardarDisponibilidad(req, res) {
 }
 
 module.exports = {
-  listar, obtener, buscarPorCedula, crear, actualizar, eliminar,
+  listar, obtener, buscarPorCedula, crear, actualizar, eliminar, eliminarDefinitivo,
   obtenerMe, actualizarMe, actualizarExtras,
   crearExperiencia, eliminarExperiencia,
   crearDiploma, eliminarDiploma,

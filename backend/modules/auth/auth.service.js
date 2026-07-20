@@ -205,7 +205,36 @@ const AuthService = {
     }
 
     const TrabajadorEmpresaModel = require('../trabajador-empresa/trabajador-empresa.model');
+    const CargosModel = require('../cargos/cargos.model');
     const ESTADOS = require('../../config/constants').ESTADOS_TRABAJADOR_EMPRESA;
+
+    // Vincular a la empresa dueña de la ficha. listarMultiEmpresa (feed de ofertas
+    // para trabajador_turnos/nomina) solo lee trabajador_empresa — nunca el
+    // empresa_id directo de usuarios — así que sin esto el trabajador no vería
+    // ninguna oferta de su propia empresa. Aprovechamos para aplicar los cargos
+    // que el gestor haya certificado al crear la ficha (cargos_iniciales).
+    if (trabajador.empresa_id) {
+      try {
+        const teId = await TrabajadorEmpresaModel.crear({
+          usuarioId,
+          empresaId: trabajador.empresa_id,
+          estado: ESTADOS.ACTIVO,
+          iniciadoPor: 'empresa',
+        });
+        await TrabajadorEmpresaModel.cambiarEstado(teId, ESTADOS.ACTIVO, { trabajadorId: trabajador.id });
+
+        if (trabajador.cargos_iniciales && trabajador.creado_por) {
+          const cargoIds = Array.isArray(trabajador.cargos_iniciales)
+            ? trabajador.cargos_iniciales
+            : JSON.parse(trabajador.cargos_iniciales);
+          for (const cargoId of cargoIds) {
+            try {
+              await CargosModel.asignar({ trabajadorEmpresaId: teId, cargoId, asignadoPor: trabajador.creado_por });
+            } catch (_e) { /* cargo ya no existe o fue desactivado — no bloquear la activación */ }
+          }
+        }
+      } catch (_e) { /* no bloquear la activación */ }
+    }
 
     // Crear solicitudes de vinculación para las empresas pre-seleccionadas (iniciadas por el trabajador).
     if (rol === ROLES.TRABAJADOR_TURNOS && trabajador.empresas_postulacion) {
