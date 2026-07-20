@@ -113,14 +113,18 @@ export default function TurnosScreen() {
 
   const ofertasFiltradas = useMemo(() => {
     const term = searchOfertas.trim().toLowerCase();
-    if (!term) return ofertas;
-    return ofertas.filter((o) =>
-      o.titulo.toLowerCase().includes(term) ||
-      (o.empresa_nombre?.toLowerCase().includes(term) ?? false) ||
-      (o.lugar?.toLowerCase().includes(term) ?? false) ||
-      (o.puestos ?? []).some((p) => p.cargo_nombre.toLowerCase().includes(term))
-    );
-  }, [ofertas, searchOfertas]);
+    return ofertas
+      .filter((o) => o.fecha === selectedDate)
+      .filter((o) => {
+        if (!term) return true;
+        return (
+          o.titulo.toLowerCase().includes(term) ||
+          (o.empresa_nombre?.toLowerCase().includes(term) ?? false) ||
+          (o.lugar?.toLowerCase().includes(term) ?? false) ||
+          (o.puestos ?? []).some((p) => p.cargo_nombre.toLowerCase().includes(term))
+        );
+      });
+  }, [ofertas, searchOfertas, selectedDate]);
 
   const isRefreshing = refetchingMios || refetchingOfertas;
 
@@ -275,9 +279,10 @@ export default function TurnosScreen() {
   const EmptyOfertas = () => (
     <View className="flex-1 items-center justify-center py-16 gap-3">
       <Ionicons name="search-outline" size={48} color="#94A3B8" />
-      <Text className="text-base font-semibold text-foreground">Sin ofertas disponibles</Text>
+      <Text className="text-base font-semibold text-foreground">Sin ofertas este día</Text>
       <Text className="text-sm text-muted-foreground text-center px-8">
-        No hay turnos disponibles en este momento. Vuelve más tarde.
+        No hay turnos disponibles el{' '}
+        {formatShortDate(selectedDate)}. Prueba con otra fecha.
       </Text>
     </View>
   );
