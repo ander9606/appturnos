@@ -478,20 +478,20 @@ export default function TurnosScreen() {
                 renderItem={renderOfertaCard}
                 contentContainerClassName="px-5 py-4 gap-3"
                 ListHeaderComponent={
-                  ofertas.length > 0 ? (
-                    <>
-                      {!isNomina && (
-                        <TouchableOpacity
-                          onPress={() => router.push('/mis-empresas')}
-                          className="flex-row items-center gap-2 bg-info/10 rounded-xl px-3 py-2 mb-3"
-                        >
-                          <Ionicons name="information-circle-outline" size={15} color="#3B82F6" />
-                          <Text className="text-xs text-info flex-1">
-                            Ves las ofertas antes o después según tu calificación en cada empresa.
-                          </Text>
-                          <Text className="text-xs font-semibold text-info">Ver</Text>
-                        </TouchableOpacity>
-                      )}
+                  <>
+                    {!isNomina && (
+                      <TouchableOpacity
+                        onPress={() => router.push('/mis-empresas')}
+                        className="flex-row items-center gap-2 bg-info/10 rounded-xl px-3 py-2 mb-3"
+                      >
+                        <Ionicons name="information-circle-outline" size={15} color="#3B82F6" />
+                        <Text className="text-xs text-info flex-1">
+                          Ves las ofertas antes o después según tu calificación en cada empresa.
+                        </Text>
+                        <Text className="text-xs font-semibold text-info">Ver</Text>
+                      </TouchableOpacity>
+                    )}
+                    {ofertas.length > 0 && (
                       <View className="flex-row items-center bg-card border border-border rounded-xl px-3 h-10 mb-3">
                         <Ionicons name="search-outline" size={15} color="#64748B" style={{ marginRight: 8 }} />
                         <TextInput
@@ -508,8 +508,8 @@ export default function TurnosScreen() {
                           </TouchableOpacity>
                         )}
                       </View>
-                    </>
-                  ) : null
+                    )}
+                  </>
                 }
                 ListEmptyComponent={
                   searchOfertas.trim() ? (
