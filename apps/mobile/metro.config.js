@@ -14,6 +14,14 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
 ];
 
+// android/ e ios/ son output nativo (Gradle/Xcode), no código de la app —
+// vigilarlos hace que Metro crashee en Windows cuando Gradle borra carpetas
+// de build a mitad de un watch (ENOENT en mergeDebugResources/*).
+config.resolver.blockList = [
+  /apps\/mobile\/android\/.*/,
+  /apps\/mobile\/ios\/.*/,
+];
+
 // Alias @api-client → packages/api-client/src/index.ts
 config.resolver.extraNodeModules = {
   '@api-client': path.resolve(monorepoRoot, 'packages/api-client/src/index.ts'),
