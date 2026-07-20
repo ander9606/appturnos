@@ -353,6 +353,14 @@ export function useEliminarCargo() {
   });
 }
 
+/** Certifica a un trabajador ya vinculado (activo) para un cargo. */
+export function useAsignarCargoAVinculo() {
+  return useMutation({
+    mutationFn: ({ vinculoId, cargoId }: { vinculoId: number; cargoId: number }) =>
+      cargosApi.asignarAVinculo(vinculoId, cargoId),
+  });
+}
+
 /** Crea una nueva oferta de turno con sus puestos. */
 export function useCrearOferta() {
   const qc = useQueryClient();

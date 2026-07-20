@@ -34,6 +34,17 @@ export interface EliminarCargoResult {
   usos: number;
 }
 
+export interface CargoCertificado {
+  id: number;
+  cargo_id: number;
+  asignado_por: number;
+  asignado_at: string;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  cargo_empresa_id: number | null;
+}
+
 export const cargosApi = {
   listar(): Promise<Cargo[]> {
     return api.get<Cargo[]>('/api/cargos');
@@ -49,5 +60,10 @@ export const cargosApi = {
 
   eliminar(id: number): Promise<EliminarCargoResult> {
     return api.delete<EliminarCargoResult>(`/api/cargos/${id}`);
+  },
+
+  /** Certifica a un trabajador ya vinculado (activo) para un cargo. */
+  asignarAVinculo(vinculoId: number, cargoId: number): Promise<CargoCertificado[]> {
+    return api.post<CargoCertificado[]>(`/api/trabajador-empresa/${vinculoId}/cargos`, { cargo_id: cargoId });
   },
 };

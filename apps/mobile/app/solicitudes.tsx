@@ -12,12 +12,14 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   RefreshControl,
   TextInput,
   Pressable,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -28,7 +30,8 @@ import {
   useAprobar,
   useRechazarVinculo,
 } from '@/features/empresas/useTrabajadorEmpresa';
-import type { SolicitudAdmin } from '@api-client';
+import { useCargos, useAsignarCargoAVinculo } from '@/features/turnos/useTurnos';
+import type { SolicitudAdmin, ApiError } from '@api-client';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { Avatar } from '@/components/ui/Avatar';
 import { confirm } from '@/lib/confirmDialog';
@@ -224,6 +227,17 @@ export default function SolicitudesScreen() {
   const aprobar  = useAprobar();
   const rechazar = useRechazarVinculo();
 
+  const { data: cargos = [] } = useCargos();
+  const asignarCargo = useAsignarCargoAVinculo();
+  const cargosActivos = cargos.filter((c) => c.activo);
+
+  // Modal "elegir cargo" — se abre al aprobar; el vínculo solo se activa
+  // una vez que se eligió y asignó un cargo.
+  const [cargoModalId, setCargoModalId]           = useState<number | null>(null);
+  const [vinculoAprobadoId, setVinculoAprobadoId] = useState<number | null>(null);
+  const [selectedCargoId, setSelectedCargoId]     = useState<number | null>(null);
+  const [cargoError, setCargoError]               = useState<string | null>(null);
+
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
 
@@ -240,12 +254,30 @@ export default function SolicitudesScreen() {
   const pendientesCount = tab === 'pendientes' ? solicitudes.length : 0;
   const aprobadosCount  = tab === 'aprobadas'  ? solicitudes.length : 0;
 
-  const handleAprobar = async (id: number) => {
-    setLoadingId(id);
+  const handleAprobar = (id: number) => {
+    setCargoModalId(id);
+    setVinculoAprobadoId(null);
+    setSelectedCargoId(null);
+    setCargoError(null);
+  };
+
+  const handleConfirmarCargo = async () => {
+    if (!cargoModalId || !selectedCargoId) return;
+    setLoadingId(cargoModalId);
+    setCargoError(null);
     try {
-      await aprobar.mutateAsync(id);
-    } catch {
-      Alert.alert('Error', 'No se pudo aprobar la solicitud');
+      // Si ya se aprobó en un intento anterior (falló solo la asignación),
+      // no se vuelve a aprobar — el backend rechaza aprobar un vínculo ya activo.
+      let vinculoId = vinculoAprobadoId;
+      if (!vinculoId) {
+        const vinculo = await aprobar.mutateAsync(cargoModalId);
+        vinculoId = vinculo.id;
+        setVinculoAprobadoId(vinculoId);
+      }
+      await asignarCargo.mutateAsync({ vinculoId, cargoId: selectedCargoId });
+      setCargoModalId(null);
+    } catch (err) {
+      setCargoError((err as ApiError)?.message ?? 'No se pudo completar la acción.');
     } finally {
       setLoadingId(null);
     }
@@ -269,7 +301,11 @@ export default function SolicitudesScreen() {
     }
   };
 
+  const solicitudEnModal = solicitudes.find((s) => s.id === cargoModalId) ?? null;
+  const asignandoCargo = loadingId === cargoModalId;
+
   return (
+    <>
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
       <Stack.Screen
         options={{
@@ -339,5 +375,90 @@ export default function SolicitudesScreen() {
         ))}
       </ScrollView>
     </SafeAreaView>
+
+    {/* ── Modal: elegir cargo (obligatorio para aprobar) ────────────── */}
+    <Modal
+      visible={cargoModalId !== null}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setCargoModalId(null)}
+    >
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+        <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
+          <View className="flex-1">
+            <Text className="text-base font-bold text-foreground">Asignar cargo</Text>
+            {solicitudEnModal && (
+              <Text className="text-xs text-muted-foreground mt-0.5">
+                Para aprobar a {solicitudEnModal.usuario_nombre}, elegí el cargo que va a desempeñar.
+              </Text>
+            )}
+          </View>
+          <Pressable onPress={() => setCargoModalId(null)} hitSlop={8} disabled={asignandoCargo}>
+            <Ionicons name="close" size={24} color="#64748B" />
+          </Pressable>
+        </View>
+
+        {cargoError && (
+          <View className="mx-5 mt-4 bg-danger-light border border-danger/30 rounded-xl px-4 py-3">
+            <Text className="text-sm font-medium text-danger">{cargoError}</Text>
+          </View>
+        )}
+
+        <FlatList
+          data={cargosActivos}
+          keyExtractor={(c) => String(c.id)}
+          contentContainerStyle={{ padding: 20, paddingBottom: 8 }}
+          ListEmptyComponent={
+            <View className="items-center gap-2 py-10">
+              <Ionicons name="briefcase-outline" size={32} color="#94A3B8" />
+              <Text className="text-sm text-muted-foreground text-center">
+                Tu empresa no tiene cargos creados todavía.{'\n'}Creá uno primero en "Gestión de cargos".
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const selected = selectedCargoId === item.id;
+            return (
+              <Pressable
+                onPress={() => setSelectedCargoId(item.id)}
+                className={`flex-row items-center gap-3 rounded-2xl border px-4 py-3 mb-2 active:opacity-70 ${
+                  selected ? 'border-primary-500 bg-primary-50' : 'bg-card border-border'
+                }`}
+              >
+                <View className="w-9 h-9 rounded-full bg-info/10 items-center justify-center">
+                  <Ionicons name="briefcase-outline" size={16} color="#3B82F6" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-foreground">{item.nombre}</Text>
+                  {!!item.descripcion && (
+                    <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+                      {item.descripcion}
+                    </Text>
+                  )}
+                </View>
+                {selected && <Ionicons name="checkmark-circle" size={20} color="#6366F1" />}
+              </Pressable>
+            );
+          }}
+        />
+
+        <View className="px-5 pb-4 pt-2">
+          <TouchableOpacity
+            onPress={handleConfirmarCargo}
+            disabled={!selectedCargoId || asignandoCargo}
+            className="h-14 rounded-2xl items-center justify-center bg-primary-500 active:opacity-80 disabled:opacity-40"
+          >
+            {asignandoCargo ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-base font-semibold text-white">
+                {vinculoAprobadoId ? 'Reintentar asignación' : 'Aprobar y asignar cargo'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </Modal>
+    </>
   );
 }
