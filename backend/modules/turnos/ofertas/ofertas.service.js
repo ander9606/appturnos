@@ -92,24 +92,26 @@ const OfertasService = {
     }
 
     if (usuario.rol === ROLES.TRABAJADOR_TURNOS || usuario.rol === ROLES.TRABAJADOR_NOMINA) {
-      const oferta = await OfertasModel.obtenerPorId(empresaId, id, 0);
-      if (!oferta) throw new AppError('Oferta no encontrada', 404);
+      // empresaId (req.empresa_id) es null para trabajadores multi-empresa — no sirve
+      // para el fetch inicial, que debe resolver la empresa dueña de la oferta primero.
+      const ofertaEmpresaId = await OfertasModel.obtenerEmpresaId(id);
+      if (!ofertaEmpresaId) throw new AppError('Oferta no encontrada', 404);
 
       const ids = empresasActivas && empresasActivas.length
         ? empresasActivas
         : await TrabajadorEmpresaModel.listarEmpresaIds(usuario.sub);
 
-      if (!ids.includes(oferta.empresa_id)) {
+      if (!ids.includes(ofertaEmpresaId)) {
         throw new AppError('Oferta no encontrada', 404);
       }
-      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(oferta.empresa_id, usuario.sub);
+      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(ofertaEmpresaId, usuario.sub);
       const delay = delayPorRanking(trabajador?.ranking);
-      const ofertaConDelay = await OfertasModel.obtenerPorId(oferta.empresa_id, id, delay);
+      const ofertaConDelay = await OfertasModel.obtenerPorId(ofertaEmpresaId, id, delay);
       if (!ofertaConDelay) {
         throw new AppError('Oferta aún no disponible para tu nivel de ranking', 403);
       }
 
-      const asignaciones = await AsignacionesModel.listarPorOferta(oferta.empresa_id, id);
+      const asignaciones = await AsignacionesModel.listarPorOferta(ofertaEmpresaId, id);
       return { ...ofertaConDelay, asignaciones };
     }
 

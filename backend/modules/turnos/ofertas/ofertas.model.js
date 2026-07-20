@@ -192,6 +192,16 @@ const OfertasModel = {
     return { data: filas.map(parsearPuestos), total };
   },
 
+  /** Resuelve la empresa dueña de una oferta sin conocerla de antemano — usada
+   *  para validar membresía de trabajadores multi-empresa antes del fetch scoped. */
+  async obtenerEmpresaId(id) {
+    const [filas] = await pool.query(
+      'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
+      [id]
+    );
+    return filas[0]?.empresa_id ?? null;
+  },
+
   async obtenerPorId(empresaId, id, antiguedadMinMin = 0) {
     const params = [id, empresaId];
     let extra = '';
