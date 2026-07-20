@@ -10,7 +10,8 @@ import { fmtHora, calcularElapsedLabel, type EstadoHoy, type ResumenPeriodoNomin
 interface Props {
   cargo:          string | null;
   puntoMarcaje:   PuntoMarcaje | null;
-  tipoMarcacion:  'libre' | 'fijo';
+  puntosZonales:  PuntoMarcaje[];
+  tipoMarcacion:  'libre' | 'fijo' | 'zonal';
   estadoHoy:      EstadoHoy;
   periodoAbierto: boolean;
   resumenSemana:  ResumenPeriodoNomina;
@@ -32,6 +33,7 @@ function abrirMaps(lat: number, lng: number, nombre: string) {
 export function IngresoHoyTab({
   cargo,
   puntoMarcaje,
+  puntosZonales,
   tipoMarcacion,
   estadoHoy,
   periodoAbierto,
@@ -76,6 +78,31 @@ export function IngresoHoyTab({
             <Ionicons name="navigate-outline" size={13} color="#3B82F6" />
             <Text className="text-xs font-semibold text-info">Cómo llegar</Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {tipoMarcacion === 'zonal' && puntosZonales.length > 0 && (
+        <View className="bg-card rounded-2xl p-4 gap-3 border border-border">
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="location-outline" size={16} color="#64748B" />
+            <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Puedes marcar en cualquiera de estas zonas
+            </Text>
+          </View>
+          {puntosZonales.map((p) => (
+            <View key={p.id} className="flex-row items-center justify-between gap-2">
+              <Text className="text-sm text-foreground flex-1" numberOfLines={1}>{p.nombre}</Text>
+              <TouchableOpacity
+                onPress={() => abrirMaps(p.latitud, p.longitud, p.nombre)}
+                className="flex-row items-center gap-1.5 bg-info/10 px-3 py-1.5 rounded-full"
+                accessibilityRole="button"
+                accessibilityLabel={`Abrir ${p.nombre} en mapas`}
+              >
+                <Ionicons name="navigate-outline" size={13} color="#3B82F6" />
+                <Text className="text-xs font-semibold text-info">Cómo llegar</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
       )}
 

@@ -37,6 +37,7 @@ export function NominaTrabajadorView() {
     tipoMarcacion,
     cargo,
     puntoMarcaje,
+    puntosZonales,
     periodos,
     periodoActivo,
     setPeriodoSeleccionado,
@@ -133,6 +134,7 @@ export function NominaTrabajadorView() {
         <IngresoHoyTab
           cargo={cargo}
           puntoMarcaje={puntoMarcaje}
+          puntosZonales={puntosZonales}
           tipoMarcacion={tipoMarcacion}
           estadoHoy={estadoHoy}
           periodoAbierto={periodoActivo?.estado === 'abierto'}

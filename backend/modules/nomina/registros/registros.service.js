@@ -28,23 +28,39 @@ async function resolverTrabajadorPropio(empresaId, usuarioId) {
   return trabajador.id;
 }
 
-/** Validate geofence if the worker has tipo_marcacion = 'fijo'. */
+/** Validate geofence if the worker has tipo_marcacion = 'fijo' or 'zonal'. */
 async function validarGeofence(empresaId, trabajador, latitud, longitud) {
-  if (trabajador.tipo_marcacion !== 'fijo') return;
-  if (!trabajador.punto_marcaje_id) {
-    throw new AppError('El trabajador no tiene punto de marcaje asignado', 422);
+  if (trabajador.tipo_marcacion === 'fijo') {
+    if (!trabajador.punto_marcaje_id) {
+      throw new AppError('El trabajador no tiene punto de marcaje asignado', 422);
+    }
+    if (latitud == null || longitud == null) {
+      throw new AppError('Debes enviar tu ubicación para marcar en un punto fijo', 422);
+    }
+    const punto = await PuntosMarcajeModel.obtenerPorId(empresaId, trabajador.punto_marcaje_id);
+    if (!punto) throw new AppError('Punto de marcaje no encontrado', 404);
+    const distancia = haversineMetros(latitud, longitud, punto.latitud, punto.longitud);
+    if (distancia > punto.radio_metros) {
+      throw new AppError(
+        `Estás a ${Math.round(distancia)} m del punto de marcaje (máximo ${punto.radio_metros} m)`,
+        422
+      );
+    }
+    return;
   }
-  if (latitud == null || longitud == null) {
-    throw new AppError('Debes enviar tu ubicación para marcar en un punto fijo', 422);
-  }
-  const punto = await PuntosMarcajeModel.obtenerPorId(empresaId, trabajador.punto_marcaje_id);
-  if (!punto) throw new AppError('Punto de marcaje no encontrado', 404);
-  const distancia = haversineMetros(latitud, longitud, punto.latitud, punto.longitud);
-  if (distancia > punto.radio_metros) {
-    throw new AppError(
-      `Estás a ${Math.round(distancia)} m del punto de marcaje (máximo ${punto.radio_metros} m)`,
-      422
+
+  if (trabajador.tipo_marcacion === 'zonal') {
+    const puntos = await PuntosMarcajeModel.listarZonales(empresaId);
+    if (puntos.length === 0) return; // sin puntos zonales configurados aún — no bloquea
+    if (latitud == null || longitud == null) {
+      throw new AppError('Debes enviar tu ubicación para marcar en una zona autorizada', 422);
+    }
+    const dentro = puntos.some(
+      (p) => haversineMetros(latitud, longitud, p.latitud, p.longitud) <= p.radio_metros
     );
+    if (!dentro) {
+      throw new AppError('Debes estar en uno de los puntos zonales autorizados para marcar', 422);
+    }
   }
 }
 
@@ -210,10 +226,13 @@ const RegistrosService = {
       throw new AppError('Tu usuario no está vinculado a un trabajador activo', 403);
     }
 
-    const [puntoMarcaje, empresa, cargos] = await Promise.all([
+    const [puntoMarcaje, puntosZonales, empresa, cargos] = await Promise.all([
       trabajador.punto_marcaje_id
         ? PuntosMarcajeModel.obtenerPorId(empresaId, trabajador.punto_marcaje_id)
         : Promise.resolve(null),
+      trabajador.tipo_marcacion === 'zonal'
+        ? PuntosMarcajeModel.listarZonales(empresaId)
+        : Promise.resolve([]),
       EmpresasModel.obtenerDetalle(empresaId),
       TrabajadoresModel.listarCargos(trabajador.id),
     ]);
@@ -227,6 +246,7 @@ const RegistrosService = {
       cargos,
       tipo_marcacion: trabajador.tipo_marcacion ?? 'libre',
       punto_marcaje: puntoMarcaje,
+      puntos_zonales: puntosZonales,
       salario_base: trabajador.salario_base,
       acepta_extras: Boolean(trabajador.acepta_extras),
     };

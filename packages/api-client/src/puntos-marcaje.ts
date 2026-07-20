@@ -24,7 +24,7 @@ export interface CrearPuntoMarcajePayload {
   tipo?: TipoPunto;
 }
 
-export type ActualizarPuntoMarcajePayload = Partial<CrearPuntoMarcajePayload>;
+export type ActualizarPuntoMarcajePayload = Partial<CrearPuntoMarcajePayload> & { activo?: boolean };
 
 export const puntosMarcajeApi = {
   listar(): Promise<PuntoMarcaje[]> {

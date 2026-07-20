@@ -31,9 +31,10 @@ export interface NominaTrabajadorState {
   // Perfil
   valorHora:       number;
   salarioBase:     number | null;
-  tipoMarcacion:   'libre' | 'fijo';
+  tipoMarcacion:   'libre' | 'fijo' | 'zonal';
   cargo:           string | null;
   puntoMarcaje:    PuntoMarcaje | null;
+  puntosZonales:   PuntoMarcaje[];
 
   // Períodos
   periodos:               PeriodoNomina[];
@@ -49,7 +50,7 @@ export interface NominaTrabajadorState {
 
   // Geofence
   geo: ReturnType<typeof useGeofence>;
-  fijoBloqueado: boolean;
+  marcajeBloqueado: boolean;
 
   // Marcaje
   isMutating:       boolean;
@@ -71,6 +72,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const { data: perfil } = useNominaPerfil();
   const tipoMarcacion = perfil?.tipo_marcacion ?? 'libre';
   const puntoMarcaje  = perfil?.punto_marcaje ?? null;
+  const puntosZonales = perfil?.puntos_zonales ?? [];
   const salarioBase   = perfil?.salario_base ?? null;
   const cargo         = perfil?.cargo ?? null;
   const valorHora     = getValorHora(salarioBase);
@@ -117,12 +119,15 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   );
 
   // ── Geofence ───────────────────────────────────────────────────────────
+  const requiereGeofence = tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal';
   const geofenceTargets = tipoMarcacion === 'fijo' && puntoMarcaje
     ? [{ lat: puntoMarcaje.latitud, lng: puntoMarcaje.longitud, radiusM: puntoMarcaje.radio_metros }]
+    : tipoMarcacion === 'zonal' && puntosZonales.length > 0
+    ? puntosZonales.map((p) => ({ lat: p.latitud, lng: p.longitud, radiusM: p.radio_metros }))
     : null;
 
-  const geo = useGeofence({ targets: geofenceTargets, enabled: tipoMarcacion === 'fijo' });
-  const fijoBloqueado = tipoMarcacion === 'fijo' && !geo.canMark;
+  const geo = useGeofence({ targets: geofenceTargets, enabled: requiereGeofence });
+  const marcajeBloqueado = requiereGeofence && !geo.canMark;
 
   // ── Mutaciones ─────────────────────────────────────────────────────────
   const entradaMutation   = useMarcarEntrada();
@@ -132,7 +137,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
 
   const handleEntrada = useCallback(async () => {
     try {
-      const coords = tipoMarcacion === 'fijo' && geo.currentLocation
+      const coords = requiereGeofence && geo.currentLocation
         ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
         : undefined;
       await entradaMutation.mutateAsync(coords);
@@ -140,7 +145,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar entrada';
       Alert.alert('Error', msg);
     }
-  }, [tipoMarcacion, geo.currentLocation, entradaMutation]);
+  }, [requiereGeofence, geo.currentLocation, entradaMutation]);
 
   const handleSalida = useCallback(async () => {
     if (!registroHoy) return;
@@ -151,7 +156,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     });
     if (!ok) return;
     try {
-      const coords = tipoMarcacion === 'fijo' && geo.currentLocation
+      const coords = requiereGeofence && geo.currentLocation
         ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
         : undefined;
       const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
@@ -160,7 +165,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
       Alert.alert('Error', msg);
     }
-  }, [registroHoy, tipoMarcacion, geo.currentLocation, salidaMutation]);
+  }, [registroHoy, requiereGeofence, geo.currentLocation, salidaMutation]);
 
   // La confirmación (con explicación + motivo opcional) vive en la pantalla, en un
   // modal propio — un Alert nativo no permite pedir texto de forma consistente en iOS/Android.
@@ -186,6 +191,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     tipoMarcacion,
     cargo,
     puntoMarcaje,
+    puntosZonales,
     periodos,
     periodoActivo,
     setPeriodoSeleccionado,
@@ -195,7 +201,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     estadoHoy,
     todayISO,
     geo,
-    fijoBloqueado,
+    marcajeBloqueado,
     isMutating,
     handleEntrada,
     handleSalida,

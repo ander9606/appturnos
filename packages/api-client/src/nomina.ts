@@ -119,7 +119,7 @@ export interface ResumenHoras {
   diasRegistrados: number;
 }
 
-export type TipoMarcacion = 'libre' | 'fijo';
+export type TipoMarcacion = 'libre' | 'fijo' | 'zonal';
 export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia';
 
 export interface TrabajadorNominaPerfil {
@@ -131,6 +131,7 @@ export interface TrabajadorNominaPerfil {
   cargos: Array<{ id: number; nombre: string; codigo: string | null }>;
   tipo_marcacion: TipoMarcacion;
   punto_marcaje: PuntoMarcaje | null;
+  puntos_zonales: PuntoMarcaje[];
   salario_base: number | null;
   acepta_extras: boolean;
 }

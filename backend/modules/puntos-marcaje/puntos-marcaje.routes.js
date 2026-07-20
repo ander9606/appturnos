@@ -21,6 +21,7 @@ const reglasBase = [
   body('longitud').isFloat({ min: -180, max: 180 }).withMessage('Longitud inválida'),
   body('radio_metros').optional().isInt({ min: 10, max: 5000 }),
   body('tipo').optional().isIn(['fijo', 'zonal']).withMessage('tipo debe ser fijo o zonal'),
+  body('activo').optional().isBoolean().withMessage('activo debe ser booleano'),
 ];
 
 router.use(verificarToken);

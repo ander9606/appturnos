@@ -31,7 +31,7 @@ import { useMisEmpresas, useSolicitudes } from '@/features/empresas/useTrabajado
 import { useAusenciasPendientesCount } from '@/features/ausencias/useAusencias';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, THEME_COLORS } from '@/lib/designTokens';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { useTheme } from '@/lib/theme';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
@@ -356,11 +356,11 @@ function SolicitudesBadge({ count, onPress }: { count: number; onPress: () => vo
 
 type Filtro = 'todos' | TipoTrabajador;
 
-const FILTROS: { key: Filtro; label: string }[] = [
-  { key: 'todos',  label: 'Todos'  },
-  { key: 'turnos', label: 'Turnos' },
-  { key: 'nomina', label: 'Nómina' },
-  { key: 'ambos',  label: 'Ambos'  },
+const FILTROS: { key: Filtro; label: string; color: string }[] = [
+  { key: 'todos',  label: 'Todos',  color: COLORS.primary },
+  { key: 'turnos', label: 'Turnos', color: THEME_COLORS.turnos.primary },
+  { key: 'nomina', label: 'Nómina', color: THEME_COLORS.nomina.primary },
+  { key: 'ambos',  label: 'Ambos',  color: COLORS.info },
 ];
 
 // ── Screen ────────────────────────────────────────────────────────────────
@@ -473,20 +473,17 @@ export default function EquipoScreen() {
       {/* Filtros: tipo + estado */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pb-1" style={{ flexGrow: 0 }}>
         <View className="flex-row items-center gap-2 px-4">
-          {FILTROS.map(({ key, label }) => {
+          {FILTROS.map(({ key, label, color }) => {
             const active = filtro === key;
             return (
               <Pressable
                 key={key}
                 onPress={() => setFiltro(key)}
-                className={`rounded-full px-4 py-2 border ${
-                  active ? 'bg-primary border-primary' : 'bg-card border-border'
-                }`}
+                className={`rounded-full px-4 py-2 border ${active ? '' : 'bg-card border-border'}`}
+                style={active ? { backgroundColor: color, borderColor: color } : undefined}
               >
                 <Text
-                  className={`text-sm font-semibold ${
-                    active ? 'text-white' : 'text-muted-foreground'
-                  }`}
+                  className={`text-sm font-semibold ${active ? 'text-white' : 'text-muted-foreground'}`}
                 >
                   {label}
                 </Text>

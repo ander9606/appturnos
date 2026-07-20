@@ -90,7 +90,7 @@ export function useActualizarMarcacion() {
   return useMutation({
     mutationFn: ({ id, tipo_marcacion, punto_marcaje_id }: {
       id: number;
-      tipo_marcacion: 'libre' | 'fijo';
+      tipo_marcacion: 'libre' | 'fijo' | 'zonal';
       punto_marcaje_id?: number | null;
     }) => trabajadoresApi.actualizarMarcacion(id, { tipo_marcacion, punto_marcaje_id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
@@ -101,6 +101,14 @@ export function useDesactivarTrabajador() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => trabajadoresApi.desactivar(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
+  });
+}
+
+export function useEliminarTrabajadorDefinitivo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => trabajadoresApi.eliminarDefinitivo(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
   });
 }

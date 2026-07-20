@@ -42,6 +42,7 @@ type FormState = {
   longitud:     string;
   radio_metros: string;
   tipo:         'fijo' | 'zonal';
+  activo:       boolean;
 };
 
 const EMPTY_FORM: FormState = {
@@ -51,6 +52,7 @@ const EMPTY_FORM: FormState = {
   longitud:     '',
   radio_metros: '100',
   tipo:         'fijo',
+  activo:       true,
 };
 
 // ── Screen ────────────────────────────────────────────────────────────────
@@ -87,6 +89,7 @@ export default function PuntosMarcajeScreen() {
       longitud:     formatCoord(punto.longitud),
       radio_metros: String(punto.radio_metros),
       tipo:         punto.tipo,
+      activo:       Boolean(punto.activo),
     });
     setModalVisible(true);
   }
@@ -146,6 +149,7 @@ export default function PuntosMarcajeScreen() {
             longitud:     lng,
             radio_metros: radio,
             tipo:         form.tipo,
+            activo:       form.activo,
           },
         },
         {
@@ -501,6 +505,34 @@ export default function PuntosMarcajeScreen() {
                 );
               })}
             </View>
+
+            {/* Activo — solo tiene sentido al editar; un punto nuevo nace activo */}
+            {editingPunto && (
+              <>
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+                  Estado
+                </Text>
+                <View className="flex-row gap-3 mb-8">
+                  {([true, false] as const).map((val) => {
+                    const active = form.activo === val;
+                    return (
+                      <Pressable
+                        key={String(val)}
+                        onPress={() => setForm((f) => ({ ...f, activo: val }))}
+                        className={`flex-1 py-3 rounded-xl border items-center active:opacity-70 ${
+                          active ? 'border-info' : 'bg-card border-border'
+                        }`}
+                        style={active ? { backgroundColor: val ? COLORS.info : COLORS.danger } : {}}
+                      >
+                        <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-foreground'}`}>
+                          {val ? 'Activo' : 'Inactivo'}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            )}
 
             {/* Guardar */}
             <Pressable

@@ -2,11 +2,19 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import type { Trabajador } from '@api-client';
 import { Avatar } from '@/components/ui/Avatar';
+import { THEME_COLORS, COLORS } from '@/lib/designTokens';
 
 const TIPO_LABELS: Record<string, string> = {
   turnos:  'Turnos',
   nomina:  'Nómina',
   ambos:   'Ambos',
+};
+
+// Mismos colores que el resto de la app usa para diferenciar turnos/nómina (ver THEME_COLORS).
+const TIPO_COLORS: Record<string, string> = {
+  turnos: THEME_COLORS.turnos.primary,
+  nomina: THEME_COLORS.nomina.primary,
+  ambos:  COLORS.info,
 };
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -65,8 +73,8 @@ export function TrabajadorCard({ trabajador: t, onPress }: Props) {
 
       {/* Right side */}
       <View className="items-end ml-2 shrink-0">
-        <View className="bg-primary/10 rounded-full px-2 py-0.5 mb-1">
-          <Text className="text-primary text-xs font-semibold">
+        <View className="rounded-full px-2 py-0.5 mb-1" style={{ backgroundColor: (TIPO_COLORS[tipo] ?? COLORS.primary) + '1A' }}>
+          <Text className="text-xs font-semibold" style={{ color: TIPO_COLORS[tipo] ?? COLORS.primary }}>
             {TIPO_LABELS[tipo] ?? tipo}
           </Text>
         </View>

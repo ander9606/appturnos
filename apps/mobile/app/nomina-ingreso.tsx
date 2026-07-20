@@ -55,7 +55,7 @@ export default function NominaIngresoScreen() {
     onRefresh,
     tipoMarcacion,
     geo,
-    fijoBloqueado,
+    marcajeBloqueado,
     valorHora,
   } = useNominaTrabajador();
 
@@ -238,8 +238,8 @@ export default function NominaIngresoScreen() {
           </View>
         )}
 
-        {/* ── Geofence (solo tipo_marcacion = 'fijo') ────────── */}
-        {tipoMarcacion === 'fijo' && (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado') && (
+        {/* ── Geofence (tipo_marcacion 'fijo' o 'zonal') ───────── */}
+        {(tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal') && (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado') && (
           <GeoFenceIndicator
             distanceM={geo.distanceM}
             status={geo.status}
@@ -252,7 +252,7 @@ export default function NominaIngresoScreen() {
         {estadoHoy === 'sin_registro' && periodoAbierto && (
           <TouchableOpacity
             onPress={handleEntrada}
-            disabled={isMutating || fijoBloqueado}
+            disabled={isMutating || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
@@ -315,7 +315,7 @@ export default function NominaIngresoScreen() {
         {estadoHoy === 'reingreso_aprobado' && periodoAbierto && (
           <TouchableOpacity
             onPress={handleEntrada}
-            disabled={isMutating || fijoBloqueado}
+            disabled={isMutating || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"

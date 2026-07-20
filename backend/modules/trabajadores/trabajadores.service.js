@@ -130,6 +130,25 @@ const TrabajadoresService = {
     }
   },
 
+  /** Borra definitivamente un trabajador desactivado que nunca tuvo actividad (ej: se creó por error). */
+  async eliminarDefinitivo(empresaId, id) {
+    const trabajador = await this.obtener(empresaId, id);
+    if (trabajador.activo) {
+      throw new AppError('Solo se pueden eliminar trabajadores desactivados.', 409);
+    }
+    try {
+      await TrabajadoresModel.eliminarDefinitivo(empresaId, id);
+    } catch (err) {
+      if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.errno === 1451) {
+        throw new AppError(
+          'No se puede eliminar: este trabajador tiene turnos, nómina o calificaciones registradas.',
+          409
+        );
+      }
+      throw err;
+    }
+  },
+
   // ── Cargos certificados ──────────────────────────────────────────────────
   // trabajador_cargos cuelga de trabajador_empresa, no del trabajador
   // directamente — estos métodos resuelven ese vínculo dentro de la empresa

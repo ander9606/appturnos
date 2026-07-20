@@ -25,7 +25,7 @@ const PuntosMarcajeService = {
     if (!punto) throw new AppError('Punto de marcaje no encontrado', 404);
     const usos = await PuntosMarcajeModel.contarUsos(id);
     if (usos > 0) throw new AppError(
-      `No se puede eliminar: ${usos} cargo(s) usan este punto. Reasígnalos primero.`,
+      `No se puede eliminar: ${usos} cargo(s) o trabajador(es) usan este punto. Reasígnalos primero.`,
       409
     );
     await PuntosMarcajeModel.eliminar(empresaId, id);

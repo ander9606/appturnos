@@ -75,10 +75,13 @@ const PuntosMarcajeModel = {
     return res.affectedRows;
   },
 
+  /** Cuenta cargos Y trabajadores (marcación 'fijo') que apuntan a este punto — la FK de trabajadores es ON DELETE SET NULL, así que sin este chequeo el borrado los deja huérfanos en silencio. */
   async contarUsos(id) {
     const [filas] = await pool.query(
-      'SELECT COUNT(*) AS n FROM cargos WHERE punto_marcaje_id = ?',
-      [id]
+      `SELECT
+         (SELECT COUNT(*) FROM cargos WHERE punto_marcaje_id = ?) +
+         (SELECT COUNT(*) FROM trabajadores WHERE punto_marcaje_id = ?) AS n`,
+      [id, id]
     );
     return filas[0]?.n || 0;
   },

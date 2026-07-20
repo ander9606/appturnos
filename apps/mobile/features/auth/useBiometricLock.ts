@@ -52,10 +52,18 @@ export function useBiometricLock(authStatus: AuthStatus) {
     authenticatingRef.current = true;
     setAuthenticating(true);
     try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Confirma tu identidad',
-        fallbackLabel: 'Usar PIN',
-      });
+      // ponytail: authenticateAsync a veces se cuelga sin resolver si la app pasa a
+      // background a mitad del prompt nativo (llamada entrante, botón home en algunos
+      // Android) — sin este timeout el botón queda en "Verificando…" para siempre.
+      const result = await Promise.race([
+        LocalAuthentication.authenticateAsync({
+          promptMessage: 'Confirma tu identidad',
+          fallbackLabel: 'Usar PIN',
+        }),
+        new Promise<{ success: false }>((resolve) =>
+          setTimeout(() => resolve({ success: false }), 30_000)
+        ),
+      ]);
       if (result.success) setLocked(false);
       return result.success;
     } catch {

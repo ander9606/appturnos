@@ -42,7 +42,7 @@ export interface Trabajador {
   numero_cuenta: string | null;
   ant_judiciales_fecha: string | null;
   ant_disciplinarios_fecha: string | null;
-  tipo_marcacion: 'libre' | 'fijo';
+  tipo_marcacion: 'libre' | 'fijo' | 'zonal';
   punto_marcaje_id: number | null;
   activo: boolean;
   external_ref: string | null;
@@ -182,6 +182,10 @@ export const trabajadoresApi = {
   desactivar: (id: number): Promise<void> =>
     api.delete<void>(`/api/trabajadores/${id}`),
 
+  /** Borra definitivamente un trabajador desactivado sin historial (turnos/nómina/calificaciones). */
+  eliminarDefinitivo: (id: number): Promise<void> =>
+    api.delete<void>(`/api/trabajadores/${id}/definitivo`),
+
   /** Cargos certificados del trabajador en mi empresa. */
   listarCargos: (id: number): Promise<CargoAsignado[]> =>
     api.get<CargoAsignado[]>(`/api/trabajadores/${id}/cargos`),
@@ -205,7 +209,7 @@ export const trabajadoresApi = {
   /** admin/jefe_nomina: actualizar tipo de marcación y punto asignado al trabajador. */
   actualizarMarcacion: (
     id: number,
-    data: { tipo_marcacion: 'libre' | 'fijo'; punto_marcaje_id?: number | null }
+    data: { tipo_marcacion: 'libre' | 'fijo' | 'zonal'; punto_marcaje_id?: number | null }
   ): Promise<Trabajador> =>
     api.patch<Trabajador>(`/api/trabajadores/${id}/marcacion`, data),
 

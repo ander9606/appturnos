@@ -194,7 +194,7 @@ router.patch(
   verificarRol([ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA]),
   [
     idParam,
-    body('tipo_marcacion').isIn(['libre', 'fijo']).withMessage('tipo_marcacion inválido'),
+    body('tipo_marcacion').isIn(['libre', 'fijo', 'zonal']).withMessage('tipo_marcacion inválido'),
     body('punto_marcaje_id')
       .if(body('tipo_marcacion').equals('fijo'))
       .isInt({ min: 1 }).withMessage('punto_marcaje_id requerido cuando tipo es fijo'),
@@ -205,6 +205,9 @@ router.patch(
 
 // DELETE /api/trabajadores/:id  (soft delete)
 router.delete('/:id', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.eliminar);
+
+// DELETE /api/trabajadores/:id/definitivo  (borrar trabajador desactivado sin historial)
+router.delete('/:id/definitivo', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.eliminarDefinitivo);
 
 // GET /api/trabajadores/:id/cargos — cargos certificados en mi empresa
 router.get('/:id/cargos', verificarRol(PUEDE_GESTIONAR_CARGOS), [idParam], validar, ctrl.listarCargos);

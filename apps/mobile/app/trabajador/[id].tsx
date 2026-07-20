@@ -26,6 +26,7 @@ import {
   useTrabajador,
   useActualizarTrabajador,
   useDesactivarTrabajador,
+  useEliminarTrabajadorDefinitivo,
 } from '@/features/equipo/useEquipo';
 import {
   useAsignacionesTrabajador,
@@ -33,8 +34,11 @@ import {
 } from '@/features/turnos/useTurnos';
 import { StarRating }      from '@/features/turnos/StarRating';
 import { TrabajadorForm }  from '@/features/equipo/TrabajadorForm';
+import { MarcacionSelector } from '@/features/equipo/MarcacionSelector';
 import { CargosCertificadosCard } from '@/features/equipo/CargosCertificadosCard';
+import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import type { TrabajadorFormValues } from '@/features/equipo/schemas';
+import { ApiError } from '@api-client';
 import type { Asignacion } from '@api-client';
 import { COLORS } from '@/lib/designTokens';
 import { Avatar } from '@/components/ui/Avatar';
@@ -76,8 +80,10 @@ export default function TrabajadorDetailScreen() {
   const [ratingComment,  setRatingComment]  = useState('');
 
   const { data: t, isLoading, isError, refetch } = useTrabajador(numId);
+  const { data: puntosMarcaje = [] } = usePuntosMarcaje(isAdmin && t?.tipo !== 'turnos');
   const actualizar  = useActualizarTrabajador(numId);
   const desactivar  = useDesactivarTrabajador();
+  const eliminarDefinitivo = useEliminarTrabajadorDefinitivo();
   const calificar   = useCalificar();
 
   // Turnos recientes del trabajador (solo para roles que pueden ver asignaciones)
@@ -187,6 +193,25 @@ export default function TrabajadorDetailScreen() {
     desactivar.mutate(numId, {
       onSuccess: () => router.back(),
       onError: () => Alert.alert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
+    });
+  }
+
+  // ── Eliminar definitivamente ──────────────────────────────────────────
+
+  async function confirmEliminarDefinitivo() {
+    const ok = await confirm({
+      title: '¿Eliminar trabajador?',
+      message: `Esto borra a ${t?.nombre} ${t?.apellido} para siempre. No se puede deshacer. Si tiene turnos, nómina o calificaciones registradas, no se podrá eliminar.`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+    eliminarDefinitivo.mutate(numId, {
+      onSuccess: () => router.back(),
+      onError: (err: unknown) => {
+        const msg = err instanceof ApiError ? err.message : 'No se pudo eliminar. Intenta de nuevo.';
+        Alert.alert('Error', msg);
+      },
     });
   }
 
@@ -330,6 +355,14 @@ export default function TrabajadorDetailScreen() {
           />
         </View>
 
+        {/* Marcación — admin, solo trabajadores de nómina/ambos */}
+        {isAdmin && t.tipo !== 'turnos' && (
+          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border p-4 gap-3">
+            <Text className="text-sm font-semibold text-foreground">Marcación</Text>
+            <MarcacionSelector trabajador={t} puntos={puntosMarcaje} />
+          </View>
+        )}
+
         {/* Ranking card */}
         <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4 py-4 flex-row items-center justify-between">
           <Text className="text-sm text-muted-foreground">Calificación promedio</Text>
@@ -457,6 +490,21 @@ export default function TrabajadorDetailScreen() {
               className="h-12 rounded-xl items-center justify-center border border-danger active:bg-danger/10"
             >
               <Text className="text-danger font-semibold">Desactivar trabajador</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Eliminar button — admin only, once deactivated */}
+        {isAdmin && !t.activo && (
+          <View className="mx-4 mt-6">
+            <Pressable
+              onPress={confirmEliminarDefinitivo}
+              disabled={eliminarDefinitivo.isPending}
+              className="h-12 rounded-xl items-center justify-center bg-danger active:bg-danger/80 disabled:opacity-50"
+            >
+              <Text className="text-white font-semibold">
+                {eliminarDefinitivo.isPending ? 'Eliminando…' : 'Eliminar trabajador'}
+              </Text>
             </Pressable>
           </View>
         )}
