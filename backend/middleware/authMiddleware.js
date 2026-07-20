@@ -78,8 +78,9 @@ async function resolverEmpresasActivas(req, _res, next) {
   }
   try {
     const [filas] = await pool.query(
-      `SELECT empresa_id FROM trabajador_empresa
-       WHERE usuario_id = ? AND estado = 'activo'`,
+      `SELECT te.empresa_id FROM trabajador_empresa te
+       JOIN empresas e ON e.id = te.empresa_id AND e.activo = 1
+       WHERE te.usuario_id = ? AND te.estado = 'activo'`,
       [req.usuario.sub]
     );
     req.empresasActivas = filas.map((f) => f.empresa_id);

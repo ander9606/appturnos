@@ -12,11 +12,12 @@ export const NOMINA_KEYS = {
 
 // ── Queries ───────────────────────────────────────────────────────────────
 
-export function usePeriodos(estado?: EstadoPeriodo) {
+export function usePeriodos(estado?: EstadoPeriodo, enabled = true) {
   return useQuery({
     queryKey: NOMINA_KEYS.periodos(estado),
     queryFn:  () => nominaApi.listarPeriodos({ estado, limit: 20 }),
     staleTime: 60_000,
+    enabled,
   });
 }
 

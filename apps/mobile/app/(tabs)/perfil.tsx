@@ -32,6 +32,7 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { authApi } from '@api-client';
 import { t } from '@/lib/i18n';
 import { showToast } from '@/lib/toast';
+import { confirm } from '@/lib/confirmDialog';
 import type { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { useNominaPerfil, useActualizarExtras } from '@/features/nomina/useNomina';
@@ -423,33 +424,28 @@ export default function PerfilScreen() {
 
   // ── Actions ────────────────────────────────────────────────────────────
 
-  const handleLogout = () => {
-    Alert.alert(
-      t('perfil.cerrarSesion'),
-      '¿Estás seguro de que deseas cerrar sesión?',
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('perfil.cerrarSesion'),
-          style: 'destructive',
-          onPress: async () => {
-            setLoggingOut(true);
-            await logout();
-          },
-        },
-      ],
-    );
+  const handleLogout = async () => {
+    const ok = await confirm({
+      title: t('perfil.cerrarSesion'),
+      message: '¿Estás seguro de que deseas cerrar sesión?',
+      cancelLabel: t('common.cancel'),
+      confirmLabel: t('perfil.cerrarSesion'),
+      destructive: true,
+    });
+    if (!ok) return;
+    setLoggingOut(true);
+    await logout();
   };
 
-  const handleEliminarCuenta = () => {
-    Alert.alert(
-      'Eliminar cuenta',
-      'Vamos a anonimizar tu nombre, cédula, teléfono, correo y demás datos de contacto — dejarán de estar asociados a ti. Por obligación legal de nómina, conservamos (de forma anonimizada) tu historial de turnos trabajados, contratos y pagos hasta por 5 años. No podrás volver a iniciar sesión con esta cuenta. Esta acción no se puede deshacer.',
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: 'Continuar', style: 'destructive', onPress: () => setDeletingAccount(true) },
-      ],
-    );
+  const handleEliminarCuenta = async () => {
+    const ok = await confirm({
+      title: 'Eliminar cuenta',
+      message: 'Vamos a anonimizar tu nombre, cédula, teléfono, correo y demás datos de contacto — dejarán de estar asociados a ti. Por obligación legal de nómina, conservamos (de forma anonimizada) tu historial de turnos trabajados, contratos y pagos hasta por 5 años. No podrás volver a iniciar sesión con esta cuenta. Esta acción no se puede deshacer.',
+      cancelLabel: t('common.cancel'),
+      confirmLabel: 'Continuar',
+      destructive: true,
+    });
+    if (ok) setDeletingAccount(true);
   };
 
   // ── Render ────────────────────────────────────────────────────────────

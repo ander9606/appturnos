@@ -262,6 +262,11 @@ export const turnosApi = {
     return api.delete<null>(`/api/turnos/ofertas/${ofertaId}`);
   },
 
+  /** Borra definitivamente una oferta cancelada que nunca tuvo postulantes. */
+  eliminarOfertaDefinitivo(ofertaId: number): Promise<null> {
+    return api.delete<null>(`/api/turnos/ofertas/${ofertaId}/definitivo`);
+  },
+
   /** Postular al turno en un puesto concreto. */
   aplicar(ofertaId: number, puestoId: number): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/ofertas/${ofertaId}/aplicar`, { puesto_id: puestoId });

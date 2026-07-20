@@ -9,6 +9,7 @@ import { Alert } from 'react-native';
 import { ApiError } from '@api-client';
 import type { RegistroDiario, PeriodoNomina, PuntoMarcaje } from '@api-client';
 import { bogotaToday } from '@/lib/formatters';
+import { confirm } from '@/lib/confirmDialog';
 import { useGeofence } from '@/features/turnos/useGeofence';
 import {
   usePeriodos,
@@ -141,30 +142,24 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     }
   }, [tipoMarcacion, geo.currentLocation, entradaMutation]);
 
-  const handleSalida = useCallback(() => {
+  const handleSalida = useCallback(async () => {
     if (!registroHoy) return;
-    Alert.alert(
-      'Confirmar salida',
-      '¿Confirmas que deseas marcar tu salida?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Marcar salida',
-          onPress: async () => {
-            try {
-              const coords = tipoMarcacion === 'fijo' && geo.currentLocation
-                ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
-                : undefined;
-              const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
-              if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
-            } catch (err) {
-              const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ],
-    );
+    const ok = await confirm({
+      title: 'Confirmar salida',
+      message: '¿Confirmas que deseas marcar tu salida?',
+      confirmLabel: 'Marcar salida',
+    });
+    if (!ok) return;
+    try {
+      const coords = tipoMarcacion === 'fijo' && geo.currentLocation
+        ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
+        : undefined;
+      const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
+      if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
+      Alert.alert('Error', msg);
+    }
   }, [registroHoy, tipoMarcacion, geo.currentLocation, salidaMutation]);
 
   // La confirmación (con explicación + motivo opcional) vive en la pantalla, en un

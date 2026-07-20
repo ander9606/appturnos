@@ -1,9 +1,39 @@
 'use strict';
 
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
+
 const AdminModel = require('./admin.model');
+const AuthModel = require('../auth/auth.model');
 const AppError = require('../../utils/AppError');
+const logger = require('../../utils/logger');
+const { enviarEmail } = require('../../utils/mailer');
+const { ROLES } = require('../../config/constants');
 
 const DEFAULT_PAGE_SIZE = 20;
+const BCRYPT_ROUNDS = 11;
+
+/** Contraseña temporal aleatoria de alta entropía (9 bytes ≈ 12 caracteres URL-safe). */
+function generarPasswordTemporal() {
+  return crypto.randomBytes(9).toString('base64url');
+}
+
+function credencialesHtml({ nombre, empresa, email, password }) {
+  return `
+    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px 24px;color:#1e293b">
+      <h2 style="margin:0 0 8px">Zaturno</h2>
+      <p style="color:#64748b;margin:0 0 24px">Gestión de turnos y nómina</p>
+      <p>Hola <strong>${nombre}</strong>,</p>
+      <p>Se creó tu cuenta de administrador para <strong>${empresa}</strong> en Zaturno. Estas son tus credenciales de acceso:</p>
+      <table style="margin:16px 0;font-size:14px">
+        <tr><td style="color:#64748b;padding:4px 12px 4px 0">Email</td><td><strong>${email}</strong></td></tr>
+        <tr><td style="color:#64748b;padding:4px 12px 4px 0">Contraseña</td><td><strong>${password}</strong></td></tr>
+      </table>
+      <p style="color:#64748b;font-size:13px">
+        Por seguridad, cambia esta contraseña apenas ingreses.
+      </p>
+    </div>`;
+}
 
 const AdminService = {
   // ── Empresas ──────────────────────────────────────────────────────────────
@@ -29,9 +59,12 @@ const AdminService = {
     return empresa;
   },
 
-  async crearEmpresa({ nombre, slug, nit, ciudad, plan, descripcion }) {
+  async crearEmpresa({ nombre, slug, nit, ciudad, plan, descripcion, admin_nombre, admin_email }) {
     if (!nombre?.trim()) throw new AppError('El nombre es obligatorio', 400);
     if (!slug?.trim()) throw new AppError('El slug es obligatorio', 400);
+    if ((admin_nombre && !admin_email) || (!admin_nombre && admin_email)) {
+      throw new AppError('admin_nombre y admin_email deben enviarse juntos', 400);
+    }
 
     // Slug: solo letras minúsculas, números y guiones
     const slugLimpio = slug.trim().toLowerCase();
@@ -42,6 +75,12 @@ const AdminService = {
     const existe = await AdminModel.existeSlug(slugLimpio);
     if (existe) throw new AppError('El slug ya está en uso por otra empresa', 409);
 
+    const emailAdmin = admin_email?.trim().toLowerCase() || null;
+    if (emailAdmin) {
+      const existente = await AuthModel.buscarUsuarioPorEmail(emailAdmin);
+      if (existente) throw new AppError('El email del administrador ya está registrado', 409);
+    }
+
     const id = await AdminModel.crearEmpresa({
       nombre: nombre.trim(),
       slug: slugLimpio,
@@ -51,7 +90,33 @@ const AdminService = {
       descripcion: descripcion?.trim() || null,
     });
 
-    return AdminModel.obtenerEmpresa(id);
+    let credencialesEnviadas = false;
+    if (emailAdmin) {
+      const passwordTemporal = generarPasswordTemporal();
+      const passwordHash = await bcrypt.hash(passwordTemporal, BCRYPT_ROUNDS);
+      await AuthModel.crearGestor({
+        empresaId: id,
+        nombre: admin_nombre.trim(),
+        apellido: null,
+        email: emailAdmin,
+        passwordHash,
+        rol: ROLES.ADMIN_EMPRESA,
+      });
+      try {
+        await enviarEmail({
+          to: emailAdmin,
+          subject: 'Tu cuenta de administrador en Zaturno',
+          html: credencialesHtml({ nombre: admin_nombre.trim(), empresa: nombre.trim(), email: emailAdmin, password: passwordTemporal }),
+        });
+        credencialesEnviadas = true;
+      } catch (err) {
+        // El usuario ya quedó creado — no reventar la creación de la empresa por un fallo de SMTP.
+        logger.error(`No se pudo enviar credenciales a ${emailAdmin} (empresa ${id}): ${err.message}`);
+      }
+    }
+
+    const empresa = await AdminModel.obtenerEmpresa(id);
+    return { ...empresa, admin_creado: Boolean(emailAdmin), credenciales_email_enviado: credencialesEnviadas };
   },
 
   async actualizarEmpresa(id, datos) {

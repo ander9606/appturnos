@@ -10,12 +10,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar, useNoPresentado } from '@/features/turnos/useTurnos';
+import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar, useNoPresentado, useEliminarOfertaDefinitivo } from '@/features/turnos/useTurnos';
 import { bogotaToday } from '@/features/turnos/turnosUtils';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
+import { confirm } from '@/lib/confirmDialog';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -85,28 +86,24 @@ function PostulanteRow({
 
   const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending || noPresentadoMutation.isPending;
 
-  function handleRechazar() {
-    Alert.alert(
-      'Rechazar postulación',
-      `¿Rechazar la postulación de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Rechazar', style: 'destructive',
-          onPress: () => rechazarMutation.mutate({ asignacionId: asignacion.id, ofertaId }) },
-      ]
-    );
+  async function handleRechazar() {
+    const ok = await confirm({
+      title: 'Rechazar postulación',
+      message: `¿Rechazar la postulación de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}?`,
+      confirmLabel: 'Rechazar',
+      destructive: true,
+    });
+    if (ok) rechazarMutation.mutate({ asignacionId: asignacion.id, ofertaId });
   }
 
-  function handleNoPresentado() {
-    Alert.alert(
-      'No se presentó',
-      `¿Marcar a ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} como no presentado? Esto registra 0 estrellas automáticamente y afecta su ranking.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Marcar ausente', style: 'destructive',
-          onPress: () => noPresentadoMutation.mutate({ asignacionId: asignacion.id, ofertaId }) },
-      ]
-    );
+  async function handleNoPresentado() {
+    const ok = await confirm({
+      title: 'No se presentó',
+      message: `¿Marcar a ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} como no presentado? Esto registra 0 estrellas automáticamente y afecta su ranking.`,
+      confirmLabel: 'Marcar ausente',
+      destructive: true,
+    });
+    if (ok) noPresentadoMutation.mutate({ asignacionId: asignacion.id, ofertaId });
   }
 
   return (
@@ -150,16 +147,15 @@ function PostulanteRow({
               </View>
               <Button label={isCancelling ? '…' : 'Cancelar'} variant="secondary" size="sm"
                 loading={isCancelling} disabled={isBusy}
-                onPress={() => {
-                  Alert.alert(
-                    'Cancelar asignación',
-                    `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
-                    [
-                      { text: 'Volver', style: 'cancel' },
-                      { text: 'Cancelar turno', style: 'destructive',
-                        onPress: () => cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId }) },
-                    ]
-                  );
+                onPress={async () => {
+                  const ok = await confirm({
+                    title: 'Cancelar asignación',
+                    message: `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
+                    cancelLabel: 'Volver',
+                    confirmLabel: 'Cancelar turno',
+                    destructive: true,
+                  });
+                  if (ok) cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId });
                 }} />
               <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
                 loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
@@ -199,21 +195,38 @@ function GestorOfertaItem({
   const [expanded, setExpanded] = useState(false);
   const router = useRouter();
   const { data: detalle, isLoading: loadingDetalle } = useOferta(expanded ? oferta.id : null);
+  const eliminarMutation = useEliminarOfertaDefinitivo();
 
+  const esCancelada     = oferta.estado === 'cancelada';
   const totalPlazas     = oferta.puestos.reduce((s, p) => s + p.plazas, 0);
   const plazasCubiertas = oferta.puestos.reduce((s, p) => s + p.plazas_cubiertas, 0);
   const pendientes      = detalle?.asignaciones.filter((a) => a.estado === 'pendiente') ?? [];
   const tienePendientes = pendientes.length > 0;
 
+  async function handleEliminar() {
+    const ok = await confirm({
+      title: 'Eliminar oferta',
+      message: `Se eliminará permanentemente "${oferta.titulo}". Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await eliminarMutation.mutateAsync(oferta.id);
+    } catch (err: unknown) {
+      Alert.alert('No se pudo eliminar', apiErrorMessage(err, 'Error al eliminar la oferta'));
+    }
+  }
+
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
       style={{
-        opacity: esPasado ? 0.72 : 1,
-        elevation: esPasado ? 0 : 2,
+        opacity: esCancelada ? 0.55 : esPasado ? 0.72 : 1,
+        elevation: (esPasado || esCancelada) ? 0 : 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: esPasado ? 0 : 0.06,
+        shadowOpacity: (esPasado || esCancelada) ? 0 : 0.06,
         shadowRadius: 8,
       }}
     >
@@ -223,16 +236,17 @@ function GestorOfertaItem({
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
       >
-        <View className="w-1.5" style={{ backgroundColor: esPasado ? '#CBD5E1' : '#FF7150' }} />
+        <View className="w-1.5" style={{ backgroundColor: esCancelada ? '#94A3B8' : esPasado ? '#CBD5E1' : '#FF7150' }} />
 
         <View className="flex-1 px-4 py-4 gap-1.5">
-          {/* Title + badge finalizado */}
+          {/* Title + badge finalizado/cancelada */}
           <View className="flex-row items-start justify-between gap-2">
             <Text className="text-base font-semibold text-foreground flex-1" numberOfLines={1}>
               {oferta.titulo}
             </Text>
             <View className="flex-row items-center gap-2">
-              {esPasado && <Badge label="Finalizado" variant="default" size="sm" />}
+              {esCancelada && <Badge label="Cancelada" variant="danger" size="sm" />}
+              {!esCancelada && esPasado && <Badge label="Finalizado" variant="default" size="sm" />}
               <Text className="text-lg text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
             </View>
           </View>
@@ -307,6 +321,18 @@ function GestorOfertaItem({
                 noPresentadoMutation={noPresentadoMutation}
               />
             ))
+          )}
+
+          {esCancelada && (
+            <View className="mt-3">
+              <Button
+                label={eliminarMutation.isPending ? 'Eliminando…' : 'Eliminar oferta'}
+                variant="danger"
+                size="sm"
+                loading={eliminarMutation.isPending}
+                onPress={handleEliminar}
+              />
+            </View>
           )}
         </View>
       )}

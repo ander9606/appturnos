@@ -7,11 +7,12 @@ const QK = {
 };
 
 /** Devuelve los dos períodos activos: 'nomina' (trimestral) y 'turnos' (ciclo de la empresa). */
-export function usePeriodosEventual() {
+export function usePeriodosEventual(enabled = true) {
   return useQuery({
     queryKey: QK.periodo,
     queryFn:  () => turnosEventualApi.periodoActivo(),
     staleTime: 60_000,
+    enabled,
   });
 }
 

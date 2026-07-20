@@ -14,6 +14,7 @@ import { validateStep1 } from './utils';
 import type { WizardData, TipoDocumento, Sexo } from './types';
 import { authApi } from '@api-client';
 import { TIPO_LABEL } from '@/lib/roleLabels';
+import { confirm } from '@/lib/confirmDialog';
 
 // ── Local helpers ──────────────────────────────────────────────────────────
 
@@ -90,14 +91,12 @@ export function Step1DatosPersonales({ data, onChange, onNext }: Props) {
       try {
         const res = await authApi.verificarCedula(data.cedula);
         if (res.existe && res.invitacion) {
-          Alert.alert(
-            'Ya tienes una invitación',
-            `Tu cédula tiene una invitación pendiente de "${res.invitacion.empresa_nombre}" como ${TIPO_LABEL[res.tipo ?? ''] ?? res.tipo}.\n\nPara acceder, activa tu cuenta desde la pantalla de activación.`,
-            [
-              { text: 'Activar cuenta', onPress: () => router.replace('/(auth)/activar') },
-              { text: 'Cancelar', style: 'cancel' },
-            ],
-          );
+          const ok = await confirm({
+            title: 'Ya tienes una invitación',
+            message: `Tu cédula tiene una invitación pendiente de "${res.invitacion.empresa_nombre}" como ${TIPO_LABEL[res.tipo ?? ''] ?? res.tipo}.\n\nPara acceder, activa tu cuenta desde la pantalla de activación.`,
+            confirmLabel: 'Activar cuenta',
+          });
+          if (ok) router.replace('/(auth)/activar');
           return;
         }
       } catch {

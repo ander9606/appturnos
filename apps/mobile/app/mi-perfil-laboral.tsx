@@ -34,6 +34,7 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { InfoRow }        from '@/components/ui/InfoRow';
 import type { Trabajador, TipoDocumento, SexoTrabajador, TipoCuenta, Experiencia, Diploma } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { confirm } from '@/lib/confirmDialog';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -279,11 +280,9 @@ export default function MiPerfilLaboralScreen() {
     }
   };
 
-  const handleDeleteExperiencia = (id: number) => {
-    Alert.alert('Eliminar experiencia', '¿Estás seguro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarExp.mutate(id) },
-    ]);
+  const handleDeleteExperiencia = async (id: number) => {
+    const ok = await confirm({ title: 'Eliminar experiencia', message: '¿Estás seguro?', confirmLabel: 'Eliminar', destructive: true });
+    if (ok) eliminarExp.mutate(id);
   };
 
   const handleAddDiploma = async () => {
@@ -304,11 +303,9 @@ export default function MiPerfilLaboralScreen() {
     }
   };
 
-  const handleDeleteDiploma = (id: number) => {
-    Alert.alert('Eliminar diploma', '¿Estás seguro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => eliminarDip.mutate(id) },
-    ]);
+  const handleDeleteDiploma = async (id: number) => {
+    const ok = await confirm({ title: 'Eliminar diploma', message: '¿Estás seguro?', confirmLabel: 'Eliminar', destructive: true });
+    if (ok) eliminarDip.mutate(id);
   };
 
   if (isLoading) {

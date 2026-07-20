@@ -89,6 +89,7 @@ interface AuthState {
     apellido?: string;
     email: string;
     password: string;
+    email_token: string;
   }): Promise<void>;
 
   /** Registro libre para trabajador_turnos (marketplace) */
@@ -168,6 +169,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     const { access_token, refresh_token, usuario } = await authApi.login(email, password);
     await secureTokenStore.setTokens(access_token, refresh_token);
     await cacheUsuario(usuario);
+    queryClient.clear(); // evita que errores/datos de una sesión anterior (incluso de otra cuenta) se filtren a esta
     set({ status: 'authenticated', usuario });
   },
 
@@ -180,12 +182,13 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   // ── registrarEmpresa ──────────────────────────────────────────────────
-  async registrarEmpresa({ nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password }) {
+  async registrarEmpresa({ nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password, email_token }) {
     const { access_token, refresh_token, usuario } = await authApi.registrarEmpresa({
-      nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password,
+      nombre_empresa, nit, actividad, descripcion, telefono, email_empresa, direccion, ciudad, nombre, apellido, email, password, email_token,
     });
     await secureTokenStore.setTokens(access_token, refresh_token);
     await cacheUsuario(usuario);
+    queryClient.clear();
     set({ status: 'authenticated', usuario });
   },
 
@@ -196,6 +199,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     });
     await secureTokenStore.setTokens(access_token, refresh_token);
     await cacheUsuario(usuario);
+    queryClient.clear();
     set({ status: 'authenticated', usuario });
   },
 
@@ -204,6 +208,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     const { access_token, refresh_token, usuario, tipo } = await authApi.loginConProvider('google', idToken);
     await secureTokenStore.setTokens(access_token, refresh_token);
     await cacheUsuario(usuario);
+    queryClient.clear();
     set({ status: 'authenticated', usuario });
     return tipo;
   },

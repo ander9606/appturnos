@@ -212,6 +212,20 @@ const OfertasService = {
     });
   },
 
+  /** Borra definitivamente una oferta cancelada que nunca tuvo postulantes (ej: se creó por error). */
+  async eliminarDefinitivo(empresaId, id) {
+    const oferta = await OfertasModel.obtenerPorId(empresaId, id);
+    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    if (oferta.estado !== 'cancelada') {
+      throw new AppError('Solo se pueden eliminar ofertas canceladas.', 409);
+    }
+    const totalAsignaciones = await AsignacionesModel.contarPorOferta(empresaId, id);
+    if (totalAsignaciones > 0) {
+      throw new AppError('No se puede eliminar: esta oferta tuvo postulantes.', 409);
+    }
+    await OfertasModel.eliminarDefinitivo(empresaId, id);
+  },
+
   /**
    * Postular al trabajador autenticado a un PUESTO específico de la oferta.
    * Valida que:

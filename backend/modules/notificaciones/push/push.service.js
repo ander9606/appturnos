@@ -33,9 +33,13 @@ if (!pushHabilitado) {
   logger.warn('[push] VAPID no configurado; la entrega push está deshabilitada');
 }
 
-/** Envía mensajes a la API de Expo Push (best-effort, sin lanzar). */
+/**
+ * Envía mensajes a la API de Expo Push (best-effort, sin lanzar).
+ * Devuelve los "tickets" de respuesta (mismo orden que `messages`), o []
+ * si la petición falla — así el caller puede detectar tokens muertos.
+ */
 async function _enviarExpoBatch(messages) {
-  if (!messages.length) return;
+  if (!messages.length) return [];
   const body = JSON.stringify(messages);
   return new Promise((resolve) => {
     const options = {
@@ -49,8 +53,18 @@ async function _enviarExpoBatch(messages) {
         'Accept-Encoding': 'gzip, deflate',
       },
     };
-    const req = https.request(options, (res) => { res.resume(); resolve(); });
-    req.on('error', () => resolve());
+    const req = https.request(options, (res) => {
+      let raw = '';
+      res.on('data', (chunk) => { raw += chunk; });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(raw)?.data ?? []);
+        } catch {
+          resolve([]);
+        }
+      });
+    });
+    req.on('error', () => resolve([]));
     req.write(body);
     req.end();
   });
@@ -144,9 +158,21 @@ const PushService = {
       body:  payload.mensaje,
       data:  payload.data || {},
     }));
-    await _enviarExpoBatch(messages).catch((err) => {
+
+    try {
+      const tickets = await _enviarExpoBatch(messages);
+      // Los tickets vienen en el mismo orden que `messages`/`tokens` — un token
+      // con DeviceNotRegistered ya no existe en el dispositivo, se descarta.
+      await Promise.all(
+        tickets.map((ticket, i) =>
+          ticket?.details?.error === 'DeviceNotRegistered'
+            ? PushModel.eliminarExpoToken(usuarioId, tokens[i]).catch(() => {})
+            : null
+        )
+      );
+    } catch (err) {
       logger.error('[push] fallo en entrega Expo:', err.message);
-    });
+    }
   },
 };
 

@@ -378,7 +378,7 @@ const RegistrosService = {
     // Notificar a gestores de nómina.
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
     const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa') AND activo = 1`,
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
       [empresaId]
     );
     if (gestores.length > 0) {

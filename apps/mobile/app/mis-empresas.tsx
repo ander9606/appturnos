@@ -30,6 +30,7 @@ import {
 } from '@/features/empresas/useTrabajadorEmpresa';
 import type { Vinculo } from '@api-client';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { confirm } from '@/lib/confirmDialog';
 import { nivelRanking, rankingLabel, rankingColor, rankingDescription } from '@/features/turnos/rankingUtils';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -250,31 +251,26 @@ export default function MisEmpresasScreen() {
     }
   };
 
-  const handleRechazar = (id: number, tipo: 'cancelar' | 'rechazar' = 'rechazar') => {
+  const handleRechazar = async (id: number, tipo: 'cancelar' | 'rechazar' = 'rechazar') => {
     const esCancelar = tipo === 'cancelar';
-    Alert.alert(
-      esCancelar ? 'Cancelar solicitud' : 'Rechazar invitación',
-      esCancelar
+    const ok = await confirm({
+      title: esCancelar ? 'Cancelar solicitud' : 'Rechazar invitación',
+      message: esCancelar
         ? '¿Estás seguro de que deseas cancelar tu solicitud para unirte a esta empresa?'
         : '¿Estás seguro de que deseas rechazar esta invitación?',
-      [
-        { text: 'Volver', style: 'cancel' },
-        {
-          text: esCancelar ? 'Cancelar solicitud' : 'Rechazar',
-          style: 'destructive',
-          onPress: async () => {
-            setActionLoadingId(id);
-            try {
-              await rechazar.mutateAsync({ id });
-            } catch {
-              Alert.alert('Error', esCancelar ? 'No se pudo cancelar' : 'No se pudo rechazar');
-            } finally {
-              setActionLoadingId(null);
-            }
-          },
-        },
-      ],
-    );
+      cancelLabel: 'Volver',
+      confirmLabel: esCancelar ? 'Cancelar solicitud' : 'Rechazar',
+      destructive: true,
+    });
+    if (!ok) return;
+    setActionLoadingId(id);
+    try {
+      await rechazar.mutateAsync({ id });
+    } catch {
+      Alert.alert('Error', esCancelar ? 'No se pudo cancelar' : 'No se pudo rechazar');
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
   const handleReactivar = (empresaId: number) => {

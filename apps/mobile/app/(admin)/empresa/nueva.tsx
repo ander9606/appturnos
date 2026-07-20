@@ -92,6 +92,8 @@ export default function NuevaEmpresaScreen() {
   const [ciudad, setCiudad] = useState('');
   const [plan, setPlan] = useState<PlanEmpresa>('basico');
   const [descripcion, setDescripcion] = useState('');
+  const [adminNombre, setAdminNombre] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
 
   const handleNombreChange = (v: string) => {
     setNombre(v);
@@ -118,6 +120,14 @@ export default function NuevaEmpresaScreen() {
       Alert.alert('Slug inválido', 'Solo letras minúsculas, números y guiones.');
       return;
     }
+    if (adminNombre.trim() && !adminEmail.trim()) {
+      Alert.alert('Falta el email', 'Si indicas un nombre de administrador, el email es obligatorio.');
+      return;
+    }
+    if (adminEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail.trim())) {
+      Alert.alert('Email inválido', 'Revisa el email del administrador.');
+      return;
+    }
 
     try {
       const nueva = await crear({
@@ -127,8 +137,15 @@ export default function NuevaEmpresaScreen() {
         ciudad: ciudad.trim() || null,
         plan,
         descripcion: descripcion.trim() || null,
+        admin_nombre: adminNombre.trim() || undefined,
+        admin_email: adminEmail.trim() || undefined,
       });
-      Alert.alert('✅', `Empresa "${nueva.nombre}" creada correctamente.`, [
+      const credencialesMsg = !nueva.admin_creado
+        ? ''
+        : nueva.credenciales_email_enviado
+        ? `\n\nSe enviaron las credenciales de acceso a ${adminEmail.trim()}.`
+        : `\n\n⚠️ El administrador se creó pero no se pudo enviar el correo con las credenciales. Usa "Olvidé mi contraseña" con ${adminEmail.trim()} para generarlas de nuevo.`;
+      Alert.alert('✅', `Empresa "${nueva.nombre}" creada correctamente.${credencialesMsg}`, [
         {
           text: 'Ver detalle',
           onPress: () => router.replace(`/(admin)/empresa/${nueva.id}`),
@@ -260,6 +277,30 @@ export default function NuevaEmpresaScreen() {
               </View>
             </Pressable>
           ))}
+        </View>
+
+        {/* ── Admin de la empresa ───────────────────────────────────── */}
+        <View className="bg-card border border-border rounded-2xl p-4 gap-4">
+          <View className="gap-1">
+            <Text className="text-sm font-bold text-foreground">Administrador de la empresa</Text>
+            <Text className="text-xs text-muted-foreground">
+              Opcional. Si lo completas, se crea su cuenta y le enviamos las credenciales por correo.
+            </Text>
+          </View>
+
+          <Field
+            label="Nombre"
+            value={adminNombre}
+            onChangeText={setAdminNombre}
+            placeholder="ej. María Gómez"
+          />
+          <Field
+            label="Email"
+            value={adminEmail}
+            onChangeText={setAdminEmail}
+            placeholder="ej. maria@empresa.com"
+            keyboardType="email-address"
+          />
         </View>
 
         {/* ── Botón crear ────────────────────────────────────────────── */}

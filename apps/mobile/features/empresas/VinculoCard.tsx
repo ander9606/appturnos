@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, Image, Alert } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import type { Vinculo } from '@api-client';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { t } from '@/lib/i18n';
+import { confirm } from '@/lib/confirmDialog';
 
 interface VinculoCardProps {
   vinculo: Vinculo;
@@ -27,15 +28,14 @@ export function VinculoCard({ vinculo, onAceptar, onRechazar, onArchivar, onCanc
   const iniciales = empresa_nombre.slice(0, 2).toUpperCase();
   const isLoading = loadingId === id;
 
-  const handleArchivar = () => {
-    Alert.alert(
-      t('empresas.desvincular'),
-      `¿Deseas desvincularte de ${empresa_nombre}?`,
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('empresas.desvincular'), style: 'destructive', onPress: () => onArchivar?.(id) },
-      ],
-    );
+  const handleArchivar = async () => {
+    const ok = await confirm({
+      title: t('empresas.desvincular'),
+      message: `¿Deseas desvincularte de ${empresa_nombre}?`,
+      confirmLabel: t('empresas.desvincular'),
+      destructive: true,
+    });
+    if (ok) onArchivar?.(id);
   };
 
   return (

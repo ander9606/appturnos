@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useEstadoIntegracion, useReintentarFallidos } from '@/features/integracion/useIntegracion';
 import { useTheme } from '@/lib/theme';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { ConteoEstado } from '@api-client';
 
@@ -56,9 +57,12 @@ function SectionHeader({ title, icon }: { title: string; icon: React.ComponentPr
 
 export default function EstadoIntegracionScreen() {
   const theme = useTheme();
-  const { data, isLoading, isRefetching, refetch, isError } = useEstadoIntegracion();
+  // Backend (VER_ESTADO) permite admin_empresa y jefe_turnos — no 'nomina', que también llega aquí desde el dashboard.
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  const puedeVer = rol === 'admin_empresa' || rol === 'jefe_turnos';
+  const { data, isLoading, isRefetching, refetch, isError } = useEstadoIntegracion(puedeVer);
   const reintentarM = useReintentarFallidos();
-  const denied = useRoleGuard(['admin_empresa']);
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
 
   if (isLoading) {

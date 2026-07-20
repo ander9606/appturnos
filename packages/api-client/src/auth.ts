@@ -171,6 +171,7 @@ export const authApi = {
     apellido?: string;
     email: string;
     password: string;
+    email_token: string;
   }): Promise<LoginResponse> {
     return api.post<LoginResponse>(
       '/api/auth/registro-empresa',

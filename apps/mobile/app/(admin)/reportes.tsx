@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useReportesGlobales } from '@/features/admin/useAdmin';
 
 // ── Sub-components ────────────────────────────────────────────────────────
@@ -74,7 +75,8 @@ const PLAN_LABELS: Record<string, string> = {
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function ReportesScreen() {
-  const { data, isLoading, isError, refetch } = useReportesGlobales();
+  const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
+  const { data, isLoading, isError, refetch } = useReportesGlobales(isSuperAdmin);
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = async () => {

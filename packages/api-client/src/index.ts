@@ -129,10 +129,17 @@ export type {
 } from './reportes';
 export type {
   EmpresaAdmin,
+  EmpresaCreada,
   EmpresasListResponse,
   EmpresasListParams,
   CrearEmpresaPayload,
   ActualizarEmpresaPayload,
   ReportesGlobales,
   PlanEmpresa,
+  SuscripcionOrigen,
+  LinkPagoResponse,
+  WompiEstado,
+  WompiEvento,
+  WompiEventosParams,
+  WompiEventosResponse,
 } from './admin';

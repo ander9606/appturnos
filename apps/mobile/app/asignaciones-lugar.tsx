@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import {
   View, Text, FlatList, ActivityIndicator,
   TouchableOpacity, Modal, Pressable,
-  RefreshControl, Alert,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -22,6 +22,7 @@ import { useTrabajadores, useActualizarMarcacion } from '@/features/equipo/useEq
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { Trabajador, PuntoMarcaje } from '@api-client';
+import { confirm } from '@/lib/confirmDialog';
 
 // ── Fila de trabajador ────────────────────────────────────────────────────────
 
@@ -38,16 +39,13 @@ function FilaTrabajador({
   const esFijo   = t.tipo_marcacion === 'fijo';
   const puntoActual = puntos.find((p) => p.id === t.punto_marcaje_id);
 
-  function toggleTipo() {
+  async function toggleTipo() {
     if (esFijo) {
-      Alert.alert(
-        'Cambiar a libre',
-        `¿${t.nombre} ${t.apellido} podrá marcar desde cualquier ubicación?`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Confirmar', onPress: () => mutate({ id: t.id, tipo_marcacion: 'libre', punto_marcaje_id: null }) },
-        ]
-      );
+      const ok = await confirm({
+        title: 'Cambiar a libre',
+        message: `¿${t.nombre} ${t.apellido} podrá marcar desde cualquier ubicación?`,
+      });
+      if (ok) mutate({ id: t.id, tipo_marcacion: 'libre', punto_marcaje_id: null });
     } else {
       // pasar a fijo requiere elegir un punto
       setShowPuntos(true);

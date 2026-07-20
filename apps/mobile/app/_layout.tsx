@@ -24,6 +24,7 @@ import { queryClient } from '@/lib/queryClient';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 // ponytail: expo-router activa keep-awake internamente en dev; falla en Android emulator — ruido inofensivo
 LogBox.ignoreLogs(['Unable to activate keep awake']);
@@ -131,6 +132,7 @@ function RootLayout() {
       <ErrorBoundary>
         <StatusBanner />
         <Toast />
+        <ConfirmDialog />
         <AuthGuard>
           {/* Default: header visible, slide from right.
               Only exceptions are registered explicitly. */}

@@ -10,10 +10,17 @@ const { TRIAL_DIAS_GRATIS } = require('../../config/constants');
 const AuthModel = {
   // ─── Usuarios ───────────────────────────────────────────────
 
-  /** Usuario por email, con password_hash (uso interno de login). */
+  /**
+   * Usuario por email, con password_hash (uso interno de login).
+   * Incluye empresa_activo (NULL para super_admin/trabajador_turnos, que no
+   * llevan empresa_id fijo) para que login() pueda bloquear empresas suspendidas.
+   */
   async buscarUsuarioPorEmail(email) {
     const [filas] = await pool.query(
-      'SELECT * FROM usuarios WHERE email = ? LIMIT 1',
+      `SELECT u.*, e.activo AS empresa_activo
+       FROM usuarios u
+       LEFT JOIN empresas e ON e.id = u.empresa_id
+       WHERE u.email = ? LIMIT 1`,
       [email]
     );
     return filas[0] || null;
@@ -56,9 +63,11 @@ const AuthModel = {
     const [filas] = await pool.query(
       `SELECT rt.id, rt.usuario_id, rt.revocado,
               (rt.expira_at <= NOW()) AS expirado,
-              u.empresa_id, u.rol, u.nombre, u.activo AS usuario_activo
+              u.empresa_id, u.rol, u.nombre, u.activo AS usuario_activo,
+              e.activo AS empresa_activo
        FROM refresh_tokens rt
        INNER JOIN usuarios u ON u.id = rt.usuario_id
+       LEFT JOIN empresas e ON e.id = u.empresa_id
        WHERE rt.token = ? LIMIT 1`,
       [token]
     );

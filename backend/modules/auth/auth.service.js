@@ -72,6 +72,9 @@ const AuthService = {
     }
 
     if (!usuario.activo) throw new AppError('Usuario inactivo', 403);
+    if (usuario.empresa_id && usuario.empresa_activo === 0) {
+      throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
+    }
 
     const passwordOk = await bcrypt.compare(password, usuario.password_hash);
     if (!passwordOk) {
@@ -103,6 +106,9 @@ const AuthService = {
     }
     if (fila.expirado) throw new AppError('Refresh token expirado', 401);
     if (!fila.usuario_activo) throw new AppError('Usuario inactivo', 403);
+    if (fila.empresa_id && fila.empresa_activo === 0) {
+      throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
+    }
 
     await AuthModel.revocarRefreshToken(refreshToken);
     const tokens = await emitirTokens({

@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
+const { SUSCRIPCION_ESTANDAR_COP } = require('../../config/constants');
 
 /**
  * Acceso a datos del módulo admin (super_admin).
@@ -36,6 +37,9 @@ const AdminModel = {
          e.acepta_postulaciones, e.logo_url, e.descripcion, e.created_at,
          COUNT(DISTINCT t.id)  AS total_trabajadores,
          COUNT(DISTINCT u.id)  AS total_usuarios,
+         COUNT(DISTINCT CASE WHEN t.tipo = 'turnos' THEN t.id END) AS trabajadores_turnos,
+         COUNT(DISTINCT CASE WHEN t.tipo = 'nomina' THEN t.id END) AS trabajadores_nomina,
+         COUNT(DISTINCT CASE WHEN t.tipo = 'ambos'  THEN t.id END) AS trabajadores_ambos,
          (MAX(ic.activo) = 1 AND MAX(ic.api_key) IS NOT NULL) AS logiq360_conectado
        FROM empresas e
        LEFT JOIN trabajadores t ON t.empresa_id = e.id
@@ -73,6 +77,9 @@ const AdminModel = {
          COUNT(DISTINCT u.id)  AS total_usuarios,
          COUNT(DISTINCT ot.id) AS total_ofertas,
          COUNT(DISTINCT pn.id) AS total_periodos,
+         COUNT(DISTINCT CASE WHEN t.tipo = 'turnos' THEN t.id END) AS trabajadores_turnos,
+         COUNT(DISTINCT CASE WHEN t.tipo = 'nomina' THEN t.id END) AS trabajadores_nomina,
+         COUNT(DISTINCT CASE WHEN t.tipo = 'ambos'  THEN t.id END) AS trabajadores_ambos,
          (MAX(ic.activo) = 1 AND MAX(ic.api_key) IS NOT NULL) AS logiq360_conectado
        FROM empresas e
        LEFT JOIN trabajadores t  ON t.empresa_id = e.id
@@ -195,6 +202,40 @@ const AdminModel = {
        GROUP BY plan`
     );
 
+    // logiq360_conectado se deriva en vivo (misma condición que listarEmpresas);
+    // pago_directo = suscripcion_origen 'wompi' entre empresas activas.
+    const [[integraciones]] = await pool.query(
+      `SELECT
+         SUM(logiq360_conectado)                    AS empresas_logiq360,
+         SUM(suscripcion_origen = 'wompi')           AS empresas_pago_directo
+       FROM (
+         SELECT e.id, e.suscripcion_origen,
+                (MAX(ic.activo) = 1 AND MAX(ic.api_key) IS NOT NULL) AS logiq360_conectado
+         FROM empresas e
+         LEFT JOIN integracion_config ic ON ic.empresa_id = e.id
+         WHERE e.activo = 1
+         GROUP BY e.id
+       ) sub`
+    );
+
+    // Proyección: empresas que pagan directo (wompi) con suscripción vigente hoy.
+    const [[proyeccion]] = await pool.query(
+      `SELECT COUNT(*) AS empresas_pagando
+       FROM empresas
+       WHERE activo = 1
+         AND suscripcion_origen = 'wompi'
+         AND (suscripcion_vigente_hasta IS NULL OR suscripcion_vigente_hasta >= CURDATE())`
+    );
+
+    // Ganado el mes pasado: pagos Wompi procesados en el mes calendario anterior.
+    const [[mesPasado]] = await pool.query(
+      `SELECT COALESCE(SUM(meses), 0) AS meses_pagados
+       FROM wompi_eventos
+       WHERE estado = 'procesado'
+         AND procesado_at >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')
+         AND procesado_at <  DATE_FORMAT(CURDATE(), '%Y-%m-01')`
+    );
+
     return {
       empresas: {
         total: Number(empresas.total_empresas),
@@ -218,6 +259,15 @@ const AdminModel = {
         acc[row.plan] = Number(row.total);
         return acc;
       }, {}),
+      integraciones: {
+        logiq360: Number(integraciones.empresas_logiq360) || 0,
+        pago_directo: Number(integraciones.empresas_pago_directo) || 0,
+      },
+      ingresos: {
+        proyeccion_mes_actual: Number(proyeccion.empresas_pagando) * SUSCRIPCION_ESTANDAR_COP,
+        ganado_mes_pasado: Number(mesPasado.meses_pagados) * SUSCRIPCION_ESTANDAR_COP,
+        tarifa_cop: SUSCRIPCION_ESTANDAR_COP,
+      },
     };
   },
 

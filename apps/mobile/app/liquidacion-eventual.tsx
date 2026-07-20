@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { bogotaToday } from '@/features/turnos/turnosUtils';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { confirm } from '@/lib/confirmDialog';
 import type { LineaLiquidacionEventual, SegmentoTurnoEventual } from '@api-client';
 
 const TIPO_LABELS: Record<'mensual' | 'quincenal' | 'semanal' | 'trimestral', string> = {
@@ -105,16 +105,15 @@ export default function LiquidacionEventualScreen() {
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
 
-  function handleLiquidar() {
+  async function handleLiquidar() {
     if (!periodo) return;
-    Alert.alert(
-      'Liquidar período',
-      `¿Confirmar el pago de ${cop(totalGeneral)} a ${lineas.length} trabajador${lineas.length !== 1 ? 'es' : ''}? Esta acción no se puede deshacer.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Liquidar', style: 'destructive', onPress: () => liquidarMutation.mutate(periodo.id) },
-      ]
-    );
+    const ok = await confirm({
+      title: 'Liquidar período',
+      message: `¿Confirmar el pago de ${cop(totalGeneral)} a ${lineas.length} trabajador${lineas.length !== 1 ? 'es' : ''}? Esta acción no se puede deshacer.`,
+      confirmLabel: 'Liquidar',
+      destructive: true,
+    });
+    if (ok) liquidarMutation.mutate(periodo.id);
   }
 
   return (

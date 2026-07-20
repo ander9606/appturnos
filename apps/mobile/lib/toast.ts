@@ -13,7 +13,11 @@ export const useToastStore = create<ToastState>((set) => ({
   hide: () => set({ message: null }),
 }));
 
-/** Feedback no bloqueante para acciones exitosas. Para confirmaciones o errores sigue usando Alert.alert. */
+/**
+ * Feedback no bloqueante para acciones exitosas.
+ * Para confirmaciones de 2 botones usa confirm() (lib/confirmDialog.ts).
+ * Para errores o mensajes de más de 2 botones sigue usando Alert.alert.
+ */
 export function showToast(message: string) {
   useToastStore.getState().show(message);
 }

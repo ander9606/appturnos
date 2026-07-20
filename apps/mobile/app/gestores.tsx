@@ -16,6 +16,7 @@ import type { Gestor } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
+import { confirm } from '@/lib/confirmDialog';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -58,22 +59,19 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
   const toggleMutation = useSetActivoGestor();
   const rolColor = ROL_COLORS[gestor.rol] ?? '#64748B';
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     const accion = gestor.activo ? 'desactivar' : 'activar';
-    Alert.alert(
-      `¿${accion.charAt(0).toUpperCase() + accion.slice(1)} gestor?`,
-      `${gestor.nombre}${gestor.apellido ? ` ${gestor.apellido}` : ''} quedará ${gestor.activo ? 'sin acceso' : 'con acceso'} a la app.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: accion.charAt(0).toUpperCase() + accion.slice(1),
-          style: gestor.activo ? 'destructive' : 'default',
-          onPress: () => toggleMutation.mutate(
-            { id: gestor.id, activo: !gestor.activo },
-            { onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el estado.')) }
-          ),
-        },
-      ]
+    const label = accion.charAt(0).toUpperCase() + accion.slice(1);
+    const ok = await confirm({
+      title: `¿${label} gestor?`,
+      message: `${gestor.nombre}${gestor.apellido ? ` ${gestor.apellido}` : ''} quedará ${gestor.activo ? 'sin acceso' : 'con acceso'} a la app.`,
+      confirmLabel: label,
+      destructive: gestor.activo,
+    });
+    if (!ok) return;
+    toggleMutation.mutate(
+      { id: gestor.id, activo: !gestor.activo },
+      { onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el estado.')) }
     );
   };
 

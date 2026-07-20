@@ -50,6 +50,8 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'ausencia.nueva':              'calendar-clear-outline',
   'ausencia.resuelta':           'calendar-outline',
   'nomina.compensatorio_asignado': 'sunny-outline',
+  'integracion.activada':        'link-outline',
+  'integracion.desactivada':     'unlink-outline',
 };
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {

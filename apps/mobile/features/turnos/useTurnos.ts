@@ -307,6 +307,17 @@ export function useCancelarOferta() {
   });
 }
 
+/** Borrar definitivamente una oferta ya cancelada que nunca tuvo postulantes (creada por error). */
+export function useEliminarOfertaDefinitivo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ofertaId: number) => turnosApi.eliminarOfertaDefinitivo(ofertaId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+    },
+  });
+}
+
 /** Catálogo de cargos (sistema + custom de la empresa). */
 export function useCargos(enabled = true) {
   return useQuery({

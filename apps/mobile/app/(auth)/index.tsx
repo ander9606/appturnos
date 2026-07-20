@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Pressable,
+  TouchableOpacity,
   SafeAreaView,
   Dimensions,
   StyleSheet,
@@ -48,8 +49,8 @@ export default function WelcomeScreen() {
         <View style={styles.cards}>
           <OptionCard
             icon="person"
-            title="Soy trabajador"
-            description="Marca tus turnos y consulta tu nómina"
+            title="Ya te invitó una empresa"
+            description="Activa tu cuenta con tu cédula"
             onPress={() => router.push('/(auth)/activar')}
             variant="filled"
           />
@@ -60,14 +61,23 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/(auth)/registro-empresa')}
             variant="outline"
           />
+          <OptionCard
+            icon="calendar"
+            title="Busco trabajo por turnos"
+            description="Regístrate y postúlate a turnos disponibles"
+            onPress={() => router.push('/(auth)/registro')}
+            variant="outline"
+          />
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
-          <Pressable onPress={() => router.push('/(auth)/login')}>
-            <Text style={styles.footerLink}>Iniciar sesión →</Text>
-          </Pressable>
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>¿Ya tienes cuenta?</Text>
+            <Pressable onPress={() => router.push('/(auth)/login')}>
+              <Text style={styles.footerLink}>Iniciar sesión →</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -89,13 +99,10 @@ function OptionCard({
 }) {
   const filled = variant === 'filled';
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        filled ? styles.cardFilled : styles.cardOutline,
-        pressed && styles.pressed,
-      ]}
+      activeOpacity={0.82}
+      style={[styles.card, filled ? styles.cardFilled : styles.cardOutline]}
     >
       <View style={[styles.iconWrap, filled ? styles.iconWrapFilled : styles.iconWrapOutline]}>
         <Ionicons name={icon} size={26} color={filled ? 'white' : '#FF5A3C'} />
@@ -111,7 +118,7 @@ function OptionCard({
         size={20}
         color={filled ? 'rgba(255,255,255,0.6)' : '#CBD5E1'}
       />
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
@@ -225,9 +232,9 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardDesc: { fontSize: 13, marginTop: 3, lineHeight: 18 },
 
-  pressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
 
-  footer: { alignItems: 'center', paddingTop: 8 },
+  footer: { alignItems: 'center', paddingTop: 8, gap: 10 },
+  footerRow: { alignItems: 'center' },
   footerText: { fontSize: 14, color: '#94A3B8' },
   footerLink: { fontSize: 15, fontWeight: '700', color: '#FF5A3C', marginTop: 4 },
 

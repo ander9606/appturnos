@@ -99,6 +99,9 @@ router.put(
 // DELETE /api/turnos/ofertas/:id  (cancelar)
 router.delete('/:id', verificarRol(GESTIONAR), [idParam], validar, ctrl.cancelar);
 
+// DELETE /api/turnos/ofertas/:id/definitivo  (borrar oferta cancelada sin postulantes)
+router.delete('/:id/definitivo', verificarRol(GESTIONAR), [idParam], validar, ctrl.eliminarDefinitivo);
+
 // POST /api/turnos/ofertas/:id/aplicar  — body: { puesto_id }
 router.post(
   '/:id/aplicar',

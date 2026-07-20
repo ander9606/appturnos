@@ -61,11 +61,13 @@ export default function TurnosScreen() {
     isRefetching: refetchingMios,
   } = useMisTurnos({ enabled: isWorker });
 
-  const { data: pendientesResp } = usePostulacionesPendientes({ enabled: isGestor });
-  const { data: periodosEventual } = usePeriodosEventual();
+  // Backend restringe GET /asignaciones/postulaciones-pendientes a admin_empresa/jefe_turnos (no jefe_nomina).
+  const { data: pendientesResp } = usePostulacionesPendientes({ enabled: isGestor && !isJefeNomina });
+  const { data: periodosEventual } = usePeriodosEventual(isNomina);
   const periodoEventual = periodosEventual?.nomina;
   const pendientesCount = pendientesResp?.data?.length ?? 0;
 
+  // Backend excluye 'nomina' de GET /ofertas.
   const {
     data: ofertasResp,
     isLoading: loadingOfertas,
@@ -73,7 +75,7 @@ export default function TurnosScreen() {
     error: errOfertas,
     refetch: refetchOfertas,
     isRefetching: refetchingOfertas,
-  } = useOfertas({ disponibles: true });
+  } = useOfertas({ disponibles: true }, { enabled: rol !== 'nomina' });
 
   const router = useRouter();
   const aplicarMutation = useAplicar();

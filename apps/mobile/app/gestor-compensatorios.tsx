@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, ActivityIndicator,
-  TouchableOpacity, Alert, Platform, RefreshControl,
+  TouchableOpacity, Platform, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
 import { toISODate } from '@/lib/formatters';
+import { confirm } from '@/lib/confirmDialog';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import {
@@ -136,16 +137,13 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
     if (selected) setFecha(selected);
   }
 
-  function confirmar() {
+  async function confirmar() {
     const iso = toISODate(fecha);
-    Alert.alert(
-      'Confirmar descanso',
-      `¿Asignar el ${fmtFechaCorta(iso)} como descanso para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Confirmar', onPress: () => mutate({ id: c.id, fecha: iso }) },
-      ]
-    );
+    const ok = await confirm({
+      title: 'Confirmar descanso',
+      message: `¿Asignar el ${fmtFechaCorta(iso)} como descanso para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
+    });
+    if (ok) mutate({ id: c.id, fecha: iso });
   }
 
   const iso = toISODate(fecha);

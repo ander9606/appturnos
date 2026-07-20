@@ -65,7 +65,7 @@ export function useDashboardAsistencia() {
     queries: [
       {
         queryKey: ['trabajadores', 'nomina', 'activos'],
-        queryFn: () => trabajadoresApi.listar({ tipo: 'nomina', activo: true, limit: 200 }),
+        queryFn: () => trabajadoresApi.listar({ tipo: 'nomina', activo: true, limit: 100 }),
         staleTime: 5 * 60_000,
       },
       {

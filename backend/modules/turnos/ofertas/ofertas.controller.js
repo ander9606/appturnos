@@ -42,6 +42,11 @@ async function cancelar(req, res) {
   res.json({ success: true, data: null, message: 'Oferta cancelada' });
 }
 
+async function eliminarDefinitivo(req, res) {
+  await OfertasService.eliminarDefinitivo(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data: null, message: 'Oferta eliminada' });
+}
+
 async function aplicar(req, res) {
   const data = await OfertasService.aplicar(
     req.empresa_id,
@@ -94,4 +99,4 @@ async function duplicar(req, res) {
   res.status(201).json({ success: true, data, message: 'Oferta duplicada' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, cancelar, aplicar, retirar, asignar, cerrar, duplicar };
+module.exports = { listar, obtener, crear, actualizar, cancelar, eliminarDefinitivo, aplicar, retirar, asignar, cerrar, duplicar };

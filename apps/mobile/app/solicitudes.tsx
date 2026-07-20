@@ -31,6 +31,7 @@ import {
 import type { SolicitudAdmin } from '@api-client';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { Avatar } from '@/components/ui/Avatar';
+import { confirm } from '@/lib/confirmDialog';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -250,28 +251,22 @@ export default function SolicitudesScreen() {
     }
   };
 
-  const handleRechazar = (id: number) => {
-    Alert.alert(
-      'Rechazar solicitud',
-      '¿Estás seguro de que deseas rechazar esta solicitud?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Rechazar',
-          style: 'destructive',
-          onPress: async () => {
-            setLoadingId(id);
-            try {
-              await rechazar.mutateAsync({ id });
-            } catch {
-              Alert.alert('Error', 'No se pudo rechazar la solicitud');
-            } finally {
-              setLoadingId(null);
-            }
-          },
-        },
-      ],
-    );
+  const handleRechazar = async (id: number) => {
+    const ok = await confirm({
+      title: 'Rechazar solicitud',
+      message: '¿Estás seguro de que deseas rechazar esta solicitud?',
+      confirmLabel: 'Rechazar',
+      destructive: true,
+    });
+    if (!ok) return;
+    setLoadingId(id);
+    try {
+      await rechazar.mutateAsync({ id });
+    } catch {
+      Alert.alert('Error', 'No se pudo rechazar la solicitud');
+    } finally {
+      setLoadingId(null);
+    }
   };
 
   return (

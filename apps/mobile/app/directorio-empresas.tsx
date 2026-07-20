@@ -23,6 +23,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { empresasApi } from '@api-client';
 import type { EmpresaDirectorio } from '@api-client';
 import { useSolicitar, useMisEmpresas } from '@/features/empresas/useTrabajadorEmpresa';
+import { confirm } from '@/lib/confirmDialog';
 
 // ── Company card ─────────────────────────────────────────────────────────────
 
@@ -163,28 +164,22 @@ export default function DirectorioEmpresasScreen() {
   );
 
   const handleSolicitar = useCallback(async (emp: EmpresaDirectorio) => {
-    Alert.alert(
-      'Solicitar vínculo',
-      `¿Deseas enviar una solicitud a ${emp.nombre}? La empresa deberá aprobarla antes de que puedas tomar turnos.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Solicitar',
-          onPress: async () => {
-            try {
-              await solicitar.mutateAsync(emp.id);
-              setRequestedIds((prev) => new Set(prev).add(emp.id));
-              qc.invalidateQueries({ queryKey: ['trabajador-empresa'] });
-            } catch (err: unknown) {
-              const msg = err && typeof err === 'object' && 'message' in err
-                ? String((err as { message: string }).message)
-                : 'No se pudo enviar la solicitud';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ],
-    );
+    const ok = await confirm({
+      title: 'Solicitar vínculo',
+      message: `¿Deseas enviar una solicitud a ${emp.nombre}? La empresa deberá aprobarla antes de que puedas tomar turnos.`,
+      confirmLabel: 'Solicitar',
+    });
+    if (!ok) return;
+    try {
+      await solicitar.mutateAsync(emp.id);
+      setRequestedIds((prev) => new Set(prev).add(emp.id));
+      qc.invalidateQueries({ queryKey: ['trabajador-empresa'] });
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err
+        ? String((err as { message: string }).message)
+        : 'No se pudo enviar la solicitud';
+      Alert.alert('Error', msg);
+    }
   }, [solicitar, qc]);
 
   const disponibles = empresas.filter((e) =>

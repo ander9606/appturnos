@@ -23,7 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ApiError } from '@api-client';
+import { authApi, ApiError } from '@api-client';
 
 const { height } = Dimensions.get('window');
 
@@ -53,6 +53,14 @@ export default function RegistroEmpresaScreen() {
   const registrarEmpresa = useAuthStore((s) => s.registrarEmpresa);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
+  // step: 'datos' | 'otp' — el backend exige email_token, obtenido al verificar el OTP
+  const [step, setStep] = React.useState<'datos' | 'otp'>('datos');
+  const [otp, setOtp] = React.useState('');
+  const [otpError, setOtpError] = React.useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = React.useState(false);
+  const [isResending, setIsResending] = React.useState(false);
+  const formDataRef = React.useRef<Form | null>(null);
+
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<Form>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -62,9 +70,36 @@ export default function RegistroEmpresaScreen() {
     },
   });
 
-  const onSubmit = async (data: Form) => {
+  const onSubmitDatos = async (data: Form) => {
     setServerError(null);
     try {
+      await authApi.enviarOtp({ tipo: 'email', destino: data.email });
+      formDataRef.current = data;
+      setStep('otp');
+    } catch (err) {
+      setServerError(err instanceof ApiError ? err.message : 'No se pudo enviar el código. Intenta de nuevo.');
+    }
+  };
+
+  const reenviarCodigo = async () => {
+    if (!formDataRef.current) return;
+    setIsResending(true);
+    try {
+      await authApi.enviarOtp({ tipo: 'email', destino: formDataRef.current.email });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const verificarYCrear = async () => {
+    const data = formDataRef.current;
+    if (!data) return;
+    if (otp.length !== 6) { setOtpError('El código tiene 6 dígitos'); return; }
+    setOtpError(null);
+    setServerError(null);
+    setIsVerifying(true);
+    try {
+      const { token } = await authApi.verificarOtp({ tipo: 'email', destino: data.email, codigo: otp });
       await registrarEmpresa({
         nombre_empresa: data.nombre_empresa,
         nit:            data.nit            || undefined,
@@ -78,13 +113,17 @@ export default function RegistroEmpresaScreen() {
         apellido:       data.apellido       || undefined,
         email:          data.email,
         password:       data.password,
+        email_token:    token,
       });
     } catch (err) {
       if (err instanceof ApiError) {
-        setServerError(err.status === 409 ? 'El email ya está registrado.' : err.message);
+        if (err.status === 409) setServerError('El email ya está registrado.');
+        else setOtpError(err.message);
       } else {
         setServerError('Error inesperado. Intenta de nuevo.');
       }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -120,6 +159,8 @@ export default function RegistroEmpresaScreen() {
             </View>
           )}
 
+          {step === 'datos' && (
+          <>
           <Section label="Datos de la empresa" icon="business-outline" />
 
           <Controller control={control} name="nombre_empresa" render={({ field: { onChange, onBlur, value } }) => (
@@ -296,19 +337,63 @@ export default function RegistroEmpresaScreen() {
               onBlur={onBlur}
               error={errors.confirmar?.message}
               returnKeyType="done"
-              onSubmitEditing={handleSubmit(onSubmit)}
+              onSubmitEditing={handleSubmit(onSubmitDatos)}
             />
           )} />
 
           <View style={styles.submitWrap}>
             <Button
-              label={isSubmitting ? 'Creando empresa...' : 'Crear empresa'}
-              onPress={handleSubmit(onSubmit)}
+              label={isSubmitting ? 'Enviando código...' : 'Continuar'}
+              onPress={handleSubmit(onSubmitDatos)}
               loading={isSubmitting}
               fullWidth
               size="lg"
             />
           </View>
+          </>
+          )}
+
+          {step === 'otp' && (
+            <View style={styles.otpBox}>
+              <View style={styles.otpIconWrap}>
+                <Ionicons name="mail-unread-outline" size={28} color="#FF5A3C" />
+              </View>
+              <Text style={styles.otpTitle}>Verifica tu correo</Text>
+              <Text style={styles.otpSubtitle}>
+                Enviamos un código de 6 dígitos a{'\n'}
+                <Text style={{ fontWeight: '700' }}>{formDataRef.current?.email}</Text>
+              </Text>
+
+              <Input
+                label="Código de verificación"
+                placeholder="000000"
+                keyboardType="number-pad"
+                maxLength={6}
+                value={otp}
+                onChangeText={setOtp}
+                error={otpError ?? undefined}
+              />
+
+              <Button
+                label={isVerifying ? 'Verificando...' : 'Verificar y crear empresa'}
+                onPress={verificarYCrear}
+                loading={isVerifying}
+                fullWidth
+                size="lg"
+              />
+
+              <View style={styles.otpActions}>
+                <TouchableOpacity onPress={reenviarCodigo} disabled={isResending}>
+                  <Text style={styles.footerLink}>
+                    {isResending ? 'Reenviando…' : 'Reenviar código'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setStep('datos')}>
+                  <Text style={styles.footerText}>← Editar datos</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
@@ -395,6 +480,19 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
 
   submitWrap: { marginTop: 8 },
+
+  // OTP step
+  otpBox: { alignItems: 'center', gap: 14, paddingVertical: 8 },
+  otpIconWrap: {
+    width: 56, height: 56, borderRadius: 18,
+    backgroundColor: '#FFF1EE',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  otpTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  otpSubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 19 },
+  otpActions: {
+    flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 4,
+  },
 
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4 },
   footerText: { fontSize: 14, color: '#94A3B8' },

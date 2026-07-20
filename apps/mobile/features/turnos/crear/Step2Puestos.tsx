@@ -16,6 +16,7 @@ import { CargoModal } from './CargoModal';
 import { validateStep2 } from './utils';
 import type { WizardData, PuestoInput } from './types';
 import type { Cargo } from '@api-client';
+import { confirm } from '@/lib/confirmDialog';
 
 type Props = {
   data: WizardData;
@@ -39,19 +40,18 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
     });
   };
 
-  const removePuesto = (key: string) => {
+  const removePuesto = async (key: string) => {
     const puesto = data.puestos.find((p) => p.key === key);
     const doRemove = () => onChange({ puestos: data.puestos.filter((p) => p.key !== key) });
 
     if (puesto?.tarifa_dia) {
-      Alert.alert(
-        '¿Quitar este rol?',
-        `Perderás la tarifa y plazas que ya cargaste para ${puesto.cargo_nombre}.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Quitar', style: 'destructive', onPress: doRemove },
-        ],
-      );
+      const ok = await confirm({
+        title: '¿Quitar este rol?',
+        message: `Perderás la tarifa y plazas que ya cargaste para ${puesto.cargo_nombre}.`,
+        confirmLabel: 'Quitar',
+        destructive: true,
+      });
+      if (ok) doRemove();
       return;
     }
     doRemove();

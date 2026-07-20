@@ -16,50 +16,41 @@ import {
   useRechazarReingreso,
 } from '@/features/nomina/useNomina';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { confirm } from '@/lib/confirmDialog';
 
 function ReingresoItem({ item }: { item: SolicitudReingreso }) {
   const aprobarMutation  = useAprobarReingreso();
   const rechazarMutation = useRechazarReingreso();
   const isPending        = aprobarMutation.isPending || rechazarMutation.isPending;
 
-  const handleAprobar = () =>
-    Alert.alert(
-      'Aprobar reingreso',
-      `¿Autorizas que ${item.trabajador_nombre} ${item.trabajador_apellido} regrese hoy?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Aprobar',
-          onPress: async () => {
-            try {
-              await aprobarMutation.mutateAsync(item.id);
-            } catch (err) {
-              Alert.alert('Error', err instanceof ApiError ? err.message : 'Error al aprobar');
-            }
-          },
-        },
-      ],
-    );
+  const handleAprobar = async () => {
+    const ok = await confirm({
+      title: 'Aprobar reingreso',
+      message: `¿Autorizas que ${item.trabajador_nombre} ${item.trabajador_apellido} regrese hoy?`,
+      confirmLabel: 'Aprobar',
+    });
+    if (!ok) return;
+    try {
+      await aprobarMutation.mutateAsync(item.id);
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'Error al aprobar');
+    }
+  };
 
-  const handleRechazar = () =>
-    Alert.alert(
-      'Rechazar reingreso',
-      `¿Rechazas la solicitud de ${item.trabajador_nombre} ${item.trabajador_apellido}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Rechazar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await rechazarMutation.mutateAsync(item.id);
-            } catch (err) {
-              Alert.alert('Error', err instanceof ApiError ? err.message : 'Error al rechazar');
-            }
-          },
-        },
-      ],
-    );
+  const handleRechazar = async () => {
+    const ok = await confirm({
+      title: 'Rechazar reingreso',
+      message: `¿Rechazas la solicitud de ${item.trabajador_nombre} ${item.trabajador_apellido}?`,
+      confirmLabel: 'Rechazar',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await rechazarMutation.mutateAsync(item.id);
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'Error al rechazar');
+    }
+  };
 
   return (
     <View className="bg-card border border-border rounded-2xl p-4 gap-3">

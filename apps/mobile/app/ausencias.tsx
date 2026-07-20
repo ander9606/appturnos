@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, RefreshControl, Alert, ActivityIndicator,
+  View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { useTheme } from '@/lib/theme';
 import { useAusencias, useActualizarEstadoAusencia } from '@/features/ausencias/useAusencias';
 import { Badge } from '@/components/ui/Badge';
 import type { Ausencia } from '@api-client';
+import { confirm } from '@/lib/confirmDialog';
 
 const TIPO_LABEL: Record<string, string> = {
   vacaciones: 'Vacaciones',
@@ -41,13 +42,15 @@ export default function AusenciasScreen() {
   const { data, isLoading, refetch, isRefetching } = useAusencias();
   const resolverM = useActualizarEstadoAusencia();
 
-  function handleResolver(ausencia: Ausencia, estado: 'aprobada' | 'rechazada') {
+  async function handleResolver(ausencia: Ausencia, estado: 'aprobada' | 'rechazada') {
     const label = estado === 'aprobada' ? 'Aprobar' : 'Rechazar';
-    Alert.alert(label, `¿${label} la solicitud de ${ausencia.trabajador_nombre ?? 'este trabajador'}?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: label, style: estado === 'rechazada' ? 'destructive' : 'default',
-        onPress: () => resolverM.mutate({ id: ausencia.id, estado }) },
-    ]);
+    const ok = await confirm({
+      title: label,
+      message: `¿${label} la solicitud de ${ausencia.trabajador_nombre ?? 'este trabajador'}?`,
+      confirmLabel: label,
+      destructive: estado === 'rechazada',
+    });
+    if (ok) resolverM.mutate({ id: ausencia.id, estado });
   }
 
   const ausencias = data?.data ?? [];

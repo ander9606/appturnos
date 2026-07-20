@@ -71,6 +71,8 @@ router.post(
       .isIn(['basico', 'profesional', 'empresarial'])
       .withMessage('plan inválido'),
     body('descripcion').optional({ nullable: true }).isString().trim(),
+    body('admin_nombre').optional({ nullable: true }).isString().trim().notEmpty(),
+    body('admin_email').optional({ nullable: true }).isEmail().withMessage('admin_email inválido'),
   ],
   validar,
   ctrl.crearEmpresa
@@ -148,7 +150,7 @@ router.get(
   '/wompi-eventos',
   verificarToken,
   verificarRol(SOLO_SUPER),
-  [query('estado').optional().isIn(['recibido', 'procesado', 'error', 'ignorado'])],
+  [query('estado').optional().isIn(['recibido', 'procesado', 'error', 'ignorado', 'rechazado'])],
   validar,
   ctrl.listarWompiEventos
 );

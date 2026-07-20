@@ -101,6 +101,15 @@ const AsignacionesModel = {
     return filas.map((f) => f.usuario_id);
   },
 
+  /** Total de asignaciones (cualquier estado) de una oferta — usado para bloquear el borrado definitivo. */
+  async contarPorOferta(empresaId, ofertaId) {
+    const [[fila]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM asignaciones_turno WHERE empresa_id = ? AND oferta_id = ?',
+      [empresaId, ofertaId]
+    );
+    return fila.total;
+  },
+
   /**
    * Confirma una asignación pendiente y suma una plaza cubierta al PUESTO
    * (no a la oferta — la oferta ya no lleva ese contador desde mig 013).

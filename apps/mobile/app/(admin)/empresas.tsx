@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useAdminEmpresas } from '@/features/admin/useAdmin';
 import type { PlanEmpresa } from '@api-client';
 
@@ -87,7 +88,8 @@ export default function EmpresasScreen() {
     limit: 50,
   };
 
-  const { data, isLoading, isError, refetch } = useAdminEmpresas(params);
+  const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
+  const { data, isLoading, isError, refetch } = useAdminEmpresas(params, isSuperAdmin);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

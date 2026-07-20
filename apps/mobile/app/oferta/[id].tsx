@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }    from '@/lib/theme';
+import { confirm }     from '@/lib/confirmDialog';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/features/turnos/turnosUtils';
 import {
@@ -78,19 +79,19 @@ function PostulanteRow({
         (isConf || isEnProg) ? (
           <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
             loading={noPresentadoM.isPending} disabled={isBusy}
-            onPress={() => Alert.alert('No se presentó', `¿Marcar a ${nombre} como no presentado?`, [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Marcar ausente', style: 'destructive',
-                onPress: () => noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId }) },
-            ])} />
+            onPress={async () => {
+              if (await confirm({ title: 'No se presentó', message: `¿Marcar a ${nombre} como no presentado?`, confirmLabel: 'Marcar ausente', destructive: true })) {
+                noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId });
+              }
+            }} />
         ) : isPending ? (
           <Button label={rechazarM.isPending ? '…' : 'Rechazar'} variant="danger" size="sm"
             loading={rechazarM.isPending} disabled={isBusy}
-            onPress={() => Alert.alert('Rechazar', `¿Rechazar a ${nombre}?`, [
-              { text: 'Cancelar', style: 'cancel' },
-              { text: 'Rechazar', style: 'destructive',
-                onPress: () => rechazarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
-            ])} />
+            onPress={async () => {
+              if (await confirm({ title: 'Rechazar', message: `¿Rechazar a ${nombre}?`, confirmLabel: 'Rechazar', destructive: true })) {
+                rechazarM.mutate({ asignacionId: asignacion.id, ofertaId });
+              }
+            }} />
         ) : null
       ) : (
         <>
@@ -98,11 +99,11 @@ function PostulanteRow({
             <View className="flex-row gap-2">
               <Button label={rechazarM.isPending ? '…' : 'Rechazar'} variant="danger" size="sm"
                 loading={rechazarM.isPending} disabled={isBusy}
-                onPress={() => Alert.alert('Rechazar', `¿Rechazar a ${nombre}?`, [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Rechazar', style: 'destructive',
-                    onPress: () => rechazarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
-                ])} />
+                onPress={async () => {
+                  if (await confirm({ title: 'Rechazar', message: `¿Rechazar a ${nombre}?`, confirmLabel: 'Rechazar', destructive: true })) {
+                    rechazarM.mutate({ asignacionId: asignacion.id, ofertaId });
+                  }
+                }} />
               <Button label={confirmarM.isPending ? '…' : 'Confirmar'} variant="success" size="sm"
                 loading={confirmarM.isPending} disabled={isBusy}
                 onPress={() => confirmarM.mutate({ asignacionId: asignacion.id, ofertaId })} />
@@ -116,18 +117,18 @@ function PostulanteRow({
               </View>
               <Button label={cancelarM.isPending ? '…' : 'Cancelar'} variant="danger" size="sm"
                 loading={cancelarM.isPending} disabled={isBusy}
-                onPress={() => Alert.alert('Cancelar turno', `¿Cancelar el turno de ${nombre}?`, [
-                  { text: 'Volver', style: 'cancel' },
-                  { text: 'Cancelar turno', style: 'destructive',
-                    onPress: () => cancelarM.mutate({ asignacionId: asignacion.id, ofertaId }) },
-                ])} />
+                onPress={async () => {
+                  if (await confirm({ title: 'Cancelar turno', message: `¿Cancelar el turno de ${nombre}?`, cancelLabel: 'Volver', confirmLabel: 'Cancelar turno', destructive: true })) {
+                    cancelarM.mutate({ asignacionId: asignacion.id, ofertaId });
+                  }
+                }} />
               <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
                 loading={noPresentadoM.isPending} disabled={isBusy}
-                onPress={() => Alert.alert('No se presentó', `¿Marcar a ${nombre} como no presentado?`, [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Marcar ausente', style: 'destructive',
-                    onPress: () => noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId }) },
-                ])} />
+                onPress={async () => {
+                  if (await confirm({ title: 'No se presentó', message: `¿Marcar a ${nombre} como no presentado?`, confirmLabel: 'Marcar ausente', destructive: true })) {
+                    noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId });
+                  }
+                }} />
             </View>
           )}
           {isEnProg && (
@@ -404,24 +405,22 @@ export default function OfertaDetailScreen() {
               variant="danger"
               fullWidth
               loading={cancelarOfertaM.isPending}
-              onPress={() => Alert.alert(
-                'Cancelar oferta',
-                `Se cancelará "${oferta.titulo}" y se notificará a los trabajadores postulados o asignados. Esta acción no se puede deshacer.`,
-                [
-                  { text: 'Volver', style: 'cancel' },
-                  {
-                    text: 'Cancelar oferta', style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        await cancelarOfertaM.mutateAsync(oferta.id);
-                        router.back();
-                      } catch (err) {
-                        Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
-                      }
-                    },
-                  },
-                ],
-              )}
+              onPress={async () => {
+                const ok = await confirm({
+                  title: 'Cancelar oferta',
+                  message: `Se cancelará "${oferta.titulo}" y se notificará a los trabajadores postulados o asignados. Esta acción no se puede deshacer.`,
+                  cancelLabel: 'Volver',
+                  confirmLabel: 'Cancelar oferta',
+                  destructive: true,
+                });
+                if (!ok) return;
+                try {
+                  await cancelarOfertaM.mutateAsync(oferta.id);
+                  router.back();
+                } catch (err) {
+                  Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
+                }
+              }}
             />
           )}
 

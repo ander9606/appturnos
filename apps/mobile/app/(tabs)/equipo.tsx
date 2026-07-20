@@ -323,14 +323,17 @@ export default function EquipoScreen() {
   const isAdmin       = usuario?.rol === 'admin_empresa';
   const isJefeTurnos  = usuario?.rol === 'jefe_turnos';
   const canInvitar    = isAdmin || isJefeTurnos;
+  // Backend restringe GET /ausencias/pendientes-count a admin_empresa/jefe_turnos/jefe_nomina (no 'nomina').
+  const canVerAusenciasPendientes = canManage && usuario?.rol !== 'nomina';
 
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 
-  const { data: solicitudesData = [] } = useSolicitudes(undefined, canManage);
+  // Backend restringe GET /trabajador-empresa/solicitudes a admin_empresa/jefe_turnos (no jefe_nomina/nomina).
+  const { data: solicitudesData = [] } = useSolicitudes(undefined, canInvitar);
   const pendientesCount = solicitudesData.length;
-  const { data: ausenciasPendientes } = useAusenciasPendientesCount(canManage);
+  const { data: ausenciasPendientes } = useAusenciasPendientesCount(canVerAusenciasPendientes);
   const ausenciasCount = ausenciasPendientes?.total ?? 0;
 
   const { data, isLoading, isError, error, isRefetching, refetch } = useTrabajadores({
@@ -419,7 +422,7 @@ export default function EquipoScreen() {
       </View>
 
       {/* Filtros: tipo + estado */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pb-1">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pb-1" style={{ flexGrow: 0 }}>
         <View className="flex-row items-center gap-2 px-4">
           {FILTROS.map(({ key, label }) => {
             const active = filtro === key;
@@ -480,6 +483,7 @@ export default function EquipoScreen() {
         <FlatList
           data={trabajadores}
           keyExtractor={(item) => String(item.id)}
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#FF5A3C" />

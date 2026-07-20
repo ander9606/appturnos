@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { confirm } from '@/lib/confirmDialog';
 import {
   useTrabajador,
   useActualizarTrabajador,
@@ -93,16 +94,16 @@ export default function TrabajadorDetailScreen() {
 
   // ── Header right button (edit toggle) ────────────────────────────────
 
-  function toggleEditing() {
+  async function toggleEditing() {
     if (editing && formDirty) {
-      Alert.alert(
-        '¿Descartar cambios?',
-        'Vas a perder lo que editaste en este formulario.',
-        [
-          { text: 'Seguir editando', style: 'cancel' },
-          { text: 'Descartar', style: 'destructive', onPress: () => { setFormDirty(false); setEditing(false); } },
-        ],
-      );
+      const ok = await confirm({
+        title: '¿Descartar cambios?',
+        message: 'Vas a perder lo que editaste en este formulario.',
+        cancelLabel: 'Seguir editando',
+        confirmLabel: 'Descartar',
+        destructive: true,
+      });
+      if (ok) { setFormDirty(false); setEditing(false); }
       return;
     }
     setEditing((v) => !v);
@@ -174,24 +175,18 @@ export default function TrabajadorDetailScreen() {
 
   // ── Desactivar ────────────────────────────────────────────────────────
 
-  function confirmDesactivar() {
-    Alert.alert(
-      '¿Desactivar trabajador?',
-      `${t?.nombre} ${t?.apellido} no podrá iniciar sesión ni recibir turnos.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Desactivar',
-          style: 'destructive',
-          onPress: () =>
-            desactivar.mutate(numId, {
-              onSuccess: () => router.back(),
-              onError: () =>
-                Alert.alert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
-            }),
-        },
-      ],
-    );
+  async function confirmDesactivar() {
+    const ok = await confirm({
+      title: '¿Desactivar trabajador?',
+      message: `${t?.nombre} ${t?.apellido} no podrá iniciar sesión ni recibir turnos.`,
+      confirmLabel: 'Desactivar',
+      destructive: true,
+    });
+    if (!ok) return;
+    desactivar.mutate(numId, {
+      onSuccess: () => router.back(),
+      onError: () => Alert.alert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
+    });
   }
 
   // ── Loading / Error states ────────────────────────────────────────────

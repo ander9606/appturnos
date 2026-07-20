@@ -69,6 +69,12 @@ export default function DashboardScreen() {
   const isAdmin       = usuario?.rol === 'admin_empresa';
   const isNomina      = usuario?.rol === 'trabajador_nomina';
   const isJefeNomina  = usuario?.rol === 'jefe_nomina';
+  // Backend restringe GET /nomina/periodos a admin_empresa/jefe_nomina/nomina/trabajador_nomina (no jefe_turnos).
+  const puedeVerPeriodos = ['admin_empresa', 'jefe_nomina', 'nomina', 'trabajador_nomina'].includes(usuario?.rol ?? '');
+  // Backend restringe GET /ofertas a todos los roles gestores menos 'nomina'.
+  const puedeVerOfertas = isManager && usuario?.rol !== 'nomina';
+  // Backend restringe GET /asignaciones (hoy) a admin_empresa/jefe_turnos únicamente.
+  const puedeVerAsignacionesHoy = usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos';
 
   const hour = new Date().getHours();
   const greeting =
@@ -103,18 +109,18 @@ export default function DashboardScreen() {
   const {
     data: periodosData,
     refetch: refetchPeriodos,
-  } = usePeriodos('abierto');
+  } = usePeriodos('abierto', puedeVerPeriodos);
   const periodoAbierto = periodosData?.data?.[0] ?? null;
 
   const {
     data: ofertasHoyData,
     refetch: refetchOfertasHoy,
-  } = useOfertas({ fecha: today }, { enabled: isManager });
+  } = useOfertas({ fecha: today }, { enabled: puedeVerOfertas });
 
   const {
     data: asignacionesHoy,
     refetch: refetchAsignacionesHoy,
-  } = useAsignacionesHoy({ enabled: isManager });
+  } = useAsignacionesHoy({ enabled: puedeVerAsignacionesHoy });
 
   // ── Checklist de primeros pasos (solo admin_empresa) ─────────────────────
   const { data: cargosData }   = useCargos(isAdmin);

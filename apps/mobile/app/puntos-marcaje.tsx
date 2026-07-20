@@ -23,6 +23,7 @@ import {
   useEliminarPuntoMarcaje,
 } from '@/features/turnos/usePuntosMarcaje';
 import { COLORS } from '@/lib/designTokens';
+import { confirm } from '@/lib/confirmDialog';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { PuntoMarcaje, ApiError } from '@api-client';
 
@@ -172,33 +173,28 @@ export default function PuntosMarcajeScreen() {
     }
   }
 
-  function handleEliminar(punto: PuntoMarcaje) {
-    Alert.alert(
-      'Eliminar punto',
-      `¿Eliminar "${punto.nombre}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () =>
-            eliminarMutation.mutate(punto.id, {
-              onSuccess: () => {},
-              onError: (err: unknown) => {
-                const apiErr = err as ApiError;
-                if (apiErr.status === 409) {
-                  Alert.alert(
-                    'Punto en uso',
-                    apiErr.message ?? 'Este punto está asignado a uno o más cargos. Reasígnalos antes de eliminarlo.',
-                  );
-                } else {
-                  Alert.alert('Error', apiErr.message ?? 'No se pudo eliminar.');
-                }
-              },
-            }),
-        },
-      ],
-    );
+  async function handleEliminar(punto: PuntoMarcaje) {
+    const ok = await confirm({
+      title: 'Eliminar punto',
+      message: `¿Eliminar "${punto.nombre}"?`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+    eliminarMutation.mutate(punto.id, {
+      onSuccess: () => {},
+      onError: (err: unknown) => {
+        const apiErr = err as ApiError;
+        if (apiErr.status === 409) {
+          Alert.alert(
+            'Punto en uso',
+            apiErr.message ?? 'Este punto está asignado a uno o más cargos. Reasígnalos antes de eliminarlo.',
+          );
+        } else {
+          Alert.alert('Error', apiErr.message ?? 'No se pudo eliminar.');
+        }
+      },
+    });
   }
 
   const isSaving = crearMutation.isPending || actualizarMutation.isPending;

@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -26,6 +25,7 @@ import {
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui/Button';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { confirm } from '@/lib/confirmDialog';
 import type { Asignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -86,28 +86,25 @@ function PostulanteItem({
 
   const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending;
 
-  function handleRechazar() {
-    Alert.alert(
-      'Rechazar postulación',
-      `¿Rechazar la postulación de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Rechazar', style: 'destructive',
-          onPress: () => rechazarMutation.mutate({ asignacionId: asignacion.id, ofertaId: asignacion.oferta_id }) },
-      ]
-    );
+  async function handleRechazar() {
+    const ok = await confirm({
+      title: 'Rechazar postulación',
+      message: `¿Rechazar la postulación de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}?`,
+      confirmLabel: 'Rechazar',
+      destructive: true,
+    });
+    if (ok) rechazarMutation.mutate({ asignacionId: asignacion.id, ofertaId: asignacion.oferta_id });
   }
 
-  function handleCancelar() {
-    Alert.alert(
-      'Cancelar asignación',
-      `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
-      [
-        { text: 'Volver', style: 'cancel' },
-        { text: 'Cancelar turno', style: 'destructive',
-          onPress: () => cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId: asignacion.oferta_id }) },
-      ]
-    );
+  async function handleCancelar() {
+    const ok = await confirm({
+      title: 'Cancelar asignación',
+      message: `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
+      cancelLabel: 'Volver',
+      confirmLabel: 'Cancelar turno',
+      destructive: true,
+    });
+    if (ok) cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId: asignacion.oferta_id });
   }
 
   return (

@@ -408,6 +408,13 @@ const OfertasModel = {
       conn.release();
     }
   },
+
+  async eliminarDefinitivo(empresaId, id) {
+    await pool.query(
+      'DELETE FROM ofertas_turno WHERE id = ? AND empresa_id = ?',
+      [id, empresaId]
+    );
+  },
 };
 
 module.exports = OfertasModel;

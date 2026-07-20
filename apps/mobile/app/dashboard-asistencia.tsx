@@ -164,7 +164,8 @@ export default function DashboardAsistenciaScreen() {
   const labelHoy = `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
   const presentes = contadores.enJornada + contadores.completos;
 
-  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina']);
+  // Dashboard de asistencia/nómina — no de turnos. Backend (registros VER) no incluye jefe_turnos.
+  const denied = useRoleGuard(['admin_empresa', 'jefe_nomina', 'nomina']);
   if (denied) return denied;
 
   if (isLoading) {

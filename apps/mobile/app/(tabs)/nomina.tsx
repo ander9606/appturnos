@@ -33,6 +33,7 @@ import {
 import { useCompensatoriosTodos } from '@/features/nomina/compensatorios/useCompensatorios';
 import { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
+import { confirm } from '@/lib/confirmDialog';
 import { useRouter } from 'expo-router';
 
 // ── Router de roles ───────────────────────────────────────────────────────
@@ -85,27 +86,21 @@ function NominaGestorView() {
     refetchLiq();
   }, [refetchPeriodos, refetchLiq]);
 
-  const handleLiquidar = () => {
+  const handleLiquidar = async () => {
     if (!activePeriodoId) return;
-    Alert.alert(
-      'Liquidar período',
-      '¿Confirmas la liquidación? Esta acción es irreversible.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Liquidar',
-          onPress: async () => {
-            try {
-              await liquidarMutation.mutateAsync(activePeriodoId);
-              Alert.alert('Período liquidado');
-            } catch (err) {
-              const msg = err instanceof ApiError ? err.message : 'Error al liquidar';
-              Alert.alert('Error', msg);
-            }
-          },
-        },
-      ],
-    );
+    const ok = await confirm({
+      title: 'Liquidar período',
+      message: '¿Confirmas la liquidación? Esta acción es irreversible.',
+      confirmLabel: 'Liquidar',
+    });
+    if (!ok) return;
+    try {
+      await liquidarMutation.mutateAsync(activePeriodoId);
+      Alert.alert('Período liquidado');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Error al liquidar';
+      Alert.alert('Error', msg);
+    }
   };
 
   if (loadingPeriodos) {

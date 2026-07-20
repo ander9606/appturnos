@@ -16,12 +16,13 @@ export function useIntegracionConfig() {
   });
 }
 
-export function useEstadoIntegracion() {
+export function useEstadoIntegracion(enabled = true) {
   return useQuery({
     queryKey: INTEGRACION_KEYS.estado,
     queryFn: () => integracionApi.obtenerEstado(),
     staleTime: 30_000,
     refetchInterval: 30_000,
+    enabled,
   });
 }
 

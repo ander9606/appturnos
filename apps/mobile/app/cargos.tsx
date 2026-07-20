@@ -23,6 +23,7 @@ import {
   useEliminarCargo,
 } from '@/features/turnos/useTurnos';
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
+import { confirm } from '@/lib/confirmDialog';
 import { COLORS } from '@/lib/designTokens';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { Cargo, CrearCargoPayload, ActualizarCargoPayload, ApiError } from '@api-client';
@@ -137,31 +138,26 @@ export default function CargosScreen() {
     }
   }
 
-  function handleEliminar(cargo: Cargo) {
-    Alert.alert(
-      'Eliminar cargo',
-      `¿Eliminar "${cargo.nombre}"? Si está asignado a trabajadores, se desactivará en lugar de eliminarse.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () =>
-            eliminarMutation.mutate(cargo.id, {
-              onSuccess: (result) => {
-                if (result.desactivado) {
-                  Alert.alert(
-                    'Cargo desactivado',
-                    `"${cargo.nombre}" estaba asignado a ${result.usos} trabajador(es) y fue desactivado.`,
-                  );
-                }
-              },
-              onError: (err: unknown) =>
-                Alert.alert('Error', (err as ApiError).message ?? 'No se pudo eliminar.'),
-            }),
-        },
-      ],
-    );
+  async function handleEliminar(cargo: Cargo) {
+    const ok = await confirm({
+      title: 'Eliminar cargo',
+      message: `¿Eliminar "${cargo.nombre}"? Si está asignado a trabajadores, se desactivará en lugar de eliminarse.`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+    eliminarMutation.mutate(cargo.id, {
+      onSuccess: (result) => {
+        if (result.desactivado) {
+          Alert.alert(
+            'Cargo desactivado',
+            `"${cargo.nombre}" estaba asignado a ${result.usos} trabajador(es) y fue desactivado.`,
+          );
+        }
+      },
+      onError: (err: unknown) =>
+        Alert.alert('Error', (err as ApiError).message ?? 'No se pudo eliminar.'),
+    });
   }
 
   const isSaving = crearMutation.isPending || actualizarMutation.isPending;

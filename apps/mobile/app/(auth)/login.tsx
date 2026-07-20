@@ -164,9 +164,14 @@ export default function LoginScreen() {
           {/* Links secundarios */}
           <View style={styles.links}>
             <LinkRow
-              label="¿Eres trabajador sin cuenta?"
+              label="¿Una empresa ya te invitó?"
               action="Activa tu cuenta"
               onPress={() => router.push('/(auth)/activar')}
+            />
+            <LinkRow
+              label="¿Buscas trabajo por turnos?"
+              action="Regístrate aquí"
+              onPress={() => router.push('/(auth)/registro')}
             />
             <LinkRow
               label="¿Primera vez con tu empresa?"
