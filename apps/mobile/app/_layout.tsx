@@ -147,6 +147,9 @@ function RootLayout() {
             <Stack.Screen name="turno/[id]"      options={{ headerShown: true }} />
             <Stack.Screen name="oferta/[id]"     options={{ headerShown: true }} />
             <Stack.Screen name="trabajador/[id]" options={{ headerShown: true }} />
+            {/* Empresa (super_admin) — fuera de (admin) para no colar tabs fantasma */}
+            <Stack.Screen name="empresa/[id]"    options={{ headerShown: false }} />
+            <Stack.Screen name="empresa/nueva"   options={{ headerShown: false }} />
             {/* Modales — sube desde abajo */}
             <Stack.Screen name="turno/nuevo"          options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
             <Stack.Screen name="trabajador/nuevo"     options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />

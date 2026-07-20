@@ -458,34 +458,6 @@ export default function EmpresaDetailScreen() {
             disabled={!editMode}
           />
 
-          {/* Plan selector */}
-          <View className="gap-1">
-            <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Plan
-            </Text>
-            <View className="flex-row gap-2">
-              {PLANES.map((p) => (
-                <Pressable
-                  key={p.value}
-                  onPress={() => editMode && setPlan(p.value)}
-                  className="flex-1 rounded-xl border py-2 items-center"
-                  style={{
-                    borderColor: plan === p.value ? p.color : '#E2E8F0',
-                    backgroundColor: plan === p.value ? p.color + '20' : 'transparent',
-                    opacity: editMode ? 1 : 0.6,
-                  }}
-                >
-                  <Text
-                    className="text-xs font-bold"
-                    style={{ color: plan === p.value ? p.color : '#94A3B8' }}
-                  >
-                    {p.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
           {/* Acepta postulaciones toggle */}
           <View className="flex-row items-center justify-between">
             <View className="flex-1">

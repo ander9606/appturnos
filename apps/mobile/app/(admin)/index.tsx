@@ -52,18 +52,6 @@ function SectionTitle({ title }: { title: string }) {
   );
 }
 
-const PLAN_LABELS: Record<string, string> = {
-  basico: 'Básico',
-  profesional: 'Profesional',
-  empresarial: 'Empresarial',
-};
-
-const PLAN_COLORS: Record<string, string> = {
-  basico: '#94A3B8',
-  profesional: '#3B82F6',
-  empresarial: '#8B5CF6',
-};
-
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
@@ -239,31 +227,6 @@ export default function AdminDashboard() {
               </View>
             </View>
 
-            {/* ── Distribución de planes ───────────────────────────── */}
-            {Object.keys(data.distribucion_planes).length > 0 && (
-              <>
-                <SectionTitle title="Distribución por plan" />
-                <View className="px-4 gap-2">
-                  {Object.entries(data.distribucion_planes).map(([plan, total]) => (
-                    <View
-                      key={plan}
-                      className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center justify-between"
-                    >
-                      <View className="flex-row items-center gap-2">
-                        <View
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: PLAN_COLORS[plan] ?? '#94A3B8' }}
-                        />
-                        <Text className="text-sm font-medium text-foreground">
-                          {PLAN_LABELS[plan] ?? plan}
-                        </Text>
-                      </View>
-                      <Text className="text-sm font-bold text-foreground">{total}</Text>
-                    </View>
-                  ))}
-                </View>
-              </>
-            )}
           </>
         )}
 

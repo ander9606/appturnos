@@ -60,18 +60,6 @@ function CardTitle({ title, emoji }: { title: string; emoji: string }) {
   );
 }
 
-const PLAN_COLORS: Record<string, string> = {
-  basico: '#94A3B8',
-  profesional: '#3B82F6',
-  empresarial: '#8B5CF6',
-};
-
-const PLAN_LABELS: Record<string, string> = {
-  basico: 'Básico',
-  profesional: 'Profesional',
-  empresarial: 'Empresarial',
-};
-
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function ReportesScreen() {
@@ -84,11 +72,6 @@ export default function ReportesScreen() {
     await refetch();
     setRefreshing(false);
   };
-
-  // Calcular porcentaje para barras de plan
-  const totalPorPlan = data
-    ? Object.values(data.distribucion_planes).reduce((a, b) => a + b, 0)
-    : 0;
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
@@ -186,40 +169,6 @@ export default function ReportesScreen() {
                 value={data.nomina.periodos_abiertos}
               />
             </Card>
-
-            {/* ── Distribución por plan ────────────────────────────── */}
-            {Object.keys(data.distribucion_planes).length > 0 && (
-              <Card>
-                <CardTitle title="Distribución por plan" emoji="📊" />
-                <View className="py-2 gap-3">
-                  {Object.entries(data.distribucion_planes).map(([plan, total]) => {
-                    const pct = totalPorPlan > 0 ? (total / totalPorPlan) * 100 : 0;
-                    const color = PLAN_COLORS[plan] ?? '#94A3B8';
-                    return (
-                      <View key={plan} className="gap-1">
-                        <View className="flex-row items-center justify-between">
-                          <Text className="text-sm font-medium text-foreground">
-                            {PLAN_LABELS[plan] ?? plan}
-                          </Text>
-                          <Text className="text-sm font-bold text-foreground">
-                            {total} ({pct.toFixed(0)}%)
-                          </Text>
-                        </View>
-                        <View className="h-2 bg-border rounded-full overflow-hidden">
-                          <View
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${pct}%`,
-                              backgroundColor: color,
-                            }}
-                          />
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              </Card>
-            )}
 
             {/* ── Última actualización ─────────────────────────────── */}
             <Text className="text-center text-xs text-muted-foreground px-4">

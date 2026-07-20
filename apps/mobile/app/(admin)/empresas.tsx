@@ -68,14 +68,12 @@ function FilterChip({
 // ── Screen ────────────────────────────────────────────────────────────────
 
 type FiltroEstado = 'todas' | 'activas' | 'inactivas';
-type FiltroPlan = 'todas' | PlanEmpresa;
 
 export default function EmpresasScreen() {
   const router = useRouter();
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todas');
-  const [filtroPlan, setFiltroPlan] = useState<FiltroPlan>('todas');
   const [refreshing, setRefreshing] = useState(false);
 
   const params = {
@@ -84,7 +82,6 @@ export default function EmpresasScreen() {
       filtroEstado === 'activas' ? true
       : filtroEstado === 'inactivas' ? false
       : undefined,
-    plan: filtroPlan !== 'todas' ? filtroPlan : undefined,
     limit: 50,
   };
 
@@ -144,21 +141,6 @@ export default function EmpresasScreen() {
             ))}
           </View>
         </ScrollView>
-
-        {/* Plan */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View className="flex-row gap-2">
-            {(['todas', 'basico', 'profesional', 'empresarial'] as FiltroPlan[]).map((p) => (
-              <FilterChip
-                key={p}
-                label={p === 'todas' ? 'Todos los planes' : PLAN_LABELS[p as PlanEmpresa]}
-                active={filtroPlan === p}
-                onPress={() => setFiltroPlan(p)}
-                color={p !== 'todas' ? PLAN_COLORS[p as PlanEmpresa] : '#6366F1'}
-              />
-            ))}
-          </View>
-        </ScrollView>
       </View>
 
       {/* ── List ─────────────────────────────────────────────────────── */}
@@ -208,7 +190,7 @@ export default function EmpresasScreen() {
           return (
             <Pressable
               key={empresa.id}
-              onPress={() => router.push(`/(admin)/empresa/${empresa.id}`)}
+              onPress={() => router.push(`/empresa/${empresa.id}`)}
               className="mx-4 mb-3 bg-card border border-border rounded-2xl p-4 gap-3 active:opacity-80"
             >
               <View className="flex-row items-start justify-between gap-3">
@@ -282,7 +264,7 @@ export default function EmpresasScreen() {
 
       {/* ── FAB: Nueva empresa ────────────────────────────────────────── */}
       <Pressable
-        onPress={() => router.push('/(admin)/empresa/nueva')}
+        onPress={() => router.push('/empresa/nueva')}
         className="absolute bottom-8 right-6 w-14 h-14 rounded-full items-center justify-center shadow-lg active:opacity-80"
         style={{ backgroundColor: '#6366F1' }}
       >

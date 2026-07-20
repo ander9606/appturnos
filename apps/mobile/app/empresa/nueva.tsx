@@ -148,7 +148,7 @@ export default function NuevaEmpresaScreen() {
       Alert.alert('✅', `Empresa "${nueva.nombre}" creada correctamente.${credencialesMsg}`, [
         {
           text: 'Ver detalle',
-          onPress: () => router.replace(`/(admin)/empresa/${nueva.id}`),
+          onPress: () => router.replace(`/empresa/${nueva.id}`),
         },
         {
           text: 'Volver a lista',

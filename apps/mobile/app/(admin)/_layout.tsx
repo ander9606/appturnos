@@ -59,6 +59,8 @@ export default function AdminLayout() {
           tabBarIcon: ({ focused }) => <TabIcon name="bar-chart-outline" focused={focused} />,
         }}
       />
+      {/* No es un tab — se navega por push desde "Acciones rápidas". Sin href:null, expo-router lo agrega igual al tab bar sin icono. */}
+      <Tabs.Screen name="pagos" options={{ href: null }} />
     </Tabs>
   );
 }

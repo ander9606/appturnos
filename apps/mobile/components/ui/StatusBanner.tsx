@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { View, Text } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,29 +18,33 @@ import { isClientError } from '@/lib/apiErrorMessage';
  */
 export function StatusBanner() {
   const [offline, setOffline] = useState(false);
-  const [hasQueryError, setHasQueryError] = useState(false);
   const queryClient = useQueryClient();
+  const cache = queryClient.getQueryCache();
   const isAuth = useAuthStore((s) => s.status === 'authenticated');
 
   useEffect(() => NetInfo.addEventListener((state) => {
     setOffline(state.isConnected === false);
   }), []);
 
+  // useSyncExternalStore evita el warning "Cannot update a component while
+  // rendering a different component": el cache cambia de estado (y notifica
+  // a sus subscribers) de forma síncrona cuando OTRA pantalla registra su
+  // useQuery, lo cual caía en medio del render de esa pantalla con
+  // useState + subscribe manual.
+  const hasQueryError = useSyncExternalStore(
+    (onChange) => cache.subscribe(onChange),
+    () => cache.getAll().some((q) => q.state.status === 'error' && !isClientError(q.state.error)),
+  );
+
   useEffect(() => {
-    const cache = queryClient.getQueryCache();
-    const check = () => {
-      const failed = cache.getAll().filter((q) => q.state.status === 'error');
-      if (failed.length > 0) {
-        console.warn('[StatusBanner] queries en error:', failed.map((q) => ({
-          key: q.queryKey,
-          error: q.state.error instanceof Error ? q.state.error.message : q.state.error,
-        })));
-      }
-      setHasQueryError(failed.some((q) => !isClientError(q.state.error)));
-    };
-    check();
-    return cache.subscribe(check);
-  }, [queryClient]);
+    const failed = cache.getAll().filter((q) => q.state.status === 'error');
+    if (failed.length > 0) {
+      console.warn('[StatusBanner] queries en error:', failed.map((q) => ({
+        key: q.queryKey,
+        error: q.state.error instanceof Error ? q.state.error.message : q.state.error,
+      })));
+    }
+  }, [hasQueryError, cache]);
 
   const showQueryError = hasQueryError && isAuth; // sin sesión no hay datos "propios" que hayan fallado
   if (!offline && !showQueryError) return null;
