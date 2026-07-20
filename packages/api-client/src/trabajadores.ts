@@ -182,6 +182,18 @@ export const trabajadoresApi = {
   desactivar: (id: number): Promise<void> =>
     api.delete<void>(`/api/trabajadores/${id}`),
 
+  /** Cargos certificados del trabajador en mi empresa. */
+  listarCargos: (id: number): Promise<CargoAsignado[]> =>
+    api.get<CargoAsignado[]>(`/api/trabajadores/${id}/cargos`),
+
+  /** Certifica al trabajador para un cargo del catálogo. */
+  asignarCargo: (id: number, cargoId: number): Promise<CargoAsignado[]> =>
+    api.post<CargoAsignado[]>(`/api/trabajadores/${id}/cargos`, { cargo_id: cargoId }),
+
+  /** Quita una certificación de cargo. */
+  desasignarCargo: (id: number, cargoId: number): Promise<CargoAsignado[]> =>
+    api.delete<CargoAsignado[]>(`/api/trabajadores/${id}/cargos/${cargoId}`),
+
   /** Trabajador: obtener su propio perfil laboral completo. */
   me: (): Promise<Trabajador> =>
     api.get<Trabajador>('/api/trabajadores/me'),

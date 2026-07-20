@@ -45,6 +45,16 @@ export function useMe() {
   });
 }
 
+/** Cargos certificados de un trabajador en mi empresa. */
+export function useCargosTrabajador(id: number, enabled = true) {
+  return useQuery({
+    queryKey: ['trabajadores', id, 'cargos'] as const,
+    queryFn: () => trabajadoresApi.listarCargos(id),
+    staleTime: 30_000,
+    enabled,
+  });
+}
+
 /** Busca un trabajador marketplace por cédula. Devuelve null si no existe. */
 export function useBuscarPorCedula(cedula: string) {
   return useQuery({
@@ -92,5 +102,21 @@ export function useDesactivarTrabajador() {
   return useMutation({
     mutationFn: (id: number) => trabajadoresApi.desactivar(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
+  });
+}
+
+export function useAsignarCargoTrabajador(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cargoId: number) => trabajadoresApi.asignarCargo(id, cargoId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores', id, 'cargos'] }),
+  });
+}
+
+export function useDesasignarCargoTrabajador(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (cargoId: number) => trabajadoresApi.desasignarCargo(id, cargoId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores', id, 'cargos'] }),
   });
 }

@@ -130,6 +130,49 @@ const TrabajadoresService = {
     }
   },
 
+  // ── Cargos certificados ──────────────────────────────────────────────────
+  // trabajador_cargos cuelga de trabajador_empresa, no del trabajador
+  // directamente — estos métodos resuelven ese vínculo dentro de la empresa
+  // del gestor para poder gestionar cargos desde la ficha del trabajador.
+
+  async listarCargos(empresaId, id) {
+    await this.obtener(empresaId, id); // 404 si no existe / no es de esta empresa
+    return TrabajadoresModel.listarCargos(id);
+  },
+
+  async _resolverVinculo(empresaId, id) {
+    const TrabajadorEmpresaModel = require('../trabajador-empresa/trabajador-empresa.model');
+    await this.obtener(empresaId, id); // 404 si no existe / no es de esta empresa
+    const vinculo = await TrabajadorEmpresaModel.obtenerPorTrabajadorEmpresa(id, empresaId);
+    if (!vinculo || vinculo.estado !== 'activo') {
+      throw new AppError('Este trabajador no tiene un vínculo activo con tu empresa.', 409);
+    }
+    return vinculo;
+  },
+
+  async asignarCargo(empresaId, id, cargoId, asignadoPor) {
+    const CargosModel = require('../cargos/cargos.model');
+    const vinculo = await this._resolverVinculo(empresaId, id);
+    if (await CargosModel.tieneAsignacion(vinculo.id, cargoId)) {
+      throw new AppError('El trabajador ya tiene este cargo asignado', 409);
+    }
+    const cargo = await CargosModel.obtenerPorId(cargoId);
+    if (!cargo) throw new AppError('Cargo no encontrado', 404);
+    if (!cargo.activo) throw new AppError('El cargo está desactivado', 409);
+    if (cargo.empresa_id !== null && cargo.empresa_id !== empresaId) {
+      throw new AppError('Este cargo no pertenece a tu empresa', 403);
+    }
+    await CargosModel.asignar({ trabajadorEmpresaId: vinculo.id, cargoId, asignadoPor });
+    return TrabajadoresModel.listarCargos(id);
+  },
+
+  async desasignarCargo(empresaId, id, cargoId) {
+    const CargosModel = require('../cargos/cargos.model');
+    const vinculo = await this._resolverVinculo(empresaId, id);
+    await CargosModel.desasignar(vinculo.id, cargoId);
+    return TrabajadoresModel.listarCargos(id);
+  },
+
   // ── Disponibilidad ────────────────────────────────────────────────────────
 
   async resolverIdPorUsuario(empresaId, usuarioId) {

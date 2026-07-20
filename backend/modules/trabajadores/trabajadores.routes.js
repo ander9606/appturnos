@@ -19,6 +19,7 @@ const PUEDEN_VER = [
   ROLES.NOMINA,
 ];
 const SOLO_ADMIN = [ROLES.ADMIN_EMPRESA];
+const PUEDE_GESTIONAR_CARGOS = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
 const SOLO_TRABAJADOR_TURNOS = [ROLES.TRABAJADOR_TURNOS];
 const SOLO_TRABAJADOR_NOMINA = [ROLES.TRABAJADOR_NOMINA];
 const CUALQUIER_TRABAJADOR   = [ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
@@ -204,6 +205,27 @@ router.patch(
 
 // DELETE /api/trabajadores/:id  (soft delete)
 router.delete('/:id', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.eliminar);
+
+// GET /api/trabajadores/:id/cargos — cargos certificados en mi empresa
+router.get('/:id/cargos', verificarRol(PUEDE_GESTIONAR_CARGOS), [idParam], validar, ctrl.listarCargos);
+
+// POST /api/trabajadores/:id/cargos — certificar un cargo
+router.post(
+  '/:id/cargos',
+  verificarRol(PUEDE_GESTIONAR_CARGOS),
+  [idParam, body('cargo_id').isInt({ min: 1 }).withMessage('cargo_id requerido')],
+  validar,
+  ctrl.asignarCargo
+);
+
+// DELETE /api/trabajadores/:id/cargos/:cargoId — quitar certificación
+router.delete(
+  '/:id/cargos/:cargoId',
+  verificarRol(PUEDE_GESTIONAR_CARGOS),
+  [idParam, param('cargoId').isInt({ min: 1 }).withMessage('cargoId inválido')],
+  validar,
+  ctrl.desasignarCargo
+);
 
 // GET  /api/trabajadores/me/disponibilidad — trabajador ve su disponibilidad
 router.get('/me/disponibilidad', verificarRol(CUALQUIER_TRABAJADOR), ctrl.obtenerDisponibilidad);

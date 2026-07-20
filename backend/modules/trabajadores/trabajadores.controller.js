@@ -58,6 +58,30 @@ async function eliminarDefinitivo(req, res) {
   res.json({ success: true, data: null, message: 'Trabajador eliminado' });
 }
 
+async function listarCargos(req, res) {
+  const data = await TrabajadoresService.listarCargos(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data, message: 'Cargos certificados' });
+}
+
+async function asignarCargo(req, res) {
+  const data = await TrabajadoresService.asignarCargo(
+    req.empresa_id,
+    Number(req.params.id),
+    Number(req.body.cargo_id),
+    req.usuario.sub
+  );
+  res.status(201).json({ success: true, data, message: 'Cargo asignado' });
+}
+
+async function desasignarCargo(req, res) {
+  const data = await TrabajadoresService.desasignarCargo(
+    req.empresa_id,
+    Number(req.params.id),
+    Number(req.params.cargoId)
+  );
+  res.json({ success: true, data, message: 'Cargo desasignado' });
+}
+
 async function buscarPorCedula(req, res) {
   // Only returns marketplace workers (empresa_id IS NULL) — never exposes other empresas' data.
   const data = await TrabajadoresService.buscarPorCedula(req.query.cedula?.trim());
@@ -128,6 +152,7 @@ async function guardarDisponibilidad(req, res) {
 
 module.exports = {
   listar, obtener, buscarPorCedula, crear, actualizar, eliminar, eliminarDefinitivo,
+  listarCargos, asignarCargo, desasignarCargo,
   obtenerMe, actualizarMe, actualizarExtras,
   crearExperiencia, eliminarExperiencia,
   crearDiploma, eliminarDiploma,

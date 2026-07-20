@@ -33,6 +33,7 @@ import {
 } from '@/features/turnos/useTurnos';
 import { StarRating }      from '@/features/turnos/StarRating';
 import { TrabajadorForm }  from '@/features/equipo/TrabajadorForm';
+import { CargosCertificadosCard } from '@/features/equipo/CargosCertificadosCard';
 import type { TrabajadorFormValues } from '@/features/equipo/schemas';
 import type { Asignacion } from '@api-client';
 import { COLORS } from '@/lib/designTokens';
@@ -343,6 +344,11 @@ export default function TrabajadorDetailScreen() {
             <Text className="text-sm text-muted-foreground italic">Sin calificaciones aún</Text>
           )}
         </View>
+
+        {/* Cargos certificados — solo si ya activó su cuenta (existe el vínculo trabajador_empresa) */}
+        {canRate && t.usuario_id !== null && (
+          <CargosCertificadosCard trabajadorId={t.id} nombre={t.nombre} />
+        )}
 
         {/* Turnos recientes — visible para gestores que pueden calificar */}
         {showTurnos && turnosRecientes.length > 0 && (

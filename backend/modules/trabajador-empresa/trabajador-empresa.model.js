@@ -37,6 +37,17 @@ const TrabajadorEmpresaModel = {
     return filas[0] || null;
   },
 
+  async obtenerPorTrabajadorEmpresa(trabajadorId, empresaId) {
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS}
+       FROM trabajador_empresa te
+       INNER JOIN empresas e ON e.id = te.empresa_id
+       WHERE te.trabajador_id = ? AND te.empresa_id = ? LIMIT 1`,
+      [trabajadorId, empresaId]
+    );
+    return filas[0] || null;
+  },
+
   /** Todas las relaciones de un trabajador (para "Mis empresas").
    *  Las activas incluyen ranking y total_calificaciones de esa empresa concreta.
    */
