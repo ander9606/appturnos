@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "10145536836",
+    "project_id": "zaturno-50e30",
+    "storage_bucket": "zaturno-50e30.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:10145536836:android:f5ac669ce14dc84c551511",
+        "android_client_info": {
+          "package_name": "com.zaturno.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIIKeVlgsvfc8O0kRMQ3vTicibqOvCBfQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
