@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar, useNoPresentado, useEliminarOfertaDefinitivo } from '@/features/turnos/useTurnos';
-import { bogotaToday } from '@/features/turnos/turnosUtils';
+import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
@@ -50,6 +50,7 @@ function PostulanteRow({
   asignacion,
   ofertaId,
   esPasado,
+  turnoIniciado,
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
@@ -58,6 +59,7 @@ function PostulanteRow({
   asignacion: AsignacionResumen;
   ofertaId: number;
   esPasado: boolean;
+  turnoIniciado: boolean;
   confirmarMutation:     ReturnType<typeof useConfirmar>;
   rechazarMutation:      ReturnType<typeof useRechazar>;
   cancelarMutation:      ReturnType<typeof useCancelar>;
@@ -164,8 +166,10 @@ function PostulanteRow({
                   });
                   if (ok) cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId });
                 }} />
-              <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
-                loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+              {turnoIniciado && (
+                <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
+                  loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+              )}
             </View>
           )}
 
@@ -205,6 +209,7 @@ function GestorOfertaItem({
   const eliminarMutation = useEliminarOfertaDefinitivo();
 
   const esCancelada     = oferta.estado === 'cancelada';
+  const turnoIniciado   = turnoYaInicio(oferta.fecha, oferta.hora_inicio);
   const totalPlazas     = oferta.puestos.reduce((s, p) => s + p.plazas, 0);
   const plazasCubiertas = oferta.puestos.reduce((s, p) => s + p.plazas_cubiertas, 0);
   const pendientes      = detalle?.asignaciones.filter((a) => a.estado === 'pendiente') ?? [];
@@ -322,6 +327,7 @@ function GestorOfertaItem({
                 asignacion={a}
                 ofertaId={oferta.id}
                 esPasado={esPasado}
+                turnoIniciado={turnoIniciado}
                 confirmarMutation={confirmarMutation}
                 rechazarMutation={rechazarMutation}
                 cancelarMutation={cancelarMutation}

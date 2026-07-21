@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme }    from '@/lib/theme';
 import { confirm }     from '@/lib/confirmDialog';
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { bogotaToday } from '@/features/turnos/turnosUtils';
+import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta, useCancelarOferta,
@@ -48,12 +48,13 @@ const ESTADO_CFG: Record<EstadoAsignacion, { label: string; variant: BadgeVarian
 // ── PostulanteRow (gestores) ──────────────────────────────────────────────
 
 function PostulanteRow({
-  asignacion, ofertaId, esPasado,
+  asignacion, ofertaId, esPasado, turnoIniciado,
   confirmarM, rechazarM, cancelarM, noPresentadoM,
 }: {
   asignacion:    AsignacionResumen;
   ofertaId:      number;
   esPasado:      boolean;
+  turnoIniciado: boolean;
   confirmarM:    ReturnType<typeof useConfirmar>;
   rechazarM:     ReturnType<typeof useRechazar>;
   cancelarM:     ReturnType<typeof useCancelar>;
@@ -129,13 +130,15 @@ function PostulanteRow({
                     cancelarM.mutate({ asignacionId: asignacion.id, ofertaId });
                   }
                 }} />
-              <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
-                loading={noPresentadoM.isPending} disabled={isBusy}
-                onPress={async () => {
-                  if (await confirm({ title: 'No se presentó', message: `¿Marcar a ${nombre} como no presentado?`, confirmLabel: 'Marcar ausente', destructive: true })) {
-                    noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId });
-                  }
-                }} />
+              {turnoIniciado && (
+                <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
+                  loading={noPresentadoM.isPending} disabled={isBusy}
+                  onPress={async () => {
+                    if (await confirm({ title: 'No se presentó', message: `¿Marcar a ${nombre} como no presentado?`, confirmLabel: 'Marcar ausente', destructive: true })) {
+                      noPresentadoM.mutate({ asignacionId: asignacion.id, ofertaId });
+                    }
+                  }} />
+              )}
             </View>
           )}
           {isEnProg && (
@@ -166,7 +169,8 @@ export default function OfertaDetailScreen() {
 
   const { data: oferta, isLoading } = useOferta(id);
   const { data: misTurnos }         = useMisTurnos({ enabled: isWorker });
-  const esPasado = oferta ? oferta.fecha < bogotaToday() : false;
+  const esPasado      = oferta ? oferta.fecha < bogotaToday() : false;
+  const turnoIniciado = oferta ? turnoYaInicio(oferta.fecha, oferta.hora_inicio) : false;
 
   const aplicarM       = useAplicar();
   const confirmarM     = useConfirmar();
@@ -470,6 +474,7 @@ export default function OfertaDetailScreen() {
                     asignacion={a}
                     ofertaId={oferta.id}
                     esPasado={esPasado}
+                    turnoIniciado={turnoIniciado}
                     confirmarM={confirmarM}
                     rechazarM={rechazarM}
                     cancelarM={cancelarM}

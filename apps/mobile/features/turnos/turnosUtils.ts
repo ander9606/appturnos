@@ -72,6 +72,15 @@ export function toISODate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** ¿Ya pasó la hora de inicio del turno (fecha + hora_inicio) en Bogotá? */
+export function turnoYaInicio(fecha: string, horaInicio: string): boolean {
+  const [y, mo, d] = fecha.split('-').map(Number);
+  const [hh, mm, ss] = horaInicio.split(':').map(Number);
+  const nowBogota = new Date(Date.now() - BOGOTA_OFFSET_MS); // getUTC* == hora Bogotá
+  const inicioBogotaMs = Date.UTC(y, mo - 1, d, hh, mm ?? 0, ss ?? 0);
+  return nowBogota.getTime() >= inicioBogotaMs;
+}
+
 // ── Estado → visual ───────────────────────────────────────────────────────
 
 export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'default' | 'primary';
