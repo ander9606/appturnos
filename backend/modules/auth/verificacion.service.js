@@ -5,6 +5,7 @@ const { pool } = require('../../config/database');
 const AppError = require('../../utils/AppError');
 const { enviarEmail } = require('../../utils/mailer');
 const { enviarSms }   = require('../../utils/sms');
+const logger = require('../../utils/logger');
 
 const OTP_TTL_MIN  = 10;
 const MAX_INTENTOS = 5;
@@ -112,6 +113,7 @@ function validarTokenVerificacion(token, tipo, destino) {
     }
   } catch (err) {
     if (err instanceof AppError) throw err;
+    logger.warn(`[verificacion] jwt.verify falló (tipo: ${tipo}, destino: ${destino}): ${err.name} — ${err.message}`);
     throw new AppError('Token de verificación inválido o expirado.', 400);
   }
 }

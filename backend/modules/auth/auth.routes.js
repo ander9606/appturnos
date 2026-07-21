@@ -88,12 +88,22 @@ router.post(
   ctrl.registrarEmpresa
 );
 
+// Mismo criterio que emailSanitizado — un destino "email" debe llegar en
+// minúsculas para calzar con el email que /registro-empresa y /registro
+// terminan guardando/validando. No afecta destinos "telefono" (no-op en dígitos).
+const destinoSanitizado = body('destino')
+  .isString()
+  .trim()
+  .notEmpty()
+  .withMessage('destino requerido')
+  .customSanitizer((v) => v.toLowerCase());
+
 // POST /api/auth/enviar-otp — envía código OTP por email o SMS
 router.post(
   '/enviar-otp',
   [
     body('tipo').isIn(['email', 'telefono']).withMessage('tipo debe ser "email" o "telefono"'),
-    body('destino').isString().trim().notEmpty().withMessage('destino requerido'),
+    destinoSanitizado,
   ],
   validar,
   ctrl.enviarOtp,
@@ -104,7 +114,7 @@ router.post(
   '/verificar-otp',
   [
     body('tipo').isIn(['email', 'telefono']).withMessage('tipo debe ser "email" o "telefono"'),
-    body('destino').isString().trim().notEmpty().withMessage('destino requerido'),
+    destinoSanitizado,
     body('codigo').isString().isLength({ min: 6, max: 6 }).withMessage('codigo debe tener 6 dígitos'),
   ],
   validar,
