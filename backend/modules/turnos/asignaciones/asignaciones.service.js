@@ -11,6 +11,15 @@ const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 const { calcularHoras } = require('../../../utils/laboralUtils');
+const logger = require('../../../utils/logger');
+
+/** JOIN best-effort para la notificación — si falla, se loguea en vez de fallar en silencio. */
+function obtenerDetallesParaNotificar(empresaId, id) {
+  return AsignacionesModel.obtenerConDetalles(empresaId, id).catch((err) => {
+    logger.error(`[asignaciones] obtenerConDetalles falló (id ${id}), no se notifica:`, err.message);
+    return null;
+  });
+}
 
 const DIAS   = ['dom','lun','mar','mié','jue','vie','sáb'];
 const MESES  = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
@@ -144,7 +153,7 @@ const AsignacionesService = {
     const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
 
     // Detalles para la notificación (JOINs opcionales — best-effort)
-    const detalles  = await AsignacionesModel.obtenerConDetalles(empresaId, id).catch(() => null);
+    const detalles  = await obtenerDetallesParaNotificar(empresaId, id);
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
 
     if (detalles) {
@@ -188,7 +197,7 @@ const AsignacionesService = {
     }
 
     const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
-    const detalles   = await AsignacionesModel.obtenerConDetalles(empresaId, id).catch(() => null);
+    const detalles   = await obtenerDetallesParaNotificar(empresaId, id);
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
 
     if (detalles) {
@@ -225,7 +234,7 @@ const AsignacionesService = {
     }
 
     const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
-    const detalles   = await AsignacionesModel.obtenerConDetalles(empresaId, id).catch(() => null);
+    const detalles   = await obtenerDetallesParaNotificar(empresaId, id);
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
 
     if (detalles) {
@@ -422,7 +431,7 @@ const AsignacionesService = {
     }
 
     const asignacion = await AsignacionesModel.obtenerPorId(empresaId, res.asignacionId);
-    const detalles   = await AsignacionesModel.obtenerConDetalles(empresaId, res.asignacionId).catch(() => null);
+    const detalles   = await obtenerDetallesParaNotificar(empresaId, res.asignacionId);
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajador_id);
 
     if (detalles) {

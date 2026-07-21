@@ -12,7 +12,10 @@ const logger = require('../../utils/logger');
  */
 const NotificacionesService = {
   async notificar({ empresaId, usuarioId, tipo, titulo, mensaje, data }) {
-    if (!usuarioId) return; // destinatario sin cuenta de usuario: no hay a quién notificar
+    if (!usuarioId) {
+      logger.warn(`[notificaciones] notificar(tipo: ${tipo}) sin usuarioId — no hay a quién notificar`);
+      return; // destinatario sin cuenta de usuario
+    }
     try {
       await NotificacionesModel.crear({ empresaId, usuarioId, tipo, titulo, mensaje, data });
     } catch (err) {
