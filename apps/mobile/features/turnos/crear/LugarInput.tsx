@@ -10,6 +10,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 
+import { MapaSelector } from '@/components/ui/MapaSelector';
+import { DEFAULT_GEOFENCE_RADIUS } from '@/lib/geo';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Sugerencia = {
@@ -33,6 +36,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
   const [buscando, setBuscando]         = useState(false);
   const [locLoading, setLocLoading]     = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mapaVisible, setMapaVisible]   = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Forward geocoding (texto → sugerencias) ──────────────────────────────
@@ -155,19 +159,29 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
         </View>
       )}
 
-      {/* GPS button */}
-      <TouchableOpacity
-        className="flex-row items-center gap-2 self-start px-3 py-2 bg-muted rounded-xl"
-        onPress={usarUbicacion}
-        disabled={locLoading}
-      >
-        {locLoading
-          ? <ActivityIndicator size="small" color="#3B82F6" />
-          : <Ionicons name="locate-outline" size={16} color="#3B82F6" />}
-        <Text className="text-sm font-medium text-info">
-          {locLoading ? 'Obteniendo GPS…' : 'Usar mi ubicación actual'}
-        </Text>
-      </TouchableOpacity>
+      {/* GPS + mapa buttons */}
+      <View className="flex-row gap-2">
+        <TouchableOpacity
+          className="flex-row items-center gap-2 self-start px-3 py-2 bg-muted rounded-xl"
+          onPress={usarUbicacion}
+          disabled={locLoading}
+        >
+          {locLoading
+            ? <ActivityIndicator size="small" color="#3B82F6" />
+            : <Ionicons name="locate-outline" size={16} color="#3B82F6" />}
+          <Text className="text-sm font-medium text-info">
+            {locLoading ? 'Obteniendo GPS…' : 'Usar mi ubicación actual'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="flex-row items-center gap-2 self-start px-3 py-2 bg-muted rounded-xl"
+          onPress={() => setMapaVisible(true)}
+        >
+          <Ionicons name="map-outline" size={16} color="#3B82F6" />
+          <Text className="text-sm font-medium text-info">Ajustar en mapa</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Confirmación GPS */}
       {latitud !== null && (
@@ -178,6 +192,18 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
           </Text>
         </View>
       )}
+
+      <MapaSelector
+        visible={mapaVisible}
+        initialLat={latitud}
+        initialLng={longitud}
+        radiusM={DEFAULT_GEOFENCE_RADIUS}
+        onClose={() => setMapaVisible(false)}
+        onConfirm={(lat, lng) => {
+          onChange(value, lat, lng);
+          setMapaVisible(false);
+        }}
+      />
     </View>
   );
 }

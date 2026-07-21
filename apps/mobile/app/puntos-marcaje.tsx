@@ -22,6 +22,7 @@ import {
   useActualizarPuntoMarcaje,
   useEliminarPuntoMarcaje,
 } from '@/features/turnos/usePuntosMarcaje';
+import { MapaSelector } from '@/components/ui/MapaSelector';
 import { COLORS } from '@/lib/designTokens';
 import { confirm } from '@/lib/confirmDialog';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -67,6 +68,7 @@ export default function PuntosMarcajeScreen() {
   const [editingPunto, setEditingPunto]   = useState<PuntoMarcaje | null>(null);
   const [form, setForm]                   = useState<FormState>(EMPTY_FORM);
   const [locating, setLocating]           = useState(false);
+  const [mapaVisible, setMapaVisible]     = useState(false);
 
   const fijosPuntos  = puntos.filter((p) => p.tipo === 'fijo');
   const zonalesPuntos = puntos.filter((p) => p.tipo === 'zonal');
@@ -421,20 +423,29 @@ export default function PuntosMarcajeScreen() {
               <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                 Coordenadas *
               </Text>
-              <Pressable
-                onPress={handleUsarUbicacion}
-                disabled={locating}
-                className="flex-row items-center gap-1.5 active:opacity-70"
-              >
-                {locating ? (
-                  <ActivityIndicator size="small" color={COLORS.info} />
-                ) : (
-                  <Ionicons name="navigate-outline" size={14} color={COLORS.info} />
-                )}
-                <Text className="text-xs font-semibold text-info">
-                  {locating ? 'Obteniendo…' : 'Usar mi ubicación'}
-                </Text>
-              </Pressable>
+              <View className="flex-row items-center gap-4">
+                <Pressable
+                  onPress={() => setMapaVisible(true)}
+                  className="flex-row items-center gap-1.5 active:opacity-70"
+                >
+                  <Ionicons name="map-outline" size={14} color={COLORS.info} />
+                  <Text className="text-xs font-semibold text-info">Ver en mapa</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleUsarUbicacion}
+                  disabled={locating}
+                  className="flex-row items-center gap-1.5 active:opacity-70"
+                >
+                  {locating ? (
+                    <ActivityIndicator size="small" color={COLORS.info} />
+                  ) : (
+                    <Ionicons name="navigate-outline" size={14} color={COLORS.info} />
+                  )}
+                  <Text className="text-xs font-semibold text-info">
+                    {locating ? 'Obteniendo…' : 'Usar mi ubicación'}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
 
             <View className="flex-row gap-3 mb-4">
@@ -552,6 +563,19 @@ export default function PuntosMarcajeScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ── Selector de mapa ──────────────────────────────────────── */}
+      <MapaSelector
+        visible={mapaVisible}
+        initialLat={form.latitud ? parseFloat(form.latitud) : null}
+        initialLng={form.longitud ? parseFloat(form.longitud) : null}
+        radiusM={parseInt(form.radio_metros, 10) || undefined}
+        onClose={() => setMapaVisible(false)}
+        onConfirm={(lat, lng) => {
+          setForm((f) => ({ ...f, latitud: formatCoord(lat), longitud: formatCoord(lng) }));
+          setMapaVisible(false);
+        }}
+      />
     </>
   );
 }
