@@ -110,9 +110,16 @@ function PostulanteRow({
     <View className="py-2.5 border-b border-border gap-2">
       {/* Nombre + estado */}
       <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-medium text-foreground flex-1 mr-3" numberOfLines={1}>
-          {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
-        </Text>
+        <View className="flex-1 mr-3">
+          <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+            {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
+          </Text>
+          {asignacion.cargo_nombre && (
+            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              {asignacion.cargo_nombre}
+            </Text>
+          )}
+        </View>
         <Badge label={cfg.label} variant={cfg.variant} size="sm" />
       </View>
 

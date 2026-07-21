@@ -171,6 +171,9 @@ export interface AsignacionResumen {
   trabajador_nombre: string;
   trabajador_apellido: string;
   estado: EstadoAsignacion;
+  puesto_id: number;
+  cargo_codigo: string;
+  cargo_nombre: string;
 }
 
 export interface PaginatedResponse<T> {

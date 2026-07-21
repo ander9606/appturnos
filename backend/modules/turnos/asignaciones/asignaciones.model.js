@@ -41,12 +41,15 @@ const AsignacionesModel = {
     return filas[0] || null;
   },
 
-  /** Asignaciones de una oferta, con nombre del trabajador (para el detalle). */
+  /** Asignaciones de una oferta, con nombre del trabajador y cargo del puesto (para el detalle). */
   async listarPorOferta(empresaId, ofertaId) {
     const [filas] = await pool.query(
-      `SELECT a.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido
+      `SELECT a.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+              carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre
        FROM asignaciones_turno a
        JOIN trabajadores t ON t.id = a.trabajador_id
+       JOIN oferta_puestos p ON p.id = a.puesto_id
+       JOIN cargos carg ON carg.id = p.cargo_id
        WHERE a.empresa_id = ? AND a.oferta_id = ?
        ORDER BY a.created_at`,
       [empresaId, ofertaId]
@@ -347,10 +350,13 @@ const AsignacionesModel = {
 
     const [filas] = await pool.query(
       `SELECT a.*, o.titulo AS oferta_titulo, o.fecha AS oferta_fecha, o.hora_inicio,
-              t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido
+              t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+              carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN trabajadores t ON t.id = a.trabajador_id
+       JOIN oferta_puestos p ON p.id = a.puesto_id
+       JOIN cargos carg ON carg.id = p.cargo_id
        WHERE ${whereSql}
        ORDER BY o.fecha DESC, o.hora_inicio
        LIMIT ? OFFSET ?`,

@@ -69,9 +69,16 @@ function PostulanteRow({
   return (
     <View className="py-2.5 border-b border-border gap-2">
       <View className="flex-row items-center justify-between">
-        <Text className="text-sm font-medium text-foreground flex-1 mr-3" numberOfLines={1}>
-          {nombre}
-        </Text>
+        <View className="flex-1 mr-3">
+          <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+            {nombre}
+          </Text>
+          {asignacion.cargo_nombre && (
+            <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+              {asignacion.cargo_nombre}
+            </Text>
+          )}
+        </View>
         <Badge label={cfg.label} variant={cfg.variant} size="sm" />
       </View>
 
@@ -175,9 +182,9 @@ export default function OfertaDetailScreen() {
     ? (misTurnos ?? []).some((a) => a.oferta_id === id)
     : false;
 
-  const firstAvailablePuesto = oferta?.puestos.find(
-    (p) => p.plazas_cubiertas < p.plazas
-  );
+  const availablePuestos = oferta?.puestos.filter((p) => p.plazas_cubiertas < p.plazas) ?? [];
+  const [selectedPuestoId, setSelectedPuestoId] = useState<number | null>(null);
+  const selectedPuesto = availablePuestos.find((p) => p.id === selectedPuestoId) ?? availablePuestos[0];
 
   const hasCoords = oferta?.latitud != null && oferta?.longitud != null;
 
@@ -196,10 +203,10 @@ export default function OfertaDetailScreen() {
   }
 
   async function handleAplicar() {
-    if (!firstAvailablePuesto) return;
+    if (!selectedPuesto) return;
     try {
-      await aplicarM.mutateAsync({ ofertaId: id!, puestoId: firstAvailablePuesto.id });
-      Alert.alert('¡Postulación enviada!', 'El gestor revisará tu solicitud.');
+      await aplicarM.mutateAsync({ ofertaId: id!, puestoId: selectedPuesto.id });
+      Alert.alert('¡Postulación enviada!', `Aplicaste como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
     } catch (err) {
       Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');
     }
@@ -315,26 +322,49 @@ export default function OfertaDetailScreen() {
           <View className="bg-card rounded-2xl px-5 py-4 gap-3"
             style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Cargos y tarifas
+              {isWorker && !yaAplicado && !esPasado && availablePuestos.length > 1
+                ? '¿A qué cargo quieres aplicar?'
+                : 'Cargos y tarifas'}
             </Text>
-            {oferta.puestos.map((p) => (
-              <View key={p.id} className="flex-row items-center justify-between py-2 border-b border-border last:border-0">
-                <View className="flex-1 gap-0.5">
-                  <Text className="text-sm font-semibold text-foreground">{p.cargo_nombre}</Text>
-                  {p.notas && (
-                    <Text className="text-xs text-muted-foreground">{p.notas}</Text>
-                  )}
+            {oferta.puestos.map((p) => {
+              const seleccionable = isWorker && !yaAplicado && !esPasado
+                && availablePuestos.length > 1 && p.plazas_cubiertas < p.plazas;
+              const seleccionado = seleccionable && p.id === selectedPuesto?.id;
+              const Row = (
+                <View className={`flex-row items-center justify-between py-2 border-b border-border last:border-0 ${seleccionable ? 'px-3 rounded-xl border' : ''} ${seleccionado ? 'bg-primary/10 border-primary' : seleccionable ? 'border-border' : ''}`}>
+                  <View className="flex-1 gap-0.5 flex-row items-center gap-2">
+                    {seleccionable && (
+                      <Ionicons
+                        name={seleccionado ? 'radio-button-on' : 'radio-button-off'}
+                        size={18}
+                        color={seleccionado ? '#FF7150' : '#94A3B8'}
+                      />
+                    )}
+                    <View className="flex-1 gap-0.5">
+                      <Text className="text-sm font-semibold text-foreground">{p.cargo_nombre}</Text>
+                      {p.notas && (
+                        <Text className="text-xs text-muted-foreground">{p.notas}</Text>
+                      )}
+                    </View>
+                  </View>
+                  <View className="items-end gap-0.5">
+                    <Text className="text-sm font-bold text-success">
+                      ${p.tarifa_dia.toLocaleString('es-CO')}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">
+                      {p.plazas_cubiertas}/{p.plazas} plazas
+                    </Text>
+                  </View>
                 </View>
-                <View className="items-end gap-0.5">
-                  <Text className="text-sm font-bold text-success">
-                    ${p.tarifa_dia.toLocaleString('es-CO')}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {p.plazas_cubiertas}/{p.plazas} plazas
-                  </Text>
-                </View>
-              </View>
-            ))}
+              );
+              return seleccionable ? (
+                <TouchableOpacity key={p.id} onPress={() => setSelectedPuestoId(p.id)}>
+                  {Row}
+                </TouchableOpacity>
+              ) : (
+                <View key={p.id}>{Row}</View>
+              );
+            })}
           </View>
 
           {/* ── CTA trabajador: Aplicar ──────────────────────────── */}
@@ -350,9 +380,9 @@ export default function OfertaDetailScreen() {
                   <Ionicons name="checkmark-circle-outline" size={22} color="#3B82F6" />
                   <Text className="text-sm font-semibold text-info">Ya estás postulado a este turno</Text>
                 </View>
-              ) : firstAvailablePuesto ? (
+              ) : selectedPuesto ? (
                 <Button
-                  label={aplicarM.isPending ? 'Enviando postulación…' : 'Aplicar a este turno'}
+                  label={aplicarM.isPending ? 'Enviando postulación…' : `Aplicar como ${selectedPuesto.cargo_nombre}`}
                   variant="primary"
                   fullWidth
                   loading={aplicarM.isPending}

@@ -149,7 +149,9 @@ export default function TurnosScreen() {
     const plazasLibres = item.puestos?.reduce((s, p) => s + (p.plazas - p.plazas_cubiertas), 0) ?? 0;
     const tarifaMin = item.puestos?.length > 0 ? Math.min(...item.puestos.map(p => p.tarifa_dia)) : 0;
     const hayVariasTarifas = item.puestos?.length > 1 && item.puestos.some(p => p.tarifa_dia !== tarifaMin);
-    const firstAvailablePuesto = item.puestos?.find(p => p.plazas_cubiertas < p.plazas);
+    const puestosDisponibles = item.puestos?.filter(p => p.plazas_cubiertas < p.plazas) ?? [];
+    const firstAvailablePuesto = puestosDisponibles[0];
+    const hayVariosCargos = puestosDisponibles.length > 1;
     const hayTraslape = !esPasado && turnosSolapan(item, turnosConfirmados);
 
     return (
@@ -197,7 +199,14 @@ export default function TurnosScreen() {
             ) : null}
           </View>
 
-          {(firstAvailablePuesto ?? item.puestos?.[0])?.cargo_nombre && (
+          {hayVariosCargos ? (
+            <View className="flex-row items-center gap-1 -mt-1">
+              <Ionicons name="briefcase-outline" size={12} color="#64748B" />
+              <Text className="text-xs text-muted-foreground">
+                {puestosDisponibles.length} cargos disponibles
+              </Text>
+            </View>
+          ) : (firstAvailablePuesto ?? item.puestos?.[0])?.cargo_nombre && (
             <View className="flex-row items-center gap-1 -mt-1">
               <Ionicons name="briefcase-outline" size={12} color="#64748B" />
               <Text className="text-xs text-muted-foreground">
@@ -248,6 +257,13 @@ export default function TurnosScreen() {
               <Badge label="Ya postulado" variant="info" size="sm" />
             ) : !firstAvailablePuesto ? (
               <Badge label="Sin plazas" variant="default" size="sm" />
+            ) : hayVariosCargos ? (
+              <Button
+                label="Elegir cargo"
+                variant="primary"
+                size="sm"
+                onPress={() => router.push(`/oferta/${item.id}` as any)}
+              />
             ) : (
               <Button
                 label={aplicarMutation.isPending ? 'Aplicando…' : 'Aplicar'}
