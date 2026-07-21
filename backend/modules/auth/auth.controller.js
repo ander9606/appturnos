@@ -75,9 +75,8 @@ async function eliminarCuenta(req, res) {
 
 async function registrarEmpresa(req, res) {
   const { nombre_empresa, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad,
-          nombre, apellido, email, password, email_token, telefono_token } = req.body;
+          nombre, apellido, email, password, email_token } = req.body;
   VerificacionSvc.validarTokenVerificacion(email_token, 'email', email);
-  if (telefono) VerificacionSvc.validarTokenVerificacion(telefono_token, 'telefono', telefono);
   const data = await AuthService.registrarEmpresa({
     nombreEmpresa: nombre_empresa, nit, descripcion, actividad, telefono,
     emailEmpresa: email_empresa, direccion, ciudad,
