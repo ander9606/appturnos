@@ -113,6 +113,7 @@ jobs:
           eas update:republish \
             --group "$GROUP_ID" \
             --destination-channel production \
+            --message "Promovido desde staging: $GROUP_ID" \
             --non-interactive
         env:
           GROUP_ID: ${{ github.event.inputs.group_id }}
