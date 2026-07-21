@@ -143,6 +143,7 @@ const PushService = {
 
   async registrarExpoToken(usuarioId, token) {
     await PushModel.guardarExpoToken(usuarioId, token);
+    logger.info(`[push] Expo token registrado para usuario ${usuarioId}`);
   },
 
   async eliminarExpoToken(usuarioId, token) {
