@@ -57,14 +57,23 @@ async function _enviarExpoBatch(messages) {
       let raw = '';
       res.on('data', (chunk) => { raw += chunk; });
       res.on('end', () => {
+        let json;
         try {
-          resolve(JSON.parse(raw)?.data ?? []);
+          json = JSON.parse(raw);
         } catch {
-          resolve([]);
+          logger.error('[push] respuesta de Expo no es JSON válido:', raw.slice(0, 300));
+          return resolve([]);
         }
+        if (res.statusCode !== 200 || json?.errors) {
+          logger.error(`[push] Expo API respondió ${res.statusCode}:`, JSON.stringify(json?.errors ?? json));
+        }
+        resolve(json?.data ?? []);
       });
     });
-    req.on('error', () => resolve([]));
+    req.on('error', (err) => {
+      logger.error('[push] fallo de red al llamar a Expo:', err.message);
+      resolve([]);
+    });
     req.write(body);
     req.end();
   });
@@ -164,11 +173,14 @@ const PushService = {
       // Los tickets vienen en el mismo orden que `messages`/`tokens` — un token
       // con DeviceNotRegistered ya no existe en el dispositivo, se descarta.
       await Promise.all(
-        tickets.map((ticket, i) =>
-          ticket?.details?.error === 'DeviceNotRegistered'
-            ? PushModel.eliminarExpoToken(usuarioId, tokens[i]).catch(() => {})
-            : null
-        )
+        tickets.map((ticket, i) => {
+          if (ticket?.status !== 'error') return null;
+          if (ticket?.details?.error === 'DeviceNotRegistered') {
+            return PushModel.eliminarExpoToken(usuarioId, tokens[i]).catch(() => {});
+          }
+          logger.error(`[push] ticket de error de Expo (usuario ${usuarioId}):`, ticket.message || ticket.details?.error);
+          return null;
+        })
       );
     } catch (err) {
       logger.error('[push] fallo en entrega Expo:', err.message);
