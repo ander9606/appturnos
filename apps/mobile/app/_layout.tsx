@@ -79,7 +79,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (status === 'unknown') return; // still loading
 
     const inAuthGroup     = segments[0] === '(auth)';
-    const inAdminGroup    = segments[0] === '(admin)';
+    // "empresa" vive fuera de (admin) a propósito (ver Stack.Screen abajo) pero
+    // sigue siendo territorio de super_admin — no debe disparar el redirect a "/(admin)".
+    const inAdminGroup    = segments[0] === '(admin)' || segments[0] === 'empresa';
     const inCompletarPerfil = segments[0] === 'completar-perfil';
 
     const isSuperAdmin = rol === 'super_admin';
