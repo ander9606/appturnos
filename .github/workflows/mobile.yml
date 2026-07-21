@@ -112,7 +112,7 @@ jobs:
         run: |
           eas update:republish \
             --group "$GROUP_ID" \
-            --branch production \
+            --destination-channel production \
             --non-interactive
         env:
           GROUP_ID: ${{ github.event.inputs.group_id }}
