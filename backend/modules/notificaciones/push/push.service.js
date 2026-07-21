@@ -150,7 +150,10 @@ const PushService = {
   },
 
   async enviarExpo(usuarioId, payload) {
-    if (!usuarioId) return;
+    if (!usuarioId) {
+      logger.warn(`[push] enviarExpo llamado sin usuarioId (tipo: ${payload?.tipo})`);
+      return;
+    }
     let tokens;
     try {
       tokens = await PushModel.listarExpoTokensPorUsuario(usuarioId);
@@ -158,7 +161,10 @@ const PushService = {
       logger.error('[push] no se pudieron leer los Expo tokens:', err.message);
       return;
     }
-    if (!tokens.length) return;
+    if (!tokens.length) {
+      logger.warn(`[push] usuario ${usuarioId} no tiene Expo push token registrado — no se envía`);
+      return;
+    }
 
     const messages = tokens.map((token) => ({
       to:    token,
