@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
+import * as Sentry from '@sentry/react-native';
 import { notificacionesApi } from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 
@@ -38,14 +39,19 @@ export async function registerPushNotifications(): Promise<void> {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    if (finalStatus !== 'granted') return;
+    if (finalStatus !== 'granted') {
+      Sentry.captureMessage(`push-registration: permiso denegado (${finalStatus})`, { level: 'info', tags: { flow: 'push-registration' } });
+      return;
+    }
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
     const { data: token } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
     await SecureStore.setItemAsync(KEY_PUSH_TOKEN, token);
     await notificacionesApi.registrarExpoToken(token);
-  } catch {
-    // Push notifications are non-critical — silently ignore errors.
+  } catch (err) {
+    // Push notifications son no-críticas para el flujo — no se propaga el error,
+    // pero se reporta para poder diagnosticar por qué no llegan tokens en producción.
+    Sentry.captureException(err, { tags: { flow: 'push-registration' } });
   }
 }
 
