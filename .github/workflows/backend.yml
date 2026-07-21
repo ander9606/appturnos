@@ -68,6 +68,8 @@ jobs:
             echo "→ Reconstruyendo API..."
             docker compose --env-file backend/.env build api
             echo "→ Reiniciando API..."
+            docker compose --env-file backend/.env stop api
+            docker compose --env-file backend/.env rm -f api
             docker compose --env-file backend/.env up -d api
             echo "→ Verificando health (migraciones + servidor)..."
             for i in $(seq 1 30); do
