@@ -3,7 +3,7 @@
     "name": "Zaturno",
     "slug": "zaturno",
     "owner": "anderson960616",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "appturnos",
@@ -31,6 +31,11 @@
       },
       "package": "com.zaturno.mobile",
       "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCx8c5ZrLihYJgxKkUQeCB010jE0Ll4W78"
+        }
+      },
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
