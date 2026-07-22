@@ -13,7 +13,7 @@ import { confirm }     from '@/lib/confirmDialog';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
-  useOferta, useMisTurnos, useAplicar,
+  useOferta, useMisTurnos, useAplicar, useRetirar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta, useCancelarOferta,
 } from '@/features/turnos/useTurnos';
 import { Badge }   from '@/components/ui/Badge';
@@ -173,6 +173,7 @@ export default function OfertaDetailScreen() {
   const turnoIniciado = oferta ? turnoYaInicio(oferta.fecha, oferta.hora_inicio) : false;
 
   const aplicarM       = useAplicar();
+  const retirarM       = useRetirar();
   const confirmarM     = useConfirmar();
   const rechazarM      = useRechazar();
   const cancelarM      = useCancelar();
@@ -182,9 +183,27 @@ export default function OfertaDetailScreen() {
 
   const [showDuplicarPicker, setShowDuplicarPicker] = useState(false);
 
-  const yaAplicado = isWorker
-    ? (misTurnos ?? []).some((a) => a.oferta_id === id)
-    : false;
+  const miAsignacion = isWorker
+    ? (misTurnos ?? []).find((a) => a.oferta_id === id)
+    : undefined;
+  const yaAplicado = !!miAsignacion;
+
+  async function handleRetirar() {
+    if (!miAsignacion?.puesto_id || !id) return;
+    const ok = await confirm({
+      title: 'Retirar postulación',
+      message: '¿Retirar tu postulación a este turno?',
+      cancelLabel: 'Volver',
+      confirmLabel: 'Retirar',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await retirarM.mutateAsync({ ofertaId: id, puestoId: miAsignacion.puesto_id });
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo retirar la postulación.');
+    }
+  }
 
   const availablePuestos = oferta?.puestos.filter((p) => p.plazas_cubiertas < p.plazas) ?? [];
   const [selectedPuestoId, setSelectedPuestoId] = useState<number | null>(null);
@@ -380,9 +399,22 @@ export default function OfertaDetailScreen() {
                   <Text className="text-sm text-muted-foreground">Evento finalizado</Text>
                 </View>
               ) : yaAplicado ? (
-                <View className="bg-info/10 rounded-2xl px-5 py-4 flex-row items-center gap-3">
-                  <Ionicons name="checkmark-circle-outline" size={22} color="#3B82F6" />
-                  <Text className="text-sm font-semibold text-info">Ya estás postulado a este turno</Text>
+                <View className="gap-3">
+                  <View className="bg-info/10 rounded-2xl px-5 py-4 flex-row items-center gap-3">
+                    <Ionicons name="checkmark-circle-outline" size={22} color="#3B82F6" />
+                    <Text className="text-sm font-semibold text-info">
+                      {miAsignacion?.estado === 'pendiente' ? 'Ya estás postulado a este turno' : 'Ya estás confirmado en este turno'}
+                    </Text>
+                  </View>
+                  {miAsignacion?.estado === 'pendiente' && (
+                    <Button
+                      label={retirarM.isPending ? 'Retirando…' : 'Retirar postulación'}
+                      variant="danger"
+                      fullWidth
+                      loading={retirarM.isPending}
+                      onPress={handleRetirar}
+                    />
+                  )}
                 </View>
               ) : selectedPuesto ? (
                 <Button
