@@ -34,21 +34,19 @@ if (!pushHabilitado) {
 }
 
 /**
- * Envía mensajes a la API de Expo Push (best-effort, sin lanzar).
- * Devuelve los "tickets" de respuesta (mismo orden que `messages`), o []
- * si la petición falla — así el caller puede detectar tokens muertos.
+ * POST genérico a un endpoint de la API de Expo Push. Nunca lanza — devuelve
+ * `json.data` o [] si falla, así el caller puede seguir en modo best-effort.
  */
-async function _enviarExpoBatch(messages) {
-  if (!messages.length) return [];
-  const body = JSON.stringify(messages);
+function _postExpo(path, body) {
+  const data = JSON.stringify(body);
   return new Promise((resolve) => {
     const options = {
       hostname: 'exp.host',
-      path: '/--/api/v2/push/send',
+      path,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
+        'Content-Length': Buffer.byteLength(data),
         'Accept': 'application/json',
         'Accept-Encoding': 'gzip, deflate',
       },
@@ -61,22 +59,48 @@ async function _enviarExpoBatch(messages) {
         try {
           json = JSON.parse(raw);
         } catch {
-          logger.error('[push] respuesta de Expo no es JSON válido:', raw.slice(0, 300));
-          return resolve([]);
+          logger.error(`[push] respuesta de Expo (${path}) no es JSON válido:`, raw.slice(0, 300));
+          return resolve(undefined);
         }
         if (res.statusCode !== 200 || json?.errors) {
-          logger.error(`[push] Expo API respondió ${res.statusCode}:`, JSON.stringify(json?.errors ?? json));
+          logger.error(`[push] Expo API (${path}) respondió ${res.statusCode}:`, JSON.stringify(json?.errors ?? json));
         }
-        resolve(json?.data ?? []);
+        resolve(json?.data);
       });
     });
     req.on('error', (err) => {
-      logger.error('[push] fallo de red al llamar a Expo:', err.message);
-      resolve([]);
+      logger.error(`[push] fallo de red al llamar a Expo (${path}):`, err.message);
+      resolve(undefined);
     });
-    req.write(body);
+    req.write(data);
     req.end();
   });
+}
+
+/**
+ * Envía mensajes a la API de Expo Push (best-effort, sin lanzar).
+ * Devuelve los "tickets" de respuesta (mismo orden que `messages`), o []
+ * si la petición falla — así el caller puede detectar tokens muertos.
+ */
+async function _enviarExpoBatch(messages) {
+  if (!messages.length) return [];
+  return (await _postExpo('/--/api/v2/push/send', messages)) ?? [];
+}
+
+/**
+ * El ticket de /send solo confirma que Expo encoló el mensaje — errores del
+ * lado de FCM/APNs (credenciales inválidas, etc.) solo aparecen acá, y solo
+ * unos segundos después de encolado. Ver: https://docs.expo.dev/push-notifications/sending-notifications/#push-receipts
+ */
+async function _revisarRecibos(ids) {
+  if (!ids.length) return;
+  const recibos = (await _postExpo('/--/api/v2/push/getReceipts', { ids })) ?? {};
+  for (const id of ids) {
+    const recibo = recibos[id];
+    if (recibo?.status === 'error') {
+      logger.error(`[push] recibo de error de Expo (ticket ${id}):`, recibo.message || recibo.details?.error);
+    }
+  }
 }
 
 const PushService = {
@@ -179,9 +203,13 @@ const PushService = {
       const tickets = await _enviarExpoBatch(messages);
       // Los tickets vienen en el mismo orden que `messages`/`tokens` — un token
       // con DeviceNotRegistered ya no existe en el dispositivo, se descarta.
+      const idsOk = [];
       await Promise.all(
         tickets.map((ticket, i) => {
-          if (ticket?.status !== 'error') return null;
+          if (ticket?.status !== 'error') {
+            if (ticket?.id) idsOk.push(ticket.id);
+            return null;
+          }
           if (ticket?.details?.error === 'DeviceNotRegistered') {
             return PushModel.eliminarExpoToken(usuarioId, tokens[i]).catch(() => {});
           }
@@ -189,6 +217,11 @@ const PushService = {
           return null;
         })
       );
+      // ponytail: setTimeout in-process para el chequeo de recibos, alcanza para
+      // el volumen actual — upgrade a job programado si el envío crece mucho.
+      if (idsOk.length) {
+        setTimeout(() => _revisarRecibos(idsOk), 15000).unref();
+      }
     } catch (err) {
       logger.error('[push] fallo en entrega Expo:', err.message);
     }
