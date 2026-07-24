@@ -344,6 +344,26 @@ const OfertasService = {
       Number(puestoId),
       trabajador.id
     );
+
+    // Notifica a jefes de turno y admin que hay una postulación nueva (best-effort).
+    const [gestores] = await pool.query(
+      `SELECT id FROM usuarios
+       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
+      [empresaOfertaId]
+    );
+    if (gestores.length > 0) {
+      await NotificacionesService.notificarVarios(
+        gestores.map((g) => g.id),
+        {
+          empresaId: empresaOfertaId,
+          tipo: 'postulacion.nueva',
+          titulo: 'Nueva postulación',
+          mensaje: `${trabajador.nombre} ${trabajador.apellido} se postuló${puesto.cargo_nombre ? ` como ${puesto.cargo_nombre}` : ''} a "${oferta.titulo}".`,
+          data: { asignacion_id: id, oferta_id: ofertaId },
+        }
+      );
+    }
+
     return AsignacionesModel.obtenerPorId(empresaOfertaId, id);
   },
 

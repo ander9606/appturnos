@@ -14,11 +14,16 @@ const schema = z.object({
 });
 type Form = z.infer<typeof schema>;
 
+// ponytail: este panel web solo soporta roles de gestión — los roles de trabajador
+// (trabajador_turnos, trabajador_nomina) usan la app móvil. Upgrade path: si algún día
+// el backend agrega más roles de gestión, sumarlos aquí.
+const ROLES_WEB: Rol[] = ['super_admin', 'admin_empresa', 'jefe_nomina', 'jefe_turnos', 'nomina'];
+
 interface LoginResponse {
   data: {
-    accessToken: string;
-    refreshToken: string;
-    usuario: { id: number; nombre: string; email: string; rol: Rol; empresa_id: number };
+    access_token: string;
+    refresh_token: string;
+    usuario: { id: number; nombre: string; email: string; rol: string; empresa_id: number };
   };
 }
 
@@ -38,9 +43,14 @@ export function LoginPage() {
         `${import.meta.env.VITE_API_URL}/auth/login`,
         data
       );
-      const { accessToken, refreshToken, usuario } = res.data.data;
-      login(usuario, accessToken, refreshToken);
-      navigate(homeForRol(usuario.rol), { replace: true });
+      const { access_token, refresh_token, usuario } = res.data.data;
+      if (!ROLES_WEB.includes(usuario.rol as Rol)) {
+        setError('root', { message: 'Esta cuenta es de trabajador. Inicia sesión desde la app móvil de Zaturno.' });
+        return;
+      }
+      const rol = usuario.rol as Rol;
+      login({ ...usuario, rol }, access_token, refresh_token);
+      navigate(homeForRol(rol), { replace: true });
     } catch (err: unknown) {
       const msg = axios.isAxiosError(err)
         ? (err.response?.data?.message as string | undefined) ?? 'Error al iniciar sesión'

@@ -116,6 +116,29 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
+  /**
+   * Sin filtro de empresa — uso interno para resolver el usuario_id de un
+   * trabajador cuyo trabajador_id ya viene validado (ej. desde una asignación
+   * propia de la empresa). Necesario para notificar a trabajadores marketplace,
+   * cuya empresa "dueña" (trabajadores.empresa_id) puede no ser la empresa que
+   * gestiona el turno. Nunca exponer esta fila a un cliente sin re-validar tenant.
+   */
+  async obtenerUsuarioId(id) {
+    const [[fila]] = await pool.query('SELECT usuario_id FROM trabajadores WHERE id = ?', [id]);
+    return fila?.usuario_id ?? null;
+  },
+
+  /** Sin filtro de empresa — usuario_id + rol para chequeos de traslape entre empresas. */
+  async obtenerUsuarioIdYRol(id) {
+    const [[fila]] = await pool.query(
+      `SELECT t.usuario_id, u.rol
+       FROM trabajadores t JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.id = ?`,
+      [id]
+    );
+    return fila || null;
+  },
+
   async obtenerPorUsuarioId(empresaId, usuarioId) {
     // Sin empresaId, un usuario puede tener varias filas activas (una por empresa
     // vinculada) — ORDER BY evita que MySQL devuelva una fila arbitraria; la más

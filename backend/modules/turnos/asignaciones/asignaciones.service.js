@@ -94,8 +94,8 @@ const AsignacionesService = {
   async confirmar(empresaId, id) {
     const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
     if (asig) {
-      const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asig.trabajador_id);
-      const rolTrabajador = trabajador?.rol || trabajador?.usuario_rol;
+      const trabajador = await TrabajadoresModel.obtenerUsuarioIdYRol(asig.trabajador_id);
+      const rolTrabajador = trabajador?.rol;
 
       // Ambos chequeos necesitan fecha/hora de la oferta — se piden una sola vez.
       const necesitaChequeo = rolTrabajador === 'trabajador_nomina' || rolTrabajador === 'trabajador_turnos';
@@ -154,7 +154,7 @@ const AsignacionesService = {
 
     // Detalles para la notificación (JOINs opcionales — best-effort)
     const detalles  = await obtenerDetallesParaNotificar(empresaId, id);
-    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
+    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(asignacion.trabajador_id);
 
     if (detalles) {
       const fecha = fmtFechaCorta(detalles.oferta_fecha);
@@ -163,7 +163,7 @@ const AsignacionesService = {
       const cargo = detalles.cargo_nombre ? ` como ${detalles.cargo_nombre}` : '';
       await NotificacionesService.notificar({
         empresaId,
-        usuarioId: trabajador?.usuario_id,
+        usuarioId: trabajadorUsuarioId,
         tipo: 'postulacion.confirmada',
         titulo: 'Turno confirmado',
         mensaje: `Quedaste confirmado${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`,
@@ -198,13 +198,13 @@ const AsignacionesService = {
 
     const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
     const detalles   = await obtenerDetallesParaNotificar(empresaId, id);
-    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
+    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(asignacion.trabajador_id);
 
     if (detalles) {
       const fecha = fmtFechaCorta(detalles.oferta_fecha);
       await NotificacionesService.notificar({
         empresaId,
-        usuarioId: trabajador?.usuario_id,
+        usuarioId: trabajadorUsuarioId,
         tipo: 'asignacion.cancelada',
         titulo: 'Turno cancelado',
         mensaje: `Tu turno "${detalles.oferta_titulo}" el ${fecha} fue cancelado por la empresa. Revisa otras ofertas disponibles.`,
@@ -235,13 +235,13 @@ const AsignacionesService = {
 
     const asignacion = await AsignacionesModel.obtenerPorId(empresaId, id);
     const detalles   = await obtenerDetallesParaNotificar(empresaId, id);
-    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
+    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(asignacion.trabajador_id);
 
     if (detalles) {
       const fecha = fmtFechaCorta(detalles.oferta_fecha);
       await NotificacionesService.notificar({
         empresaId,
-        usuarioId: trabajador?.usuario_id,
+        usuarioId: trabajadorUsuarioId,
         tipo: 'postulacion.rechazada',
         titulo: 'Postulación no aceptada',
         mensaje: `Tu postulación para "${detalles.oferta_titulo}" el ${fecha} no fue aceptada. Revisa otras ofertas disponibles.`,
@@ -432,7 +432,7 @@ const AsignacionesService = {
 
     const asignacion = await AsignacionesModel.obtenerPorId(empresaId, res.asignacionId);
     const detalles   = await obtenerDetallesParaNotificar(empresaId, res.asignacionId);
-    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajador_id);
+    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(trabajador_id);
 
     if (detalles) {
       const fecha = fmtFechaCorta(detalles.oferta_fecha);
@@ -441,7 +441,7 @@ const AsignacionesService = {
       const cargo = detalles.cargo_nombre ? ` como ${detalles.cargo_nombre}` : '';
       await NotificacionesService.notificar({
         empresaId,
-        usuarioId: trabajador?.usuario_id,
+        usuarioId: trabajadorUsuarioId,
         tipo: 'postulacion.confirmada',
         titulo: 'Turno asignado',
         mensaje: `Fuiste asignado${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`,
@@ -527,12 +527,12 @@ const AsignacionesService = {
     }
 
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
-    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, res.trabajador_id);
+    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(res.trabajador_id);
 
-    if (trabajador) {
+    if (trabajadorUsuarioId) {
       await NotificacionesService.notificar({
         empresaId,
-        usuarioId: trabajador.usuario_id,
+        usuarioId: trabajadorUsuarioId,
         tipo: 'asignacion.no_presentado',
         titulo: 'Turno marcado como no presentado',
         mensaje: 'Fuiste marcado como no presentado en un turno. Esto impacta tu calificación y la visibilidad de futuras ofertas.',
@@ -674,10 +674,10 @@ const AsignacionesService = {
       throw err;
     }
 
-    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, asignacion.trabajador_id);
+    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(asignacion.trabajador_id);
     await NotificacionesService.notificar({
       empresaId,
-      usuarioId: trabajador?.usuario_id,
+      usuarioId: trabajadorUsuarioId,
       tipo: 'calificacion.recibida',
       titulo: 'Recibiste una calificación',
       mensaje: `Tu turno fue calificado con ${calificacion}/5 estrellas.`,
