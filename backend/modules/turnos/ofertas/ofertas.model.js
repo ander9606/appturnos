@@ -11,7 +11,7 @@ const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
   lugar, latitud, longitud, encargado_nombre, encargado_telefono, estado, para_quien,
-  external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
+  external_ref, alquiler_ref, externo_notas, cobertura_notificada, creado_por, created_at`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
 // al listar/obtener. mysql2 devuelve esto como string si es resultado de
@@ -349,6 +349,13 @@ const OfertasModel = {
     await pool.query(
       'UPDATE ofertas_turno SET alerta_personal_enviada = 1 WHERE id = ?',
       [id]
+    );
+  },
+
+  async marcarCoberturaNotificada(empresaId, id) {
+    await pool.query(
+      'UPDATE ofertas_turno SET cobertura_notificada = 1 WHERE id = ? AND empresa_id = ?',
+      [id, empresaId]
     );
   },
 
