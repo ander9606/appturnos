@@ -17,7 +17,9 @@ async function crear(req, res) {
     req.body.descripcion,
     req.body.hora_evento || null,
     req.body.foto_b64 || null,
-    req.usuario
+    req.usuario,
+    req.body.latitud ?? null,
+    req.body.longitud ?? null
   );
   res.status(201).json({ success: true, data });
 }

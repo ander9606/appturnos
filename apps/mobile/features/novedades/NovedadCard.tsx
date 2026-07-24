@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Novedad, TipoNovedad } from '@api-client';
 
@@ -41,6 +41,15 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
               </View>
             )}
             <Text className="text-xs text-muted-foreground">{fmtTs(novedad.created_at)}</Text>
+            {novedad.latitud != null && novedad.longitud != null && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`https://maps.google.com/?q=${novedad.latitud},${novedad.longitud}`)}
+                className="flex-row items-center gap-1"
+              >
+                <Ionicons name="location-outline" size={11} color="#0284C7" />
+                <Text className="text-xs text-primary">Ver ubicación</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

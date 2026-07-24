@@ -28,7 +28,13 @@ export interface Oferta {
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
+  encargado_nombre: string | null;
+  encargado_telefono: string | null;
   estado: EstadoOferta;
+  // Presentes solo si la oferta se originó desde logiq360 (evento orden.creada).
+  external_ref: string | null;
+  alquiler_ref: string | null;
+  externo_notas: string | null;
   puestos: Puesto[];
   created_at: string;
 }

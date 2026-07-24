@@ -466,9 +466,19 @@ async procesarContratoCompletado(tenantId, data) {
 
 ---
 
-### EVENTO: `novedad.reportada`
+### EVENTO: `novedad.reportada` *(implementado — v1.4)*
 
-**Cuando un operario reporta un incidente desde la app de turnos**
+**Cuando un trabajador reporta una novedad desde la app de turnos**
+(`POST /api/novedades/asignaciones/:asignacionId` en App Turnos).
+
+> **Nota:** el payload real usa los tipos de App Turnos (`retraso | ausencia
+> | incidente | otro`), no los de logiq360 (`dano_elemento`, etc. — esos
+> son para las novedades internas de operarios de logiq360, tabla
+> `orden_trabajo_novedades`, un concepto distinto). No incluye `imagen_url`
+> — la foto se queda en App Turnos como base64; solo viaja `tiene_foto`
+> como bandera informativa. Coordenadas GPS opcionales: van si el
+> trabajador compartió ubicación al reportar (best-effort, nunca bloquea
+> el envío).
 
 ```json
 {
@@ -478,26 +488,28 @@ async procesarContratoCompletado(tenantId, data) {
   "data": {
     "external_ref": "logiq360:orden:47",
     "trabajador_nombre": "Pedro Gómez",
-    "tipo_novedad": "dano_elemento",
+    "tipo_novedad": "incidente",
     "descripcion": "Tubo galvanizado doblado, no apto para instalación",
-    "imagen_url": "https://app-turnos.com/uploads/novedades/foto.jpg",
-    "severidad": "alta",
-    "timestamp": "2026-05-25T08:15:33Z"
+    "hora_evento": "2026-05-25T08:15:33-05:00",
+    "latitud": 4.8567,
+    "longitud": -74.0124,
+    "tiene_foto": true
   }
 }
 ```
 
-**Qué hace logiq360:**
+**Qué hace logiq360:** inserta en su tabla `novedades` (migración 80),
+distinta de `orden_trabajo_novedades`:
 ```javascript
-// Crea una alerta_operacion en el sistema de carpas
-await AlertaModel.crear(tenantId, {
-    orden_id: ordenId,
-    tipo: 'incidencia',
-    severidad: data.severidad,
-    titulo: `Novedad de ${data.trabajador_nombre}`,
-    mensaje: data.descripcion,
-    fuente: 'app_turnos'
-});
+// EventHandlerService.js
+await pool.query(
+    `INSERT INTO novedades
+        (tenant_id, id_orden, tipo, descripcion, prioridad, trabajador_nombre, latitud, longitud, creado_por_integracion)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+    [tenantId, ordenId, data.tipo_novedad || 'otro', data.descripcion || '',
+     data.prioridad || 'media', data.trabajador_nombre || null,
+     data.latitud ?? null, data.longitud ?? null]
+);
 ```
 
 ---
@@ -1004,6 +1016,27 @@ App Turnos NUNCA envía a logiq360:
 ---
 
 ## CHANGELOG
+
+### v1.4 — novedad.reportada implementado + GPS
+
+`novedad.reportada` estaba documentado y hasta tenía un handler escrito del
+lado de logiq360 (`EventHandlerService.js`), pero **nunca se emitía** desde
+App Turnos y la tabla `novedades` de logiq360 **nunca se creó** — cualquier
+intento real habría fallado en silencio. Se cierra el ciclo completo:
+
+- App Turnos emite el evento al crear una novedad (`NovedadesService.crear`),
+  best-effort y solo si la oferta tiene `external_ref`.
+- Se agrega captura de GPS opcional al reportar (permiso denegado o sin señal
+  → se envía igual sin coordenadas, nunca bloquea el reporte).
+- El payload usa los tipos reales de App Turnos (`tipo_novedad`: retraso |
+  ausencia | incidente | otro), no los especulativos de la v1.0
+  (`dano_elemento`, `severidad`) que nunca existieron en su schema.
+- No se envía `imagen_url` — la foto es base64 interno de App Turnos; solo
+  viaja `tiene_foto` como bandera.
+- logiq360: migración 80 crea la tabla `novedades` (distinta de
+  `orden_trabajo_novedades`, que es para novedades internas de operarios) y
+  el handler se corrige para leer `tipo_novedad` (antes leía `tipo`, que
+  nunca llegaba) y guardar `trabajador_nombre`/`latitud`/`longitud`.
 
 ### v1.3 — Reconciliación periódica de la conexión
 

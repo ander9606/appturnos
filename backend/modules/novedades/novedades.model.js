@@ -6,7 +6,7 @@ const NovedadesModel = {
   async getByAsignacion(empresaId, asignacionId) {
     const [filas] = await pool.query(
       `SELECT n.id, n.asignacion_id, n.autor_id, n.tipo, n.descripcion,
-              n.hora_evento, n.created_at, n.foto_b64,
+              n.hora_evento, n.created_at, n.foto_b64, n.latitud, n.longitud,
               u.nombre AS autor_nombre, u.apellido AS autor_apellido
        FROM novedades n
        JOIN usuarios u ON u.id = n.autor_id
@@ -17,15 +17,15 @@ const NovedadesModel = {
     return filas;
   },
 
-  async create(empresaId, asignacionId, autorId, tipo, descripcion, horaEvento, fotoB64) {
+  async create(empresaId, asignacionId, autorId, tipo, descripcion, horaEvento, fotoB64, latitud, longitud) {
     const [res] = await pool.query(
-      `INSERT INTO novedades (empresa_id, asignacion_id, autor_id, tipo, descripcion, hora_evento, foto_b64)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [empresaId, asignacionId, autorId, tipo, descripcion, horaEvento || null, fotoB64 || null]
+      `INSERT INTO novedades (empresa_id, asignacion_id, autor_id, tipo, descripcion, hora_evento, foto_b64, latitud, longitud)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [empresaId, asignacionId, autorId, tipo, descripcion, horaEvento || null, fotoB64 || null, latitud ?? null, longitud ?? null]
     );
     const [filas] = await pool.query(
       `SELECT n.id, n.asignacion_id, n.autor_id, n.tipo, n.descripcion,
-              n.hora_evento, n.created_at,
+              n.hora_evento, n.created_at, n.latitud, n.longitud,
               u.nombre AS autor_nombre, u.apellido AS autor_apellido
        FROM novedades n
        JOIN usuarios u ON u.id = n.autor_id

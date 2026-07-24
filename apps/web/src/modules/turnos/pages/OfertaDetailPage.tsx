@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -8,6 +8,7 @@ import {
   useCrearPuesto,
   useActualizarPuesto,
   useEliminarPuesto,
+  usePublicarOferta,
   useConfirmarAsignacion,
   useRechazarAsignacion,
   useCancelarAsignacion,
@@ -83,6 +84,7 @@ export function OfertaDetailPage() {
   const asignaciones: Asignacion[] = asigData?.data ?? [];
 
   const eliminarPuesto = useEliminarPuesto();
+  const publicar = usePublicarOferta();
   const confirmar = useConfirmarAsignacion();
   const rechazar = useRechazarAsignacion();
   const cancelarAsig = useCancelarAsignacion();
@@ -110,26 +112,72 @@ export function OfertaDetailPage() {
       <div className="bg-card border border-border rounded-2xl p-5 mb-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h1 className="text-xl font-bold text-foreground truncate">{oferta.titulo}</h1>
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${ESTADO_OFERTA_BADGE[oferta.estado as EstadoOferta]}`}>
                 {ESTADO_OFERTA_LABEL[oferta.estado as EstadoOferta]}
               </span>
+              {oferta.external_ref && (
+                <span
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-600 flex-shrink-0"
+                  title={oferta.external_ref}
+                >
+                  <Zap size={11} /> logiq360
+                </span>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               {fmtDate(oferta.fecha)} · {oferta.hora_inicio}
               {oferta.hora_fin_estimada ? ` – ${oferta.hora_fin_estimada}` : ''}
               {oferta.lugar ? ` · ${oferta.lugar}` : ''}
+              {oferta.latitud != null && oferta.longitud != null && (
+                <>
+                  {' · '}
+                  <a
+                    href={`https://maps.google.com/?q=${oferta.latitud},${oferta.longitud}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Ver mapa
+                  </a>
+                </>
+              )}
             </p>
             {oferta.descripcion && (
               <p className="text-sm text-muted-foreground mt-1">{oferta.descripcion}</p>
             )}
+            {oferta.externo_notas && (
+              <p className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 mt-2">
+                <span className="font-medium">Instrucciones para el operario: </span>
+                {oferta.externo_notas}
+              </p>
+            )}
           </div>
-          <div className="flex-shrink-0 text-right">
-            <p className="text-2xl font-bold text-foreground">
-              {puestos.reduce((s, p) => s + p.asignados, 0)}/{puestos.reduce((s, p) => s + p.plazas, 0)}
-            </p>
-            <p className="text-xs text-muted-foreground">asignados</p>
+          <div className="flex-shrink-0 flex flex-col items-end gap-2">
+            <div className="text-right">
+              <p className="text-2xl font-bold text-foreground">
+                {puestos.reduce((s, p) => s + p.asignados, 0)}/{puestos.reduce((s, p) => s + p.plazas, 0)}
+              </p>
+              <p className="text-xs text-muted-foreground">asignados</p>
+            </div>
+            {oferta.estado === 'borrador' && (
+              <button
+                onClick={() => {
+                  if (puestos.length === 0) {
+                    window.alert('Agrega al menos un puesto antes de publicar.');
+                    return;
+                  }
+                  if (window.confirm('¿Publicar esta oferta? Será visible para el pool de trabajadores.')) {
+                    publicar.mutate(ofertaId);
+                  }
+                }}
+                disabled={publicar.isPending}
+                className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Send size={14} /> {publicar.isPending ? 'Publicando...' : 'Publicar oferta'}
+              </button>
+            )}
           </div>
         </div>
       </div>

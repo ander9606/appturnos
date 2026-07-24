@@ -13,6 +13,8 @@ export interface Novedad {
   descripcion: string;
   hora_evento: string | null;
   foto_b64: string | null;
+  latitud: number | null;
+  longitud: number | null;
   created_at: string;
 }
 
@@ -21,6 +23,8 @@ export interface CrearNovedadPayload {
   descripcion: string;
   hora_evento?: string | null;
   foto_b64?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export const novedadesApi = {
