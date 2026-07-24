@@ -42,6 +42,14 @@ router.post(
       .optional({ values: 'falsy' })
       .isString()
       .withMessage('foto_b64 debe ser string base64'),
+    body('latitud')
+      .optional({ values: 'falsy' })
+      .isFloat({ min: -90, max: 90 })
+      .withMessage('latitud inválida'),
+    body('longitud')
+      .optional({ values: 'falsy' })
+      .isFloat({ min: -180, max: 180 })
+      .withMessage('longitud inválida'),
   ],
   validar,
   ctrl.crear
