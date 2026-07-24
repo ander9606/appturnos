@@ -192,11 +192,12 @@ const PushService = {
     }
 
     const messages = tokens.map((token) => ({
-      to:    token,
-      sound: 'default',
-      title: payload.titulo,
-      body:  payload.mensaje,
-      data:  payload.data || {},
+      to:        token,
+      sound:     'default',
+      title:     payload.titulo,
+      body:      payload.mensaje,
+      data:      payload.data || {},
+      channelId: 'default', // debe existir en el cliente — ver setNotificationChannelAsync en pushNotifications.ts
     }));
 
     try {
