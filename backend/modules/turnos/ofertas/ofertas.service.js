@@ -48,6 +48,36 @@ async function validarPuestosParaEmpresa(empresaId, puestos) {
   }
 }
 
+/** Notifica a trabajadores con los cargos solicitados por la oferta (best-effort). */
+async function notificarPoolPorPuestos(empresaId, oferta) {
+  for (const puesto of oferta.puestos || []) {
+    const [destinatarios] = await pool.query(
+      `SELECT DISTINCT u.id AS usuario_id
+       FROM trabajador_cargos tc
+       JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
+       JOIN trabajadores t        ON t.id  = te.trabajador_id
+       JOIN usuarios u            ON u.id  = t.usuario_id
+       WHERE te.empresa_id = ?
+         AND tc.cargo_id   = ?
+         AND te.estado     = 'activo'
+         AND u.activo      = 1`,
+      [empresaId, puesto.cargo_id]
+    );
+    if (destinatarios.length > 0) {
+      await NotificacionesService.notificarVarios(
+        destinatarios.map((d) => d.usuario_id),
+        {
+          empresaId,
+          tipo: 'oferta.nueva',
+          titulo: `Nueva oferta: ${puesto.cargo_nombre}`,
+          mensaje: `${oferta.titulo} — ${oferta.fecha} — $${Number(puesto.tarifa_dia).toLocaleString('es-CO')}`,
+          data: { oferta_id: oferta.id, puesto_id: puesto.id },
+        }
+      );
+    }
+  }
+}
+
 async function validarAceptaExtras(usuario) {
   if (usuario.rol !== ROLES.TRABAJADOR_NOMINA) return;
   const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuario.sub);
@@ -133,35 +163,7 @@ const OfertasService = {
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
 
-    // Notificar a trabajadores con los cargos solicitados (best-effort).
-    if (oferta.puestos && oferta.puestos.length > 0) {
-      for (const puesto of oferta.puestos) {
-        const [destinatarios] = await pool.query(
-          `SELECT DISTINCT u.id AS usuario_id
-           FROM trabajador_cargos tc
-           JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
-           JOIN trabajadores t        ON t.id  = te.trabajador_id
-           JOIN usuarios u            ON u.id  = t.usuario_id
-           WHERE te.empresa_id = ?
-             AND tc.cargo_id   = ?
-             AND te.estado     = 'activo'
-             AND u.activo      = 1`,
-          [empresaId, puesto.cargo_id]
-        );
-        if (destinatarios.length > 0) {
-          await NotificacionesService.notificarVarios(
-            destinatarios.map((d) => d.usuario_id),
-            {
-              empresaId,
-              tipo: 'oferta.nueva',
-              titulo: `Nueva oferta: ${puesto.cargo_nombre}`,
-              mensaje: `${oferta.titulo} — ${oferta.fecha} — $${Number(puesto.tarifa_dia).toLocaleString('es-CO')}`,
-              data: { oferta_id: id, puesto_id: puesto.id },
-            }
-          );
-        }
-      }
-    }
+    await notificarPoolPorPuestos(empresaId, oferta);
 
     return oferta;
   },
@@ -190,6 +192,32 @@ const OfertasService = {
         data: { oferta_id: id },
       });
     }
+
+    return OfertasModel.obtenerPorId(empresaId, id);
+  },
+
+  /**
+   * Publica manualmente una oferta en 'borrador' (típicamente creada por
+   * logiq360 vía orden.creada) para que sea visible al pool de trabajadores.
+   * Normalmente esto lo dispara el evento orden.publicada de logiq360, pero
+   * el jefe_turnos puede hacerlo a mano si logiq360 nunca lo envía o si
+   * completó los puestos y quiere publicar antes.
+   */
+  async publicar(empresaId, id) {
+    const oferta = await OfertasModel.obtenerPorId(empresaId, id);
+    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    if (oferta.estado !== 'borrador') {
+      throw new AppError('Solo se puede publicar una oferta en borrador', 409);
+    }
+    if (!oferta.puestos || oferta.puestos.length === 0) {
+      throw new AppError('Agrega al menos un puesto antes de publicar', 409);
+    }
+
+    await OfertasModel.cambiarEstado(empresaId, id, 'publicada');
+
+    // Mismo criterio de notificación que crear() — necesario porque los puestos
+    // de una oferta externa se agregan después de crearla y nunca dispararon esto.
+    await notificarPoolPorPuestos(empresaId, oferta);
 
     return OfertasModel.obtenerPorId(empresaId, id);
   },

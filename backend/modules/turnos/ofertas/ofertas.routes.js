@@ -96,6 +96,9 @@ router.put(
   ctrl.actualizar
 );
 
+// POST /api/turnos/ofertas/:id/publicar  — pasa una oferta de 'borrador' a 'publicada'
+router.post('/:id/publicar', verificarRol(GESTIONAR), [idParam], validar, ctrl.publicar);
+
 // DELETE /api/turnos/ofertas/:id  (cancelar)
 router.delete('/:id', verificarRol(GESTIONAR), [idParam], validar, ctrl.cancelar);
 
