@@ -8,6 +8,7 @@ const { pool } = require('../../../config/database');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const IntegracionService = require('../../integracion/integracion.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
+const CoberturaService = require('../../integracion/cobertura.service');
 const AppError = require('../../../utils/AppError');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 const { calcularHoras } = require('../../../utils/laboralUtils');
@@ -181,6 +182,10 @@ const AsignacionesService = {
         });
       }
     }
+
+    // Si esta confirmación completó todas las plazas de la oferta, avisa a
+    // logiq360 (best-effort, idempotente — ver CoberturaService).
+    await CoberturaService.verificarYEmitir(empresaId, asignacion.oferta_id);
 
     return asignacion;
   },
@@ -458,6 +463,8 @@ const AsignacionesService = {
         });
       }
     }
+
+    await CoberturaService.verificarYEmitir(empresaId, ofertaId);
 
     return asignacion;
   },
