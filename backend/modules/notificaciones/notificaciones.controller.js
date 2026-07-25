@@ -14,7 +14,7 @@ async function listar(req, res) {
     { soloNoLeidas, page, limit }
   );
   logger.info(`[notificaciones] listar usuario=${req.usuario.sub} empresa=${req.empresa_id} rol=${req.usuario.rol} → ${data.length}/${pagination.total} filas (${no_leidas} no leídas)`);
-  res.json({ success: true, data, no_leidas, pagination });
+  res.json({ success: true, data: { data, no_leidas, pagination } });
 }
 
 async function leer(req, res) {
