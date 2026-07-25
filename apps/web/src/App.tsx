@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router';
 import { LoginPage } from '@/modules/auth/LoginPage';
 import { ProtectedRoute, RoleRoute } from '@/modules/auth/ProtectedRoute';
 import { Layout } from '@/shared/components/Layout';
+import { LandingPage } from '@/pages/LandingPage';
 import { WelcomePage } from '@/pages/WelcomePage';
 import { RegistroEmpresaPage } from '@/pages/RegistroEmpresaPage';
 import { PrivacidadPage } from '@/pages/PrivacidadPage';
@@ -24,6 +25,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/bienvenida" element={<WelcomePage />} />
         <Route path="/registro" element={<RegistroEmpresaPage />} />
         <Route path="/login" element={<LoginPage />} />
