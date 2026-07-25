@@ -15,9 +15,9 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
   ],
   admin_empresa: [
     { label: 'Inicio',         to: '/',              icon: LayoutDashboard },
+    { label: 'Turnos',         to: '/turnos',         icon: Calendar },
     { label: 'Nómina',         to: '/nomina',         icon: DollarSign },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
-    { label: 'Turnos',         to: '/turnos',         icon: Calendar },
     { label: 'Configuración',  to: '/configuracion',  icon: Settings },
     { label: 'logiq360',       to: '/integracion',    icon: Plug },
   ],
