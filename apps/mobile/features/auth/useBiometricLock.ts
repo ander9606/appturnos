@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AppState, Platform, type AppStateStatus } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
+import { showToast } from '@/lib/toast';
 
 const isWeb = Platform.OS === 'web';
 
@@ -55,18 +56,29 @@ export function useBiometricLock(authStatus: AuthStatus) {
       // ponytail: authenticateAsync a veces se cuelga sin resolver si la app pasa a
       // background a mitad del prompt nativo (llamada entrante, botón home en algunos
       // Android) — sin este timeout el botón queda en "Verificando…" para siempre.
+      // 15s es suficiente para un escaneo lento; más que eso se siente colgado.
       const result = await Promise.race([
         LocalAuthentication.authenticateAsync({
           promptMessage: 'Confirma tu identidad',
           fallbackLabel: 'Usar PIN',
         }),
-        new Promise<{ success: false }>((resolve) =>
-          setTimeout(() => resolve({ success: false }), 30_000)
+        new Promise<{ success: false; error: 'timeout' }>((resolve) =>
+          setTimeout(() => resolve({ success: false, error: 'timeout' }), 15_000)
         ),
       ]);
-      if (result.success) setLocked(false);
+      if (result.success) {
+        setLocked(false);
+      } else if (result.error !== 'user_cancel' && result.error !== 'app_cancel' && result.error !== 'system_cancel') {
+        // No avisar en cancelaciones voluntarias — el usuario ya sabe que canceló.
+        showToast(
+          result.error === 'timeout'
+            ? 'La verificación tardó demasiado. Intenta de nuevo.'
+            : 'No se pudo verificar tu identidad. Intenta de nuevo o usa PIN.'
+        );
+      }
       return result.success;
     } catch {
+      showToast('No se pudo verificar tu identidad. Intenta de nuevo o usa PIN.');
       return false;
     } finally {
       authenticatingRef.current = false;

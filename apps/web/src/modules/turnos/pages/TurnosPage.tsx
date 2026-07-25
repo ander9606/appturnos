@@ -4,6 +4,7 @@ import { Plus, ChevronRight, XCircle } from 'lucide-react';
 import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes } from '../hooks/useTurnos';
 import type { EstadoOferta, Oferta } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { LugarInput } from '../components/LugarInput';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -29,6 +30,12 @@ function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
 }
 
+const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
+function bogotaToday(): string {
+  const t = new Date(Date.now() - BOGOTA_OFFSET_MS);
+  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
+}
+
 const ESTADOS_FILTER: (EstadoOferta | undefined)[] = [undefined, 'abierta', 'publicada', 'en_proceso', 'completada', 'borrador', 'cerrada', 'cancelada'];
 const FILTER_LABELS: Record<string, string> = {
   undefined: 'Todas', abierta: 'Abiertas', publicada: 'Publicadas', en_proceso: 'En progreso',
@@ -43,6 +50,7 @@ export function TurnosPage() {
   const { data, isLoading, isError, error, refetch } = useOfertas({ estado, limit: 100 });
   const ofertas: Oferta[] = data?.data?.data ?? [];
   const cancelar = useCancelarOferta();
+  const today = bogotaToday();
 
   const { data: pendientesData } = usePostulacionesPendientes();
   const pendientesPorOferta = new Map<number, number>();
@@ -111,9 +119,10 @@ export function TurnosPage() {
                 const totalPlazas = o.puestos?.reduce((s, p) => s + p.plazas, 0) ?? 0;
                 const totalAsignados = o.puestos?.reduce((s, p) => s + p.plazas_cubiertas, 0) ?? 0;
                 const pendientes = pendientesPorOferta.get(o.id) ?? 0;
+                const esPasado = o.fecha < today;
                 return (
-                  <tr key={o.id} className="border-t border-border/60 hover:bg-muted">
-                    <td className="px-4 py-3 font-medium text-foreground">{o.titulo}</td>
+                  <tr key={o.id} className={`border-t border-border/60 hover:bg-muted transition-opacity ${esPasado ? 'opacity-50' : ''}`}>
+                    <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>{o.titulo}</td>
                     <td className="px-4 py-3 text-muted-foreground">{fmtDate(o.fecha)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.hora_inicio}{o.hora_fin_estimada ? ` – ${o.hora_fin_estimada}` : ''}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.lugar ?? '—'}</td>
@@ -173,6 +182,8 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
     titulo: '', fecha: '', hora_inicio: '', hora_fin_estimada: '',
     descripcion: '', lugar: '',
   });
+  const [latitud, setLatitud] = useState<number | null>(null);
+  const [longitud, setLongitud] = useState<number | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,6 +194,8 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
       hora_fin_estimada: form.hora_fin_estimada || undefined,
       descripcion: form.descripcion || undefined,
       lugar: form.lugar || undefined,
+      latitud: latitud ?? undefined,
+      longitud: longitud ?? undefined,
       puestos: [],
     });
     onClose();
@@ -214,15 +227,22 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
               <input required type="time" {...field('hora_inicio')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Hora fin estimada</label>
-              <input type="time" {...field('hora_fin_estimada')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Lugar</label>
-              <input type="text" {...field('lugar')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Hora fin estimada</label>
+            <input type="time" {...field('hora_fin_estimada')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Lugar</label>
+            <LugarInput
+              value={form.lugar}
+              latitud={latitud}
+              longitud={longitud}
+              onChange={(lugar, lat, lng) => {
+                setForm(f => ({ ...f, lugar }));
+                setLatitud(lat);
+                setLongitud(lng);
+              }}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
