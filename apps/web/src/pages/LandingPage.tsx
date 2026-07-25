@@ -13,10 +13,20 @@ const FEATURES = [
   { icon: Plug, titulo: 'Integraciones', desc: 'Conecta Zaturno con plataformas aliadas como logiq360 para cubrir personal por evento.' },
 ];
 
-const PASOS = [
-  { n: '01', t: 'Publica el turno', d: 'Define fecha, cargo y punto de marcaje. La oferta llega a tu equipo al instante.' },
-  { n: '02', t: 'El trabajador marca', d: 'Ingreso y egreso desde el celular, validados por geocerca en tiempo real.' },
-  { n: '03', t: 'La nómina se calcula sola', d: 'Horas, recargos y festivos se consolidan por período, listos para liquidar.' },
+const PASOS_TURNOS = [
+  { n: '01', t: 'Crea la oferta', d: 'Título, fecha, hora de inicio/fin y el lugar con su punto de marcaje.' },
+  { n: '02', t: 'Define los puestos', d: 'Un puesto por cargo, con las plazas que necesitas cubrir y la tarifa por día de cada uno.' },
+  { n: '03', t: 'Publícala', d: 'La oferta llega al equipo por notificación push y se abre a postulaciones.' },
+  { n: '04', t: 'Confirma o rechaza', d: 'Revisa cada postulación y arma el equipo del turno puesto por puesto.' },
+  { n: '05', t: 'Marcaje y calificación', d: 'El trabajador marca ingreso/egreso validado por geocerca; al terminar, lo calificas.' },
+];
+
+const PASOS_NOMINA = [
+  { n: '01', t: 'Abre el período', d: 'Semanal, quincenal o mensual, según cómo pague tu empresa.' },
+  { n: '02', t: 'Registra las horas', d: 'Cada marcaje se clasifica: ordinario, descanso, compensatorio, incapacidad, vacaciones o licencia.' },
+  { n: '03', t: 'Recargos automáticos', d: 'Nocturno, dominical y festivo — incluida la Ley Emiliani — se calculan solos sobre las horas marcadas.' },
+  { n: '04', t: 'Cierra el período', d: 'El valor hora queda congelado (snapshot): un cambio de salario después no altera períodos ya cerrados.' },
+  { n: '05', t: 'Liquida y exporta', d: 'Genera el detalle final por trabajador y descárgalo en Excel.' },
 ];
 
 const TARIFA_INCLUYE = [
@@ -122,21 +132,45 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Cómo funciona */}
+      {/* Cómo funcionan los turnos */}
       <section id="como-funciona" className="bg-muted border-y border-border">
         <div className="max-w-6xl mx-auto px-5 py-20">
-          <div className="max-w-xl mx-auto text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight text-balance">Cómo funciona</h2>
+          <div className="max-w-xl mb-12">
+            <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 mb-3">
+              <Calendar size={14} /> Turnos
+            </span>
+            <h2 className="text-3xl font-bold tracking-tight text-balance">De la oferta al turno cubierto</h2>
+            <p className="mt-3 text-muted-foreground">Así se cubre un turno de principio a fin, con o sin logiq360 de por medio.</p>
           </div>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {PASOS.map(p => (
-              <div key={p.n} className="text-center sm:text-left">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            {PASOS_TURNOS.map(p => (
+              <div key={p.n}>
                 <span className="text-sm font-mono font-bold text-primary">{p.n}</span>
                 <h3 className="font-semibold text-foreground mt-2 mb-1.5">{p.t}</h3>
                 <p className="text-sm text-muted-foreground">{p.d}</p>
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Cómo funciona la nómina */}
+      <section className="max-w-6xl mx-auto px-5 py-20">
+        <div className="max-w-xl mb-12">
+          <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 mb-3">
+            <Wallet size={14} /> Nómina
+          </span>
+          <h2 className="text-3xl font-bold tracking-tight text-balance">De las horas marcadas al pago listo</h2>
+          <p className="mt-3 text-muted-foreground">Cada hora que se marca en un turno alimenta la nómina del período, sin doble digitación.</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
+          {PASOS_NOMINA.map(p => (
+            <div key={p.n}>
+              <span className="text-sm font-mono font-bold text-primary">{p.n}</span>
+              <h3 className="font-semibold text-foreground mt-2 mb-1.5">{p.t}</h3>
+              <p className="text-sm text-muted-foreground">{p.d}</p>
+            </div>
+          ))}
         </div>
       </section>
 
