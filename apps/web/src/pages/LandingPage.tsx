@@ -19,10 +19,12 @@ const PASOS = [
   { n: '03', t: 'La nómina se calcula sola', d: 'Horas, recargos y festivos se consolidan por período, listos para liquidar.' },
 ];
 
-const PLANES = [
-  { id: 'basico', nombre: 'Básico', desc: 'Para equipos pequeños que arrancan con turnos y nómina digital.', features: ['Turnos y marcaje con geocerca', 'Nómina con recargos de ley', 'Roles de administración básicos'] },
-  { id: 'profesional', nombre: 'Profesional', desc: 'Para operaciones con varios cargos y sedes.', features: ['Todo lo del plan Básico', 'Multi-sede y multi-rol', 'Integración con logiq360'], destacado: true },
-  { id: 'empresarial', nombre: 'Empresarial', desc: 'Para empresas con alto volumen de personal por turnos.', features: ['Todo lo del plan Profesional', 'Soporte prioritario', 'Integraciones a medida'] },
+const TARIFA_INCLUYE = [
+  'Turnos y marcaje con geocerca',
+  'Nómina con recargos de ley (nocturno, dominical, festivo)',
+  'Multi-sede y multi-rol',
+  'Notificaciones push',
+  'Integración con logiq360',
 ];
 
 const FAQS = [
@@ -138,41 +140,27 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Planes */}
-      <section id="planes" className="max-w-6xl mx-auto px-5 py-20">
+      {/* Tarifa */}
+      <section id="tarifa" className="max-w-6xl mx-auto px-5 py-20">
         <div className="max-w-xl mx-auto text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tight text-balance">Un plan para cada etapa</h2>
-          <p className="mt-3 text-muted-foreground">Registra tu empresa y elige el plan que se ajuste a tu operación.</p>
+          <h2 className="text-3xl font-bold tracking-tight text-balance">Una sola tarifa, sin letra pequeña</h2>
+          <p className="mt-3 text-muted-foreground">Todas las funciones de Zaturno incluidas desde el primer día.</p>
         </div>
-        <div className="grid sm:grid-cols-3 gap-5">
-          {PLANES.map(p => (
-            <div
-              key={p.id}
-              className={`p-6 rounded-2xl border bg-card flex flex-col ${p.destacado ? 'border-primary shadow-lg shadow-primary/10' : 'border-border'}`}
-            >
-              {p.destacado && (
-                <span className="text-xs font-semibold text-primary-600 uppercase tracking-wide mb-2">Más elegido</span>
-              )}
-              <h3 className="font-bold text-lg text-foreground">{p.nombre}</h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-4">{p.desc}</p>
-              <ul className="space-y-2 mb-6 flex-1">
-                {p.features.map(f => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-foreground">
-                    <Check size={16} className="text-primary mt-0.5 flex-shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => navigate('/registro')}
-                className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors ${
-                  p.destacado ? 'bg-primary text-white hover:bg-primary-600' : 'border border-border text-foreground hover:bg-muted'
-                }`}
-              >
-                Empezar
-              </button>
-            </div>
-          ))}
+        <div className="max-w-md mx-auto p-8 rounded-2xl border border-primary shadow-lg shadow-primary/10 bg-card text-center">
+          <ul className="space-y-3 mb-8 text-left">
+            {TARIFA_INCLUYE.map(f => (
+              <li key={f} className="flex items-start gap-2 text-sm text-foreground">
+                <Check size={16} className="text-primary mt-0.5 flex-shrink-0" />
+                {f}
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={() => navigate('/registro')}
+            className="w-full py-2.5 rounded-xl font-semibold text-sm bg-primary text-white hover:bg-primary-600 transition-colors"
+          >
+            Registra tu empresa
+          </button>
         </div>
       </section>
 
