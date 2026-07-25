@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCrearAusencia } from '@/features/ausencias/useAusencias';
 import { useTheme } from '@/lib/theme';
+import { showToast } from '@/lib/toast';
 import { Button } from '@/components/ui/Button';
 import type { TipoAusencia } from '@api-client';
 
@@ -38,7 +39,7 @@ export default function AusenciaNuevaScreen() {
     }
     try {
       await crear.mutateAsync({ tipo, fecha_inicio: isoDate(inicio), fecha_fin: isoDate(fin), motivo: motivo.trim() || undefined });
-      Alert.alert('Enviado', 'Tu solicitud fue enviada al gestor.');
+      showToast('Tu solicitud fue enviada al gestor.');
       router.back();
     } catch {
       Alert.alert('Error', 'No se pudo enviar la solicitud.');

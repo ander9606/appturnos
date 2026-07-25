@@ -34,6 +34,7 @@ import { useCompensatoriosTodos } from '@/features/nomina/compensatorios/useComp
 import { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { confirm } from '@/lib/confirmDialog';
+import { showToast } from '@/lib/toast';
 import { useRouter } from 'expo-router';
 
 // ── Router de roles ───────────────────────────────────────────────────────
@@ -96,7 +97,7 @@ function NominaGestorView() {
     if (!ok) return;
     try {
       await liquidarMutation.mutateAsync(activePeriodoId);
-      Alert.alert('Período liquidado');
+      showToast('Período liquidado correctamente.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al liquidar';
       Alert.alert('Error', msg);

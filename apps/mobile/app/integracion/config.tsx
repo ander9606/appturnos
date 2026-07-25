@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useIntegracionConfig, useActualizarIntegracion, useEmparejar } from '@/features/integracion/useIntegracion';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { showToast } from '@/lib/toast';
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ export default function IntegracionConfigScreen() {
     try {
       const r = await emparejar(codigo);
       setCodigoPair('');
-      Alert.alert('Conectado', `Integración vinculada con logiq360 (tenant ${r.logiq360_tenant_id}).`);
+      showToast(`Integración vinculada con logiq360 (tenant ${r.logiq360_tenant_id}).`);
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo emparejar.');
     }

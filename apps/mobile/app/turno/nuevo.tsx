@@ -14,6 +14,7 @@ import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
 import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { showToast } from '@/lib/toast';
 import type { WizardData } from '@/features/turnos/crear/types';
 
 const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar'];
@@ -57,11 +58,8 @@ export default function NuevoTurnoScreen() {
 
     try {
       await crearMutation.mutateAsync(payload);
-      Alert.alert(
-        '¡Turno publicado!',
-        'Los trabajadores con los cargos seleccionados recibirán una notificación.',
-        [{ text: 'OK', onPress: () => router.back() }],
-      );
+      showToast(`¡"${payload.titulo}" publicado! Los trabajadores con los cargos seleccionados recibirán una notificación.`);
+      router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo publicar el turno.';
       Alert.alert('Error', msg);

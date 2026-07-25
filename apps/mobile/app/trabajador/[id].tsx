@@ -22,6 +22,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { confirm } from '@/lib/confirmDialog';
+import { showToast } from '@/lib/toast';
 import {
   useTrabajador,
   useActualizarTrabajador,
@@ -146,7 +147,7 @@ export default function TrabajadorDetailScreen() {
         salario_base: data.salario_base,
       });
       setEditing(false);
-      Alert.alert('✓ Guardado', 'Los datos del trabajador fueron actualizados.');
+      showToast('Los datos del trabajador fueron actualizados.');
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'message' in err
@@ -170,7 +171,7 @@ export default function TrabajadorDetailScreen() {
       setRatingId(null);
       setRatingComment('');
       setRatingStars(5);
-      Alert.alert('✓ Calificado', `Turno calificado con ${ratingStars}/5 estrellas.`);
+      showToast(`Turno calificado con ${ratingStars}/5 estrellas.`);
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'message' in err

@@ -18,6 +18,7 @@ import { useBuscarPorCedula } from '@/features/equipo/useEquipo';
 import { useInvitar } from '@/features/empresas/useTrabajadorEmpresa';
 import { COLORS } from '@/lib/designTokens';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { showToast } from '@/lib/toast';
 import type { ApiError } from '@api-client';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -53,11 +54,8 @@ export default function InvitarTrabajadorScreen() {
     if (!canSend) return;
     invitar.mutate(cedula.trim(), {
       onSuccess: () => {
-        Alert.alert(
-          'Invitación enviada',
-          `${trabajador!.nombre} ${trabajador!.apellido} recibirá una notificación para unirse a tu empresa.`,
-          [{ text: 'Listo', onPress: () => router.back() }]
-        );
+        showToast(`${trabajador!.nombre} ${trabajador!.apellido} recibirá una notificación para unirse a tu empresa.`);
+        router.back();
       },
       onError: (err: unknown) => {
         Alert.alert('Error', (err as ApiError).message ?? 'No se pudo enviar la invitación.');

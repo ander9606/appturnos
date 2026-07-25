@@ -35,6 +35,7 @@ import { InfoRow }        from '@/components/ui/InfoRow';
 import type { Trabajador, TipoDocumento, SexoTrabajador, TipoCuenta, Experiencia, Diploma } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { confirm } from '@/lib/confirmDialog';
+import { showToast } from '@/lib/toast';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -246,7 +247,7 @@ export default function MiPerfilLaboralScreen() {
         ant_disciplinarios_fecha:   form.ant_disciplinarios_fecha || undefined,
       });
       setEditing(false);
-      Alert.alert('', 'Perfil actualizado correctamente');
+      showToast('Perfil actualizado correctamente.');
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'message' in err

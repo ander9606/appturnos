@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { trabajadoresApi } from '@api-client';
 import type { DisponibilidadSlot } from '@api-client';
 import { useTheme } from '@/lib/theme';
+import { showToast } from '@/lib/toast';
 import { Button } from '@/components/ui/Button';
 
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -53,7 +54,7 @@ export default function DisponibilidadScreen() {
     mutationFn: () => trabajadoresApi.guardarDisponibilidad(slots),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['disponibilidad'] });
-      Alert.alert('Guardado', 'Tu disponibilidad fue actualizada.');
+      showToast('Tu disponibilidad fue actualizada.');
     },
     onError: () => Alert.alert('Error', 'No se pudo guardar la disponibilidad.'),
   });

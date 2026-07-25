@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }    from '@/lib/theme';
 import { confirm }     from '@/lib/confirmDialog';
+import { showToast }   from '@/lib/toast';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
@@ -229,7 +230,7 @@ export default function OfertaDetailScreen() {
     if (!selectedPuesto) return;
     try {
       await aplicarM.mutateAsync({ ofertaId: id!, puestoId: selectedPuesto.id });
-      Alert.alert('¡Postulación enviada!', `Aplicaste como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
+      showToast(`Has solicitado el turno como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
     } catch (err) {
       Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');
     }
@@ -454,7 +455,7 @@ export default function OfertaDetailScreen() {
                     const fecha = date.toISOString().slice(0, 10);
                     try {
                       const nueva = await duplicarM.mutateAsync({ ofertaId: id, fecha });
-                      Alert.alert('Oferta duplicada', `"${nueva.titulo}" creada para el ${fecha}.`);
+                      showToast(`"${nueva.titulo}" creada para el ${fecha}.`);
                     } catch {
                       Alert.alert('Error', 'No se pudo duplicar la oferta.');
                     }

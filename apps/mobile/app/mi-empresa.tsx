@@ -21,6 +21,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
+import { showToast } from '@/lib/toast';
 
 // ── Schema ────────────────────────────────────────────────────────────────
 
@@ -118,7 +119,7 @@ export default function MiEmpresaScreen() {
         acepta_postulaciones: data.acepta_postulaciones,
         tipo_liquidacion:     data.tipo_liquidacion,
       });
-      Alert.alert('✓ Guardado', 'Datos de la empresa actualizados.');
+      showToast('Datos de la empresa actualizados.');
     } catch {
       Alert.alert('Error', 'No se pudo guardar. Intenta de nuevo.');
     }

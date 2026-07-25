@@ -26,6 +26,7 @@ import {
 } from '@/features/admin/useAdmin';
 import { formatCOP } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
+import { showToast } from '@/lib/toast';
 import type { PlanEmpresa, EmpresaAdmin, LinkPagoResponse } from '@api-client';
 
 const OPCIONES_MESES = [1, 3, 6, 12];
@@ -138,7 +139,7 @@ export default function EmpresaDetailScreen() {
         acepta_postulaciones: aceptaPostulaciones,
       });
       setEditMode(false);
-      Alert.alert('✅', 'Empresa actualizada correctamente.');
+      showToast('Empresa actualizada correctamente.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al guardar';
       Alert.alert('Error', msg);
