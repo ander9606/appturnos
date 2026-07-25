@@ -25,7 +25,8 @@ function fmtCOP(n: number) {
 }
 
 function fmtHrs(n: number) {
-  return n.toFixed(1);
+  // ponytail: MySQL DECIMAL vuelve como string (decimalNumbers:false en el pool) — upgrade path: castear en el backend
+  return Number(n).toFixed(1);
 }
 
 export function PeriodoDetailPage() {
@@ -38,10 +39,10 @@ export function PeriodoDetailPage() {
   const [showCrear, setShowCrear] = useState(false);
 
   const { data: periodosData, isLoading: loadingPeriodos } = usePeriodos();
-  const periodo = (periodosData?.data ?? []).find((p: { id: number }) => p.id === periodoId);
+  const periodo = (periodosData?.data?.data ?? []).find((p: { id: number }) => p.id === periodoId);
 
   const { data: registrosData, isLoading: loadingReg, isError: errorReg, error: errReg, refetch: refetchReg } = useRegistros({ periodo_id: periodoId });
-  const registros: Registro[] = registrosData?.data ?? [];
+  const registros: Registro[] = registrosData?.data?.data ?? [];
 
   const { data: liqData, isLoading: loadingLiq } = useLiquidacion(
     tab === 'liquidacion' && periodo?.estado !== 'abierto' ? periodoId : null
@@ -171,7 +172,7 @@ export function PeriodoDetailPage() {
                       <td className="px-3 py-2.5 text-muted-foreground">{r.hora_salida ?? '—'}</td>
                       <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
                       <td className="px-3 py-2.5 text-right text-muted-foreground">
-                        {fmtHrs(r.horas_extra_diurnas + r.horas_extra_nocturnas)}
+                        {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}
                       </td>
                       <td className="px-3 py-2.5 text-muted-foreground capitalize">{r.tipo_dia}</td>
                       <td className="px-3 py-2.5 text-muted-foreground max-w-32 truncate">{r.novedad ?? ''}</td>

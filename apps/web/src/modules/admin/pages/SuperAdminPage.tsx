@@ -39,8 +39,8 @@ export function SuperAdminPage() {
     plan: planFiltro,
     activo: activoFiltro,
   });
-  const empresas: EmpresaAdmin[] = empresasData?.data ?? [];
-  const total: number = empresasData?.total ?? 0;
+  const empresas: EmpresaAdmin[] = empresasData?.data?.data ?? [];
+  const total: number = empresasData?.data?.pagination?.total ?? 0;
 
   const cambiarEstado = useCambiarEstadoEmpresa();
 

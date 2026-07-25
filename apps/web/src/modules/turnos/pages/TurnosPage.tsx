@@ -37,7 +37,7 @@ export function TurnosPage() {
   const [showCrear, setShowCrear] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useOfertas({ estado, limit: 100 });
-  const ofertas: Oferta[] = data?.data ?? [];
+  const ofertas: Oferta[] = data?.data?.data ?? [];
   const cancelar = useCancelarOferta();
 
   return (

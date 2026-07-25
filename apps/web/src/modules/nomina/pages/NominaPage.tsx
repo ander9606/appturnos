@@ -29,7 +29,7 @@ export function NominaPage() {
   const [confirmAction, setConfirmAction] = useState<{ type: 'cerrar' | 'liquidar'; periodo: Periodo } | null>(null);
 
   const { data, isLoading, isError, error, refetch } = usePeriodos(filtroEstado);
-  const periodos: Periodo[] = data?.data ?? [];
+  const periodos: Periodo[] = data?.data?.data ?? [];
 
   const cerrar = useCerrarPeriodo();
   const liquidar = useLiquidarPeriodo();

@@ -81,7 +81,7 @@ export function OfertaDetailPage() {
     oferta_id: ofertaId,
     estado: filtroAsig,
   });
-  const asignaciones: Asignacion[] = asigData?.data ?? [];
+  const asignaciones: Asignacion[] = asigData?.data?.data ?? [];
 
   const eliminarPuesto = useEliminarPuesto();
   const publicar = usePublicarOferta();
