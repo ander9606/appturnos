@@ -98,15 +98,6 @@ export function useAsignacionesHoy(opts: { enabled?: boolean } = {}) {
   });
 }
 
-/** Todas las asignaciones de la empresa (gestores de turnos). */
-export function useAsignacionesGestor() {
-  return useQuery({
-    queryKey: QUERY_KEYS.asignaciones({ gestor: true }),
-    queryFn:  () => turnosApi.listarAsignaciones({ limit: 200 }),
-    staleTime: 30_000,
-  });
-}
-
 /** Postulaciones pendientes de toda la empresa — para el inbox del gestor. */
 export function usePostulacionesPendientes(opts: { enabled?: boolean } = {}) {
   return useQuery({
@@ -114,6 +105,16 @@ export function usePostulacionesPendientes(opts: { enabled?: boolean } = {}) {
     queryFn:  () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 200 }),
     staleTime: 15_000,
     refetchOnMount: true,
+    enabled:  opts.enabled ?? true,
+  });
+}
+
+/** Asignaciones ya confirmadas de toda la empresa — pestaña "Confirmados" del inbox. */
+export function useAsignacionesConfirmadas(opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ estado: 'confirmado' }),
+    queryFn:  () => turnosApi.listarAsignaciones({ estado: 'confirmado', limit: 200 }),
+    staleTime: 30_000,
     enabled:  opts.enabled ?? true,
   });
 }

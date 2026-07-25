@@ -1,9 +1,11 @@
 /**
- * Pantalla de postulaciones pendientes (gestores / admin_empresa).
- * Lista todas las postulaciones en estado 'pendiente' agrupadas por
- * fecha → oferta, con botones de confirmar y rechazar inline.
+ * Pantalla de postulaciones (gestores / admin_empresa).
+ * Dos pestañas — Pendientes / Confirmados — cada una agrupada por
+ * fecha → oferta, con botones de confirmar/rechazar/cancelar inline.
+ * El filtro por estado va server-side (evita traer confirmados viejos
+ * mezclados con lo que realmente necesita acción).
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -17,7 +19,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import {
-  useAsignacionesGestor,
+  usePostulacionesPendientes,
+  useAsignacionesConfirmadas,
   useConfirmar,
   useRechazar,
   useCancelar,
@@ -204,19 +207,22 @@ function OfertaCard({
 export default function PostulacionesScreen() {
   const router  = useRouter();
   const theme   = useTheme();
+  const [tab, setTab] = useState<'pendientes' | 'confirmados'>('pendientes');
 
-  const { data: resp, isLoading, isRefetching, isError, refetch } = useAsignacionesGestor();
+  const pendientesQuery  = usePostulacionesPendientes();
+  const confirmadosQuery = useAsignacionesConfirmadas({ enabled: tab === 'confirmados' });
+  const { data: resp, isLoading, isRefetching, isError, refetch } =
+    tab === 'pendientes' ? pendientesQuery : confirmadosQuery;
+
   const confirmarMutation = useConfirmar();
   const rechazarMutation  = useRechazar();
   const cancelarMutation  = useCancelar();
 
+  const totalPendientes = pendientesQuery.data?.data.length ?? 0;
+
   const sections: Section[] = useMemo(() => {
-    const todas = resp?.data ?? [];
-    // Solo pendientes y confirmados — estados que requieren atención del gestor
-    const asignaciones = todas.filter(
-      (a) => a.estado === 'pendiente' || a.estado === 'confirmado'
-    );
-    // Agrupar por fecha → oferta_id
+    const asignaciones = resp?.data ?? [];
+    // Agrupar por fecha → oferta_id (el evento/turno al que pertenece cada postulante)
     const byFecha = new Map<string, Map<number, OfertaGroup>>();
 
     for (const a of asignaciones) {
@@ -243,7 +249,7 @@ export default function PostulacionesScreen() {
       }));
   }, [resp]);
 
-  const total = sections.reduce((s, sec) => s + sec.data.reduce((s2, g) => s2 + g.asignaciones.length, 0), 0);
+  const totalTab = sections.reduce((s, sec) => s + sec.data.reduce((s2, g) => s2 + g.asignaciones.length, 0), 0);
 
   const onRefresh = useCallback(() => { refetch(); }, [refetch]);
 
@@ -298,12 +304,28 @@ export default function PostulacionesScreen() {
         </TouchableOpacity>
         <View className="flex-1">
           <Text className="text-lg font-bold text-foreground">Postulaciones</Text>
-          <Text className="text-xs text-muted-foreground">
-            {total === 0
-              ? 'Sin pendientes'
-              : `${total} pendiente${total !== 1 ? 's' : ''}`}
-          </Text>
         </View>
+      </View>
+
+      {/* ── Tabs Pendientes / Confirmados ─────────────────────────────── */}
+      <View className="flex-row gap-2 px-5 pt-3 pb-1 bg-card border-b border-border">
+        {([
+          { key: 'pendientes' as const, label: 'Pendientes', count: totalPendientes },
+          { key: 'confirmados' as const, label: 'Confirmados', count: tab === 'confirmados' ? totalTab : undefined },
+        ]).map((opt) => {
+          const active = tab === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              onPress={() => setTab(opt.key)}
+              className={`flex-1 py-2 mb-2 rounded-full items-center ${active ? 'bg-primary/10' : 'bg-background'}`}
+            >
+              <Text className={`text-sm font-semibold ${active ? 'text-primary' : 'text-muted-foreground'}`}>
+                {opt.label}{opt.count != null ? ` (${opt.count})` : ''}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* ── List ───────────────────────────────────────────────────────── */}
@@ -316,10 +338,10 @@ export default function PostulacionesScreen() {
             <Ionicons name="checkmark-done-outline" size={36} color={theme.primary} />
           </View>
           <Text className="text-base font-semibold text-foreground text-center">
-            Sin postulaciones pendientes
+            {tab === 'pendientes' ? 'Sin postulaciones pendientes' : 'Sin confirmados'}
           </Text>
           <Text className="text-sm text-muted-foreground text-center">
-            Todas las postulaciones han sido revisadas.
+            {tab === 'pendientes' ? 'Todas las postulaciones han sido revisadas.' : 'Todavía no hay trabajadores confirmados.'}
           </Text>
         </View>
       ) : (
