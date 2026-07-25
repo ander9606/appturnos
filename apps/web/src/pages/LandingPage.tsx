@@ -4,7 +4,12 @@ import {
   Calendar, MapPin, Wallet, Bell, Building2, Plug,
   Check, ArrowRight, Users, Briefcase, HardHat, Tent,
   UtensilsCrossed, Truck, Settings2, CheckCircle2, Sparkles,
+  Apple, PlayCircle, type LucideIcon,
 } from 'lucide-react';
+
+// ponytail: sin links de tienda todavía — reemplaza estas dos constantes cuando la app esté publicada
+const APPSTORE_URL = '#';
+const PLAYSTORE_URL = '#';
 
 const BENEFICIOS = [
   { icon: Calendar, tono: 'primary' as const, titulo: 'Turnos y ofertas', desc: 'Cubre turnos sin cadenas de WhatsApp: publicas la oferta y tu equipo se postula solo.' },
@@ -111,6 +116,31 @@ function ZaturnoLogo() {
       </span>
       Zaturno
     </span>
+  );
+}
+
+/* ── Badge de tienda (App Store / Google Play) ── */
+function StoreBadge({ icon: Icon, tienda, href }: { icon: LucideIcon; tienda: string; href: string }) {
+  const disponible = href !== '#';
+  return (
+    <a
+      href={href}
+      target={disponible ? '_blank' : undefined}
+      rel={disponible ? 'noreferrer' : undefined}
+      onClick={e => { if (!disponible) e.preventDefault(); }}
+      aria-disabled={!disponible}
+      className={`inline-flex items-center gap-2.5 rounded-xl px-4 py-2.5 transition-colors ${
+        disponible ? 'bg-slate-900 hover:bg-slate-800 text-white' : 'bg-slate-900/40 text-white/70 cursor-default'
+      }`}
+    >
+      <Icon size={22} className="flex-shrink-0" />
+      <span className="text-left leading-tight">
+        <span className="block text-[10px] uppercase tracking-wide opacity-80">
+          {disponible ? 'Disponible en' : 'Próximamente en'}
+        </span>
+        <span className="block text-sm font-semibold -mt-0.5">{tienda}</span>
+      </span>
+    </a>
   );
 }
 
@@ -242,6 +272,13 @@ export function LandingPage() {
               >
                 Ver cómo funciona
               </a>
+            </div>
+            <div className="mt-6">
+              <p className="text-xs text-white/70 mb-2.5">Para trabajadores, la app está disponible en:</p>
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                <StoreBadge icon={Apple} tienda="App Store" href={APPSTORE_URL} />
+                <StoreBadge icon={PlayCircle} tienda="Google Play" href={PLAYSTORE_URL} />
+              </div>
             </div>
           </div>
           <HeroMockup />
