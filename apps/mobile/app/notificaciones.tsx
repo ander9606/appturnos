@@ -52,6 +52,8 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'nomina.compensatorio_asignado': 'sunny-outline',
   'integracion.activada':        'link-outline',
   'integracion.desactivada':     'unlink-outline',
+  'admin.empresa_nueva':         'business-outline',
+  'admin.suscripcion_vencimiento': 'alert-circle-outline',
 };
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {
@@ -69,14 +71,26 @@ function fmtDate(iso: string): string {
   return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
 }
 
+// Notificaciones dirigidas al gestor que igual traen asignacion_id — deben
+// abrir la vista de gestión de la oferta (postulantes/asignaciones), no la
+// vista del trabajador (marcar ingreso/egreso) que es a donde manda asignacion_id.
+const TIPOS_GESTOR = new Set(['turno.ingreso', 'turno.egreso', 'postulacion.nueva']);
+
 function destino(n: Notificacion): string | null {
   if (!n.data) return null;
   const d = n.data as Record<string, unknown>;
+  if (TIPOS_GESTOR.has(n.tipo) && d.oferta_id) return `/oferta/${d.oferta_id}`;
   if (d.asignacion_id)   return `/turno/${d.asignacion_id}`;
   if (d.oferta_id)       return `/oferta/${d.oferta_id}`;
+  // Solo presente en notificaciones dirigidas a super_admin (empresa_nueva,
+  // pago_rechazado/integracion.desactivada duplicadas a super_admin, vencimiento).
+  if (d.empresa_id)      return `/empresa/${d.empresa_id}`;
   if (d.ausencia_id)     return '/ausencias';
   if (d.periodo_id)      return '/(tabs)/nomina';
   if (d.compensatorio_id) return '/(tabs)/nomina';
+  // 'reingreso.solicitado' va al gestor (que aprueba/rechaza en /reingresos-pendientes);
+  // 'reingreso.aprobado'/'reingreso.rechazado' van al trabajador (que marca en /nomina-ingreso).
+  if (d.solicitud_id && n.tipo === 'reingreso.solicitado') return '/reingresos-pendientes';
   if (d.solicitud_id && n.tipo.startsWith('reingreso.')) return '/nomina-ingreso';
   return null;
 }

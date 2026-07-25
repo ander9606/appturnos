@@ -259,6 +259,15 @@ async function integracionDesactivada(empresaId) {
       mensaje: 'Ya no tienes la integración activa con logiq360, así que Zaturno deja de ser gratis. Tienes 3 días de gracia para renovar tu suscripción.',
     });
   }
+
+  const [[empresa]] = await pool.query('SELECT nombre FROM empresas WHERE id = ?', [empresaId]);
+  await NotificacionesService.notificarSuperAdmins({
+    empresaId,
+    tipo: 'integracion.desactivada',
+    titulo: 'Se desconectó una integración con logiq360',
+    mensaje: `${empresa?.nombre ?? 'Una empresa'} se desconectó de logiq360 — deja de ser gratis, 3 días de gracia.`,
+    data: { empresa_id: empresaId },
+  }).catch((err) => logger.error(`[integracion] no se pudo notificar desconexión a super_admin (empresa ${empresaId}):`, err.message));
 }
 
 const HANDLERS = {

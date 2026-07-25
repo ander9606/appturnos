@@ -7,6 +7,8 @@ const AuthModel = require('./auth.model');
 const { generarAccessToken, generarRefreshToken, fechaExpiracionRefresh } = require('../../utils/TokenService');
 const AppError = require('../../utils/AppError');
 const { ROLES, LOGIN } = require('../../config/constants');
+const NotificacionesService = require('../notificaciones/notificaciones.service');
+const logger = require('../../utils/logger');
 
 const BCRYPT_ROUNDS = 11;
 
@@ -437,6 +439,15 @@ const AuthService = {
 
     const usuario = { id: usuarioId, empresa_id: empresaId, rol: ROLES.ADMIN_EMPRESA, nombre };
     const tokens = await emitirTokens(usuario);
+
+    NotificacionesService.notificarSuperAdmins({
+      empresaId,
+      tipo: 'admin.empresa_nueva',
+      titulo: 'Nueva empresa registrada',
+      mensaje: `${nombreEmpresa} se registró (self-service).`,
+      data: { empresa_id: empresaId },
+    }).catch((err) => logger.error('[auth] no se pudo notificar nueva empresa a super_admin:', err.message));
+
     return {
       ...tokens,
       usuario: { id: usuarioId, empresa_id: empresaId, nombre, apellido: apellido || null, email, rol: ROLES.ADMIN_EMPRESA },
