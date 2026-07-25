@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Plus, Pencil } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Pencil, ChevronDown } from 'lucide-react';
 import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
   useCorregirRegistro, useCrearRegistro,
@@ -37,6 +37,7 @@ export function PeriodoDetailPage() {
   const [filtroTrabajador, setFiltroTrabajador] = useState<number | undefined>(undefined);
   const [corrigiendoId, setCorrigiendoId] = useState<number | null>(null);
   const [showCrear, setShowCrear] = useState(false);
+  const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
 
   const { data: periodosData, isLoading: loadingPeriodos } = usePeriodos();
   const periodo = (periodosData?.data?.data ?? []).find((p: { id: number }) => p.id === periodoId);
@@ -55,6 +56,26 @@ export function PeriodoDetailPage() {
   const trabajadoresEnPeriodo = Array.from(
     new Map(registros.map(r => [r.trabajador_id, { nombre: r.trabajador_nombre, apellido: r.trabajador_apellido }])).entries()
   ).map(([tid, t]) => ({ id: tid, nombre: t.nombre, apellido: t.apellido }));
+
+  const gruposPorTrabajador = Array.from(
+    registrosFiltrados.reduce((m, r) => {
+      if (!m.has(r.trabajador_id)) {
+        m.set(r.trabajador_id, { nombre: r.trabajador_nombre, apellido: r.trabajador_apellido, registros: [] as Registro[] });
+      }
+      m.get(r.trabajador_id)!.registros.push(r);
+      return m;
+    }, new Map<number, { nombre: string; apellido: string; registros: Registro[] }>())
+  )
+    .map(([trabajadorId, g]) => ({ trabajadorId, ...g }))
+    .sort((a, b) => `${a.nombre} ${a.apellido}`.localeCompare(`${b.nombre} ${b.apellido}`));
+
+  function toggleExpandido(trabajadorId: number) {
+    setExpandidos(prev => {
+      const next = new Set(prev);
+      next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
+      return next;
+    });
+  }
 
   const handleExport = async () => {
     const res = await import('../api/nominaApi').then(m => m.nominaApi.exportarLiquidacion(periodoId));
@@ -143,51 +164,69 @@ export function PeriodoDetailPage() {
             <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
           ) : errorReg ? (
             <ErrorState error={errReg} onRetry={refetchReg} />
-          ) : registrosFiltrados.length === 0 ? (
+          ) : gruposPorTrabajador.length === 0 ? (
             <p className="text-muted-foreground text-sm py-8 text-center">Sin registros</p>
           ) : (
-            <div className="bg-card border border-border rounded-xl overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted text-muted-foreground text-xs uppercase">
-                    <th className="text-left px-3 py-3 font-medium">Trabajador</th>
-                    <th className="text-left px-3 py-3 font-medium">Fecha</th>
-                    <th className="text-left px-3 py-3 font-medium">Entrada</th>
-                    <th className="text-left px-3 py-3 font-medium">Salida</th>
-                    <th className="text-right px-3 py-3 font-medium">Hrs Ord</th>
-                    <th className="text-right px-3 py-3 font-medium">Hrs Extra</th>
-                    <th className="text-left px-3 py-3 font-medium">Tipo día</th>
-                    <th className="text-left px-3 py-3 font-medium">Novedad</th>
-                    <th className="px-3 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {registrosFiltrados.map(r => (
-                    <tr key={r.id} className="border-t border-border/60 hover:bg-muted">
-                      <td className="px-3 py-2.5 text-foreground">
-                        {r.trabajador_nombre} {r.trabajador_apellido}
-                      </td>
-                      <td className="px-3 py-2.5 text-muted-foreground">{fmtDate(r.fecha)}</td>
-                      <td className="px-3 py-2.5 text-muted-foreground">{r.hora_entrada ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-muted-foreground">{r.hora_salida ?? '—'}</td>
-                      <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
-                      <td className="px-3 py-2.5 text-right text-muted-foreground">
-                        {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}
-                      </td>
-                      <td className="px-3 py-2.5 text-muted-foreground capitalize">{r.tipo_dia}</td>
-                      <td className="px-3 py-2.5 text-muted-foreground max-w-32 truncate">{r.novedad ?? ''}</td>
-                      <td className="px-3 py-2.5">
-                        <button
-                          onClick={() => setCorrigiendoId(r.id)}
-                          className="text-muted-foreground/60 hover:text-primary transition-colors"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="flex flex-col gap-2">
+              {gruposPorTrabajador.map(g => {
+                const abierto = expandidos.has(g.trabajadorId) || gruposPorTrabajador.length === 1;
+                const totalOrd = g.registros.reduce((s, r) => s + Number(r.horas_ordinarias), 0);
+                const totalExtra = g.registros.reduce((s, r) => s + Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas), 0);
+                return (
+                  <div key={g.trabajadorId} className="bg-card border border-border rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => toggleExpandido(g.trabajadorId)}
+                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted transition-colors"
+                    >
+                      <span className="font-medium text-foreground">{g.nombre} {g.apellido}</span>
+                      <span className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span>{g.registros.length} día{g.registros.length !== 1 ? 's' : ''}</span>
+                        <span>{fmtHrs(totalOrd)} hrs ord · {fmtHrs(totalExtra)} hrs extra</span>
+                        <ChevronDown size={16} className={`transition-transform ${abierto ? 'rotate-180' : ''}`} />
+                      </span>
+                    </button>
+                    {abierto && (
+                      <table className="w-full text-sm border-t border-border">
+                        <thead>
+                          <tr className="bg-muted text-muted-foreground text-xs uppercase">
+                            <th className="text-left px-3 py-2.5 font-medium">Fecha</th>
+                            <th className="text-left px-3 py-2.5 font-medium">Entrada</th>
+                            <th className="text-left px-3 py-2.5 font-medium">Salida</th>
+                            <th className="text-right px-3 py-2.5 font-medium">Hrs Ord</th>
+                            <th className="text-right px-3 py-2.5 font-medium">Hrs Extra</th>
+                            <th className="text-left px-3 py-2.5 font-medium">Tipo día</th>
+                            <th className="text-left px-3 py-2.5 font-medium">Novedad</th>
+                            <th className="px-3 py-2.5" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {g.registros.map(r => (
+                            <tr key={r.id} className="border-t border-border/60 hover:bg-muted">
+                              <td className="px-3 py-2.5 text-muted-foreground">{fmtDate(r.fecha)}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">{r.hora_entrada ?? '—'}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">{r.hora_salida ?? '—'}</td>
+                              <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
+                              <td className="px-3 py-2.5 text-right text-muted-foreground">
+                                {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}
+                              </td>
+                              <td className="px-3 py-2.5 text-muted-foreground capitalize">{r.tipo_dia}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground max-w-32 truncate">{r.novedad ?? ''}</td>
+                              <td className="px-3 py-2.5">
+                                <button
+                                  onClick={() => setCorrigiendoId(r.id)}
+                                  className="text-muted-foreground/60 hover:text-primary transition-colors"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
