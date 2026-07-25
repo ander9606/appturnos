@@ -324,11 +324,15 @@ const OfertasModel = {
     const limite = ahoraColombiaSQL(horasAntes * 3_600_000);
     const [filas] = await pool.query(
       `SELECT o.id, o.empresa_id, o.titulo, o.fecha, o.hora_inicio,
-              SUM(p.plazas) AS total_plazas,
-              SUM(p.plazas_cubiertas) AS cubiertas,
+              MAX(pu.total_plazas) AS total_plazas,
+              MAX(pu.cubiertas) AS cubiertas,
               JSON_ARRAYAGG(u.id) AS gestor_ids
        FROM ofertas_turno o
-       JOIN oferta_puestos p ON p.oferta_id = o.id
+       JOIN (
+         SELECT oferta_id, SUM(plazas) AS total_plazas, SUM(plazas_cubiertas) AS cubiertas
+         FROM oferta_puestos
+         GROUP BY oferta_id
+       ) pu ON pu.oferta_id = o.id
        JOIN usuarios u ON u.empresa_id = o.empresa_id
                       AND u.rol IN ('jefe_turnos', 'admin_empresa')
                       AND u.activo = 1
@@ -336,7 +340,7 @@ const OfertasModel = {
          AND o.alerta_personal_enviada = 0
          AND TIMESTAMP(o.fecha, o.hora_inicio) BETWEEN ? AND ?
        GROUP BY o.id, o.empresa_id, o.titulo, o.fecha, o.hora_inicio
-       HAVING SUM(p.plazas_cubiertas) < SUM(p.plazas)`,
+       HAVING MAX(pu.cubiertas) < MAX(pu.total_plazas)`,
       [ahora, limite]
     );
     return filas.map((f) => ({

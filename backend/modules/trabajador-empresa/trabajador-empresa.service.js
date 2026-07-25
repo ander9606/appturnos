@@ -190,7 +190,7 @@ const TrabajadorEmpresaService = {
     });
     // Actualizar trabajador_id en la relación recién creada.
     await TrabajadorEmpresaModel.cambiarEstado(id, E.SOLICITADO_POR_EMPRESA, { trabajadorId });
-    pushInvitacion();
+    await notificarInvitacion();
     return TrabajadorEmpresaModel.obtenerPorId(id);
   },
 

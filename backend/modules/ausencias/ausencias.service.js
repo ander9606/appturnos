@@ -33,11 +33,11 @@ const AusenciasService = {
     const id = await AusenciasModel.crear(empresaId, t.id, datos);
 
     // Notificar a gestores (best-effort)
-    const [[gestores]] = await require('../../config/database').pool.query(
+    const [gestores] = await require('../../config/database').pool.query(
       `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('admin_empresa','jefe_turnos','jefe_nomina','nomina') AND activo = 1`,
       [empresaId]
-    ).catch(() => [[[]]]); // eslint-disable-line no-unused-vars
-    const gestoraIds = Array.isArray(gestores) ? gestores.map((g) => g.id) : [];
+    ).catch(() => [[]]);
+    const gestoraIds = gestores.map((g) => g.id);
     if (gestoraIds.length) {
       await NotificacionesService.notificarVarios(gestoraIds, {
         empresaId,

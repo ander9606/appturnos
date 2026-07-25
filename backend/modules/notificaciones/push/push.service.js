@@ -77,14 +77,27 @@ function _postExpo(path, body) {
   });
 }
 
+const EXPO_LIMITE_LOTE = 100; // Expo rechaza requests con mas de 100 mensajes
+
 /**
- * Envía mensajes a la API de Expo Push (best-effort, sin lanzar).
- * Devuelve los "tickets" de respuesta (mismo orden que `messages`), o []
- * si la petición falla — así el caller puede detectar tokens muertos.
+ * Envía mensajes a la API de Expo Push (best-effort, sin lanzar), en lotes
+ * de EXPO_LIMITE_LOTE. Devuelve los "tickets" de respuesta (mismo orden e
+ * indice que `messages`) — un lote fallido rellena con `undefined` en vez
+ * de encoger el arreglo, para no desalinear el mapeo ticket→token del caller.
  */
 async function _enviarExpoBatch(messages) {
   if (!messages.length) return [];
-  return (await _postExpo('/--/api/v2/push/send', messages)) ?? [];
+  const tickets = [];
+  for (let i = 0; i < messages.length; i += EXPO_LIMITE_LOTE) {
+    const lote = messages.slice(i, i + EXPO_LIMITE_LOTE);
+    const resultado = await _postExpo('/--/api/v2/push/send', lote);
+    if (Array.isArray(resultado) && resultado.length === lote.length) {
+      tickets.push(...resultado);
+    } else {
+      tickets.push(...lote.map(() => undefined));
+    }
+  }
+  return tickets;
 }
 
 /**
@@ -103,7 +116,9 @@ async function _revisarRecibos(usuarioId, entradas) {
       if (recibo?.status !== 'error') return null;
       logger.error(`[push] recibo de error de Expo (usuario ${usuarioId}, ticket ${id}):`, recibo.message || recibo.details?.error);
       if (recibo.details?.error === 'DeviceNotRegistered') {
-        return PushModel.eliminarExpoToken(usuarioId, token).catch(() => {});
+        return PushModel.eliminarExpoToken(usuarioId, token).catch((err) =>
+          logger.error(`[push] no se pudo borrar token caduco (usuario ${usuarioId}):`, err.message)
+        );
       }
       return null;
     })
@@ -162,7 +177,9 @@ const PushService = {
         } catch (err) {
           if (err.statusCode === 404 || err.statusCode === 410) {
             // Suscripción caducada: se descarta.
-            await PushModel.eliminarPorEndpoint(sub.usuario_id, sub.endpoint).catch(() => {});
+            await PushModel.eliminarPorEndpoint(sub.usuario_id, sub.endpoint).catch((delErr) =>
+              logger.error(`[push] no se pudo borrar suscripción caducada (usuario ${sub.usuario_id}):`, delErr.message)
+            );
           } else {
             logger.error('[push] fallo al enviar notificación:', err.message);
           }
@@ -219,7 +236,10 @@ const PushService = {
             return null;
           }
           if (ticket?.details?.error === 'DeviceNotRegistered') {
-            return PushModel.eliminarExpoToken(usuarioId, tokens[i]).catch(() => {});
+            logger.info(`[push] token caduco (DeviceNotRegistered) descartado para usuario ${usuarioId}`);
+            return PushModel.eliminarExpoToken(usuarioId, tokens[i]).catch((err) =>
+              logger.error(`[push] no se pudo borrar token caduco (usuario ${usuarioId}):`, err.message)
+            );
           }
           logger.error(`[push] ticket de error de Expo (usuario ${usuarioId}):`, ticket.message || ticket.details?.error);
           return null;
