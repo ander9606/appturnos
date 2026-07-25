@@ -30,5 +30,5 @@ export const nominaApi = {
     api.get(`/nomina/liquidacion/${periodoId}/export`, { responseType: 'blob' }),
 
   listarTrabajadores: () =>
-    api.get('/trabajadores', { params: { tipo: 'nomina', activo: true, limit: 200 } }).then(r => r.data),
+    api.get('/trabajadores', { params: { tipo: 'nomina', activo: true, limit: 100 } }).then(r => r.data),
 };

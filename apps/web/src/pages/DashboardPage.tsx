@@ -31,7 +31,7 @@ export function DashboardPage() {
 
   const { data: trabajadoresData } = useQuery({
     queryKey: ['trabajadores', { activo: true, dashboard: true }],
-    queryFn: () => equipoApi.listar({ activo: true, limit: 200 }),
+    queryFn: () => equipoApi.listar({ activo: true, limit: 1 }),
     enabled: showEquipo,
     staleTime: 60_000,
   });
@@ -45,7 +45,7 @@ export function DashboardPage() {
 
   const { data: asigData } = useQuery({
     queryKey: ['turnos', 'asignaciones', { estado: 'pendiente', dashboard: true }],
-    queryFn: () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 100 }),
+    queryFn: () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 1 }),
     enabled: showTurnos,
     staleTime: 30_000,
   });
@@ -57,12 +57,12 @@ export function DashboardPage() {
     staleTime: 60_000,
   });
 
-  const trabajadoresCount = trabajadoresData?.data?.length ?? 0;
+  const trabajadoresCount = trabajadoresData?.data?.pagination?.total ?? 0;
   const ofertas: Array<{ id: number; titulo: string; fecha: string; hora_inicio: string; estado: string }> =
-    ofertasData?.data ?? [];
+    ofertasData?.data?.data ?? [];
   const ofertasActivas = ofertas.filter(o => o.estado === 'publicada' || o.estado === 'en_progreso');
-  const asigPendientes = asigData?.data?.length ?? 0;
-  const periodoAbierto = periodosData?.data?.[0] ?? null;
+  const asigPendientes = asigData?.data?.pagination?.total ?? 0;
+  const periodoAbierto = periodosData?.data?.data?.[0] ?? null;
 
   const proximas = ofertasActivas.slice(0, 5);
 

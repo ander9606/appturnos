@@ -361,7 +361,7 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
 function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose: () => void }) {
   const crear = useCrearRegistro();
   const { data: trabData } = useTrabajadoresNomina();
-  const trabajadores: Trabajador[] = trabData?.data ?? [];
+  const trabajadores: Trabajador[] = trabData?.data?.data ?? [];
   const [form, setForm] = useState({
     trabajador_id: '',
     fecha: '',
