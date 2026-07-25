@@ -135,10 +135,25 @@ const OfertasService = {
         throw new AppError('Oferta no encontrada', 404);
       }
       const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(ofertaEmpresaId, usuario.sub);
-      const delay = delayPorRanking(trabajador?.ranking);
-      const ofertaConDelay = await OfertasModel.obtenerPorId(ofertaEmpresaId, id, delay);
-      if (!ofertaConDelay) {
-        throw new AppError('Oferta aún no disponible para tu nivel de ranking', 403);
+
+      // Fetch sin delay primero: necesitamos saber la visibilidad antes de decidir
+      // si aplica el delay por ranking (un destinatario directo lo salta).
+      const ofertaBase = await OfertasModel.obtenerPorId(ofertaEmpresaId, id, 0);
+      if (!ofertaBase) throw new AppError('Oferta no encontrada', 404);
+
+      const esDestinatarioDirecto = ofertaBase.visibilidad === 'dirigida'
+        && await OfertasModel.esDestinatario(id, trabajador?.id);
+      if (ofertaBase.visibilidad === 'dirigida' && !esDestinatarioDirecto) {
+        throw new AppError('Oferta no encontrada', 404);
+      }
+
+      let ofertaConDelay = ofertaBase;
+      if (!esDestinatarioDirecto) {
+        const delay = delayPorRanking(trabajador?.ranking);
+        ofertaConDelay = delay > 0 ? await OfertasModel.obtenerPorId(ofertaEmpresaId, id, delay) : ofertaBase;
+        if (!ofertaConDelay) {
+          throw new AppError('Oferta aún no disponible para tu nivel de ranking', 403);
+        }
       }
 
       const asignaciones = await AsignacionesModel.listarPorOferta(ofertaEmpresaId, id);
@@ -160,6 +175,7 @@ const OfertasService = {
    */
   async crear(empresaId, datos, creadoPor) {
     await validarPuestosParaEmpresa(empresaId, datos.puestos);
+    await validarDestinatarios(empresaId, datos.visibilidad, datos.trabajador_ids);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
 
@@ -294,12 +310,24 @@ const OfertasService = {
     // Use the JWT's empresaId (null for marketplace workers) so obtenerPorUsuarioId
     // finds the worker row that was created with empresa_id = null.
     const trabajador = await resolverTrabajador(empresaId, usuarioId);
-    const oferta = await OfertasModel.obtenerPorId(
-      empresaOfertaId,
-      ofertaId,
-      delayPorRanking(trabajador.ranking)
-    );
-    if (!oferta) throw new AppError('Oferta no encontrada o aún no disponible', 404);
+
+    // Fetch sin delay primero: necesitamos saber la visibilidad antes de decidir
+    // si aplica el delay por ranking (un destinatario directo lo salta).
+    const ofertaBase = await OfertasModel.obtenerPorId(empresaOfertaId, ofertaId, 0);
+    if (!ofertaBase) throw new AppError('Oferta no encontrada', 404);
+
+    const esDestinatarioDirecto = ofertaBase.visibilidad === 'dirigida'
+      && await OfertasModel.esDestinatario(ofertaId, trabajador.id);
+    if (ofertaBase.visibilidad === 'dirigida' && !esDestinatarioDirecto) {
+      throw new AppError('Oferta no encontrada', 404);
+    }
+
+    let oferta = ofertaBase;
+    if (!esDestinatarioDirecto) {
+      const delay = delayPorRanking(trabajador.ranking);
+      oferta = delay > 0 ? await OfertasModel.obtenerPorId(empresaOfertaId, ofertaId, delay) : ofertaBase;
+      if (!oferta) throw new AppError('Oferta no encontrada o aún no disponible', 404);
+    }
     if (oferta.estado !== 'abierta' && oferta.estado !== 'publicada') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
     }
@@ -323,12 +351,16 @@ const OfertasService = {
     if (!vinculo || vinculo.estado !== 'activo') {
       throw new AppError('No tienes vínculo activo con esta empresa', 403);
     }
-    const tieneCargo = await CargosModel.tieneAsignacion(vinculo.id, puesto.cargo_id);
-    if (!tieneCargo) {
-      throw new AppError(
-        `No tienes el cargo "${puesto.cargo_nombre}" certificado por esta empresa`,
-        403
-      );
+    // Si fue invitado a mano (destinatario directo) no se exige el cargo certificado —
+    // el gestor eligiéndolo ya reemplaza ese filtro (mismo criterio que asignarDirecto).
+    if (!esDestinatarioDirecto) {
+      const tieneCargo = await CargosModel.tieneAsignacion(vinculo.id, puesto.cargo_id);
+      if (!tieneCargo) {
+        throw new AppError(
+          `No tienes el cargo "${puesto.cargo_nombre}" certificado por esta empresa`,
+          403
+        );
+      }
     }
 
     // Duplicado de postulación al MISMO puesto.

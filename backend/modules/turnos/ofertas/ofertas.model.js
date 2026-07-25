@@ -10,7 +10,7 @@ const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-  lugar, latitud, longitud, encargado_nombre, encargado_telefono, estado, para_quien,
+  lugar, latitud, longitud, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
@@ -38,6 +38,25 @@ const PUESTOS_JSON_ALIAS = PUESTOS_JSON.replace(
   'p.oferta_id = o.id'
 );
 
+// Destinatarios elegidos a mano (solo relevante cuando visibilidad = 'dirigida').
+// Mismo criterio anti-N+1 que PUESTOS_JSON.
+const DESTINATARIOS_JSON = `(
+  SELECT JSON_ARRAYAGG(JSON_OBJECT(
+    'trabajador_id', t.id,
+    'usuario_id', t.usuario_id,
+    'nombre', t.nombre,
+    'apellido', t.apellido
+  ))
+  FROM oferta_destinatarios od
+  INNER JOIN trabajadores t ON t.id = od.trabajador_id
+  WHERE od.oferta_id = ofertas_turno.id
+) AS destinatarios_json`;
+
+const DESTINATARIOS_JSON_ALIAS = DESTINATARIOS_JSON.replace(
+  'od.oferta_id = ofertas_turno.id',
+  'od.oferta_id = o.id'
+);
+
 // Allowlist de columnas modificables vía PUT (lista fija de código).
 const CAMPOS_EDITABLES = [
   'titulo',
@@ -53,15 +72,19 @@ const CAMPOS_EDITABLES = [
   'para_quien',
 ];
 
-/** Convierte la columna `puestos_json` (string) en array de objetos. */
+/** Convierte las columnas `puestos_json`/`destinatarios_json` (string) en arrays de objetos. */
 function parsearPuestos(fila) {
   if (!fila) return fila;
-  const { puestos_json, ...resto } = fila;
+  const { puestos_json, destinatarios_json, ...resto } = fila;
   let puestos = [];
   if (puestos_json) {
     puestos = typeof puestos_json === 'string' ? JSON.parse(puestos_json) : puestos_json;
   }
-  return { ...resto, puestos };
+  let destinatarios = [];
+  if (destinatarios_json) {
+    destinatarios = typeof destinatarios_json === 'string' ? JSON.parse(destinatarios_json) : destinatarios_json;
+  }
+  return { ...resto, puestos, destinatarios };
 }
 
 const OfertasModel = {
@@ -88,7 +111,7 @@ const OfertasModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
        FROM ofertas_turno
        WHERE ${whereSql}
        ORDER BY fecha DESC, hora_inicio
@@ -105,9 +128,12 @@ const OfertasModel = {
   /**
    * Lista ofertas para un TRABAJADOR_TURNOS multi-empresa.
    * Aplica:
-   *   - Delay de visibilidad por ranking (POR empresa).
-   *   - Filtro por cargos: solo ofertas con al menos un puesto cuyo cargo
-   *     el trabajador tiene certificado en esa empresa.
+   *   - Ofertas abiertas: delay de visibilidad por ranking (POR empresa) +
+   *     filtro por cargos (solo ofertas con al menos un puesto cuyo cargo el
+   *     trabajador tiene certificado en esa empresa).
+   *   - Ofertas dirigidas: visibles solo si el trabajador está en
+   *     `oferta_destinatarios` — sin delay ni filtro de cargo (el gestor ya
+   *     lo eligió a mano).
    */
   async listarMultiEmpresa(usuarioId, empresaIds, { fecha, estado, disponibles, paraQuien, limit, offset }) {
     if (!empresaIds || empresaIds.length === 0) {
@@ -131,31 +157,39 @@ const OfertasModel = {
       )`);
     }
 
-    // Visibilidad escalonada por ranking POR empresa.
-    where.push(`
-      TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) >=
-        CASE
-          WHEN t.ranking IS NULL THEN 15
-          WHEN t.ranking >= 4.5  THEN 0
-          WHEN t.ranking >= 3.5  THEN 15
-          WHEN t.ranking >= 2.5  THEN 30
-          ELSE                        60
-        END
-    `);
-
-    // Filtro por cargos certificados: existe al menos un puesto en la oferta
-    // cuyo cargo está en `trabajador_cargos` del vínculo activo del trabajador
-    // con la empresa de la oferta.
-    where.push(`EXISTS (
-      SELECT 1
-      FROM oferta_puestos p
-      JOIN trabajador_empresa te
-        ON te.usuario_id = ? AND te.empresa_id = o.empresa_id AND te.estado = 'activo'
-      JOIN trabajador_cargos tc
-        ON tc.trabajador_empresa_id = te.id AND tc.cargo_id = p.cargo_id
-      WHERE p.oferta_id = o.id
+    // Visibilidad: o la oferta está abierta al pool (delay por ranking + cargo
+    // certificado, igual que siempre) o está dirigida y el trabajador es uno de
+    // los destinatarios elegidos a mano — ahí se salta el delay y el cargo
+    // (mismo criterio que asignarDirecto: si el gestor lo eligió, no aplica el
+    // filtro automático).
+    where.push(`(
+      (o.visibilidad = 'dirigida' AND EXISTS (
+        SELECT 1 FROM oferta_destinatarios od
+        JOIN trabajadores td ON td.id = od.trabajador_id
+        WHERE od.oferta_id = o.id AND td.usuario_id = ?
+      ))
+      OR
+      (o.visibilidad = 'abierta'
+        AND TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) >=
+          CASE
+            WHEN t.ranking IS NULL THEN 15
+            WHEN t.ranking >= 4.5  THEN 0
+            WHEN t.ranking >= 3.5  THEN 15
+            WHEN t.ranking >= 2.5  THEN 30
+            ELSE                        60
+          END
+        AND EXISTS (
+          SELECT 1
+          FROM oferta_puestos p
+          JOIN trabajador_empresa te
+            ON te.usuario_id = ? AND te.empresa_id = o.empresa_id AND te.estado = 'activo'
+          JOIN trabajador_cargos tc
+            ON tc.trabajador_empresa_id = te.id AND tc.cargo_id = p.cargo_id
+          WHERE p.oferta_id = o.id
+        )
+      )
     )`);
-    params.push(usuarioId);  // (segundo bind del usuario_id en este predicate)
+    params.push(usuarioId, usuarioId);  // dos binds del usuario_id en este predicate
 
     const whereSql = where.join(' AND ');
     const joinSql = `
@@ -172,7 +206,7 @@ const OfertasModel = {
     // gestor ya sabe en qué empresa está), acá el nombre es indispensable para distinguir
     // de un vistazo de qué empresa es cada oferta.
     const [filas] = await pool.query(
-      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}
+      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}
        FROM ofertas_turno o
        ${joinSql}
        WHERE ${whereSql}
@@ -210,7 +244,7 @@ const OfertasModel = {
       params.push(antiguedadMinMin);
     }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
        FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
       params
     );
@@ -219,11 +253,20 @@ const OfertasModel = {
 
   async obtenerPorExternalRef(empresaId, externalRef) {
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
        FROM ofertas_turno WHERE external_ref = ? AND empresa_id = ? LIMIT 1`,
       [externalRef, empresaId]
     );
     return parsearPuestos(filas[0]) || null;
+  },
+
+  /** ¿El trabajador está en la lista de destinatarios elegidos a mano de esta oferta? */
+  async esDestinatario(ofertaId, trabajadorId) {
+    const [filas] = await pool.query(
+      'SELECT 1 FROM oferta_destinatarios WHERE oferta_id = ? AND trabajador_id = ? LIMIT 1',
+      [ofertaId, trabajadorId]
+    );
+    return filas.length > 0;
   },
 
   async cambiarEstado(empresaId, id, estado) {
@@ -241,6 +284,8 @@ const OfertasModel = {
    *                       los agrega después via /puestos). Esto se permite
    *                       para que ordenes externas (logiq360) puedan llegar
    *                       en estado 'borrador' sin tarifas decididas.
+   * @param datos.visibilidad — 'abierta' (default) | 'dirigida'.
+   * @param datos.trabajador_ids — solo si visibilidad = 'dirigida': destinatarios elegidos a mano.
    */
   async crear(empresaId, datos, creadoPor) {
     const conn = await pool.getConnection();
@@ -251,8 +296,8 @@ const OfertasModel = {
         `INSERT INTO ofertas_turno
            (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
             lugar, latitud, longitud, encargado_nombre, encargado_telefono,
-            estado, para_quien, external_ref, alquiler_ref, externo_notas, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresaId,
           datos.titulo,
@@ -267,6 +312,7 @@ const OfertasModel = {
           datos.encargado_telefono ?? null,
           datos.estado ?? 'abierta',
           datos.para_quien ?? 'turnos',
+          datos.visibilidad ?? 'abierta',
           datos.external_ref ?? null,
           datos.alquiler_ref ?? null,
           datos.externo_notas ?? null,
@@ -282,6 +328,16 @@ const OfertasModel = {
             `INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas)
              VALUES (?, ?, ?, ?, ?)`,
             [ofertaId, p.cargo_id, p.plazas ?? 1, p.tarifa_dia, p.notas ?? null]
+          );
+        }
+      }
+
+      // Destinatarios elegidos a mano (solo si visibilidad = 'dirigida').
+      if (datos.visibilidad === 'dirigida' && Array.isArray(datos.trabajador_ids)) {
+        for (const trabajadorId of datos.trabajador_ids) {
+          await conn.query(
+            'INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)',
+            [ofertaId, trabajadorId]
           );
         }
       }

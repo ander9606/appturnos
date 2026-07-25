@@ -47,7 +47,8 @@ function reglasOferta({ parcial }) {
       .optional({ values: 'falsy' })
       .isFloat({ min: -180, max: 180 })
       .withMessage('longitud inválida'),
-    // Puestos solo se aceptan en crear (no en PUT de actualizar).
+    // Puestos y destinatarios solo se aceptan en crear (no en PUT de actualizar
+    // — todavía no se soporta editar destinatarios de una oferta ya creada).
     ...(parcial
       ? []
       : [
@@ -59,6 +60,9 @@ function reglasOferta({ parcial }) {
           body('puestos.*.plazas').optional().isInt({ min: 1 }),
           body('puestos.*.tarifa_dia').isFloat({ min: 0 }).withMessage('tarifa_dia inválida'),
           body('puestos.*.notas').optional().isString().trim().isLength({ max: 255 }),
+          body('visibilidad').optional().isIn(['abierta', 'dirigida']).withMessage('visibilidad inválida'),
+          body('trabajador_ids').optional().isArray().withMessage('trabajador_ids debe ser un array'),
+          body('trabajador_ids.*').isInt({ min: 1 }).withMessage('trabajador_ids inválido'),
         ]),
   ];
 }
