@@ -256,7 +256,9 @@ const AsignacionesService = {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
 
-    const trabajador = await resolverTrabajador(empresaId, usuarioId);
+    // Use empresa_id from the DB row — JWT empresa_id is null/stale for marketplace
+    // workers with trabajador rows in more than one empresa.
+    const trabajador = await resolverTrabajador(asignacion.empresa_id, usuarioId);
     if (asignacion.trabajador_id !== trabajador.id) {
       throw new AppError('Esta asignación no te pertenece', 403);
     }
@@ -340,10 +342,11 @@ const AsignacionesService = {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
 
-    // Use empresa_id from the DB row — JWT empresa_id is null for marketplace workers.
+    // Use empresa_id from the DB row — JWT empresa_id is null/stale for marketplace
+    // workers with trabajador rows in more than one empresa.
     const dbEmpresaId = asignacion.empresa_id;
 
-    const trabajador = await resolverTrabajador(empresaId, usuarioId);
+    const trabajador = await resolverTrabajador(dbEmpresaId, usuarioId);
     if (asignacion.trabajador_id !== trabajador.id) {
       throw new AppError('Esta asignación no te pertenece', 403);
     }
