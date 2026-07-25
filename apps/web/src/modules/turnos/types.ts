@@ -1,4 +1,4 @@
-export type EstadoOferta = 'borrador' | 'publicada' | 'en_progreso' | 'completada' | 'cancelada';
+export type EstadoOferta = 'borrador' | 'abierta' | 'publicada' | 'en_proceso' | 'cerrada' | 'completada' | 'cancelada';
 export type EstadoAsignacion =
   | 'pendiente'
   | 'confirmado'
@@ -15,7 +15,7 @@ export interface Puesto {
   plazas: number;
   tarifa_dia: number;
   notas: string | null;
-  asignados: number;
+  plazas_cubiertas: number;
 }
 
 export interface Oferta {
@@ -45,10 +45,11 @@ export interface Asignacion {
   puesto_id: number;
   trabajador_id: number;
   estado: EstadoAsignacion;
-  calificacion: number | null;
-  comentario: string | null;
-  hora_ingreso: string | null;
-  hora_egreso: string | null;
-  trabajador?: { nombre: string; apellido: string; cedula?: string };
-  puesto?: { cargo_nombre: string; tarifa_dia: number };
+  hora_ingreso_real: string | null;
+  hora_egreso_real: string | null;
+  trabajador_nombre: string;
+  trabajador_apellido: string;
+  cargo_nombre: string;
+  // Solo viene poblado en el detalle puntual (obtenerAsignacion), no en el listado.
+  calificacion?: number | null;
 }

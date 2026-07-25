@@ -16,8 +16,9 @@ function fmtTime(s: string) {
 }
 
 const ESTADO_BADGE: Record<string, string> = {
+  abierta: 'bg-primary-100 text-primary-600',
   publicada: 'bg-primary-100 text-primary-600',
-  en_progreso: 'bg-warning-light text-warning',
+  en_proceso: 'bg-warning-light text-warning',
 };
 
 export function DashboardPage() {
@@ -60,7 +61,7 @@ export function DashboardPage() {
   const trabajadoresCount = trabajadoresData?.data?.pagination?.total ?? 0;
   const ofertas: Array<{ id: number; titulo: string; fecha: string; hora_inicio: string; estado: string }> =
     ofertasData?.data?.data ?? [];
-  const ofertasActivas = ofertas.filter(o => o.estado === 'publicada' || o.estado === 'en_progreso');
+  const ofertasActivas = ofertas.filter(o => o.estado === 'abierta' || o.estado === 'publicada' || o.estado === 'en_proceso');
   const asigPendientes = asigData?.data?.pagination?.total ?? 0;
   const periodoAbierto = periodosData?.data?.data?.[0] ?? null;
 
@@ -149,7 +150,7 @@ export function DashboardPage() {
                   <p className="text-xs text-muted-foreground">{fmtDate(o.fecha)} · {fmtTime(o.hora_inicio)}</p>
                 </div>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${ESTADO_BADGE[o.estado]}`}>
-                  {o.estado === 'en_progreso' ? 'En progreso' : 'Publicada'}
+                  {o.estado === 'en_proceso' ? 'En progreso' : o.estado === 'abierta' ? 'Abierta' : 'Publicada'}
                 </span>
               </li>
             ))}

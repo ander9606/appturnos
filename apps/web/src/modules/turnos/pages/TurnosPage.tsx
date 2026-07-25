@@ -1,22 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, XCircle } from 'lucide-react';
-import { useOfertas, useCrearOferta, useCancelarOferta } from '../hooks/useTurnos';
+import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes } from '../hooks/useTurnos';
 import type { EstadoOferta, Oferta } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
+  abierta: 'bg-primary-100 text-primary-600',
   publicada: 'bg-primary-100 text-primary-600',
-  en_progreso: 'bg-warning-light text-warning',
+  en_proceso: 'bg-warning-light text-warning',
+  cerrada: 'bg-muted text-muted-foreground',
   completada: 'bg-success-light text-success',
   cancelada: 'bg-danger-light text-danger',
 };
 
 const ESTADO_LABEL: Record<EstadoOferta, string> = {
   borrador: 'Borrador',
+  abierta: 'Abierta',
   publicada: 'Publicada',
-  en_progreso: 'En progreso',
+  en_proceso: 'En progreso',
+  cerrada: 'Cerrada',
   completada: 'Completada',
   cancelada: 'Cancelada',
 };
@@ -25,10 +29,10 @@ function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
 }
 
-const ESTADOS_FILTER: (EstadoOferta | undefined)[] = [undefined, 'publicada', 'en_progreso', 'completada', 'borrador', 'cancelada'];
+const ESTADOS_FILTER: (EstadoOferta | undefined)[] = [undefined, 'abierta', 'publicada', 'en_proceso', 'completada', 'borrador', 'cerrada', 'cancelada'];
 const FILTER_LABELS: Record<string, string> = {
-  undefined: 'Todas', publicada: 'Publicadas', en_progreso: 'En progreso',
-  completada: 'Completadas', borrador: 'Borrador', cancelada: 'Canceladas',
+  undefined: 'Todas', abierta: 'Abiertas', publicada: 'Publicadas', en_proceso: 'En progreso',
+  completada: 'Completadas', borrador: 'Borrador', cerrada: 'Cerradas', cancelada: 'Canceladas',
 };
 
 export function TurnosPage() {
@@ -40,10 +44,24 @@ export function TurnosPage() {
   const ofertas: Oferta[] = data?.data?.data ?? [];
   const cancelar = useCancelarOferta();
 
+  const { data: pendientesData } = usePostulacionesPendientes();
+  const pendientesPorOferta = new Map<number, number>();
+  for (const a of pendientesData?.data?.data ?? []) {
+    pendientesPorOferta.set(a.oferta_id, (pendientesPorOferta.get(a.oferta_id) ?? 0) + 1);
+  }
+  const totalPendientes = pendientesData?.data?.pagination?.total ?? 0;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Turnos</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-foreground">Turnos</h1>
+          {totalPendientes > 0 && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-warning-light text-warning">
+              {totalPendientes} postulante{totalPendientes !== 1 ? 's' : ''} esperando revisión
+            </span>
+          )}
+        </div>
         <button
           onClick={() => setShowCrear(true)}
           className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
@@ -91,7 +109,8 @@ export function TurnosPage() {
             <tbody>
               {ofertas.map(o => {
                 const totalPlazas = o.puestos?.reduce((s, p) => s + p.plazas, 0) ?? 0;
-                const totalAsignados = o.puestos?.reduce((s, p) => s + p.asignados, 0) ?? 0;
+                const totalAsignados = o.puestos?.reduce((s, p) => s + p.plazas_cubiertas, 0) ?? 0;
+                const pendientes = pendientesPorOferta.get(o.id) ?? 0;
                 return (
                   <tr key={o.id} className="border-t border-border/60 hover:bg-muted">
                     <td className="px-4 py-3 font-medium text-foreground">{o.titulo}</td>
@@ -100,13 +119,20 @@ export function TurnosPage() {
                     <td className="px-4 py-3 text-muted-foreground">{o.lugar ?? '—'}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{totalAsignados}/{totalPlazas}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[o.estado]}`}>
-                        {ESTADO_LABEL[o.estado]}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[o.estado]}`}>
+                          {ESTADO_LABEL[o.estado]}
+                        </span>
+                        {pendientes > 0 && (
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">
+                            {pendientes} pendiente{pendientes !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
-                        {(o.estado === 'publicada' || o.estado === 'borrador') && (
+                        {(o.estado !== 'completada' && o.estado !== 'cancelada') && (
                           <button
                             onClick={() => {
                               if (window.confirm(`¿Cancelar la oferta "${o.titulo}"?`)) {

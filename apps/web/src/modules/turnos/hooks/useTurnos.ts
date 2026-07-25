@@ -93,6 +93,15 @@ export function useAsignaciones(params: { oferta_id?: number; estado?: EstadoAsi
   });
 }
 
+/** Postulaciones pendientes de toda la empresa — para marcar qué ofertas esperan revisión. */
+export function usePostulacionesPendientes() {
+  return useQuery({
+    queryKey: KEYS.asignaciones({ estado: 'pendiente', global: true }),
+    queryFn: () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 200 }),
+    staleTime: 15_000,
+  });
+}
+
 export function useCrearOferta() {
   const qc = useQueryClient();
   return useMutation({
