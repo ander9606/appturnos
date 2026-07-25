@@ -53,8 +53,8 @@ export function PeriodoDetailPage() {
     : registros;
 
   const trabajadoresEnPeriodo = Array.from(
-    new Map(registros.map(r => [r.trabajador_id, r.trabajador])).entries()
-  ).map(([tid, t]) => ({ id: tid, nombre: t?.nombre ?? '', apellido: t?.apellido ?? '' }));
+    new Map(registros.map(r => [r.trabajador_id, { nombre: r.trabajador_nombre, apellido: r.trabajador_apellido }])).entries()
+  ).map(([tid, t]) => ({ id: tid, nombre: t.nombre, apellido: t.apellido }));
 
   const handleExport = async () => {
     const res = await import('../api/nominaApi').then(m => m.nominaApi.exportarLiquidacion(periodoId));
@@ -165,7 +165,7 @@ export function PeriodoDetailPage() {
                   {registrosFiltrados.map(r => (
                     <tr key={r.id} className="border-t border-border/60 hover:bg-muted">
                       <td className="px-3 py-2.5 text-foreground">
-                        {r.trabajador ? `${r.trabajador.nombre} ${r.trabajador.apellido}` : r.trabajador_id}
+                        {r.trabajador_nombre} {r.trabajador_apellido}
                       </td>
                       <td className="px-3 py-2.5 text-muted-foreground">{fmtDate(r.fecha)}</td>
                       <td className="px-3 py-2.5 text-muted-foreground">{r.hora_entrada ?? '—'}</td>

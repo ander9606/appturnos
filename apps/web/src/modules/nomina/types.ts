@@ -26,7 +26,8 @@ export interface Registro {
   es_festivo: number;
   tipo_dia: TipoDia;
   novedad: string | null;
-  trabajador?: { nombre: string; apellido: string; cedula?: string };
+  trabajador_nombre: string;
+  trabajador_apellido: string;
 }
 
 export interface LiquidacionLinea {
