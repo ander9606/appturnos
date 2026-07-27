@@ -49,6 +49,8 @@ export default function NuevoTurnoScreen() {
       encargado_nombre:   data.encargado_nombre.trim() || undefined,
       encargado_telefono: data.encargado_telefono.trim() || undefined,
       para_quien:        data.para_quien,
+      visibilidad:       data.visibilidad,
+      trabajador_ids:    data.visibilidad === 'dirigida' ? data.destinatarios.map((d) => d.id) : undefined,
       puestos:           data.puestos.map((p) => ({
         cargo_id:   p.cargo_id,
         plazas:     p.plazas,
@@ -58,7 +60,10 @@ export default function NuevoTurnoScreen() {
 
     try {
       await crearMutation.mutateAsync(payload);
-      showToast(`¡"${payload.titulo}" publicado! Los trabajadores con los cargos seleccionados recibirán una notificación.`);
+      const aviso = data.visibilidad === 'dirigida'
+        ? `Se notificó a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''}.`
+        : 'Los trabajadores con los cargos seleccionados recibirán una notificación.';
+      showToast(`¡"${payload.titulo}" publicado! ${aviso}`);
       router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo publicar el turno.';

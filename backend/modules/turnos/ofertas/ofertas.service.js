@@ -48,8 +48,34 @@ async function validarPuestosParaEmpresa(empresaId, puestos) {
   }
 }
 
+/**
+ * Valida los destinatarios elegidos a mano para un turno dirigido: debe haber
+ * al menos uno y todos deben tener vínculo activo con la empresa. A propósito
+ * NO se exige cargo certificado — el gestor eligiendo a la persona reemplaza
+ * ese filtro (mismo criterio que asignarDirecto).
+ */
+async function validarDestinatarios(empresaId, visibilidad, trabajadorIds) {
+  if (visibilidad !== 'dirigida') return;
+  const ids = [...new Set((trabajadorIds || []).map(Number))];
+  if (ids.length === 0) {
+    throw new AppError('Elige al menos una persona para un turno dirigido', 400);
+  }
+  const [filas] = await pool.query(
+    `SELECT t.id FROM trabajadores t
+     JOIN trabajador_empresa te ON te.trabajador_id = t.id
+     WHERE t.id IN (?) AND te.empresa_id = ? AND te.estado = 'activo'`,
+    [ids, empresaId]
+  );
+  if (filas.length !== ids.length) {
+    throw new AppError('Alguno de los trabajadores seleccionados no pertenece a esta empresa', 400);
+  }
+}
+
 /** Notifica a trabajadores con los cargos solicitados por la oferta (best-effort). */
 async function notificarPoolPorPuestos(empresaId, oferta) {
+  if (oferta.visibilidad === 'dirigida') {
+    return notificarDestinatariosDirectos(empresaId, oferta);
+  }
   for (const puesto of oferta.puestos || []) {
     const [destinatarios] = await pool.query(
       `SELECT DISTINCT u.id AS usuario_id
@@ -76,6 +102,21 @@ async function notificarPoolPorPuestos(empresaId, oferta) {
       );
     }
   }
+}
+
+/** Notifica solo a los destinatarios elegidos a mano de un turno dirigido (best-effort). */
+async function notificarDestinatariosDirectos(empresaId, oferta) {
+  const usuarioIds = (oferta.destinatarios || [])
+    .map((d) => d.usuario_id)
+    .filter(Boolean);
+  if (usuarioIds.length === 0) return;
+  await NotificacionesService.notificarVarios(usuarioIds, {
+    empresaId,
+    tipo: 'oferta.nueva',
+    titulo: `Te invitaron a un turno: ${oferta.titulo}`,
+    mensaje: `${oferta.titulo} — ${oferta.fecha}. Te eligieron directamente para este turno.`,
+    data: { oferta_id: oferta.id },
+  });
 }
 
 async function validarAceptaExtras(usuario) {

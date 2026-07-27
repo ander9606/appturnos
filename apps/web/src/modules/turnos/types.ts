@@ -18,6 +18,14 @@ export interface Puesto {
   plazas_cubiertas: number;
 }
 
+export type VisibilidadOferta = 'abierta' | 'dirigida';
+
+export interface OfertaDestinatario {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string;
+}
+
 export interface Oferta {
   id: number;
   titulo: string;
@@ -31,6 +39,9 @@ export interface Oferta {
   encargado_nombre: string | null;
   encargado_telefono: string | null;
   estado: EstadoOferta;
+  // 'dirigida': solo `destinatarios` la ven/reciben notificación, sin filtro de cargo ni ranking.
+  visibilidad: VisibilidadOferta;
+  destinatarios: OfertaDestinatario[];
   // Presentes solo si la oferta se originó desde logiq360 (evento orden.creada).
   external_ref: string | null;
   alquiler_ref: string | null;

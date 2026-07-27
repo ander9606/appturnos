@@ -95,8 +95,9 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing }: Props) {
       <View className="flex-row items-start gap-3 bg-info-light rounded-2xl px-4 py-3">
         <Ionicons name="notifications-outline" size={18} color="#3B82F6" style={{ marginTop: 1 }} />
         <Text className="flex-1 text-sm text-info">
-          Al publicar, se enviará una notificación push a todos los trabajadores
-          de la empresa que tengan cada cargo certificado.
+          {data.visibilidad === 'dirigida'
+            ? `Al publicar, se notificará solo a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''} que elegiste.`
+            : 'Al publicar, se enviará una notificación push a todos los trabajadores de la empresa que tengan cada cargo certificado.'}
         </Text>
       </View>
 

@@ -39,6 +39,9 @@ export function validateStep1(data: WizardData): string | null {
   if (!data.titulo.trim()) return 'Escribe un título para el turno.';
   if (!isValidDate(data.dia, data.mes, data.anio)) return 'Ingresa una fecha válida (día, mes y año).';
   if (!isValidTime(data.hora_inicio_h, data.hora_inicio_m)) return 'Hora de inicio inválida.';
+  if (data.visibilidad === 'dirigida' && data.destinatarios.length === 0) {
+    return 'Elige al menos una persona para el turno dirigido.';
+  }
   return null;
 }
 

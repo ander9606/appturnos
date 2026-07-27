@@ -39,7 +39,7 @@ describe('buildFecha', () => {
     hora_inicio_h: '', hora_inicio_m: '', hora_fin_h: '', hora_fin_m: '',
     lugar: '', latitud: null, longitud: null,
     encargado_nombre: '', encargado_telefono: '',
-    para_quien: 'turnos', puestos: [],
+    para_quien: 'turnos', visibilidad: 'abierta', destinatarios: [], puestos: [],
     ...overrides,
   });
 
@@ -194,7 +194,7 @@ describe('validateStep1', () => {
     hora_fin_h: '', hora_fin_m: '',
     lugar: '', latitud: null, longitud: null,
     encargado_nombre: '', encargado_telefono: '',
-    para_quien: 'turnos', puestos: [],
+    para_quien: 'turnos', visibilidad: 'abierta', destinatarios: [], puestos: [],
   };
 
   it('returns null for valid step-1 data', () => {
@@ -211,6 +211,16 @@ describe('validateStep1', () => {
 
   it('requires a valid start time', () => {
     expect(validateStep1({ ...valid, hora_inicio_h: '', hora_inicio_m: '' })).toMatch(/inicio/i);
+  });
+
+  it('requires at least one destinatario when visibilidad is dirigida', () => {
+    expect(validateStep1({ ...valid, visibilidad: 'dirigida', destinatarios: [] })).toMatch(/persona/i);
+  });
+
+  it('accepts dirigida with at least one destinatario', () => {
+    expect(
+      validateStep1({ ...valid, visibilidad: 'dirigida', destinatarios: [{ id: 1, nombre: 'Ana', apellido: 'Ruiz' }] })
+    ).toBeNull();
   });
 });
 

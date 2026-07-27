@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button }      from '@/components/ui/Button';
 import { SegmentInput } from './SegmentInput';
 import { LugarInput }   from './LugarInput';
+import { TrabajadorPickerModal } from './TrabajadorPickerModal';
 import { validateStep1 } from './utils';
 import type { WizardData } from './types';
 
@@ -22,6 +23,8 @@ type Props = {
 };
 
 export function Step1Basicos({ data, onChange, onNext }: Props) {
+  const [pickerVisible, setPickerVisible] = useState(false);
+
   const handleNext = () => {
     const err = validateStep1(data);
     if (err) { Alert.alert('Datos incompletos', err); return; }
@@ -155,7 +158,54 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         </View>
       </View>
 
+      {/* Visibilidad: pool abierto vs turno dirigido */}
+      <View className="gap-2">
+        <Text className="text-sm font-semibold text-foreground">¿Quién puede ver esta oferta?</Text>
+        <View className="flex-row gap-2">
+          {([
+            { value: 'abierta',  label: 'Todos los que\ncalifican' },
+            { value: 'dirigida', label: 'Personas\nespecíficas' },
+          ] as const).map((opt) => {
+            const active = data.visibilidad === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => onChange({ visibilidad: opt.value })}
+                className={`flex-1 rounded-2xl border py-3 px-2 items-center ${
+                  active ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                }`}
+              >
+                <Text className={`text-xs font-bold text-center ${active ? 'text-primary' : 'text-foreground'}`}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {data.visibilidad === 'dirigida' && (
+          <TouchableOpacity
+            className="flex-row items-center justify-between bg-muted rounded-2xl px-4 py-3"
+            onPress={() => setPickerVisible(true)}
+          >
+            <Text className="text-sm text-foreground">
+              {data.destinatarios.length === 0
+                ? 'Elegir personas'
+                : `${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''} elegida${data.destinatarios.length !== 1 ? 's' : ''}`}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <Button label="Siguiente →" variant="primary" size="lg" fullWidth onPress={handleNext} />
+
+      <TrabajadorPickerModal
+        visible={pickerVisible}
+        seleccionados={data.destinatarios}
+        onConfirm={(destinatarios) => onChange({ destinatarios })}
+        onClose={() => setPickerVisible(false)}
+      />
     </ScrollView>
   );
 }

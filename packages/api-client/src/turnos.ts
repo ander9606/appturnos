@@ -118,6 +118,14 @@ export interface OfertaPuesto {
 }
 
 export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
+export type VisibilidadOferta = 'abierta' | 'dirigida';
+
+export interface OfertaDestinatario {
+  trabajador_id: number;
+  usuario_id: number;
+  nombre: string;
+  apellido: string;
+}
 
 export interface Oferta {
   id: number;
@@ -136,6 +144,10 @@ export interface Oferta {
   encargado_telefono: string | null;
   estado: EstadoOferta;
   para_quien: ParaQuienOferta;
+  /** 'dirigida': solo `destinatarios` la ven/reciben notificación, sin filtro de cargo ni ranking. */
+  visibilidad: VisibilidadOferta;
+  /** Presente cuando visibilidad = 'dirigida'. */
+  destinatarios: OfertaDestinatario[];
   creado_por: number;
   created_at: string;
   puestos: OfertaPuesto[];
@@ -153,6 +165,9 @@ export interface CrearOfertaPayload {
   encargado_nombre?: string;
   encargado_telefono?: string;
   para_quien?: ParaQuienOferta;
+  /** 'dirigida' requiere trabajador_ids con al menos una persona. */
+  visibilidad?: VisibilidadOferta;
+  trabajador_ids?: number[];
   puestos: Array<{
     cargo_id: number;
     plazas: number;

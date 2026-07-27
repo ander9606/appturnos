@@ -6,6 +6,12 @@ export type PuestoInput = {
   tarifa_dia: string; // string for TextInput, parsed on submit
 };
 
+export type DestinatarioInput = {
+  id: number; // trabajador_id
+  nombre: string;
+  apellido: string;
+};
+
 export type WizardData = {
   titulo: string;
   descripcion: string;
@@ -22,6 +28,8 @@ export type WizardData = {
   encargado_nombre: string;
   encargado_telefono: string;
   para_quien: 'turnos' | 'nomina' | 'ambos';
+  visibilidad: 'abierta' | 'dirigida';
+  destinatarios: DestinatarioInput[];
   puestos: PuestoInput[];
 };
 
@@ -41,5 +49,7 @@ export const INITIAL: WizardData = {
   encargado_nombre: '',
   encargado_telefono: '',
   para_quien: 'turnos',
+  visibilidad: 'abierta',
+  destinatarios: [],
   puestos: [],
 };
