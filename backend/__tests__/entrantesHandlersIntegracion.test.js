@@ -6,6 +6,7 @@ jest.mock('../modules/trabajadores/trabajadores.model');
 jest.mock('../modules/integracion/integracion.model');
 jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
+  notificarSuperAdmins: jest.fn().mockResolvedValue(undefined),
 }));
 
 const { pool } = require('../config/database');
