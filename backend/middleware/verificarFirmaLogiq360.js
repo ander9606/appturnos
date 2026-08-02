@@ -2,6 +2,7 @@
 
 const { pool } = require('../config/database');
 const AppError = require('../utils/AppError');
+const logger = require('../utils/logger');
 const { firmar, firmasCoinciden } = require('../utils/hmac');
 
 /**
@@ -10,7 +11,9 @@ const { firmar, firmasCoinciden } = require('../utils/hmac');
  * Prioridad del secreto:
  *  1. integracion_config.incoming_secret del tenant (per-tenant, recomendado).
  *  2. Variable de entorno LOGIQ360_WEBHOOK_SECRET (global, retrocompatible).
- *  3. Sin secreto → sin verificación (integración opcional).
+ *
+ * Sin secreto → fail-closed (401), igual que el webhook de Wompi: un tenant
+ * sin incoming_secret configurado no debe aceptar eventos sin autenticar.
  *
  * El tenant_id se lee del body JSON ya parseado (express.json corre antes).
  * Requiere que req.rawBody esté disponible (lo captura server.js).
@@ -38,7 +41,12 @@ async function verificarFirmaLogiq360(req, _res, next) {
     secreto = process.env.LOGIQ360_WEBHOOK_SECRET || null;
   }
 
-  if (!secreto) return next();
+  if (!secreto) {
+    logger.error('Webhook logiq360 sin incoming_secret configurado — evento rechazado (fail-closed)', {
+      tenantId,
+    });
+    return next(new AppError('Firma del webhook inválida', 401));
+  }
 
   const recibida = req.headers['x-logiq360-signature'] || '';
   const esperada = firmar(req.rawBody || Buffer.alloc(0), secreto);
