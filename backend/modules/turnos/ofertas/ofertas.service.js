@@ -49,6 +49,30 @@ async function validarPuestosParaEmpresa(empresaId, puestos) {
 }
 
 /**
+ * Advierte (sin bloquear — el pool puede crecer o la oferta puede quedar
+ * parcialmente cubierta) cuando un puesto pide más plazas que trabajadores
+ * activos certificados para ese cargo hay en la empresa.
+ */
+async function advertenciasCapacidad(empresaId, puestos) {
+  if (!Array.isArray(puestos) || puestos.length === 0) return [];
+  const advertencias = [];
+  for (const p of puestos) {
+    const cargoId = Number(p.cargo_id);
+    const plazas = Number(p.plazas);
+    if (!plazas) continue;
+    const disponibles = await CargosModel.contarActivosPorEmpresa(cargoId, empresaId);
+    if (plazas > disponibles) {
+      const cargo = await CargosModel.obtenerPorId(cargoId);
+      advertencias.push(
+        `"${cargo?.nombre ?? 'Cargo ' + cargoId}" pide ${plazas} plaza(s), pero tu empresa solo tiene ` +
+        `${disponibles} trabajador(es) activo(s) certificado(s) para ese cargo.`
+      );
+    }
+  }
+  return advertencias;
+}
+
+/**
  * Valida los destinatarios elegidos a mano para un turno dirigido: debe haber
  * al menos uno y todos deben tener vínculo activo con la empresa. A propósito
  * NO se exige cargo certificado — el gestor eligiendo a la persona reemplaza
@@ -221,6 +245,10 @@ const OfertasService = {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
 
     await notificarPoolPorPuestos(empresaId, oferta);
+
+    // No bloquea la creación — solo avisa al gestor si el catálogo de
+    // trabajadores de la empresa no alcanza para cubrir lo pedido.
+    oferta.advertencias = await advertenciasCapacidad(empresaId, datos.puestos);
 
     return oferta;
   },

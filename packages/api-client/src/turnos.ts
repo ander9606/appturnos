@@ -115,6 +115,9 @@ export interface OfertaPuesto {
   plazas_cubiertas: number;
   tarifa_dia: number;
   notas: string | null;
+  /** Solo presente justo después de crear/actualizar: aviso si `plazas` supera
+   *  los trabajadores activos certificados para el cargo. No bloquea. */
+  advertencia?: string | null;
 }
 
 export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
@@ -151,6 +154,9 @@ export interface Oferta {
   creado_por: number;
   created_at: string;
   puestos: OfertaPuesto[];
+  /** Solo presente justo después de crear: avisos de capacidad por puesto
+   *  (plazas pedidas > trabajadores certificados activos). No bloquea. */
+  advertencias?: string[];
 }
 
 export interface CrearOfertaPayload {
