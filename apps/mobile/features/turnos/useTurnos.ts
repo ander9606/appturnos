@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi, cargosApi } from '@api-client';
 import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
+import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/lib/formatters';
 
@@ -14,6 +15,7 @@ export const QUERY_KEYS = {
   asignaciones: (params: object) => ['asignaciones', params] as const,
   liquidacion:  (params?: object) => ['liquidacion-turnos', params] as const,
   cargos:       ['cargos'] as const,
+  funcionesCargo: (cargoId: number) => ['cargo-funciones', cargoId] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
@@ -359,6 +361,28 @@ export function useAsignarCargoAVinculo() {
   return useMutation({
     mutationFn: ({ vinculoId, cargoId }: { vinculoId: number; cargoId: number }) =>
       cargosApi.asignarAVinculo(vinculoId, cargoId),
+  });
+}
+
+/** Funciones (responsabilidades) que el cargo tiene en mi empresa. */
+export function useFuncionesCargo(cargoId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: QUERY_KEYS.funcionesCargo(cargoId ?? 0),
+    queryFn:  () => cargosApi.listarFunciones(cargoId as number),
+    staleTime: 5 * 60_000,
+    enabled: enabled && cargoId != null,
+  });
+}
+
+/** Diligencia (reemplaza) el listado de funciones de un cargo. Solo jefe_turnos/admin. */
+export function useActualizarFuncionesCargo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ cargoId, funciones }: { cargoId: number; funciones: string[] }) =>
+      cargosApi.actualizarFunciones(cargoId, funciones),
+    onSuccess: (data: CargoFuncion[], { cargoId }) => {
+      qc.setQueryData(QUERY_KEYS.funcionesCargo(cargoId), data);
+    },
   });
 }
 

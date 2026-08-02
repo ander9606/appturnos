@@ -51,6 +51,7 @@ export type {
   CrearOfertaPayload,
   Oferta,
   OfertaDetalle,
+  OfertaPuesto,
   AsignacionResumen,
   EstadoAsignacion,
   EstadoOferta,
@@ -70,7 +71,7 @@ export type {
   LiquidacionEventualResponse,
 } from './turnosEventual';
 export { cargosApi } from './cargos';
-export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult, CargoCertificado } from './cargos';
+export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult, CargoCertificado, CargoFuncion } from './cargos';
 export { puntosMarcajeApi } from './puntos-marcaje';
 export type {
   PuntoMarcaje,

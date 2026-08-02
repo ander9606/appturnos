@@ -87,6 +87,22 @@ const CargosModel = {
     return filas[0]?.n || 0;
   },
 
+  /**
+   * Trabajadores activos de una empresa certificados para un cargo — usado
+   * para advertir cuando una oferta pide más plazas de las que el catálogo
+   * de la empresa puede cubrir.
+   */
+  async contarActivosPorEmpresa(cargoId, empresaId) {
+    const [filas] = await pool.query(
+      `SELECT COUNT(*) AS n
+       FROM trabajador_cargos tc
+       INNER JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
+       WHERE tc.cargo_id = ? AND te.empresa_id = ? AND te.estado = 'activo'`,
+      [cargoId, empresaId]
+    );
+    return filas[0]?.n || 0;
+  },
+
   async eliminar(id) {
     const [res] = await pool.query('DELETE FROM cargos WHERE id = ?', [id]);
     return res.affectedRows;
@@ -141,6 +157,44 @@ const CargosModel = {
       [trabajadorEmpresaId, cargoId]
     );
     return res.affectedRows;
+  },
+
+  // -------- Funciones por cargo (cargo_funciones) --------
+  // Se guardan por (cargo_id, empresa_id): un cargo de sistema puede tener un
+  // listado de funciones distinto en cada empresa que lo usa.
+
+  async listarFunciones(cargoId, empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id, descripcion, orden
+       FROM cargo_funciones
+       WHERE cargo_id = ? AND empresa_id = ?
+       ORDER BY orden, id`,
+      [cargoId, empresaId]
+    );
+    return filas;
+  },
+
+  /** Reemplaza el listado completo de funciones de un cargo para una empresa. */
+  async reemplazarFunciones(cargoId, empresaId, descripciones) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query('DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?', [cargoId, empresaId]);
+      if (descripciones.length > 0) {
+        const values = descripciones.map((d, i) => [cargoId, empresaId, d, i]);
+        await conn.query(
+          'INSERT INTO cargo_funciones (cargo_id, empresa_id, descripcion, orden) VALUES ?',
+          [values]
+        );
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+    return CargosModel.listarFunciones(cargoId, empresaId);
   },
 };
 
