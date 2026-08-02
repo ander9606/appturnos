@@ -59,11 +59,14 @@ export default function NuevoTurnoScreen() {
     };
 
     try {
-      await crearMutation.mutateAsync(payload);
+      const oferta = await crearMutation.mutateAsync(payload);
       const aviso = data.visibilidad === 'dirigida'
         ? `Se notificó a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''}.`
         : 'Los trabajadores con los cargos seleccionados recibirán una notificación.';
       showToast(`¡"${payload.titulo}" publicado! ${aviso}`);
+      if (oferta.advertencias && oferta.advertencias.length > 0) {
+        Alert.alert('Puede que falte personal', oferta.advertencias.join('\n\n'));
+      }
       router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo publicar el turno.';

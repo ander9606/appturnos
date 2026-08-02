@@ -15,17 +15,31 @@ const optionalPositiveNumber = z
 
 // ── Schema ────────────────────────────────────────────────────────────────
 
+const optionalText = z.string().trim().optional().or(z.literal(''));
+
 export const trabajadorSchema = z
   .object({
     nombre:       z.string().trim().min(1, 'El nombre es obligatorio'),
     apellido:     z.string().trim().min(1, 'El apellido es obligatorio'),
     tipo:         z.enum(['turnos', 'nomina', 'ambos']),
     cedula:       z.string().trim().optional().or(z.literal('')),
+    tipo_documento: z.enum(['CC', 'CE', 'PAS']).optional().or(z.literal('')),
+    fecha_nacimiento: optionalText,
+    sexo:         z.enum(['M', 'F', 'otro']).optional().or(z.literal('')),
     email:        z.string().trim().email('Email inválido').optional().or(z.literal('')),
     telefono:     z.string().trim().optional().or(z.literal('')),
+    contacto_emergencia_nombre: optionalText,
+    contacto_emergencia_tel:    optionalText,
     cargo:        z.string().trim().optional().or(z.literal('')),
     tarifa_hora:  optionalPositiveNumber,
     salario_base: optionalPositiveNumber,
+    eps:          optionalText,
+    afp:          optionalText,
+    banco:        optionalText,
+    tipo_cuenta:  z.enum(['ahorros', 'corriente']).optional().or(z.literal('')),
+    numero_cuenta: optionalText,
+    ant_judiciales_fecha:     optionalText,
+    ant_disciplinarios_fecha: optionalText,
   })
   .refine(
     (d) =>

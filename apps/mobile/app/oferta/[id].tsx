@@ -17,9 +17,10 @@ import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta, useCancelarOferta,
 } from '@/features/turnos/useTurnos';
+import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
-import type { AsignacionResumen, EstadoAsignacion } from '@api-client';
+import type { AsignacionResumen, EstadoAsignacion, OfertaPuesto } from '@api-client';
 import { ApiError } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -209,6 +210,7 @@ export default function OfertaDetailScreen() {
   const availablePuestos = oferta?.puestos.filter((p) => p.plazas_cubiertas < p.plazas) ?? [];
   const [selectedPuestoId, setSelectedPuestoId] = useState<number | null>(null);
   const selectedPuesto = availablePuestos.find((p) => p.id === selectedPuestoId) ?? availablePuestos[0];
+  const [funcionesPuesto, setFuncionesPuesto] = useState<OfertaPuesto | null>(null);
 
   const hasCoords = oferta?.latitud != null && oferta?.longitud != null;
 
@@ -369,6 +371,12 @@ export default function OfertaDetailScreen() {
                       {p.notas && (
                         <Text className="text-xs text-muted-foreground">{p.notas}</Text>
                       )}
+                      {isWorker && (
+                        <TouchableOpacity onPress={() => setFuncionesPuesto(p)} hitSlop={6} className="flex-row items-center gap-1 mt-0.5">
+                          <Ionicons name="list-outline" size={12} color="#3B82F6" />
+                          <Text className="text-xs text-info font-medium">Ver funciones</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                   <View className="items-end gap-0.5">
@@ -520,6 +528,13 @@ export default function OfertaDetailScreen() {
 
         </ScrollView>
       </SafeAreaView>
+
+      <FuncionesCargoModal
+        visible={!!funcionesPuesto}
+        onClose={() => setFuncionesPuesto(null)}
+        cargoId={funcionesPuesto?.cargo_id ?? null}
+        cargoNombre={funcionesPuesto?.cargo_nombre ?? ''}
+      />
     </>
   );
 }

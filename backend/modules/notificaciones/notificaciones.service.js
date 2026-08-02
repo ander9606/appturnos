@@ -25,7 +25,7 @@ const NotificacionesService = {
     // Web Push (navegadores) — best-effort.
     await PushService.enviar(empresaId, usuarioId, { tipo, titulo, mensaje, data });
     // Expo Push (app móvil) — best-effort.
-    await PushService.enviarExpo(usuarioId, { titulo, mensaje, data });
+    await PushService.enviarExpo(usuarioId, { tipo, titulo, mensaje, data });
   },
 
   async notificarVarios(usuarioIds, base) {

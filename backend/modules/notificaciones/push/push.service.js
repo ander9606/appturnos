@@ -220,7 +220,9 @@ const PushService = {
       sound:     'default',
       title:     payload.titulo,
       body:      payload.mensaje,
-      data:      payload.data || {},
+      // `tipo` viaja dentro de `data` (no hay campo aparte en la API de Expo) para
+      // que el listener de push-tap en el cliente pueda decidir a dónde navegar.
+      data:      { ...(payload.data || {}), tipo: payload.data?.tipo ?? payload.tipo },
       channelId: 'default', // debe existir en el cliente — ver setNotificationChannelAsync en pushNotifications.ts
     }));
 

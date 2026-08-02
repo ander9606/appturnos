@@ -51,6 +51,30 @@ const TIPO_LABELS: Record<string, string> = {
   ambos:  'Ambos',
 };
 
+const TIPO_DOC_LABELS: Record<string, string> = {
+  CC: 'Cédula (CC)',
+  CE: 'Cédula Ext. (CE)',
+  PAS: 'Pasaporte',
+};
+
+const SEXO_LABELS: Record<string, string> = {
+  M: 'Masculino',
+  F: 'Femenino',
+  otro: 'Otro',
+};
+
+const TIPO_CUENTA_LABELS: Record<string, string> = {
+  ahorros: 'Ahorros',
+  corriente: 'Corriente',
+};
+
+function fmtFechaCorta(iso: string | null | undefined) {
+  if (!iso) return null;
+  return new Date(iso.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', {
+    year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   if (value == null || value === '') return null;
   return (
@@ -140,11 +164,23 @@ export default function TrabajadorDetailScreen() {
         apellido:     data.apellido,
         tipo:         data.tipo,
         cedula:       data.cedula   || undefined,
+        tipo_documento: (data.tipo_documento as 'CC' | 'CE' | 'PAS') || undefined,
+        fecha_nacimiento: data.fecha_nacimiento || undefined,
+        sexo:         (data.sexo as 'M' | 'F' | 'otro') || undefined,
         email:        data.email    || undefined,
         telefono:     data.telefono || undefined,
+        contacto_emergencia_nombre: data.contacto_emergencia_nombre || undefined,
+        contacto_emergencia_tel:    data.contacto_emergencia_tel    || undefined,
         cargo:        data.cargo    || undefined,
         tarifa_hora:  data.tarifa_hora,
         salario_base: data.salario_base,
+        eps:          data.eps          || undefined,
+        afp:          data.afp          || undefined,
+        banco:        data.banco        || undefined,
+        tipo_cuenta:  (data.tipo_cuenta as 'ahorros' | 'corriente') || undefined,
+        numero_cuenta: data.numero_cuenta || undefined,
+        ant_judiciales_fecha:     data.ant_judiciales_fecha     || undefined,
+        ant_disciplinarios_fecha: data.ant_disciplinarios_fecha || undefined,
       });
       setEditing(false);
       showToast('Los datos del trabajador fueron actualizados.');
@@ -248,11 +284,23 @@ export default function TrabajadorDetailScreen() {
       apellido:     t.apellido,
       tipo:         t.tipo,
       cedula:       t.cedula       ?? '',
+      tipo_documento: t.tipo_documento ?? '',
+      fecha_nacimiento: t.fecha_nacimiento?.slice(0, 10) ?? '',
+      sexo:         t.sexo ?? '',
       email:        t.email        ?? '',
       telefono:     t.telefono     ?? '',
+      contacto_emergencia_nombre: t.contacto_emergencia_nombre ?? '',
+      contacto_emergencia_tel:    t.contacto_emergencia_tel    ?? '',
       cargo:        t.cargo        ?? '',
       tarifa_hora:  t.tarifa_hora  ?? undefined,
       salario_base: t.salario_base ?? undefined,
+      eps:          t.eps          ?? '',
+      afp:          t.afp          ?? '',
+      banco:        t.banco        ?? '',
+      tipo_cuenta:  t.tipo_cuenta  ?? '',
+      numero_cuenta: t.numero_cuenta ?? '',
+      ant_judiciales_fecha:     t.ant_judiciales_fecha?.slice(0, 10)     ?? '',
+      ant_disciplinarios_fecha: t.ant_disciplinarios_fecha?.slice(0, 10) ?? '',
     };
     return (
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
@@ -345,8 +393,11 @@ export default function TrabajadorDetailScreen() {
         {/* Info card */}
         <View className="mx-4 bg-card rounded-2xl border border-border px-4">
           <InfoRow label="Cédula"     value={t.cedula} />
+          <InfoRow label="Tipo de documento" value={t.tipo_documento ? TIPO_DOC_LABELS[t.tipo_documento] : null} />
           <InfoRow label="Correo"     value={t.email} />
           <InfoRow label="Teléfono"   value={t.telefono} />
+          <InfoRow label="Fecha de nacimiento" value={fmtFechaCorta(t.fecha_nacimiento)} />
+          <InfoRow label="Sexo"       value={t.sexo ? SEXO_LABELS[t.sexo] : null} />
           <InfoRow label="Salario"    value={salarioLabel} />
           <InfoRow
             label="Miembro desde"
@@ -355,6 +406,27 @@ export default function TrabajadorDetailScreen() {
             })}
           />
         </View>
+
+        {/* Contacto de emergencia */}
+        {(t.contacto_emergencia_nombre || t.contacto_emergencia_tel) && (
+          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4">
+            <InfoRow label="Contacto de emergencia" value={t.contacto_emergencia_nombre} />
+            <InfoRow label="Teléfono de emergencia"  value={t.contacto_emergencia_tel} />
+          </View>
+        )}
+
+        {/* Seguridad social, banco y antecedentes — solo aplica a nómina/ambos */}
+        {t.tipo !== 'turnos' && (t.eps || t.afp || t.banco || t.numero_cuenta || t.ant_judiciales_fecha || t.ant_disciplinarios_fecha) && (
+          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4">
+            <InfoRow label="EPS"  value={t.eps} />
+            <InfoRow label="AFP"  value={t.afp} />
+            <InfoRow label="Banco" value={t.banco} />
+            <InfoRow label="Tipo de cuenta" value={t.tipo_cuenta ? TIPO_CUENTA_LABELS[t.tipo_cuenta] : null} />
+            <InfoRow label="Número de cuenta" value={t.numero_cuenta} />
+            <InfoRow label="Antecedentes judiciales" value={fmtFechaCorta(t.ant_judiciales_fecha)} />
+            <InfoRow label="Antecedentes disciplinarios" value={fmtFechaCorta(t.ant_disciplinarios_fecha)} />
+          </View>
+        )}
 
         {/* Marcación — admin, solo trabajadores de nómina/ambos */}
         {isAdmin && t.tipo !== 'turnos' && (

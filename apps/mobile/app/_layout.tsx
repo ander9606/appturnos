@@ -25,6 +25,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { destino as destinoNotificacion } from './notificaciones';
 
 // ponytail: expo-router activa keep-awake internamente en dev; falla en Android emulator — ruido inofensivo
 LogBox.ignoreLogs(['Unable to activate keep awake']);
@@ -66,11 +67,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (status !== 'authenticated') return;
     const sub = Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
-      if (data.asignacion_id) {
-        router.push(`/turno/${data.asignacion_id}`);
-      } else {
-        router.push('/notificaciones');
-      }
+      const tipo = typeof data.tipo === 'string' ? data.tipo : '';
+      const ruta = destinoNotificacion({ tipo, data });
+      router.push((ruta ?? '/notificaciones') as Parameters<typeof router.push>[0]);
     });
     return () => sub.remove();
   }, [status]);
