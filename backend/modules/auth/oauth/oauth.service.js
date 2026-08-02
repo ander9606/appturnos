@@ -25,15 +25,21 @@ async function emitirTokens(usuario) {
   return { access_token: accessToken, refresh_token: refreshToken };
 }
 
-/** Vista pública del usuario (sin password_hash). */
+/** Vista pública del usuario (sin password_hash). Debe reflejar los mismos
+ * campos que auth.service.js#perfilPublico: el frontend usa `telefono` y
+ * `has_password` para decidir si debe pedir el teléfono en cada login. */
 function perfilPublico(u) {
   return {
     id: u.id,
     empresa_id: u.empresa_id ?? null,
     nombre: u.nombre,
     apellido: u.apellido || null,
+    foto_perfil: u.foto_perfil ?? null,
     email: u.email,
+    telefono: u.telefono ?? null,
     rol: u.rol,
+    has_password: !!(u.has_password ?? !u.oauth_only),
+    terminos_aceptados_at: u.terminos_aceptados_at ?? null,
   };
 }
 
@@ -141,6 +147,7 @@ const OAuthService = {
       apellido: info.apellido || null,
       email: info.email,
       password_hash: passwordHash,
+      oauth_only: true,
     });
 
     await OAuthModel.crearLink({
@@ -161,14 +168,16 @@ const OAuthService = {
     const tokens = await emitirTokens(usuario);
     return {
       ...tokens,
-      usuario: {
+      usuario: perfilPublico({
         id: usuarioId,
         empresa_id: null,
         nombre: info.nombre,
         apellido: info.apellido,
         email: info.email,
+        telefono: null,
+        oauth_only: true,
         rol: ROLES.TRABAJADOR_TURNOS,
-      },
+      }),
       tipo: 'registro',
     };
   },

@@ -31,7 +31,7 @@ const AuthModel = {
     const [filas] = await pool.query(
       `SELECT id, empresa_id, nombre, apellido, foto_perfil, email, telefono, rol, activo, created_at,
               terminos_aceptados_at,
-              (password_hash IS NOT NULL) AS has_password
+              (oauth_only = 0) AS has_password
        FROM usuarios WHERE id = ? LIMIT 1`,
       [id]
     );
@@ -239,11 +239,11 @@ const AuthModel = {
    * Sin transacción: no hay tabla secundaria que actualizar.
    * @returns {Promise<number>} id del usuario creado.
    */
-  async registrarTrabajadorLibre({ nombre, apellido, email, telefono, password_hash }) {
+  async registrarTrabajadorLibre({ nombre, apellido, email, telefono, password_hash, oauth_only }) {
     const [res] = await pool.query(
-      `INSERT INTO usuarios (empresa_id, nombre, apellido, email, telefono, password_hash, rol)
-       VALUES (NULL, ?, ?, ?, ?, ?, 'trabajador_turnos')`,
-      [nombre, apellido || null, email, telefono || null, password_hash]
+      `INSERT INTO usuarios (empresa_id, nombre, apellido, email, telefono, password_hash, oauth_only, rol)
+       VALUES (NULL, ?, ?, ?, ?, ?, ?, 'trabajador_turnos')`,
+      [nombre, apellido || null, email, telefono || null, password_hash, oauth_only ? 1 : 0]
     );
     return res.insertId;
   },
