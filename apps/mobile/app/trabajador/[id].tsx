@@ -15,6 +15,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -75,14 +76,31 @@ function fmtFechaCorta(iso: string | null | undefined) {
   });
 }
 
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
+function InfoRow({
+  label, value, onCall,
+}: {
+  label: string;
+  value: string | null | undefined;
+  /** Si se pasa, muestra un botón de llamar junto al valor (abre el marcador con el número). */
+  onCall?: () => void;
+}) {
   if (value == null || value === '') return null;
   return (
-    <View className="flex-row justify-between py-3 border-b border-border last:border-b-0">
+    <View className="flex-row justify-between items-center py-3 border-b border-border last:border-b-0">
       <Text className="text-sm text-muted-foreground">{label}</Text>
-      <Text className="text-sm font-medium text-foreground text-right flex-1 ml-4">
-        {value}
-      </Text>
+      <View className="flex-row items-center gap-2 flex-1 ml-4 justify-end">
+        <Text className="text-sm font-medium text-foreground text-right">{value}</Text>
+        {onCall && (
+          <Pressable
+            onPress={onCall}
+            hitSlop={8}
+            accessibilityLabel={`Llamar a ${label}`}
+            className="w-7 h-7 rounded-full bg-success/10 items-center justify-center active:opacity-70"
+          >
+            <Ionicons name="call" size={14} color="#16A34A" />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -395,7 +413,11 @@ export default function TrabajadorDetailScreen() {
           <InfoRow label="Cédula"     value={t.cedula} />
           <InfoRow label="Tipo de documento" value={t.tipo_documento ? TIPO_DOC_LABELS[t.tipo_documento] : null} />
           <InfoRow label="Correo"     value={t.email} />
-          <InfoRow label="Teléfono"   value={t.telefono} />
+          <InfoRow
+            label="Teléfono"
+            value={t.telefono}
+            onCall={t.telefono ? () => Linking.openURL(`tel:${t.telefono}`) : undefined}
+          />
           <InfoRow label="Fecha de nacimiento" value={fmtFechaCorta(t.fecha_nacimiento)} />
           <InfoRow label="Sexo"       value={t.sexo ? SEXO_LABELS[t.sexo] : null} />
           <InfoRow label="Salario"    value={salarioLabel} />
@@ -411,7 +433,11 @@ export default function TrabajadorDetailScreen() {
         {(t.contacto_emergencia_nombre || t.contacto_emergencia_tel) && (
           <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4">
             <InfoRow label="Contacto de emergencia" value={t.contacto_emergencia_nombre} />
-            <InfoRow label="Teléfono de emergencia"  value={t.contacto_emergencia_tel} />
+            <InfoRow
+              label="Teléfono de emergencia"
+              value={t.contacto_emergencia_tel}
+              onCall={t.contacto_emergencia_tel ? () => Linking.openURL(`tel:${t.contacto_emergencia_tel}`) : undefined}
+            />
           </View>
         )}
 
