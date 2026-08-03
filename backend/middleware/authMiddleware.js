@@ -1,9 +1,27 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
 const AppError = require('../utils/AppError');
 const { pool } = require('../config/database');
 const { ROLES } = require('../config/constants');
+
+/**
+ * Límite por usuario (no por IP): el limiter global de server.js es por IP y
+ * lo comparte toda una oficina, así que una cuenta abusiva ahí adentro le
+ * come el cupo a sus compañeros, y una cuenta usada desde varias redes lo
+ * esquiva del todo. Este cierra ambos huecos — generoso para uso normal,
+ * ajustado para un loop/scraping sostenido (ver conversación de seguridad).
+ */
+const limitePorUsuario = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 400,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.usuario?.sub ? String(req.usuario.sub) : ipKeyGenerator(req.ip)),
+  message: { success: false, message: 'Demasiadas solicitudes, intenta en un momento' },
+});
 
 /**
  * Verifica el access token JWT y expone el payload en `req.usuario`.
@@ -13,7 +31,7 @@ const { ROLES } = require('../config/constants');
  * El middleware `resolverEmpresasActivas` resuelve la lista completa
  * de empresas activas para esos usuarios cuando sea necesario.
  */
-function verificarToken(req, _res, next) {
+function verificarToken(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     return next(new AppError('Token requerido', 401));
@@ -23,7 +41,7 @@ function verificarToken(req, _res, next) {
     const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
     req.usuario = payload;
     req.empresa_id = payload.empresa_id ?? null;
-    next();
+    limitePorUsuario(req, res, next);
   } catch {
     next(new AppError('Token inválido o expirado', 401));
   }

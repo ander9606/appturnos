@@ -1,6 +1,8 @@
 'use strict';
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
 const { body } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
@@ -9,6 +11,18 @@ const { ROLES } = require('../../config/constants');
 const ctrl = require('./auth.controller');
 
 const router = express.Router();
+
+// Clave por destino (no solo IP): un SMS/email cuesta dinero real y hostigar
+// un número/correo ajeno no requiere cambiar de red. Cae a IP si no hay
+// destino válido (el body ya pasó por validar/destinoSanitizado en ese punto).
+const otpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.body?.destino || ipKeyGenerator(req.ip),
+  message: { success: false, message: 'Demasiados códigos solicitados, intenta más tarde' },
+});
 
 const emailSanitizado = body('email')
   .isEmail()
@@ -105,6 +119,7 @@ router.post(
     destinoSanitizado,
   ],
   validar,
+  otpLimiter,
   ctrl.enviarOtp,
 );
 
