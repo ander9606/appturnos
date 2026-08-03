@@ -57,6 +57,7 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'trabajador_empresa.solicitud': 'person-add-outline',
   'trabajador_empresa.aprobado':  'checkmark-circle-outline',
   'trabajador_empresa.aceptada':  'checkmark-circle-outline',
+  'nomina.ciclo_cambiado':        'sync-outline',
 };
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {
