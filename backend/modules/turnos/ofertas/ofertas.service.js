@@ -9,7 +9,7 @@ const TrabajadorEmpresaModel = require('../../trabajador-empresa/trabajador-empr
 const CargosModel = require('../../cargos/cargos.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
-const { ROLES } = require('../../../config/constants');
+const { ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA } = require('../../../config/constants');
 const { delayPorRanking } = require('../../../utils/rankingUtils');
 
 /**
@@ -254,6 +254,13 @@ const OfertasService = {
    * el jefe los agrega antes de publicar.
    */
   async crear(empresaId, datos, creadoPor) {
+    const activas = await OfertasModel.contarActivasPorEmpresa(empresaId);
+    if (activas >= MAX_OFERTAS_ACTIVAS_POR_EMPRESA) {
+      throw new AppError(
+        `Llegaste al máximo de ${MAX_OFERTAS_ACTIVAS_POR_EMPRESA} ofertas activas. Cierra o cancela ofertas antiguas antes de crear nuevas.`,
+        409
+      );
+    }
     await validarPuestosParaEmpresa(empresaId, datos.puestos);
     await validarDestinatarios(empresaId, datos.visibilidad, datos.trabajador_ids);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
@@ -485,6 +492,13 @@ const OfertasService = {
   async duplicar(empresaId, id, nuevaFecha, creadoPor) {
     const original = await OfertasModel.obtenerPorId(empresaId, id);
     if (!original) throw new AppError('Oferta no encontrada', 404);
+    const activas = await OfertasModel.contarActivasPorEmpresa(empresaId);
+    if (activas >= MAX_OFERTAS_ACTIVAS_POR_EMPRESA) {
+      throw new AppError(
+        `Llegaste al máximo de ${MAX_OFERTAS_ACTIVAS_POR_EMPRESA} ofertas activas. Cierra o cancela ofertas antiguas antes de crear nuevas.`,
+        409
+      );
+    }
     const nuevaId = await OfertasModel.duplicar(empresaId, id, nuevaFecha, creadoPor);
     return OfertasModel.obtenerPorId(empresaId, nuevaId);
   },

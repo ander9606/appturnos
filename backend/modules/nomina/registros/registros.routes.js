@@ -3,7 +3,7 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
 
-const { validar } = require('../../../middleware/validator');
+const { validar, rangoFechasMax } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
 const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../../config/constants');
@@ -33,6 +33,7 @@ router.get(
     query('fecha').optional().isISO8601().withMessage('fecha inválida'),
     query('fecha_desde').optional().isISO8601().withMessage('fecha_desde inválida'),
     query('fecha_hasta').optional().isISO8601().withMessage('fecha_hasta inválida'),
+    rangoFechasMax(366, 'fecha_desde', 'fecha_hasta'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
     query('limit').optional().isInt({ min: 1, max: 500 }).withMessage('limit inválido'),
   ],
