@@ -105,6 +105,45 @@ describe('PeriodosService.liquidar', () => {
   });
 });
 
+// ── recalcularPorCambioDeCiclo ──────────────────────────────────────────────────
+
+describe('PeriodosService.recalcularPorCambioDeCiclo', () => {
+  afterEach(() => {
+    if (PeriodosService.autoCrear.mockRestore) PeriodosService.autoCrear.mockRestore();
+  });
+
+  test('con período abierto → lo cierra con snapshot y crea el nuevo', async () => {
+    PeriodosModel.obtenerAbiertoPorFecha.mockResolvedValue({
+      id: 7, fecha_inicio: '2026-07-01', fecha_fin: '2026-07-31',
+    });
+    PeriodosModel.cerrarConSnapshot.mockResolvedValue(undefined);
+    jest.spyOn(PeriodosService, 'autoCrear').mockResolvedValue({
+      id: 8, fecha_inicio: '2026-08-01', fecha_fin: '2026-08-15',
+    });
+
+    const result = await PeriodosService.recalcularPorCambioDeCiclo(1, 99);
+
+    expect(PeriodosModel.cerrarConSnapshot).toHaveBeenCalledWith(1, 7, 99);
+    expect(PeriodosService.autoCrear).toHaveBeenCalledWith(1);
+    expect(result.periodo_anterior_cerrado.id).toBe(7);
+    expect(result.periodo_nuevo.id).toBe(8);
+  });
+
+  test('sin período abierto → no cierra nada, solo crea el nuevo', async () => {
+    PeriodosModel.obtenerAbiertoPorFecha.mockResolvedValue(null);
+    PeriodosModel.cerrarConSnapshot.mockClear();
+    jest.spyOn(PeriodosService, 'autoCrear').mockResolvedValue({
+      id: 9, fecha_inicio: '2026-08-01', fecha_fin: '2026-08-15',
+    });
+
+    const result = await PeriodosService.recalcularPorCambioDeCiclo(1, 99);
+
+    expect(PeriodosModel.cerrarConSnapshot).not.toHaveBeenCalled();
+    expect(result.periodo_anterior_cerrado).toBeNull();
+    expect(result.periodo_nuevo.id).toBe(9);
+  });
+});
+
 // ── obtener ───────────────────────────────────────────────────────────────────
 
 describe('PeriodosService.obtener', () => {

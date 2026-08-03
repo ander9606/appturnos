@@ -2,7 +2,9 @@
 
 const EmpresasModel = require('./empresas.model');
 const IntegracionModel = require('../integracion/integracion.model');
+const PeriodosService = require('../nomina/periodos/periodos.service');
 const AppError = require('../../utils/AppError');
+const logger = require('../../utils/logger');
 
 /** Fuente de verdad de "es logiq360": conexión activa con api_key, no una etiqueta manual. */
 async function tieneIntegracionLogiq360Activa(empresaId) {
@@ -33,9 +35,27 @@ const EmpresasService = {
     return empresa;
   },
 
-  async actualizarMiEmpresa(empresaId, datos) {
+  async actualizarMiEmpresa(empresaId, datos, usuarioId) {
+    const antes = await EmpresasModel.obtenerParaAdmin(empresaId);
     await EmpresasModel.actualizarPorAdmin(empresaId, datos);
-    return EmpresasModel.obtenerParaAdmin(empresaId);
+    const empresa = await EmpresasModel.obtenerParaAdmin(empresaId);
+
+    // El ciclo (tipo_liquidacion) es lo que determina los límites de cada
+    // período — si cambia, un período ya abierto con las fechas del ciclo
+    // viejo queda desactualizado. Se cierra con lo acumulado a la fecha
+    // (snapshot, igual que un cierre normal) y se abre uno nuevo ya con el
+    // ciclo nuevo. Best-effort: un fallo acá no debe tumbar la actualización
+    // de los datos de la empresa, que ya se guardaron.
+    if (
+      datos.tipo_liquidacion !== undefined &&
+      antes &&
+      datos.tipo_liquidacion !== antes.tipo_liquidacion
+    ) {
+      await PeriodosService.recalcularPorCambioDeCiclo(empresaId, usuarioId)
+        .catch((err) => logger.error(`[empresas] no se pudo recalcular el período tras cambiar tipo_liquidacion (empresa ${empresaId}):`, err.message));
+    }
+
+    return empresa;
   },
 
   async generarLinkPago(empresaId, { meses = 1 }) {
