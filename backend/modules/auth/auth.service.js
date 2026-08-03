@@ -360,7 +360,7 @@ const AuthService = {
     const TrabajadorEmpresaService = require('../trabajador-empresa/trabajador-empresa.service');
     const { activas } = await TrabajadorEmpresaService.misEmpresas(usuarioId);
     for (const relacion of activas) {
-      await TrabajadorEmpresaService.archivar(usuarioId, rol, relacion.id);
+      await TrabajadorEmpresaService.archivar(usuarioId, rol, empresaId, relacion.id);
     }
 
     const passwordHashInutil = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
