@@ -13,6 +13,21 @@ const { ROLES } = require('../../../config/constants');
 const { delayPorRanking } = require('../../../utils/rankingUtils');
 
 /**
+ * ¿Ya pasó la hora de inicio del turno? Compara contra la hora actual en
+ * Bogotá (UTC-5, sin horario de verano). Antes solo se comparaba la fecha
+ * (día), así que un turno de hoy con hora de inicio ya pasada seguía
+ * aceptando postulaciones — mismo criterio que turnoYaInicio() en el mobile
+ * (apps/mobile/features/turnos/turnosUtils.ts).
+ */
+function turnoYaInicio(fecha, horaInicio) {
+  const [y, mo, d] = fecha.split('-').map(Number);
+  const [hh, mm, ss] = String(horaInicio).split(':').map(Number);
+  const nowBogota = new Date(Date.now() - 5 * 60 * 60 * 1000); // getUTC* == hora Bogotá
+  const inicioBogotaMs = Date.UTC(y, mo - 1, d, hh, mm || 0, ss || 0);
+  return nowBogota.getTime() >= inicioBogotaMs;
+}
+
+/**
  * Resuelve el trabajador vinculado al usuario autenticado en una empresa concreta.
  */
 async function resolverTrabajador(empresaId, usuarioId) {
@@ -400,9 +415,8 @@ const OfertasService = {
     if (oferta.estado !== 'abierta' && oferta.estado !== 'publicada') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
     }
-    const hoyBogota = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    if (oferta.fecha < hoyBogota) {
-      throw new AppError('No puedes postularte a un turno que ya pasó', 409);
+    if (turnoYaInicio(oferta.fecha, oferta.hora_inicio)) {
+      throw new AppError('No puedes postularte a un turno que ya empezó', 409);
     }
 
     // Puesto existe y pertenece a la oferta.

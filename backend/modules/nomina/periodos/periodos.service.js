@@ -25,6 +25,12 @@ async function listarUsuariosNomina(empresaId) {
  */
 const PeriodosService = {
   async listar(empresaId, { estado, page, limit }) {
+    // Antes el período "de hoy" solo se auto-creaba/cerraba cuando un
+    // trabajador marcaba entrada (registros.service.js). Si nadie marcó
+    // desde que venció el período anterior, el admin seguía viendo ese
+    // período como "Abierto" indefinidamente. Al listar también se
+    // dispara el mismo chequeo (best-effort, no debe romper el listado).
+    await this.autoCrear(empresaId).catch(() => {});
     const offset = (page - 1) * limit;
     const { data, total } = await PeriodosModel.listar(empresaId, { estado, limit, offset });
     return { data, pagination: { page, limit, total } };
