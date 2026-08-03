@@ -173,6 +173,10 @@ export default function OfertaDetailScreen() {
   const { data: misTurnos }         = useMisTurnos({ enabled: isWorker });
   const esPasado      = oferta ? oferta.fecha < bogotaToday() : false;
   const turnoIniciado = oferta ? turnoYaInicio(oferta.fecha, oferta.hora_inicio) : false;
+  // esPasado solo compara el día — un turno de hoy con hora de inicio ya
+  // pasada seguía aceptando postulaciones. El backend valida lo mismo en
+  // OfertasService.aplicar().
+  const yaNoSePuedePostular = esPasado || turnoIniciado;
 
   const aplicarM       = useAplicar();
   const retirarM       = useRetirar();
@@ -348,12 +352,12 @@ export default function OfertaDetailScreen() {
           <View className="bg-card rounded-2xl px-5 py-4 gap-3"
             style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              {isWorker && !yaAplicado && !esPasado && availablePuestos.length > 1
+              {isWorker && !yaAplicado && !yaNoSePuedePostular && availablePuestos.length > 1
                 ? '¿A qué cargo quieres aplicar?'
                 : 'Cargos y tarifas'}
             </Text>
             {oferta.puestos.map((p) => {
-              const seleccionable = isWorker && !yaAplicado && !esPasado
+              const seleccionable = isWorker && !yaAplicado && !yaNoSePuedePostular
                 && availablePuestos.length > 1 && p.plazas_cubiertas < p.plazas;
               const seleccionado = seleccionable && p.id === selectedPuesto?.id;
               const Row = (
@@ -424,6 +428,11 @@ export default function OfertaDetailScreen() {
                       onPress={handleRetirar}
                     />
                   )}
+                </View>
+              ) : turnoIniciado ? (
+                <View className="bg-muted rounded-2xl px-5 py-4 flex-row items-center gap-3">
+                  <Ionicons name="time-outline" size={20} color="#94A3B8" />
+                  <Text className="text-sm text-muted-foreground">El turno ya empezó — ya no se puede postular</Text>
                 </View>
               ) : selectedPuesto ? (
                 <Button
