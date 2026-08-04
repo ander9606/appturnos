@@ -36,6 +36,18 @@ export function avatarColorForId(id: number): string {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
 }
 
+// Composición de horas por tipo (barra de nómina). Orden fijo, validado contra
+// daltonismo con el validador del skill de dataviz sobre superficie #FFFFFF
+// (adjacent, ΔE normal-vision 27.6, CVD deutan 6.1 — banda límite, mitigado con
+// la leyenda fija + detalle exacto siempre disponible al expandir la fila).
+export const HOUR_TYPE_COLORS = {
+  ordinarias:    COLORS.placeholder, // baseline neutro, no es una "serie"
+  extraNocturna: '#4A3AA7', // violeta
+  extraDiurna:   '#E87BA4', // magenta
+  nocturna:      '#1BAF7A', // aqua
+  festivo:       '#EB6834', // naranja
+} as const;
+
 // Paleta por tipo de usuario: naranja (turnos), verde (nomina), azul (gestores).
 export const THEME_COLORS = {
   turnos:   { primary: '#FF5A3C', primaryLight: '#FFF1EE' },

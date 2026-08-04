@@ -9,6 +9,7 @@ import { trabajadoresApi } from '@api-client';
 import type { DisponibilidadSlot } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { showToast } from '@/lib/toast';
+import { isChronological } from '@/lib/dateValidation';
 import { Button } from '@/components/ui/Button';
 
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -70,14 +71,20 @@ export default function DisponibilidadScreen() {
 
   function onPickerChange(_: unknown, date?: Date) {
     if (pickerIdx === null) return;
+    const idx = pickerIdx, field = pickerField;
     setPickerIdx(null);
     if (!date) return;
     const hhmm = dateToHHMM(date);
-    setSlots((prev) => prev.map((s, i) =>
-      i === pickerIdx
-        ? pickerField === 'inicio' ? { ...s, hora_inicio: hhmm } : { ...s, hora_fin: hhmm }
-        : s
-    ));
+    setSlots((prev) => prev.map((s, i) => {
+      if (i !== idx) return s;
+      const inicio = field === 'inicio' ? hhmm : s.hora_inicio;
+      const fin    = field === 'fin'    ? hhmm : s.hora_fin;
+      if (isChronological(fin, inicio)) {
+        showToast('La hora de fin debe ser después de la de inicio.');
+        return s;
+      }
+      return field === 'inicio' ? { ...s, hora_inicio: hhmm } : { ...s, hora_fin: hhmm };
+    }));
   }
 
   if (isLoading) {

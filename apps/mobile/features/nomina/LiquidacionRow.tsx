@@ -7,15 +7,25 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { LiquidacionLinea, DescansoCompensatorio } from '@api-client';
 import { getInitials } from '@/lib/formatters';
-import { avatarColorForId } from '@/lib/designTokens';
+import { avatarColorForId, HOUR_TYPE_COLORS } from '@/lib/designTokens';
+import { CompositionBar } from '@/components/ui/CompositionBar';
+import { Badge } from '@/components/ui/Badge';
 
 interface LiquidacionRowProps {
   linea: LiquidacionLinea;
   compensatorios?: DescansoCompensatorio[];
   periodoId?: number;
+  fechaInicio?: string;
+  fechaFin?: string;
+  /** Horas en recargo/extra (extra diurna+nocturna+nocturna+festivo) — para el badge de outlier. */
+  recargoHoras?: number;
+  /** true si su proporción de recargo/extra está notablemente por encima del promedio del equipo. */
+  outlier?: boolean;
 }
 
-export function LiquidacionRow({ linea, compensatorios = [], periodoId }: LiquidacionRowProps) {
+export function LiquidacionRow({
+  linea, compensatorios = [], periodoId, fechaInicio, fechaFin, recargoHoras = 0, outlier = false,
+}: LiquidacionRowProps) {
   const [expanded, setExpanded] = useState(false);
   const router = useRouter();
 
@@ -52,8 +62,9 @@ export function LiquidacionRow({ linea, compensatorios = [], periodoId }: Liquid
           <Text className="text-xs text-muted-foreground">
             {linea.dias_registrados} días · {totalHoras.toFixed(1)}h totales
           </Text>
-          {(extrasTotal > 0 || compensatorios.length > 0) && (
-            <View className="flex-row gap-1.5 mt-0.5">
+          {(extrasTotal > 0 || compensatorios.length > 0 || outlier) && (
+            <View className="flex-row flex-wrap gap-1.5 mt-0.5">
+              {outlier && <Badge label={`⚠ ${recargoHoras.toFixed(0)}h en recargos/extra`} variant="warning" size="sm" />}
               {extrasTotal > 0 && (
                 <View className="bg-primary/10 px-2 py-0.5 rounded-full">
                   <Text className="text-[10px] font-semibold text-primary">
@@ -79,6 +90,20 @@ export function LiquidacionRow({ linea, compensatorios = [], periodoId }: Liquid
           </Text>
           <Text className="text-xs text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
         </View>
+      </View>
+
+      {/* ── Composición — siempre visible, no hace falta expandir ── */}
+      <View className="px-4 pb-3 -mt-1">
+        <CompositionBar
+          height={6}
+          segments={[
+            { value: linea.horas_ordinarias,      color: HOUR_TYPE_COLORS.ordinarias },
+            { value: linea.horas_extra_nocturnas, color: HOUR_TYPE_COLORS.extraNocturna },
+            { value: linea.horas_extra_diurnas,   color: HOUR_TYPE_COLORS.extraDiurna },
+            { value: linea.horas_nocturnas,       color: HOUR_TYPE_COLORS.nocturna },
+            { value: linea.horas_festivo,         color: HOUR_TYPE_COLORS.festivo },
+          ]}
+        />
       </View>
 
       {/* ── Expanded: hour breakdown + link ──────────────────── */}
@@ -109,7 +134,9 @@ export function LiquidacionRow({ linea, compensatorios = [], periodoId }: Liquid
           {periodoId && (
             <TouchableOpacity
               onPress={() => router.push(
-                `/registros-periodo?periodoId=${periodoId}&trabajadorId=${linea.trabajador_id}`
+                `/registros-periodo?periodoId=${periodoId}&trabajadorId=${linea.trabajador_id}${
+                  fechaInicio && fechaFin ? `&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}` : ''
+                }`
               )}
               className="flex-row items-center gap-1 mt-3"
             >

@@ -11,6 +11,14 @@ import {
 } from '../features/turnos/crear/utils';
 import type { WizardData, PuestoInput } from '../features/turnos/crear/types';
 
+// Fechas relativas a "hoy" — evita que el test se pudra cuando pase el tiempo
+// (isValidDate/validateStep1 rechazan fechas pasadas).
+function futureDateParts(daysFromNow: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  return { dia: String(d.getDate()), mes: String(d.getMonth() + 1), anio: String(d.getFullYear()) };
+}
+
 // ── pad ───────────────────────────────────────────────────────────────────────
 
 describe('pad', () => {
@@ -71,8 +79,14 @@ describe('buildTime', () => {
 // ── isValidDate ───────────────────────────────────────────────────────────────
 
 describe('isValidDate', () => {
-  it('accepts a valid date', () => {
-    expect(isValidDate('15', '6', '2026')).toBe(true);
+  it('accepts a valid future date', () => {
+    const { dia, mes, anio } = futureDateParts(30);
+    expect(isValidDate(dia, mes, anio)).toBe(true);
+  });
+
+  it('accepts today', () => {
+    const { dia, mes, anio } = futureDateParts(0);
+    expect(isValidDate(dia, mes, anio)).toBe(true);
   });
 
   it('rejects empty strings', () => {
@@ -80,31 +94,28 @@ describe('isValidDate', () => {
   });
 
   it('rejects month 0', () => {
-    expect(isValidDate('1', '0', '2026')).toBe(false);
+    expect(isValidDate('1', '0', '2099')).toBe(false);
   });
 
   it('rejects month 13', () => {
-    expect(isValidDate('1', '13', '2026')).toBe(false);
+    expect(isValidDate('1', '13', '2099')).toBe(false);
   });
 
   it('rejects day 0', () => {
-    expect(isValidDate('0', '6', '2026')).toBe(false);
+    expect(isValidDate('0', '6', '2099')).toBe(false);
   });
 
   it('rejects day 32', () => {
-    expect(isValidDate('32', '6', '2026')).toBe(false);
+    expect(isValidDate('32', '6', '2099')).toBe(false);
   });
 
-  it('rejects year below 2024', () => {
-    expect(isValidDate('1', '1', '2023')).toBe(false);
+  it('rejects an impossible calendar date (Feb 30)', () => {
+    expect(isValidDate('30', '2', '2099')).toBe(false);
   });
 
-  it('rejects year above 2099', () => {
-    expect(isValidDate('1', '1', '2100')).toBe(false);
-  });
-
-  it('accepts boundary year 2024', () => {
-    expect(isValidDate('1', '1', '2024')).toBe(true);
+  it('rejects a date in the past', () => {
+    const { dia, mes, anio } = futureDateParts(-1);
+    expect(isValidDate(dia, mes, anio)).toBe(false);
   });
 });
 
@@ -187,11 +198,12 @@ describe('calcularPresupuesto', () => {
 // ── validateStep1 ─────────────────────────────────────────────────────────────
 
 describe('validateStep1', () => {
+  const { dia, mes, anio } = futureDateParts(30);
   const valid: WizardData = {
     titulo: 'Turno Corferias', descripcion: '',
-    dia: '15', mes: '6', anio: '2026',
+    dia, mes, anio,
     hora_inicio_h: '7', hora_inicio_m: '0',
-    hora_fin_h: '', hora_fin_m: '',
+    hora_fin_h: '15', hora_fin_m: '0',
     lugar: '', latitud: null, longitud: null,
     encargado_nombre: '', encargado_telefono: '',
     para_quien: 'turnos', visibilidad: 'abierta', destinatarios: [], puestos: [],
@@ -211,6 +223,22 @@ describe('validateStep1', () => {
 
   it('requires a valid start time', () => {
     expect(validateStep1({ ...valid, hora_inicio_h: '', hora_inicio_m: '' })).toMatch(/inicio/i);
+  });
+
+  it('requires a valid end time', () => {
+    expect(validateStep1({ ...valid, hora_fin_h: '', hora_fin_m: '' })).toMatch(/fin/i);
+  });
+
+  it('rejects hora_fin before hora_inicio', () => {
+    expect(
+      validateStep1({ ...valid, hora_inicio_h: '15', hora_inicio_m: '0', hora_fin_h: '7', hora_fin_m: '0' })
+    ).toMatch(/fin.*inicio/i);
+  });
+
+  it('rejects hora_fin equal to hora_inicio', () => {
+    expect(
+      validateStep1({ ...valid, hora_inicio_h: '9', hora_inicio_m: '0', hora_fin_h: '9', hora_fin_m: '0' })
+    ).toMatch(/fin.*inicio/i);
   });
 
   it('requires at least one destinatario when visibilidad is dirigida', () => {

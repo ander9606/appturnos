@@ -36,6 +36,8 @@ import type { Trabajador, TipoDocumento, SexoTrabajador, TipoCuenta, Experiencia
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
+import { isValidISODate } from '@/lib/dateValidation';
+import { bogotaToday } from '@/lib/formatters';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -229,6 +231,17 @@ export default function MiPerfilLaboralScreen() {
     (val: FormState[K]) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const handleSave = async () => {
+    const fechas: [string, string][] = [
+      [form.fecha_nacimiento, 'Fecha de nacimiento'],
+      [form.ant_judiciales_fecha, 'Fecha de antecedentes judiciales'],
+      [form.ant_disciplinarios_fecha, 'Fecha de antecedentes disciplinarios'],
+    ];
+    for (const [valor, label] of fechas) {
+      if (valor && (!isValidISODate(valor) || valor > bogotaToday())) {
+        Alert.alert('Fecha inválida', `${label} debe tener formato AAAA-MM-DD y no puede ser futura.`);
+        return;
+      }
+    }
     try {
       await update.mutateAsync({
         tipo_documento:             form.tipo_documento || undefined,
@@ -265,6 +278,14 @@ export default function MiPerfilLaboralScreen() {
   const handleAddExperiencia = async () => {
     if (!newExp.empresa_nombre || !newExp.cargo || !newExp.fecha_inicio) {
       Alert.alert('Campos requeridos', 'Empresa, cargo y fecha de inicio son obligatorios');
+      return;
+    }
+    if (!isValidISODate(newExp.fecha_inicio)) {
+      Alert.alert('Fecha inválida', 'La fecha de inicio debe tener formato AAAA-MM-DD.');
+      return;
+    }
+    if (newExp.fecha_fin && (!isValidISODate(newExp.fecha_fin) || newExp.fecha_fin < newExp.fecha_inicio)) {
+      Alert.alert('Fecha inválida', 'La fecha de fin debe ser AAAA-MM-DD y no puede ser antes que la de inicio.');
       return;
     }
     try {

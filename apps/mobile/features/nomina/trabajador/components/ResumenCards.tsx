@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
+import { HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import {
   fmtPeriodo,
   getJornadaLegalSemanal,
@@ -125,16 +126,16 @@ export function ResumenCards({
                   </Text>
                   <View className="flex-row flex-wrap gap-x-4 gap-y-2">
                     {resumen.horasExtraDiurnas > 0 && (
-                      <HoraChip label="Extra diurna" horas={resumen.horasExtraDiurnas} color="text-primary-500" />
+                      <HoraChip label="Extra diurna" horas={resumen.horasExtraDiurnas} color={HOUR_TYPE_COLORS.extraDiurna} />
                     )}
                     {resumen.horasExtraNocturnas > 0 && (
-                      <HoraChip label="Extra noct." horas={resumen.horasExtraNocturnas} color="text-primary-600" />
+                      <HoraChip label="Extra noct." horas={resumen.horasExtraNocturnas} color={HOUR_TYPE_COLORS.extraNocturna} />
                     )}
                     {resumen.horasNocturnas > 0 && (
-                      <HoraChip label="Nocturnas" horas={resumen.horasNocturnas} color="text-info" />
+                      <HoraChip label="Nocturnas" horas={resumen.horasNocturnas} color={HOUR_TYPE_COLORS.nocturna} />
                     )}
                     {resumen.horasFestivo > 0 && (
-                      <HoraChip label="Festivo" horas={resumen.horasFestivo} color="text-danger" />
+                      <HoraChip label="Festivo" horas={resumen.horasFestivo} color={HOUR_TYPE_COLORS.festivo} />
                     )}
                   </View>
                   {resumen.valorExtraCOP > 0 && (
@@ -195,10 +196,10 @@ function StatCard({ label, value, valueClass }: { label: string; value: string; 
   );
 }
 
-function HoraChip({ label, horas, color }: { label: string; horas: number; color: ColorToken }) {
+function HoraChip({ label, horas, color }: { label: string; horas: number; color: string }) {
   return (
     <View className="gap-0.5">
-      <Text className={`text-sm font-bold ${color}`}>{horas.toFixed(1)}h</Text>
+      <Text className="text-sm font-bold" style={{ color }}>{horas.toFixed(1)}h</Text>
       <Text className="text-[10px] text-muted-foreground">{label}</Text>
     </View>
   );
@@ -214,22 +215,33 @@ function fmtLunes(iso: string): string {
 function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorHora: number }) {
   const excede = semana.horasExtra > 0;
   const extra$ = excede ? Math.round(semana.horasExtra * 1.25 * valorHora) : 0;
+  const pct = Math.min(100, (semana.horasTotales / semana.limiteHoras) * 100);
 
   return (
-    <View className="flex-row items-center justify-between py-1 border-b border-border last:border-0">
-      <Text className="text-xs text-muted-foreground">
-        Sem. {fmtLunes(semana.inicioSemana)}
-      </Text>
-      <View className="flex-row items-center gap-2">
-        <Text className={`text-xs font-medium ${excede ? 'text-success' : 'text-foreground'}`}>
-          {semana.horasTotales.toFixed(1)}h / {semana.limiteHoras}h
+    <View className="py-1.5 border-b border-border last:border-0 gap-1.5">
+      <View className="flex-row items-center justify-between">
+        <Text className="text-xs text-muted-foreground">
+          Sem. {fmtLunes(semana.inicioSemana)}
         </Text>
-        {excede && (
-          <Text className="text-xs font-semibold text-success">
-            +{semana.horasExtra.toFixed(1)}h
-            {extra$ > 0 ? ` ≈ +${formatCOP(extra$)}` : ''}
+        <View className="flex-row items-center gap-2">
+          <Text className={`text-xs font-medium ${excede ? 'text-success' : 'text-foreground'}`}>
+            {semana.horasTotales.toFixed(1)}h / {semana.limiteHoras}h
           </Text>
-        )}
+          {excede && (
+            <Text className="text-xs font-semibold text-success">
+              +{semana.horasExtra.toFixed(1)}h
+              {extra$ > 0 ? ` ≈ +${formatCOP(extra$)}` : ''}
+            </Text>
+          )}
+        </View>
+      </View>
+      {/* excede = trabajó más del límite legal = generó extra — es buena noticia
+          para el trabajador, por eso va en success y no en un color de alerta. */}
+      <View className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <View
+          className="h-full rounded-full"
+          style={{ width: `${pct}%`, backgroundColor: excede ? '#059669' : '#CBD5E1' }}
+        />
       </View>
     </View>
   );
