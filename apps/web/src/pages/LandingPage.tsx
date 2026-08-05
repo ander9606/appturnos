@@ -1,10 +1,60 @@
 import { Link } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Calendar, MapPin, Wallet, Users, Bell, ShieldCheck,
   Bell as BellIcon, Search, Star, Lock, Mail, ChevronRight, Home,
   CalendarDays, Wallet as WalletIcon, Apple, PlayCircle,
 } from 'lucide-react';
+
+/**
+ * Revela su contenido con un fade + slide-up al entrar en el viewport.
+ * Si el usuario prefiere movimiento reducido, se muestra directo sin animar.
+ */
+function Reveal({
+  children,
+  className = '',
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`transition-all duration-700 ease-out ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+      } ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
 
 /**
  * Landing pública de zaturno.app — vive fuera del área autenticada.
@@ -68,7 +118,7 @@ function Hero() {
       style={{ background: 'linear-gradient(160deg, #FF7150 0%, #FF5A3C 50%, #E83E1F 100%)' }}
     >
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-16 lg:grid-cols-2 lg:pb-24 lg:pt-20">
-        <div>
+        <Reveal>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/70">
             Gestión de turnos y nómina
           </p>
@@ -94,13 +144,15 @@ function Hero() {
               Ver la app
             </a>
           </div>
-        </div>
+        </Reveal>
 
-        <div className="flex justify-center lg:justify-end">
-          <Phone>
-            <DashboardScreen />
-          </Phone>
-        </div>
+        <Reveal delay={150} className="flex justify-center lg:justify-end">
+          <div className="animate-[zt-float_5s_ease-in-out_infinite] motion-reduce:animate-none">
+            <Phone>
+              <DashboardScreen />
+            </Phone>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -117,15 +169,15 @@ function Stats() {
   return (
     <section className="bg-primary-900">
       <div className="mx-auto grid max-w-6xl grid-cols-1 divide-y divide-white/15 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        {items.map((s) => (
-          <div key={s.label} className="px-8 py-10 text-center">
+        {items.map((s, i) => (
+          <Reveal key={s.label} delay={i * 100} className="px-8 py-10 text-center">
             <div className="text-4xl font-extrabold tabular-nums tracking-tight text-white sm:text-5xl">
               {s.num}
             </div>
             <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-white/60">
               {s.label}
             </div>
-          </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -137,7 +189,7 @@ function Stats() {
 function Mockups() {
   return (
     <section id="app" className="px-6 py-20 sm:py-24">
-      <div className="mx-auto max-w-3xl text-center">
+      <Reveal className="mx-auto max-w-3xl text-center">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">La app</p>
         <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
           Pantallas reales, no bocetos
@@ -146,24 +198,34 @@ function Mockups() {
           Esto es exactamente lo que tu equipo ve al abrir zaturno — desde que inician sesión
           hasta que revisan su quincena.
         </p>
-      </div>
+      </Reveal>
 
       <div className="mx-auto mt-14 flex max-w-6xl flex-nowrap gap-7 overflow-x-auto px-1 pb-4 sm:flex-wrap sm:justify-center sm:overflow-visible">
-        <MockupItem caption="Inicio de sesión">
-          <Phone size="sm"><LoginScreen /></Phone>
-        </MockupItem>
-        <MockupItem caption="Mis turnos">
-          <Phone size="sm"><TurnosScreen /></Phone>
-        </MockupItem>
-        <MockupItem caption="Nómina">
-          <Phone size="sm"><NominaScreen /></Phone>
-        </MockupItem>
-        <MockupItem caption="Equipo">
-          <Phone size="sm"><EquipoScreen /></Phone>
-        </MockupItem>
+        <Reveal delay={0}>
+          <MockupItem caption="Inicio de sesión">
+            <Phone size="sm"><LoginScreen /></Phone>
+          </MockupItem>
+        </Reveal>
+        <Reveal delay={80}>
+          <MockupItem caption="Mis turnos">
+            <Phone size="sm"><TurnosScreen /></Phone>
+          </MockupItem>
+        </Reveal>
+        <Reveal delay={160}>
+          <MockupItem caption="Nómina">
+            <Phone size="sm"><NominaScreen /></Phone>
+          </MockupItem>
+        </Reveal>
+        <Reveal delay={240}>
+          <MockupItem caption="Equipo">
+            <Phone size="sm"><EquipoScreen /></Phone>
+          </MockupItem>
+        </Reveal>
       </div>
 
-      <StoreBadges />
+      <Reveal delay={300}>
+        <StoreBadges />
+      </Reveal>
     </section>
   );
 }
@@ -207,7 +269,7 @@ function StoreBadge({
 
 function MockupItem({ caption, children }: { caption: string; children: ReactNode }) {
   return (
-    <div className="flex flex-shrink-0 flex-col items-center gap-3.5">
+    <div className="flex flex-shrink-0 flex-col items-center gap-3.5 transition-transform duration-300 hover:-translate-y-1.5">
       {children}
       <span className="text-sm font-semibold text-muted-foreground">{caption}</span>
     </div>
@@ -233,18 +295,20 @@ function Pain() {
   ];
   return (
     <section className="bg-card px-6 py-20 sm:py-24">
-      <div className="mx-auto max-w-2xl text-center">
+      <Reveal className="mx-auto max-w-2xl text-center">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">El problema</p>
         <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
           ¿Te suena familiar?
         </h2>
-      </div>
+      </Reveal>
       <div className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-px overflow-hidden rounded-2xl bg-border md:grid-cols-3">
-        {items.map((p) => (
-          <div key={p.q} className="border-t-[3px] border-warning bg-background px-7 py-9">
-            <p className="text-base font-bold leading-snug text-foreground">{p.q}</p>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.a}</p>
-          </div>
+        {items.map((p, i) => (
+          <Reveal key={p.q} delay={i * 100}>
+            <div className="h-full border-t-[3px] border-warning bg-background px-7 py-9 transition-transform duration-300 hover:-translate-y-1">
+              <p className="text-base font-bold leading-snug text-foreground">{p.q}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.a}</p>
+            </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -290,15 +354,17 @@ function HowItWorks() {
   return (
     <section className="px-6 py-20 sm:py-24" id="como-funciona">
       <div className="mx-auto max-w-6xl">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Cómo funciona</p>
-        <h2 className="mt-3 max-w-lg text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
-          Del turno a la nómina, sin fricción
-        </h2>
+        <Reveal>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Cómo funciona</p>
+          <h2 className="mt-3 max-w-lg text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
+            Del turno a la nómina, sin fricción
+          </h2>
+        </Reveal>
 
         <div className="mt-14 grid gap-16 lg:grid-cols-2">
           <div className="flex flex-col gap-9">
             {steps.map((s, i) => (
-              <div key={s.title} className="flex gap-5">
+              <Reveal key={s.title} delay={i * 90} className="flex gap-5">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 border-primary text-sm font-extrabold text-primary">
                   {i + 1}
                 </div>
@@ -306,11 +372,11 @@ function HowItWorks() {
                   <h4 className="text-base font-bold text-foreground">{s.title}</h4>
                   <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
 
-          <div>
+          <Reveal delay={150}>
             <p className="mb-3.5 text-xs font-bold uppercase tracking-[0.14em] text-primary">
               Vista de turnos — semana actual
             </p>
@@ -346,7 +412,7 @@ function HowItWorks() {
                 <Legend color="bg-muted" label="Descanso" />
               </div>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>
@@ -376,19 +442,23 @@ function Features() {
   return (
     <section className="bg-muted/60 px-6 py-20 sm:py-24">
       <div className="mx-auto max-w-6xl">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Funcionalidades</p>
-        <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-          Todo lo que necesitas, nada que no
-        </h2>
+        <Reveal>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Funcionalidades</p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+            Todo lo que necesitas, nada que no
+          </h2>
+        </Reveal>
         <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl bg-border sm:grid-cols-2">
-          {items.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="border-l-[3px] border-transparent bg-card px-8 py-9 transition-colors hover:border-primary">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
-                <Icon size={20} className="text-primary" />
+          {items.map(({ icon: Icon, title, body }, i) => (
+            <Reveal key={title} delay={(i % 2) * 90}>
+              <div className="h-full border-l-[3px] border-transparent bg-card px-8 py-9 transition-all duration-300 hover:-translate-y-1 hover:border-primary">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
+                  <Icon size={20} className="text-primary" />
+                </div>
+                <h3 className="text-base font-bold text-foreground">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
               </div>
-              <h3 className="text-base font-bold text-foreground">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -408,7 +478,7 @@ function Sectors() {
   ];
   return (
     <section className="bg-primary-900 px-6 py-20 sm:py-24">
-      <div className="mx-auto max-w-3xl text-center">
+      <Reveal className="mx-auto max-w-3xl text-center">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary-200">Industrias</p>
         <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white text-balance sm:text-4xl">
           Con turnos rotativos o sin ellos, tu nómina queda al día
@@ -417,16 +487,15 @@ function Sectors() {
           zaturno no es solo para negocios con turnos: es un sistema completo de nómina — también
           sirve para empresas con horario fijo que quieren automatizar sus recargos y liquidaciones.
         </p>
-      </div>
+      </Reveal>
       <div className="mx-auto mt-12 grid max-w-6xl grid-cols-1 gap-px sm:grid-cols-2 lg:grid-cols-5">
-        {sectors.map((s) => (
-          <div
-            key={s.name}
-            className="border border-white/10 bg-white/5 px-6 py-7 text-center transition-colors hover:bg-white/10"
-          >
-            <div className="text-sm font-bold text-white">{s.name}</div>
-            <div className="mt-1.5 text-xs leading-relaxed text-white/50">{s.desc}</div>
-          </div>
+        {sectors.map((s, i) => (
+          <Reveal key={s.name} delay={i * 70}>
+            <div className="h-full border border-white/10 bg-white/5 px-6 py-7 text-center transition-all duration-300 hover:-translate-y-1 hover:bg-white/10">
+              <div className="text-sm font-bold text-white">{s.name}</div>
+              <div className="mt-1.5 text-xs leading-relaxed text-white/50">{s.desc}</div>
+            </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -438,34 +507,36 @@ function Sectors() {
 function FinalCta() {
   return (
     <section className="bg-card px-6 py-24 text-center">
-      <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Empieza hoy</p>
-      <h2 className="mx-auto mt-4 max-w-lg text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
-        ¿Listo para dejar de calcular a mano?
-      </h2>
-      <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-        Registra tu empresa gratis y configura tu primer turno en menos de 10 minutos.
-      </p>
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Link
-          to="/registro"
-          className="rounded-xl bg-primary px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 hover:bg-primary-600"
-        >
-          Registrar mi empresa gratis
-        </Link>
-        <Link
-          to="/login"
-          className="rounded-xl border border-border px-7 py-3.5 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:text-primary"
-        >
-          Ya tengo cuenta
-        </Link>
-      </div>
-      <p className="mt-7 text-sm text-muted-foreground">
-        ¿Dudas? Escríbenos a{' '}
-        <a href="mailto:anderson960616@gmail.com" className="font-semibold text-primary hover:underline">
-          anderson960616@gmail.com
-        </a>{' '}
-        · <a href="tel:+573204143661" className="font-semibold text-primary hover:underline">320 414 3661</a>
-      </p>
+      <Reveal>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Empieza hoy</p>
+        <h2 className="mx-auto mt-4 max-w-lg text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
+          ¿Listo para dejar de calcular a mano?
+        </h2>
+        <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
+          Registra tu empresa gratis y configura tu primer turno en menos de 10 minutos.
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/registro"
+            className="rounded-xl bg-primary px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 hover:bg-primary-600"
+          >
+            Registrar mi empresa gratis
+          </Link>
+          <Link
+            to="/login"
+            className="rounded-xl border border-border px-7 py-3.5 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            Ya tengo cuenta
+          </Link>
+        </div>
+        <p className="mt-7 text-sm text-muted-foreground">
+          ¿Dudas? Escríbenos a{' '}
+          <a href="mailto:anderson960616@gmail.com" className="font-semibold text-primary hover:underline">
+            anderson960616@gmail.com
+          </a>{' '}
+          · <a href="tel:+573204143661" className="font-semibold text-primary hover:underline">320 414 3661</a>
+        </p>
+      </Reveal>
     </section>
   );
 }
@@ -740,7 +811,12 @@ function NominaScreen() {
   ];
   return (
     <>
-      <div className="rounded-b-[18px] px-3 pb-3 pt-2" style={{ background: GREEN }}>
+      <div
+        className="relative overflow-hidden rounded-b-[18px] px-3 pb-3 pt-2"
+        style={{ background: 'linear-gradient(155deg, #10B981 0%, #059669 55%, #065F46 100%)' }}
+      >
+        <div className="pointer-events-none absolute -right-5 -top-7 h-16 w-16 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-5 -left-6 h-12 w-12 rounded-full bg-white/10" />
         <StatusRow />
         <p className="mt-1 text-[11px] font-semibold text-white/85">Nómina</p>
         <p className="text-[12px] font-extrabold text-white">Quincena 1–15 Ago</p>

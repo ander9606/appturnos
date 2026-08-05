@@ -52,3 +52,9 @@
   html { font-family: var(--font-family-sans); }
   body { @apply bg-background text-foreground; }
 }
+
+/* Flotación ambiental sutil para el mockup del hero en la landing (LandingPage.tsx) */
+@keyframes zt-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
