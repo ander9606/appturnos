@@ -1,7 +1,9 @@
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { LoginPage } from '@/modules/auth/LoginPage';
 import { ProtectedRoute, RoleRoute } from '@/modules/auth/ProtectedRoute';
+import { useAuthStore } from '@/modules/auth/authStore';
 import { Layout } from '@/shared/components/Layout';
+import { LandingPage } from '@/pages/LandingPage';
 import { WelcomePage } from '@/pages/WelcomePage';
 import { RegistroEmpresaPage } from '@/pages/RegistroEmpresaPage';
 import { PrivacidadPage } from '@/pages/PrivacidadPage';
@@ -20,10 +22,19 @@ import { EmpresaDetailPage } from '@/modules/admin/pages/EmpresaDetailPage';
 import { WompiEventosPage } from '@/modules/admin/pages/WompiEventosPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
+/** La raíz es pública (landing de marketing) para visitantes anónimos; un usuario
+ *  con sesión activa se manda directo a su dashboard en vez de ver el folleto. */
+function RootRoute() {
+  const usuario = useAuthStore((s) => s.usuario);
+  if (usuario) return <Navigate to="/dashboard" replace />;
+  return <LandingPage />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<RootRoute />} />
         <Route path="/bienvenida" element={<WelcomePage />} />
         <Route path="/registro" element={<RegistroEmpresaPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -32,7 +43,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_nomina', 'jefe_turnos', 'nomina']} />}>
-              <Route index element={<DashboardPage />} />
+              <Route path="dashboard" element={<DashboardPage />} />
             </Route>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_nomina', 'nomina']} />}>
               <Route path="nomina" element={<NominaPage />} />
