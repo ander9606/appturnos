@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import {
   Calendar, MapPin, Wallet, Users, Bell, ShieldCheck,
   Bell as BellIcon, Search, Star, Lock, Mail, ChevronRight, Home,
-  CalendarDays, Wallet as WalletIcon,
+  CalendarDays, Wallet as WalletIcon, Apple, PlayCircle,
 } from 'lucide-react';
 
 /**
@@ -162,7 +162,46 @@ function Mockups() {
           <Phone size="sm"><EquipoScreen /></Phone>
         </MockupItem>
       </div>
+
+      <StoreBadges />
     </section>
+  );
+}
+
+function StoreBadges() {
+  return (
+    <div className="mx-auto mt-16 flex max-w-6xl flex-col items-center gap-4">
+      <p className="text-sm font-semibold text-muted-foreground">
+        Muy pronto disponible para descargar
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <StoreBadge icon={Apple} eyebrow="Próximamente en" store="App Store" />
+        <StoreBadge icon={PlayCircle} eyebrow="Próximamente en" store="Google Play" />
+      </div>
+    </div>
+  );
+}
+
+function StoreBadge({
+  icon: Icon,
+  eyebrow,
+  store,
+}: {
+  icon: typeof Apple;
+  eyebrow: string;
+  store: string;
+}) {
+  return (
+    <div
+      className="flex cursor-default items-center gap-2.5 rounded-xl border border-border bg-foreground px-4 py-2.5 opacity-90"
+      aria-label={`${store}: ${eyebrow.toLowerCase()}`}
+    >
+      <Icon size={22} className="text-white" />
+      <div className="text-left leading-tight">
+        <div className="text-[9px] font-medium uppercase tracking-wide text-white/60">{eyebrow}</div>
+        <div className="text-sm font-bold text-white">{store}</div>
+      </div>
+    </div>
   );
 }
 
