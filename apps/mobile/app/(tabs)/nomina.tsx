@@ -71,6 +71,10 @@ function NominaGestorView() {
 
   const activePeriodoId = periodoId ?? periodos[0]?.id;
   const activePeriodo   = periodos.find((p) => p.id === activePeriodoId) ?? periodos[0];
+  // Solo mostrar en el selector períodos del mismo tipo que el más reciente — evita mezclar
+  // quincenales con mensuales cuando la empresa cambia su esquema de facturación.
+  const tipoActual        = periodos[0]?.tipo;
+  const periodosSelector  = periodos.filter((p) => p.tipo === tipoActual);
 
   const {
     data: liquidacion,
@@ -211,10 +215,10 @@ function NominaGestorView() {
             </View>
 
             <View className="px-5 gap-3">
-              {periodos.length > 0 && (
+              {periodosSelector.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View className="flex-row gap-2 py-1">
-                    {periodos.slice(0, 8).map((p) => (
+                    {periodosSelector.slice(0, 8).map((p) => (
                       <TouchableOpacity
                         key={p.id}
                         onPress={() => setPeriodoId(p.id)}
