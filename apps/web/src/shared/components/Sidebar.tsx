@@ -14,7 +14,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Empresas', to: '/admin/empresas', icon: Building2 },
   ],
   admin_empresa: [
-    { label: 'Inicio',         to: '/',              icon: LayoutDashboard },
+    { label: 'Inicio',         to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Turnos',         to: '/turnos',         icon: Calendar },
     { label: 'Nómina',         to: '/nomina',         icon: DollarSign },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
@@ -22,19 +22,19 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'logiq360',       to: '/integracion',    icon: Plug },
   ],
   jefe_nomina: [
-    { label: 'Inicio',  to: '/',       icon: LayoutDashboard },
-    { label: 'Nómina',  to: '/nomina', icon: DollarSign },
-    { label: 'Equipo',  to: '/equipo', icon: Users },
+    { label: 'Inicio',  to: '/dashboard', icon: LayoutDashboard },
+    { label: 'Nómina',  to: '/nomina',    icon: DollarSign },
+    { label: 'Equipo',  to: '/equipo',    icon: Users },
   ],
   jefe_turnos: [
-    { label: 'Inicio',        to: '/',             icon: LayoutDashboard },
+    { label: 'Inicio',        to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Turnos',        to: '/turnos',        icon: Calendar },
     { label: 'Equipo',        to: '/equipo',        icon: Users },
     { label: 'Configuración', to: '/configuracion', icon: Settings },
   ],
   nomina: [
-    { label: 'Inicio',  to: '/',       icon: LayoutDashboard },
-    { label: 'Nómina',  to: '/nomina', icon: DollarSign },
+    { label: 'Inicio',  to: '/dashboard', icon: LayoutDashboard },
+    { label: 'Nómina',  to: '/nomina',    icon: DollarSign },
   ],
 };
 
@@ -89,7 +89,7 @@ export function Sidebar() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.to === '/dashboard'}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
