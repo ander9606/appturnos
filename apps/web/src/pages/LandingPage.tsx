@@ -58,6 +58,20 @@ function Reveal({
   );
 }
 
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduced(query.matches);
+    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+    query.addEventListener('change', handler);
+    return () => query.removeEventListener('change', handler);
+  }, []);
+
+  return reduced;
+}
+
 /**
  * Landing pública de zaturno.app — vive fuera del área autenticada.
  * Reusa los tokens de marca reales de index.css (mismo naranja que la app
@@ -205,29 +219,60 @@ function Mockups() {
         </p>
       </Reveal>
 
-      <div className="mx-auto mt-14 flex max-w-7xl flex-nowrap gap-7 overflow-x-auto px-1 pb-4 sm:flex-wrap sm:justify-center sm:overflow-visible">
-        {[
-          { caption: 'Inicio de sesión', screen: <LoginScreen /> },
-          { caption: 'Mis turnos', screen: <TurnosScreen /> },
-          { caption: 'Crear turno', screen: <CrearTurnoScreen /> },
-          { caption: 'Marcar ingreso', screen: <MarcarIngresoScreen /> },
-          { caption: 'Detalle y valor del turno', screen: <OfertaDetalleScreen /> },
-          { caption: 'Nómina', screen: <NominaScreen /> },
-          { caption: 'Valor acumulado', screen: <AcumuladoScreen /> },
-          { caption: 'Equipo', screen: <EquipoScreen /> },
-        ].map((m, i) => (
-          <Reveal key={m.caption} delay={i * 60}>
-            <MockupItem caption={m.caption}>
-              <Phone size="sm">{m.screen}</Phone>
-            </MockupItem>
-          </Reveal>
-        ))}
-      </div>
+      <MockupsCarousel />
 
       <Reveal delay={200}>
         <StoreBadges />
       </Reveal>
     </section>
+  );
+}
+
+const MOCKUP_SCREENS = [
+  { caption: 'Inicio de sesión', screen: <LoginScreen /> },
+  { caption: 'Mis turnos', screen: <TurnosScreen /> },
+  { caption: 'Crear turno', screen: <CrearTurnoScreen /> },
+  { caption: 'Marcar ingreso', screen: <MarcarIngresoScreen /> },
+  { caption: 'Detalle y valor del turno', screen: <OfertaDetalleScreen /> },
+  { caption: 'Nómina', screen: <NominaScreen /> },
+  { caption: 'Valor acumulado', screen: <AcumuladoScreen /> },
+  { caption: 'Equipo', screen: <EquipoScreen /> },
+];
+
+/**
+ * Carrusel infinito: la fila se duplica y se traslada -50% en loop, así que el
+ * corte entre la 1ª y 2ª copia es invisible. Se pausa por completo con :hover
+ * (así el usuario puede mirar y agrandar la pantalla que le interese) y se
+ * desactiva del todo si el usuario prefiere menos movimiento.
+ */
+function MockupsCarousel() {
+  const reducedMotion = usePrefersReducedMotion();
+
+  if (reducedMotion) {
+    return (
+      <div className="mx-auto mt-14 flex max-w-7xl flex-wrap justify-center gap-7 px-1">
+        {MOCKUP_SCREENS.map((m) => (
+          <MockupItem key={m.caption} caption={m.caption}>
+            <Phone size="sm">{m.screen}</Phone>
+          </MockupItem>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="group/carousel relative mt-14 overflow-hidden py-2"
+      style={{ maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)' }}
+    >
+      <div className="flex w-max animate-[zt-marquee_44s_linear_infinite] gap-7 group-hover/carousel:[animation-play-state:paused]">
+        {[...MOCKUP_SCREENS, ...MOCKUP_SCREENS].map((m, i) => (
+          <MockupItem key={`${m.caption}-${i}`} caption={m.caption}>
+            <Phone size="sm">{m.screen}</Phone>
+          </MockupItem>
+        ))}
+      </div>
+    </div>
   );
 }
 
