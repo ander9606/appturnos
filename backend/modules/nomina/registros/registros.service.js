@@ -131,6 +131,12 @@ const RegistrosService = {
     if (datos.fecha < periodo.fecha_inicio || datos.fecha > periodo.fecha_fin) {
       throw new AppError('La fecha está fuera del rango del período', 422);
     }
+    // Creación manual: no hay campo para "día siguiente", así que a diferencia de
+    // marcarSalida() (clock-out real que sí puede cruzar medianoche) aquí salida <= entrada
+    // siempre es un dato imposible, no un turno nocturno.
+    if (datos.hora_entrada && datos.hora_salida && datos.hora_salida <= datos.hora_entrada) {
+      throw new AppError('La hora de salida debe ser posterior a la de entrada', 422);
+    }
 
     // Mismo criterio que marcarSalida(): el tope de ordinarias es semanal, no por día.
     const lunesCrear = getLunesDeSemana(datos.fecha);
@@ -191,6 +197,12 @@ const RegistrosService = {
       datos.hora_entrada !== undefined ? datos.hora_entrada : registro.hora_entrada;
     const horaSalida =
       datos.hora_salida !== undefined ? datos.hora_salida : registro.hora_salida;
+
+    // No se bloquea salida < entrada aquí: un registro creado por marcarEntrada/marcarSalida
+    // puede cruzar medianoche legítimamente. Solo la igualdad exacta es inequívocamente inválida.
+    if (horaEntrada && horaSalida && horaEntrada === horaSalida) {
+      throw new AppError('La hora de salida no puede ser igual a la de entrada', 422);
+    }
 
     // Mismo criterio que marcarSalida(): el tope de ordinarias es semanal, no por día.
     const lunesCorregir = getLunesDeSemana(registro.fecha);
