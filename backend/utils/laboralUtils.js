@@ -23,6 +23,12 @@ const {
   HORA_FIN_NOCTURNO,
   HORAS_MES_NOMINA,
   RECARGOS,
+  SMMLV_COP,
+  DEDUCCION_SALUD,
+  DEDUCCION_PENSION,
+  FONDO_SOLIDARIDAD_TRAMOS,
+  SUBSIDIO_TRANSPORTE_COP,
+  SUBSIDIO_TRANSPORTE_TOPE_SMMLV,
 } = require('../config/constants');
 
 const MIN_POR_DIA = 24 * 60;
@@ -276,6 +282,47 @@ function calcularPagoNomina(desglose, valorHoraTrabajador) {
   );
 }
 
+// ─────────────────────────────────────────────────────────────
+// Descuentos de ley (contrato laboral)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Descuentos de ley sobre el ingreso base de cotización (IBC) de un
+ * trabajador con contrato laboral: salud (4%) + pensión (4%, + aporte al
+ * Fondo de Solidaridad Pensional si el IBC ≥ 4 SMMLV).
+ * ARL y caja de compensación no se incluyen: en Colombia van 100% por
+ * cuenta del empleador, no se descuentan del trabajador.
+ * @param {number} ibc  Ingreso base de cotización (normalmente el pago bruto del período).
+ */
+function calcularDeducciones(ibc) {
+  const base = Number(ibc) || 0;
+  const salud = base * DEDUCCION_SALUD;
+
+  const smmlvDevengados = base / SMMLV_COP;
+  const tramo = [...FONDO_SOLIDARIDAD_TRAMOS]
+    .reverse()
+    .find((t) => smmlvDevengados >= t.desdeSmmlv);
+  const tasaPension = DEDUCCION_PENSION + (tramo ? tramo.tasa : 0);
+  const pension = base * tasaPension;
+
+  const total = salud + pension;
+  return { salud, pension, total, neto: base - total };
+}
+
+/**
+ * Auxilio de transporte (Ley 15/1959) prorateado a los días del período.
+ * Solo aplica si el salario mensual equivalente del trabajador no supera
+ * SUBSIDIO_TRANSPORTE_TOPE_SMMLV salarios mínimos. No es IBC — no lleva
+ * descuento de salud/pensión.
+ * @param {number} salarioMensualEquivalente  valorHora(trabajador) * HORAS_MES_NOMINA.
+ * @param {number} diasPeriodo  días calendario del período de nómina.
+ */
+function calcularSubsidioTransporte(salarioMensualEquivalente, diasPeriodo) {
+  const salario = Number(salarioMensualEquivalente) || 0;
+  if (salario <= 0 || salario > SMMLV_COP * SUBSIDIO_TRANSPORTE_TOPE_SMMLV) return 0;
+  return (SUBSIDIO_TRANSPORTE_COP / 30) * diasPeriodo;
+}
+
 module.exports = {
   calcularPascua,
   festivosDeAnio,
@@ -284,4 +331,6 @@ module.exports = {
   horaAMinutos,
   valorHora,
   calcularPagoNomina,
+  calcularDeducciones,
+  calcularSubsidioTransporte,
 };

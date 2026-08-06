@@ -71,6 +71,7 @@ router.patch(
     body('direccion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 300 }),
     body('acepta_postulaciones').optional().isBoolean().withMessage('acepta_postulaciones debe ser booleano'),
     body('tipo_liquidacion').optional().isIn(['mensual', 'quincenal', 'semanal']).withMessage('tipo_liquidacion inválido'),
+    body('tipo_contrato').optional().isIn(['laboral', 'prestacion_servicios']).withMessage('tipo_contrato inválido'),
   ],
   validar,
   ctrl.actualizarMiEmpresa

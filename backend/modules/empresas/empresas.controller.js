@@ -26,7 +26,7 @@ async function miEmpresa(req, res) {
 async function actualizarMiEmpresa(req, res) {
   const {
     nombre, nit, ciudad, descripcion, actividad, logo_url,
-    telefono, email_empresa, direccion, acepta_postulaciones, tipo_liquidacion,
+    telefono, email_empresa, direccion, acepta_postulaciones, tipo_liquidacion, tipo_contrato,
   } = req.body;
   const datos = {};
   if (nombre               !== undefined) datos.nombre               = nombre;
@@ -40,6 +40,7 @@ async function actualizarMiEmpresa(req, res) {
   if (direccion            !== undefined) datos.direccion            = direccion;
   if (acepta_postulaciones !== undefined) datos.acepta_postulaciones = acepta_postulaciones ? 1 : 0;
   if (tipo_liquidacion     !== undefined) datos.tipo_liquidacion     = tipo_liquidacion;
+  if (tipo_contrato        !== undefined) datos.tipo_contrato        = tipo_contrato;
 
   const data = await EmpresasService.actualizarMiEmpresa(req.empresa_id, datos, req.usuario.sub);
   res.json({ success: true, data, message: 'Empresa actualizada' });
