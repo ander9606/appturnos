@@ -11,6 +11,7 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const AppError = require('../../../utils/AppError');
 const { ROLES } = require('../../../config/constants');
 const { delayPorRanking } = require('../../../utils/rankingUtils');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 
 /**
  * ¿Ya pasó la hora de inicio del turno? Compara contra la hora actual en
@@ -158,6 +159,20 @@ async function notificarDestinatariosDirectos(empresaId, oferta) {
   });
 }
 
+/**
+ * Fecha no pasada + hora_fin_estimada posterior a hora_inicio — mismo criterio
+ * que validateStep1() en el mobile (apps/mobile/features/turnos/crear/utils.ts),
+ * ahora también exigido en el backend para cerrar el hueco en web/API directa.
+ */
+function validarFechaHoraOferta({ fecha, hora_inicio, hora_fin_estimada }) {
+  if (fecha && fecha < ahoraColombiaSQL().slice(0, 10)) {
+    throw new AppError('La fecha del turno no puede ser en el pasado', 422);
+  }
+  if (hora_inicio && hora_fin_estimada && hora_fin_estimada <= hora_inicio) {
+    throw new AppError('La hora de fin debe ser posterior a la hora de inicio', 422);
+  }
+}
+
 async function validarAceptaExtras(usuario) {
   if (usuario.rol !== ROLES.TRABAJADOR_NOMINA) return;
   const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuario.sub);
@@ -254,6 +269,7 @@ const OfertasService = {
    * el jefe los agrega antes de publicar.
    */
   async crear(empresaId, datos, creadoPor) {
+    validarFechaHoraOferta(datos);
     await validarPuestosParaEmpresa(empresaId, datos.puestos);
     await validarDestinatarios(empresaId, datos.visibilidad, datos.trabajador_ids);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
@@ -274,6 +290,11 @@ const OfertasService = {
     if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {
       throw new AppError('Solo se puede editar una oferta en borrador o abierta', 409);
     }
+    validarFechaHoraOferta({
+      fecha: datos.fecha ?? oferta.fecha,
+      hora_inicio: datos.hora_inicio ?? oferta.hora_inicio,
+      hora_fin_estimada: datos.hora_fin_estimada !== undefined ? datos.hora_fin_estimada : oferta.hora_fin_estimada,
+    });
 
     const camposCriticos = ['fecha', 'hora_inicio', 'hora_fin_estimada', 'lugar'];
     const hayCambioRelevante = camposCriticos.some(

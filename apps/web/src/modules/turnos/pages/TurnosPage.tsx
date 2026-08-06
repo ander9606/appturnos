@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes } from '../hooks/useTurnos';
 import type { EstadoOferta, Oferta, VisibilidadOferta } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -194,6 +195,14 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (dirigidaSinPersonas) return;
+    if (form.fecha < bogotaToday()) {
+      toast.error('La fecha del turno no puede ser en el pasado');
+      return;
+    }
+    if (form.hora_fin_estimada && form.hora_fin_estimada <= form.hora_inicio) {
+      toast.error('La hora de fin debe ser posterior a la hora de inicio');
+      return;
+    }
     const res = await crear.mutateAsync({
       titulo: form.titulo,
       fecha: form.fecha,
@@ -229,7 +238,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
-              <input required type="date" {...field('fecha')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              <input required type="date" min={bogotaToday()} {...field('fecha')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Hora inicio *</label>
