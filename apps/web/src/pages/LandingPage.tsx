@@ -72,6 +72,23 @@ function usePrefersReducedMotion() {
   return reduced;
 }
 
+/** Detecta dispositivos sin puntero preciso (táctiles) — ahí un carrusel que
+ *  gira solo y solo se pausa con :hover es inutilizable; conviene un scroll
+ *  nativo deslizable en su lugar. */
+function useCoarsePointer() {
+  const [coarse, setCoarse] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(hover: none), (pointer: coarse)');
+    setCoarse(query.matches);
+    const handler = (e: MediaQueryListEvent) => setCoarse(e.matches);
+    query.addEventListener('change', handler);
+    return () => query.removeEventListener('change', handler);
+  }, []);
+
+  return coarse;
+}
+
 /**
  * Landing pública de zaturno.app — vive fuera del área autenticada.
  * Reusa los tokens de marca reales de index.css (mismo naranja que la app
@@ -247,6 +264,7 @@ const MOCKUP_SCREENS = [
  */
 function MockupsCarousel() {
   const reducedMotion = usePrefersReducedMotion();
+  const coarsePointer = useCoarsePointer();
 
   if (reducedMotion) {
     return (
@@ -255,6 +273,22 @@ function MockupsCarousel() {
           <MockupItem key={m.caption} caption={m.caption}>
             <Phone size="sm">{m.screen}</Phone>
           </MockupItem>
+        ))}
+      </div>
+    );
+  }
+
+  // Táctil: nada de auto-rotación imparable — se desliza con el dedo, a su
+  // propio ritmo, con snap para que cada pantalla quede centrada al soltar.
+  if (coarsePointer) {
+    return (
+      <div className="mt-14 flex snap-x snap-mandatory gap-7 overflow-x-auto px-6 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {MOCKUP_SCREENS.map((m) => (
+          <div key={m.caption} className="snap-center">
+            <MockupItem caption={m.caption}>
+              <Phone size="sm">{m.screen}</Phone>
+            </MockupItem>
+          </div>
         ))}
       </div>
     );
@@ -412,7 +446,7 @@ function HowItWorks() {
         </Reveal>
 
         <div className="mt-14 grid gap-16 lg:grid-cols-2">
-          <div className="flex flex-col gap-9">
+          <div className="flex min-w-0 flex-col gap-9">
             {steps.map((s, i) => (
               <Reveal key={s.title} delay={i * 90} className="flex gap-5">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 border-primary text-sm font-extrabold text-primary">
@@ -426,7 +460,7 @@ function HowItWorks() {
             ))}
           </div>
 
-          <Reveal delay={150}>
+          <Reveal delay={150} className="min-w-0">
             <p className="mb-3.5 text-xs font-bold uppercase tracking-[0.14em] text-primary">
               Vista de turnos — semana actual
             </p>
