@@ -1,5 +1,6 @@
 import { api } from './client';
 import type { PuntoMarcaje } from './puntos-marcaje';
+import type { TipoContrato } from './empresas';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,10 @@ export interface LiquidacionLinea {
   nombre: string;
   apellido: string;
   cedula: string;
+  /** Datos bancarios del trabajador — para pagarle sin salir de la liquidación. */
+  banco: string | null;
+  tipo_cuenta: 'ahorros' | 'corriente' | null;
+  numero_cuenta: string | null;
   dias_registrados: number;
   horas_ordinarias: number;
   horas_extra_diurnas: number;
@@ -101,12 +106,45 @@ export interface LiquidacionLinea {
   salario_minimo_periodo: number;
   ajuste_minimo: number;
   total: number;
+  /** Descuento de salud (4% del total). 0 si la empresa es prestación de servicios. */
+  descuento_salud: number;
+  /** Descuento de pensión (4% + fondo de solidaridad si aplica). 0 si prestación de servicios. */
+  descuento_pension: number;
+  /** Descuentos manuales ya aceptados por el trabajador (préstamos, inasistencias, etc.). */
+  otros_descuentos: Array<{ id: number; tipo: TipoDescuento; motivo: string; monto: number }>;
+  otros_descuentos_total: number;
+  /** total - descuento_salud - descuento_pension - otros_descuentos_total. */
+  neto: number;
+}
+
+// ── Descuentos manuales (préstamos, inasistencias, daños, anticipos, etc.) ─
+
+export type TipoDescuento = 'prestamo' | 'inasistencia' | 'dano_equipo' | 'anticipo' | 'otro';
+export type EstadoDescuento = 'pendiente' | 'aceptado' | 'rechazado';
+
+export interface DescuentoNomina {
+  id: number;
+  empresa_id: number;
+  trabajador_id: number;
+  periodo_id: number;
+  tipo: TipoDescuento;
+  motivo: string;
+  monto: number;
+  estado: EstadoDescuento;
+  creado_por: number;
+  respondido_at: string | null;
+  created_at: string;
+  // Joined
+  trabajador_nombre: string;
+  trabajador_apellido: string;
 }
 
 export interface LiquidacionResumen {
   periodo: PeriodoNomina;
+  /** Régimen de la empresa — determina si `lineas[].neto` trae descuentos aplicados. */
+  tipo_contrato: TipoContrato;
   lineas: LiquidacionLinea[];
-  totales: { trabajadores: number; total_general: number };
+  totales: { trabajadores: number; total_general: number; total_neto_general: number };
 }
 
 export interface ResumenHoras {
@@ -258,9 +296,46 @@ export const nominaApi = {
     );
   },
 
+  // ── Descuentos manuales ────────────────────────────────────────────────
+
+  /** Trabajador → solo los suyos; gestor → todos (filtrable por período/estado). */
+  listarDescuentos(params?: { periodo_id?: number; estado?: EstadoDescuento }): Promise<DescuentoNomina[]> {
+    const qs = new URLSearchParams();
+    if (params?.periodo_id) qs.set('periodo_id', String(params.periodo_id));
+    if (params?.estado)     qs.set('estado', params.estado);
+    const q = qs.toString() ? `?${qs}` : '';
+    return api.get<DescuentoNomina[]>(`/api/nomina/descuentos${q}`);
+  },
+
+  /** Solo jefe_nomina / admin_empresa. Queda pendiente hasta que el trabajador lo acepte. */
+  crearDescuento(datos: {
+    trabajador_id: number;
+    periodo_id: number;
+    tipo: TipoDescuento;
+    motivo: string;
+    monto: number;
+  }): Promise<DescuentoNomina> {
+    return api.post<DescuentoNomina>('/api/nomina/descuentos', datos);
+  },
+
+  /** Solo trabajador_nomina, sobre su propio descuento. */
+  aceptarDescuento(id: number): Promise<DescuentoNomina> {
+    return api.post<DescuentoNomina>(`/api/nomina/descuentos/${id}/aceptar`);
+  },
+
+  /** Solo trabajador_nomina, sobre su propio descuento. */
+  rechazarDescuento(id: number): Promise<DescuentoNomina> {
+    return api.post<DescuentoNomina>(`/api/nomina/descuentos/${id}/rechazar`);
+  },
+
+  /** Solo jefe_nomina / admin_empresa. */
+  eliminarDescuento(id: number): Promise<void> {
+    return api.delete(`/api/nomina/descuentos/${id}`);
+  },
+
   // ── Liquidación ───────────────────────────────────────────────────────
 
-  /** Solo admin_empresa / jefe_nomina */
+  /** Gestores ven todas las líneas; trabajador_nomina recibe solo la suya (`lineas.length` ≤ 1). */
   obtenerLiquidacion(periodoId: number): Promise<LiquidacionResumen> {
     return api.get<LiquidacionResumen>(`/api/nomina/liquidacion/${periodoId}`);
   },
