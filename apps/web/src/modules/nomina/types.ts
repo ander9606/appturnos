@@ -35,6 +35,10 @@ export interface LiquidacionLinea {
   nombre: string;
   apellido: string;
   cedula: string;
+  /** Datos bancarios del trabajador — para pagarle sin salir de la liquidación. */
+  banco: string | null;
+  tipo_cuenta: 'ahorros' | 'corriente' | null;
+  numero_cuenta: string | null;
   dias_registrados: number;
   horas_ordinarias: number;
   horas_extra_diurnas: number;
@@ -46,12 +50,43 @@ export interface LiquidacionLinea {
   salario_minimo_periodo: number;
   ajuste_minimo: number;
   total: number;
+  /** Descuento de salud (4% del total). 0 si la empresa es prestación de servicios. */
+  descuento_salud: number;
+  /** Descuento de pensión (4% + fondo de solidaridad si aplica). 0 si prestación de servicios. */
+  descuento_pension: number;
+  /** Descuentos manuales ya aceptados por el trabajador (préstamos, inasistencias, etc.). */
+  otros_descuentos: Array<{ id: number; tipo: TipoDescuento; motivo: string; monto: number }>;
+  otros_descuentos_total: number;
+  /** total - descuento_salud - descuento_pension - otros_descuentos_total. */
+  neto: number;
+}
+
+export type TipoContrato = 'laboral' | 'prestacion_servicios';
+
+export type TipoDescuento = 'prestamo' | 'inasistencia' | 'dano_equipo' | 'anticipo' | 'otro';
+export type EstadoDescuento = 'pendiente' | 'aceptado' | 'rechazado';
+
+export interface DescuentoNomina {
+  id: number;
+  trabajador_id: number;
+  periodo_id: number;
+  tipo: TipoDescuento;
+  motivo: string;
+  monto: number;
+  estado: EstadoDescuento;
+  creado_por: number;
+  respondido_at: string | null;
+  created_at: string;
+  trabajador_nombre: string;
+  trabajador_apellido: string;
 }
 
 export interface LiquidacionData {
   periodo: Periodo;
+  /** Régimen de la empresa — determina si `lineas[].neto` trae descuentos aplicados. */
+  tipo_contrato: TipoContrato;
   lineas: LiquidacionLinea[];
-  totales: { trabajadores: number; total_general: number };
+  totales: { trabajadores: number; total_general: number; total_neto_general: number };
 }
 
 export interface Trabajador {

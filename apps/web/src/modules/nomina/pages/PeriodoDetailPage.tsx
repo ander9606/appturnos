@@ -1,12 +1,28 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Plus, Pencil, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Pencil, ChevronDown, X, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
   useCorregirRegistro, useCrearRegistro,
+  useDescuentosPeriodo, useCrearDescuento, useEliminarDescuento,
 } from '../hooks/useNomina';
-import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea } from '../types';
+import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, TipoDescuento, DescuentoNomina } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
+
+const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
+  prestamo: 'Préstamo',
+  inasistencia: 'Inasistencia',
+  dano_equipo: 'Daño a equipo',
+  anticipo: 'Anticipo',
+  otro: 'Otro',
+};
+
+const ESTADO_DESCUENTO_BADGE: Record<string, string> = {
+  pendiente: 'bg-warning-light text-warning',
+  aceptado: 'bg-success-light text-success',
+  rechazado: 'bg-muted text-muted-foreground',
+};
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
@@ -38,9 +54,13 @@ export function PeriodoDetailPage() {
   const [corrigiendoId, setCorrigiendoId] = useState<number | null>(null);
   const [showCrear, setShowCrear] = useState(false);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
+  const [descuentoTrabajador, setDescuentoTrabajador] = useState<{ id: number; nombre: string } | null>(null);
 
   const { data: periodosData, isLoading: loadingPeriodos } = usePeriodos();
   const periodo = (periodosData?.data?.data ?? []).find((p: { id: number }) => p.id === periodoId);
+
+  const { data: descuentosData } = useDescuentosPeriodo(periodoId);
+  const descuentos: DescuentoNomina[] = descuentosData?.data ?? [];
 
   const { data: registrosData, isLoading: loadingReg, isError: errorReg, error: errReg, refetch: refetchReg } = useRegistros({ periodo_id: periodoId });
   const registros: Registro[] = registrosData?.data?.data ?? [];
@@ -242,16 +262,28 @@ export function PeriodoDetailPage() {
             <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
           ) : liqData?.data ? (
             <div>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-card border border-border rounded-xl p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Trabajadores</p>
-                  <p className="text-2xl font-bold text-foreground">{liqData.data.totales.trabajadores}</p>
-                </div>
-                <div className="bg-card border border-border rounded-xl p-4">
-                  <p className="text-xs text-muted-foreground mb-1">Total a pagar</p>
-                  <p className="text-2xl font-bold text-foreground">{fmtCOP(liqData.data.totales.total_general)}</p>
-                </div>
-              </div>
+              {(() => {
+                const esLaboral = liqData.data.tipo_contrato === 'laboral';
+                const { trabajadores, total_general, total_neto_general } = liqData.data.totales;
+                return (
+                  <div className={`grid gap-4 mb-6 ${esLaboral ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    <div className="bg-card border border-border rounded-xl p-4">
+                      <p className="text-xs text-muted-foreground mb-1">Trabajadores</p>
+                      <p className="text-2xl font-bold text-foreground">{trabajadores}</p>
+                    </div>
+                    <div className="bg-card border border-border rounded-xl p-4">
+                      <p className="text-xs text-muted-foreground mb-1">{esLaboral ? 'Total bruto' : 'Total a pagar'}</p>
+                      <p className="text-2xl font-bold text-foreground">{fmtCOP(total_general)}</p>
+                    </div>
+                    {esLaboral && (
+                      <div className="bg-card border border-border rounded-xl p-4">
+                        <p className="text-xs text-muted-foreground mb-1">Total neto (con descuentos)</p>
+                        <p className="text-2xl font-bold text-success">{fmtCOP(total_neto_general)}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="flex justify-end mb-3">
                 <button
@@ -274,13 +306,30 @@ export function PeriodoDetailPage() {
                       <th className="text-right px-3 py-3 font-medium">Noct</th>
                       <th className="text-right px-3 py-3 font-medium">Fest</th>
                       <th className="text-right px-3 py-3 font-medium">Valor/h</th>
-                      <th className="text-right px-3 py-3 font-medium">Total</th>
+                      <th className="text-right px-3 py-3 font-medium">{liqData.data.tipo_contrato === 'laboral' ? 'Bruto' : 'Total'}</th>
+                      {liqData.data.tipo_contrato === 'laboral' && (
+                        <>
+                          <th className="text-right px-3 py-3 font-medium">Salud</th>
+                          <th className="text-right px-3 py-3 font-medium">Pensión</th>
+                        </>
+                      )}
+                      <th className="text-left px-3 py-3 font-medium">Otros descuentos</th>
+                      <th className="text-right px-3 py-3 font-medium">Neto</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {(liqData.data.lineas as LiquidacionLinea[]).map(l => (
+                    {(liqData.data.lineas as LiquidacionLinea[]).map(l => {
+                      const otrosDelTrabajador = descuentos.filter(d => d.trabajador_id === l.trabajador_id);
+                      return (
                       <tr key={l.trabajador_id} className="border-t border-border/60 hover:bg-muted">
-                        <td className="px-3 py-2.5 text-foreground">{l.nombre} {l.apellido}</td>
+                        <td className="px-3 py-2.5 text-foreground">
+                          <p>{l.nombre} {l.apellido}</p>
+                          <p className="text-xs text-muted-foreground font-normal">
+                            {l.numero_cuenta
+                              ? `${l.banco} · ${l.tipo_cuenta === 'corriente' ? 'Corriente' : 'Ahorros'} · ${l.numero_cuenta}`
+                              : 'Sin datos bancarios'}
+                          </p>
+                        </td>
                         <td className="px-3 py-2.5 text-right text-muted-foreground">{l.dias_registrados}</td>
                         <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_ordinarias)}</td>
                         <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_extra_diurnas)}</td>
@@ -289,8 +338,31 @@ export function PeriodoDetailPage() {
                         <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_festivo)}</td>
                         <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtCOP(l.valor_hora)}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-foreground">{fmtCOP(l.total)}</td>
+                        {liqData.data.tipo_contrato === 'laboral' && (
+                          <>
+                            <td className="px-3 py-2.5 text-right text-danger">-{fmtCOP(l.descuento_salud)}</td>
+                            <td className="px-3 py-2.5 text-right text-danger">-{fmtCOP(l.descuento_pension)}</td>
+                          </>
+                        )}
+                        <td className="px-3 py-2.5">
+                          <button
+                            onClick={() => setDescuentoTrabajador({ id: l.trabajador_id, nombre: `${l.nombre} ${l.apellido}` })}
+                            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-600 transition-colors"
+                          >
+                            {otrosDelTrabajador.length > 0 ? (
+                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                                otrosDelTrabajador.some(d => d.estado === 'pendiente') ? ESTADO_DESCUENTO_BADGE.pendiente : 'bg-muted text-muted-foreground'
+                              }`}>
+                                {otrosDelTrabajador.length}
+                              </span>
+                            ) : null}
+                            <Plus size={12} /> {otrosDelTrabajador.length > 0 ? 'Ver' : 'Agregar'}
+                          </button>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-success">{fmtCOP(l.neto)}</td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -312,6 +384,16 @@ export function PeriodoDetailPage() {
           onClose={() => setShowCrear(false)}
         />
       )}
+
+      {descuentoTrabajador && (
+        <DescuentoModal
+          periodoId={periodoId}
+          trabajadorId={descuentoTrabajador.id}
+          trabajadorNombre={descuentoTrabajador.nombre}
+          descuentos={descuentos.filter(d => d.trabajador_id === descuentoTrabajador.id)}
+          onClose={() => setDescuentoTrabajador(null)}
+        />
+      )}
     </div>
   );
 }
@@ -327,6 +409,10 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.hora_entrada && form.hora_salida && form.hora_entrada === form.hora_salida) {
+      toast.error('La hora de salida no puede ser igual a la de entrada');
+      return;
+    }
     await corregir.mutateAsync({
       id: registro.id,
       hora_entrada: form.hora_entrada || undefined,
@@ -412,6 +498,10 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.hora_salida && form.hora_salida <= form.hora_entrada) {
+      toast.error('La hora de salida debe ser posterior a la de entrada');
+      return;
+    }
     await crear.mutateAsync({
       periodo_id: periodoId,
       trabajador_id: Number(form.trabajador_id),
@@ -491,6 +581,129 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function DescuentoModal({
+  periodoId, trabajadorId, trabajadorNombre, descuentos, onClose,
+}: {
+  periodoId: number;
+  trabajadorId: number;
+  trabajadorNombre: string;
+  descuentos: DescuentoNomina[];
+  onClose: () => void;
+}) {
+  const crear = useCrearDescuento();
+  const eliminar = useEliminarDescuento();
+  const [showForm, setShowForm] = useState(descuentos.length === 0);
+  const [form, setForm] = useState({ tipo: 'prestamo' as TipoDescuento, motivo: '', monto: '' });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await crear.mutateAsync({
+      trabajador_id: trabajadorId,
+      periodo_id: periodoId,
+      tipo: form.tipo,
+      motivo: form.motivo,
+      monto: Number(form.monto),
+    });
+    setForm({ tipo: 'prestamo', motivo: '', monto: '' });
+    setShowForm(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-card rounded-2xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-lg font-semibold text-foreground">Descuentos</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={18} /></button>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">{trabajadorNombre}</p>
+
+        {descuentos.length > 0 && (
+          <div className="flex flex-col gap-2 mb-4">
+            {descuentos.map(d => (
+              <div key={d.id} className="border border-border rounded-xl p-3 flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${ESTADO_DESCUENTO_BADGE[d.estado]}`}>
+                      {d.estado === 'pendiente' ? 'Por aceptar' : d.estado === 'aceptado' ? 'Aceptado' : 'Rechazado'}
+                    </span>
+                    <span className="text-xs font-medium text-foreground">{TIPO_DESCUENTO_LABELS[d.tipo]}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{d.motivo}</p>
+                  <p className="text-sm font-semibold text-danger mt-1">-{fmtCOP(d.monto)}</p>
+                </div>
+                <button
+                  onClick={() => { if (window.confirm('¿Eliminar este descuento?')) eliminar.mutate(d.id); }}
+                  className="text-muted-foreground/60 hover:text-danger transition-colors flex-shrink-0"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showForm ? (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 border-t border-border pt-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Tipo</label>
+              <select
+                value={form.tipo}
+                onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoDescuento }))}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              >
+                {Object.entries(TIPO_DESCUENTO_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Motivo *</label>
+              <input
+                required
+                type="text"
+                placeholder="Ej. Préstamo del 12 de marzo"
+                value={form.motivo}
+                onChange={e => setForm(f => ({ ...f, motivo: e.target.value }))}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Monto (COP) *</label>
+              <input
+                required
+                type="number"
+                min="1"
+                step="any"
+                value={form.monto}
+                onChange={e => setForm(f => ({ ...f, monto: e.target.value }))}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Queda pendiente hasta que el trabajador lo acepte desde su app — no se descuenta de su neto todavía.
+            </p>
+            <div className="flex gap-2 pt-1">
+              {descuentos.length > 0 && (
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+                  Cancelar
+                </button>
+              )}
+              <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                {crear.isPending ? 'Guardando...' : 'Registrar descuento'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <button
+            onClick={() => setShowForm(true)}
+            className="w-full flex items-center justify-center gap-1.5 border border-dashed border-border hover:bg-muted text-sm font-medium text-muted-foreground py-2.5 rounded-lg transition-colors"
+          >
+            <Plus size={14} /> Agregar otro descuento
+          </button>
+        )}
       </div>
     </div>
   );

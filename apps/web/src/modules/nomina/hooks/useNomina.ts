@@ -2,13 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { nominaApi } from '../api/nominaApi';
-import type { EstadoPeriodo, TipoPeriodo, TipoDia } from '../types';
+import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento } from '../types';
 
 const KEYS = {
   periodos: (estado?: EstadoPeriodo) => ['nomina', 'periodos', estado] as const,
   registros: (params: object) => ['nomina', 'registros', params] as const,
   liquidacion: (id: number) => ['nomina', 'liquidacion', id] as const,
   trabajadores: () => ['trabajadores', 'nomina'] as const,
+  descuentos: (periodoId: number) => ['nomina', 'descuentos', periodoId] as const,
 };
 
 function getErrMsg(err: unknown) {
@@ -96,6 +97,42 @@ export function useCrearRegistro() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
       toast.success('Registro creado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useDescuentosPeriodo(periodoId: number | undefined) {
+  return useQuery({
+    queryKey: KEYS.descuentos(periodoId!),
+    queryFn: () => nominaApi.listarDescuentos({ periodo_id: periodoId }),
+    enabled: periodoId !== undefined,
+    staleTime: 30_000,
+  });
+}
+
+export function useCrearDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { trabajador_id: number; periodo_id: number; tipo: TipoDescuento; motivo: string; monto: number }) =>
+      nominaApi.crearDescuento(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nomina', 'descuentos'] });
+      qc.invalidateQueries({ queryKey: ['nomina', 'liquidacion'] });
+      toast.success('Descuento registrado — queda pendiente de aceptación del trabajador');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useEliminarDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => nominaApi.eliminarDescuento(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nomina', 'descuentos'] });
+      qc.invalidateQueries({ queryKey: ['nomina', 'liquidacion'] });
+      toast.success('Descuento eliminado');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
