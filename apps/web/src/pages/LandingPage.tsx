@@ -5,6 +5,7 @@ import {
   Calendar, MapPin, Wallet, Users, Bell, ShieldCheck,
   Bell as BellIcon, Search, Star, Lock, Mail, ChevronRight, Home,
   CalendarDays, Wallet as WalletIcon, Apple, PlayCircle,
+  ChevronLeft, CheckCircle2, Plus, Minus, Briefcase, Crosshair, TrendingUp,
 } from 'lucide-react';
 import zaturnoLogo from '@/assets/zaturno-logo.png';
 
@@ -199,35 +200,31 @@ function Mockups() {
           Pantallas reales, no bocetos
         </h2>
         <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-          Esto es exactamente lo que tu equipo ve al abrir zaturno — desde que inician sesión
-          hasta que revisan su quincena.
+          Esto es exactamente lo que tu equipo ve al abrir zaturno — desde que crea un turno
+          hasta que revisa cuánto lleva acumulado en el período.
         </p>
       </Reveal>
 
-      <div className="mx-auto mt-14 flex max-w-6xl flex-nowrap gap-7 overflow-x-auto px-1 pb-4 sm:flex-wrap sm:justify-center sm:overflow-visible">
-        <Reveal delay={0}>
-          <MockupItem caption="Inicio de sesión">
-            <Phone size="sm"><LoginScreen /></Phone>
-          </MockupItem>
-        </Reveal>
-        <Reveal delay={80}>
-          <MockupItem caption="Mis turnos">
-            <Phone size="sm"><TurnosScreen /></Phone>
-          </MockupItem>
-        </Reveal>
-        <Reveal delay={160}>
-          <MockupItem caption="Nómina">
-            <Phone size="sm"><NominaScreen /></Phone>
-          </MockupItem>
-        </Reveal>
-        <Reveal delay={240}>
-          <MockupItem caption="Equipo">
-            <Phone size="sm"><EquipoScreen /></Phone>
-          </MockupItem>
-        </Reveal>
+      <div className="mx-auto mt-14 flex max-w-7xl flex-nowrap gap-7 overflow-x-auto px-1 pb-4 sm:flex-wrap sm:justify-center sm:overflow-visible">
+        {[
+          { caption: 'Inicio de sesión', screen: <LoginScreen /> },
+          { caption: 'Mis turnos', screen: <TurnosScreen /> },
+          { caption: 'Crear turno', screen: <CrearTurnoScreen /> },
+          { caption: 'Marcar ingreso', screen: <MarcarIngresoScreen /> },
+          { caption: 'Detalle y valor del turno', screen: <OfertaDetalleScreen /> },
+          { caption: 'Nómina', screen: <NominaScreen /> },
+          { caption: 'Valor acumulado', screen: <AcumuladoScreen /> },
+          { caption: 'Equipo', screen: <EquipoScreen /> },
+        ].map((m, i) => (
+          <Reveal key={m.caption} delay={i * 60}>
+            <MockupItem caption={m.caption}>
+              <Phone size="sm">{m.screen}</Phone>
+            </MockupItem>
+          </Reveal>
+        ))}
       </div>
 
-      <Reveal delay={300}>
+      <Reveal delay={200}>
         <StoreBadges />
       </Reveal>
     </section>
@@ -809,6 +806,134 @@ function TurnosScreen() {
   );
 }
 
+function Field({
+  label,
+  value,
+  icon: Icon,
+  className = '',
+}: {
+  label: string;
+  value: string;
+  icon?: typeof MapPin;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-lg border border-border bg-background px-2.5 py-1.5 ${className}`}>
+      <div className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5 flex items-center gap-1 text-[9px] font-bold text-foreground">
+        {Icon && <Icon size={10} className="text-muted-foreground" />}
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function CrearTurnoScreen() {
+  return (
+    <>
+      <div className="border-b border-border bg-white px-3 pb-2 pt-2">
+        <StatusRow dark />
+        <div className="mt-1 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-foreground" />
+          <p className="text-[11px] font-extrabold text-foreground">Nuevo turno</p>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 px-3 py-2.5">
+        <Field label="Título" value="Turno de cocina" icon={Briefcase} />
+        <Field label="Fecha" value="Vie 12 Ago" icon={CalendarDays} />
+        <div className="flex gap-2">
+          <Field label="Inicio" value="14:00" className="flex-1" />
+          <Field label="Fin" value="22:00" className="flex-1" />
+        </div>
+        <Field label="Lugar" value="Zona Rosa, Bogotá" icon={MapPin} />
+        <div className="flex items-center justify-between rounded-lg border border-border bg-background px-2.5 py-1.5">
+          <span className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground">Plazas</span>
+          <div className="flex items-center gap-2.5">
+            <Minus size={12} className="text-muted-foreground" />
+            <span className="text-[10px] font-extrabold text-foreground">3</span>
+            <Plus size={12} className="text-primary" />
+          </div>
+        </div>
+        <Field label="Tarifa por turno" value="$85.000" />
+        <div className="mt-auto rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
+          Publicar turno
+        </div>
+      </div>
+    </>
+  );
+}
+
+function MarcarIngresoScreen() {
+  return (
+    <>
+      <div className="rounded-b-[20px] bg-primary px-3 pb-4 pt-2">
+        <StatusRow />
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-white" />
+          <span className="text-[10px] font-bold text-white">Restaurante La Terraza</span>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-4 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success-light">
+          <CheckCircle2 size={26} className="text-success" />
+        </div>
+        <div>
+          <p className="text-[11px] font-extrabold text-foreground">Dentro del rango</p>
+          <p className="mt-1 flex items-center justify-center gap-1 text-[8px] font-semibold text-muted-foreground">
+            <Crosshair size={9} /> 38 m del punto de marcaje
+          </p>
+        </div>
+        <div className="w-full rounded-lg bg-primary py-2 text-center text-[9px] font-extrabold text-white">
+          Marcar ingreso
+        </div>
+        <p className="text-[7px] leading-relaxed text-muted-foreground">
+          Este turno requiere que estés en la ubicación asignada para poder fichar.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function MetaRow({ icon: Icon, text }: { icon: typeof MapPin; text: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[8px] font-semibold text-muted-foreground">
+      <Icon size={10} className="text-muted-foreground" /> {text}
+    </div>
+  );
+}
+
+function OfertaDetalleScreen() {
+  return (
+    <>
+      <div className="border-b border-border bg-white px-3 pb-2 pt-2">
+        <StatusRow dark />
+        <div className="mt-1 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-foreground" />
+          <p className="text-[11px] font-extrabold text-foreground">Detalle del turno</p>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-2.5 px-3 py-2.5">
+        <div>
+          <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">Eventos BQ</span>
+          <p className="text-[12px] font-extrabold text-foreground">Meseros · evento corporativo</p>
+        </div>
+        <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-white px-2.5 py-2">
+          <MetaRow icon={CalendarDays} text="Vie 8 Ago · 18:00 – 23:00" />
+          <MetaRow icon={MapPin} text="Salón Andino, Bogotá" />
+          <MetaRow icon={Briefcase} text="Mesero(a) · 2 plazas libres" />
+        </div>
+        <div className="rounded-xl px-2.5 py-2.5" style={{ background: GREEN_LIGHT }}>
+          <p className="text-[7px] font-bold uppercase tracking-wide" style={{ color: GREEN }}>Pago por turno</p>
+          <p className="text-[15px] font-extrabold" style={{ color: GREEN }}>$85.000</p>
+        </div>
+        <div className="mt-auto rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
+          Aplicar a este turno
+        </div>
+      </div>
+    </>
+  );
+}
+
 function NominaScreen() {
   const registros = [
     { d: 'Lun 3 Ago', h: '6:58 a.m. – 3:02 p.m.', v: '8h 04' },
@@ -864,6 +989,53 @@ function NominaScreen() {
         ))}
       </div>
       <TabBar active="nomina" accent={GREEN} />
+    </>
+  );
+}
+
+function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="flex-1 rounded-lg border border-border bg-white py-1.5 text-center">
+      <div className="text-[11px] font-extrabold text-foreground" style={color ? { color } : undefined}>
+        {value}
+      </div>
+      <div className="text-[7px] font-bold text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function AcumuladoScreen() {
+  return (
+    <>
+      <div
+        className="relative overflow-hidden rounded-b-[20px] px-3 pb-5 pt-2"
+        style={{ background: 'linear-gradient(155deg, #10B981 0%, #059669 55%, #065F46 100%)' }}
+      >
+        <div className="pointer-events-none absolute -right-5 -top-7 h-16 w-16 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-5 -left-6 h-12 w-12 rounded-full bg-white/10" />
+        <StatusRow />
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-white" />
+          <span className="text-[10px] font-bold text-white/85">Resumen del período</span>
+        </div>
+      </div>
+      <div className="-mt-3 flex flex-1 flex-col gap-3 px-3 pb-2">
+        <div className="rounded-xl border border-border bg-white px-3 py-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-muted-foreground">
+            <TrendingUp size={10} /> Acumulado este período
+          </div>
+          <p className="mt-1 text-[19px] font-extrabold text-foreground">$687.200</p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full" style={{ width: '80%', background: GREEN }} />
+          </div>
+          <p className="mt-1 text-[7px] font-semibold text-muted-foreground">12 de 15 días del período</p>
+        </div>
+        <div className="flex gap-2">
+          <MiniStat label="Horas" value="76h" />
+          <MiniStat label="Extra" value="6h" color={VIOLET} />
+          <MiniStat label="Festivos" value="1" color="#EB6834" />
+        </div>
+      </div>
     </>
   );
 }
