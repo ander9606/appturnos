@@ -25,7 +25,7 @@ import {
   TIPO_DIA_LABEL, fmtHora, fmtFechaCorta,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { useTheme } from '@/lib/theme';
-import { toISODate } from '@/lib/formatters';
+import { toISODate, bogotaToday } from '@/lib/formatters';
 import { isChronological } from '@/lib/dateValidation';
 import type { RegistroDiario, TipoDia } from '@api-client';
 
@@ -217,6 +217,10 @@ function CrearRegistroModal({
       Alert.alert('Fecha fuera del período', `La fecha debe estar entre ${fechaInicio} y ${fechaFin}.`);
       return;
     }
+    if (fechaISO > bogotaToday()) {
+      Alert.alert('Fecha inválida', 'No puedes registrar un día que aún no ha ocurrido.');
+      return;
+    }
     try {
       await crear.mutateAsync({
         periodo_id:    periodoId,
@@ -273,7 +277,7 @@ function CrearRegistroModal({
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
                 minimumDate={fechaInicio ? new Date(`${fechaInicio}T00:00:00`) : undefined}
-                maximumDate={fechaFin ? new Date(`${fechaFin}T00:00:00`) : undefined}
+                maximumDate={new Date(`${fechaFin && fechaFin < bogotaToday() ? fechaFin : bogotaToday()}T00:00:00`)}
                 onChange={onChangeFecha}
               />
             )}

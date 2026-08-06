@@ -131,6 +131,9 @@ const RegistrosService = {
     if (datos.fecha < periodo.fecha_inicio || datos.fecha > periodo.fecha_fin) {
       throw new AppError('La fecha está fuera del rango del período', 422);
     }
+    if (datos.fecha > hoyISO()) {
+      throw new AppError('No puedes registrar un día que aún no ha ocurrido', 422);
+    }
     // Creación manual: no hay campo para "día siguiente", así que a diferencia de
     // marcarSalida() (clock-out real que sí puede cruzar medianoche) aquí salida <= entrada
     // siempre es un dato imposible, no un turno nocturno.

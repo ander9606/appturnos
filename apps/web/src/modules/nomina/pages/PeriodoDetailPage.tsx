@@ -488,6 +488,7 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
   const crear = useCrearRegistro();
   const { data: trabData } = useTrabajadoresNomina();
   const trabajadores: Trabajador[] = trabData?.data?.data ?? [];
+  const hoy = new Date().toLocaleDateString('en-CA');
   const [form, setForm] = useState({
     trabajador_id: '',
     fecha: '',
@@ -537,6 +538,7 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
             <input
               type="date"
               required
+              max={hoy}
               value={form.fecha}
               onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
