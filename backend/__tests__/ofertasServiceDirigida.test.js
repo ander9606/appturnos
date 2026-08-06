@@ -44,7 +44,7 @@ describe('OfertasService.crear — turno dirigido', () => {
       id: 1,
       empresa_id: 7,
       titulo: 'Montaje privado',
-      fecha: '2026-08-01',
+      fecha: '2099-01-01',
       visibilidad: 'dirigida',
       puestos: [],
       destinatarios: [
@@ -55,7 +55,7 @@ describe('OfertasService.crear — turno dirigido', () => {
 
     const resultado = await OfertasService.crear(
       7,
-      { titulo: 'Montaje privado', fecha: '2026-08-01', visibilidad: 'dirigida', trabajador_ids: [55, 56], puestos: [] },
+      { titulo: 'Montaje privado', fecha: '2099-01-01', visibilidad: 'dirigida', trabajador_ids: [55, 56], puestos: [] },
       1
     );
 
