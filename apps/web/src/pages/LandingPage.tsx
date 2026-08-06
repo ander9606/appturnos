@@ -6,6 +6,7 @@ import {
   Bell as BellIcon, Search, Star, Lock, Mail, ChevronRight, Home,
   CalendarDays, Wallet as WalletIcon, Apple, PlayCircle,
 } from 'lucide-react';
+import zaturnoLogo from '@/assets/zaturno-logo.png';
 
 /**
  * Revela su contenido con un fade + slide-up al entrar en el viewport.
@@ -84,10 +85,8 @@ function Nav() {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary">
-            <Calendar size={16} className="text-white" />
-          </div>
+        <div className="flex items-center gap-2.5">
+          <img src={zaturnoLogo} alt="" className="h-8 w-8 rounded-xl" />
           <span className="text-base font-bold tracking-tight text-foreground">Zaturno</span>
         </div>
         <div className="flex items-center gap-2">
@@ -188,8 +187,13 @@ function Stats() {
 
 function Mockups() {
   return (
-    <section id="app" className="px-6 py-20 sm:py-24">
-      <Reveal className="mx-auto max-w-3xl text-center">
+    <section id="app" className="relative overflow-hidden px-6 py-20 sm:py-24">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-24 h-[420px] w-[780px] -translate-x-1/2 rounded-full opacity-[0.07] blur-3xl"
+        style={{ background: 'radial-gradient(ellipse, #FF5A3C 0%, transparent 70%)' }}
+      />
+      <Reveal className="relative mx-auto max-w-3xl text-center">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">La app</p>
         <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
           Pantallas reales, no bocetos
@@ -269,9 +273,13 @@ function StoreBadge({
 
 function MockupItem({ caption, children }: { caption: string; children: ReactNode }) {
   return (
-    <div className="flex flex-shrink-0 flex-col items-center gap-3.5 transition-transform duration-300 hover:-translate-y-1.5">
-      {children}
-      <span className="text-sm font-semibold text-muted-foreground">{caption}</span>
+    <div className="group relative flex flex-shrink-0 flex-col items-center gap-3.5 hover:z-10">
+      <div className="transition-transform duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-110">
+        {children}
+      </div>
+      <span className="text-sm font-semibold text-muted-foreground transition-colors group-hover:text-primary">
+        {caption}
+      </span>
     </div>
   );
 }
@@ -304,7 +312,7 @@ function Pain() {
       <div className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-px overflow-hidden rounded-2xl bg-border md:grid-cols-3">
         {items.map((p, i) => (
           <Reveal key={p.q} delay={i * 100}>
-            <div className="h-full border-t-[3px] border-warning bg-background px-7 py-9 transition-transform duration-300 hover:-translate-y-1">
+            <div className="h-full border-t-[3px] border-primary bg-background px-7 py-9 transition-transform duration-300 hover:-translate-y-1">
               <p className="text-base font-bold leading-snug text-foreground">{p.q}</p>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.a}</p>
             </div>
@@ -717,9 +725,7 @@ function LoginScreen() {
       <div className="rounded-b-[26px] bg-primary pb-4 pt-2">
         <StatusRow />
         <div className="mt-2 flex flex-col items-center gap-1.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/35 bg-white/20">
-            <span className="text-[13px] font-extrabold text-white">Z</span>
-          </div>
+          <img src={zaturnoLogo} alt="" className="h-8 w-8 rounded-xl ring-1 ring-white/35" />
           <p className="text-[13px] font-extrabold text-white">Zaturno</p>
           <p className="text-[8px] font-semibold text-white/75">Gestión de turnos y nómina</p>
         </div>
