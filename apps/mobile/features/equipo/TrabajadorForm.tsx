@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { trabajadorSchema, TIPO_OPTIONS, TIPO_HINTS, type TrabajadorFormValues } from './schemas';
 import { Input } from '@/components/ui/Input';
 import { useCargos } from '@/features/turnos/useTurnos';
+import { DeduccionesChecklist } from './DeduccionesChecklist';
 
 // ── Pill selector — reutilizado para tipo_documento / sexo / tipo_cuenta ────
 
@@ -94,6 +95,8 @@ export function TrabajadorForm({
   }, [isDirty, onDirtyChange]);
 
   const tipo = useWatch({ control, name: 'tipo' });
+  const tarifaHora = useWatch({ control, name: 'tarifa_hora' });
+  const salarioBase = useWatch({ control, name: 'salario_base' });
   const muestraSalario = tipo !== 'turnos'; // turnos cobra por oferta_puestos.tarifa_dia, no por salario fijo
   // turnos ya tiene "Cargos certificados" (trabajador_cargos) en la ficha del
   // trabajador — mostrar acá también este picker era redundante.
@@ -484,6 +487,8 @@ export function TrabajadorForm({
                 )}
               />
             </View>
+
+            <DeduccionesChecklist tarifaHora={tarifaHora} salarioBase={salarioBase} />
 
             {/* Seguridad social y datos bancarios */}
             <View className="mb-4 mt-1">

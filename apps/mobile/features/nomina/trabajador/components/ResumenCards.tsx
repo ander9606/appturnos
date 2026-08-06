@@ -10,17 +10,27 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
 import { HOUR_TYPE_COLORS } from '@/lib/designTokens';
+import { Badge } from '@/components/ui/Badge';
+import { useAceptarDescuento, useRechazarDescuento } from '../../descuentos/useDescuentos';
 import {
   fmtPeriodo,
   getJornadaLegalSemanal,
   type ResumenPeriodoNomina,
   type ResumenSemana,
 } from '../nominaTrabajadorUtils';
-import type { PeriodoNomina } from '@api-client';
+import type { PeriodoNomina, LiquidacionLinea, TipoContrato, DescuentoNomina, TipoDescuento } from '@api-client';
+
+const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
+  prestamo: 'Préstamo',
+  inasistencia: 'Inasistencia',
+  dano_equipo: 'Daño a equipo',
+  anticipo: 'Anticipo',
+  otro: 'Otro',
+};
 
 interface Props {
   resumen:              ResumenPeriodoNomina;
@@ -28,6 +38,11 @@ interface Props {
   periodoActivoId:      number | undefined;
   onSeleccionarPeriodo: (id: number) => void;
   valorHora?:           number;
+  /** Liquidación real del período — para el detalle de pago opcional (bruto/descuentos). */
+  miLiquidacion?: LiquidacionLinea;
+  tipoContrato?:  TipoContrato;
+  /** Descuentos manuales propios del período (pendientes, aceptados, rechazados). */
+  misDescuentos?: DescuentoNomina[];
 }
 
 export function ResumenCards({
@@ -36,8 +51,40 @@ export function ResumenCards({
   periodoActivoId,
   onSeleccionarPeriodo,
   valorHora = 0,
+  miLiquidacion,
+  tipoContrato,
+  misDescuentos = [],
 }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const pendientes = misDescuentos.filter((d) => d.estado === 'pendiente');
+  const rechazados = misDescuentos.filter((d) => d.estado === 'rechazado');
+  const [expandedPago, setExpandedPago] = useState(pendientes.length > 0);
+  const [respondiendoId, setRespondiendoId] = useState<number | null>(null);
+  const aceptarDescuento = useAceptarDescuento();
+  const rechazarDescuento = useRechazarDescuento();
+
+  const tieneDeduccionLegal = tipoContrato === 'laboral' && miLiquidacion && miLiquidacion.neto !== miLiquidacion.total;
+  const tieneDescuentos = tieneDeduccionLegal || pendientes.length > 0 || rechazados.length > 0;
+
+  const handleResponder = async (id: number, aceptar: boolean) => {
+    if (!aceptar) {
+      const ok = await new Promise<boolean>((resolve) =>
+        Alert.alert('Rechazar descuento', 'Tu empleador verá que lo rechazaste. ¿Confirmas?', [
+          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Rechazar', style: 'destructive', onPress: () => resolve(true) },
+        ])
+      );
+      if (!ok) return;
+    }
+    setRespondiendoId(id);
+    try {
+      await (aceptar ? aceptarDescuento : rechazarDescuento).mutateAsync(id);
+    } catch {
+      Alert.alert('Error', 'No se pudo registrar tu respuesta. Intenta de nuevo.');
+    } finally {
+      setRespondiendoId(null);
+    }
+  };
 
   const tieneExtras    = resumen.horasExtraDiurnas > 0 || resumen.horasExtraNocturnas > 0 ||
                          resumen.horasNocturnas > 0    || resumen.horasFestivo > 0;
@@ -59,6 +106,107 @@ export function ResumenCards({
           valueClass="text-foreground"
         />
       </View>
+
+      {/* ── Detalle de pago — colapsado, solo si hay algo que explicar ── */}
+      {tieneDescuentos && (
+        <TouchableOpacity
+          onPress={() => setExpandedPago((v) => !v)}
+          activeOpacity={0.8}
+          className="bg-card border border-border rounded-2xl px-4 py-3"
+        >
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center gap-2">
+              {pendientes.length > 0 && <View className="w-2 h-2 rounded-full bg-warning" />}
+              <Text className="text-sm font-semibold text-foreground">Detalle de pago</Text>
+            </View>
+            <Ionicons name={expandedPago ? 'chevron-up' : 'chevron-down'} size={16} color="#64748B" />
+          </View>
+
+          {!expandedPago && pendientes.length > 0 && (
+            <Text className="text-xs text-warning mt-1.5">
+              {pendientes.length} descuento{pendientes.length > 1 ? 's' : ''} por aceptar
+            </Text>
+          )}
+
+          {expandedPago && (
+            <View className="gap-3 mt-3">
+              {miLiquidacion && tieneDeduccionLegal && (
+                <View className="gap-1.5">
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-xs text-muted-foreground">Bruto</Text>
+                    <Text className="text-xs font-medium text-foreground">{formatCOP(miLiquidacion.total)}</Text>
+                  </View>
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-xs text-muted-foreground">Salud (4%)</Text>
+                    <Text className="text-xs font-medium text-danger">-{formatCOP(miLiquidacion.descuento_salud)}</Text>
+                  </View>
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-xs text-muted-foreground">Pensión</Text>
+                    <Text className="text-xs font-medium text-danger">-{formatCOP(miLiquidacion.descuento_pension)}</Text>
+                  </View>
+                  {miLiquidacion.otros_descuentos.map((d) => (
+                    <View key={d.id} className="flex-row items-center justify-between">
+                      <Text className="text-xs text-muted-foreground">{TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}</Text>
+                      <Text className="text-xs font-medium text-danger">-{formatCOP(d.monto)}</Text>
+                    </View>
+                  ))}
+                  <View className="flex-row items-center justify-between pt-1.5 mt-0.5 border-t border-border">
+                    <Text className="text-xs font-semibold text-foreground">Neto</Text>
+                    <Text className="text-xs font-bold text-success">{formatCOP(miLiquidacion.neto)}</Text>
+                  </View>
+                </View>
+              )}
+
+              {pendientes.length > 0 && (
+                <View className="gap-2 pt-1 border-t border-border">
+                  <Text className="text-xs font-semibold text-foreground mt-2">Por tu aceptación</Text>
+                  {pendientes.map((d) => (
+                    <View key={d.id} className="bg-warning/10 rounded-xl p-3 gap-2">
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-xs font-semibold text-foreground flex-1">
+                          {TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}
+                        </Text>
+                        <Text className="text-xs font-bold text-danger">-{formatCOP(d.monto)}</Text>
+                      </View>
+                      <View className="flex-row gap-2">
+                        <TouchableOpacity
+                          onPress={() => handleResponder(d.id, false)}
+                          disabled={respondiendoId === d.id}
+                          className="flex-1 h-8 rounded-lg border border-border items-center justify-center"
+                        >
+                          <Text className="text-xs font-semibold text-muted-foreground">Rechazar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleResponder(d.id, true)}
+                          disabled={respondiendoId === d.id}
+                          className="flex-1 h-8 rounded-lg bg-primary-500 items-center justify-center active:opacity-80"
+                        >
+                          {respondiendoId === d.id
+                            ? <ActivityIndicator size="small" color="#fff" />
+                            : <Text className="text-xs font-semibold text-white">Aceptar</Text>}
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {rechazados.length > 0 && (
+                <View className="gap-1.5 pt-1 border-t border-border">
+                  {rechazados.map((d) => (
+                    <View key={d.id} className="flex-row items-center gap-2">
+                      <Badge label="Rechazado" variant="default" size="sm" />
+                      <Text className="text-xs text-muted-foreground flex-1">
+                        {TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
 
       {/* ── Panel expandible de novedades ──────────────────── */}
       {tieneNovedades && (

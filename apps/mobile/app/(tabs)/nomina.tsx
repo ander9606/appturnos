@@ -33,6 +33,7 @@ import {
   useLiquidarPeriodo,
 } from '@/features/nomina/useNomina';
 import { useCompensatoriosTodos } from '@/features/nomina/compensatorios/useCompensatorios';
+import { useDescuentosPeriodo } from '@/features/nomina/descuentos/useDescuentos';
 import { ApiError, type LiquidacionLinea } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { confirm } from '@/lib/confirmDialog';
@@ -87,6 +88,7 @@ function NominaGestorView() {
 
   // ponytail: carga todos los compensatorios de la empresa, filtra client-side por periodo+trabajador
   const { data: allComp } = useCompensatoriosTodos();
+  const { data: descuentosPeriodo } = useDescuentosPeriodo(activePeriodoId);
 
   const onRefresh = useCallback(() => {
     refetchPeriodos();
@@ -176,6 +178,9 @@ function NominaGestorView() {
             compensatorios={(allComp ?? []).filter(
               (c) => c.trabajador_id === item.linea.trabajador_id && c.periodo_id === activePeriodoId
             )}
+            descuentosPendientes={(descuentosPeriodo ?? []).filter(
+              (d) => d.trabajador_id === item.linea.trabajador_id && d.estado !== 'aceptado'
+            )}
           />
         )}
         contentContainerClassName="gap-2 pb-10"
@@ -203,12 +208,17 @@ function NominaGestorView() {
 
               {totales && (
                 <View className="bg-white/15 rounded-2xl px-4 py-3 mt-1">
-                  <Text className="text-white/80 text-xs">Total bruto</Text>
+                  <Text className="text-white/80 text-xs">
+                    {liquidacion?.tipo_contrato === 'laboral' ? 'Total neto a pagar' : 'Total a pagar'}
+                  </Text>
                   <Text className="text-white text-3xl font-extrabold">
-                    ${totales.total_general.toLocaleString('es-CO')}
+                    ${totales.total_neto_general.toLocaleString('es-CO')}
                   </Text>
                   <Text className="text-white/70 text-xs mt-0.5">
                     {totales.trabajadores} empleados
+                    {liquidacion?.tipo_contrato === 'laboral' && totales.total_neto_general !== totales.total_general
+                      ? ` · bruto $${totales.total_general.toLocaleString('es-CO')}`
+                      : ''}
                   </Text>
                 </View>
               )}
