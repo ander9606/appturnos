@@ -15,13 +15,9 @@ export type DestinatarioInput = {
 export type WizardData = {
   titulo: string;
   descripcion: string;
-  dia: string;   // DD
-  mes: string;   // MM
-  anio: string;  // YYYY
-  hora_inicio_h: string;
-  hora_inicio_m: string;
-  hora_fin_h: string;
-  hora_fin_m: string;
+  fecha: Date | null;
+  hora_inicio: Date | null;
+  hora_fin: Date | null;
   lugar: string;
   latitud: number | null;
   longitud: number | null;
@@ -36,13 +32,9 @@ export type WizardData = {
 export const INITIAL: WizardData = {
   titulo: '',
   descripcion: '',
-  dia: '',
-  mes: '',
-  anio: '',
-  hora_inicio_h: '',
-  hora_inicio_m: '',
-  hora_fin_h: '',
-  hora_fin_m: '',
+  fecha: null,
+  hora_inicio: null,
+  hora_fin: null,
   lugar: '',
   latitud: null,
   longitud: null,

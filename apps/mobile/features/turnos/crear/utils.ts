@@ -1,31 +1,13 @@
-import { isValidCalendarDate, isChronological } from '@/lib/dateValidation';
-import { bogotaToday } from '@/lib/formatters';
+import { isChronological } from '@/lib/dateValidation';
+import { bogotaToday, toISODate, formatTimeObj } from '@/lib/formatters';
 import type { WizardData, PuestoInput } from './types';
 
-export function pad(s: string, len = 2): string {
-  return s.padStart(len, '0');
-}
-
 export function buildFecha(data: WizardData): string {
-  return `${pad(data.anio, 4)}-${pad(data.mes)}-${pad(data.dia)}`;
+  return toISODate(data.fecha!);
 }
 
-export function buildTime(h: string, m: string): string {
-  return `${pad(h)}:${pad(m)}:00`;
-}
-
-/** Fecha real de calendario y no en el pasado — un turno no se puede publicar para ayer */
-export function isValidDate(d: string, m: string, y: string): boolean {
-  const day = Number(d), month = Number(m), year = Number(y);
-  if (!day || !month || !year) return false;
-  if (!isValidCalendarDate(day, month, year)) return false;
-  return `${pad(y, 4)}-${pad(m)}-${pad(d)}` >= bogotaToday();
-}
-
-export function isValidTime(h: string, m: string): boolean {
-  const hour = Number(h), min = Number(m);
-  if (h === '' || m === '') return false;
-  return hour >= 0 && hour <= 23 && min >= 0 && min <= 59;
+export function buildTime(d: Date): string {
+  return `${formatTimeObj(d)}:00`;
 }
 
 export function parseTarifa(s: string): number {
@@ -38,10 +20,10 @@ export function calcularPresupuesto(puestos: PuestoInput[]): number {
 
 export function validateStep1(data: WizardData): string | null {
   if (!data.titulo.trim()) return 'Escribe un título para el turno.';
-  if (!isValidDate(data.dia, data.mes, data.anio)) return 'Ingresa una fecha válida — no puede ser en el pasado.';
-  if (!isValidTime(data.hora_inicio_h, data.hora_inicio_m)) return 'Hora de inicio inválida.';
-  if (!isValidTime(data.hora_fin_h, data.hora_fin_m)) return 'Hora de fin inválida.';
-  if (isChronological(buildTime(data.hora_fin_h, data.hora_fin_m), buildTime(data.hora_inicio_h, data.hora_inicio_m))) {
+  if (!data.fecha || toISODate(data.fecha) < bogotaToday()) return 'Ingresa una fecha válida — no puede ser en el pasado.';
+  if (!data.hora_inicio) return 'Hora de inicio inválida.';
+  if (!data.hora_fin) return 'Hora de fin inválida.';
+  if (isChronological(buildTime(data.hora_fin), buildTime(data.hora_inicio))) {
     return 'La hora de fin debe ser después de la hora de inicio.';
   }
   if (data.visibilidad === 'dirigida' && data.destinatarios.length === 0) {

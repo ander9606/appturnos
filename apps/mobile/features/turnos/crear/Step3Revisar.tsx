@@ -3,7 +3,8 @@ import { View, Text, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';
-import { pad, parseTarifa, calcularPresupuesto } from './utils';
+import { parseTarifa, calcularPresupuesto } from './utils';
+import { formatDateObj, formatTimeObj } from '@/lib/formatters';
 import type { WizardData } from './types';
 
 type Props = {
@@ -26,9 +27,9 @@ function SummaryRow({ icon, label, value }: { icon: string; label: string; value
 }
 
 export function Step3Revisar({ data, onBack, onPublish, isPublishing }: Props) {
-  const fecha = `${pad(data.dia)}/${pad(data.mes)}/${pad(data.anio, 4)}`;
-  const inicio = `${pad(data.hora_inicio_h)}:${pad(data.hora_inicio_m)}`;
-  const fin = data.hora_fin_h ? ` – ${pad(data.hora_fin_h)}:${pad(data.hora_fin_m)}` : '';
+  const fecha = data.fecha ? formatDateObj(data.fecha) : '';
+  const inicio = data.hora_inicio ? formatTimeObj(data.hora_inicio) : '';
+  const fin = data.hora_fin ? ` – ${formatTimeObj(data.hora_fin)}` : '';
 
   const totalPlazas = data.puestos.reduce((s, p) => s + p.plazas, 0);
   const presupuesto = calcularPresupuesto(data.puestos);
