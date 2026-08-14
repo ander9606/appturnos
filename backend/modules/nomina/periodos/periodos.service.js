@@ -4,6 +4,7 @@ const { pool } = require('../../../config/database');
 const PeriodosModel = require('./periodos.model');
 const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const LiquidacionService = require('../liquidacion/liquidacion.service');
 const AppError = require('../../../utils/AppError');
 const { toISODate, calcularPeriodoActual, calcularSiguientePeriodo } = require('../../../utils/periodoCiclo');
 
@@ -35,7 +36,7 @@ async function listarInvolucradosNomina(empresaId) {
  *   abierto → cerrado → liquidado
  */
 const PeriodosService = {
-  async listar(empresaId, { estado, page, limit }) {
+  async listar(empresaId, { estado, page, limit, conTotales }) {
     // Antes el período "de hoy" solo se auto-creaba/cerraba cuando un
     // trabajador marcaba entrada (registros.service.js). Si nadie marcó
     // desde que venció el período anterior, el admin seguía viendo ese
@@ -44,6 +45,20 @@ const PeriodosService = {
     await this.autoCrear(empresaId).catch(() => {});
     const offset = (page - 1) * limit;
     const { data, total } = await PeriodosModel.listar(empresaId, { estado, limit, offset });
+
+    if (conTotales) {
+      // Reutiliza el mismo cálculo que la pestaña Liquidación (recargos,
+      // mínimo garantizado, deducciones) — nada de reimplementar reglas
+      // laborales acá. Solo tomamos `.totales`, no las líneas por trabajador.
+      for (const periodo of data) {
+        const { totales } = await LiquidacionService.generar(empresaId, periodo.id);
+        periodo.total_estimado = totales.total_general;
+        periodo.total_neto_estimado = totales.total_neto_general;
+        periodo.trabajadores = totales.trabajadores;
+        periodo.es_definitivo = periodo.estado !== 'abierto';
+      }
+    }
+
     return { data, pagination: { page, limit, total } };
   },
 
