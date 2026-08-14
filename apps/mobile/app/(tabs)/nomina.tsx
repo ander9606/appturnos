@@ -23,6 +23,7 @@ import { NominaTrabajadorView }   from '@/features/nomina/trabajador';
 import { NominaTurnosView }       from '@/features/nomina/NominaTurnosView';
 import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView';
 import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
+import { TipoPeriodoBadge }       from '@/features/nomina/TipoPeriodoBadge';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
@@ -201,8 +202,13 @@ function NominaGestorView() {
                     {activePeriodo ? fmtPeriodo(activePeriodo) : '—'}
                   </Text>
                 </View>
-                <View className="flex-row items-center gap-2">
-                  {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
+                <View className="flex-row items-center gap-1.5">
+                  {activePeriodo && (
+                    <>
+                      <PeriodoBadge estado={activePeriodo.estado} />
+                      <TipoPeriodoBadge tipo={activePeriodo.tipo} />
+                    </>
+                  )}
                 </View>
               </View>
 

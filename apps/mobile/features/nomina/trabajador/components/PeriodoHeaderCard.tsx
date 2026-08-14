@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PeriodoBadge } from '../../PeriodoBadge';
+import { TipoPeriodoBadge } from '../../TipoPeriodoBadge';
 import { formatCOP } from '@/lib/formatters';
 import {
   fmtPeriodo,
@@ -71,7 +72,12 @@ export function PeriodoHeaderCard({
           <Text className="text-white text-xl font-bold">
             {periodo ? fmtPeriodo(periodo) : '—'}
           </Text>
-          {periodo && <PeriodoBadge estado={periodo.estado} />}
+          {periodo && (
+            <View className="flex-row items-center gap-1.5">
+              <PeriodoBadge estado={periodo.estado} />
+              <TipoPeriodoBadge tipo={periodo.tipo} />
+            </View>
+          )}
         </View>
       </View>
 
