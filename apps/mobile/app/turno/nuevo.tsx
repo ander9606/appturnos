@@ -14,6 +14,7 @@ import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
 import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { showToast } from '@/lib/toast';
 import type { WizardData } from '@/features/turnos/crear/types';
 
 const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar'];
@@ -40,14 +41,16 @@ export default function NuevoTurnoScreen() {
       titulo:            data.titulo.trim(),
       descripcion:       data.descripcion.trim() || undefined,
       fecha:             buildFecha(data),
-      hora_inicio:       buildTime(data.hora_inicio_h, data.hora_inicio_m),
-      hora_fin_estimada: data.hora_fin_h ? buildTime(data.hora_fin_h, data.hora_fin_m) : undefined,
+      hora_inicio:       buildTime(data.hora_inicio!),
+      hora_fin_estimada: data.hora_fin ? buildTime(data.hora_fin) : undefined,
       lugar:             data.lugar.trim() || undefined,
       latitud:           data.latitud ?? undefined,
       longitud:          data.longitud ?? undefined,
       encargado_nombre:   data.encargado_nombre.trim() || undefined,
       encargado_telefono: data.encargado_telefono.trim() || undefined,
       para_quien:        data.para_quien,
+      visibilidad:       data.visibilidad,
+      trabajador_ids:    data.visibilidad === 'dirigida' ? data.destinatarios.map((d) => d.id) : undefined,
       puestos:           data.puestos.map((p) => ({
         cargo_id:   p.cargo_id,
         plazas:     p.plazas,
@@ -56,12 +59,15 @@ export default function NuevoTurnoScreen() {
     };
 
     try {
-      await crearMutation.mutateAsync(payload);
-      Alert.alert(
-        '¡Turno publicado!',
-        'Los trabajadores con los cargos seleccionados recibirán una notificación.',
-        [{ text: 'OK', onPress: () => router.back() }],
-      );
+      const oferta = await crearMutation.mutateAsync(payload);
+      const aviso = data.visibilidad === 'dirigida'
+        ? `Se notificó a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''}.`
+        : 'Los trabajadores con los cargos seleccionados recibirán una notificación.';
+      showToast(`¡"${payload.titulo}" publicado! ${aviso}`);
+      if (oferta.advertencias && oferta.advertencias.length > 0) {
+        Alert.alert('Puede que falte personal', oferta.advertencias.join('\n\n'));
+      }
+      router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo publicar el turno.';
       Alert.alert('Error', msg);

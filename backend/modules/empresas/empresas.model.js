@@ -7,7 +7,7 @@ const COLUMNAS_PUBLICAS = `id, nombre, slug, ciudad, plan,
 
 const COLUMNAS_ADMIN = `id, nombre, slug, nit, ciudad, plan, actividad,
   logo_url, descripcion, telefono, email_empresa, direccion, acepta_postulaciones,
-  tipo_liquidacion, created_at`;
+  tipo_liquidacion, tipo_contrato, created_at`;
 
 const EmpresasModel = {
   async listarDirectorio({ busqueda, ciudad, limit, offset }) {
@@ -50,7 +50,7 @@ const EmpresasModel = {
   },
 
   async actualizarPorAdmin(empresaId, datos) {
-    const CAMPOS = ['nombre', 'nit', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion'];
+    const CAMPOS = ['nombre', 'nit', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato'];
     const sets = [];
     const params = [];
     for (const campo of CAMPOS) {
@@ -66,6 +66,14 @@ const EmpresasModel = {
       params
     );
     return res.affectedRows;
+  },
+
+  async obtenerTipoContrato(empresaId) {
+    const [filas] = await pool.query(
+      'SELECT tipo_contrato FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return filas[0]?.tipo_contrato || 'laboral';
   },
 
   async obtenerParaPago(empresaId) {

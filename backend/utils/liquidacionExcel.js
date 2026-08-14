@@ -30,6 +30,9 @@ async function generarLiquidacionExcel(liquidacion) {
     { key: 'fes', width: 12 },
     { key: 'vh', width: 14 },
     { key: 'total', width: 16 },
+    { key: 'salud', width: 14 },
+    { key: 'pension', width: 14 },
+    { key: 'neto', width: 16 },
   ];
 
   const cabecera = ws.addRow([
@@ -42,7 +45,10 @@ async function generarLiquidacionExcel(liquidacion) {
     'H. nocturnas',
     'H. festivo',
     'Valor hora',
-    'Total',
+    'Total bruto',
+    'Descuento salud',
+    'Descuento pensión',
+    'Total neto',
   ]);
   cabecera.font = { bold: true };
 
@@ -58,10 +64,16 @@ async function generarLiquidacionExcel(liquidacion) {
       l.horas_festivo,
       l.valor_hora,
       l.total,
+      l.descuento_salud,
+      l.descuento_pension,
+      l.neto,
     ]);
   }
 
-  const filaTotal = ws.addRow(['', 'TOTAL', '', '', '', '', '', '', '', liquidacion.totales.total_general]);
+  const filaTotal = ws.addRow([
+    '', 'TOTAL', '', '', '', '', '', '', '',
+    liquidacion.totales.total_general, '', '', liquidacion.totales.total_neto_general,
+  ]);
   filaTotal.font = { bold: true };
 
   return wb.xlsx.writeBuffer();

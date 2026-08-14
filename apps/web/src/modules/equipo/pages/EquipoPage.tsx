@@ -4,6 +4,7 @@ import { Plus, UserX, UserPlus, Search } from 'lucide-react';
 import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador, useInvitarTrabajador } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
 import type { TipoTrabajador, Trabajador } from '../types';
 
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
@@ -268,6 +269,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
     nombre: '', apellido: '', tipo: 'nomina' as TipoTrabajador,
     email: '', cedula: '', telefono: '', cargo: '',
     tarifa_hora: '', salario_base: '',
+    banco: '', tipo_cuenta: '', numero_cuenta: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -282,6 +284,9 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
       cargo: form.cargo || undefined,
       tarifa_hora: form.tarifa_hora ? Number(form.tarifa_hora) : undefined,
       salario_base: form.salario_base ? Number(form.salario_base) : undefined,
+      banco: form.banco || undefined,
+      tipo_cuenta: form.tipo_cuenta || undefined,
+      numero_cuenta: form.numero_cuenta || undefined,
     });
     onClose();
   };
@@ -343,6 +348,28 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
               <input type="number" min="0" step="any" {...field('salario_base')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
           </div>
+
+          <DeduccionesChecklist tarifaHora={form.tarifa_hora} salarioBase={form.salario_base} />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Banco</label>
+              <input type="text" placeholder="Ej. Bancolombia" {...field('banco')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Tipo de cuenta</label>
+              <select {...field('tipo_cuenta')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                <option value="">—</option>
+                <option value="ahorros">Ahorros</option>
+                <option value="corriente">Corriente</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Número de cuenta</label>
+            <input type="text" {...field('numero_cuenta')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
             <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">

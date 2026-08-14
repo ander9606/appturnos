@@ -19,6 +19,16 @@ function esCargoDelSistema(cargo) {
   return cargo.empresa_id === null;
 }
 
+/** Valida que el cargo exista y sea usable (de sistema o de esta empresa). */
+async function cargoUtilizablePorEmpresa(empresaId, cargoId) {
+  const cargo = await CargosModel.obtenerPorId(cargoId);
+  if (!cargo) throw new AppError('Cargo no encontrado', 404);
+  if (cargo.empresa_id !== null && cargo.empresa_id !== empresaId) {
+    throw new AppError('Este cargo no pertenece a tu empresa', 403);
+  }
+  return cargo;
+}
+
 /** Slugifica un nombre humano a un código interno: "Jefe de Montaje" → "jefe_de_montaje". */
 function slugificar(texto) {
   return texto
@@ -183,6 +193,23 @@ const CargosService = {
       throw new AppError('El trabajador no tiene este cargo asignado', 404);
     }
     return CargosModel.listarPorVinculo(vinculoId);
+  },
+
+  // -------- Funciones por cargo --------
+
+  /** Cualquier usuario autenticado de la empresa puede consultar las funciones de un cargo. */
+  async listarFunciones(empresaId, cargoId) {
+    await cargoUtilizablePorEmpresa(empresaId, cargoId);
+    return CargosModel.listarFunciones(cargoId, empresaId);
+  },
+
+  /** Solo jefe_turnos/admin_empresa diligencian el listado de funciones de un cargo. */
+  async actualizarFunciones(empresaId, cargoId, descripciones) {
+    await cargoUtilizablePorEmpresa(empresaId, cargoId);
+    const limpias = (descripciones || [])
+      .map((d) => String(d).trim())
+      .filter((d) => d.length > 0);
+    return CargosModel.reemplazarFunciones(cargoId, empresaId, limpias);
   },
 };
 

@@ -6,6 +6,7 @@ import { equipoApi } from '@/modules/equipo/api/equipoApi';
 import { turnosApi } from '@/modules/turnos/api/turnosApi';
 import { nominaApi } from '@/modules/nomina/api/nominaApi';
 import type { Rol } from '@/modules/auth/authStore';
+import { StatCard } from '@/shared/components/StatCard';
 
 function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'short' }).format(new Date(s + 'T00:00:00'));
@@ -16,8 +17,9 @@ function fmtTime(s: string) {
 }
 
 const ESTADO_BADGE: Record<string, string> = {
+  abierta: 'bg-primary-100 text-primary-600',
   publicada: 'bg-primary-100 text-primary-600',
-  en_progreso: 'bg-warning-light text-warning',
+  en_proceso: 'bg-warning-light text-warning',
 };
 
 export function DashboardPage() {
@@ -31,7 +33,7 @@ export function DashboardPage() {
 
   const { data: trabajadoresData } = useQuery({
     queryKey: ['trabajadores', { activo: true, dashboard: true }],
-    queryFn: () => equipoApi.listar({ activo: true, limit: 200 }),
+    queryFn: () => equipoApi.listar({ activo: true, limit: 1 }),
     enabled: showEquipo,
     staleTime: 60_000,
   });
@@ -45,7 +47,7 @@ export function DashboardPage() {
 
   const { data: asigData } = useQuery({
     queryKey: ['turnos', 'asignaciones', { estado: 'pendiente', dashboard: true }],
-    queryFn: () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 100 }),
+    queryFn: () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 1 }),
     enabled: showTurnos,
     staleTime: 30_000,
   });
@@ -57,12 +59,12 @@ export function DashboardPage() {
     staleTime: 60_000,
   });
 
-  const trabajadoresCount = trabajadoresData?.data?.length ?? 0;
+  const trabajadoresCount = trabajadoresData?.data?.pagination?.total ?? 0;
   const ofertas: Array<{ id: number; titulo: string; fecha: string; hora_inicio: string; estado: string }> =
-    ofertasData?.data ?? [];
-  const ofertasActivas = ofertas.filter(o => o.estado === 'publicada' || o.estado === 'en_progreso');
-  const asigPendientes = asigData?.data?.length ?? 0;
-  const periodoAbierto = periodosData?.data?.[0] ?? null;
+    ofertasData?.data?.data ?? [];
+  const ofertasActivas = ofertas.filter(o => o.estado === 'abierta' || o.estado === 'publicada' || o.estado === 'en_proceso');
+  const asigPendientes = asigData?.data?.pagination?.total ?? 0;
+  const periodoAbierto = periodosData?.data?.data?.[0] ?? null;
 
   const proximas = ofertasActivas.slice(0, 5);
 
@@ -149,7 +151,7 @@ export function DashboardPage() {
                   <p className="text-xs text-muted-foreground">{fmtDate(o.fecha)} · {fmtTime(o.hora_inicio)}</p>
                 </div>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${ESTADO_BADGE[o.estado]}`}>
-                  {o.estado === 'en_progreso' ? 'En progreso' : 'Publicada'}
+                  {o.estado === 'en_proceso' ? 'En progreso' : o.estado === 'abierta' ? 'Abierta' : 'Publicada'}
                 </span>
               </li>
             ))}
@@ -157,37 +159,5 @@ export function DashboardPage() {
         </div>
       )}
     </div>
-  );
-}
-
-type StatColor = 'default' | 'warning' | 'success';
-
-function StatCard({
-  label, value, icon: Icon, color = 'default', valueSmall, onClick,
-}: {
-  label: string;
-  value: number | string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  color?: StatColor;
-  valueSmall?: boolean;
-  onClick: () => void;
-}) {
-  const iconBg: Record<StatColor, string> = {
-    default: 'bg-primary-50 text-primary-600',
-    warning: 'bg-warning-light text-warning',
-    success: 'bg-success-light text-success',
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className="bg-card border border-border rounded-2xl p-4 text-left hover:bg-muted transition-colors w-full"
-    >
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${iconBg[color]}`}>
-        <Icon size={18} />
-      </div>
-      <p className={`font-bold text-foreground mb-0.5 ${valueSmall ? 'text-sm' : 'text-2xl'}`}>{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
-    </button>
   );
 }

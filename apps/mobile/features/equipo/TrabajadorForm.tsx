@@ -20,6 +20,43 @@ import { Ionicons } from '@expo/vector-icons';
 import { trabajadorSchema, TIPO_OPTIONS, TIPO_HINTS, type TrabajadorFormValues } from './schemas';
 import { Input } from '@/components/ui/Input';
 import { useCargos } from '@/features/turnos/useTurnos';
+import { DeduccionesChecklist } from './DeduccionesChecklist';
+
+// ── Pill selector — reutilizado para tipo_documento / sexo / tipo_cuenta ────
+
+function PillSelector<T extends string>({
+  label, options, labels, value, onChange,
+}: {
+  label: string;
+  options: readonly T[];
+  labels: Record<T, string>;
+  value: T | '' | undefined;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <View className="mb-4">
+      <Text className="text-sm font-semibold text-foreground mb-1">{label}</Text>
+      <View className="flex-row gap-2">
+        {options.map((opt) => {
+          const active = value === opt;
+          return (
+            <Pressable
+              key={opt}
+              onPress={() => onChange(opt)}
+              className={`flex-1 h-11 rounded-xl items-center justify-center border ${
+                active ? 'bg-primary border-primary' : 'bg-card border-border'
+              }`}
+            >
+              <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-muted-foreground'}`}>
+                {labels[opt]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
 
 // ── Props ─────────────────────────────────────────────────────────────────
 
@@ -58,6 +95,8 @@ export function TrabajadorForm({
   }, [isDirty, onDirtyChange]);
 
   const tipo = useWatch({ control, name: 'tipo' });
+  const tarifaHora = useWatch({ control, name: 'tarifa_hora' });
+  const salarioBase = useWatch({ control, name: 'salario_base' });
   const muestraSalario = tipo !== 'turnos'; // turnos cobra por oferta_puestos.tarifa_dia, no por salario fijo
   // turnos ya tiene "Cargos certificados" (trabajador_cargos) en la ficha del
   // trabajador — mostrar acá también este picker era redundante.
@@ -221,6 +260,90 @@ export function TrabajadorForm({
           />
         </View>
 
+        {/* Tipo de documento + fecha de nacimiento + sexo */}
+        <Controller
+          control={control}
+          name="tipo_documento"
+          render={({ field }) => (
+            <PillSelector
+              label="Tipo de documento"
+              options={['CC', 'CE', 'PAS'] as const}
+              labels={{ CC: 'Cédula (CC)', CE: 'Cédula Ext. (CE)', PAS: 'Pasaporte' }}
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
+        />
+
+        <View className="mb-4">
+          <Controller
+            control={control}
+            name="fecha_nacimiento"
+            render={({ field }) => (
+              <Input
+                label="Fecha de nacimiento (AAAA-MM-DD)"
+                error={errors.fecha_nacimiento?.message}
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="1990-01-15"
+              />
+            )}
+          />
+        </View>
+
+        <Controller
+          control={control}
+          name="sexo"
+          render={({ field }) => (
+            <PillSelector
+              label="Sexo"
+              options={['M', 'F', 'otro'] as const}
+              labels={{ M: 'Masculino', F: 'Femenino', otro: 'Otro' }}
+              value={field.value}
+              onChange={field.onChange}
+            />
+          )}
+        />
+
+        {/* Contacto de emergencia */}
+        <View className="mb-4">
+          <Controller
+            control={control}
+            name="contacto_emergencia_nombre"
+            render={({ field }) => (
+              <Input
+                label="Contacto de emergencia — nombre"
+                error={errors.contacto_emergencia_nombre?.message}
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="Nombre completo"
+                autoCapitalize="words"
+              />
+            )}
+          />
+        </View>
+
+        <View className="mb-4">
+          <Controller
+            control={control}
+            name="contacto_emergencia_tel"
+            render={({ field }) => (
+              <Input
+                label="Contacto de emergencia — teléfono"
+                error={errors.contacto_emergencia_tel?.message}
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="+57 300 000 0000"
+                keyboardType="phone-pad"
+                autoCapitalize="none"
+              />
+            )}
+          />
+        </View>
+
         {/* Cargo — select sobre el catálogo de la empresa; oculto en turnos, que
             ya gestiona esto vía "Cargos certificados" en la ficha del trabajador */}
         {muestraCargo && (
@@ -360,6 +483,147 @@ export function TrabajadorForm({
                     placeholder="Ej. 1300000"
                     keyboardType="numeric"
                     autoCapitalize="none"
+                  />
+                )}
+              />
+            </View>
+
+            <DeduccionesChecklist tarifaHora={tarifaHora} salarioBase={salarioBase} />
+
+            {/* Seguridad social y datos bancarios */}
+            <View className="mb-4 mt-1">
+              <View className="flex-row items-center gap-3">
+                <View className="flex-1 h-px bg-border" />
+                <Text className="text-xs text-muted-foreground font-medium">SEGURIDAD SOCIAL Y BANCO (opcional)</Text>
+                <View className="flex-1 h-px bg-border" />
+              </View>
+            </View>
+
+            <View className="mb-4">
+              <Controller
+                control={control}
+                name="eps"
+                render={({ field }) => (
+                  <Input
+                    label="EPS"
+                    error={errors.eps?.message}
+                    value={field.value ?? ''}
+                    onChangeText={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Ej. Sura"
+                    autoCapitalize="words"
+                  />
+                )}
+              />
+            </View>
+
+            <View className="mb-4">
+              <Controller
+                control={control}
+                name="afp"
+                render={({ field }) => (
+                  <Input
+                    label="AFP"
+                    error={errors.afp?.message}
+                    value={field.value ?? ''}
+                    onChangeText={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Ej. Porvenir"
+                    autoCapitalize="words"
+                  />
+                )}
+              />
+            </View>
+
+            <View className="mb-4">
+              <Controller
+                control={control}
+                name="banco"
+                render={({ field }) => (
+                  <Input
+                    label="Banco"
+                    error={errors.banco?.message}
+                    value={field.value ?? ''}
+                    onChangeText={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Ej. Bancolombia"
+                    autoCapitalize="words"
+                  />
+                )}
+              />
+            </View>
+
+            <Controller
+              control={control}
+              name="tipo_cuenta"
+              render={({ field }) => (
+                <PillSelector
+                  label="Tipo de cuenta"
+                  options={['ahorros', 'corriente'] as const}
+                  labels={{ ahorros: 'Ahorros', corriente: 'Corriente' }}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+
+            <View className="mb-4">
+              <Controller
+                control={control}
+                name="numero_cuenta"
+                render={({ field }) => (
+                  <Input
+                    label="Número de cuenta"
+                    error={errors.numero_cuenta?.message}
+                    value={field.value ?? ''}
+                    onChangeText={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="Número de cuenta"
+                    keyboardType="numeric"
+                    autoCapitalize="none"
+                  />
+                )}
+              />
+            </View>
+
+            {/* Antecedentes */}
+            <View className="mb-4 mt-1">
+              <View className="flex-row items-center gap-3">
+                <View className="flex-1 h-px bg-border" />
+                <Text className="text-xs text-muted-foreground font-medium">ANTECEDENTES (opcional)</Text>
+                <View className="flex-1 h-px bg-border" />
+              </View>
+            </View>
+
+            <View className="mb-4">
+              <Controller
+                control={control}
+                name="ant_judiciales_fecha"
+                render={({ field }) => (
+                  <Input
+                    label="Antecedentes judiciales — fecha (AAAA-MM-DD)"
+                    error={errors.ant_judiciales_fecha?.message}
+                    value={field.value ?? ''}
+                    onChangeText={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="2025-01-15"
+                  />
+                )}
+              />
+            </View>
+
+            <View className="mb-4">
+              <Controller
+                control={control}
+                name="ant_disciplinarios_fecha"
+                render={({ field }) => (
+                  <Input
+                    label="Antecedentes disciplinarios — fecha (AAAA-MM-DD)"
+                    error={errors.ant_disciplinarios_fecha?.message}
+                    value={field.value ?? ''}
+                    onChangeText={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder="2025-01-15"
                   />
                 )}
               />

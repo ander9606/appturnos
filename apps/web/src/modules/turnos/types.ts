@@ -1,4 +1,4 @@
-export type EstadoOferta = 'borrador' | 'publicada' | 'en_progreso' | 'completada' | 'cancelada';
+export type EstadoOferta = 'borrador' | 'abierta' | 'publicada' | 'en_proceso' | 'cerrada' | 'completada' | 'cancelada';
 export type EstadoAsignacion =
   | 'pendiente'
   | 'confirmado'
@@ -15,7 +15,15 @@ export interface Puesto {
   plazas: number;
   tarifa_dia: number;
   notas: string | null;
-  asignados: number;
+  plazas_cubiertas: number;
+}
+
+export type VisibilidadOferta = 'abierta' | 'dirigida';
+
+export interface OfertaDestinatario {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string;
 }
 
 export interface Oferta {
@@ -31,6 +39,9 @@ export interface Oferta {
   encargado_nombre: string | null;
   encargado_telefono: string | null;
   estado: EstadoOferta;
+  // 'dirigida': solo `destinatarios` la ven/reciben notificación, sin filtro de cargo ni ranking.
+  visibilidad: VisibilidadOferta;
+  destinatarios: OfertaDestinatario[];
   // Presentes solo si la oferta se originó desde logiq360 (evento orden.creada).
   external_ref: string | null;
   alquiler_ref: string | null;
@@ -39,16 +50,49 @@ export interface Oferta {
   created_at: string;
 }
 
+export interface LiquidacionTurno {
+  asignacion_id: number;
+  oferta_titulo: string;
+  oferta_fecha: string;
+  hora_inicio: string;
+  hora_fin_estimada: string | null;
+  lugar: string | null;
+  hora_ingreso_real: string | null;
+  hora_egreso_real: string | null;
+  horas_trabajadas: number;
+  tarifa_dia: number;
+  cargo_nombre: string;
+  pago_extra: number;
+  pago_total: number;
+  calificacion: number | null;
+}
+
+export interface LiquidacionTurnosTrabajador {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string;
+  cargo: string | null;
+  ranking: number | null;
+  total_calificaciones: number;
+  total_turnos: number;
+  total_horas: number;
+  pago_base: number;
+  pago_extra: number;
+  pago_total: number;
+  turnos: LiquidacionTurno[];
+}
+
 export interface Asignacion {
   id: number;
   oferta_id: number;
   puesto_id: number;
   trabajador_id: number;
   estado: EstadoAsignacion;
-  calificacion: number | null;
-  comentario: string | null;
-  hora_ingreso: string | null;
-  hora_egreso: string | null;
-  trabajador?: { nombre: string; apellido: string; cedula?: string };
-  puesto?: { cargo_nombre: string; tarifa_dia: number };
+  hora_ingreso_real: string | null;
+  hora_egreso_real: string | null;
+  trabajador_nombre: string;
+  trabajador_apellido: string;
+  cargo_nombre: string;
+  // Solo viene poblado en el detalle puntual (obtenerAsignacion), no en el listado.
+  calificacion?: number | null;
 }

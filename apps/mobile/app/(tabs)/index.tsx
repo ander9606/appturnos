@@ -39,7 +39,7 @@ import { ActiveShiftCard } from '@/features/dashboard/ActiveShiftCard';
 import { NextShiftCard }   from '@/features/dashboard/NextShiftCard';
 import { NoShiftCard }     from '@/features/dashboard/NoShiftCard';
 import { SetupChecklist }  from '@/features/dashboard/SetupChecklist';
-import { fmtPeriodo }      from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { fmtPeriodo, TIPO_PERIODO_LABEL } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { formatShortDate } from '@/lib/formatters';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -206,9 +206,11 @@ export default function DashboardScreen() {
 
   // ── Stats ────────────────────────────────────────────────────────────────
 
+  const periodoLabel = periodoAbierto ? `Período · ${TIPO_PERIODO_LABEL[periodoAbierto.tipo]}` : 'Período';
+
   const stats: { value: string | number; label: string; color: string; onPress?: () => void }[] = isNomina
     ? [
-        { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—', label: 'Período', color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
+        { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—', label: periodoLabel, color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
         { value: nominaPerfil?.acepta_extras ? '✓' : '—',             label: 'Extras activos', color: nominaPerfil?.acepta_extras ? 'text-info' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
         { value: turnosHoy.length > 0 ? turnosHoy.length : '—',       label: 'Extras hoy', color: 'text-foreground', onPress: () => router.push('/(tabs)/turnos') },
       ]
@@ -222,12 +224,12 @@ export default function DashboardScreen() {
     ? [
         { value: totalEquipo ?? '…',          label: 'Empleados',      color: 'text-info',                                                              onPress: () => router.push('/(tabs)/equipo') },
         { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—',  label: 'Período', color: periodoAbierto ? 'text-success' : 'text-muted-foreground',                onPress: () => router.push('/(tabs)/nomina') },
-        { value: periodoAbierto?.tipo ?? '—', label: 'Ciclo',          color: 'text-foreground',                                                        onPress: () => router.push('/(tabs)/nomina') },
+        { value: periodoAbierto ? TIPO_PERIODO_LABEL[periodoAbierto.tipo] : '—', label: 'Ciclo', color: 'text-foreground',                                              onPress: () => router.push('/(tabs)/nomina') },
       ]
     : [
         { value: totalEquipo ?? '…',                                                                                                                                                                      label: t('dashboard.statEmployees'),   color: 'text-info',       onPress: () => router.push('/(tabs)/equipo') },
         { value: ofertasHoyData?.pagination?.total ?? '…', label: t('dashboard.statShiftsToday'), color: 'text-foreground', onPress: () => router.push('/(tabs)/turnos') },
-        { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—', label: 'Período', color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
+        { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—', label: periodoLabel, color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
       ];
 
   // ── Quick actions ────────────────────────────────────────────────────────

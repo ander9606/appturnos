@@ -13,16 +13,16 @@ export const EQUIPO_KEYS = {
 // ── Queries ───────────────────────────────────────────────────────────────
 
 export function useTrabajadores(
-  opts: { tipo?: TipoTrabajador; activo?: boolean; enabled?: boolean } = {},
+  opts: { tipo?: TipoTrabajador; activo?: boolean; limit?: number; enabled?: boolean } = {},
 ) {
-  const { enabled = true, ...listOpts } = opts;
+  const { enabled = true, limit = 100, ...listOpts } = opts;
   return useQuery({
     queryKey: EQUIPO_KEYS.lista(listOpts.tipo, listOpts.activo),
     queryFn: () =>
       trabajadoresApi.listar({
         tipo: listOpts.tipo,
         activo: listOpts.activo,
-        limit: 100,
+        limit,
       }),
     staleTime: 60_000,
     enabled,

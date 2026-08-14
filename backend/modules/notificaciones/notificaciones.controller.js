@@ -1,6 +1,7 @@
 'use strict';
 
 const NotificacionesService = require('./notificaciones.service');
+const logger = require('../../utils/logger');
 
 async function listar(req, res) {
   const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
@@ -12,7 +13,8 @@ async function listar(req, res) {
     req.usuario.sub,
     { soloNoLeidas, page, limit }
   );
-  res.json({ success: true, data, no_leidas, pagination });
+  logger.info(`[notificaciones] listar usuario=${req.usuario.sub} empresa=${req.empresa_id} rol=${req.usuario.rol} → ${data.length}/${pagination.total} filas (${no_leidas} no leídas)`);
+  res.json({ success: true, data: { data, no_leidas, pagination } });
 }
 
 async function leer(req, res) {

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
@@ -9,11 +9,23 @@ interface Props {
   authenticating: boolean;
 }
 
+// Tiempo tras el cual mostramos un aviso de que la verificación va lenta —
+// sin esto, "Verificando…" se siente colgado durante los ~15s de margen
+// que tiene el hook antes de reportar timeout.
+const SLOW_HINT_MS = 4_000;
+
 export function BiometricLockScreen({ onUnlock, onLogout, authenticating }: Props) {
   const theme = useTheme();
+  const [slow, setSlow] = useState(false);
 
   // Auto-prompt on mount so the user doesn't have to tap manually
   useEffect(() => { onUnlock(); }, []);
+
+  useEffect(() => {
+    if (!authenticating) { setSlow(false); return; }
+    const t = setTimeout(() => setSlow(true), SLOW_HINT_MS);
+    return () => clearTimeout(t);
+  }, [authenticating]);
 
   return (
     <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]} className="bg-background items-center justify-center px-8">
@@ -24,7 +36,7 @@ export function BiometricLockScreen({ onUnlock, onLogout, authenticating }: Prop
 
         <Text className="text-xl font-bold text-foreground">App bloqueada</Text>
         <Text className="text-sm text-muted-foreground text-center">
-          Verifica tu identidad para continuar
+          {slow ? 'Esto está tardando más de lo normal…' : 'Verifica tu identidad para continuar'}
         </Text>
 
         <Pressable

@@ -77,30 +77,52 @@ function _postExpo(path, body) {
   });
 }
 
+const EXPO_LIMITE_LOTE = 100; // Expo rechaza requests con mas de 100 mensajes
+
 /**
- * Envía mensajes a la API de Expo Push (best-effort, sin lanzar).
- * Devuelve los "tickets" de respuesta (mismo orden que `messages`), o []
- * si la petición falla — así el caller puede detectar tokens muertos.
+ * Envía mensajes a la API de Expo Push (best-effort, sin lanzar), en lotes
+ * de EXPO_LIMITE_LOTE. Devuelve los "tickets" de respuesta (mismo orden e
+ * indice que `messages`) — un lote fallido rellena con `undefined` en vez
+ * de encoger el arreglo, para no desalinear el mapeo ticket→token del caller.
  */
 async function _enviarExpoBatch(messages) {
   if (!messages.length) return [];
-  return (await _postExpo('/--/api/v2/push/send', messages)) ?? [];
+  const tickets = [];
+  for (let i = 0; i < messages.length; i += EXPO_LIMITE_LOTE) {
+    const lote = messages.slice(i, i + EXPO_LIMITE_LOTE);
+    const resultado = await _postExpo('/--/api/v2/push/send', lote);
+    if (Array.isArray(resultado) && resultado.length === lote.length) {
+      tickets.push(...resultado);
+    } else {
+      tickets.push(...lote.map(() => undefined));
+    }
+  }
+  return tickets;
 }
 
 /**
  * El ticket de /send solo confirma que Expo encoló el mensaje — errores del
- * lado de FCM/APNs (credenciales inválidas, etc.) solo aparecen acá, y solo
- * unos segundos después de encolado. Ver: https://docs.expo.dev/push-notifications/sending-notifications/#push-receipts
+ * lado de FCM/APNs (credenciales inválidas, token caduco, etc.) solo aparecen
+ * acá, y solo unos segundos después de encolado. Ver: https://docs.expo.dev/push-notifications/sending-notifications/#push-receipts
+ * A diferencia del error de ticket, este también borra el token caduco —
+ * si no, queda fallando en silencio hasta que el usuario reabra la app.
  */
-async function _revisarRecibos(ids) {
-  if (!ids.length) return;
-  const recibos = (await _postExpo('/--/api/v2/push/getReceipts', { ids })) ?? {};
-  for (const id of ids) {
-    const recibo = recibos[id];
-    if (recibo?.status === 'error') {
-      logger.error(`[push] recibo de error de Expo (ticket ${id}):`, recibo.message || recibo.details?.error);
-    }
-  }
+async function _revisarRecibos(usuarioId, entradas) {
+  if (!entradas.length) return;
+  const recibos = (await _postExpo('/--/api/v2/push/getReceipts', { ids: entradas.map((e) => e.id) })) ?? {};
+  await Promise.all(
+    entradas.map(({ id, token }) => {
+      const recibo = recibos[id];
+      if (recibo?.status !== 'error') return null;
+      logger.error(`[push] recibo de error de Expo (usuario ${usuarioId}, ticket ${id}):`, recibo.message || recibo.details?.error);
+      if (recibo.details?.error === 'DeviceNotRegistered') {
+        return PushModel.eliminarExpoToken(usuarioId, token).catch((err) =>
+          logger.error(`[push] no se pudo borrar token caduco (usuario ${usuarioId}):`, err.message)
+        );
+      }
+      return null;
+    })
+  );
 }
 
 const PushService = {
@@ -155,7 +177,9 @@ const PushService = {
         } catch (err) {
           if (err.statusCode === 404 || err.statusCode === 410) {
             // Suscripción caducada: se descarta.
-            await PushModel.eliminarPorEndpoint(sub.usuario_id, sub.endpoint).catch(() => {});
+            await PushModel.eliminarPorEndpoint(sub.usuario_id, sub.endpoint).catch((delErr) =>
+              logger.error(`[push] no se pudo borrar suscripción caducada (usuario ${sub.usuario_id}):`, delErr.message)
+            );
           } else {
             logger.error('[push] fallo al enviar notificación:', err.message);
           }
@@ -196,7 +220,9 @@ const PushService = {
       sound:     'default',
       title:     payload.titulo,
       body:      payload.mensaje,
-      data:      payload.data || {},
+      // `tipo` viaja dentro de `data` (no hay campo aparte en la API de Expo) para
+      // que el listener de push-tap en el cliente pueda decidir a dónde navegar.
+      data:      { ...(payload.data || {}), tipo: payload.data?.tipo ?? payload.tipo },
       channelId: 'default', // debe existir en el cliente — ver setNotificationChannelAsync en pushNotifications.ts
     }));
 
@@ -204,15 +230,18 @@ const PushService = {
       const tickets = await _enviarExpoBatch(messages);
       // Los tickets vienen en el mismo orden que `messages`/`tokens` — un token
       // con DeviceNotRegistered ya no existe en el dispositivo, se descarta.
-      const idsOk = [];
+      const entradasOk = [];
       await Promise.all(
         tickets.map((ticket, i) => {
           if (ticket?.status !== 'error') {
-            if (ticket?.id) idsOk.push(ticket.id);
+            if (ticket?.id) entradasOk.push({ id: ticket.id, token: tokens[i] });
             return null;
           }
           if (ticket?.details?.error === 'DeviceNotRegistered') {
-            return PushModel.eliminarExpoToken(usuarioId, tokens[i]).catch(() => {});
+            logger.info(`[push] token caduco (DeviceNotRegistered) descartado para usuario ${usuarioId}`);
+            return PushModel.eliminarExpoToken(usuarioId, tokens[i]).catch((err) =>
+              logger.error(`[push] no se pudo borrar token caduco (usuario ${usuarioId}):`, err.message)
+            );
           }
           logger.error(`[push] ticket de error de Expo (usuario ${usuarioId}):`, ticket.message || ticket.details?.error);
           return null;
@@ -220,8 +249,8 @@ const PushService = {
       );
       // ponytail: setTimeout in-process para el chequeo de recibos, alcanza para
       // el volumen actual — upgrade a job programado si el envío crece mucho.
-      if (idsOk.length) {
-        setTimeout(() => _revisarRecibos(idsOk), 15000).unref();
+      if (entradasOk.length) {
+        setTimeout(() => _revisarRecibos(usuarioId, entradasOk), 15000).unref();
       }
     } catch (err) {
       logger.error('[push] fallo en entrega Expo:', err.message);

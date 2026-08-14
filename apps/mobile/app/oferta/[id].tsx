@@ -10,15 +10,17 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }    from '@/lib/theme';
 import { confirm }     from '@/lib/confirmDialog';
+import { showToast }   from '@/lib/toast';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta, useCancelarOferta,
 } from '@/features/turnos/useTurnos';
+import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
-import type { AsignacionResumen, EstadoAsignacion } from '@api-client';
+import type { AsignacionResumen, EstadoAsignacion, OfertaPuesto } from '@api-client';
 import { ApiError } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -171,6 +173,10 @@ export default function OfertaDetailScreen() {
   const { data: misTurnos }         = useMisTurnos({ enabled: isWorker });
   const esPasado      = oferta ? oferta.fecha < bogotaToday() : false;
   const turnoIniciado = oferta ? turnoYaInicio(oferta.fecha, oferta.hora_inicio) : false;
+  // esPasado solo compara el día — un turno de hoy con hora de inicio ya
+  // pasada seguía aceptando postulaciones. El backend valida lo mismo en
+  // OfertasService.aplicar().
+  const yaNoSePuedePostular = esPasado || turnoIniciado;
 
   const aplicarM       = useAplicar();
   const retirarM       = useRetirar();
@@ -208,6 +214,7 @@ export default function OfertaDetailScreen() {
   const availablePuestos = oferta?.puestos.filter((p) => p.plazas_cubiertas < p.plazas) ?? [];
   const [selectedPuestoId, setSelectedPuestoId] = useState<number | null>(null);
   const selectedPuesto = availablePuestos.find((p) => p.id === selectedPuestoId) ?? availablePuestos[0];
+  const [funcionesPuesto, setFuncionesPuesto] = useState<OfertaPuesto | null>(null);
 
   const hasCoords = oferta?.latitud != null && oferta?.longitud != null;
 
@@ -229,7 +236,7 @@ export default function OfertaDetailScreen() {
     if (!selectedPuesto) return;
     try {
       await aplicarM.mutateAsync({ ofertaId: id!, puestoId: selectedPuesto.id });
-      Alert.alert('¡Postulación enviada!', `Aplicaste como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
+      showToast(`Has solicitado el turno como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
     } catch (err) {
       Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');
     }
@@ -345,12 +352,12 @@ export default function OfertaDetailScreen() {
           <View className="bg-card rounded-2xl px-5 py-4 gap-3"
             style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              {isWorker && !yaAplicado && !esPasado && availablePuestos.length > 1
+              {isWorker && !yaAplicado && !yaNoSePuedePostular && availablePuestos.length > 1
                 ? '¿A qué cargo quieres aplicar?'
                 : 'Cargos y tarifas'}
             </Text>
             {oferta.puestos.map((p) => {
-              const seleccionable = isWorker && !yaAplicado && !esPasado
+              const seleccionable = isWorker && !yaAplicado && !yaNoSePuedePostular
                 && availablePuestos.length > 1 && p.plazas_cubiertas < p.plazas;
               const seleccionado = seleccionable && p.id === selectedPuesto?.id;
               const Row = (
@@ -367,6 +374,12 @@ export default function OfertaDetailScreen() {
                       <Text className="text-sm font-semibold text-foreground">{p.cargo_nombre}</Text>
                       {p.notas && (
                         <Text className="text-xs text-muted-foreground">{p.notas}</Text>
+                      )}
+                      {isWorker && (
+                        <TouchableOpacity onPress={() => setFuncionesPuesto(p)} hitSlop={6} className="flex-row items-center gap-1 mt-0.5">
+                          <Ionicons name="list-outline" size={12} color="#3B82F6" />
+                          <Text className="text-xs text-info font-medium">Ver funciones</Text>
+                        </TouchableOpacity>
                       )}
                     </View>
                   </View>
@@ -416,6 +429,11 @@ export default function OfertaDetailScreen() {
                     />
                   )}
                 </View>
+              ) : turnoIniciado ? (
+                <View className="bg-muted rounded-2xl px-5 py-4 flex-row items-center gap-3">
+                  <Ionicons name="time-outline" size={20} color="#94A3B8" />
+                  <Text className="text-sm text-muted-foreground">El turno ya empezó — ya no se puede postular</Text>
+                </View>
               ) : selectedPuesto ? (
                 <Button
                   label={aplicarM.isPending ? 'Enviando postulación…' : `Aplicar como ${selectedPuesto.cargo_nombre}`}
@@ -454,7 +472,7 @@ export default function OfertaDetailScreen() {
                     const fecha = date.toISOString().slice(0, 10);
                     try {
                       const nueva = await duplicarM.mutateAsync({ ofertaId: id, fecha });
-                      Alert.alert('Oferta duplicada', `"${nueva.titulo}" creada para el ${fecha}.`);
+                      showToast(`"${nueva.titulo}" creada para el ${fecha}.`);
                     } catch {
                       Alert.alert('Error', 'No se pudo duplicar la oferta.');
                     }
@@ -519,6 +537,13 @@ export default function OfertaDetailScreen() {
 
         </ScrollView>
       </SafeAreaView>
+
+      <FuncionesCargoModal
+        visible={!!funcionesPuesto}
+        onClose={() => setFuncionesPuesto(null)}
+        cargoId={funcionesPuesto?.cargo_id ?? null}
+        cargoNombre={funcionesPuesto?.cargo_nombre ?? ''}
+      />
     </>
   );
 }

@@ -108,6 +108,14 @@ export function useGeofence({
       }
       setPermission(false);
       if (intervalRef.current) return; // already polling
+      // ponytail: muestra la última ubicación conocida (casi instantánea) mientras se
+      // resuelve el fix fresco, para no dejar "Calculando distancia…" varios segundos.
+      try {
+        const last = await Location.getLastKnownPositionAsync({});
+        if (!cancelled && last) aplicarFix(last.coords.latitude, last.coords.longitude);
+      } catch {
+        // sin respaldo — poll() de abajo sigue intentando el fix fresco
+      }
       await poll();
       intervalRef.current = setInterval(poll, 5_000);
     };

@@ -23,6 +23,7 @@ import {
   useEliminarCargo,
 } from '@/features/turnos/useTurnos';
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
+import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
 import { confirm } from '@/lib/confirmDialog';
 import { COLORS } from '@/lib/designTokens';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -70,6 +71,7 @@ export default function CargosScreen() {
   const [editingCargo, setEditingCargo]       = useState<Cargo | null>(null);
   const [form, setForm]                       = useState<FormState>(EMPTY_FORM);
   const [puntoModalVisible, setPuntoModal]    = useState(false);
+  const [funcionesCargo, setFuncionesCargo]   = useState<Cargo | null>(null);
 
   const sistemaCargos = cargos.filter((c) => c.empresa_id === null);
   const empresaCargos = cargos.filter((c) => c.empresa_id !== null);
@@ -181,13 +183,15 @@ export default function CargosScreen() {
             </Text>
             <View className="flex-row flex-wrap gap-2 mb-8">
               {sistemaCargos.map((c) => (
-                <View
+                <Pressable
                   key={c.id}
-                  className="flex-row items-center gap-1.5 bg-card border border-border rounded-xl px-3 py-2"
+                  onPress={() => setFuncionesCargo(c)}
+                  className="flex-row items-center gap-1.5 bg-card border border-border rounded-xl px-3 py-2 active:opacity-70"
                 >
                   <Ionicons name="briefcase-outline" size={13} color="#64748B" />
                   <Text className="text-sm text-foreground">{c.nombre}</Text>
-                </View>
+                  <Ionicons name="list-outline" size={13} color="#94A3B8" />
+                </Pressable>
               ))}
               {sistemaCargos.length === 0 && (
                 <Text className="text-sm text-muted-foreground">Sin cargos de sistema</Text>
@@ -244,6 +248,14 @@ export default function CargosScreen() {
                     </View>
 
                     <View className="flex-row items-center gap-4">
+                      <Pressable
+                        onPress={() => setFuncionesCargo(cargo)}
+                        hitSlop={8}
+                        accessibilityLabel="Funciones del cargo"
+                        className="w-8 h-8 rounded-full bg-muted items-center justify-center active:opacity-70"
+                      >
+                        <Ionicons name="list-outline" size={15} color="#64748B" />
+                      </Pressable>
                       <Pressable
                         onPress={() => openEdit(cargo)}
                         hitSlop={8}
@@ -529,6 +541,15 @@ export default function CargosScreen() {
           />
         </SafeAreaView>
       </Modal>
+
+      {/* ── Modal funciones del cargo ──────────────────────────────── */}
+      <FuncionesCargoModal
+        visible={!!funcionesCargo}
+        onClose={() => setFuncionesCargo(null)}
+        cargoId={funcionesCargo?.id ?? null}
+        cargoNombre={funcionesCargo?.nombre ?? ''}
+        editable
+      />
     </>
   );
 }

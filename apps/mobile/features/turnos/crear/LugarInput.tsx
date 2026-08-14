@@ -84,7 +84,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'Activa los permisos de ubicación en ajustes.');
+        Alert.alert('Permiso requerido', 'Activa el permiso de ubicación para buscar el lugar del turno con tu GPS.');
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -103,7 +103,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
         onChange(`${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng);
       }
     } catch {
-      Alert.alert('Error', 'No se pudo obtener la ubicación.');
+      Alert.alert('No se pudo obtener el GPS', 'Revisa que el GPS esté activado e intenta de nuevo, o busca el lugar por texto.');
     } finally {
       setLocLoading(false);
     }

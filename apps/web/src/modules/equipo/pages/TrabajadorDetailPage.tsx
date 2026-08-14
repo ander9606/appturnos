@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { useTrabajador, useActualizarTrabajador } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
+import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
 import type { TipoTrabajador, TipoDocumento, Sexo, TipoCuenta, Trabajador } from '../types';
 
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
@@ -224,6 +225,10 @@ export function TrabajadorDetailPage() {
               <label className="block text-sm font-medium text-foreground mb-1">Número cuenta</label>
               <input type="text" {...inp('numero_cuenta')} />
             </div>
+          </div>
+
+          <div className="mt-4">
+            <DeduccionesChecklist tarifaHora={form.tarifa_hora} salarioBase={form.salario_base} />
           </div>
         </section>
 

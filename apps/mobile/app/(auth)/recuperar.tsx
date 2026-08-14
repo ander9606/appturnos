@@ -13,7 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -29,6 +28,7 @@ import {
 } from '@/features/auth/schemas';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { showToast } from '@/lib/toast';
 import { authApi } from '@api-client';
 import type { ApiError } from '@api-client';
 
@@ -77,9 +77,8 @@ export default function RecuperarScreen() {
         password: data.password,
         email_token: token,
       });
-      Alert.alert('Listo', 'Tu contraseña fue actualizada. Inicia sesión con la nueva.', [
-        { text: 'OK', onPress: () => router.replace('/(auth)/login') },
-      ]);
+      showToast('Tu contraseña fue actualizada. Inicia sesión con la nueva.');
+      router.replace('/(auth)/login');
     } catch (err) {
       setServerError((err as ApiError)?.message ?? 'No se pudo restablecer la contraseña. Intenta de nuevo.');
     }

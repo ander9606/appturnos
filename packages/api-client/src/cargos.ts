@@ -45,6 +45,12 @@ export interface CargoCertificado {
   cargo_empresa_id: number | null;
 }
 
+export interface CargoFuncion {
+  id: number;
+  descripcion: string;
+  orden: number;
+}
+
 export const cargosApi = {
   listar(): Promise<Cargo[]> {
     return api.get<Cargo[]>('/api/cargos');
@@ -65,5 +71,15 @@ export const cargosApi = {
   /** Certifica a un trabajador ya vinculado (activo) para un cargo. */
   asignarAVinculo(vinculoId: number, cargoId: number): Promise<CargoCertificado[]> {
     return api.post<CargoCertificado[]>(`/api/trabajador-empresa/${vinculoId}/cargos`, { cargo_id: cargoId });
+  },
+
+  /** Funciones (responsabilidades) que el cargo tiene en mi empresa. */
+  listarFunciones(cargoId: number): Promise<CargoFuncion[]> {
+    return api.get<CargoFuncion[]>(`/api/cargos/${cargoId}/funciones`);
+  },
+
+  /** Reemplaza el listado completo de funciones del cargo para mi empresa. */
+  actualizarFunciones(cargoId: number, funciones: string[]): Promise<CargoFuncion[]> {
+    return api.put<CargoFuncion[]>(`/api/cargos/${cargoId}/funciones`, { funciones });
   },
 };

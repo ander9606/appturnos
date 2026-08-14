@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,16 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { Button }      from '@/components/ui/Button';
-import { SegmentInput } from './SegmentInput';
 import { LugarInput }   from './LugarInput';
+import { TrabajadorPickerModal } from './TrabajadorPickerModal';
 import { validateStep1 } from './utils';
+import { bogotaToday, formatShortDate, formatTimeObj, toISODate } from '@/lib/formatters';
 import type { WizardData } from './types';
 
 type Props = {
@@ -22,6 +25,24 @@ type Props = {
 };
 
 export function Step1Basicos({ data, onChange, onNext }: Props) {
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [showFecha, setShowFecha] = useState(false);
+  const [showInicio, setShowInicio] = useState(false);
+  const [showFin, setShowFin] = useState(false);
+
+  function onChangeFecha(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowFecha(false);
+    if (d) onChange({ fecha: d });
+  }
+  function onChangeInicio(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowInicio(false);
+    if (d) onChange({ hora_inicio: d });
+  }
+  function onChangeFin(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowFin(false);
+    if (d) onChange({ hora_fin: d });
+  }
+
   const handleNext = () => {
     const err = validateStep1(data);
     if (err) { Alert.alert('Datos incompletos', err); return; }
@@ -62,34 +83,82 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
 
       <View className="gap-2">
         <Text className="text-sm font-semibold text-foreground">Fecha *</Text>
-        <View className="flex-row items-end gap-3">
-          <SegmentInput label="Día"  value={data.dia}  onChange={(v) => onChange({ dia: v })}  placeholder="15" />
-          <Text className="text-muted-foreground mb-3">/</Text>
-          <SegmentInput label="Mes"  value={data.mes}  onChange={(v) => onChange({ mes: v })}  placeholder="06" />
-          <Text className="text-muted-foreground mb-3">/</Text>
-          <SegmentInput label="Año"  value={data.anio} onChange={(v) => onChange({ anio: v })} placeholder="2026" maxLength={4} />
-        </View>
+        <TouchableOpacity
+          onPress={() => setShowFecha(true)}
+          className="bg-muted rounded-2xl px-4 py-3 flex-row items-center gap-2"
+        >
+          <Ionicons name="calendar-outline" size={16} color="#64748B" />
+          <Text className="text-base text-foreground">
+            {data.fecha ? formatShortDate(toISODate(data.fecha)) : 'Seleccionar fecha'}
+          </Text>
+        </TouchableOpacity>
+        {showFecha && (
+          <DateTimePicker
+            value={data.fecha ?? new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            minimumDate={new Date(`${bogotaToday()}T00:00:00`)}
+            onChange={onChangeFecha}
+          />
+        )}
+        {showFecha && Platform.OS === 'ios' && (
+          <TouchableOpacity onPress={() => setShowFecha(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+            <Text className="text-sm font-semibold text-primary">Listo</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View className="gap-2">
         <Text className="text-sm font-semibold text-foreground">Horario *</Text>
-        <View className="flex-row gap-6">
-          <View className="gap-1.5">
+        <View className="flex-row gap-3">
+          <View className="flex-1 gap-1.5">
             <Text className="text-xs text-muted-foreground">Inicio</Text>
-            <View className="flex-row items-end gap-1">
-              <SegmentInput label="HH" value={data.hora_inicio_h} onChange={(v) => onChange({ hora_inicio_h: v })} placeholder="07" />
-              <Text className="text-muted-foreground mb-3 font-bold">:</Text>
-              <SegmentInput label="mm" value={data.hora_inicio_m} onChange={(v) => onChange({ hora_inicio_m: v })} placeholder="00" />
-            </View>
+            <TouchableOpacity
+              onPress={() => setShowInicio(true)}
+              className="bg-muted rounded-2xl px-4 py-3 items-center"
+            >
+              <Text className="text-base font-semibold text-foreground">
+                {data.hora_inicio ? formatTimeObj(data.hora_inicio) : '--:--'}
+              </Text>
+            </TouchableOpacity>
+            {showInicio && (
+              <DateTimePicker
+                value={data.hora_inicio ?? new Date()}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onChangeInicio}
+              />
+            )}
+            {showInicio && Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowInicio(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          <View className="gap-1.5">
+          <View className="flex-1 gap-1.5">
             <Text className="text-xs text-muted-foreground">Fin estimado</Text>
-            <View className="flex-row items-end gap-1">
-              <SegmentInput label="HH" value={data.hora_fin_h} onChange={(v) => onChange({ hora_fin_h: v })} placeholder="15" />
-              <Text className="text-muted-foreground mb-3 font-bold">:</Text>
-              <SegmentInput label="mm" value={data.hora_fin_m} onChange={(v) => onChange({ hora_fin_m: v })} placeholder="00" />
-            </View>
+            <TouchableOpacity
+              onPress={() => setShowFin(true)}
+              className="bg-muted rounded-2xl px-4 py-3 items-center"
+            >
+              <Text className="text-base font-semibold text-foreground">
+                {data.hora_fin ? formatTimeObj(data.hora_fin) : '--:--'}
+              </Text>
+            </TouchableOpacity>
+            {showFin && (
+              <DateTimePicker
+                value={data.hora_fin ?? new Date()}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onChangeFin}
+              />
+            )}
+            {showFin && Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowFin(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -155,7 +224,54 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         </View>
       </View>
 
+      {/* Visibilidad: pool abierto vs turno dirigido */}
+      <View className="gap-2">
+        <Text className="text-sm font-semibold text-foreground">¿Quién puede ver esta oferta?</Text>
+        <View className="flex-row gap-2">
+          {([
+            { value: 'abierta',  label: 'Todos los que\ncalifican' },
+            { value: 'dirigida', label: 'Personas\nespecíficas' },
+          ] as const).map((opt) => {
+            const active = data.visibilidad === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => onChange({ visibilidad: opt.value })}
+                className={`flex-1 rounded-2xl border py-3 px-2 items-center ${
+                  active ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                }`}
+              >
+                <Text className={`text-xs font-bold text-center ${active ? 'text-primary' : 'text-foreground'}`}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {data.visibilidad === 'dirigida' && (
+          <TouchableOpacity
+            className="flex-row items-center justify-between bg-muted rounded-2xl px-4 py-3"
+            onPress={() => setPickerVisible(true)}
+          >
+            <Text className="text-sm text-foreground">
+              {data.destinatarios.length === 0
+                ? 'Elegir personas'
+                : `${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''} elegida${data.destinatarios.length !== 1 ? 's' : ''}`}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <Button label="Siguiente →" variant="primary" size="lg" fullWidth onPress={handleNext} />
+
+      <TrabajadorPickerModal
+        visible={pickerVisible}
+        seleccionados={data.destinatarios}
+        onConfirm={(destinatarios) => onChange({ destinatarios })}
+        onClose={() => setPickerVisible(false)}
+      />
     </ScrollView>
   );
 }

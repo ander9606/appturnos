@@ -73,8 +73,8 @@ describe('AuthService.eliminarCuenta', () => {
 
     await AuthService.eliminarCuenta(1, 'trabajador_turnos', null, 'clave-correcta');
 
-    expect(TrabajadorEmpresaService.archivar).toHaveBeenCalledWith(1, 'trabajador_turnos', 5);
-    expect(TrabajadorEmpresaService.archivar).toHaveBeenCalledWith(1, 'trabajador_turnos', 6);
+    expect(TrabajadorEmpresaService.archivar).toHaveBeenCalledWith(1, 'trabajador_turnos', null, 5);
+    expect(TrabajadorEmpresaService.archivar).toHaveBeenCalledWith(1, 'trabajador_turnos', null, 6);
     expect(AuthModel.eliminarCuenta).toHaveBeenCalledWith(1, [10, 11], 'hash-inutil');
   });
 });

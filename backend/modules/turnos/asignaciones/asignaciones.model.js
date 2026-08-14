@@ -146,8 +146,7 @@ const AsignacionesModel = {
         await conn.rollback();
         return { ok: false, motivo: 'oferta' };
       }
-      const hoyBogota = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      if (oferta.fecha < hoyBogota) {
+      if (oferta.fecha < ahoraColombiaSQL().slice(0, 10)) {
         await conn.rollback();
         return { ok: false, motivo: 'vencida' };
       }

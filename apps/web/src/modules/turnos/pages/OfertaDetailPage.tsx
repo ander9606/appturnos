@@ -17,18 +17,21 @@ import {
 } from '../hooks/useTurnos';
 import { useCargos } from '@/modules/configuracion/hooks/useConfiguracion';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto } from '../types';
+import { fmtDate, fmtCOP } from '@/shared/lib/format';
 
 const ESTADO_OFERTA_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
+  abierta: 'bg-primary-100 text-primary-600',
   publicada: 'bg-primary-100 text-primary-600',
-  en_progreso: 'bg-warning-light text-warning',
+  en_proceso: 'bg-warning-light text-warning',
+  cerrada: 'bg-muted text-muted-foreground',
   completada: 'bg-success-light text-success',
   cancelada: 'bg-danger-light text-danger',
 };
 
 const ESTADO_OFERTA_LABEL: Record<EstadoOferta, string> = {
-  borrador: 'Borrador', publicada: 'Publicada', en_progreso: 'En progreso',
-  completada: 'Completada', cancelada: 'Cancelada',
+  borrador: 'Borrador', abierta: 'Abierta', publicada: 'Publicada', en_proceso: 'En progreso',
+  cerrada: 'Cerrada', completada: 'Completada', cancelada: 'Cancelada',
 };
 
 const ESTADO_ASIG_BADGE: Record<EstadoAsignacion, string> = {
@@ -44,14 +47,6 @@ const ESTADO_ASIG_LABEL: Record<EstadoAsignacion, string> = {
   pendiente: 'Pendiente', confirmado: 'Confirmado', en_progreso: 'En progreso',
   completado: 'Completado', no_presentado: 'No presentado', cancelado: 'Cancelado',
 };
-
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
-}
-
-function fmtCOP(n: number) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
-}
 
 const FILTROS_ASIG: { label: string; value: EstadoAsignacion | undefined }[] = [
   { label: 'Todas', value: undefined },
@@ -81,7 +76,7 @@ export function OfertaDetailPage() {
     oferta_id: ofertaId,
     estado: filtroAsig,
   });
-  const asignaciones: Asignacion[] = asigData?.data ?? [];
+  const asignaciones: Asignacion[] = asigData?.data?.data ?? [];
 
   const eliminarPuesto = useEliminarPuesto();
   const publicar = usePublicarOferta();
@@ -94,7 +89,7 @@ export function OfertaDetailPage() {
     ? asignaciones.find(a => a.id === calificandoId) ?? null
     : null;
 
-  const canEditPuestos = oferta?.estado === 'borrador' || oferta?.estado === 'publicada';
+  const canEditPuestos = oferta?.estado === 'borrador' || oferta?.estado === 'abierta';
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-12 text-center">Cargando...</p>;
   if (!oferta) return <p className="text-muted-foreground text-sm py-12 text-center">Oferta no encontrada</p>;
@@ -157,7 +152,7 @@ export function OfertaDetailPage() {
           <div className="flex-shrink-0 flex flex-col items-end gap-2">
             <div className="text-right">
               <p className="text-2xl font-bold text-foreground">
-                {puestos.reduce((s, p) => s + p.asignados, 0)}/{puestos.reduce((s, p) => s + p.plazas, 0)}
+                {puestos.reduce((s, p) => s + p.plazas_cubiertas, 0)}/{puestos.reduce((s, p) => s + p.plazas, 0)}
               </p>
               <p className="text-xs text-muted-foreground">asignados</p>
             </div>
@@ -239,8 +234,8 @@ export function OfertaDetailPage() {
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{fmtCOP(p.tarifa_dia)}/día</span>
-                    <span className={`font-medium ${p.asignados >= p.plazas ? 'text-success' : 'text-foreground'}`}>
-                      {p.asignados}/{p.plazas} plazas
+                    <span className={`font-medium ${p.plazas_cubiertas >= p.plazas ? 'text-success' : 'text-foreground'}`}>
+                      {p.plazas_cubiertas}/{p.plazas} plazas
                     </span>
                   </div>
                   {p.notas && (
@@ -250,7 +245,7 @@ export function OfertaDetailPage() {
                   <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
                     <div
                       className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: p.plazas > 0 ? `${Math.min(100, (p.asignados / p.plazas) * 100)}%` : '0%' }}
+                      style={{ width: p.plazas > 0 ? `${Math.min(100, (p.plazas_cubiertas / p.plazas) * 100)}%` : '0%' }}
                     />
                   </div>
                 </div>
@@ -304,21 +299,18 @@ export function OfertaDetailPage() {
                   {asignaciones.map(a => (
                     <tr key={a.id} className="border-t border-border/60 hover:bg-muted transition-colors">
                       <td className="px-4 py-3 font-medium text-foreground">
-                        {a.trabajador ? `${a.trabajador.nombre} ${a.trabajador.apellido}` : String(a.trabajador_id)}
-                        {a.trabajador?.cedula && (
-                          <span className="block text-xs text-muted-foreground font-normal">{a.trabajador.cedula}</span>
-                        )}
+                        {a.trabajador_nombre} {a.trabajador_apellido}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.puesto?.cargo_nombre ?? '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{a.cargo_nombre}</td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_ASIG_BADGE[a.estado]}`}>
                           {ESTADO_ASIG_LABEL[a.estado]}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.hora_ingreso ?? '—'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.hora_egreso ?? '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{a.hora_ingreso_real ?? '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{a.hora_egreso_real ?? '—'}</td>
                       <td className="px-4 py-3 text-center text-muted-foreground">
-                        {a.calificacion !== null ? (
+                        {a.calificacion != null ? (
                           <span className="text-warning font-medium">{a.calificacion}★</span>
                         ) : '—'}
                       </td>
@@ -356,7 +348,7 @@ export function OfertaDetailPage() {
                               NP
                             </button>
                           )}
-                          {a.estado === 'completado' && a.calificacion === null && (
+                          {a.estado === 'completado' && a.calificacion == null && (
                             <button
                               onClick={() => setCalificandoId(a.id)}
                               className="flex items-center gap-1 text-xs text-warning hover:bg-warning-light px-2 py-1 rounded transition-colors"
@@ -521,7 +513,7 @@ function CalificarModal({ asignacion, onClose }: { asignacion: Asignacion; onClo
       <div className="bg-card rounded-2xl p-6 w-full max-w-sm">
         <h2 className="text-lg font-semibold text-foreground mb-1">Calificar trabajador</h2>
         <p className="text-sm text-muted-foreground mb-4">
-          {asignacion.trabajador ? `${asignacion.trabajador.nombre} ${asignacion.trabajador.apellido}` : ''}
+          {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>

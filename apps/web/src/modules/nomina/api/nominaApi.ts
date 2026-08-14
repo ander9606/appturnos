@@ -1,8 +1,8 @@
 import { api } from '@/shared/api/axios';
-import type { EstadoPeriodo, TipoPeriodo, TipoDia } from '../types';
+import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento, EstadoDescuento } from '../types';
 
 export const nominaApi = {
-  listarPeriodos: (params?: { estado?: EstadoPeriodo; page?: number; limit?: number }) =>
+  listarPeriodos: (params?: { estado?: EstadoPeriodo; page?: number; limit?: number; conTotales?: boolean }) =>
     api.get('/nomina/periodos', { params }).then(r => r.data),
 
   crearPeriodo: (data: { fecha_inicio: string; fecha_fin: string; tipo?: TipoPeriodo }) =>
@@ -30,5 +30,14 @@ export const nominaApi = {
     api.get(`/nomina/liquidacion/${periodoId}/export`, { responseType: 'blob' }),
 
   listarTrabajadores: () =>
-    api.get('/trabajadores', { params: { tipo: 'nomina', activo: true, limit: 200 } }).then(r => r.data),
+    api.get('/trabajadores', { params: { tipo: 'nomina', activo: true, limit: 100 } }).then(r => r.data),
+
+  listarDescuentos: (params?: { periodo_id?: number; estado?: EstadoDescuento }) =>
+    api.get('/nomina/descuentos', { params }).then(r => r.data),
+
+  crearDescuento: (data: { trabajador_id: number; periodo_id: number; tipo: TipoDescuento; motivo: string; monto: number }) =>
+    api.post('/nomina/descuentos', data).then(r => r.data),
+
+  eliminarDescuento: (id: number) =>
+    api.delete(`/nomina/descuentos/${id}`).then(r => r.data),
 };

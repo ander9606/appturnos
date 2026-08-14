@@ -81,6 +81,7 @@ function EmpresaTab() {
   const editing = form !== null;
   const base: Record<string, string> = {};
   for (const { key } of EMPRESA_FIELDS) base[key] = ((empresa as unknown as Record<string, unknown>)[key] as string) ?? '';
+  base.tipo_contrato = empresa.tipo_contrato ?? 'laboral';
   const val = editing ? form : base;
 
   const handleSave = async () => {
@@ -127,6 +128,23 @@ function EmpresaTab() {
             }
           </div>
         ))}
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">Régimen de contratación</label>
+          <select
+            disabled={!editing}
+            value={val.tipo_contrato ?? 'laboral'}
+            onChange={e => setForm(f => ({ ...f!, tipo_contrato: e.target.value }))}
+            className={INPUT_CLS}
+          >
+            <option value="laboral">Contrato laboral</option>
+            <option value="prestacion_servicios">Prestación de servicios</option>
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            {val.tipo_contrato === 'prestacion_servicios'
+              ? 'La liquidación no calcula descuentos (el independiente se autoliquida salud/pensión).'
+              : 'La liquidación descuenta salud (4%) y pensión (4%, + fondo de solidaridad si aplica) del pago de cada trabajador.'}
+          </p>
+        </div>
       </div>
     </div>
   );

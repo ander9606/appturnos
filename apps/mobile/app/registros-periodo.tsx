@@ -25,7 +25,8 @@ import {
   TIPO_DIA_LABEL, fmtHora, fmtFechaCorta,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { useTheme } from '@/lib/theme';
-import { toISODate } from '@/lib/formatters';
+import { toISODate, bogotaToday } from '@/lib/formatters';
+import { isChronological } from '@/lib/dateValidation';
 import type { RegistroDiario, TipoDia } from '@api-client';
 
 // ── Constantes ────────────────────────────────────────────────────────────
@@ -153,10 +154,14 @@ type CreandoState = { trabajadorId: number; nombre: string } | null;
 function CrearRegistroModal({
   creando,
   periodoId,
+  fechaInicio,
+  fechaFin,
   onClose,
 }: {
   creando: CreandoState;
   periodoId: number;
+  fechaInicio?: string;
+  fechaFin?: string;
   onClose: () => void;
 }) {
   const crear = useCrearRegistro();
@@ -201,6 +206,19 @@ function CrearRegistroModal({
   async function handleGuardar() {
     if (!horaEntrada) {
       Alert.alert('Falta la hora de entrada');
+      return;
+    }
+    if (horaSalida && isChronological(fmtTime(horaSalida), fmtTime(horaEntrada))) {
+      Alert.alert('La hora de salida debe ser después de la de entrada.');
+      return;
+    }
+    const fechaISO = toISODate(fecha);
+    if (fechaInicio && fechaFin && !(fechaISO >= fechaInicio && fechaISO <= fechaFin)) {
+      Alert.alert('Fecha fuera del período', `La fecha debe estar entre ${fechaInicio} y ${fechaFin}.`);
+      return;
+    }
+    if (fechaISO > bogotaToday()) {
+      Alert.alert('Fecha inválida', 'No puedes registrar un día que aún no ha ocurrido.');
       return;
     }
     try {
@@ -258,6 +276,8 @@ function CrearRegistroModal({
                 value={fecha}
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={fechaInicio ? new Date(`${fechaInicio}T00:00:00`) : undefined}
+                maximumDate={new Date(`${fechaFin && fechaFin < bogotaToday() ? fechaFin : bogotaToday()}T00:00:00`)}
                 onChange={onChangeFecha}
               />
             )}
@@ -428,7 +448,9 @@ type Seccion = {
 
 export default function RegistrosPeriodoScreen() {
   const theme = useTheme();
-  const { periodoId, trabajadorId } = useLocalSearchParams<{ periodoId: string; trabajadorId?: string }>();
+  const { periodoId, trabajadorId, fechaInicio, fechaFin } = useLocalSearchParams<{
+    periodoId: string; trabajadorId?: string; fechaInicio?: string; fechaFin?: string;
+  }>();
   const numId        = Number(periodoId);
   const numTrabId    = trabajadorId ? Number(trabajadorId) : undefined;
   const rol          = useAuthStore((s) => s.usuario?.rol);
@@ -490,7 +512,13 @@ export default function RegistrosPeriodoScreen() {
       <Stack.Screen options={{ title: numTrabId ? 'Registros del trabajador' : 'Registros del equipo', headerShown: true }} />
 
       <EditarRegistroModal registro={editando} onClose={() => setEditando(null)} />
-      <CrearRegistroModal  creando={creando}   periodoId={numId} onClose={() => setCreando(null)} />
+      <CrearRegistroModal
+        creando={creando}
+        periodoId={numId}
+        fechaInicio={fechaInicio}
+        fechaFin={fechaFin}
+        onClose={() => setCreando(null)}
+      />
 
       {sections.length === 0 ? (
         <View className="flex-1 items-center justify-center gap-3 px-8">

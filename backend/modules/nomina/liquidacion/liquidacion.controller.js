@@ -4,7 +4,7 @@ const LiquidacionService = require('./liquidacion.service');
 const { generarLiquidacionExcel } = require('../../../utils/liquidacionExcel');
 
 async function obtener(req, res) {
-  const data = await LiquidacionService.generar(req.empresa_id, Number(req.params.periodo_id));
+  const data = await LiquidacionService.generar(req.empresa_id, Number(req.params.periodo_id), req.usuario);
   res.json({ success: true, data, message: 'Liquidación del período' });
 }
 

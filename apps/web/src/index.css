@@ -14,8 +14,11 @@
   --color-primary-800:      #9E2410;
   --color-primary-900:      #7D1E0D;
 
-  /* Semantic */
+  /* Semantic — success también es el acento del módulo Nómina (igual que
+     THEME_COLORS.nomina en mobile/lib/designTokens.ts), mientras primary
+     (naranja) es el acento de Turnos. */
   --color-success:          #059669;
+  --color-success-600:      #047857;
   --color-success-light:    #D1FAE5;
   --color-warning:          #F59E0B;
   --color-warning-light:    #FEF3C7;
@@ -51,4 +54,18 @@
 @layer base {
   html { font-family: var(--font-family-sans); }
   body { @apply bg-background text-foreground; }
+}
+
+/* Flotación ambiental sutil para el mockup del hero en la landing (LandingPage.tsx) */
+@keyframes zt-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+
+/* Carrusel infinito de pantallas reales en la landing (LandingPage.tsx) — la
+   fila se duplica y se traslada exactamente la mitad de su ancho, así el
+   punto de corte entre la 1ª y la 2ª copia queda invisible. */
+@keyframes zt-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }

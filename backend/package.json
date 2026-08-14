@@ -39,5 +39,8 @@
   "devDependencies": {
     "jest": "^30.4.2",
     "nodemon": "^3.1.7"
+  },
+  "overrides": {
+    "body-parser": "2.3.0"
   }
 }

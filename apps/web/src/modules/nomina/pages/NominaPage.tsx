@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, ChevronRight } from 'lucide-react';
+import { Plus, ChevronRight, DollarSign, Users, AlertTriangle } from 'lucide-react';
 import { usePeriodos, useCrearPeriodo, useCerrarPeriodo, useLiquidarPeriodo } from '../hooks/useNomina';
 import type { EstadoPeriodo, TipoPeriodo, Periodo } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { StatCard } from '@/shared/components/StatCard';
+import { fmtDate, fmtPeriodo, fmtCOP, bogotaToday } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
   cerrado: 'bg-warning-light text-warning',
-  liquidado: 'bg-primary-100 text-primary-600',
+  liquidado: 'bg-muted text-muted-foreground',
 };
 
 const TIPO_LABEL: Record<TipoPeriodo, string> = {
@@ -18,18 +20,19 @@ const TIPO_LABEL: Record<TipoPeriodo, string> = {
   mensual: 'Mensual',
 };
 
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
-}
-
 export function NominaPage() {
   const navigate = useNavigate();
   const [filtroEstado, setFiltroEstado] = useState<EstadoPeriodo | undefined>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'cerrar' | 'liquidar'; periodo: Periodo } | null>(null);
 
-  const { data, isLoading, isError, error, refetch } = usePeriodos(filtroEstado);
-  const periodos: Periodo[] = data?.data ?? [];
+  const { data, isLoading, isError, error, refetch } = usePeriodos(filtroEstado, true);
+  const periodos: Periodo[] = data?.data?.data ?? [];
+  const hoy = bogotaToday();
+
+  const pendientes = periodos.filter(p => p.estado !== 'liquidado');
+  const totalPendiente = pendientes.reduce((s, p) => s + (p.total_estimado ?? 0), 0);
+  const vencidos = periodos.filter(p => p.estado === 'abierto' && p.fecha_fin < hoy).length;
 
   const cerrar = useCerrarPeriodo();
   const liquidar = useLiquidarPeriodo();
@@ -47,7 +50,7 @@ export function NominaPage() {
         <h1 className="text-2xl font-bold text-foreground">Nómina</h1>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 bg-success hover:bg-success-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
         >
           <Plus size={16} /> Nuevo período
         </button>
@@ -60,7 +63,7 @@ export function NominaPage() {
             onClick={() => setFiltroEstado(t.value)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               filtroEstado === t.value
-                ? 'border-primary text-primary'
+                ? 'border-success text-success'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -68,6 +71,18 @@ export function NominaPage() {
           </button>
         ))}
       </div>
+
+      {!isLoading && !isError && periodos.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <StatCard label="Total pendiente de pago" value={fmtCOP(totalPendiente)} icon={DollarSign} color={totalPendiente > 0 ? 'warning' : 'success'} />
+          <StatCard
+            label={vencidos > 0 ? `${vencidos} período${vencidos !== 1 ? 's' : ''} vencido${vencidos !== 1 ? 's' : ''}` : 'Períodos abiertos al día'}
+            value={pendientes.length}
+            icon={vencidos > 0 ? AlertTriangle : Users}
+            color={vencidos > 0 ? 'warning' : 'success'}
+          />
+        </div>
+      )}
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
@@ -83,20 +98,40 @@ export function NominaPage() {
                 <th className="text-left px-4 py-3 font-medium">Período</th>
                 <th className="text-left px-4 py-3 font-medium">Tipo</th>
                 <th className="text-left px-4 py-3 font-medium">Estado</th>
+                <th className="text-right px-4 py-3 font-medium">Trabajadores</th>
+                <th className="text-right px-4 py-3 font-medium">Total a pagar</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
-              {periodos.map(p => (
+              {periodos.map(p => {
+                const vencido = p.estado === 'abierto' && p.fecha_fin < hoy;
+                return (
                 <tr key={p.id} className="border-t border-border/60 hover:bg-muted">
                   <td className="px-4 py-3 text-foreground">
-                    {fmtDate(p.fecha_inicio)} — {fmtDate(p.fecha_fin)}
+                    {fmtPeriodo(p.fecha_inicio, p.fecha_fin)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{TIPO_LABEL[p.tipo]}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[p.estado]}`}>
-                      {p.estado.charAt(0).toUpperCase() + p.estado.slice(1)}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[p.estado]}`}>
+                        {p.estado.charAt(0).toUpperCase() + p.estado.slice(1)}
+                      </span>
+                      {vencido && (
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-danger-light text-danger">
+                          Vencido
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{p.trabajadores ?? '—'}</td>
+                  <td className="px-4 py-3 text-right">
+                    <span className="font-semibold text-foreground">
+                      {p.total_estimado != null ? fmtCOP(p.total_estimado) : '—'}
                     </span>
+                    {p.total_estimado != null && !p.es_definitivo && (
+                      <span className="ml-1.5 text-[10px] font-medium text-muted-foreground align-middle">Estimado</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
@@ -120,14 +155,15 @@ export function NominaPage() {
                       )}
                       <button
                         onClick={() => navigate(`/nomina/${p.id}`)}
-                        className="flex items-center gap-1 text-xs text-primary hover:text-primary-600 font-medium px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors"
+                        className="flex items-center gap-1 text-xs text-success hover:text-success-600 font-medium px-2 py-1 rounded-lg hover:bg-success-light transition-colors"
                       >
                         Ver <ChevronRight size={14} />
                       </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -179,7 +215,7 @@ function NuevoPeriodoModal({ onClose }: { onClose: () => void }) {
               required
               value={form.fecha_inicio}
               onChange={e => setForm(f => ({ ...f, fecha_inicio: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
           <div>
@@ -189,7 +225,7 @@ function NuevoPeriodoModal({ onClose }: { onClose: () => void }) {
               required
               value={form.fecha_fin}
               onChange={e => setForm(f => ({ ...f, fecha_fin: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
           <div>
@@ -197,7 +233,7 @@ function NuevoPeriodoModal({ onClose }: { onClose: () => void }) {
             <select
               value={form.tipo}
               onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoPeriodo }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             >
               <option value="semanal">Semanal</option>
               <option value="quincenal">Quincenal</option>
@@ -208,7 +244,7 @@ function NuevoPeriodoModal({ onClose }: { onClose: () => void }) {
             <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
               {crear.isPending ? 'Creando...' : 'Crear'}
             </button>
           </div>

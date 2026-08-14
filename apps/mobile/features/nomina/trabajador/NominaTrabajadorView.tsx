@@ -46,6 +46,9 @@ export function NominaTrabajadorView() {
     registroHoy,
     estadoHoy,
     todayISO,
+    miLiquidacion,
+    tipoContrato,
+    misDescuentos,
     loading,
     loadingRegistros,
     isRefetching,
@@ -176,6 +179,8 @@ export function NominaTrabajadorView() {
                 valorHora={valorHora}
                 color={theme.primary}
                 todayLabel={todayLabel}
+                miLiquidacion={miLiquidacion}
+                tipoContrato={tipoContrato}
               />
               {/* onVerDetalles omitted — ResumenCards is immediately below */}
               <View className="px-5 gap-3">
@@ -185,6 +190,9 @@ export function NominaTrabajadorView() {
                   periodoActivoId={periodoActivo?.id}
                   onSeleccionarPeriodo={setPeriodoSeleccionado}
                   valorHora={valorHora}
+                  miLiquidacion={miLiquidacion}
+                  tipoContrato={tipoContrato}
+                  misDescuentos={misDescuentos}
                 />
                 <View className="flex-row items-center justify-between mt-1">
                   <Text className="text-sm font-semibold text-foreground">

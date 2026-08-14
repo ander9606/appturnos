@@ -27,12 +27,12 @@ const NovedadesService = {
     await _validarAcceso(empresaId, asignacionId, usuario);
 
     const novedad = await NovedadesModel.create(
-      empresaId, asignacionId, usuario.id, tipo, descripcion, horaEvento, fotoB64, latitud, longitud
+      empresaId, asignacionId, usuario.sub, tipo, descripcion, horaEvento, fotoB64, latitud, longitud
     );
 
     // Notificar a los demás participantes (best-effort).
     const todos = await NovedadesModel.getParticipantes(empresaId, asignacionId);
-    const otros = todos.filter((id) => id !== usuario.id);
+    const otros = todos.filter((id) => id !== usuario.sub);
     const label = TIPOS_LABEL[tipo] ?? 'Novedad';
     await NotificacionesService.notificarVarios(otros, {
       empresaId,
@@ -83,7 +83,7 @@ async function _validarAcceso(empresaId, asignacionId, usuario) {
       `SELECT 1 FROM asignaciones_turno a
        JOIN trabajadores t ON t.id = a.trabajador_id
        WHERE a.id = ? AND a.empresa_id = ? AND t.usuario_id = ?`,
-      [asignacionId, empresaId, usuario.id]
+      [asignacionId, empresaId, usuario.sub]
     );
     if (!row) throw new AppError('No tienes acceso a este turno', 403);
     return;

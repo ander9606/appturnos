@@ -53,10 +53,17 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `integracion.desactivada` | Se desconectó tu integración con logiq360 | logiq360 desconecta la integración | `entrantes.handlers.js:257` |
 | `suscripcion.pago_rechazado` | Pago rechazado | Wompi rechaza un intento de pago | `wompi.service.js:81` |
 
+## Solo `super_admin` (cross-tenant, `empresa_id` null — via `notificarSuperAdmins()`)
+
+| Tipo | Título | Cuándo se dispara | Código |
+|---|---|---|---|
+| `admin.empresa_nueva` | Nueva empresa registrada | Alguien se registra self-service (`registrarEmpresa`) | `auth.service.js` |
+| `suscripcion.pago_rechazado` | Pago rechazado | Igual que arriba, copia adicional con `empresa_id` en `data` para navegar a `/empresa/[id]` | `wompi.service.js` |
+| `integracion.desactivada` | Se desconectó una integración con logiq360 | Igual que arriba, copia adicional a super_admin | `entrantes.handlers.js` |
+| `admin.suscripcion_vencimiento` | Suscripción por vencer / vencida | Cron diario (`suscripcion.worker.js`), empresas con pago directo (no logiq360) a 7/3/0 días de vencer o 3 días ya vencidas | `suscripcion.worker.js` |
+
 ## Huecos conocidos (no es que fallen — no existen)
 
 - Nada notifica a `jefe_nomina` ni a `nomina` (rol de solo lectura) específicamente — comparten
   los tipos de nómina solo si también son `admin_empresa`.
-- No hay notificación al **crear** una empresa/período/oferta desde cero, solo en cambios sobre
-  algo existente.
-- `super_admin` no recibe ninguna notificación in-app (tiene su propio panel separado).
+- No hay notificación al **crear** un período/oferta desde cero, solo en cambios sobre algo existente.

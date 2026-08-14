@@ -190,7 +190,7 @@ const TrabajadorEmpresaService = {
     });
     // Actualizar trabajador_id en la relación recién creada.
     await TrabajadorEmpresaModel.cambiarEstado(id, E.SOLICITADO_POR_EMPRESA, { trabajadorId });
-    pushInvitacion();
+    await notificarInvitacion();
     return TrabajadorEmpresaModel.obtenerPorId(id);
   },
 
@@ -255,12 +255,12 @@ const TrabajadorEmpresaService = {
    * Rechaza una solicitud o invitación.
    * Puede hacerlo el trabajador (rechaza invitación) o la empresa (rechaza solicitud).
    */
-  async rechazar(actorId, actorRol, relacionId, motivo) {
+  async rechazar(actorId, actorRol, actorEmpresaId, relacionId, motivo) {
     const relacion = await TrabajadorEmpresaModel.obtenerPorId(relacionId);
     if (!relacion) throw new AppError('Solicitud no encontrada', 404);
 
     const esTrabajador = relacion.usuario_id === actorId;
-    const esJefe = actorRol === ROLES.JEFE_TURNOS && relacion.empresa_id !== undefined;
+    const esJefe = actorRol === ROLES.JEFE_TURNOS && relacion.empresa_id === actorEmpresaId;
 
     if (!esTrabajador && !esJefe) {
       throw new AppError('Sin permisos para esta acción', 403);
@@ -276,12 +276,12 @@ const TrabajadorEmpresaService = {
   /**
    * Archiva una relación activa (renuncia del trabajador o desvinculación por la empresa).
    */
-  async archivar(actorId, actorRol, relacionId) {
+  async archivar(actorId, actorRol, actorEmpresaId, relacionId) {
     const relacion = await TrabajadorEmpresaModel.obtenerPorId(relacionId);
     if (!relacion) throw new AppError('Solicitud no encontrada', 404);
 
     const esTrabajador = relacion.usuario_id === actorId;
-    const esJefe = actorRol === ROLES.JEFE_TURNOS;
+    const esJefe = actorRol === ROLES.JEFE_TURNOS && relacion.empresa_id === actorEmpresaId;
 
     if (!esTrabajador && !esJefe) {
       throw new AppError('Sin permisos para esta acción', 403);

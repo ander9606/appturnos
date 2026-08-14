@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi, cargosApi } from '@api-client';
 import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
+import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/lib/formatters';
 
@@ -14,6 +15,7 @@ export const QUERY_KEYS = {
   asignaciones: (params: object) => ['asignaciones', params] as const,
   liquidacion:  (params?: object) => ['liquidacion-turnos', params] as const,
   cargos:       ['cargos'] as const,
+  funcionesCargo: (cargoId: number) => ['cargo-funciones', cargoId] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
@@ -98,15 +100,6 @@ export function useAsignacionesHoy(opts: { enabled?: boolean } = {}) {
   });
 }
 
-/** Todas las asignaciones de la empresa (gestores de turnos). */
-export function useAsignacionesGestor() {
-  return useQuery({
-    queryKey: QUERY_KEYS.asignaciones({ gestor: true }),
-    queryFn:  () => turnosApi.listarAsignaciones({ limit: 200 }),
-    staleTime: 30_000,
-  });
-}
-
 /** Postulaciones pendientes de toda la empresa — para el inbox del gestor. */
 export function usePostulacionesPendientes(opts: { enabled?: boolean } = {}) {
   return useQuery({
@@ -114,6 +107,16 @@ export function usePostulacionesPendientes(opts: { enabled?: boolean } = {}) {
     queryFn:  () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 200 }),
     staleTime: 15_000,
     refetchOnMount: true,
+    enabled:  opts.enabled ?? true,
+  });
+}
+
+/** Asignaciones ya confirmadas de toda la empresa — pestaña "Confirmados" del inbox. */
+export function useAsignacionesConfirmadas(opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ estado: 'confirmado' }),
+    queryFn:  () => turnosApi.listarAsignaciones({ estado: 'confirmado', limit: 200 }),
+    staleTime: 30_000,
     enabled:  opts.enabled ?? true,
   });
 }
@@ -242,11 +245,15 @@ export function useMarcarEgreso() {
 }
 
 /** Liquidación de turnos por trabajador (gestores/admin). */
-export function useLiquidacionTurnos(params?: { fecha_inicio?: string; fecha_fin?: string }) {
+export function useLiquidacionTurnos(
+  params?: { fecha_inicio?: string; fecha_fin?: string },
+  opts: { enabled?: boolean } = {},
+) {
   return useQuery<LiquidacionTurnosTrabajador[]>({
     queryKey: QUERY_KEYS.liquidacion(params),
     queryFn:  () => turnosApi.liquidacion(params),
     staleTime: 60_000,
+    enabled:  opts.enabled ?? true,
   });
 }
 
@@ -358,6 +365,28 @@ export function useAsignarCargoAVinculo() {
   return useMutation({
     mutationFn: ({ vinculoId, cargoId }: { vinculoId: number; cargoId: number }) =>
       cargosApi.asignarAVinculo(vinculoId, cargoId),
+  });
+}
+
+/** Funciones (responsabilidades) que el cargo tiene en mi empresa. */
+export function useFuncionesCargo(cargoId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: QUERY_KEYS.funcionesCargo(cargoId ?? 0),
+    queryFn:  () => cargosApi.listarFunciones(cargoId as number),
+    staleTime: 5 * 60_000,
+    enabled: enabled && cargoId != null,
+  });
+}
+
+/** Diligencia (reemplaza) el listado de funciones de un cargo. Solo jefe_turnos/admin. */
+export function useActualizarFuncionesCargo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ cargoId, funciones }: { cargoId: number; funciones: string[] }) =>
+      cargosApi.actualizarFunciones(cargoId, funciones),
+    onSuccess: (data: CargoFuncion[], { cargoId }) => {
+      qc.setQueryData(QUERY_KEYS.funcionesCargo(cargoId), data);
+    },
   });
 }
 

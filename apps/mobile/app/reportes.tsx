@@ -231,7 +231,8 @@ export default function ReportesScreen() {
             value={pickerAbierto === 'desde' ? customDesde : customHasta}
             mode="date"
             display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            maximumDate={today}
+            minimumDate={pickerAbierto === 'hasta' ? customDesde : undefined}
+            maximumDate={pickerAbierto === 'desde' ? customHasta : today}
             onChange={(e, d) => onChangeFecha(pickerAbierto, e, d)}
           />
         )}

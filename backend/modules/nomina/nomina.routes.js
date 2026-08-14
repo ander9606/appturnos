@@ -11,6 +11,7 @@ const registrosCtrl = require('./registros/registros.controller');
  *   /api/nomina/periodos         → ciclos de nómina
  *   /api/nomina/registros        → registros diarios de horas
  *   /api/nomina/liquidacion      → resumen y exportación
+ *   /api/nomina/descuentos       → descuentos manuales (préstamos, inasistencias, etc.)
  */
 const router = express.Router();
 
@@ -26,5 +27,6 @@ router.use('/periodos',       require('./periodos/periodos.routes'));
 router.use('/registros',      require('./registros/registros.routes'));
 router.use('/liquidacion',    require('./liquidacion/liquidacion.routes'));
 router.use('/compensatorios', require('./compensatorios/compensatorios.routes'));
+router.use('/descuentos',     require('./descuentos/descuentos.routes'));
 
 module.exports = router;

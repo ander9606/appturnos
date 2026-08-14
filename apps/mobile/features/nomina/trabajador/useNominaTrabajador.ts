@@ -7,7 +7,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ApiError } from '@api-client';
-import type { RegistroDiario, PeriodoNomina, PuntoMarcaje } from '@api-client';
+import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina } from '@api-client';
 import { bogotaToday } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import { useGeofence } from '@/features/turnos/useGeofence';
@@ -15,10 +15,12 @@ import {
   usePeriodos,
   useRegistros,
   useNominaPerfil,
+  useLiquidacion,
   useMarcarEntrada,
   useMarcarSalida,
   useSolicitarReingreso,
 } from '../useNomina';
+import { useMisDescuentos } from '../descuentos/useDescuentos';
 import {
   getValorHora,
   calcularResumenPeriodo,
@@ -47,6 +49,11 @@ export interface NominaTrabajadorState {
   registroHoy:   RegistroDiario | null;
   estadoHoy:     EstadoHoy;
   todayISO:      string;
+
+  // Liquidación real (bruto/neto/descuentos) — la misma que ve el gestor, filtrada a su propia línea.
+  miLiquidacion: LiquidacionLinea | undefined;
+  tipoContrato:  TipoContrato | undefined;
+  misDescuentos: DescuentoNomina[];
 
   // Geofence
   geo: ReturnType<typeof useGeofence>;
@@ -117,6 +124,14 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     () => getEstadoHoy(registroHoy, periodoActivo?.estado === 'abierto'),
     [registroHoy, periodoActivo],
   );
+
+  // ── Liquidación real (backend la filtra a esta sola línea) ───────────────
+  const { data: liquidacion } = useLiquidacion(periodoActivo?.id ?? null);
+  const miLiquidacion = liquidacion?.lineas[0];
+  const tipoContrato  = liquidacion?.tipo_contrato;
+
+  // ── Descuentos manuales propios (préstamos, inasistencias, etc.) ─────────
+  const { data: misDescuentos = [] } = useMisDescuentos(periodoActivo?.id);
 
   // ── Geofence ───────────────────────────────────────────────────────────
   const requiereGeofence = tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal';
@@ -200,6 +215,9 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     registroHoy,
     estadoHoy,
     todayISO,
+    miLiquidacion,
+    tipoContrato,
+    misDescuentos,
     geo,
     marcajeBloqueado,
     isMutating,

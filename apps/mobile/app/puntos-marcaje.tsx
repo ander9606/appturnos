@@ -101,7 +101,7 @@ export default function PuntosMarcajeScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'La app necesita acceso a tu ubicación para autocompletar las coordenadas.');
+        Alert.alert('Permiso requerido', 'Activa el permiso de ubicación para autocompletar las coordenadas del punto de marcaje.');
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -111,7 +111,7 @@ export default function PuntosMarcajeScreen() {
         longitud: formatCoord(loc.coords.longitude),
       }));
     } catch {
-      Alert.alert('Error', 'No se pudo obtener la ubicación. Ingresa las coordenadas manualmente.');
+      Alert.alert('No se pudo obtener el GPS', 'Revisa que el GPS esté activado e intenta de nuevo, o ingresa las coordenadas manualmente.');
     } finally {
       setLocating(false);
     }

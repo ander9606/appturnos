@@ -3,6 +3,7 @@
 const { pool }        = require('../../config/database');
 const { enviarEmail } = require('../../utils/mailer');
 const WompiService    = require('../webhooks/wompi.service');
+const NotificacionesService = require('../notificaciones/notificaciones.service');
 const logger          = require('../../utils/logger');
 
 const INTERVALO_MS = 24 * 60 * 60 * 1000; // cada 24h
@@ -24,7 +25,7 @@ async function procesarRenovaciones() {
       WHERE e.activo = 1
         AND e.suscripcion_origen != 'logiq360'
         AND e.suscripcion_vigente_hasta IS NOT NULL
-        AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 0)
+        AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 0, -3)
       LIMIT 100`
   );
 
@@ -33,29 +34,45 @@ async function procesarRenovaciones() {
   logger.info(`[suscripcion-worker] ${empresas.length} empresa(s) con renovación pendiente`);
 
   for (const emp of empresas) {
-    try {
-      const link = await WompiService.generarLinkPago({
-        empresaId:     emp.id,
-        nombreEmpresa: emp.nombre,
-        plan:          emp.plan,
-        meses:         1,
-      });
+    const dias = emp.dias_restantes;
 
-      const dias = emp.dias_restantes;
-      const asunto =
-        dias === 0 ? `⚠️ Tu suscripción de Zaturno vence hoy`
-        : `Tu suscripción de Zaturno vence en ${dias} día${dias > 1 ? 's' : ''}`;
+    // El email de renovación solo aplica antes/el día del vencimiento — mismos
+    // 3 checkpoints de siempre. -3 (ya vencida) es nuevo y solo es para super_admin.
+    if (dias >= 0) {
+      try {
+        const link = await WompiService.generarLinkPago({
+          empresaId:     emp.id,
+          nombreEmpresa: emp.nombre,
+          plan:          emp.plan,
+          meses:         1,
+        });
 
-      await enviarEmail({
-        to:      emp.email,
-        subject: asunto,
-        html:    emailHtml({ empresa: emp.nombre, admin: emp.admin_nombre, dias, url: link.url, monto: link.monto_cop }),
-      });
+        const asunto =
+          dias === 0 ? `⚠️ Tu suscripción de Zaturno vence hoy`
+          : `Tu suscripción de Zaturno vence en ${dias} día${dias > 1 ? 's' : ''}`;
 
-      logger.info(`[suscripcion-worker] email enviado a ${emp.email} (empresa ${emp.id}, ${dias}d restantes)`);
-    } catch (err) {
-      logger.error(`[suscripcion-worker] error empresa ${emp.id}: ${err.message}`);
+        await enviarEmail({
+          to:      emp.email,
+          subject: asunto,
+          html:    emailHtml({ empresa: emp.nombre, admin: emp.admin_nombre, dias, url: link.url, monto: link.monto_cop }),
+        });
+
+        logger.info(`[suscripcion-worker] email enviado a ${emp.email} (empresa ${emp.id}, ${dias}d restantes)`);
+      } catch (err) {
+        logger.error(`[suscripcion-worker] error empresa ${emp.id}: ${err.message}`);
+      }
     }
+
+    const mensaje = dias >= 0
+      ? `${emp.nombre}: suscripción vence en ${dias} día${dias !== 1 ? 's' : ''}.`
+      : `${emp.nombre}: suscripción vencida hace ${-dias} días (ya pasó el período de gracia).`;
+    await NotificacionesService.notificarSuperAdmins({
+      empresaId: emp.id,
+      tipo: 'admin.suscripcion_vencimiento',
+      titulo: dias >= 0 ? 'Suscripción por vencer' : 'Suscripción vencida',
+      mensaje,
+      data: { empresa_id: emp.id },
+    }).catch((err) => logger.error(`[suscripcion-worker] no se pudo notificar a super_admin (empresa ${emp.id}):`, err.message));
   }
 }
 

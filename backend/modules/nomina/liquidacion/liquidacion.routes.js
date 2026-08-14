@@ -11,7 +11,9 @@ const ctrl = require('./liquidacion.controller');
 const router = express.Router();
 
 // Liquidación: contabilidad (nomina) puede ver pero no gestionar.
-const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA];
+// trabajador_nomina también puede ver — el service la filtra a su propia línea únicamente.
+const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
+const EXPORTAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA];
 const periodoParam = param('periodo_id').isInt({ min: 1 }).withMessage('periodo_id inválido');
 
 router.use(verificarToken);
@@ -20,6 +22,6 @@ router.use(verificarToken);
 router.get('/:periodo_id', verificarRol(VER), [periodoParam], validar, ctrl.obtener);
 
 // GET /api/nomina/liquidacion/:periodo_id/export
-router.get('/:periodo_id/export', verificarRol(VER), [periodoParam], validar, ctrl.exportar);
+router.get('/:periodo_id/export', verificarRol(EXPORTAR), [periodoParam], validar, ctrl.exportar);
 
 module.exports = router;

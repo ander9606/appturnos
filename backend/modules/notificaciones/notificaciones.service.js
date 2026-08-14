@@ -4,6 +4,7 @@ const NotificacionesModel = require('./notificaciones.model');
 const PushService = require('./push/push.service');
 const AppError = require('../../utils/AppError');
 const logger = require('../../utils/logger');
+const { pool } = require('../../config/database');
 
 /**
  * Notificaciones in-app. Las funciones de emisión (`notificar`,
@@ -24,7 +25,7 @@ const NotificacionesService = {
     // Web Push (navegadores) — best-effort.
     await PushService.enviar(empresaId, usuarioId, { tipo, titulo, mensaje, data });
     // Expo Push (app móvil) — best-effort.
-    await PushService.enviarExpo(usuarioId, { titulo, mensaje, data });
+    await PushService.enviarExpo(usuarioId, { tipo, titulo, mensaje, data });
   },
 
   async notificarVarios(usuarioIds, base) {
@@ -33,6 +34,12 @@ const NotificacionesService = {
         NotificacionesService.notificar({ ...base, usuarioId })
       )
     );
+  },
+
+  /** Notifica a todos los super_admin activos (cross-tenant, sin empresa fija). */
+  async notificarSuperAdmins(base) {
+    const [admins] = await pool.query(`SELECT id FROM usuarios WHERE rol = 'super_admin' AND activo = 1`);
+    await NotificacionesService.notificarVarios(admins.map((a) => a.id), base);
   },
 
   async listar(empresaId, usuarioId, { soloNoLeidas, page, limit }) {

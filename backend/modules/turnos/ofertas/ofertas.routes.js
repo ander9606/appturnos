@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../../middleware/validator');
@@ -11,6 +12,17 @@ const ctrl = require('./ofertas.controller');
 const puestosRouter = require('./puestos/puestos.routes');
 
 const router = express.Router();
+
+// Frena un loop/bug de creación masiva sin esperar al límite global de la IP
+// (200 req/15 min compartido con el resto de la app). No aplica a GET / porque
+// solo se monta en la ruta POST de creación, más abajo.
+const crearOfertaLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Demasiadas ofertas creadas, intenta en un momento' },
+});
 
 const PUEDEN_VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 const GESTIONAR  = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA];
@@ -47,7 +59,8 @@ function reglasOferta({ parcial }) {
       .optional({ values: 'falsy' })
       .isFloat({ min: -180, max: 180 })
       .withMessage('longitud inválida'),
-    // Puestos solo se aceptan en crear (no en PUT de actualizar).
+    // Puestos y destinatarios solo se aceptan en crear (no en PUT de actualizar
+    // — todavía no se soporta editar destinatarios de una oferta ya creada).
     ...(parcial
       ? []
       : [
@@ -59,6 +72,9 @@ function reglasOferta({ parcial }) {
           body('puestos.*.plazas').optional().isInt({ min: 1 }),
           body('puestos.*.tarifa_dia').isFloat({ min: 0 }).withMessage('tarifa_dia inválida'),
           body('puestos.*.notas').optional().isString().trim().isLength({ max: 255 }),
+          body('visibilidad').optional().isIn(['abierta', 'dirigida']).withMessage('visibilidad inválida'),
+          body('trabajador_ids').optional().isArray().withMessage('trabajador_ids debe ser un array'),
+          body('trabajador_ids.*').isInt({ min: 1 }).withMessage('trabajador_ids inválido'),
         ]),
   ];
 }
@@ -85,7 +101,15 @@ router.get(
 router.get('/:id', verificarRol(PUEDEN_VER), [idParam], validar, ctrl.obtener);
 
 // POST /api/turnos/ofertas
-router.post('/', verificarRol(GESTIONAR), verificarSuscripcion, reglasOferta({ parcial: false }), validar, ctrl.crear);
+router.post(
+  '/',
+  crearOfertaLimiter,
+  verificarRol(GESTIONAR),
+  verificarSuscripcion,
+  reglasOferta({ parcial: false }),
+  validar,
+  ctrl.crear
+);
 
 // PUT /api/turnos/ofertas/:id
 router.put(
@@ -152,6 +176,7 @@ router.post(
 // POST /api/turnos/ofertas/:id/duplicar  — copia la oferta a una nueva fecha
 router.post(
   '/:id/duplicar',
+  crearOfertaLimiter,
   verificarRol(GESTIONAR),
   [idParam, body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)')],
   validar,

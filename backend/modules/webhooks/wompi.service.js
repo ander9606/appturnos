@@ -75,13 +75,23 @@ async function notificarPagoRechazado({ empresaId, plan, meses }, wompiStatus) {
       `SELECT id FROM usuarios WHERE empresa_id = ? AND rol = 'admin_empresa' AND activo = 1`,
       [empresaId]
     );
-    if (admins.length === 0) return;
-    await NotificacionesService.notificarVarios(admins.map((a) => a.id), {
+    if (admins.length > 0) {
+      await NotificacionesService.notificarVarios(admins.map((a) => a.id), {
+        empresaId,
+        tipo: 'suscripcion.pago_rechazado',
+        titulo: 'Pago rechazado',
+        mensaje: `El pago de la suscripción (plan ${plan}, ${meses} mes${meses !== 1 ? 'es' : ''}) fue rechazado por Wompi. Genera un nuevo link de pago para renovar.`,
+        data: { plan, meses, wompi_status: wompiStatus },
+      });
+    }
+
+    const [[empresa]] = await pool.query('SELECT nombre FROM empresas WHERE id = ?', [empresaId]);
+    await NotificacionesService.notificarSuperAdmins({
       empresaId,
       tipo: 'suscripcion.pago_rechazado',
       titulo: 'Pago rechazado',
-      mensaje: `El pago de la suscripción (plan ${plan}, ${meses} mes${meses !== 1 ? 'es' : ''}) fue rechazado por Wompi. Genera un nuevo link de pago para renovar.`,
-      data: { plan, meses, wompi_status: wompiStatus },
+      mensaje: `${empresa?.nombre ?? 'Una empresa'}: pago rechazado por Wompi (plan ${plan}, ${meses} mes${meses !== 1 ? 'es' : ''}).`,
+      data: { empresa_id: empresaId, plan, meses, wompi_status: wompiStatus },
     });
   } catch (err) {
     logger.error(`Wompi: no se pudo notificar pago rechazado (empresa ${empresaId}):`, err.message);
