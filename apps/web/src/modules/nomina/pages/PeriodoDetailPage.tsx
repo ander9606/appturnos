@@ -28,7 +28,7 @@ const ESTADO_DESCUENTO_BADGE: Record<string, string> = {
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
   cerrado: 'bg-warning-light text-warning',
-  liquidado: 'bg-primary-100 text-primary-600',
+  liquidado: 'bg-muted text-muted-foreground',
 };
 
 const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario','descanso','compensatorio','incapacidad','vacacion','licencia'];
@@ -157,7 +157,7 @@ export function PeriodoDetailPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors capitalize ${
-              tab === t ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
+              tab === t ? 'border-success text-success' : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
             {t === 'registros' ? 'Registros' : 'Liquidación'}
@@ -171,7 +171,7 @@ export function PeriodoDetailPage() {
             <select
               value={filtroTrabajador ?? ''}
               onChange={e => setFiltroTrabajador(e.target.value ? Number(e.target.value) : undefined)}
-              className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             >
               <option value="">Todos los trabajadores</option>
               {trabajadoresEnPeriodo.map(t => (
@@ -180,7 +180,7 @@ export function PeriodoDetailPage() {
             </select>
             <button
               onClick={() => setShowCrear(true)}
-              className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 bg-success hover:bg-success-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
             >
               <Plus size={14} /> Agregar registro
             </button>
@@ -240,7 +240,7 @@ export function PeriodoDetailPage() {
                               <td className="px-3 py-2.5">
                                 <button
                                   onClick={() => setCorrigiendoId(r.id)}
-                                  className="text-muted-foreground/60 hover:text-primary transition-colors"
+                                  className="text-muted-foreground/60 hover:text-success transition-colors"
                                 >
                                   <Pencil size={14} />
                                 </button>
@@ -334,7 +334,7 @@ export function PeriodoDetailPage() {
                             </span>
                             <button
                               onClick={() => setDescuentoTrabajador({ id: l.trabajador_id, nombre: `${l.nombre} ${l.apellido}` })}
-                              className="flex items-center gap-1 font-medium text-primary hover:text-primary-600 transition-colors flex-shrink-0"
+                              className="flex items-center gap-1 font-medium text-success hover:text-success-600 transition-colors flex-shrink-0"
                             >
                               {otrosDelTrabajador.length > 0 ? (
                                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -372,7 +372,7 @@ export function PeriodoDetailPage() {
                                       {r.novedad && <span className="col-span-2">Novedad: {r.novedad}</span>}
                                       <button
                                         onClick={() => setCorrigiendoId(r.id)}
-                                        className="col-span-2 flex items-center gap-1 text-primary hover:text-primary-600 font-medium mt-0.5"
+                                        className="col-span-2 flex items-center gap-1 text-success hover:text-success-600 font-medium mt-0.5"
                                       >
                                         <Pencil size={12} /> Corregir
                                       </button>
@@ -458,7 +458,7 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
                 type="time"
                 value={form.hora_entrada}
                 onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
               />
             </div>
             <div>
@@ -467,7 +467,7 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
                 type="time"
                 value={form.hora_salida}
                 onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
               />
             </div>
           </div>
@@ -476,7 +476,7 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
             <select
               value={form.tipo_dia}
               onChange={e => setForm(f => ({ ...f, tipo_dia: e.target.value as TipoDia }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             >
               {TIPO_DIA_OPTIONS.map(o => (
                 <option key={o} value={o} className="capitalize">{o.charAt(0).toUpperCase() + o.slice(1)}</option>
@@ -489,14 +489,14 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
               type="text"
               value={form.novedad}
               onChange={e => setForm(f => ({ ...f, novedad: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button type="submit" disabled={corregir.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            <button type="submit" disabled={corregir.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
               {corregir.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
@@ -547,7 +547,7 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
               required
               value={form.trabajador_id}
               onChange={e => setForm(f => ({ ...f, trabajador_id: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             >
               <option value="">Seleccionar...</option>
               {trabajadores.map(t => (
@@ -563,7 +563,7 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
               max={hoy}
               value={form.fecha}
               onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -574,7 +574,7 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
                 required
                 value={form.hora_entrada}
                 onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
               />
             </div>
             <div>
@@ -583,7 +583,7 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
                 type="time"
                 value={form.hora_salida}
                 onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
               />
             </div>
           </div>
@@ -593,14 +593,14 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
               type="text"
               value={form.novedad}
               onChange={e => setForm(f => ({ ...f, novedad: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
           <div className="flex gap-2 pt-2">
             <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
               {crear.isPending ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
@@ -678,7 +678,7 @@ function DescuentoModal({
               <select
                 value={form.tipo}
                 onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoDescuento }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
               >
                 {Object.entries(TIPO_DESCUENTO_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
               </select>
@@ -691,7 +691,7 @@ function DescuentoModal({
                 placeholder="Ej. Préstamo del 12 de marzo"
                 value={form.motivo}
                 onChange={e => setForm(f => ({ ...f, motivo: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
               />
             </div>
             <div>
@@ -703,7 +703,7 @@ function DescuentoModal({
                 step="any"
                 value={form.monto}
                 onChange={e => setForm(f => ({ ...f, monto: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -715,7 +715,7 @@ function DescuentoModal({
                   Cancelar
                 </button>
               )}
-              <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+              <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
                 {crear.isPending ? 'Guardando...' : 'Registrar descuento'}
               </button>
             </div>

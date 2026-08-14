@@ -14,8 +14,11 @@
   --color-primary-800:      #9E2410;
   --color-primary-900:      #7D1E0D;
 
-  /* Semantic */
+  /* Semantic — success también es el acento del módulo Nómina (igual que
+     THEME_COLORS.nomina en mobile/lib/designTokens.ts), mientras primary
+     (naranja) es el acento de Turnos. */
   --color-success:          #059669;
+  --color-success-600:      #047857;
   --color-success-light:    #D1FAE5;
   --color-warning:          #F59E0B;
   --color-warning-light:    #FEF3C7;
