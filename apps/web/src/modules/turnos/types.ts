@@ -50,6 +50,38 @@ export interface Oferta {
   created_at: string;
 }
 
+export interface LiquidacionTurno {
+  asignacion_id: number;
+  oferta_titulo: string;
+  oferta_fecha: string;
+  hora_inicio: string;
+  hora_fin_estimada: string | null;
+  lugar: string | null;
+  hora_ingreso_real: string | null;
+  hora_egreso_real: string | null;
+  horas_trabajadas: number;
+  tarifa_dia: number;
+  cargo_nombre: string;
+  pago_extra: number;
+  pago_total: number;
+  calificacion: number | null;
+}
+
+export interface LiquidacionTurnosTrabajador {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string;
+  cargo: string | null;
+  ranking: number | null;
+  total_calificaciones: number;
+  total_turnos: number;
+  total_horas: number;
+  pago_base: number;
+  pago_extra: number;
+  pago_total: number;
+  turnos: LiquidacionTurno[];
+}
+
 export interface Asignacion {
   id: number;
   oferta_id: number;

@@ -1,14 +1,21 @@
 'use strict';
 
 const PeriodosService = require('./periodos.service');
+const { ROLES } = require('../../../config/constants');
+
+// jefe_turnos/trabajador_turnos pueden listar periodos_nomina (para ubicar su ciclo
+// de pago de turnos), pero nunca los montos — eso es visibilidad de nómina real.
+const VER_TOTALES = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
 
 async function listar(req, res) {
   const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const pideTotales = req.query.conTotales === '1' || req.query.conTotales === 'true';
   const { data, pagination } = await PeriodosService.listar(req.empresa_id, {
     estado: req.query.estado || undefined,
     page,
     limit,
+    conTotales: pideTotales && VER_TOTALES.includes(req.usuario.rol),
   });
   res.json({ success: true, data: { data, pagination } });
 }

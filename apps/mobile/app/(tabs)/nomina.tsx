@@ -10,7 +10,7 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
   ActivityIndicator, RefreshControl, Alert,
@@ -23,15 +23,19 @@ import { NominaTrabajadorView }   from '@/features/nomina/trabajador';
 import { NominaTurnosView }       from '@/features/nomina/NominaTurnosView';
 import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView';
 import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
+import { TipoPeriodoBadge }       from '@/features/nomina/TipoPeriodoBadge';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
+import { CompositionBar }         from '@/components/ui/CompositionBar';
+import { HOUR_TYPE_COLORS }       from '@/lib/designTokens';
 import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import {
   usePeriodos, useLiquidacion,
   useLiquidarPeriodo,
 } from '@/features/nomina/useNomina';
 import { useCompensatoriosTodos } from '@/features/nomina/compensatorios/useCompensatorios';
-import { ApiError } from '@api-client';
+import { useDescuentosPeriodo } from '@/features/nomina/descuentos/useDescuentos';
+import { ApiError, type LiquidacionLinea } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
@@ -69,6 +73,10 @@ function NominaGestorView() {
 
   const activePeriodoId = periodoId ?? periodos[0]?.id;
   const activePeriodo   = periodos.find((p) => p.id === activePeriodoId) ?? periodos[0];
+  // Solo mostrar en el selector períodos del mismo tipo que el más reciente — evita mezclar
+  // quincenales con mensuales cuando la empresa cambia su esquema de facturación.
+  const tipoActual        = periodos[0]?.tipo;
+  const periodosSelector  = periodos.filter((p) => p.tipo === tipoActual);
 
   const {
     data: liquidacion,
@@ -81,6 +89,7 @@ function NominaGestorView() {
 
   // ponytail: carga todos los compensatorios de la empresa, filtra client-side por periodo+trabajador
   const { data: allComp } = useCompensatoriosTodos();
+  const { data: descuentosPeriodo } = useDescuentosPeriodo(activePeriodoId);
 
   const onRefresh = useCallback(() => {
     refetchPeriodos();
@@ -115,17 +124,63 @@ function NominaGestorView() {
   const lineas  = liquidacion?.lineas ?? [];
   const totales = liquidacion?.totales;
 
+  const composicionEquipo = useMemo(() => {
+    const sum = (k: keyof LiquidacionLinea) => lineas.reduce((s, l) => s + Number(l[k]), 0);
+    return {
+      ordinarias:    sum('horas_ordinarias'),
+      extraNocturna: sum('horas_extra_nocturnas'),
+      extraDiurna:   sum('horas_extra_diurnas'),
+      nocturna:      sum('horas_nocturnas'),
+      festivo:       sum('horas_festivo'),
+    };
+  }, [lineas]);
+  const totalHorasEquipo = Object.values(composicionEquipo).reduce((a, b) => a + b, 0);
+  const pctRecargoEquipo = totalHorasEquipo > 0
+    ? Math.round(((totalHorasEquipo - composicionEquipo.ordinarias) / totalHorasEquipo) * 100)
+    : 0;
+  const segmentosEquipo = [
+    { value: composicionEquipo.ordinarias,    color: HOUR_TYPE_COLORS.ordinarias },
+    { value: composicionEquipo.extraNocturna, color: HOUR_TYPE_COLORS.extraNocturna },
+    { value: composicionEquipo.extraDiurna,   color: HOUR_TYPE_COLORS.extraDiurna },
+    { value: composicionEquipo.nocturna,      color: HOUR_TYPE_COLORS.nocturna },
+    { value: composicionEquipo.festivo,       color: HOUR_TYPE_COLORS.festivo },
+  ];
+
+  // Ordenado por total (de más a menos) y marcado el que tiene una proporción
+  // de recargo/extra notablemente por encima del promedio del equipo — así
+  // salta a la vista en vez de quedar escondido en el medio de la lista.
+  const filas = useMemo(() => {
+    const conRecargo = lineas.map((l) => {
+      const recargoHoras = l.horas_extra_diurnas + l.horas_extra_nocturnas + l.horas_nocturnas + l.horas_festivo;
+      const totalH = l.horas_ordinarias + recargoHoras;
+      return { linea: l, recargoHoras, recargoPct: totalH > 0 ? recargoHoras / totalH : 0 };
+    });
+    const pctPromedio = conRecargo.length > 0
+      ? conRecargo.reduce((s, f) => s + f.recargoPct, 0) / conRecargo.length
+      : 0;
+    return conRecargo
+      .map((f) => ({ ...f, outlier: f.recargoPct > pctPromedio + 0.10 }))
+      .sort((a, b) => b.linea.total - a.linea.total);
+  }, [lineas]);
+
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <FlatList
-        data={lineas}
-        keyExtractor={(item) => String(item.trabajador_id)}
+        data={filas}
+        keyExtractor={(item) => String(item.linea.trabajador_id)}
         renderItem={({ item }) => (
           <LiquidacionRow
-            linea={item}
+            linea={item.linea}
             periodoId={activePeriodoId}
+            fechaInicio={activePeriodo?.fecha_inicio}
+            fechaFin={activePeriodo?.fecha_fin}
+            recargoHoras={item.recargoHoras}
+            outlier={item.outlier}
             compensatorios={(allComp ?? []).filter(
-              (c) => c.trabajador_id === item.trabajador_id && c.periodo_id === activePeriodoId
+              (c) => c.trabajador_id === item.linea.trabajador_id && c.periodo_id === activePeriodoId
+            )}
+            descuentosPendientes={(descuentosPeriodo ?? []).filter(
+              (d) => d.trabajador_id === item.linea.trabajador_id && d.estado !== 'aceptado'
             )}
           />
         )}
@@ -147,29 +202,39 @@ function NominaGestorView() {
                     {activePeriodo ? fmtPeriodo(activePeriodo) : '—'}
                   </Text>
                 </View>
-                <View className="flex-row items-center gap-2">
-                  {activePeriodo && <PeriodoBadge estado={activePeriodo.estado} />}
+                <View className="flex-row items-center gap-1.5">
+                  {activePeriodo && (
+                    <>
+                      <PeriodoBadge estado={activePeriodo.estado} />
+                      <TipoPeriodoBadge tipo={activePeriodo.tipo} />
+                    </>
+                  )}
                 </View>
               </View>
 
               {totales && (
                 <View className="bg-white/15 rounded-2xl px-4 py-3 mt-1">
-                  <Text className="text-white/80 text-xs">Total bruto</Text>
+                  <Text className="text-white/80 text-xs">
+                    {liquidacion?.tipo_contrato === 'laboral' ? 'Total neto a pagar' : 'Total a pagar'}
+                  </Text>
                   <Text className="text-white text-3xl font-extrabold">
-                    ${totales.total_general.toLocaleString('es-CO')}
+                    ${totales.total_neto_general.toLocaleString('es-CO')}
                   </Text>
                   <Text className="text-white/70 text-xs mt-0.5">
                     {totales.trabajadores} empleados
+                    {liquidacion?.tipo_contrato === 'laboral' && totales.total_neto_general !== totales.total_general
+                      ? ` · bruto $${totales.total_general.toLocaleString('es-CO')}`
+                      : ''}
                   </Text>
                 </View>
               )}
             </View>
 
             <View className="px-5 gap-3">
-              {periodos.length > 0 && (
+              {periodosSelector.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View className="flex-row gap-2 py-1">
-                    {periodos.slice(0, 8).map((p) => (
+                    {periodosSelector.slice(0, 8).map((p) => (
                       <TouchableOpacity
                         key={p.id}
                         onPress={() => setPeriodoId(p.id)}
@@ -243,7 +308,7 @@ function NominaGestorView() {
 
               {activePeriodo && (
                 <TouchableOpacity
-                  onPress={() => router.push(`/registros-periodo?periodoId=${activePeriodoId}`)}
+                  onPress={() => router.push(`/registros-periodo?periodoId=${activePeriodoId}&fechaInicio=${activePeriodo.fecha_inicio}&fechaFin=${activePeriodo.fecha_fin}`)}
                   className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
                 >
                   <View className="flex-row items-center gap-2">
@@ -310,6 +375,26 @@ function NominaGestorView() {
               <Text className="text-sm font-semibold text-foreground">
                 Detalle por empleado
               </Text>
+
+              {totalHorasEquipo > 0 && (
+                <View className="bg-card border border-border rounded-2xl px-4 py-3 gap-2.5">
+                  <Text className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">
+                    Composición del equipo
+                  </Text>
+                  <CompositionBar segments={segmentosEquipo} height={12} />
+                  <View className="flex-row justify-between">
+                    <Text className="text-[10px] text-muted-foreground">{totalHorasEquipo.toFixed(0)}h del período</Text>
+                    <Text className="text-[10px] text-muted-foreground">{pctRecargoEquipo}% son recargos/extra</Text>
+                  </View>
+                  <View className="flex-row flex-wrap gap-x-3 gap-y-1 mt-0.5">
+                    <LegendItem color={HOUR_TYPE_COLORS.ordinarias}    label="Ordinarias" />
+                    <LegendItem color={HOUR_TYPE_COLORS.extraNocturna} label="Extra noct." />
+                    <LegendItem color={HOUR_TYPE_COLORS.extraDiurna}   label="Extra diurna" />
+                    <LegendItem color={HOUR_TYPE_COLORS.nocturna}      label="Nocturna" />
+                    <LegendItem color={HOUR_TYPE_COLORS.festivo}       label="Festivo" />
+                  </View>
+                </View>
+              )}
             </View>
           </View>
         }
@@ -331,5 +416,14 @@ function NominaGestorView() {
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
     </SafeAreaView>
+  );
+}
+
+function LegendItem({ color, label }: { color: string; label: string }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: color }} />
+      <Text className="text-[10px] text-muted-foreground">{label}</Text>
+    </View>
   );
 }

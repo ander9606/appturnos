@@ -17,6 +17,7 @@ import {
 } from '../hooks/useTurnos';
 import { useCargos } from '@/modules/configuracion/hooks/useConfiguracion';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto } from '../types';
+import { fmtDate, fmtCOP } from '@/shared/lib/format';
 
 const ESTADO_OFERTA_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -46,14 +47,6 @@ const ESTADO_ASIG_LABEL: Record<EstadoAsignacion, string> = {
   pendiente: 'Pendiente', confirmado: 'Confirmado', en_progreso: 'En progreso',
   completado: 'Completado', no_presentado: 'No presentado', cancelado: 'Cancelado',
 };
-
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
-}
-
-function fmtCOP(n: number) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
-}
 
 const FILTROS_ASIG: { label: string; value: EstadoAsignacion | undefined }[] = [
   { label: 'Todas', value: undefined },

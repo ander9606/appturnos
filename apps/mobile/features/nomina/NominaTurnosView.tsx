@@ -1,7 +1,9 @@
 /**
- * Vista de quincena para trabajador_turnos.
- * Muestra los turnos completados en el período actual/anterior
- * con el total a cobrar, horas trabajadas y badge de turno extendido.
+ * Vista de período para trabajador_turnos.
+ * Muestra los turnos completados en el período actual/anterior de la
+ * empresa (mismo ciclo que periodos_nomina — semanal/quincenal/mensual
+ * según empresas.tipo_liquidacion) con el total a cobrar, horas
+ * trabajadas y badge de turno extendido.
  */
 import React, { useState, useMemo, useCallback } from 'react';
 import {
@@ -16,7 +18,9 @@ import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { Button } from '@/components/ui/Button';
-import { getQuincena as getQuincenaRange, getPrevQuincena } from './quincenaUtils';
+import { usePeriodos } from './useNomina';
+import { TipoPeriodoBadge } from './TipoPeriodoBadge';
+import { fmtPeriodo } from './trabajador/nominaTrabajadorUtils';
 import type { Asignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -52,21 +56,22 @@ export function NominaTurnosView() {
 
   const { data: turnos, isLoading, isError, error, refetch, isRefetching } = useMisTurnos();
 
-  const hoy = useMemo(() => new Date(), []);
-  const quincenaActual  = useMemo(() => getQuincenaRange(hoy), [hoy]);
-  const quincenaAnterior = useMemo(() => getPrevQuincena(quincenaActual), [quincenaActual]);
+  // periodos_nomina ya viene ordenado fecha_inicio DESC — [0] es el actual, [1] el anterior.
+  const { data: periodosResp } = usePeriodos();
+  const periodos = periodosResp?.data ?? [];
 
   const [showAnterior, setShowAnterior] = useState(false);
-  const quincena = showAnterior ? quincenaAnterior : quincenaActual;
+  const periodoActual = periodos[0];
+  const periodoAnterior = periodos[1];
+  const periodo = showAnterior ? periodoAnterior : periodoActual;
 
   const turnosQuincena = useMemo(() => {
-    if (!turnos) return [];
+    if (!turnos || !periodo) return [];
     return turnos.filter((a) => {
       if (a.estado !== 'completado') return false;
-      const fecha = new Date(`${a.oferta_fecha}T00:00:00`);
-      return fecha >= quincena.inicio && fecha <= quincena.fin;
+      return a.oferta_fecha >= periodo.fecha_inicio && a.oferta_fecha <= periodo.fecha_fin;
     });
-  }, [turnos, quincena]);
+  }, [turnos, periodo]);
 
   const totales = useMemo(() =>
     turnosQuincena.reduce(
@@ -255,26 +260,31 @@ export function NominaTurnosView() {
                 </TouchableOpacity>
               </View>
 
-              {/* Selector quincena */}
+              {/* Selector de período */}
               <View className="flex-row items-center gap-2">
-                <TouchableOpacity
-                  onPress={() => setShowAnterior(true)}
-                  className="px-3 py-1.5 rounded-full border border-white/30"
-                  style={showAnterior ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
-                >
-                  <Text className="text-white text-xs font-medium">
-                    {quincenaAnterior.label}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowAnterior(false)}
-                  className="px-3 py-1.5 rounded-full border border-white/30"
-                  style={!showAnterior ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
-                >
-                  <Text className="text-white text-xs font-medium">
-                    {quincenaActual.label}
-                  </Text>
-                </TouchableOpacity>
+                {periodoAnterior && (
+                  <TouchableOpacity
+                    onPress={() => setShowAnterior(true)}
+                    className="px-3 py-1.5 rounded-full border border-white/30"
+                    style={showAnterior ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
+                  >
+                    <Text className="text-white text-xs font-medium">
+                      {fmtPeriodo(periodoAnterior)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {periodoActual && (
+                  <TouchableOpacity
+                    onPress={() => setShowAnterior(false)}
+                    className="px-3 py-1.5 rounded-full border border-white/30"
+                    style={!showAnterior ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
+                  >
+                    <Text className="text-white text-xs font-medium">
+                      {fmtPeriodo(periodoActual)}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {periodo && <TipoPeriodoBadge tipo={periodo.tipo} />}
               </View>
 
               {/* Resumen cards */}
@@ -329,7 +339,7 @@ export function NominaTurnosView() {
               Sin turnos completados
             </Text>
             <Text className="text-sm text-muted-foreground text-center">
-              No tienes turnos completados en el período {quincena.label}.
+              No tienes turnos completados en el período {periodo ? fmtPeriodo(periodo) : 'actual'}.
             </Text>
           </View>
         }

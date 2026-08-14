@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes } from '../hooks/useTurnos';
 import type { EstadoOferta, Oferta, VisibilidadOferta } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { LugarInput } from '../components/LugarInput';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
+import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
+import { fmtDate, bogotaToday } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -27,16 +30,6 @@ const ESTADO_LABEL: Record<EstadoOferta, string> = {
   cancelada: 'Cancelada',
 };
 
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
-}
-
-const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
-function bogotaToday(): string {
-  const t = new Date(Date.now() - BOGOTA_OFFSET_MS);
-  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
-}
-
 const ESTADOS_FILTER: (EstadoOferta | undefined)[] = [undefined, 'abierta', 'publicada', 'en_proceso', 'completada', 'borrador', 'cerrada', 'cancelada'];
 const FILTER_LABELS: Record<string, string> = {
   undefined: 'Todas', abierta: 'Abiertas', publicada: 'Publicadas', en_proceso: 'En progreso',
@@ -45,6 +38,7 @@ const FILTER_LABELS: Record<string, string> = {
 
 export function TurnosPage() {
   const navigate = useNavigate();
+  const [vista, setVista] = useState<'ofertas' | 'pagos'>('ofertas');
   const [estado, setEstado] = useState<EstadoOferta | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
 
@@ -71,14 +65,36 @@ export function TurnosPage() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setShowCrear(true)}
-          className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={16} /> Nueva oferta
-        </button>
+        {vista === 'ofertas' && (
+          <button
+            onClick={() => setShowCrear(true)}
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+          >
+            <Plus size={16} /> Nueva oferta
+          </button>
+        )}
       </div>
 
+      <div className="flex gap-1 mb-4 border-b border-border">
+        {([{ value: 'ofertas' as const, label: 'Ofertas' }, { value: 'pagos' as const, label: 'Pagos' }]).map(t => (
+          <button
+            key={t.value}
+            onClick={() => setVista(t.value)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              vista === t.value
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {vista === 'pagos' ? (
+        <LiquidacionTurnosView />
+      ) : (
+      <>
       <div className="flex gap-1 mb-4 border-b border-border overflow-x-auto">
         {ESTADOS_FILTER.map(e => (
           <button
@@ -170,6 +186,8 @@ export function TurnosPage() {
           </table>
         </div>
       )}
+      </>
+      )}
 
       {showCrear && <NuevaOfertaModal onClose={() => setShowCrear(false)} />}
     </div>
@@ -194,6 +212,14 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (dirigidaSinPersonas) return;
+    if (form.fecha < bogotaToday()) {
+      toast.error('La fecha del turno no puede ser en el pasado');
+      return;
+    }
+    if (form.hora_fin_estimada && form.hora_fin_estimada <= form.hora_inicio) {
+      toast.error('La hora de fin debe ser posterior a la hora de inicio');
+      return;
+    }
     const res = await crear.mutateAsync({
       titulo: form.titulo,
       fecha: form.fecha,
@@ -229,7 +255,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
-              <input required type="date" {...field('fecha')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              <input required type="date" min={bogotaToday()} {...field('fecha')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Hora inicio *</label>

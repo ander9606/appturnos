@@ -1,3 +1,5 @@
+export type TipoContrato = 'laboral' | 'prestacion_servicios';
+
 export interface Empresa {
   id: number;
   nombre: string;
@@ -6,6 +8,8 @@ export interface Empresa {
   telefono: string | null;
   email: string | null;
   logo_url: string | null;
+  /** Determina si la liquidación de nómina calcula descuentos de ley (salud/pensión). */
+  tipo_contrato: TipoContrato;
 }
 
 export interface PuntoMarcaje {

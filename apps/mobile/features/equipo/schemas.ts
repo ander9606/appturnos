@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { isValidISODate } from '@/lib/dateValidation';
+import { bogotaToday } from '@/lib/formatters';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -17,35 +19,38 @@ const optionalPositiveNumber = z
 
 const optionalText = z.string().trim().optional().or(z.literal(''));
 
-export const trabajadorSchema = z
-  .object({
-    nombre:       z.string().trim().min(1, 'El nombre es obligatorio'),
-    apellido:     z.string().trim().min(1, 'El apellido es obligatorio'),
-    tipo:         z.enum(['turnos', 'nomina', 'ambos']),
-    cedula:       z.string().trim().optional().or(z.literal('')),
-    tipo_documento: z.enum(['CC', 'CE', 'PAS']).optional().or(z.literal('')),
-    fecha_nacimiento: optionalText,
-    sexo:         z.enum(['M', 'F', 'otro']).optional().or(z.literal('')),
-    email:        z.string().trim().email('Email inválido').optional().or(z.literal('')),
-    telefono:     z.string().trim().optional().or(z.literal('')),
-    contacto_emergencia_nombre: optionalText,
-    contacto_emergencia_tel:    optionalText,
-    cargo:        z.string().trim().optional().or(z.literal('')),
-    tarifa_hora:  optionalPositiveNumber,
-    salario_base: optionalPositiveNumber,
-    eps:          optionalText,
-    afp:          optionalText,
-    banco:        optionalText,
-    tipo_cuenta:  z.enum(['ahorros', 'corriente']).optional().or(z.literal('')),
-    numero_cuenta: optionalText,
-    ant_judiciales_fecha:     optionalText,
-    ant_disciplinarios_fecha: optionalText,
-  })
-  .refine(
-    (d) =>
-      // At least one of tarifa_hora or salario_base, or neither (allowed)
-      true,
-  );
+/** AAAA-MM-DD real de calendario, no futura — vacío permitido (campo opcional) */
+const optionalPastISODate = z
+  .string()
+  .trim()
+  .optional()
+  .or(z.literal(''))
+  .refine((v) => !v || isValidISODate(v), { message: 'Fecha inválida (AAAA-MM-DD)' })
+  .refine((v) => !v || v <= bogotaToday(), { message: 'No puede ser una fecha futura' });
+
+export const trabajadorSchema = z.object({
+  nombre:       z.string().trim().min(1, 'El nombre es obligatorio'),
+  apellido:     z.string().trim().min(1, 'El apellido es obligatorio'),
+  tipo:         z.enum(['turnos', 'nomina', 'ambos']),
+  cedula:       z.string().trim().optional().or(z.literal('')),
+  tipo_documento: z.enum(['CC', 'CE', 'PAS']).optional().or(z.literal('')),
+  fecha_nacimiento: optionalPastISODate,
+  sexo:         z.enum(['M', 'F', 'otro']).optional().or(z.literal('')),
+  email:        z.string().trim().email('Email inválido').optional().or(z.literal('')),
+  telefono:     z.string().trim().optional().or(z.literal('')),
+  contacto_emergencia_nombre: optionalText,
+  contacto_emergencia_tel:    optionalText,
+  cargo:        z.string().trim().optional().or(z.literal('')),
+  tarifa_hora:  optionalPositiveNumber,
+  salario_base: optionalPositiveNumber,
+  eps:          optionalText,
+  afp:          optionalText,
+  banco:        optionalText,
+  tipo_cuenta:  z.enum(['ahorros', 'corriente']).optional().or(z.literal('')),
+  numero_cuenta: optionalText,
+  ant_judiciales_fecha:     optionalPastISODate,
+  ant_disciplinarios_fecha: optionalPastISODate,
+});
 
 export type TrabajadorFormValues = z.infer<typeof trabajadorSchema>;
 

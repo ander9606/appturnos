@@ -11,6 +11,22 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const AppError = require('../../../utils/AppError');
 const { ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA } = require('../../../config/constants');
 const { delayPorRanking } = require('../../../utils/rankingUtils');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+
+/**
+ * ¿Ya pasó la hora de inicio del turno? Compara contra la hora actual en
+ * Bogotá (UTC-5, sin horario de verano). Antes solo se comparaba la fecha
+ * (día), así que un turno de hoy con hora de inicio ya pasada seguía
+ * aceptando postulaciones — mismo criterio que turnoYaInicio() en el mobile
+ * (apps/mobile/features/turnos/turnosUtils.ts).
+ */
+function turnoYaInicio(fecha, horaInicio) {
+  const [y, mo, d] = fecha.split('-').map(Number);
+  const [hh, mm, ss] = String(horaInicio).split(':').map(Number);
+  const nowBogota = new Date(Date.now() - 5 * 60 * 60 * 1000); // getUTC* == hora Bogotá
+  const inicioBogotaMs = Date.UTC(y, mo - 1, d, hh, mm || 0, ss || 0);
+  return nowBogota.getTime() >= inicioBogotaMs;
+}
 
 /**
  * Resuelve el trabajador vinculado al usuario autenticado en una empresa concreta.
@@ -143,6 +159,20 @@ async function notificarDestinatariosDirectos(empresaId, oferta) {
   });
 }
 
+/**
+ * Fecha no pasada + hora_fin_estimada posterior a hora_inicio — mismo criterio
+ * que validateStep1() en el mobile (apps/mobile/features/turnos/crear/utils.ts),
+ * ahora también exigido en el backend para cerrar el hueco en web/API directa.
+ */
+function validarFechaHoraOferta({ fecha, hora_inicio, hora_fin_estimada }) {
+  if (fecha && fecha < ahoraColombiaSQL().slice(0, 10)) {
+    throw new AppError('La fecha del turno no puede ser en el pasado', 422);
+  }
+  if (hora_inicio && hora_fin_estimada && hora_fin_estimada <= hora_inicio) {
+    throw new AppError('La hora de fin debe ser posterior a la hora de inicio', 422);
+  }
+}
+
 async function validarAceptaExtras(usuario) {
   if (usuario.rol !== ROLES.TRABAJADOR_NOMINA) return;
   const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(null, usuario.sub);
@@ -266,6 +296,11 @@ const OfertasService = {
     if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {
       throw new AppError('Solo se puede editar una oferta en borrador o abierta', 409);
     }
+    validarFechaHoraOferta({
+      fecha: datos.fecha ?? oferta.fecha,
+      hora_inicio: datos.hora_inicio ?? oferta.hora_inicio,
+      hora_fin_estimada: datos.hora_fin_estimada !== undefined ? datos.hora_fin_estimada : oferta.hora_fin_estimada,
+    });
 
     const camposCriticos = ['fecha', 'hora_inicio', 'hora_fin_estimada', 'lugar'];
     const hayCambioRelevante = camposCriticos.some(
@@ -407,9 +442,8 @@ const OfertasService = {
     if (oferta.estado !== 'abierta' && oferta.estado !== 'publicada') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
     }
-    const hoyBogota = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    if (oferta.fecha < hoyBogota) {
-      throw new AppError('No puedes postularte a un turno que ya pasó', 409);
+    if (turnoYaInicio(oferta.fecha, oferta.hora_inicio)) {
+      throw new AppError('No puedes postularte a un turno que ya empezó', 409);
     }
 
     // Puesto existe y pertenece a la oferta.

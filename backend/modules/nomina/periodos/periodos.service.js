@@ -4,6 +4,7 @@ const { pool } = require('../../../config/database');
 const PeriodosModel = require('./periodos.model');
 const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const LiquidacionService = require('../liquidacion/liquidacion.service');
 const AppError = require('../../../utils/AppError');
 const { toISODate, calcularPeriodoActual, calcularSiguientePeriodo } = require('../../../utils/periodoCiclo');
 
@@ -19,14 +20,45 @@ async function listarUsuariosNomina(empresaId) {
   return filas.map((f) => f.usuario_id);
 }
 
+/** trabajador_nomina + gestores de nómina (jefe_nomina, admin_empresa, nomina) — "todos los involucrados". */
+async function listarInvolucradosNomina(empresaId) {
+  const trabajadores = await listarUsuariosNomina(empresaId);
+  const [gestores] = await pool.query(
+    `SELECT id FROM usuarios
+     WHERE empresa_id = ? AND activo = 1 AND rol IN ('jefe_nomina', 'admin_empresa', 'nomina')`,
+    [empresaId]
+  );
+  return [...new Set([...trabajadores, ...gestores.map((g) => g.id)])];
+}
+
 /**
  * Lógica de períodos de nómina. Máquina de estados:
  *   abierto → cerrado → liquidado
  */
 const PeriodosService = {
-  async listar(empresaId, { estado, page, limit }) {
+  async listar(empresaId, { estado, page, limit, conTotales }) {
+    // Antes el período "de hoy" solo se auto-creaba/cerraba cuando un
+    // trabajador marcaba entrada (registros.service.js). Si nadie marcó
+    // desde que venció el período anterior, el admin seguía viendo ese
+    // período como "Abierto" indefinidamente. Al listar también se
+    // dispara el mismo chequeo (best-effort, no debe romper el listado).
+    await this.autoCrear(empresaId).catch(() => {});
     const offset = (page - 1) * limit;
     const { data, total } = await PeriodosModel.listar(empresaId, { estado, limit, offset });
+
+    if (conTotales) {
+      // Reutiliza el mismo cálculo que la pestaña Liquidación (recargos,
+      // mínimo garantizado, deducciones) — nada de reimplementar reglas
+      // laborales acá. Solo tomamos `.totales`, no las líneas por trabajador.
+      for (const periodo of data) {
+        const { totales } = await LiquidacionService.generar(empresaId, periodo.id);
+        periodo.total_estimado = totales.total_general;
+        periodo.total_neto_estimado = totales.total_neto_general;
+        periodo.trabajadores = totales.trabajadores;
+        periodo.es_definitivo = periodo.estado !== 'abierto';
+      }
+    }
+
     return { data, pagination: { page, limit, total } };
   },
 
@@ -83,6 +115,43 @@ const PeriodosService = {
     if (existente) return existente;
     const datos = calcularPeriodoActual(tipo);
     return this.crear(empresaId, datos);
+  },
+
+  /**
+   * Se llama cuando cambia empresas.tipo_liquidacion (el ciclo determina los
+   * límites de cada período). Un período ya abierto quedaría con fechas del
+   * ciclo viejo si no se hace nada, así que se cierra con lo acumulado hasta
+   * hoy (mismo snapshot atómico que un cierre normal) y se abre uno nuevo ya
+   * con el ciclo nuevo. Notifica a trabajadores de nómina y gestores.
+   */
+  async recalcularPorCambioDeCiclo(empresaId, usuarioId) {
+    const hoy = toISODate(new Date());
+    const abierto = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
+    if (abierto) {
+      await PeriodosModel.cerrarConSnapshot(empresaId, abierto.id, usuarioId ?? null);
+    }
+    // autoCrear() ya notifica "nuevo período abierto" a trabajador_nomina vía crear().
+    const nuevo = await this.autoCrear(empresaId);
+
+    const destinatarios = await listarInvolucradosNomina(empresaId);
+    if (destinatarios.length > 0) {
+      let mensaje = 'Cambió el ciclo de nómina de tu empresa.';
+      if (abierto) mensaje += ' Tu período anterior se cerró con lo acumulado hasta hoy.';
+      if (nuevo) {
+        const inicio = new Date(nuevo.fecha_inicio + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+        const fin = new Date(nuevo.fecha_fin + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+        mensaje += ` Nuevo período: ${inicio} – ${fin}.`;
+      }
+      await NotificacionesService.notificarVarios(destinatarios, {
+        empresaId,
+        tipo: 'nomina.ciclo_cambiado',
+        titulo: 'Cambió el ciclo de nómina',
+        mensaje,
+        data: nuevo ? { periodo_id: nuevo.id } : {},
+      });
+    }
+
+    return { periodo_anterior_cerrado: abierto, periodo_nuevo: nuevo };
   },
 
   async cerrar(empresaId, id, usuarioId) {

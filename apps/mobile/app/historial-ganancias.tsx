@@ -1,7 +1,7 @@
 /**
  * Historial de ganancias — vista consolidada por período.
  *
- *   trabajador_turnos → total cobrado por quincena (turnos completados)
+ *   trabajador_turnos → total cobrado por período de nómina (turnos completados)
  *   trabajador_nomina → extras por período de nómina (el salario base es fijo,
  *                        se muestra aparte; lo que varía período a período son
  *                        las horas con recargo)
@@ -17,13 +17,11 @@ import { formatCOP } from '@/lib/formatters';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { Button } from '@/components/ui/Button';
 import { PeriodoBadge } from '@/features/nomina/PeriodoBadge';
+import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
-import { getQuincena, getPrevQuincena, sumarQuincena, type QuincenaRange, type TotalesQuincena } from '@/features/nomina/quincenaUtils';
 import { usePeriodos, useNominaPerfil, useRegistrosHistorial } from '@/features/nomina/useNomina';
 import { calcularResumenPeriodo, getValorHora, fmtPeriodo, type ResumenPeriodoNomina } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
-import type { PeriodoNomina, RegistroDiario } from '@api-client';
-
-const MAX_QUINCENAS = 24; // ~1 año hacia atrás como tope de seguridad
+import type { PeriodoNomina, RegistroDiario, Asignacion } from '@api-client';
 
 export default function HistorialGananciasScreen() {
   const rol = useAuthStore((s) => s.usuario?.rol);
@@ -31,12 +29,29 @@ export default function HistorialGananciasScreen() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// trabajador_turnos — historial por quincena
+// trabajador_turnos — historial por período de nómina
 // ══════════════════════════════════════════════════════════════════════════
+
+interface TotalesPeriodo { count: number; horas: number; pago: number }
+
+function sumarPeriodo(turnos: Asignacion[], periodo: PeriodoNomina): TotalesPeriodo {
+  return turnos.reduce((acc, a) => {
+    if (a.estado !== 'completado') return acc;
+    if (a.oferta_fecha < periodo.fecha_inicio || a.oferta_fecha > periodo.fecha_fin) return acc;
+    return {
+      count: acc.count + 1,
+      horas: acc.horas + (Number(a.horas_trabajadas) || 0),
+      pago:  acc.pago  + (Number(a.pago_total) || 0),
+    };
+  }, { count: 0, horas: 0, pago: 0 });
+}
 
 function HistorialTurnos() {
   const theme = useTheme();
-  const { data: turnos, isLoading, isError, error, refetch, isRefetching } = useMisTurnos();
+  const { data: turnos, isLoading: loadingTurnos, isError, error, refetch, isRefetching } = useMisTurnos();
+  const { data: periodosResp, isLoading: loadingPeriodos } = usePeriodos();
+  const periodos = periodosResp?.data ?? [];
+  const isLoading = loadingTurnos || loadingPeriodos;
 
   const filas = useMemo(() => {
     const completados = (turnos ?? []).filter((a) => a.estado === 'completado');
@@ -45,17 +60,15 @@ function HistorialTurnos() {
       (min, a) => (a.oferta_fecha < min ? a.oferta_fecha : min),
       completados[0].oferta_fecha,
     );
-    const minDate = new Date(`${fechaMin}T00:00:00`);
 
-    const out: { q: QuincenaRange; totales: TotalesQuincena }[] = [];
-    let q = getQuincena(new Date());
-    for (let i = 0; i < MAX_QUINCENAS && q.fin >= minDate; i++) {
-      const totales = sumarQuincena(completados, q);
-      if (totales.count > 0) out.push({ q, totales });
-      q = getPrevQuincena(q);
+    const out: { periodo: PeriodoNomina; totales: TotalesPeriodo }[] = [];
+    for (const periodo of periodos) {
+      if (periodo.fecha_fin < fechaMin) break; // periodos vienen fecha_inicio DESC
+      const totales = sumarPeriodo(completados, periodo);
+      if (totales.count > 0) out.push({ periodo, totales });
     }
     return out;
-  }, [turnos]);
+  }, [turnos, periodos]);
 
   const totalHistorico = filas.reduce((s, f) => s + f.totales.pago, 0);
 
@@ -83,7 +96,7 @@ function HistorialTurnos() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <FlatList
         data={filas}
-        keyExtractor={(item) => item.q.label}
+        keyExtractor={(item) => String(item.periodo.id)}
         contentContainerClassName="gap-2 pb-8"
         contentContainerStyle={{ paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
@@ -95,14 +108,17 @@ function HistorialTurnos() {
               {formatCOP(totalHistorico)}
             </Text>
             <Text className="text-xs text-muted-foreground">
-              {filas.length} {filas.length === 1 ? 'quincena' : 'quincenas'} con turnos completados
+              {filas.length} {filas.length === 1 ? 'período' : 'períodos'} con turnos completados
             </Text>
           </View>
         }
         renderItem={({ item }) => (
           <View className="bg-card border border-border rounded-2xl px-4 py-3 flex-row items-center justify-between">
             <View className="flex-1 gap-0.5">
-              <Text className="text-sm font-semibold text-foreground">{item.q.label}</Text>
+              <View className="flex-row items-center gap-1.5">
+                <Text className="text-sm font-semibold text-foreground">{fmtPeriodo(item.periodo)}</Text>
+                <TipoPeriodoBadge tipo={item.periodo.tipo} />
+              </View>
               <Text className="text-xs text-muted-foreground">
                 {item.totales.count} {item.totales.count === 1 ? 'turno' : 'turnos'} · {item.totales.horas.toFixed(1)}h
               </Text>
@@ -117,7 +133,7 @@ function HistorialTurnos() {
             <Ionicons name="bar-chart-outline" size={48} color="#94A3B8" />
             <Text className="text-base font-semibold text-foreground text-center">Sin historial aún</Text>
             <Text className="text-sm text-muted-foreground text-center">
-              Cuando completes turnos, aparecerán aquí agrupados por quincena.
+              Cuando completes turnos, aparecerán aquí agrupados por período.
             </Text>
           </View>
         }
@@ -216,7 +232,10 @@ function HistorialNomina() {
           <View className="bg-card border border-border rounded-2xl px-4 py-3 gap-1.5">
             <View className="flex-row items-center justify-between">
               <Text className="text-sm font-semibold text-foreground">{fmtPeriodo(item.periodo)}</Text>
-              <PeriodoBadge estado={item.periodo.estado} />
+              <View className="flex-row items-center gap-1.5">
+                <PeriodoBadge estado={item.periodo.estado} />
+                <TipoPeriodoBadge tipo={item.periodo.tipo} />
+              </View>
             </View>
             <View className="flex-row items-center justify-between">
               <Text className="text-xs text-muted-foreground">

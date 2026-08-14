@@ -1,4 +1,5 @@
 import { getWeekDays, toISODate, getEstadoConfig } from '../turnosUtils';
+import { bogotaToday } from '@/lib/formatters';
 import type { EstadoAsignacion } from '@api-client';
 import { ESTADOS_ASIGNACION } from '@api-client';
 
@@ -29,7 +30,7 @@ describe('getWeekDays', () => {
 
   it('marca correctamente el día de hoy', () => {
     const hoy = new Date();
-    const isoHoy = hoy.toISOString().split('T')[0];
+    const isoHoy = bogotaToday();
     const semana = getWeekDays(hoy);
     const diaHoy = semana.find((d) => d.isoDate === isoHoy);
     expect(diaHoy?.isToday).toBe(true);

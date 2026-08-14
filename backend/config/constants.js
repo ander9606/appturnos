@@ -68,6 +68,39 @@ const HORA_FIN_NOCTURNO = 6; // 06:00
 // (convención laboral colombiana: 30 días × 8 h).
 const HORAS_MES_NOMINA = 240;
 
+// ── Descuentos de ley (solo aplican a empresas.tipo_contrato = 'laboral') ──
+
+// Salario mínimo mensual legal vigente. Cambia cada 1-ene por decreto del
+// Gobierno — actualizar aquí. Valor 2025; verificar el vigente antes de usar
+// en producción para 2026.
+const SMMLV_COP = 1423500;
+
+// A cargo del trabajador (se descuentan de su pago). ARL y caja de
+// compensación NO se incluyen: en Colombia corren 100% por cuenta del
+// empleador, nunca se descuentan del trabajador.
+const DEDUCCION_SALUD = 0.04;
+const DEDUCCION_PENSION = 0.04;
+
+// Aporte adicional al Fondo de Solidaridad Pensional (Ley 100/1993 art. 27-28),
+// sobre el 100% del IBC, según cuántos SMMLV gana el trabajador. Solo aplica
+// si el IBC ≥ 4 SMMLV.
+const FONDO_SOLIDARIDAD_TRAMOS = [
+  { desdeSmmlv: 4, tasa: 0.01 },
+  { desdeSmmlv: 16, tasa: 0.012 },
+  { desdeSmmlv: 17, tasa: 0.014 },
+  { desdeSmmlv: 18, tasa: 0.016 },
+  { desdeSmmlv: 19, tasa: 0.018 },
+  { desdeSmmlv: 20, tasa: 0.02 },
+];
+
+// Auxilio de transporte (Ley 15/1959, decreto anual del Gobierno junto con el
+// SMMLV). Aplica solo a contrato laboral, a trabajadores que devengan hasta
+// SUBSIDIO_TRANSPORTE_TOPE_SMMLV salarios mínimos. No es salario para efectos
+// de IBC — no se le calculan descuentos de salud/pensión.
+// Valor 2025; verificar el vigente antes de usar en producción para 2026.
+const SUBSIDIO_TRANSPORTE_COP = 200000;
+const SUBSIDIO_TRANSPORTE_TOPE_SMMLV = 2;
+
 // Seguridad de login
 const LOGIN = {
   MAX_INTENTOS: 5,
@@ -115,6 +148,12 @@ module.exports = {
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
   HORAS_MES_NOMINA,
+  SMMLV_COP,
+  DEDUCCION_SALUD,
+  DEDUCCION_PENSION,
+  FONDO_SOLIDARIDAD_TRAMOS,
+  SUBSIDIO_TRANSPORTE_COP,
+  SUBSIDIO_TRANSPORTE_TOPE_SMMLV,
   LOGIN,
   ESTADOS_TRABAJADOR_EMPRESA,
   PLANES,
