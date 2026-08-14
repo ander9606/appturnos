@@ -9,6 +9,8 @@ type NavItem = {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   /** Acento del módulo — Nómina usa verde, el resto (Turnos incluido) usa el naranja de marca. Igual que THEME_COLORS en mobile. */
   accent?: 'success';
+  /** Ítems de soporte (config, integraciones) van anclados abajo, separados de la navegación principal. */
+  bottom?: boolean;
 };
 
 const NAV_BY_ROL: Record<Rol, NavItem[]> = {
@@ -20,8 +22,8 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Turnos',         to: '/turnos',         icon: Calendar },
     { label: 'Nómina',         to: '/nomina',         icon: DollarSign, accent: 'success' },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
-    { label: 'Configuración',  to: '/configuracion',  icon: Settings },
-    { label: 'logiq360',       to: '/integracion',    icon: Plug },
+    { label: 'Configuración',  to: '/configuracion',  icon: Settings, bottom: true },
+    { label: 'logiq360',       to: '/integracion',    icon: Plug, bottom: true },
   ],
   jefe_nomina: [
     { label: 'Inicio',  to: '/dashboard', icon: LayoutDashboard },
@@ -32,7 +34,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Inicio',        to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Turnos',        to: '/turnos',        icon: Calendar },
     { label: 'Equipo',        to: '/equipo',        icon: Users },
-    { label: 'Configuración', to: '/configuracion', icon: Settings },
+    { label: 'Configuración', to: '/configuracion', icon: Settings, bottom: true },
   ],
   nomina: [
     { label: 'Inicio',  to: '/dashboard', icon: LayoutDashboard },
@@ -52,6 +54,8 @@ export function Sidebar() {
   const { usuario, clearAuth } = useAuthStore();
   const navigate = useNavigate();
   const items = usuario ? (NAV_BY_ROL[usuario.rol] ?? []) : [];
+  const mainItems = items.filter(item => !item.bottom);
+  const bottomItems = items.filter(item => item.bottom);
 
   const logout = () => {
     clearAuth();
@@ -87,35 +91,15 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5">
-        {items.map(item => {
-          const isNomina = item.accent === 'success';
-          return (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/dashboard'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                isActive
-                  ? isNomina ? 'bg-success-light text-success-600' : 'bg-primary-50 text-primary-600'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                  isActive ? `${isNomina ? 'bg-success' : 'bg-primary'} text-white` : 'bg-muted text-muted-foreground'
-                }`}>
-                  <item.icon size={14} />
-                </div>
-                {item.label}
-              </>
-            )}
-          </NavLink>
-          );
-        })}
+        {mainItems.map(item => <NavItemLink key={item.to} item={item} />)}
       </nav>
+
+      {/* Soporte (config, integraciones) — ancladas abajo, separadas de la navegación principal */}
+      {bottomItems.length > 0 && (
+        <nav className="px-3 py-2 flex flex-col gap-0.5">
+          {bottomItems.map(item => <NavItemLink key={item.to} item={item} />)}
+        </nav>
+      )}
 
       {/* Logout */}
       <div className="px-3 pb-4">
@@ -131,5 +115,33 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+  );
+}
+
+function NavItemLink({ item }: { item: NavItem }) {
+  const isNomina = item.accent === 'success';
+  return (
+    <NavLink
+      to={item.to}
+      end={item.to === '/dashboard'}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+          isActive
+            ? isNomina ? 'bg-success-light text-success-600' : 'bg-primary-50 text-primary-600'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+            isActive ? `${isNomina ? 'bg-success' : 'bg-primary'} text-white` : 'bg-muted text-muted-foreground'
+          }`}>
+            <item.icon size={14} />
+          </div>
+          {item.label}
+        </>
+      )}
+    </NavLink>
   );
 }
