@@ -245,11 +245,15 @@ export function useMarcarEgreso() {
 }
 
 /** Liquidación de turnos por trabajador (gestores/admin). */
-export function useLiquidacionTurnos(params?: { fecha_inicio?: string; fecha_fin?: string }) {
+export function useLiquidacionTurnos(
+  params?: { fecha_inicio?: string; fecha_fin?: string },
+  opts: { enabled?: boolean } = {},
+) {
   return useQuery<LiquidacionTurnosTrabajador[]>({
     queryKey: QUERY_KEYS.liquidacion(params),
     queryFn:  () => turnosApi.liquidacion(params),
     staleTime: 60_000,
+    enabled:  opts.enabled ?? true,
   });
 }
 
