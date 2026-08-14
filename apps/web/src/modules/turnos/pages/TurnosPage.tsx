@@ -7,6 +7,7 @@ import type { EstadoOferta, Oferta, VisibilidadOferta } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { LugarInput } from '../components/LugarInput';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
+import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
 import { fmtDate, bogotaToday } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
@@ -37,6 +38,7 @@ const FILTER_LABELS: Record<string, string> = {
 
 export function TurnosPage() {
   const navigate = useNavigate();
+  const [vista, setVista] = useState<'ofertas' | 'pagos'>('ofertas');
   const [estado, setEstado] = useState<EstadoOferta | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
 
@@ -63,14 +65,36 @@ export function TurnosPage() {
             </span>
           )}
         </div>
-        <button
-          onClick={() => setShowCrear(true)}
-          className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={16} /> Nueva oferta
-        </button>
+        {vista === 'ofertas' && (
+          <button
+            onClick={() => setShowCrear(true)}
+            className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+          >
+            <Plus size={16} /> Nueva oferta
+          </button>
+        )}
       </div>
 
+      <div className="flex gap-1 mb-4 border-b border-border">
+        {([{ value: 'ofertas' as const, label: 'Ofertas' }, { value: 'pagos' as const, label: 'Pagos' }]).map(t => (
+          <button
+            key={t.value}
+            onClick={() => setVista(t.value)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              vista === t.value
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {vista === 'pagos' ? (
+        <LiquidacionTurnosView />
+      ) : (
+      <>
       <div className="flex gap-1 mb-4 border-b border-border overflow-x-auto">
         {ESTADOS_FILTER.map(e => (
           <button
@@ -161,6 +185,8 @@ export function TurnosPage() {
             </tbody>
           </table>
         </div>
+      )}
+      </>
       )}
 
       {showCrear && <NuevaOfertaModal onClose={() => setShowCrear(false)} />}

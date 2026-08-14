@@ -9,6 +9,12 @@ export interface Periodo {
   tipo: TipoPeriodo;
   estado: EstadoPeriodo;
   created_at: string;
+  /** Solo presentes cuando se pide `conTotales: true` (mismo cálculo que la pestaña Liquidación). */
+  total_estimado?: number;
+  total_neto_estimado?: number;
+  trabajadores?: number;
+  /** false si el período sigue abierto — el monto puede seguir cambiando. */
+  es_definitivo?: boolean;
 }
 
 export interface Registro {

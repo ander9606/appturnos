@@ -37,11 +37,13 @@ export function PeriodoDetailPage() {
   const { id } = useParams<{ id: string }>();
   const periodoId = Number(id);
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'registros' | 'liquidacion'>('registros');
+  const [tab, setTab] = useState<'liquidacion' | 'registros'>('liquidacion');
   const [filtroTrabajador, setFiltroTrabajador] = useState<number | undefined>(undefined);
   const [corrigiendoId, setCorrigiendoId] = useState<number | null>(null);
   const [showCrear, setShowCrear] = useState(false);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
+  const [expandidosLiq, setExpandidosLiq] = useState<Set<number>>(new Set());
+  const [diasExpandidos, setDiasExpandidos] = useState<Set<number>>(new Set());
   const [descuentoTrabajador, setDescuentoTrabajador] = useState<{ id: number; nombre: string } | null>(null);
 
   const { data: periodosData, isLoading: loadingPeriodos } = usePeriodos();
@@ -54,7 +56,7 @@ export function PeriodoDetailPage() {
   const registros: Registro[] = registrosData?.data?.data ?? [];
 
   const { data: liqData, isLoading: loadingLiq } = useLiquidacion(
-    tab === 'liquidacion' && periodo?.estado !== 'abierto' ? periodoId : null
+    tab === 'liquidacion' ? periodoId : null
   );
 
   const registrosFiltrados = filtroTrabajador
@@ -81,6 +83,22 @@ export function PeriodoDetailPage() {
     setExpandidos(prev => {
       const next = new Set(prev);
       next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
+      return next;
+    });
+  }
+
+  function toggleExpandidoLiq(trabajadorId: number) {
+    setExpandidosLiq(prev => {
+      const next = new Set(prev);
+      next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
+      return next;
+    });
+  }
+
+  function toggleDia(registroId: number) {
+    setDiasExpandidos(prev => {
+      const next = new Set(prev);
+      next.has(registroId) ? next.delete(registroId) : next.add(registroId);
       return next;
     });
   }
@@ -134,7 +152,7 @@ export function PeriodoDetailPage() {
       )}
 
       <div className="flex gap-1 mb-6 border-b border-border">
-        {(['registros', 'liquidacion'] as const).map(t => (
+        {(['liquidacion', 'registros'] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -242,11 +260,12 @@ export function PeriodoDetailPage() {
 
       {tab === 'liquidacion' && (
         <div>
-          {periodo?.estado === 'abierto' ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-warning text-sm">
-              El período debe estar cerrado para ver la liquidación.
+          {periodo?.estado === 'abierto' && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-warning text-sm mb-4">
+              Estimado — el período sigue abierto, estos montos pueden cambiar hasta que se cierre.
             </div>
-          ) : loadingLiq ? (
+          )}
+          {loadingLiq ? (
             <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
           ) : liqData?.data ? (
             <div>
@@ -282,77 +301,92 @@ export function PeriodoDetailPage() {
                 </button>
               </div>
 
-              <div className="bg-card border border-border rounded-xl overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-muted text-muted-foreground text-xs uppercase">
-                      <th className="text-left px-3 py-3 font-medium">Trabajador</th>
-                      <th className="text-right px-3 py-3 font-medium">Días</th>
-                      <th className="text-right px-3 py-3 font-medium">Hrs Ord</th>
-                      <th className="text-right px-3 py-3 font-medium">H.Ext D</th>
-                      <th className="text-right px-3 py-3 font-medium">H.Ext N</th>
-                      <th className="text-right px-3 py-3 font-medium">Noct</th>
-                      <th className="text-right px-3 py-3 font-medium">Fest</th>
-                      <th className="text-right px-3 py-3 font-medium">Valor/h</th>
-                      <th className="text-right px-3 py-3 font-medium">{liqData.data.tipo_contrato === 'laboral' ? 'Bruto' : 'Total'}</th>
-                      {liqData.data.tipo_contrato === 'laboral' && (
-                        <>
-                          <th className="text-right px-3 py-3 font-medium">Salud</th>
-                          <th className="text-right px-3 py-3 font-medium">Pensión</th>
-                        </>
+              <div className="flex flex-col gap-2">
+                {(liqData.data.lineas as LiquidacionLinea[]).map(l => {
+                  const abierto = expandidosLiq.has(l.trabajador_id);
+                  const otrosDelTrabajador = descuentos.filter(d => d.trabajador_id === l.trabajador_id);
+                  const diasTrabajador = registros
+                    .filter(r => r.trabajador_id === l.trabajador_id)
+                    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+                  return (
+                    <div key={l.trabajador_id} className="bg-card border border-border rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => toggleExpandidoLiq(l.trabajador_id)}
+                        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted transition-colors"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">{l.nombre} {l.apellido}</p>
+                          <p className="text-xs text-muted-foreground">{l.dias_registrados} día{l.dias_registrados !== 1 ? 's' : ''} trabajado{l.dias_registrados !== 1 ? 's' : ''}</p>
+                        </div>
+                        <span className="flex items-center gap-3">
+                          <span className="font-semibold text-success">{fmtCOP(l.neto)}</span>
+                          <ChevronDown size={16} className={`text-muted-foreground transition-transform ${abierto ? 'rotate-180' : ''}`} />
+                        </span>
+                      </button>
+                      {abierto && (
+                        <div className="border-t border-border">
+                          <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-muted/40 text-xs text-muted-foreground flex-wrap">
+                            <span>
+                              {fmtHrs(l.horas_ordinarias)} hrs ord · {fmtHrs(Number(l.horas_extra_diurnas) + Number(l.horas_extra_nocturnas))} hrs extra · {fmtCOP(l.valor_hora)}/h
+                              {liqData.data.tipo_contrato === 'laboral' && ` · salud -${fmtCOP(l.descuento_salud)} · pensión -${fmtCOP(l.descuento_pension)}`}
+                              {' · '}
+                              {l.numero_cuenta ? `${l.banco} · ${l.tipo_cuenta === 'corriente' ? 'Corriente' : 'Ahorros'} · ${l.numero_cuenta}` : 'Sin datos bancarios'}
+                            </span>
+                            <button
+                              onClick={() => setDescuentoTrabajador({ id: l.trabajador_id, nombre: `${l.nombre} ${l.apellido}` })}
+                              className="flex items-center gap-1 font-medium text-primary hover:text-primary-600 transition-colors flex-shrink-0"
+                            >
+                              {otrosDelTrabajador.length > 0 ? (
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                                  otrosDelTrabajador.some(d => d.estado === 'pendiente') ? ESTADO_DESCUENTO_BADGE.pendiente : 'bg-muted text-muted-foreground'
+                                }`}>
+                                  {otrosDelTrabajador.length}
+                                </span>
+                              ) : null}
+                              <Plus size={12} /> {otrosDelTrabajador.length > 0 ? 'Ver descuentos' : 'Agregar descuento'}
+                            </button>
+                          </div>
+
+                          {diasTrabajador.length === 0 ? (
+                            <p className="text-xs text-muted-foreground px-4 py-3">Sin registros de días</p>
+                          ) : (
+                            diasTrabajador.map(r => {
+                              const diaAbierto = diasExpandidos.has(r.id);
+                              return (
+                                <div key={r.id} className="border-t border-border/60">
+                                  <button
+                                    onClick={() => toggleDia(r.id)}
+                                    className="w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-muted transition-colors"
+                                  >
+                                    <span className="text-foreground">{fmtDate(r.fecha)}</span>
+                                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      {r.hora_entrada ?? '—'} – {r.hora_salida ?? '—'}
+                                      <ChevronDown size={14} className={`transition-transform ${diaAbierto ? 'rotate-180' : ''}`} />
+                                    </span>
+                                  </button>
+                                  {diaAbierto && (
+                                    <div className="px-4 py-2.5 bg-muted/40 text-xs text-muted-foreground grid grid-cols-2 gap-1.5">
+                                      <span>Hrs ordinarias: {fmtHrs(r.horas_ordinarias)}</span>
+                                      <span>Hrs extra: {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}</span>
+                                      <span className="capitalize">Tipo día: {r.tipo_dia}</span>
+                                      {r.novedad && <span className="col-span-2">Novedad: {r.novedad}</span>}
+                                      <button
+                                        onClick={() => setCorrigiendoId(r.id)}
+                                        className="col-span-2 flex items-center gap-1 text-primary hover:text-primary-600 font-medium mt-0.5"
+                                      >
+                                        <Pencil size={12} /> Corregir
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
                       )}
-                      <th className="text-left px-3 py-3 font-medium">Otros descuentos</th>
-                      <th className="text-right px-3 py-3 font-medium">Neto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(liqData.data.lineas as LiquidacionLinea[]).map(l => {
-                      const otrosDelTrabajador = descuentos.filter(d => d.trabajador_id === l.trabajador_id);
-                      return (
-                      <tr key={l.trabajador_id} className="border-t border-border/60 hover:bg-muted">
-                        <td className="px-3 py-2.5 text-foreground">
-                          <p>{l.nombre} {l.apellido}</p>
-                          <p className="text-xs text-muted-foreground font-normal">
-                            {l.numero_cuenta
-                              ? `${l.banco} · ${l.tipo_cuenta === 'corriente' ? 'Corriente' : 'Ahorros'} · ${l.numero_cuenta}`
-                              : 'Sin datos bancarios'}
-                          </p>
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-muted-foreground">{l.dias_registrados}</td>
-                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_ordinarias)}</td>
-                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_extra_diurnas)}</td>
-                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_extra_nocturnas)}</td>
-                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_nocturnas)}</td>
-                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(l.horas_festivo)}</td>
-                        <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtCOP(l.valor_hora)}</td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-foreground">{fmtCOP(l.total)}</td>
-                        {liqData.data.tipo_contrato === 'laboral' && (
-                          <>
-                            <td className="px-3 py-2.5 text-right text-danger">-{fmtCOP(l.descuento_salud)}</td>
-                            <td className="px-3 py-2.5 text-right text-danger">-{fmtCOP(l.descuento_pension)}</td>
-                          </>
-                        )}
-                        <td className="px-3 py-2.5">
-                          <button
-                            onClick={() => setDescuentoTrabajador({ id: l.trabajador_id, nombre: `${l.nombre} ${l.apellido}` })}
-                            className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary-600 transition-colors"
-                          >
-                            {otrosDelTrabajador.length > 0 ? (
-                              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                                otrosDelTrabajador.some(d => d.estado === 'pendiente') ? ESTADO_DESCUENTO_BADGE.pendiente : 'bg-muted text-muted-foreground'
-                              }`}>
-                                {otrosDelTrabajador.length}
-                              </span>
-                            ) : null}
-                            <Plus size={12} /> {otrosDelTrabajador.length > 0 ? 'Ver' : 'Agregar'}
-                          </button>
-                        </td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-success">{fmtCOP(l.neto)}</td>
-                      </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : null}
