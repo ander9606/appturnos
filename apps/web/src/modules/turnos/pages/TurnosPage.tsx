@@ -7,6 +7,7 @@ import type { EstadoOferta, Oferta, VisibilidadOferta } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { LugarInput } from '../components/LugarInput';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
+import { fmtDate, bogotaToday } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -27,16 +28,6 @@ const ESTADO_LABEL: Record<EstadoOferta, string> = {
   completada: 'Completada',
   cancelada: 'Cancelada',
 };
-
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
-}
-
-const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
-function bogotaToday(): string {
-  const t = new Date(Date.now() - BOGOTA_OFFSET_MS);
-  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
-}
 
 const ESTADOS_FILTER: (EstadoOferta | undefined)[] = [undefined, 'abierta', 'publicada', 'en_proceso', 'completada', 'borrador', 'cerrada', 'cancelada'];
 const FILTER_LABELS: Record<string, string> = {

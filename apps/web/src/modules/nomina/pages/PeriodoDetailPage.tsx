@@ -9,6 +9,7 @@ import {
 } from '../hooks/useNomina';
 import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, TipoDescuento, DescuentoNomina } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { fmtDate, fmtCOP, fmtHrs } from '@/shared/lib/format';
 
 const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
@@ -31,19 +32,6 @@ const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
 };
 
 const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario','descanso','compensatorio','incapacidad','vacacion','licencia'];
-
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
-}
-
-function fmtCOP(n: number) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
-}
-
-function fmtHrs(n: number) {
-  // ponytail: MySQL DECIMAL vuelve como string (decimalNumbers:false en el pool) — upgrade path: castear en el backend
-  return Number(n).toFixed(1);
-}
 
 export function PeriodoDetailPage() {
   const { id } = useParams<{ id: string }>();

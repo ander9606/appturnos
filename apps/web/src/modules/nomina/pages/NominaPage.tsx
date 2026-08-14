@@ -5,6 +5,7 @@ import { usePeriodos, useCrearPeriodo, useCerrarPeriodo, useLiquidarPeriodo } fr
 import type { EstadoPeriodo, TipoPeriodo, Periodo } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { fmtDate } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
@@ -17,10 +18,6 @@ const TIPO_LABEL: Record<TipoPeriodo, string> = {
   quincenal: 'Quincenal',
   mensual: 'Mensual',
 };
-
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
-}
 
 export function NominaPage() {
   const navigate = useNavigate();
