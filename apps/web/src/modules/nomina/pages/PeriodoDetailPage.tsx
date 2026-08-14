@@ -9,7 +9,7 @@ import {
 } from '../hooks/useNomina';
 import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, TipoDescuento, DescuentoNomina } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
-import { fmtDate, fmtCOP, fmtHrs } from '@/shared/lib/format';
+import { fmtDate, fmtPeriodo, fmtCOP, fmtHrs } from '@/shared/lib/format';
 
 const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
@@ -143,7 +143,7 @@ export function PeriodoDetailPage() {
         <div className="bg-card border border-border rounded-xl p-4 mb-6 flex items-center gap-4">
           <div className="flex-1">
             <p className="text-xs text-muted-foreground mb-0.5">Período</p>
-            <p className="font-semibold text-foreground">{fmtDate(periodo.fecha_inicio)} — {fmtDate(periodo.fecha_fin)}</p>
+            <p className="font-semibold text-foreground">{fmtPeriodo(periodo.fecha_inicio, periodo.fecha_fin)}</p>
           </div>
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[periodo.estado as EstadoPeriodo]}`}>
             {periodo.estado.charAt(0).toUpperCase() + periodo.estado.slice(1)}

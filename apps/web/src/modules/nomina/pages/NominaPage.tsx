@@ -6,7 +6,7 @@ import type { EstadoPeriodo, TipoPeriodo, Periodo } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { StatCard } from '@/shared/components/StatCard';
-import { fmtDate, fmtCOP, bogotaToday } from '@/shared/lib/format';
+import { fmtDate, fmtPeriodo, fmtCOP, bogotaToday } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
@@ -109,7 +109,7 @@ export function NominaPage() {
                 return (
                 <tr key={p.id} className="border-t border-border/60 hover:bg-muted">
                   <td className="px-4 py-3 text-foreground">
-                    {fmtDate(p.fecha_inicio)} — {fmtDate(p.fecha_fin)}
+                    {fmtPeriodo(p.fecha_inicio, p.fecha_fin)}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{TIPO_LABEL[p.tipo]}</td>
                   <td className="px-4 py-3">
