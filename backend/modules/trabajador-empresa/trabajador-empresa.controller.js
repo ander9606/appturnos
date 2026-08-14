@@ -34,6 +34,7 @@ async function rechazar(req, res) {
   const data = await TrabajadorEmpresaService.rechazar(
     req.usuario.sub,
     req.usuario.rol,
+    req.empresa_id,
     Number(req.params.id),
     req.body.motivo || null
   );
@@ -44,6 +45,7 @@ async function archivar(req, res) {
   const data = await TrabajadorEmpresaService.archivar(
     req.usuario.sub,
     req.usuario.rol,
+    req.empresa_id,
     Number(req.params.id)
   );
   res.json({ success: true, data, message: 'Relación archivada' });

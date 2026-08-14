@@ -3,7 +3,7 @@
 const express = require('express');
 const { param, query } = require('express-validator');
 
-const { validar } = require('../../middleware/validator');
+const { validar, rangoFechasMax } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./reportes.controller');
@@ -13,9 +13,12 @@ const router = express.Router();
 // Reportes: admin_empresa y jefes (matriz de 06-AUTH.md).
 const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA];
 
+// Estos endpoints agregan sobre todo el rango sin paginar — sin tope, un
+// rango de décadas es una query cara y barata de pedir repetidamente.
 const reglasRango = [
   query('desde').optional().isISO8601().withMessage('desde inválida (YYYY-MM-DD)'),
   query('hasta').optional().isISO8601().withMessage('hasta inválida (YYYY-MM-DD)'),
+  rangoFechasMax(366),
 ];
 
 router.use(verificarToken);

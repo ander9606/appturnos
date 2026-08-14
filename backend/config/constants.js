@@ -27,6 +27,13 @@ const GRUPOS_ROLES = {
 
 const ESTADOS_OFERTA = ['borrador', 'abierta', 'publicada', 'en_proceso', 'cerrada', 'completada', 'cancelada'];
 
+/**
+ * Tope de ofertas activas (no canceladas/completadas) por empresa. Defensa de
+ * negocio contra creación masiva por error o abuso — independiente del
+ * rate-limit de la ruta, que solo frena el ritmo de peticiones.
+ */
+const MAX_OFERTAS_ACTIVAS_POR_EMPRESA = 500;
+
 // Fuente de verdad en TS: packages/api-client/src/turnos.ts → ESTADOS_ASIGNACION
 // Si añades un estado aquí, actualiza también ese array y el ESTADO_CONFIG
 // en apps/mobile/features/turnos/turnosUtils.ts.
@@ -131,6 +138,7 @@ module.exports = {
   ROLES_VALIDOS,
   GRUPOS_ROLES,
   ESTADOS_OFERTA,
+  MAX_OFERTAS_ACTIVAS_POR_EMPRESA,
   ESTADOS_ASIGNACION,
   ESTADOS_PERIODO,
   RECARGOS,

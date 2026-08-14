@@ -269,6 +269,16 @@ const OfertasModel = {
     return filas.length > 0;
   },
 
+  /** Cuenta ofertas activas (no canceladas/completadas) de la empresa — ver MAX_OFERTAS_ACTIVAS_POR_EMPRESA. */
+  async contarActivasPorEmpresa(empresaId) {
+    const [[fila]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM ofertas_turno
+       WHERE empresa_id = ? AND estado NOT IN ('cancelada', 'completada')`,
+      [empresaId]
+    );
+    return fila.total;
+  },
+
   async cambiarEstado(empresaId, id, estado) {
     const [res] = await pool.query(
       'UPDATE ofertas_turno SET estado = ? WHERE id = ? AND empresa_id = ?',
