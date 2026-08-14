@@ -422,6 +422,13 @@ const OfertasModel = {
     );
   },
 
+  async marcarCoberturaNotificada(empresaId, id) {
+    await pool.query(
+      'UPDATE ofertas_turno SET cobertura_notificada = 1 WHERE id = ? AND empresa_id = ?',
+      [id, empresaId]
+    );
+  },
+
   /**
    * Copia una oferta a una nueva fecha, con plazas_cubiertas = 0 en todos los puestos.
    */

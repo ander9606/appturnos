@@ -514,9 +514,17 @@ await pool.query(
 
 ---
 
-### EVENTO: `oferta.cubierta`
+### EVENTO: `oferta.cubierta` *(implementado — v1.5)*
 
-**Cuando todos los cupos de la oferta fueron aceptados**
+**Cuando todos los puestos de la oferta llegan a plazas_cubiertas >= plazas.**
+Se emite una sola vez por oferta (idempotente vía `ofertas_turno.cobertura_notificada`,
+migración 057), disparado justo después de cada confirmación/asignación directa
+que podría haber completado el cupo (`CoberturaService.verificarYEmitir`).
+
+> `trabajadores[].rol` viaja como el `cargo_codigo` del puesto en Zaturno (valor
+> libre por tenant). logiq360 lo mapea a su ENUM fijo
+> (`responsable|operario|conductor|auxiliar`); cualquier valor que no reconozca
+> cae en `'operario'`.
 
 ```json
 {
@@ -528,22 +536,31 @@ await pool.query(
     "cupos_requeridos": 5,
     "cupos_cubiertos": 5,
     "trabajadores": [
-      { "nombre": "Pedro Gómez",  "external_ref": "logiq360:empleado:15" },
-      { "nombre": "María López",  "external_ref": null },
-      { "nombre": "Carlos Ruiz",  "external_ref": null }
+      { "nombre": "Pedro Gómez",  "external_ref": "logiq360:empleado:15", "rol": "auxiliar" },
+      { "nombre": "María López",  "external_ref": null, "rol": "auxiliar" },
+      { "nombre": "Carlos Ruiz",  "external_ref": null, "rol": "auxiliar" }
     ]
   }
 }
 ```
 
-**Qué hace logiq360:**
+**Qué hace logiq360:** asigna cada trabajador conciliado (con `external_ref`
+resoluble) al equipo de la orden — los que aún no tienen empleado vinculado en
+logiq360 (`external_ref: null`) se omiten, igual que en `asignacion.confirmada`:
 ```javascript
-// Notifica al coordinador que la orden tiene equipo completo
-await NotificacionModel.crear(tenantId, {
-    tipo: 'orden_equipo_completo',
-    titulo: 'Equipo completo para orden #47',
-    mensaje: '5 trabajadores confirmados para Montaje - Boda García'
-});
+// EventHandlerService.js
+for (const t of payload.trabajadores) {
+    const empleadoId = extraerIdRef(t.external_ref, 'empleado');
+    if (!empleadoId) continue;
+    const rol = ROLES_VALIDOS.has(t.rol) ? t.rol : 'operario';
+    await pool.query(
+        `INSERT INTO orden_trabajo_equipo
+            (tenant_id, orden_id, empleado_id, rol_en_orden, estado_asignacion)
+         VALUES (?, ?, ?, ?, 'aceptada')
+         ON DUPLICATE KEY UPDATE estado_asignacion = 'aceptada'`,
+        [tenantId, ordenId, empleadoId, rol]
+    );
+}
 ```
 
 ---
@@ -979,7 +996,7 @@ App Turnos → logiq360   Webhook      trabajador.ingreso                      �
 App Turnos → logiq360   Webhook      trabajador.egreso                       ✅
 App Turnos → logiq360   Webhook      contrato.completado                     ✅
 App Turnos → logiq360   Webhook      novedad.reportada                       ✅
-App Turnos → logiq360   Webhook      oferta.cubierta                         ⬜
+App Turnos → logiq360   Webhook      oferta.cubierta                         ✅
 
 App Turnos → logiq360   REST (GET)   /public/ordenes/{ref}                   ✅
 App Turnos → logiq360   REST (GET)   /public/ordenes/{ref}/productos         ✅
@@ -1016,6 +1033,28 @@ App Turnos NUNCA envía a logiq360:
 ---
 
 ## CHANGELOG
+
+### v1.5 — oferta.cubierta implementado
+
+Cerraba la lista de eventos pendientes de la spec original. Zaturno ya
+llevaba la cuenta de `plazas_cubiertas` por puesto (usada para bloquear
+postulaciones cuando un puesto se llena), pero nunca la usaba para avisar a
+logiq360 — el handler `oferta.cubierta` en logiq360 ya existía y funcionaba
+(tabla `orden_trabajo_equipo` con su UNIQUE KEY, a diferencia del caso de
+`novedad.reportada`), simplemente nadie lo disparaba nunca.
+
+- `CoberturaService.verificarYEmitir(empresaId, ofertaId)` (nuevo, en
+  `modules/integracion/`) revisa si TODOS los puestos de la oferta están
+  llenos; si la oferta viene de logiq360 (`external_ref`) y no se había
+  notificado antes, emite el evento con el desglose de cupos y la lista de
+  trabajadores confirmados/en progreso/completados.
+- Se llama tras `AsignacionesService.confirmar()` y `.asignarDirecto()` —
+  los dos únicos caminos que incrementan `plazas_cubiertas`.
+- Idempotencia vía `ofertas_turno.cobertura_notificada` (migración 057),
+  mismo patrón que `alerta_personal_enviada`.
+- `trabajadores[].rol` ahora viaja en el payload (antes solo estaba en el
+  doc de diseño, nunca implementado) — necesario porque logiq360 lo usa
+  para poblar `rol_en_orden`.
 
 ### v1.4 — novedad.reportada implementado + GPS
 
