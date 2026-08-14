@@ -1,6 +1,10 @@
 // Types
 export * from './types';
 
+// Descuentos de ley (contrato laboral) — cálculo compartido para previews en UI
+export { calcularDeducciones, SMMLV_COP, HORAS_MES_NOMINA, DEDUCCION_SALUD, DEDUCCION_PENSION } from './laboral';
+export type { Deducciones } from './laboral';
+
 // Client initializer + TokenStore interface
 export { initApiClient } from './client';
 export type { TokenStore } from './client';
@@ -9,7 +13,7 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export type { CrearGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
@@ -43,6 +47,9 @@ export type {
   EstadoCompensatorio,
   SolicitudReingreso,
   EstadoSolicitudReingreso,
+  DescuentoNomina,
+  TipoDescuento,
+  EstadoDescuento,
 } from './nomina';
 export { turnosApi, ESTADOS_ASIGNACION } from './turnos';
 export type {
@@ -51,6 +58,7 @@ export type {
   CrearOfertaPayload,
   Oferta,
   OfertaDetalle,
+  OfertaPuesto,
   AsignacionResumen,
   EstadoAsignacion,
   EstadoOferta,
@@ -70,7 +78,7 @@ export type {
   LiquidacionEventualResponse,
 } from './turnosEventual';
 export { cargosApi } from './cargos';
-export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult, CargoCertificado } from './cargos';
+export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult, CargoCertificado, CargoFuncion } from './cargos';
 export { puntosMarcajeApi } from './puntos-marcaje';
 export type {
   PuntoMarcaje,

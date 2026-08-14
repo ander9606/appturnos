@@ -10,7 +10,7 @@
  *   (Art. 179 CST) — sin recargo económico adicional.
  */
 
-import type { RegistroDiario, PeriodoNomina, TipoDia } from '@api-client';
+import type { RegistroDiario, PeriodoNomina, TipoDia, TipoPeriodo } from '@api-client';
 import { toISODate, BOGOTA_OFFSET_MS } from '@/lib/formatters';
 
 // ── Constantes ─────────────────────────────────────────────────────────────
@@ -292,6 +292,12 @@ export function fmtFechaCorta(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
 }
+
+export const TIPO_PERIODO_LABEL: Record<TipoPeriodo, string> = {
+  semanal:   'Semanal',
+  quincenal: 'Quincenal',
+  mensual:   'Mensual',
+};
 
 export const TIPO_DIA_LABEL: Partial<Record<TipoDia, string>> = {
   descanso:      'Descanso',

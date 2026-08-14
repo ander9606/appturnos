@@ -3,7 +3,8 @@ import { View, Text, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';
-import { pad, parseTarifa, calcularPresupuesto } from './utils';
+import { parseTarifa, calcularPresupuesto } from './utils';
+import { formatDateObj, formatTimeObj } from '@/lib/formatters';
 import type { WizardData } from './types';
 
 type Props = {
@@ -26,9 +27,9 @@ function SummaryRow({ icon, label, value }: { icon: string; label: string; value
 }
 
 export function Step3Revisar({ data, onBack, onPublish, isPublishing }: Props) {
-  const fecha = `${pad(data.dia)}/${pad(data.mes)}/${pad(data.anio, 4)}`;
-  const inicio = `${pad(data.hora_inicio_h)}:${pad(data.hora_inicio_m)}`;
-  const fin = data.hora_fin_h ? ` – ${pad(data.hora_fin_h)}:${pad(data.hora_fin_m)}` : '';
+  const fecha = data.fecha ? formatDateObj(data.fecha) : '';
+  const inicio = data.hora_inicio ? formatTimeObj(data.hora_inicio) : '';
+  const fin = data.hora_fin ? ` – ${formatTimeObj(data.hora_fin)}` : '';
 
   const totalPlazas = data.puestos.reduce((s, p) => s + p.plazas, 0);
   const presupuesto = calcularPresupuesto(data.puestos);
@@ -95,8 +96,9 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing }: Props) {
       <View className="flex-row items-start gap-3 bg-info-light rounded-2xl px-4 py-3">
         <Ionicons name="notifications-outline" size={18} color="#3B82F6" style={{ marginTop: 1 }} />
         <Text className="flex-1 text-sm text-info">
-          Al publicar, se enviará una notificación push a todos los trabajadores
-          de la empresa que tengan cada cargo certificado.
+          {data.visibilidad === 'dirigida'
+            ? `Al publicar, se notificará solo a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''} que elegiste.`
+            : 'Al publicar, se enviará una notificación push a todos los trabajadores de la empresa que tengan cada cargo certificado.'}
         </Text>
       </View>
 

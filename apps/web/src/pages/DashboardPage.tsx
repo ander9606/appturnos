@@ -6,6 +6,7 @@ import { equipoApi } from '@/modules/equipo/api/equipoApi';
 import { turnosApi } from '@/modules/turnos/api/turnosApi';
 import { nominaApi } from '@/modules/nomina/api/nominaApi';
 import type { Rol } from '@/modules/auth/authStore';
+import { StatCard } from '@/shared/components/StatCard';
 
 function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'short' }).format(new Date(s + 'T00:00:00'));
@@ -158,37 +159,5 @@ export function DashboardPage() {
         </div>
       )}
     </div>
-  );
-}
-
-type StatColor = 'default' | 'warning' | 'success';
-
-function StatCard({
-  label, value, icon: Icon, color = 'default', valueSmall, onClick,
-}: {
-  label: string;
-  value: number | string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  color?: StatColor;
-  valueSmall?: boolean;
-  onClick: () => void;
-}) {
-  const iconBg: Record<StatColor, string> = {
-    default: 'bg-primary-50 text-primary-600',
-    warning: 'bg-warning-light text-warning',
-    success: 'bg-success-light text-success',
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className="bg-card border border-border rounded-2xl p-4 text-left hover:bg-muted transition-colors w-full"
-    >
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${iconBg[color]}`}>
-        <Icon size={18} />
-      </div>
-      <p className={`font-bold text-foreground mb-0.5 ${valueSmall ? 'text-sm' : 'text-2xl'}`}>{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
-    </button>
   );
 }

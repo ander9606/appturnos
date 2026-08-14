@@ -7,6 +7,8 @@ type NavItem = {
   label: string;
   to: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
+  /** Acento del módulo — Nómina usa verde, el resto (Turnos incluido) usa el naranja de marca. Igual que THEME_COLORS en mobile. */
+  accent?: 'success';
 };
 
 const NAV_BY_ROL: Record<Rol, NavItem[]> = {
@@ -14,27 +16,27 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Empresas', to: '/admin/empresas', icon: Building2 },
   ],
   admin_empresa: [
-    { label: 'Inicio',         to: '/',              icon: LayoutDashboard },
+    { label: 'Inicio',         to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Turnos',         to: '/turnos',         icon: Calendar },
-    { label: 'Nómina',         to: '/nomina',         icon: DollarSign },
+    { label: 'Nómina',         to: '/nomina',         icon: DollarSign, accent: 'success' },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
     { label: 'Configuración',  to: '/configuracion',  icon: Settings },
     { label: 'logiq360',       to: '/integracion',    icon: Plug },
   ],
   jefe_nomina: [
-    { label: 'Inicio',  to: '/',       icon: LayoutDashboard },
-    { label: 'Nómina',  to: '/nomina', icon: DollarSign },
-    { label: 'Equipo',  to: '/equipo', icon: Users },
+    { label: 'Inicio',  to: '/dashboard', icon: LayoutDashboard },
+    { label: 'Nómina',  to: '/nomina',    icon: DollarSign, accent: 'success' },
+    { label: 'Equipo',  to: '/equipo',    icon: Users },
   ],
   jefe_turnos: [
-    { label: 'Inicio',        to: '/',             icon: LayoutDashboard },
+    { label: 'Inicio',        to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Turnos',        to: '/turnos',        icon: Calendar },
     { label: 'Equipo',        to: '/equipo',        icon: Users },
     { label: 'Configuración', to: '/configuracion', icon: Settings },
   ],
   nomina: [
-    { label: 'Inicio',  to: '/',       icon: LayoutDashboard },
-    { label: 'Nómina',  to: '/nomina', icon: DollarSign },
+    { label: 'Inicio',  to: '/dashboard', icon: LayoutDashboard },
+    { label: 'Nómina',  to: '/nomina',    icon: DollarSign, accent: 'success' },
   ],
 };
 
@@ -85,15 +87,17 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2 flex flex-col gap-0.5">
-        {items.map(item => (
+        {items.map(item => {
+          const isNomina = item.accent === 'success';
+          return (
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.to === '/dashboard'}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-primary-50 text-primary-600'
+                  ? isNomina ? 'bg-success-light text-success-600' : 'bg-primary-50 text-primary-600'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`
             }
@@ -101,7 +105,7 @@ export function Sidebar() {
             {({ isActive }) => (
               <>
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                  isActive ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+                  isActive ? `${isNomina ? 'bg-success' : 'bg-primary'} text-white` : 'bg-muted text-muted-foreground'
                 }`}>
                   <item.icon size={14} />
                 </div>
@@ -109,7 +113,8 @@ export function Sidebar() {
               </>
             )}
           </NavLink>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Logout */}

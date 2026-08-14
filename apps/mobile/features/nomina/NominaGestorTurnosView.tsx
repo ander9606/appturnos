@@ -8,27 +8,28 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useLiquidacionTurnos } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
-import { toISODate, formatCOP } from '@/lib/formatters';
-import { getQuincena, getPrevQuincena } from './quincenaUtils';
+import { formatCOP } from '@/lib/formatters';
+import { usePeriodos } from './useNomina';
+import { TipoPeriodoBadge } from './TipoPeriodoBadge';
+import { fmtPeriodo } from './trabajador/nominaTrabajadorUtils';
 import { LiquidacionTrabajadorCard } from './LiquidacionTrabajadorCard';
 
 export function NominaGestorTurnosView() {
   const theme = useTheme();
 
-  const hoy              = useMemo(() => new Date(), []);
-  const quincenaActual   = useMemo(() => getQuincena(hoy), [hoy]);
-  const quincenaAnterior = useMemo(() => getPrevQuincena(quincenaActual), [quincenaActual]);
+  // periodos_nomina ya viene ordenado fecha_inicio DESC — [0] es el actual, [1] el anterior.
+  const { data: periodosResp } = usePeriodos();
+  const periodos = periodosResp?.data ?? [];
 
   const [showAnterior, setShowAnterior] = useState(false);
-  const quincena = showAnterior ? quincenaAnterior : quincenaActual;
-
-  const fechaInicio = useMemo(() => toISODate(quincena.inicio), [quincena]);
-  const fechaFin    = useMemo(() => toISODate(quincena.fin),    [quincena]);
+  const periodoActual = periodos[0];
+  const periodoAnterior = periodos[1];
+  const periodo = showAnterior ? periodoAnterior : periodoActual;
 
   const { data, isLoading, isError, refetch, isRefetching } = useLiquidacionTurnos({
-    fecha_inicio: fechaInicio,
-    fecha_fin:    fechaFin,
-  });
+    fecha_inicio: periodo?.fecha_inicio ?? '',
+    fecha_fin:    periodo?.fecha_fin ?? '',
+  }, { enabled: periodo !== undefined });
 
   const trabajadores = data ?? [];
 
@@ -87,10 +88,11 @@ export function NominaGestorTurnosView() {
                 Liquidación de Turnos
               </Text>
 
-              {/* Selector quincena */}
+              {/* Selector de período */}
               <View className="flex-row items-center gap-2">
                 {[true, false].map((esAnterior) => {
-                  const q     = esAnterior ? quincenaAnterior : quincenaActual;
+                  const p = esAnterior ? periodoAnterior : periodoActual;
+                  if (!p) return null;
                   const activa = showAnterior === esAnterior;
                   return (
                     <TouchableOpacity
@@ -99,10 +101,11 @@ export function NominaGestorTurnosView() {
                       className="px-3 py-1.5 rounded-full border border-white/30"
                       style={activa ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
                     >
-                      <Text className="text-white text-xs font-medium">{q.label}</Text>
+                      <Text className="text-white text-xs font-medium">{fmtPeriodo(p)}</Text>
                     </TouchableOpacity>
                   );
                 })}
+                {periodo && <TipoPeriodoBadge tipo={periodo.tipo} />}
               </View>
 
               {/* Resumen */}
@@ -143,7 +146,7 @@ export function NominaGestorTurnosView() {
               Sin turnos completados
             </Text>
             <Text className="text-sm text-muted-foreground text-center">
-              No hay turnos completados en el período {quincena.label}.
+              No hay turnos completados en el período {periodo ? fmtPeriodo(periodo) : 'actual'}.
             </Text>
           </View>
         }

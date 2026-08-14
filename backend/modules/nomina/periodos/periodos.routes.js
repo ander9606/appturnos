@@ -12,7 +12,12 @@ const ctrl = require('./periodos.controller');
 const router = express.Router();
 
 // Permisos según la matriz de 06-AUTH.md.
-const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
+// VER_TOTALES: roles con visibilidad real de nómina (montos a pagar).
+// VER: además de esos, jefe_turnos/trabajador_turnos leen fecha_inicio/fecha_fin/tipo/estado
+// de periodos_nomina para ubicar su propio ciclo de pago de turnos — NUNCA montos
+// (el controller ignora `conTotales` si el rol no está en VER_TOTALES).
+const VER_TOTALES = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
+const VER = [...VER_TOTALES, ROLES.JEFE_TURNOS, ROLES.TRABAJADOR_TURNOS];
 const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA];
 
 const TIPOS = ['semanal', 'quincenal', 'mensual'];
@@ -28,6 +33,7 @@ router.get(
     query('estado').optional().isIn(ESTADOS_PERIODO).withMessage('estado inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
+    query('conTotales').optional().isBoolean().withMessage('conTotales inválido'),
   ],
   validar,
   ctrl.listar

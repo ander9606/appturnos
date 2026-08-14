@@ -66,4 +66,27 @@ router.delete(
   ctrl.eliminar
 );
 
+// GET /api/cargos/:id/funciones — funciones del cargo para mi empresa (cualquier rol autenticado).
+router.get(
+  '/:id/funciones',
+  verificarToken,
+  [param('id').isInt({ min: 1 }).toInt()],
+  validar,
+  ctrl.listarFunciones
+);
+
+// PUT /api/cargos/:id/funciones — diligenciar el listado de funciones (solo jefe_turnos/admin).
+router.put(
+  '/:id/funciones',
+  verificarToken,
+  verificarRol(PUEDE_GESTIONAR),
+  [
+    param('id').isInt({ min: 1 }).toInt(),
+    body('funciones').isArray({ max: 50 }).withMessage('funciones debe ser un arreglo'),
+    body('funciones.*').isString().trim().isLength({ min: 1, max: 255 }),
+  ],
+  validar,
+  ctrl.actualizarFunciones
+);
+
 module.exports = router;

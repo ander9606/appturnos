@@ -21,6 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import {
   usePerfilLaboral,
@@ -36,6 +37,8 @@ import type { Trabajador, TipoDocumento, SexoTrabajador, TipoCuenta, Experiencia
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
+import { isValidISODate } from '@/lib/dateValidation';
+import { bogotaToday, toISODate } from '@/lib/formatters';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -75,6 +78,82 @@ function MiniField({
         autoCorrect={false}
         autoCapitalize="none"
       />
+    </View>
+  );
+}
+
+// ── Campo de fecha con picker nativo (evita que el usuario tenga que escribir
+//    "AAAA-MM-DD" a mano) — variante compacta reutiliza el look de MiniField. ──
+
+function DateField({
+  label, value, onChange, placeholder, maximumDate, minimumDate, last = false, compact = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (iso: string) => void;
+  placeholder?: string;
+  maximumDate?: Date;
+  minimumDate?: Date;
+  last?: boolean;
+  compact?: boolean;
+}) {
+  const [show, setShow] = useState(false);
+
+  function handleChange(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShow(false);
+    if (d) onChange(toISODate(d));
+  }
+
+  const trigger = (
+    <View className="flex-row items-center gap-1.5">
+      <TouchableOpacity onPress={() => setShow(true)} className="flex-1 flex-row items-center gap-1.5 py-0.5">
+        <Ionicons name="calendar-outline" size={14} color="#94A3B8" />
+        <Text className={`text-sm ${value ? 'text-foreground' : 'text-muted-foreground'}`}>
+          {value ? fmtFecha(value) : (placeholder ?? 'Seleccionar fecha')}
+        </Text>
+      </TouchableOpacity>
+      {value ? (
+        <TouchableOpacity onPress={() => onChange('')} hitSlop={8}>
+          <Ionicons name="close-circle" size={16} color="#94A3B8" />
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+
+  const picker = (
+    <>
+      {show && (
+        <DateTimePicker
+          value={value ? new Date(`${value}T00:00:00`) : new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          maximumDate={maximumDate}
+          minimumDate={minimumDate}
+          onChange={handleChange}
+        />
+      )}
+      {show && Platform.OS === 'ios' && (
+        <TouchableOpacity onPress={() => setShow(false)} className="bg-primary/10 rounded-xl py-1.5 items-center mt-2">
+          <Text className="text-xs font-semibold text-primary">Listo</Text>
+        </TouchableOpacity>
+      )}
+    </>
+  );
+
+  if (compact) {
+    return (
+      <View>
+        <Text className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">{label}</Text>
+        <View className="border border-border rounded-xl px-3 py-2">{trigger}</View>
+        {picker}
+      </View>
+    );
+  }
+  return (
+    <View className={`px-5 py-3 bg-card ${!last ? 'border-b border-border' : ''}`}>
+      <Text className="text-xs text-muted-foreground mb-1">{label}</Text>
+      {trigger}
+      {picker}
     </View>
   );
 }
@@ -229,6 +308,17 @@ export default function MiPerfilLaboralScreen() {
     (val: FormState[K]) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const handleSave = async () => {
+    const fechas: [string, string][] = [
+      [form.fecha_nacimiento, 'Fecha de nacimiento'],
+      [form.ant_judiciales_fecha, 'Fecha de antecedentes judiciales'],
+      [form.ant_disciplinarios_fecha, 'Fecha de antecedentes disciplinarios'],
+    ];
+    for (const [valor, label] of fechas) {
+      if (valor && (!isValidISODate(valor) || valor > bogotaToday())) {
+        Alert.alert('Fecha inválida', `${label} debe tener formato AAAA-MM-DD y no puede ser futura.`);
+        return;
+      }
+    }
     try {
       await update.mutateAsync({
         tipo_documento:             form.tipo_documento || undefined,
@@ -265,6 +355,14 @@ export default function MiPerfilLaboralScreen() {
   const handleAddExperiencia = async () => {
     if (!newExp.empresa_nombre || !newExp.cargo || !newExp.fecha_inicio) {
       Alert.alert('Campos requeridos', 'Empresa, cargo y fecha de inicio son obligatorios');
+      return;
+    }
+    if (!isValidISODate(newExp.fecha_inicio)) {
+      Alert.alert('Fecha inválida', 'La fecha de inicio debe tener formato AAAA-MM-DD.');
+      return;
+    }
+    if (newExp.fecha_fin && (!isValidISODate(newExp.fecha_fin) || newExp.fecha_fin < newExp.fecha_inicio)) {
+      Alert.alert('Fecha inválida', 'La fecha de fin debe ser AAAA-MM-DD y no puede ser antes que la de inicio.');
       return;
     }
     try {
@@ -381,11 +479,11 @@ export default function MiPerfilLaboralScreen() {
           <View className="mx-5 rounded-2xl border border-border overflow-hidden">
             {editing ? (
               <>
-                <FieldInput
-                  label="Fecha de nacimiento (AAAA-MM-DD)"
+                <DateField
+                  label="Fecha de nacimiento"
                   value={form.fecha_nacimiento}
-                  onChangeText={set('fecha_nacimiento')}
-                  placeholder="1990-01-15"
+                  onChange={set('fecha_nacimiento')}
+                  maximumDate={new Date()}
                 />
                 <PillRow
                   label="Sexo"
@@ -500,17 +598,17 @@ export default function MiPerfilLaboralScreen() {
           <View className="mx-5 rounded-2xl border border-border overflow-hidden">
             {editing ? (
               <>
-                <FieldInput
-                  label="Antecedentes judiciales (AAAA-MM-DD)"
+                <DateField
+                  label="Antecedentes judiciales"
                   value={form.ant_judiciales_fecha}
-                  onChangeText={set('ant_judiciales_fecha')}
-                  placeholder="2024-01-15"
+                  onChange={set('ant_judiciales_fecha')}
+                  maximumDate={new Date()}
                 />
-                <FieldInput
-                  label="Antecedentes disciplinarios (AAAA-MM-DD)"
+                <DateField
+                  label="Antecedentes disciplinarios"
                   value={form.ant_disciplinarios_fecha}
-                  onChangeText={set('ant_disciplinarios_fecha')}
-                  placeholder="2024-01-15"
+                  onChange={set('ant_disciplinarios_fecha')}
+                  maximumDate={new Date()}
                   last
                 />
               </>
@@ -551,8 +649,21 @@ export default function MiPerfilLaboralScreen() {
               <View className="bg-card rounded-2xl border border-primary-200 p-4 gap-3">
                 <MiniField label="Empresa" value={newExp.empresa_nombre} onChangeText={(v) => setNewExp((p) => ({ ...p, empresa_nombre: v }))} />
                 <MiniField label="Cargo" value={newExp.cargo} onChangeText={(v) => setNewExp((p) => ({ ...p, cargo: v }))} />
-                <MiniField label="Fecha inicio (AAAA-MM-DD)" value={newExp.fecha_inicio} onChangeText={(v) => setNewExp((p) => ({ ...p, fecha_inicio: v }))} placeholder="2022-01-15" />
-                <MiniField label="Fecha fin (dejar vacío si actual)" value={newExp.fecha_fin} onChangeText={(v) => setNewExp((p) => ({ ...p, fecha_fin: v }))} placeholder="2024-06-30" />
+                <DateField
+                  compact
+                  label="Fecha inicio"
+                  value={newExp.fecha_inicio}
+                  onChange={(v) => setNewExp((p) => ({ ...p, fecha_inicio: v }))}
+                  maximumDate={new Date()}
+                />
+                <DateField
+                  compact
+                  label="Fecha fin (dejar vacío si actual)"
+                  value={newExp.fecha_fin}
+                  onChange={(v) => setNewExp((p) => ({ ...p, fecha_fin: v }))}
+                  minimumDate={newExp.fecha_inicio ? new Date(`${newExp.fecha_inicio}T00:00:00`) : undefined}
+                  maximumDate={new Date()}
+                />
                 <View className="flex-row gap-2">
                   <TouchableOpacity
                     onPress={() => { setShowAddExp(false); setNewExp(EMPTY_EXP); }}

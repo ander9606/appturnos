@@ -9,6 +9,7 @@ const KEYS = {
   oferta: (id: number) => ['turnos', 'oferta', id] as const,
   puestos: (ofertaId: number) => ['turnos', 'puestos', ofertaId] as const,
   asignaciones: (params?: object) => ['turnos', 'asignaciones', params] as const,
+  liquidacion: (params: { fecha_inicio: string; fecha_fin: string }) => ['turnos', 'liquidacion', params] as const,
 };
 
 function getErrMsg(err: unknown) {
@@ -30,6 +31,14 @@ export function useOferta(id: number | null) {
     queryKey: KEYS.oferta(id!),
     queryFn: () => turnosApi.obtenerOferta(id!),
     enabled: id !== null,
+    staleTime: 30_000,
+  });
+}
+
+export function useLiquidacionTurnos(params: { fecha_inicio: string; fecha_fin: string }) {
+  return useQuery({
+    queryKey: KEYS.liquidacion(params),
+    queryFn: () => turnosApi.liquidacion(params),
     staleTime: 30_000,
   });
 }

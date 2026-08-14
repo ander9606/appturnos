@@ -1,539 +1,1159 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
-  Calendar, MapPin, Wallet, Bell, Building2, Plug,
-  Check, ArrowRight, Users, Briefcase, HardHat, Tent,
-  UtensilsCrossed, Truck, Settings2, CheckCircle2, Sparkles,
-  Apple, PlayCircle, type LucideIcon,
+  Calendar, MapPin, Wallet, Users, Bell, ShieldCheck,
+  Bell as BellIcon, Search, Star, Lock, Mail, ChevronRight, Home,
+  CalendarDays, Wallet as WalletIcon, Apple, PlayCircle,
+  ChevronLeft, CheckCircle2, Plus, Minus, Briefcase, Crosshair, TrendingUp,
 } from 'lucide-react';
+import zaturnoLogo from '@/assets/zaturno-logo.png';
 
-// ponytail: sin links de tienda todavía — reemplaza estas dos constantes cuando la app esté publicada
-const APPSTORE_URL = '#';
-const PLAYSTORE_URL = '#';
-
-const BENEFICIOS = [
-  { icon: Calendar, tono: 'primary' as const, titulo: 'Turnos y ofertas', desc: 'Cubre turnos sin cadenas de WhatsApp: publicas la oferta y tu equipo se postula solo.' },
-  { icon: MapPin, tono: 'dark' as const, titulo: 'Marcaje con geocerca', desc: 'Evita pagar horas que nunca se trabajaron — el ingreso y el egreso se validan por ubicación real.' },
-  { icon: Wallet, tono: 'primary' as const, titulo: 'Nómina automática', desc: 'Liquida la nómina en minutos, no en una tarde con calculadora y recargos a mano.' },
-  { icon: Bell, tono: 'outline' as const, titulo: 'Notificaciones push', desc: 'Nadie se pierde un turno: tu equipo se entera al instante de ofertas y cambios.' },
-  { icon: Building2, tono: 'dark' as const, titulo: 'Multi-sede y multi-rol', desc: 'Administradores, jefes de turno, jefes de nómina y trabajadores en un solo lugar.' },
-  { icon: Plug, tono: 'outline' as const, titulo: 'Integraciones', desc: 'Si ya usas logiq360, el personal por turnos se cubre solo, sin doble digitación.' },
-];
-
-const PASOS_TURNOS = [
-  { n: '01', t: 'Crea la oferta', d: 'Título, fecha, hora de inicio/fin y el lugar con su punto de marcaje.' },
-  { n: '02', t: 'Define los puestos', d: 'Un puesto por cargo, con las plazas que necesitas cubrir y la tarifa por día de cada uno.' },
-  { n: '03', t: 'Publícala', d: 'La oferta llega al equipo por notificación push y se abre a postulaciones.' },
-  { n: '04', t: 'Confirma o rechaza', d: 'Revisa cada postulación y arma el equipo del turno puesto por puesto.' },
-  { n: '05', t: 'Marcaje y calificación', d: 'El trabajador marca ingreso/egreso validado por geocerca; al terminar, lo calificas.' },
-];
-
-const PASOS_NOMINA = [
-  { n: '01', t: 'Abre el período', d: 'Semanal, quincenal o mensual, según cómo pague tu empresa.' },
-  { n: '02', t: 'Registra las horas', d: 'Cada marcaje se clasifica: ordinario, descanso, compensatorio, incapacidad, vacaciones o licencia.' },
-  { n: '03', t: 'Recargos automáticos', d: 'Nocturno, dominical y festivo — incluida la Ley Emiliani — se calculan solos sobre las horas marcadas.' },
-  { n: '04', t: 'Cierra el período', d: 'El valor hora queda congelado (snapshot): un cambio de salario después no altera períodos ya cerrados.' },
-  { n: '05', t: 'Liquida y exporta', d: 'Genera el detalle final por trabajador y descárgalo en Excel.' },
-];
-
-const AUDIENCIAS = [
-  { icon: HardHat, label: 'Constructoras' },
-  { icon: Tent, label: 'Empresas de eventos' },
-  { icon: UtensilsCrossed, label: 'Catering' },
-  { icon: Settings2, label: 'Operaciones' },
-  { icon: Truck, label: 'Logística' },
-];
-
-const TARIFA_INCLUYE = [
-  'Turnos y marcaje con geocerca',
-  'Nómina con recargos de ley (nocturno, dominical, festivo)',
-  'Multi-sede y multi-rol',
-  'Notificaciones push',
-  'Integración con logiq360',
-];
-
-const FAQS = [
-  { q: '¿Necesito instalar algo?', a: 'No. Zaturno funciona desde el navegador para administradores y desde una app móvil (Expo) para los trabajadores.' },
-  { q: '¿Cómo se calculan los recargos?', a: 'Aplicamos automáticamente los recargos nocturno, dominical y festivo colombianos, incluida la Ley Emiliani, sobre las horas marcadas.' },
-  { q: '¿Qué es la integración con logiq360?', a: 'Si tu empresa opera con logiq360, las ofertas de personal por montaje/desmontaje se publican directamente en Zaturno y las horas y costos vuelven solos a cada evento.' },
-];
-
-/* ── Scroll reveal (IntersectionObserver, sin dependencias) ── */
-function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+/**
+ * Revela su contenido con un fade + slide-up al entrar en el viewport.
+ * Si el usuario prefiere movimiento reducido, se muestra directo sin animar.
+ */
+function Reveal({
+  children,
+  className = '',
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (!('IntersectionObserver' in window)) { setVisible(true); return; }
-    const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) { setVisible(true); io.disconnect(); }
-    }, { threshold: 0.15 });
-    io.observe(el);
-    return () => io.disconnect();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${className}`}
       style={{ transitionDelay: `${delay}ms` }}
+      className={`transition-all duration-700 ease-out ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+      } ${className}`}
     >
       {children}
     </div>
   );
 }
 
-function WaveDivider({ fill, flip = false }: { fill: string; flip?: boolean }) {
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduced(query.matches);
+    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+    query.addEventListener('change', handler);
+    return () => query.removeEventListener('change', handler);
+  }, []);
+
+  return reduced;
+}
+
+/** Detecta dispositivos sin puntero preciso (táctiles) — ahí un carrusel que
+ *  gira solo y solo se pausa con :hover es inutilizable; conviene un scroll
+ *  nativo deslizable en su lugar. */
+function useCoarsePointer() {
+  const [coarse, setCoarse] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(hover: none), (pointer: coarse)');
+    setCoarse(query.matches);
+    const handler = (e: MediaQueryListEvent) => setCoarse(e.matches);
+    query.addEventListener('change', handler);
+    return () => query.removeEventListener('change', handler);
+  }, []);
+
+  return coarse;
+}
+
+/**
+ * Landing pública de zaturno.app — vive fuera del área autenticada.
+ * Reusa los tokens de marca reales de index.css (mismo naranja que la app
+ * móvil y el panel) en vez de una paleta de marca provisional.
+ */
+export function LandingPage() {
   return (
-    <div className="w-full overflow-hidden leading-none" style={{ height: 32, transform: flip ? 'scaleY(-1)' : undefined }} aria-hidden="true">
-      <svg viewBox="0 0 1440 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full block">
-        <path d="M0 32L1440 32L1440 16C1200 0 960 32 720 32C480 32 240 0 0 16L0 32Z" fill={fill} />
-      </svg>
+    <div className="min-h-screen bg-background">
+      <Nav />
+      <Hero />
+      <Stats />
+      <Mockups />
+      <Pain />
+      <HowItWorks />
+      <Features />
+      <Sectors />
+      <FinalCta />
+      <Footer />
     </div>
   );
 }
 
-function DotPattern({ className = '' }: { className?: string }) {
-  return (
-    <div
-      className={`absolute inset-0 pointer-events-none ${className}`}
-      style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.35) 1px, transparent 1px)', backgroundSize: '22px 22px' }}
-      aria-hidden="true"
-    />
-  );
-}
+// ── Nav ──────────────────────────────────────────────────────────────────
 
-function ZaturnoLogo() {
+function Nav() {
   return (
-    <span className="inline-flex items-center gap-2 font-bold tracking-tight text-lg text-foreground">
-      <span
-        className="w-7 h-7 rounded-lg flex items-center justify-center"
-        style={{ background: 'linear-gradient(135deg, #FF7150, #E83E1F)' }}
-      >
-        <Calendar size={16} className="text-white" />
-      </span>
-      Zaturno
-    </span>
-  );
-}
-
-/* ── Badge de tienda (App Store / Google Play) ── */
-function StoreBadge({ icon: Icon, tienda, href }: { icon: LucideIcon; tienda: string; href: string }) {
-  const disponible = href !== '#';
-  return (
-    <a
-      href={href}
-      target={disponible ? '_blank' : undefined}
-      rel={disponible ? 'noreferrer' : undefined}
-      onClick={e => { if (!disponible) e.preventDefault(); }}
-      aria-disabled={!disponible}
-      className={`inline-flex items-center gap-2.5 rounded-xl px-4 py-2.5 transition-colors ${
-        disponible ? 'bg-slate-900 hover:bg-slate-800 text-white' : 'bg-slate-900/40 text-white/70 cursor-default'
-      }`}
-    >
-      <Icon size={22} className="flex-shrink-0" />
-      <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide opacity-80">
-          {disponible ? 'Disponible en' : 'Próximamente en'}
-        </span>
-        <span className="block text-sm font-semibold -mt-0.5">{tienda}</span>
-      </span>
-    </a>
-  );
-}
-
-/* ── Mockup del hero: teléfono con la app + tarjetas flotantes ── */
-function HeroMockup() {
-  return (
-    <div className="relative mx-auto w-full max-w-[300px]">
-      {/* Teléfono */}
-      <div className="relative rounded-[2.5rem] bg-slate-900 p-2.5 shadow-2xl shadow-black/40 rotate-2">
-        <div className="rounded-[2rem] bg-white overflow-hidden">
-          <div className="px-4 pt-4 pb-3 flex items-center justify-between">
-            <span className="font-bold text-sm text-foreground">Zaturno</span>
-            <div className="w-6 h-6 rounded-full bg-primary-100" />
-          </div>
-          <div className="px-4 pb-4 space-y-2.5">
-            <div className="rounded-2xl border border-border p-3">
-              <p className="text-[11px] text-muted-foreground">Montaje Feria Expo</p>
-              <p className="text-xs font-semibold text-foreground mt-0.5">Sáb 6:00 a.m. · Corferias</p>
-              <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
-                <div className="h-full w-3/4 rounded-full bg-primary" />
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-1">3/4 plazas cubiertas</p>
-            </div>
-            <div className="rounded-2xl bg-slate-900 p-3">
-              <p className="text-[11px] text-white/60">Este período</p>
-              <p className="text-sm font-bold text-white mt-0.5">$1.480.320</p>
-              <p className="text-[10px] text-white/50 mt-0.5">Recargos incluidos</p>
-            </div>
-          </div>
+    <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <img src={zaturnoLogo} alt="" className="h-8 w-8 rounded-xl" />
+          <span className="text-base font-bold tracking-tight text-foreground">Zaturno</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/login"
+            className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground sm:block"
+          >
+            Iniciar sesión
+          </Link>
+          <Link
+            to="/registro"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
+          >
+            Registrar mi empresa
+          </Link>
         </div>
       </div>
-
-      {/* Tarjetas flotantes */}
-      <div className="hidden sm:flex absolute -left-10 top-6 items-center gap-2 bg-white rounded-xl shadow-lg shadow-black/10 px-3 py-2 -rotate-6">
-        <CheckCircle2 size={16} className="text-success flex-shrink-0" />
-        <span className="text-xs font-medium text-foreground whitespace-nowrap">Turno confirmado</span>
-      </div>
-      <div className="hidden sm:flex absolute -right-16 top-[44%] items-center gap-2 bg-white rounded-xl shadow-lg shadow-black/10 px-3 py-2 rotate-3">
-        <MapPin size={16} className="text-primary flex-shrink-0" />
-        <span className="text-xs font-medium text-foreground whitespace-nowrap">Geocerca validada</span>
-      </div>
-      <div className="hidden sm:flex absolute -left-6 bottom-4 items-center gap-2 bg-white rounded-xl shadow-lg shadow-black/10 px-3 py-2 -rotate-3">
-        <Wallet size={16} className="text-primary flex-shrink-0" />
-        <span className="text-xs font-medium text-foreground whitespace-nowrap">Nómina calculada</span>
-      </div>
-    </div>
+    </header>
   );
 }
 
-/* ── Ilustraciones propias (SVG, tono de marca) ── */
-function IlustracionTurno() {
+// ── Hero ─────────────────────────────────────────────────────────────────
+
+function Hero() {
   return (
-    <svg viewBox="0 0 120 120" className="w-20 h-20" aria-hidden="true">
-      <circle cx="60" cy="60" r="56" fill="#FFF1EE" />
-      <rect x="34" y="40" width="52" height="40" rx="8" fill="#fff" stroke="#FFBFB0" strokeWidth="2" />
-      <path d="M34 54h52" stroke="#FFBFB0" strokeWidth="2" />
-      <circle cx="76" cy="72" r="12" fill="#FF5A3C" />
-      <path d="M71 72l3.5 3.5L82 68" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
-  );
-}
-
-function IlustracionNomina() {
-  return (
-    <svg viewBox="0 0 120 120" className="w-20 h-20" aria-hidden="true">
-      <circle cx="60" cy="60" r="56" fill="#FFF1EE" />
-      <rect x="38" y="32" width="44" height="56" rx="6" fill="#fff" stroke="#FFBFB0" strokeWidth="2" />
-      <path d="M46 46h28M46 56h28M46 66h16" stroke="#FFBFB0" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="80" cy="78" r="16" fill="#E83E1F" />
-      <path d="M80 70v16M74 78h12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-const TONOS = {
-  primary: { box: 'bg-primary-50', icon: 'text-primary' },
-  dark: { box: 'bg-slate-900', icon: 'text-white' },
-  outline: { box: 'bg-white border border-border', icon: 'text-primary' },
-};
-
-export function LandingPage() {
-  const navigate = useNavigate();
-
-  return (
-    <div className="min-h-screen bg-white text-foreground">
-      {/* Nav */}
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 sm:px-5 h-16 flex items-center justify-between gap-2">
-          <ZaturnoLogo />
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <Link to="/login" className="hidden sm:inline text-sm font-medium text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap">
-              Iniciar sesión
-            </Link>
+    <section
+      className="rounded-b-[40px]"
+      style={{ background: 'linear-gradient(160deg, #FF7150 0%, #FF5A3C 50%, #E83E1F 100%)' }}
+    >
+      <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-16 lg:grid-cols-2 lg:pb-24 lg:pt-20">
+        <Reveal>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/70">
+            Gestión de turnos y nómina
+          </p>
+          <h1 className="mt-4 text-4xl font-extrabold leading-[1.05] tracking-tight text-white text-balance sm:text-5xl">
+            El control total de tu equipo en una sola app
+          </h1>
+          <p className="mt-5 max-w-md text-base leading-relaxed text-white/80">
+            Turnos, asistencia, recargos de ley y liquidación de nómina — automatizados.
+            Con turnos rotativos o con horario fijo, zaturno calcula la nómina de cualquier
+            empresa colombiana.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               to="/registro"
-              className="text-xs sm:text-sm font-semibold text-white px-3 py-2 sm:px-4 rounded-xl bg-primary hover:bg-primary-600 transition-colors whitespace-nowrap"
+              className="rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-primary-600 shadow-lg shadow-black/10 transition-transform hover:-translate-y-0.5"
             >
-              Registrar empresa
+              Registrar mi empresa
             </Link>
+            <a
+              href="#app"
+              className="rounded-xl border border-white/30 px-6 py-3.5 text-sm font-semibold text-white/90 transition-colors hover:border-white/60 hover:text-white"
+            >
+              Ver la app
+            </a>
           </div>
-        </div>
-      </header>
+        </Reveal>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden text-white" style={{ background: 'linear-gradient(160deg, #FF7150 0%, #FF5A3C 45%, #E83E1F 100%)' }}>
-        <DotPattern className="opacity-40" />
-        <div className="relative max-w-6xl mx-auto px-5 pt-16 pb-20 grid lg:grid-cols-2 gap-12 items-center">
-          <div className="text-center lg:text-left">
-            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-white/80 mb-4">
-              Turnos y nómina para tu empresa
-            </span>
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-balance">
-              Cubre turnos en minutos.<br />La nómina se liquida sola.
-            </h1>
-            <p className="mt-5 text-lg text-white/85 text-balance max-w-md mx-auto lg:mx-0">
-              Zaturno conecta a tu equipo con los turnos disponibles, valida el marcaje por geocerca
-              y calcula la nómina con los recargos de ley — todo desde el celular.
-            </p>
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
-              <button
-                onClick={() => navigate('/registro')}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-white text-primary-600 font-semibold hover:bg-white/90 transition-colors inline-flex items-center justify-center gap-2"
-              >
-                Registra tu empresa <ArrowRight size={16} />
-              </button>
-              <a
-                href="#turnos"
-                className="w-full sm:w-auto px-6 py-3 rounded-xl border border-white/40 text-white font-semibold hover:bg-white/10 transition-colors"
-              >
-                Ver cómo funciona
-              </a>
-            </div>
-            <div className="mt-6">
-              <p className="text-xs text-white/70 mb-2.5">Para trabajadores, la app está disponible en:</p>
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
-                <StoreBadge icon={Apple} tienda="App Store" href={APPSTORE_URL} />
-                <StoreBadge icon={PlayCircle} tienda="Google Play" href={PLAYSTORE_URL} />
-              </div>
-            </div>
+        <Reveal delay={150} className="flex justify-center lg:justify-end">
+          <div className="animate-[zt-float_5s_ease-in-out_infinite] motion-reduce:animate-none">
+            <Phone>
+              <DashboardScreen />
+            </Phone>
           </div>
-          <HeroMockup />
-        </div>
-        <WaveDivider fill="#ffffff" />
-      </section>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
 
-      {/* Beneficios */}
-      <section className="bg-white">
-        <div className="max-w-6xl mx-auto px-5 py-20">
-          <Reveal className="max-w-xl mx-auto text-center mb-12">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 mb-3">
-              <Sparkles size={14} /> Por qué Zaturno
-            </span>
-            <h2 className="text-3xl font-bold tracking-tight text-balance">Todo lo que necesita tu operación</h2>
-            <p className="mt-3 text-muted-foreground">Del turno publicado a la nómina liquidada, sin salir de Zaturno.</p>
+// ── Stats ────────────────────────────────────────────────────────────────
+
+function Stats() {
+  const items = [
+    { num: '100%', label: 'Recargos de ley colombiana' },
+    { num: '0', label: 'Errores en nómina manual' },
+    { num: '∞', label: 'Empresas en un solo sistema' },
+  ];
+  return (
+    <section className="bg-primary-900">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 divide-y divide-white/15 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {items.map((s, i) => (
+          <Reveal key={s.label} delay={i * 100} className="px-8 py-10 text-center">
+            <div className="text-4xl font-extrabold tabular-nums tracking-tight text-white sm:text-5xl">
+              {s.num}
+            </div>
+            <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-white/60">
+              {s.label}
+            </div>
           </Reveal>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {BENEFICIOS.map(({ icon: Icon, titulo, desc, tono }, i) => (
-              <Reveal key={titulo} delay={i * 70} className="p-6 rounded-3xl border border-border bg-card">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${TONOS[tono].box}`}>
-                  <Icon size={20} className={TONOS[tono].icon} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── Mockups gallery ──────────────────────────────────────────────────────
+
+function Mockups() {
+  return (
+    <section id="app" className="relative overflow-hidden px-6 py-20 sm:py-24">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-24 h-[420px] w-[780px] -translate-x-1/2 rounded-full opacity-[0.07] blur-3xl"
+        style={{ background: 'radial-gradient(ellipse, #FF5A3C 0%, transparent 70%)' }}
+      />
+      <Reveal className="relative mx-auto max-w-3xl text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">La app</p>
+        <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
+          Pantallas reales, no bocetos
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+          Esto es exactamente lo que tu equipo ve al abrir zaturno — desde que crea un turno
+          hasta que revisa cuánto lleva acumulado en el período.
+        </p>
+      </Reveal>
+
+      <MockupsCarousel />
+
+      <Reveal delay={200}>
+        <StoreBadges />
+      </Reveal>
+    </section>
+  );
+}
+
+const MOCKUP_SCREENS = [
+  { caption: 'Inicio de sesión', screen: <LoginScreen /> },
+  { caption: 'Mis turnos', screen: <TurnosScreen /> },
+  { caption: 'Crear turno', screen: <CrearTurnoScreen /> },
+  { caption: 'Marcar ingreso', screen: <MarcarIngresoScreen /> },
+  { caption: 'Detalle y valor del turno', screen: <OfertaDetalleScreen /> },
+  { caption: 'Nómina', screen: <NominaScreen /> },
+  { caption: 'Valor acumulado', screen: <AcumuladoScreen /> },
+  { caption: 'Equipo', screen: <EquipoScreen /> },
+];
+
+/**
+ * Carrusel infinito: la fila se duplica y se traslada -50% en loop, así que el
+ * corte entre la 1ª y 2ª copia es invisible. Se pausa por completo con :hover
+ * (así el usuario puede mirar y agrandar la pantalla que le interese) y se
+ * desactiva del todo si el usuario prefiere menos movimiento.
+ */
+function MockupsCarousel() {
+  const reducedMotion = usePrefersReducedMotion();
+  const coarsePointer = useCoarsePointer();
+
+  if (reducedMotion) {
+    return (
+      <div className="mx-auto mt-14 flex max-w-7xl flex-wrap justify-center gap-7 px-1">
+        {MOCKUP_SCREENS.map((m) => (
+          <MockupItem key={m.caption} caption={m.caption}>
+            <Phone size="sm">{m.screen}</Phone>
+          </MockupItem>
+        ))}
+      </div>
+    );
+  }
+
+  // Táctil: nada de auto-rotación imparable — se desliza con el dedo, a su
+  // propio ritmo, con snap para que cada pantalla quede centrada al soltar.
+  if (coarsePointer) {
+    return (
+      <div className="mt-14 flex snap-x snap-mandatory gap-7 overflow-x-auto px-6 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {MOCKUP_SCREENS.map((m) => (
+          <div key={m.caption} className="snap-center">
+            <MockupItem caption={m.caption}>
+              <Phone size="sm">{m.screen}</Phone>
+            </MockupItem>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="group/carousel relative mt-14 overflow-hidden py-2"
+      style={{ maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)' }}
+    >
+      <div className="flex w-max animate-[zt-marquee_44s_linear_infinite] gap-7 group-hover/carousel:[animation-play-state:paused]">
+        {[...MOCKUP_SCREENS, ...MOCKUP_SCREENS].map((m, i) => (
+          <MockupItem key={`${m.caption}-${i}`} caption={m.caption}>
+            <Phone size="sm">{m.screen}</Phone>
+          </MockupItem>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StoreBadges() {
+  return (
+    <div className="mx-auto mt-16 flex max-w-6xl flex-col items-center gap-4">
+      <p className="text-sm font-semibold text-muted-foreground">
+        Muy pronto disponible para descargar
+      </p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <StoreBadge icon={Apple} eyebrow="Próximamente en" store="App Store" />
+        <StoreBadge icon={PlayCircle} eyebrow="Próximamente en" store="Google Play" />
+      </div>
+    </div>
+  );
+}
+
+function StoreBadge({
+  icon: Icon,
+  eyebrow,
+  store,
+}: {
+  icon: typeof Apple;
+  eyebrow: string;
+  store: string;
+}) {
+  return (
+    <div
+      className="flex cursor-default items-center gap-2.5 rounded-xl border border-border bg-foreground px-4 py-2.5 opacity-90"
+      aria-label={`${store}: ${eyebrow.toLowerCase()}`}
+    >
+      <Icon size={22} className="text-white" />
+      <div className="text-left leading-tight">
+        <div className="text-[9px] font-medium uppercase tracking-wide text-white/60">{eyebrow}</div>
+        <div className="text-sm font-bold text-white">{store}</div>
+      </div>
+    </div>
+  );
+}
+
+function MockupItem({ caption, children }: { caption: string; children: ReactNode }) {
+  return (
+    <div className="group relative flex flex-shrink-0 flex-col items-center gap-3.5 hover:z-10">
+      <div className="transition-transform duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-110">
+        {children}
+      </div>
+      <span className="text-sm font-semibold text-muted-foreground transition-colors group-hover:text-primary">
+        {caption}
+      </span>
+    </div>
+  );
+}
+
+// ── Pain ─────────────────────────────────────────────────────────────────
+
+function Pain() {
+  const items = [
+    {
+      q: '"¿Cuántos trabajadores llegaron hoy y a qué hora?"',
+      a: 'Sin zaturno: llamas uno por uno o esperas que te reporten por WhatsApp. Con zaturno: lo ves en tiempo real, con la ubicación exacta del registro.',
+    },
+    {
+      q: '"¿Cuánto le toca de nocturno a cada trabajador este mes?"',
+      a: 'Sin zaturno: calculas manualmente con tablas de Excel, con margen de error. Con zaturno: los recargos nocturnos, dominicales y festivos se calculan solos, al centavo — tengas turnos rotativos o nómina de horario fijo.',
+    },
+    {
+      q: '"¿Cómo le notifico a mi equipo el cambio de turno?"',
+      a: 'Sin zaturno: grupos de WhatsApp, llamadas y mensajes que se pierden. Con zaturno: notificaciones push instantáneas a cada empleado, con confirmación de lectura.',
+    },
+  ];
+  return (
+    <section className="bg-card px-6 py-20 sm:py-24">
+      <Reveal className="mx-auto max-w-2xl text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">El problema</p>
+        <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          ¿Te suena familiar?
+        </h2>
+      </Reveal>
+      <div className="mx-auto mt-14 grid max-w-6xl grid-cols-1 gap-px overflow-hidden rounded-2xl bg-border md:grid-cols-3">
+        {items.map((p, i) => (
+          <Reveal key={p.q} delay={i * 100}>
+            <div className="h-full border-t-[3px] border-primary bg-background px-7 py-9 transition-transform duration-300 hover:-translate-y-1">
+              <p className="text-base font-bold leading-snug text-foreground">{p.q}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.a}</p>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ── How it works ─────────────────────────────────────────────────────────
+
+function HowItWorks() {
+  const steps = [
+    {
+      title: 'Configuras tus turnos y equipo',
+      body: 'Crea los períodos de nómina, asigna roles a cada trabajador y define los lugares de trabajo con geofencing. Una vez configurado, el sistema trabaja solo.',
+    },
+    {
+      title: 'Tus empleados fichan desde el celular',
+      body: 'El trabajador marca entrada y salida desde su app. Si no está en la ubicación asignada, el sistema lo detecta. Sin tarjetas, sin relojes biométricos.',
+    },
+    {
+      title: 'La nómina se calcula sola',
+      body: 'Al cerrar el período, zaturno suma las horas ordinarias, nocturnas, dominicales y festivas de cada empleado aplicando los recargos del Código Sustantivo del Trabajo — con turnos rotativos o con horario fijo.',
+    },
+    {
+      title: 'Liquidás con un toque',
+      body: 'Revisas el resumen, aprobás y quedás con el histórico de cada período guardado. Todo trazable, todo auditable.',
+    },
+  ];
+
+  const week = [
+    { name: 'Carlos M.', shifts: ['M', 'M', '', 'M', 'M', 'T'] },
+    { name: 'Luisa R.', shifts: ['N', 'N', 'N', '', '', 'N'] },
+    { name: 'Pedro V.', shifts: ['T', '', 'T', 'T', 'T', ''] },
+    { name: 'Ana G.', shifts: ['✓', '✓', 'M', 'M', '', 'M'] },
+  ];
+  const shiftStyle: Record<string, string> = {
+    M: 'bg-primary text-white',
+    N: 'bg-info text-white',
+    T: 'bg-[#7B4F9E] text-white',
+    '✓': 'bg-warning text-primary-900',
+    '': 'bg-muted',
+  };
+
+  return (
+    <section className="px-6 py-20 sm:py-24" id="como-funciona">
+      <div className="mx-auto max-w-6xl">
+        <Reveal>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Cómo funciona</p>
+          <h2 className="mt-3 max-w-lg text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
+            Del turno a la nómina, sin fricción
+          </h2>
+        </Reveal>
+
+        <div className="mt-14 grid gap-16 lg:grid-cols-2">
+          <div className="flex min-w-0 flex-col gap-9">
+            {steps.map((s, i) => (
+              <Reveal key={s.title} delay={i * 90} className="flex gap-5">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border-2 border-primary text-sm font-extrabold text-primary">
+                  {i + 1}
                 </div>
-                <h3 className="font-semibold text-foreground mb-1.5">{titulo}</h3>
-                <p className="text-sm text-muted-foreground">{desc}</p>
+                <div>
+                  <h4 className="text-base font-bold text-foreground">{s.title}</h4>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
+                </div>
               </Reveal>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* Cómo funcionan los turnos */}
-      <section id="turnos" className="bg-muted border-y border-border">
-        <div className="max-w-6xl mx-auto px-5 py-20 grid lg:grid-cols-2 gap-12 items-center">
-          <Reveal>
-            <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 mb-3">
-              <Calendar size={14} /> Turnos
-            </span>
-            <h2 className="text-3xl font-bold tracking-tight text-balance">De la oferta al turno cubierto</h2>
-            <p className="mt-3 text-muted-foreground mb-8">Así se cubre un turno de principio a fin, con o sin logiq360 de por medio.</p>
-            <div className="space-y-5">
-              {PASOS_TURNOS.map(p => (
-                <div key={p.n} className="flex gap-4">
-                  <span className="text-sm font-mono font-bold text-primary flex-shrink-0 w-6">{p.n}</span>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{p.t}</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{p.d}</p>
+          <Reveal delay={150} className="min-w-0">
+            <p className="mb-3.5 text-xs font-bold uppercase tracking-[0.14em] text-primary">
+              Vista de turnos — semana actual
+            </p>
+            <div className="overflow-x-auto rounded-2xl border border-border bg-card p-5">
+              <div className="grid min-w-[420px] grid-cols-[80px_repeat(6,1fr)] gap-1">
+                <div />
+                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d) => (
+                  <div key={d} className="py-1 text-center text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                    {d}
                   </div>
-                </div>
-              ))}
-            </div>
-          </Reveal>
-          <Reveal delay={150} className="flex flex-col items-center gap-6">
-            <IlustracionTurno />
-            <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-5 shadow-xl shadow-slate-900/5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Montaje Feria Expo Bogotá</p>
-                  <p className="text-sm font-semibold text-foreground">Sáb 14 jun · 6:00 a.m.</p>
-                </div>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-600">Publicada</span>
-              </div>
-              <div className="space-y-3">
-                {[{ cargo: 'Montajista', cubierto: 3, total: 4, tarifa: '$85.000/día' }, { cargo: 'Supervisor', cubierto: 1, total: 1, tarifa: '$120.000/día' }].map(p => (
-                  <div key={p.cargo} className="border border-border rounded-xl p-3">
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                      <span className="font-medium text-foreground">{p.cargo}</span>
-                      <span className="text-xs text-muted-foreground">{p.tarifa}</span>
+                ))}
+                {week.map((row) => (
+                  <div key={row.name} className="contents">
+                    <div className="flex items-center truncate pr-2 text-xs font-semibold text-foreground">
+                      {row.name}
                     </div>
-                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${(p.cubierto / p.total) * 100}%` }} />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{p.cubierto}/{p.total} plazas cubiertas</p>
+                    {row.shifts.map((s, i) => (
+                      <div
+                        key={i}
+                        className={`flex h-7 items-center justify-center rounded text-xs font-bold ${shiftStyle[s]}`}
+                      >
+                        {s}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
+              <div className="mt-3 flex flex-wrap gap-4">
+                <Legend color="bg-primary" label="Mañana" />
+                <Legend color="bg-info" label="Nocturno" />
+                <Legend color="bg-[#7B4F9E]" label="Tarde" />
+                <Legend color="bg-warning" label="Geoficó" />
+                <Legend color="bg-muted" label="Descanso" />
+              </div>
             </div>
           </Reveal>
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      {/* Cómo funciona la nómina */}
-      <section className="bg-white">
-        <div className="max-w-6xl mx-auto px-5 py-20 grid lg:grid-cols-2 gap-12 items-center">
-          <Reveal className="order-2 lg:order-1 flex flex-col items-center gap-6">
-            <IlustracionNomina />
-            <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-5 shadow-xl shadow-slate-900/5">
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-semibold text-foreground">Período · Junio Q1</p>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Liquidado</span>
-              </div>
-              <div className="space-y-2.5">
-                {[{ tipo: 'Ordinarias', horas: 160, color: 'bg-slate-400' }, { tipo: 'Recargo nocturno', horas: 18.5, color: 'bg-primary' }, { tipo: 'Recargo dominical', horas: 8, color: 'bg-primary-300' }].map(f => (
-                  <div key={f.tipo} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-28 flex-shrink-0">{f.tipo}</span>
-                    <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                      <div className={`h-full rounded-full ${f.color}`} style={{ width: `${Math.min(100, f.horas * 2)}%` }} />
-                    </div>
-                    <span className="text-xs font-medium text-foreground w-10 text-right flex-shrink-0">{f.horas}h</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total a pagar</span>
-                <span className="text-lg font-bold text-foreground">$1.480.320</span>
-              </div>
-            </div>
-          </Reveal>
-          <Reveal delay={150} className="order-1 lg:order-2">
-            <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 mb-3">
-              <Wallet size={14} /> Nómina
-            </span>
-            <h2 className="text-3xl font-bold tracking-tight text-balance">De las horas marcadas al pago listo</h2>
-            <p className="mt-3 text-muted-foreground mb-8">Cada hora que se marca en un turno alimenta la nómina del período, sin doble digitación.</p>
-            <div className="space-y-5">
-              {PASOS_NOMINA.map(p => (
-                <div key={p.n} className="flex gap-4">
-                  <span className="text-sm font-mono font-bold text-primary flex-shrink-0 w-6">{p.n}</span>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{p.t}</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{p.d}</p>
-                  </div>
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+      <span className={`h-2.5 w-2.5 rounded-sm ${color}`} />
+      {label}
+    </div>
+  );
+}
+
+// ── Features ─────────────────────────────────────────────────────────────
+
+function Features() {
+  const items = [
+    { icon: MapPin, title: 'Geofencing en check-in', body: 'El empleado solo puede marcar entrada si está físicamente en el lugar de trabajo. Validación en el servidor — no se puede falsificar desde el teléfono.' },
+    { icon: Wallet, title: 'Nómina con recargos automáticos', body: 'Horas nocturnas (21:00–06:00), dominicales y festivos colombianos calculados al centavo. Incluye los festivos de Ley Emiliani y los móviles de Semana Santa.' },
+    { icon: Users, title: 'Roles diferenciados', body: 'Admin, jefe de turnos, jefe de nómina, trabajador — cada uno ve solo lo que le corresponde. El trabajador no ve la nómina de sus compañeros.' },
+    { icon: Bell, title: 'Notificaciones push', body: 'Alertas en tiempo real para reingresos pendientes, cambios de turno y cierres de período. Sin depender de WhatsApp.' },
+    { icon: Calendar, title: 'Períodos flexibles', body: 'Semanal, quincenal o mensual — configura el esquema que tu empresa usa. Cambiar el período no afecta el histórico de nóminas anteriores.' },
+    { icon: ShieldCheck, title: 'Multi-empresa segura', body: 'Cada empresa opera en aislamiento total. Los datos de tus trabajadores nunca se mezclan con los de otro cliente. Arquitectura multi-tenant desde el diseño.' },
+  ];
+  return (
+    <section className="bg-muted/60 px-6 py-20 sm:py-24">
+      <div className="mx-auto max-w-6xl">
+        <Reveal>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Funcionalidades</p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+            Todo lo que necesitas, nada que no
+          </h2>
+        </Reveal>
+        <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl bg-border sm:grid-cols-2">
+          {items.map(({ icon: Icon, title, body }, i) => (
+            <Reveal key={title} delay={(i % 2) * 90}>
+              <div className="h-full border-l-[3px] border-transparent bg-card px-8 py-9 transition-all duration-300 hover:-translate-y-1 hover:border-primary">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
+                  <Icon size={20} className="text-primary" />
                 </div>
-              ))}
+                <h3 className="text-base font-bold text-foreground">{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Sectors ──────────────────────────────────────────────────────────────
+
+function Sectors() {
+  const sectors = [
+    { name: 'Restaurantes y F&B', desc: 'Turnos de cocina, servicio y domicilios con horarios variables' },
+    { name: 'Seguridad privada', desc: 'Guardas en múltiples sedes, turnos nocturnos y festivos' },
+    { name: 'Manufactura', desc: 'Plantas con tres turnos continuos y rotación de personal' },
+    { name: 'Salud y clínicas', desc: 'Enfermeros, auxiliares y turnos de 12 horas en festivos' },
+    { name: 'Oficinas y servicios', desc: 'Nómina de horario fijo, sin turnos rotativos — igual de automatizada' },
+  ];
+  return (
+    <section className="bg-primary-900 px-6 py-20 sm:py-24">
+      <Reveal className="mx-auto max-w-3xl text-center">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary-200">Industrias</p>
+        <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-white text-balance sm:text-4xl">
+          Con turnos rotativos o sin ellos, tu nómina queda al día
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-white/60">
+          zaturno no es solo para negocios con turnos: es un sistema completo de nómina — también
+          sirve para empresas con horario fijo que quieren automatizar sus recargos y liquidaciones.
+        </p>
+      </Reveal>
+      <div className="mx-auto mt-12 grid max-w-6xl grid-cols-1 gap-px sm:grid-cols-2 lg:grid-cols-5">
+        {sectors.map((s, i) => (
+          <Reveal key={s.name} delay={i * 70}>
+            <div className="h-full border border-white/10 bg-white/5 px-6 py-7 text-center transition-all duration-300 hover:-translate-y-1 hover:bg-white/10">
+              <div className="text-sm font-bold text-white">{s.name}</div>
+              <div className="mt-1.5 text-xs leading-relaxed text-white/50">{s.desc}</div>
             </div>
           </Reveal>
-        </div>
-      </section>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-      {/* Hecho para */}
-      <section className="bg-muted border-y border-border">
-        <div className="max-w-6xl mx-auto px-5 py-20">
-          <Reveal className="max-w-xl mx-auto text-center mb-10">
-            <h2 className="text-3xl font-bold tracking-tight text-balance">Hecho para equipos que trabajan por turnos</h2>
-          </Reveal>
-          <Reveal delay={100} className="flex flex-wrap items-center justify-center gap-3">
-            {AUDIENCIAS.map(({ icon: Icon, label }) => (
+// ── Final CTA ────────────────────────────────────────────────────────────
+
+function FinalCta() {
+  return (
+    <section className="bg-card px-6 py-24 text-center">
+      <Reveal>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Empieza hoy</p>
+        <h2 className="mx-auto mt-4 max-w-lg text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
+          ¿Listo para dejar de calcular a mano?
+        </h2>
+        <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
+          Registra tu empresa gratis y configura tu primer turno en menos de 10 minutos.
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/registro"
+            className="rounded-xl bg-primary px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 hover:bg-primary-600"
+          >
+            Registrar mi empresa gratis
+          </Link>
+          <Link
+            to="/login"
+            className="rounded-xl border border-border px-7 py-3.5 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            Ya tengo cuenta
+          </Link>
+        </div>
+        <p className="mt-7 text-sm text-muted-foreground">
+          ¿Dudas? Escríbenos a{' '}
+          <a href="mailto:anderson960616@gmail.com" className="font-semibold text-primary hover:underline">
+            anderson960616@gmail.com
+          </a>{' '}
+          · <a href="tel:+573204143661" className="font-semibold text-primary hover:underline">320 414 3661</a>
+        </p>
+      </Reveal>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="bg-primary-900 px-6 py-8 text-center text-xs font-medium tracking-wide text-white/35">
+      zaturno · Desarrollado en Colombia · Todos los derechos reservados 2025
+    </footer>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Device mockups — pantallas reales de la app, reconstruidas con los mismos
+// tokens de marca (apps/mobile/lib/designTokens.ts) y estructura de
+// apps/mobile/app/(tabs)/*.tsx e (auth)/login.tsx.
+// ══════════════════════════════════════════════════════════════════════════
+
+const GREEN = '#059669';
+const GREEN_LIGHT = '#ECFDF5';
+const ORANGE_LIGHT = '#FFF1EE';
+const BLUE = '#3B82F6';
+const BLUE_LIGHT = '#DBEAFE';
+const VIOLET = '#7C3AED';
+const AQUA = '#1BAF7A';
+const PLACEHOLDER = '#94A3B8';
+
+function Phone({ size = 'lg', children }: { size?: 'lg' | 'sm'; children: ReactNode }) {
+  const isSm = size === 'sm';
+  return (
+    <div
+      className={`relative flex-shrink-0 rounded-[34px] bg-[#12222b] shadow-[0_40px_80px_rgba(0,0,0,0.35)] ${
+        isSm ? 'w-[168px] rounded-[26px] p-[7px]' : 'w-[228px] p-[9px]'
+      }`}
+    >
+      <div
+        className={`absolute left-1/2 top-[9px] -translate-x-1/2 rounded-b-[10px] bg-[#12222b] ${
+          isSm ? 'h-[12px] w-[56px] rounded-b-[8px]' : 'h-[16px] w-[76px]'
+        }`}
+      />
+      <div
+        className={`flex flex-col overflow-hidden rounded-[26px] bg-[#F8FAFC] ${
+          isSm ? 'min-h-[330px] rounded-[20px]' : 'min-h-[430px]'
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StatusRow({ dark }: { dark?: boolean }) {
+  return (
+    <div className={`flex justify-between px-4 pt-2 text-[10px] font-bold ${dark ? 'text-foreground' : 'text-white/90'}`}>
+      <span>9:41</span>
+      <span>••• ▮▮▮</span>
+    </div>
+  );
+}
+
+function TabBar({ active, accent = '#FF5A3C' }: { active: 'inicio' | 'turnos' | 'nomina' | 'equipo'; accent?: string }) {
+  const tabs = [
+    { key: 'inicio', icon: Home, label: 'Inicio' },
+    { key: 'turnos', icon: CalendarDays, label: 'Turnos' },
+    { key: 'nomina', icon: WalletIcon, label: 'Nómina' },
+    { key: 'equipo', icon: Users, label: 'Equipo' },
+  ] as const;
+  return (
+    <div className="mt-auto flex border-t border-border bg-white px-1 pb-2 pt-1.5">
+      {tabs.map((t) => {
+        const isActive = t.key === active;
+        return (
+          <div key={t.key} className="flex flex-1 flex-col items-center gap-0.5" style={{ color: isActive ? accent : PLACEHOLDER }}>
+            <t.icon size={13} />
+            <span className="text-[7px] font-bold">{t.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DashboardScreen() {
+  return (
+    <>
+      <div className="rounded-b-[22px] bg-primary px-4 pb-5 pt-2">
+        <StatusRow />
+        <p className="mt-1.5 text-[11px] font-semibold text-white/85">Buenos días</p>
+        <div className="mt-1 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white/25 text-[10px] font-extrabold text-white">
+              CM
+            </div>
+            <span className="text-base font-extrabold text-white">Carlos</span>
+          </div>
+          <div className="relative flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-white/20">
+            <BellIcon size={13} className="text-white" />
+            <div className="absolute -right-1 -top-1 flex h-3 min-w-3 items-center justify-center rounded-full bg-danger px-0.5 text-[7px] font-bold text-white">
+              2
+            </div>
+          </div>
+        </div>
+        <p className="mt-0.5 text-[10px] font-semibold text-white/70">Trabajador · Turnos</p>
+      </div>
+
+      <div className="-mt-3.5 flex flex-1 flex-col gap-2.5 px-3 pb-2.5">
+        <div className="rounded-xl border bg-white px-3 py-2.5" style={{ borderColor: ORANGE_LIGHT }}>
+          <span className="rounded-full px-2 py-0.5 text-[8px] font-extrabold" style={{ background: ORANGE_LIGHT, color: '#FF5A3C' }}>
+            ● Turno activo
+          </span>
+          <p className="mt-1.5 text-[13px] font-extrabold text-foreground">Restaurante La Terraza</p>
+          <div className="mt-1 flex items-center gap-1 text-[9px] font-semibold text-muted-foreground">
+            <MapPin size={10} /> Zona Rosa · 14:00–22:00
+          </div>
+          <div className="mt-2 rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
+            Marcar salida
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          {[
+            { n: '1', l: 'Turnos hoy', c: 'text-foreground' },
+            { n: '3', l: 'Próximos', c: 'text-info' },
+            { n: '12', l: 'Completados', c: 'text-success' },
+          ].map((s) => (
+            <div key={s.l} className="flex-1 rounded-lg border border-border bg-white py-1.5 text-center">
+              <div className={`text-[13px] font-extrabold tabular-nums ${s.c}`}>{s.n}</div>
+              <div className="text-[7px] font-bold text-muted-foreground">{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-[10px] font-bold text-muted-foreground">Acciones rápidas</p>
+          <div className="flex gap-2">
+            {[
+              { icon: CalendarDays, l: 'Mis Turnos' },
+              { icon: WalletIcon, l: 'Quincena' },
+              { icon: Star, l: 'Calificación' },
+            ].map((a) => (
+              <div key={a.l} className="flex flex-1 flex-col items-center gap-1 rounded-xl border border-border bg-white py-2">
+                <a.icon size={14} className="text-primary" />
+                <span className="text-center text-[7px] font-bold text-foreground">{a.l}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted-foreground">Próximos turnos</span>
+            <span className="text-[9px] font-bold text-primary">Ver todos</span>
+          </div>
+          {[
+            { t: 'Evento corporativo', d: 'Vie 8 Ago · 6:00 p.m.' },
+            { t: 'Turno nocturno', d: 'Sáb 9 Ago · 9:00 p.m.' },
+          ].map((r) => (
+            <div key={r.t} className="flex items-center gap-2 border-b border-border py-1.5 last:border-0">
+              <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-info" />
+              <div className="flex-1">
+                <div className="text-[10px] font-bold text-foreground">{r.t}</div>
+                <div className="text-[8px] font-semibold text-muted-foreground">{r.d}</div>
+              </div>
+              <ChevronRight size={11} className="text-muted-foreground" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <TabBar active="inicio" />
+    </>
+  );
+}
+
+function LoginScreen() {
+  return (
+    <>
+      <div className="rounded-b-[26px] bg-primary pb-4 pt-2">
+        <StatusRow />
+        <div className="mt-2 flex flex-col items-center gap-1.5">
+          <img src={zaturnoLogo} alt="" className="h-8 w-8 rounded-xl ring-1 ring-white/35" />
+          <p className="text-[13px] font-extrabold text-white">Zaturno</p>
+          <p className="text-[8px] font-semibold text-white/75">Gestión de turnos y nómina</p>
+        </div>
+      </div>
+      <div className="-mt-3 flex flex-1 flex-col gap-2 px-3 pb-2">
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-white px-2.5 py-2">
+          <p className="text-[10px] font-extrabold text-foreground">Inicia sesión</p>
+          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5 text-[8px] font-semibold text-muted-foreground">
+            <Mail size={11} /> correo@empresa.com
+          </div>
+          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5 text-[8px] font-semibold text-muted-foreground">
+            <Lock size={11} /> ••••••••
+          </div>
+          <p className="text-right text-[8px] font-bold text-primary">¿Olvidaste tu contraseña?</p>
+          <div className="rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
+            Iniciar sesión
+          </div>
+        </div>
+        <p className="text-center text-[8px] leading-relaxed text-muted-foreground">
+          ¿Una empresa ya te invitó?
+          <br />
+          <span className="font-bold text-primary">Activa tu cuenta</span>
+        </p>
+      </div>
+    </>
+  );
+}
+
+function TurnosScreen() {
+  const days = [
+    { d: 'L', n: 3 }, { d: 'M', n: 4 }, { d: 'M', n: 5, active: true },
+    { d: 'J', n: 6 }, { d: 'V', n: 7 }, { d: 'S', n: 8 }, { d: 'D', n: 9 },
+  ];
+  return (
+    <>
+      <div className="border-b border-border bg-white px-3 pb-2 pt-2">
+        <StatusRow dark />
+        <p className="mt-1 text-[13px] font-extrabold text-foreground">Mis Turnos</p>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 px-3 py-2.5">
+        <div className="flex justify-between">
+          {days.map((d, i) => (
+            <div key={i} className="flex flex-col items-center gap-0.5 text-[8px] font-bold text-muted-foreground">
+              <span>{d.d}</span>
               <span
-                key={label}
-                className="inline-flex items-center gap-2 bg-card border border-border rounded-full pl-3 pr-4 py-2 text-sm font-medium text-foreground hover:border-primary transition-colors"
+                className={`flex h-[18px] w-[18px] items-center justify-center rounded-full text-[9px] font-bold ${
+                  d.active ? 'bg-primary text-white' : 'text-foreground'
+                }`}
               >
-                <span className="w-7 h-7 rounded-full bg-primary-50 flex items-center justify-center">
-                  <Icon size={14} className="text-primary" />
-                </span>
-                {label}
+                {d.n}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-3.5 border-b border-border">
+          <span className="border-b-2 border-primary pb-1.5 text-[9px] font-bold text-primary">Mis Turnos</span>
+          <span className="pb-1.5 text-[9px] font-bold text-muted-foreground">Disponibles</span>
+        </div>
+        {[
+          { org: 'La Terraza', title: 'Turno de cocina', meta: '5 Ago · 14:00–22:00', tag: 'Confirmado', tagBg: GREEN_LIGHT, tagFg: GREEN, accent: '#FF5A3C' },
+          { org: 'Eventos BQ', title: 'Meseros · evento corporativo', meta: '8 Ago · 18:00–23:00', tag: 'Pendiente', tagBg: BLUE_LIGHT, tagFg: BLUE, accent: BLUE },
+        ].map((c) => (
+          <div key={c.org} className="flex overflow-hidden rounded-xl border border-border bg-white">
+            <div className="w-1" style={{ background: c.accent }} />
+            <div className="flex flex-1 flex-col gap-0.5 px-2.5 py-2">
+              <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">{c.org}</span>
+              <span className="text-[11px] font-extrabold text-foreground">{c.title}</span>
+              <span className="text-[8px] font-semibold text-muted-foreground">{c.meta}</span>
+              <span
+                className="mt-0.5 w-fit rounded-full px-1.5 py-0.5 text-[7px] font-extrabold"
+                style={{ background: c.tagBg, color: c.tagFg }}
+              >
+                {c.tag}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <TabBar active="turnos" />
+    </>
+  );
+}
+
+function Field({
+  label,
+  value,
+  icon: Icon,
+  className = '',
+}: {
+  label: string;
+  value: string;
+  icon?: typeof MapPin;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-lg border border-border bg-background px-2.5 py-1.5 ${className}`}>
+      <div className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5 flex items-center gap-1 text-[9px] font-bold text-foreground">
+        {Icon && <Icon size={10} className="text-muted-foreground" />}
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function CrearTurnoScreen() {
+  return (
+    <>
+      <div className="border-b border-border bg-white px-3 pb-2 pt-2">
+        <StatusRow dark />
+        <div className="mt-1 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-foreground" />
+          <p className="text-[11px] font-extrabold text-foreground">Nuevo turno</p>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 px-3 py-2.5">
+        <Field label="Título" value="Turno de cocina" icon={Briefcase} />
+        <Field label="Fecha" value="Vie 12 Ago" icon={CalendarDays} />
+        <div className="flex gap-2">
+          <Field label="Inicio" value="14:00" className="flex-1" />
+          <Field label="Fin" value="22:00" className="flex-1" />
+        </div>
+        <Field label="Lugar" value="Zona Rosa, Bogotá" icon={MapPin} />
+        <div className="flex items-center justify-between rounded-lg border border-border bg-background px-2.5 py-1.5">
+          <span className="text-[7px] font-bold uppercase tracking-wide text-muted-foreground">Plazas</span>
+          <div className="flex items-center gap-2.5">
+            <Minus size={12} className="text-muted-foreground" />
+            <span className="text-[10px] font-extrabold text-foreground">3</span>
+            <Plus size={12} className="text-primary" />
+          </div>
+        </div>
+        <Field label="Tarifa por turno" value="$85.000" />
+        <div className="mt-auto rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
+          Publicar turno
+        </div>
+      </div>
+    </>
+  );
+}
+
+function MarcarIngresoScreen() {
+  return (
+    <>
+      <div className="rounded-b-[20px] bg-primary px-3 pb-4 pt-2">
+        <StatusRow />
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-white" />
+          <span className="text-[10px] font-bold text-white">Restaurante La Terraza</span>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-4 text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success-light">
+          <CheckCircle2 size={26} className="text-success" />
+        </div>
+        <div>
+          <p className="text-[11px] font-extrabold text-foreground">Dentro del rango</p>
+          <p className="mt-1 flex items-center justify-center gap-1 text-[8px] font-semibold text-muted-foreground">
+            <Crosshair size={9} /> 38 m del punto de marcaje
+          </p>
+        </div>
+        <div className="w-full rounded-lg bg-primary py-2 text-center text-[9px] font-extrabold text-white">
+          Marcar ingreso
+        </div>
+        <p className="text-[7px] leading-relaxed text-muted-foreground">
+          Este turno requiere que estés en la ubicación asignada para poder fichar.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function MetaRow({ icon: Icon, text }: { icon: typeof MapPin; text: string }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[8px] font-semibold text-muted-foreground">
+      <Icon size={10} className="text-muted-foreground" /> {text}
+    </div>
+  );
+}
+
+function OfertaDetalleScreen() {
+  return (
+    <>
+      <div className="border-b border-border bg-white px-3 pb-2 pt-2">
+        <StatusRow dark />
+        <div className="mt-1 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-foreground" />
+          <p className="text-[11px] font-extrabold text-foreground">Detalle del turno</p>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-2.5 px-3 py-2.5">
+        <div>
+          <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">Eventos BQ</span>
+          <p className="text-[12px] font-extrabold text-foreground">Meseros · evento corporativo</p>
+        </div>
+        <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-white px-2.5 py-2">
+          <MetaRow icon={CalendarDays} text="Vie 8 Ago · 18:00 – 23:00" />
+          <MetaRow icon={MapPin} text="Salón Andino, Bogotá" />
+          <MetaRow icon={Briefcase} text="Mesero(a) · 2 plazas libres" />
+        </div>
+        <div className="rounded-xl px-2.5 py-2.5" style={{ background: GREEN_LIGHT }}>
+          <p className="text-[7px] font-bold uppercase tracking-wide" style={{ color: GREEN }}>Pago por turno</p>
+          <p className="text-[15px] font-extrabold" style={{ color: GREEN }}>$85.000</p>
+        </div>
+        <div className="mt-auto rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
+          Aplicar a este turno
+        </div>
+      </div>
+    </>
+  );
+}
+
+function NominaScreen() {
+  const registros = [
+    { d: 'Lun 3 Ago', h: '6:58 a.m. – 3:02 p.m.', v: '8h 04' },
+    { d: 'Mar 4 Ago', h: '6:55 a.m. – 3:00 p.m.', v: '8h 05' },
+    { d: 'Mié 5 Ago', h: '9:58 p.m. – 6:03 a.m.', v: '8h 05 ★', highlight: true },
+  ];
+  return (
+    <>
+      <div
+        className="relative overflow-hidden rounded-b-[18px] px-3 pb-3 pt-2"
+        style={{ background: 'linear-gradient(155deg, #10B981 0%, #059669 55%, #065F46 100%)' }}
+      >
+        <div className="pointer-events-none absolute -right-5 -top-7 h-16 w-16 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-5 -left-6 h-12 w-12 rounded-full bg-white/10" />
+        <StatusRow />
+        <p className="mt-1 text-[11px] font-semibold text-white/85">Nómina</p>
+        <p className="text-[12px] font-extrabold text-white">Quincena 1–15 Ago</p>
+      </div>
+      <div className="-mt-2 flex flex-1 flex-col gap-2.5 px-3 pb-2">
+        <div className="rounded-xl border border-border bg-white px-2.5 py-2">
+          <p className="text-[8px] font-bold text-muted-foreground">Total del período</p>
+          <p className="text-[15px] font-extrabold text-foreground">$1.240.500</p>
+          <div className="mt-1.5 flex h-2 gap-px overflow-hidden rounded">
+            <span style={{ flex: 5, background: PLACEHOLDER }} />
+            <span style={{ flex: 2, background: AQUA }} />
+            <span style={{ flex: 1.5, background: '#EB6834' }} />
+            <span style={{ flex: 1, background: VIOLET }} />
+          </div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {[
+              { c: PLACEHOLDER, l: 'Ordinarias' },
+              { c: AQUA, l: 'Nocturnas' },
+              { c: '#EB6834', l: 'Festivas' },
+              { c: VIOLET, l: 'Extra' },
+            ].map((l) => (
+              <span key={l.l} className="flex items-center gap-1 text-[7px] font-bold text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-sm" style={{ background: l.c }} /> {l.l}
               </span>
             ))}
-          </Reveal>
+          </div>
         </div>
-      </section>
-
-      {/* Tarifa */}
-      <section id="tarifa" className="bg-white">
-        <div className="max-w-6xl mx-auto px-5 py-20">
-          <Reveal className="max-w-xl mx-auto text-center mb-12">
-            <h2 className="text-3xl font-bold tracking-tight text-balance">Una sola tarifa, sin letra pequeña</h2>
-            <p className="mt-3 text-muted-foreground">Todas las funciones de Zaturno incluidas desde el primer día.</p>
-          </Reveal>
-          <Reveal delay={100} className="max-w-md mx-auto p-8 rounded-3xl border border-primary shadow-xl shadow-primary/10 bg-card text-center">
-            <ul className="space-y-3 mb-8 text-left">
-              {TARIFA_INCLUYE.map(f => (
-                <li key={f} className="flex items-start gap-2 text-sm text-foreground">
-                  <Check size={16} className="text-primary mt-0.5 flex-shrink-0" />
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={() => navigate('/registro')}
-              className="w-full py-2.5 rounded-xl font-semibold text-sm bg-primary text-white hover:bg-primary-600 transition-colors"
-            >
-              Registra tu empresa
-            </button>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* Integración logiq360 */}
-      <section className="bg-muted border-y border-border">
-        <div className="max-w-6xl mx-auto px-5 py-20">
-          <Reveal className="rounded-3xl border border-primary-200 bg-gradient-to-br from-primary-50 to-white p-8 lg:p-12 grid lg:grid-cols-2 gap-8 items-center">
+        <p className="text-[10px] font-bold text-muted-foreground">Registros</p>
+        {registros.map((r) => (
+          <div key={r.d} className="flex items-center justify-between border-b border-border py-1.5 last:border-0">
             <div>
-              <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary-600 mb-3">
-                <Plug size={14} /> Integración · logiq360
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground text-balance">
-                ¿Ya operas con logiq360? Cubre montajes sin salir de Zaturno
-              </h2>
-              <p className="mt-3 text-muted-foreground">
-                Cuando logiq360 publica una orden que necesita personal por turnos, la oferta llega directo
-                a Zaturno. Tu equipo confirma el turno y las horas y costos vuelven solos a cada evento.
-              </p>
+              <div className="text-[10px] font-bold text-foreground">{r.d}</div>
+              <div className="text-[8px] font-semibold text-muted-foreground">{r.h}</div>
             </div>
-            <div className="flex items-center justify-center gap-4 bg-card rounded-2xl border border-border p-8 shadow-lg shadow-slate-900/5">
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center">
-                  <Briefcase size={22} className="text-white" />
-                </div>
-                <span className="text-xs font-semibold text-muted-foreground">logiq360</span>
-              </div>
-              <span className="text-2xl text-muted-foreground">+</span>
-              <div className="flex flex-col items-center gap-2">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF7150, #E83E1F)' }}>
-                  <Users size={22} className="text-white" />
-                </div>
-                <span className="text-xs font-semibold text-primary-600">Zaturno</span>
-              </div>
+            <div className="text-[9px] font-extrabold" style={{ color: r.highlight ? GREEN : undefined }}>
+              {r.v}
             </div>
-          </Reveal>
-        </div>
-      </section>
+          </div>
+        ))}
+      </div>
+      <TabBar active="nomina" accent={GREEN} />
+    </>
+  );
+}
 
-      {/* FAQ */}
-      <section className="bg-white">
-        <div className="max-w-2xl mx-auto px-5 py-20">
-          <Reveal>
-            <h2 className="text-3xl font-bold tracking-tight text-center text-balance mb-10">¿Tienes dudas?</h2>
-            <div className="space-y-3">
-              {FAQS.map(f => (
-                <details key={f.q} className="group rounded-xl border border-border bg-card px-5 py-4">
-                  <summary className="cursor-pointer font-semibold text-foreground list-none flex items-center justify-between gap-4">
-                    {f.q}
-                    <span className="text-muted-foreground group-open:rotate-45 transition-transform">+</span>
-                  </summary>
-                  <p className="mt-3 text-sm text-muted-foreground">{f.a}</p>
-                </details>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* CTA final */}
-      <section className="relative overflow-hidden text-white text-center px-5 py-20" style={{ background: 'linear-gradient(160deg, #FF7150 0%, #E83E1F 100%)' }}>
-        <DotPattern className="opacity-30" />
-        <div className="relative">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-balance">Empieza a cubrir turnos hoy</h2>
-          <button
-            onClick={() => navigate('/registro')}
-            className="mt-6 px-6 py-3 rounded-xl bg-white text-primary-600 font-semibold hover:bg-white/90 transition-colors inline-flex items-center gap-2"
-          >
-            Registra tu empresa <ArrowRight size={16} />
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-white max-w-6xl mx-auto px-5 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-        <ZaturnoLogo />
-        <div className="flex items-center gap-5">
-          <Link to="/login" className="hover:text-foreground transition-colors">Iniciar sesión</Link>
-          <Link to="/privacidad" className="hover:text-foreground transition-colors">Privacidad</Link>
-          <Link to="/terminos" className="hover:text-foreground transition-colors">Términos</Link>
-        </div>
-      </footer>
+function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="flex-1 rounded-lg border border-border bg-white py-1.5 text-center">
+      <div className="text-[11px] font-extrabold text-foreground" style={color ? { color } : undefined}>
+        {value}
+      </div>
+      <div className="text-[7px] font-bold text-muted-foreground">{label}</div>
     </div>
+  );
+}
+
+function AcumuladoScreen() {
+  return (
+    <>
+      <div
+        className="relative overflow-hidden rounded-b-[20px] px-3 pb-5 pt-2"
+        style={{ background: 'linear-gradient(155deg, #10B981 0%, #059669 55%, #065F46 100%)' }}
+      >
+        <div className="pointer-events-none absolute -right-5 -top-7 h-16 w-16 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-5 -left-6 h-12 w-12 rounded-full bg-white/10" />
+        <StatusRow />
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-white" />
+          <span className="text-[10px] font-bold text-white/85">Resumen del período</span>
+        </div>
+      </div>
+      <div className="-mt-3 flex flex-1 flex-col gap-3 px-3 pb-2">
+        <div className="rounded-xl border border-border bg-white px-3 py-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-[8px] font-bold text-muted-foreground">
+            <TrendingUp size={10} /> Acumulado este período
+          </div>
+          <p className="mt-1 text-[19px] font-extrabold text-foreground">$687.200</p>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full" style={{ width: '80%', background: GREEN }} />
+          </div>
+          <p className="mt-1 text-[7px] font-semibold text-muted-foreground">12 de 15 días del período</p>
+        </div>
+        <div className="flex gap-2">
+          <MiniStat label="Horas" value="76h" />
+          <MiniStat label="Extra" value="6h" color={VIOLET} />
+          <MiniStat label="Festivos" value="1" color="#EB6834" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function EquipoScreen() {
+  const equipo = [
+    { i: 'CM', n: 'Carlos Martínez', c: 'Cocina · Activo', bg: '#FF5A3C' },
+    { i: 'LR', n: 'Luisa Ramírez', c: 'Salón · Activo', bg: BLUE },
+    { i: 'PV', n: 'Pedro Vargas', c: 'Domicilios · Activo', bg: GREEN },
+    { i: 'AG', n: 'Ana Gómez', c: 'Caja · Activo', bg: VIOLET },
+  ];
+  return (
+    <>
+      <div className="border-b border-border bg-white px-3 pb-2 pt-2">
+        <StatusRow dark />
+        <p className="mt-1 text-[13px] font-extrabold text-foreground">Equipo</p>
+        <p className="text-[8px] font-semibold text-muted-foreground">8 activos</p>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 px-3 py-2.5">
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5 text-[8px] font-semibold text-muted-foreground">
+          <Search size={11} /> Buscar trabajador…
+        </div>
+        {equipo.map((t) => (
+          <div key={t.i} className="flex items-center gap-2 border-b border-border py-1.5 last:border-0">
+            <div
+              className="flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
+              style={{ background: t.bg }}
+            >
+              {t.i}
+            </div>
+            <div className="flex-1">
+              <div className="text-[10px] font-bold text-foreground">{t.n}</div>
+              <div className="text-[8px] font-semibold text-muted-foreground">{t.c}</div>
+            </div>
+            <ChevronRight size={11} className="text-muted-foreground" />
+          </div>
+        ))}
+      </div>
+      <TabBar active="equipo" accent={BLUE} />
+    </>
   );
 }

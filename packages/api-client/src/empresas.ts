@@ -14,12 +14,16 @@ export interface EmpresaDirectorio {
 
 export type TipoLiquidacion = 'mensual' | 'quincenal' | 'semanal';
 
+/** 'laboral' aplica descuentos de ley (salud/pensión) en la liquidación; 'prestacion_servicios' no. */
+export type TipoContrato = 'laboral' | 'prestacion_servicios';
+
 /** Vista completa que solo ve el admin_empresa de esa empresa */
 export interface Empresa extends EmpresaDirectorio {
   nit: string | null;
   actividad: string | null;
   plan: string;
   tipo_liquidacion: TipoLiquidacion;
+  tipo_contrato: TipoContrato;
   created_at: string;
 }
 
@@ -32,6 +36,7 @@ export interface ActualizarMiEmpresaPayload {
   logo_url?: string;
   acepta_postulaciones?: boolean;
   tipo_liquidacion?: TipoLiquidacion;
+  tipo_contrato?: TipoContrato;
 }
 
 export interface DirectorioResponse {

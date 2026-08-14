@@ -12,6 +12,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PeriodoBadge } from '../../PeriodoBadge';
+import { TipoPeriodoBadge } from '../../TipoPeriodoBadge';
 import { formatCOP } from '@/lib/formatters';
 import {
   fmtPeriodo,
@@ -21,7 +22,7 @@ import {
   type EstadoHoy,
   type ResumenPeriodoNomina,
 } from '../nominaTrabajadorUtils';
-import type { PeriodoNomina, RegistroDiario } from '@api-client';
+import type { PeriodoNomina, RegistroDiario, LiquidacionLinea, TipoContrato } from '@api-client';
 
 interface Props {
   periodo:     PeriodoNomina | undefined;
@@ -34,6 +35,9 @@ interface Props {
   color:       string;  // theme.primary
   todayLabel:  string;  // "Lun 9 Jun"
   onVerDetalles?: () => void;
+  /** Liquidación real del período (bruto/neto/descuentos) — la misma que calcula el gestor. */
+  miLiquidacion?: LiquidacionLinea;
+  tipoContrato?:  TipoContrato;
 }
 
 export function PeriodoHeaderCard({
@@ -47,6 +51,8 @@ export function PeriodoHeaderCard({
   color,
   todayLabel,
   onVerDetalles,
+  miLiquidacion,
+  tipoContrato,
 }: Props) {
   const [visible, setVisible] = useState(false);
   const analisisHoy = registroHoy ? analizarDia(registroHoy, valorHora) : null;
@@ -66,17 +72,35 @@ export function PeriodoHeaderCard({
           <Text className="text-white text-xl font-bold">
             {periodo ? fmtPeriodo(periodo) : '—'}
           </Text>
-          {periodo && <PeriodoBadge estado={periodo.estado} />}
+          {periodo && (
+            <View className="flex-row items-center gap-1.5">
+              <PeriodoBadge estado={periodo.estado} />
+              <TipoPeriodoBadge tipo={periodo.tipo} />
+            </View>
+          )}
         </View>
       </View>
 
       {/* ── Card salario + extras ──────────────────────────── */}
       <View className="bg-white/20 rounded-2xl px-4 py-3 flex-row items-center gap-3">
         <View className="flex-1 gap-0.5">
-          <Text className="text-white text-lg font-extrabold">
-            {salarioBase != null ? mask(formatCOP(salarioBase)) : '—'}
-          </Text>
-          <Text className="text-white/70 text-[10px]">Salario mensual</Text>
+          {miLiquidacion ? (
+            <>
+              <Text className="text-white text-lg font-extrabold">
+                {mask(formatCOP(miLiquidacion.neto))}
+              </Text>
+              <Text className="text-white/70 text-[10px]">
+                {tipoContrato === 'laboral' ? 'Neto del período' : 'Total del período'}
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text className="text-white text-lg font-extrabold">
+                {salarioBase != null ? mask(formatCOP(salarioBase)) : '—'}
+              </Text>
+              <Text className="text-white/70 text-[10px]">Salario mensual</Text>
+            </>
+          )}
         </View>
 
         {resumen.valorExtraCOP > 0 && (

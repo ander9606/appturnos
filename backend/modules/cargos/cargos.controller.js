@@ -83,6 +83,24 @@ async function desasignarCargoDeVinculo(req, res) {
   res.json({ success: true, data, message: 'Cargo desasignado' });
 }
 
+// -------- Funciones por cargo --------
+
+/** GET /api/cargos/:id/funciones — funciones del cargo para mi empresa. */
+async function listarFunciones(req, res) {
+  const empresaId = req.empresa_id;
+  const cargoId = Number(req.params.id);
+  const data = await CargosService.listarFunciones(empresaId, cargoId);
+  res.json({ success: true, data, message: 'Funciones del cargo' });
+}
+
+/** PUT /api/cargos/:id/funciones — reemplaza el listado de funciones (solo jefe/admin). */
+async function actualizarFunciones(req, res) {
+  const empresaId = req.empresa_id;
+  const cargoId = Number(req.params.id);
+  const data = await CargosService.actualizarFunciones(empresaId, cargoId, req.body.funciones);
+  res.json({ success: true, data, message: 'Funciones actualizadas' });
+}
+
 module.exports = {
   listar,
   crear,
@@ -91,4 +109,6 @@ module.exports = {
   listarCargosDeVinculo,
   asignarCargoAVinculo,
   desasignarCargoDeVinculo,
+  listarFunciones,
+  actualizarFunciones,
 };

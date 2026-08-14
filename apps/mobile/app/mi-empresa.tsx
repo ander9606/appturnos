@@ -16,7 +16,7 @@ import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 
 import { empresasApi } from '@api-client';
-import type { ActualizarMiEmpresaPayload, TipoLiquidacion } from '@api-client';
+import type { ActualizarMiEmpresaPayload, TipoLiquidacion, TipoContrato } from '@api-client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -31,6 +31,11 @@ const TIPO_LIQUIDACION_OPTIONS: { value: TipoLiquidacion; label: string; sub: st
   { value: 'semanal',    label: 'Semanal',    sub: 'Lun–Dom' },
 ];
 
+const TIPO_CONTRATO_OPTIONS: { value: TipoContrato; label: string; sub: string }[] = [
+  { value: 'laboral',              label: 'Contrato laboral',        sub: 'Descuenta salud y pensión' },
+  { value: 'prestacion_servicios', label: 'Prestación de servicios', sub: 'El independiente se autoliquida' },
+];
+
 const schema = z.object({
   nombre:               z.string().trim().min(1, 'Razón social requerida'),
   nit:                  z.string().trim().optional(),
@@ -40,6 +45,7 @@ const schema = z.object({
   logo_url:             z.string().trim().url('Debe ser una URL válida').optional().or(z.literal('')),
   acepta_postulaciones: z.boolean(),
   tipo_liquidacion:     z.enum(['mensual', 'quincenal', 'semanal']),
+  tipo_contrato:        z.enum(['laboral', 'prestacion_servicios']),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -87,6 +93,7 @@ export default function MiEmpresaScreen() {
       logo_url:             '',
       acepta_postulaciones: true,
       tipo_liquidacion:     'mensual' as TipoLiquidacion,
+      tipo_contrato:        'laboral' as TipoContrato,
     },
   });
 
@@ -103,6 +110,7 @@ export default function MiEmpresaScreen() {
         logo_url:             empresa.logo_url ?? '',
         acepta_postulaciones: Boolean(empresa.acepta_postulaciones),
         tipo_liquidacion:     (empresa.tipo_liquidacion ?? 'mensual') as TipoLiquidacion,
+        tipo_contrato:        (empresa.tipo_contrato ?? 'laboral') as TipoContrato,
       });
     }
   }, [empresa, reset]);
@@ -118,6 +126,7 @@ export default function MiEmpresaScreen() {
         logo_url:             data.logo_url  || undefined,
         acepta_postulaciones: data.acepta_postulaciones,
         tipo_liquidacion:     data.tipo_liquidacion,
+        tipo_contrato:        data.tipo_contrato,
       });
       showToast('Datos de la empresa actualizados.');
     } catch {
@@ -295,6 +304,46 @@ export default function MiEmpresaScreen() {
               render={({ field: { onChange, value } }) => (
                 <View className="flex-row gap-2">
                   {TIPO_LIQUIDACION_OPTIONS.map((opt) => {
+                    const active = value === opt.value;
+                    return (
+                      <View
+                        key={opt.value}
+                        className={`flex-1 rounded-2xl border py-3 px-2 items-center gap-0.5 ${
+                          active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
+                        }`}
+                        // ponytail: TouchableOpacity wrapping needed
+                      >
+                        <Text
+                          onPress={() => onChange(opt.value)}
+                          className={`text-sm font-bold ${active ? 'text-primary-500' : 'text-foreground'}`}
+                        >
+                          {opt.label}
+                        </Text>
+                        <Text className="text-[10px] text-muted-foreground text-center">{opt.sub}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            />
+          </View>
+
+          {/* ── Régimen de contratación ───────────────────────────── */}
+          <View className="gap-3 mt-2">
+            <View className="gap-1">
+              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                Régimen de contratación
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                Determina si la liquidación descuenta salud y pensión del pago de cada trabajador.
+              </Text>
+            </View>
+            <Controller
+              control={control}
+              name="tipo_contrato"
+              render={({ field: { onChange, value } }) => (
+                <View className="flex-row gap-2">
+                  {TIPO_CONTRATO_OPTIONS.map((opt) => {
                     const active = value === opt.value;
                     return (
                       <View

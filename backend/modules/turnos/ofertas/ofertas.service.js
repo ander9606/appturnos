@@ -9,8 +9,24 @@ const TrabajadorEmpresaModel = require('../../trabajador-empresa/trabajador-empr
 const CargosModel = require('../../cargos/cargos.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError = require('../../../utils/AppError');
-const { ROLES } = require('../../../config/constants');
+const { ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA } = require('../../../config/constants');
 const { delayPorRanking } = require('../../../utils/rankingUtils');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+
+/**
+ * ¿Ya pasó la hora de inicio del turno? Compara contra la hora actual en
+ * Bogotá (UTC-5, sin horario de verano). Antes solo se comparaba la fecha
+ * (día), así que un turno de hoy con hora de inicio ya pasada seguía
+ * aceptando postulaciones — mismo criterio que turnoYaInicio() en el mobile
+ * (apps/mobile/features/turnos/turnosUtils.ts).
+ */
+function turnoYaInicio(fecha, horaInicio) {
+  const [y, mo, d] = fecha.split('-').map(Number);
+  const [hh, mm, ss] = String(horaInicio).split(':').map(Number);
+  const nowBogota = new Date(Date.now() - 5 * 60 * 60 * 1000); // getUTC* == hora Bogotá
+  const inicioBogotaMs = Date.UTC(y, mo - 1, d, hh, mm || 0, ss || 0);
+  return nowBogota.getTime() >= inicioBogotaMs;
+}
 
 /**
  * Resuelve el trabajador vinculado al usuario autenticado en una empresa concreta.
@@ -48,8 +64,58 @@ async function validarPuestosParaEmpresa(empresaId, puestos) {
   }
 }
 
+/**
+ * Advierte (sin bloquear — el pool puede crecer o la oferta puede quedar
+ * parcialmente cubierta) cuando un puesto pide más plazas que trabajadores
+ * activos certificados para ese cargo hay en la empresa.
+ */
+async function advertenciasCapacidad(empresaId, puestos) {
+  if (!Array.isArray(puestos) || puestos.length === 0) return [];
+  const advertencias = [];
+  for (const p of puestos) {
+    const cargoId = Number(p.cargo_id);
+    const plazas = Number(p.plazas);
+    if (!plazas) continue;
+    const disponibles = await CargosModel.contarActivosPorEmpresa(cargoId, empresaId);
+    if (plazas > disponibles) {
+      const cargo = await CargosModel.obtenerPorId(cargoId);
+      advertencias.push(
+        `"${cargo?.nombre ?? 'Cargo ' + cargoId}" pide ${plazas} plaza(s), pero tu empresa solo tiene ` +
+        `${disponibles} trabajador(es) activo(s) certificado(s) para ese cargo.`
+      );
+    }
+  }
+  return advertencias;
+}
+
+/**
+ * Valida los destinatarios elegidos a mano para un turno dirigido: debe haber
+ * al menos uno y todos deben tener vínculo activo con la empresa. A propósito
+ * NO se exige cargo certificado — el gestor eligiendo a la persona reemplaza
+ * ese filtro (mismo criterio que asignarDirecto).
+ */
+async function validarDestinatarios(empresaId, visibilidad, trabajadorIds) {
+  if (visibilidad !== 'dirigida') return;
+  const ids = [...new Set((trabajadorIds || []).map(Number))];
+  if (ids.length === 0) {
+    throw new AppError('Elige al menos una persona para un turno dirigido', 400);
+  }
+  const [filas] = await pool.query(
+    `SELECT t.id FROM trabajadores t
+     JOIN trabajador_empresa te ON te.trabajador_id = t.id
+     WHERE t.id IN (?) AND te.empresa_id = ? AND te.estado = 'activo'`,
+    [ids, empresaId]
+  );
+  if (filas.length !== ids.length) {
+    throw new AppError('Alguno de los trabajadores seleccionados no pertenece a esta empresa', 400);
+  }
+}
+
 /** Notifica a trabajadores con los cargos solicitados por la oferta (best-effort). */
 async function notificarPoolPorPuestos(empresaId, oferta) {
+  if (oferta.visibilidad === 'dirigida') {
+    return notificarDestinatariosDirectos(empresaId, oferta);
+  }
   for (const puesto of oferta.puestos || []) {
     const [destinatarios] = await pool.query(
       `SELECT DISTINCT u.id AS usuario_id
@@ -75,6 +141,35 @@ async function notificarPoolPorPuestos(empresaId, oferta) {
         }
       );
     }
+  }
+}
+
+/** Notifica solo a los destinatarios elegidos a mano de un turno dirigido (best-effort). */
+async function notificarDestinatariosDirectos(empresaId, oferta) {
+  const usuarioIds = (oferta.destinatarios || [])
+    .map((d) => d.usuario_id)
+    .filter(Boolean);
+  if (usuarioIds.length === 0) return;
+  await NotificacionesService.notificarVarios(usuarioIds, {
+    empresaId,
+    tipo: 'oferta.nueva',
+    titulo: `Te invitaron a un turno: ${oferta.titulo}`,
+    mensaje: `${oferta.titulo} — ${oferta.fecha}. Te eligieron directamente para este turno.`,
+    data: { oferta_id: oferta.id },
+  });
+}
+
+/**
+ * Fecha no pasada + hora_fin_estimada posterior a hora_inicio — mismo criterio
+ * que validateStep1() en el mobile (apps/mobile/features/turnos/crear/utils.ts),
+ * ahora también exigido en el backend para cerrar el hueco en web/API directa.
+ */
+function validarFechaHoraOferta({ fecha, hora_inicio, hora_fin_estimada }) {
+  if (fecha && fecha < ahoraColombiaSQL().slice(0, 10)) {
+    throw new AppError('La fecha del turno no puede ser en el pasado', 422);
+  }
+  if (hora_inicio && hora_fin_estimada && hora_fin_estimada <= hora_inicio) {
+    throw new AppError('La hora de fin debe ser posterior a la hora de inicio', 422);
   }
 }
 
@@ -135,10 +230,25 @@ const OfertasService = {
         throw new AppError('Oferta no encontrada', 404);
       }
       const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(ofertaEmpresaId, usuario.sub);
-      const delay = delayPorRanking(trabajador?.ranking);
-      const ofertaConDelay = await OfertasModel.obtenerPorId(ofertaEmpresaId, id, delay);
-      if (!ofertaConDelay) {
-        throw new AppError('Oferta aún no disponible para tu nivel de ranking', 403);
+
+      // Fetch sin delay primero: necesitamos saber la visibilidad antes de decidir
+      // si aplica el delay por ranking (un destinatario directo lo salta).
+      const ofertaBase = await OfertasModel.obtenerPorId(ofertaEmpresaId, id, 0);
+      if (!ofertaBase) throw new AppError('Oferta no encontrada', 404);
+
+      const esDestinatarioDirecto = ofertaBase.visibilidad === 'dirigida'
+        && await OfertasModel.esDestinatario(id, trabajador?.id);
+      if (ofertaBase.visibilidad === 'dirigida' && !esDestinatarioDirecto) {
+        throw new AppError('Oferta no encontrada', 404);
+      }
+
+      let ofertaConDelay = ofertaBase;
+      if (!esDestinatarioDirecto) {
+        const delay = delayPorRanking(trabajador?.ranking);
+        ofertaConDelay = delay > 0 ? await OfertasModel.obtenerPorId(ofertaEmpresaId, id, delay) : ofertaBase;
+        if (!ofertaConDelay) {
+          throw new AppError('Oferta aún no disponible para tu nivel de ranking', 403);
+        }
       }
 
       const asignaciones = await AsignacionesModel.listarPorOferta(ofertaEmpresaId, id);
@@ -159,11 +269,23 @@ const OfertasService = {
    * el jefe los agrega antes de publicar.
    */
   async crear(empresaId, datos, creadoPor) {
+    const activas = await OfertasModel.contarActivasPorEmpresa(empresaId);
+    if (activas >= MAX_OFERTAS_ACTIVAS_POR_EMPRESA) {
+      throw new AppError(
+        `Llegaste al máximo de ${MAX_OFERTAS_ACTIVAS_POR_EMPRESA} ofertas activas. Cierra o cancela ofertas antiguas antes de crear nuevas.`,
+        409
+      );
+    }
     await validarPuestosParaEmpresa(empresaId, datos.puestos);
+    await validarDestinatarios(empresaId, datos.visibilidad, datos.trabajador_ids);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
 
     await notificarPoolPorPuestos(empresaId, oferta);
+
+    // No bloquea la creación — solo avisa al gestor si el catálogo de
+    // trabajadores de la empresa no alcanza para cubrir lo pedido.
+    oferta.advertencias = await advertenciasCapacidad(empresaId, datos.puestos);
 
     return oferta;
   },
@@ -174,6 +296,11 @@ const OfertasService = {
     if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {
       throw new AppError('Solo se puede editar una oferta en borrador o abierta', 409);
     }
+    validarFechaHoraOferta({
+      fecha: datos.fecha ?? oferta.fecha,
+      hora_inicio: datos.hora_inicio ?? oferta.hora_inicio,
+      hora_fin_estimada: datos.hora_fin_estimada !== undefined ? datos.hora_fin_estimada : oferta.hora_fin_estimada,
+    });
 
     const camposCriticos = ['fecha', 'hora_inicio', 'hora_fin_estimada', 'lugar'];
     const hayCambioRelevante = camposCriticos.some(
@@ -294,18 +421,29 @@ const OfertasService = {
     // Use the JWT's empresaId (null for marketplace workers) so obtenerPorUsuarioId
     // finds the worker row that was created with empresa_id = null.
     const trabajador = await resolverTrabajador(empresaId, usuarioId);
-    const oferta = await OfertasModel.obtenerPorId(
-      empresaOfertaId,
-      ofertaId,
-      delayPorRanking(trabajador.ranking)
-    );
-    if (!oferta) throw new AppError('Oferta no encontrada o aún no disponible', 404);
+
+    // Fetch sin delay primero: necesitamos saber la visibilidad antes de decidir
+    // si aplica el delay por ranking (un destinatario directo lo salta).
+    const ofertaBase = await OfertasModel.obtenerPorId(empresaOfertaId, ofertaId, 0);
+    if (!ofertaBase) throw new AppError('Oferta no encontrada', 404);
+
+    const esDestinatarioDirecto = ofertaBase.visibilidad === 'dirigida'
+      && await OfertasModel.esDestinatario(ofertaId, trabajador.id);
+    if (ofertaBase.visibilidad === 'dirigida' && !esDestinatarioDirecto) {
+      throw new AppError('Oferta no encontrada', 404);
+    }
+
+    let oferta = ofertaBase;
+    if (!esDestinatarioDirecto) {
+      const delay = delayPorRanking(trabajador.ranking);
+      oferta = delay > 0 ? await OfertasModel.obtenerPorId(empresaOfertaId, ofertaId, delay) : ofertaBase;
+      if (!oferta) throw new AppError('Oferta no encontrada o aún no disponible', 404);
+    }
     if (oferta.estado !== 'abierta' && oferta.estado !== 'publicada') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
     }
-    const hoyBogota = new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    if (oferta.fecha < hoyBogota) {
-      throw new AppError('No puedes postularte a un turno que ya pasó', 409);
+    if (turnoYaInicio(oferta.fecha, oferta.hora_inicio)) {
+      throw new AppError('No puedes postularte a un turno que ya empezó', 409);
     }
 
     // Puesto existe y pertenece a la oferta.
@@ -323,12 +461,16 @@ const OfertasService = {
     if (!vinculo || vinculo.estado !== 'activo') {
       throw new AppError('No tienes vínculo activo con esta empresa', 403);
     }
-    const tieneCargo = await CargosModel.tieneAsignacion(vinculo.id, puesto.cargo_id);
-    if (!tieneCargo) {
-      throw new AppError(
-        `No tienes el cargo "${puesto.cargo_nombre}" certificado por esta empresa`,
-        403
-      );
+    // Si fue invitado a mano (destinatario directo) no se exige el cargo certificado —
+    // el gestor eligiéndolo ya reemplaza ese filtro (mismo criterio que asignarDirecto).
+    if (!esDestinatarioDirecto) {
+      const tieneCargo = await CargosModel.tieneAsignacion(vinculo.id, puesto.cargo_id);
+      if (!tieneCargo) {
+        throw new AppError(
+          `No tienes el cargo "${puesto.cargo_nombre}" certificado por esta empresa`,
+          403
+        );
+      }
     }
 
     // Duplicado de postulación al MISMO puesto.
@@ -370,6 +512,13 @@ const OfertasService = {
   async duplicar(empresaId, id, nuevaFecha, creadoPor) {
     const original = await OfertasModel.obtenerPorId(empresaId, id);
     if (!original) throw new AppError('Oferta no encontrada', 404);
+    const activas = await OfertasModel.contarActivasPorEmpresa(empresaId);
+    if (activas >= MAX_OFERTAS_ACTIVAS_POR_EMPRESA) {
+      throw new AppError(
+        `Llegaste al máximo de ${MAX_OFERTAS_ACTIVAS_POR_EMPRESA} ofertas activas. Cierra o cancela ofertas antiguas antes de crear nuevas.`,
+        409
+      );
+    }
     const nuevaId = await OfertasModel.duplicar(empresaId, id, nuevaFecha, creadoPor);
     return OfertasModel.obtenerPorId(empresaId, nuevaId);
   },

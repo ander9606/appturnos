@@ -43,6 +43,18 @@ async function validarCargoUtilizable(cargoId, empresaId) {
   return cargo;
 }
 
+/**
+ * Advierte (sin bloquear) si `plazas` supera el número de trabajadores
+ * activos certificados para el cargo en la empresa.
+ */
+async function advertenciaCapacidad(empresaId, cargoId, cargoNombre, plazas) {
+  if (!plazas) return null;
+  const disponibles = await CargosModel.contarActivosPorEmpresa(cargoId, empresaId);
+  if (plazas <= disponibles) return null;
+  return `"${cargoNombre}" pide ${plazas} plaza(s), pero tu empresa solo tiene ` +
+    `${disponibles} trabajador(es) activo(s) certificado(s) para ese cargo.`;
+}
+
 const PuestosService = {
   async listar(empresaId, ofertaId) {
     await cargarOfertaDeEmpresa(empresaId, ofertaId);
@@ -51,7 +63,7 @@ const PuestosService = {
 
   async agregar(empresaId, ofertaId, { cargo_id, plazas, tarifa_dia, notas }) {
     await cargarOfertaDeEmpresa(empresaId, ofertaId);
-    await validarCargoUtilizable(cargo_id, empresaId);
+    const cargo = await validarCargoUtilizable(cargo_id, empresaId);
 
     try {
       const id = await PuestosModel.crear({
@@ -61,7 +73,9 @@ const PuestosService = {
         tarifaDia: tarifa_dia,
         notas,
       });
-      return PuestosModel.obtenerPorId(id);
+      const puesto = await PuestosModel.obtenerPorId(id);
+      puesto.advertencia = await advertenciaCapacidad(empresaId, cargo.id, cargo.nombre, Number(plazas));
+      return puesto;
     } catch (err) {
       // UNIQUE (oferta_id, cargo_id): no dos puestos con mismo cargo en la misma oferta.
       if (err.code === 'ER_DUP_ENTRY') {
@@ -82,7 +96,13 @@ const PuestosService = {
     }
     const afectadas = await PuestosModel.actualizar(puestoId, cambios);
     if (afectadas === 0) throw new AppError('Nada que actualizar', 400);
-    return PuestosModel.obtenerPorId(puestoId);
+    const actualizado = await PuestosModel.obtenerPorId(puestoId);
+    if (cambios.plazas !== undefined) {
+      actualizado.advertencia = await advertenciaCapacidad(
+        empresaId, actualizado.cargo_id, actualizado.cargo_nombre, Number(cambios.plazas)
+      );
+    }
+    return actualizado;
   },
 
   async eliminar(empresaId, ofertaId, puestoId) {
