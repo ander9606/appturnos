@@ -50,3 +50,8 @@ export function bogotaToday(): string {
   const t = new Date(Date.now() - BOGOTA_OFFSET_MS);
   return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
 }
+
+/** Primer día del mes actual (Bogotá) como YYYY-MM-DD — rango por defecto para vistas de liquidación mes-a-la-fecha. */
+export function inicioMesActual(): string {
+  return `${bogotaToday().slice(0, 7)}-01`;
+}

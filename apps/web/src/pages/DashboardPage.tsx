@@ -6,11 +6,9 @@ import { equipoApi } from '@/modules/equipo/api/equipoApi';
 import { turnosApi } from '@/modules/turnos/api/turnosApi';
 import { nominaApi } from '@/modules/nomina/api/nominaApi';
 import type { Rol } from '@/modules/auth/authStore';
+import type { LiquidacionTurnosTrabajador } from '@/modules/turnos/types';
 import { StatCard } from '@/shared/components/StatCard';
-
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'short' }).format(new Date(s + 'T00:00:00'));
-}
+import { fmtDate, fmtCOP, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 
 function fmtTime(s: string) {
   return s.slice(0, 5);
@@ -54,8 +52,15 @@ export function DashboardPage() {
 
   const { data: periodosData } = useQuery({
     queryKey: ['nomina', 'periodos', 'abierto', 'dashboard'],
-    queryFn: () => nominaApi.listarPeriodos({ estado: 'abierto', limit: 5 }),
+    queryFn: () => nominaApi.listarPeriodos({ estado: 'abierto', limit: 5, conTotales: true }),
     enabled: showNomina,
+    staleTime: 60_000,
+  });
+
+  const { data: liqTurnosData } = useQuery({
+    queryKey: ['turnos', 'liquidacion', 'dashboard'],
+    queryFn: () => turnosApi.liquidacion({ fecha_inicio: inicioMesActual(), fecha_fin: bogotaToday() }),
+    enabled: showTurnos,
     staleTime: 60_000,
   });
 
@@ -65,8 +70,14 @@ export function DashboardPage() {
   const ofertasActivas = ofertas.filter(o => o.estado === 'abierta' || o.estado === 'publicada' || o.estado === 'en_proceso');
   const asigPendientes = asigData?.data?.pagination?.total ?? 0;
   const periodoAbierto = periodosData?.data?.data?.[0] ?? null;
+  const debeTurnos = ((liqTurnosData?.data ?? []) as LiquidacionTurnosTrabajador[])
+    .reduce((s, t) => s + Number(t.pago_total), 0);
 
-  const proximas = ofertasActivas.slice(0, 5);
+  const proximasOrdenadas = [...ofertasActivas].sort((a, b) =>
+    a.fecha === b.fecha ? a.hora_inicio.localeCompare(b.hora_inicio) : a.fecha.localeCompare(b.fecha)
+  );
+  const proximoTurno = proximasOrdenadas[0] ?? null;
+  const proximas = proximasOrdenadas.slice(0, 5);
 
   return (
     <div>
@@ -81,8 +92,32 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {/* Cuánto se debe — lo primero que el jefe necesita ver */}
+      {(showNomina || showTurnos) && (
+        <div className={`grid gap-4 mb-4 ${showNomina && showTurnos ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {showNomina && (
+            <StatCard
+              label="Debes a Nómina"
+              value={periodoAbierto ? fmtCOP(periodoAbierto.total_estimado ?? 0) : 'Sin período abierto'}
+              valueSmall={!periodoAbierto}
+              icon={DollarSign}
+              color="success"
+              onClick={() => navigate('/nomina')}
+            />
+          )}
+          {showTurnos && (
+            <StatCard
+              label="Debes a Turnos (mes en curso)"
+              value={fmtCOP(debeTurnos)}
+              icon={DollarSign}
+              onClick={() => navigate('/turnos')}
+            />
+          )}
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         {showEquipo && (
           <StatCard
             label="Trabajadores activos"
@@ -106,21 +141,14 @@ export function DashboardPage() {
               color="warning"
               onClick={() => navigate('/turnos')}
             />
+            <StatCard
+              label="Próximo turno"
+              value={proximoTurno ? `${proximoTurno.titulo} · ${fmtDate(proximoTurno.fecha)} ${fmtTime(proximoTurno.hora_inicio)}` : 'Ninguno'}
+              valueSmall
+              icon={Calendar}
+              onClick={() => proximoTurno ? navigate(`/turnos/${proximoTurno.id}`) : navigate('/turnos')}
+            />
           </>
-        )}
-        {showNomina && (
-          <StatCard
-            label="Período abierto"
-            value={
-              periodoAbierto
-                ? `${fmtDate(periodoAbierto.fecha_inicio)} – ${fmtDate(periodoAbierto.fecha_fin)}`
-                : 'Ninguno'
-            }
-            valueSmall={!periodoAbierto}
-            icon={DollarSign}
-            color={periodoAbierto ? 'success' : undefined}
-            onClick={() => navigate('/nomina')}
-          />
         )}
       </div>
 

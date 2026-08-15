@@ -7,10 +7,19 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
 import type { TipoTrabajador, Trabajador } from '../types';
 
+/** Mismo código de colores que el resto de la app: Turnos = naranja, Nómina = verde. "Ambos" es su propio color — no reusa el verde para no leerse como "solo nómina". */
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
-  nomina: 'bg-purple-100 text-purple-700',
   turnos: 'bg-primary-100 text-primary-600',
-  ambos: 'bg-success-light text-success',
+  nomina: 'bg-success-light text-success',
+  ambos: 'bg-info-light text-info',
+};
+
+const TIPO_ORDEN: TipoTrabajador[] = ['turnos', 'nomina', 'ambos'];
+
+const TIPO_DOT: Record<TipoTrabajador, string> = {
+  turnos: 'bg-primary',
+  nomina: 'bg-success',
+  ambos: 'bg-info',
 };
 
 const TIPO_LABEL: Record<TipoTrabajador, string> = {
@@ -133,65 +142,26 @@ export function EquipoPage() {
         <ErrorState error={error} onRetry={refetch} />
       ) : trabajadores.length === 0 ? (
         <p className="text-muted-foreground text-sm py-8 text-center">No hay trabajadores</p>
-      ) : (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted text-muted-foreground text-xs uppercase">
-                <th className="text-left px-4 py-3 font-medium">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium">Cédula</th>
-                <th className="text-left px-4 py-3 font-medium">Tipo</th>
-                <th className="text-left px-4 py-3 font-medium">Cargo</th>
-                <th className="text-right px-4 py-3 font-medium">Tarifa/hora</th>
-                <th className="text-left px-4 py-3 font-medium">Estado</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {trabajadores.map(t => (
-                <tr key={t.id} className="border-t border-border/60 hover:bg-muted">
-                  <td className="px-4 py-3 font-medium text-foreground">{t.nombre} {t.apellido}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{t.cedula ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_BADGE[t.tipo]}`}>
-                      {TIPO_LABEL[t.tipo]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{t.cargo ?? '—'}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{fmtCOP(t.tarifa_hora)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${t.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
-                      {t.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 justify-end">
-                      {isAdmin && Boolean(t.activo) && (
-                        <button
-                          onClick={() => {
-                            if (window.confirm(`¿Desactivar a ${t.nombre} ${t.apellido}?`)) {
-                              desactivar.mutate(t.id);
-                            }
-                          }}
-                          className="text-muted-foreground/60 hover:text-danger transition-colors"
-                          title="Desactivar"
-                        >
-                          <UserX size={14} />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => navigate(`/equipo/${t.id}`)}
-                        className="text-xs text-primary hover:text-primary-600 font-medium px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors"
-                      >
-                        Ver →
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      ) : tipoFiltro === undefined ? (
+        <div className="flex flex-col gap-5">
+          {TIPO_ORDEN.map(tipo => {
+            const grupo = trabajadores.filter(t => t.tipo === tipo);
+            if (grupo.length === 0) return null;
+            return (
+              <div key={tipo}>
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span className={`w-2 h-2 rounded-full ${TIPO_DOT[tipo]}`} />
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {TIPO_LABEL[tipo]} · {grupo.length}
+                  </h3>
+                </div>
+                <TablaTrabajadores trabajadores={grupo} isAdmin={isAdmin} navigate={navigate} desactivar={desactivar} />
+              </div>
+            );
+          })}
         </div>
+      ) : (
+        <TablaTrabajadores trabajadores={trabajadores} isAdmin={isAdmin} navigate={navigate} desactivar={desactivar} />
       )}
 
       {pagination && pagination.total > pagination.limit && (
@@ -218,6 +188,76 @@ export function EquipoPage() {
 
       {showCrear && <TrabajadorFormModal onClose={() => setShowCrear(false)} />}
       {showInvitar && <InvitarModal onClose={() => setShowInvitar(false)} />}
+    </div>
+  );
+}
+
+function TablaTrabajadores({
+  trabajadores, isAdmin, navigate, desactivar,
+}: {
+  trabajadores: Trabajador[];
+  isAdmin: boolean;
+  navigate: ReturnType<typeof useNavigate>;
+  desactivar: ReturnType<typeof useDesactivarTrabajador>;
+}) {
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-muted text-muted-foreground text-xs uppercase">
+            <th className="text-left px-4 py-3 font-medium">Nombre</th>
+            <th className="text-left px-4 py-3 font-medium">Cédula</th>
+            <th className="text-left px-4 py-3 font-medium">Tipo</th>
+            <th className="text-left px-4 py-3 font-medium">Cargo</th>
+            <th className="text-right px-4 py-3 font-medium">Tarifa/hora</th>
+            <th className="text-left px-4 py-3 font-medium">Estado</th>
+            <th className="px-4 py-3" />
+          </tr>
+        </thead>
+        <tbody>
+          {trabajadores.map(t => (
+            <tr key={t.id} className="border-t border-border/60 hover:bg-muted">
+              <td className="px-4 py-3 font-medium text-foreground">{t.nombre} {t.apellido}</td>
+              <td className="px-4 py-3 text-muted-foreground">{t.cedula ?? '—'}</td>
+              <td className="px-4 py-3">
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${TIPO_BADGE[t.tipo]}`}>
+                  {TIPO_LABEL[t.tipo]}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-muted-foreground">{t.cargo ?? '—'}</td>
+              <td className="px-4 py-3 text-right text-muted-foreground">{fmtCOP(t.tarifa_hora)}</td>
+              <td className="px-4 py-3">
+                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${t.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
+                  {t.activo ? 'Activo' : 'Inactivo'}
+                </span>
+              </td>
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-2 justify-end">
+                  {isAdmin && Boolean(t.activo) && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`¿Desactivar a ${t.nombre} ${t.apellido}?`)) {
+                          desactivar.mutate(t.id);
+                        }
+                      }}
+                      className="text-muted-foreground/60 hover:text-danger transition-colors"
+                      title="Desactivar"
+                    >
+                      <UserX size={14} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate(`/equipo/${t.id}`)}
+                    className="text-xs text-primary hover:text-primary-600 font-medium px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors"
+                  >
+                    Ver →
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

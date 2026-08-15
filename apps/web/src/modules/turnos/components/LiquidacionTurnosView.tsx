@@ -3,20 +3,15 @@ import { DollarSign, Calendar, Clock, ChevronDown } from 'lucide-react';
 import { useLiquidacionTurnos } from '../hooks/useTurnos';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { StatCard } from '@/shared/components/StatCard';
-import { fmtCOP, fmtHrs, fmtDate, bogotaToday } from '@/shared/lib/format';
+import { fmtCOP, fmtHrs, fmtDate, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 import type { LiquidacionTurnosTrabajador } from '../types';
-
-function primerDiaMes(): string {
-  const hoy = bogotaToday();
-  return `${hoy.slice(0, 7)}-01`;
-}
 
 function fmtHora(dt: string | null): string {
   return dt ? dt.slice(11, 16) : '—';
 }
 
 export function LiquidacionTurnosView() {
-  const [fechaInicio, setFechaInicio] = useState(primerDiaMes());
+  const [fechaInicio, setFechaInicio] = useState(inicioMesActual());
   const [fechaFin, setFechaFin] = useState(bogotaToday());
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [turnosExpandidos, setTurnosExpandidos] = useState<Set<number>>(new Set());
