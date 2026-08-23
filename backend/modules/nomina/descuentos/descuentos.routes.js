@@ -4,6 +4,7 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../../config/constants');
 const ctrl = require('./descuentos.controller');
 
@@ -30,6 +31,7 @@ router.get(
 router.post(
   '/',
   verificarRol(ROLES_GESTOR),
+  verificarSuscripcion,
   [
     body('trabajador_id').isInt({ min: 1 }).withMessage('trabajador_id es obligatorio'),
     body('periodo_id').isInt({ min: 1 }).withMessage('periodo_id es obligatorio'),
@@ -48,6 +50,6 @@ router.post('/:id/aceptar', verificarRol([ROLES.TRABAJADOR_NOMINA]), [idParam], 
 router.post('/:id/rechazar', verificarRol([ROLES.TRABAJADOR_NOMINA]), [idParam], validar, ctrl.rechazar);
 
 // DELETE /api/nomina/descuentos/:id
-router.delete('/:id', verificarRol(ROLES_GESTOR), [idParam], validar, ctrl.eliminar);
+router.delete('/:id', verificarRol(ROLES_GESTOR), verificarSuscripcion, [idParam], validar, ctrl.eliminar);
 
 module.exports = router;

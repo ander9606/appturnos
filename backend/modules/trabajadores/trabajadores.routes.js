@@ -183,6 +183,7 @@ router.post('/', verificarRol(SOLO_ADMIN), verificarSuscripcion, reglasTrabajado
 router.put(
   '/:id',
   verificarRol(SOLO_ADMIN),
+  verificarSuscripcion,
   [idParam, ...reglasTrabajador({ parcial: true })],
   validar,
   ctrl.actualizar
@@ -192,6 +193,7 @@ router.put(
 router.patch(
   '/:id/marcacion',
   verificarRol([ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA]),
+  verificarSuscripcion,
   [
     idParam,
     body('tipo_marcacion').isIn(['libre', 'fijo', 'zonal']).withMessage('tipo_marcacion inválido'),
@@ -204,10 +206,10 @@ router.patch(
 );
 
 // DELETE /api/trabajadores/:id  (soft delete)
-router.delete('/:id', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.eliminar);
+router.delete('/:id', verificarRol(SOLO_ADMIN), verificarSuscripcion, [idParam], validar, ctrl.eliminar);
 
 // DELETE /api/trabajadores/:id/definitivo  (borrar trabajador desactivado sin historial)
-router.delete('/:id/definitivo', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.eliminarDefinitivo);
+router.delete('/:id/definitivo', verificarRol(SOLO_ADMIN), verificarSuscripcion, [idParam], validar, ctrl.eliminarDefinitivo);
 
 // GET /api/trabajadores/:id/cargos — cargos certificados en mi empresa
 router.get('/:id/cargos', verificarRol(PUEDE_GESTIONAR_CARGOS), [idParam], validar, ctrl.listarCargos);
@@ -216,6 +218,7 @@ router.get('/:id/cargos', verificarRol(PUEDE_GESTIONAR_CARGOS), [idParam], valid
 router.post(
   '/:id/cargos',
   verificarRol(PUEDE_GESTIONAR_CARGOS),
+  verificarSuscripcion,
   [idParam, body('cargo_id').isInt({ min: 1 }).withMessage('cargo_id requerido')],
   validar,
   ctrl.asignarCargo
@@ -225,6 +228,7 @@ router.post(
 router.delete(
   '/:id/cargos/:cargoId',
   verificarRol(PUEDE_GESTIONAR_CARGOS),
+  verificarSuscripcion,
   [idParam, param('cargoId').isInt({ min: 1 }).withMessage('cargoId inválido')],
   validar,
   ctrl.desasignarCargo
