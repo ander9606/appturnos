@@ -54,9 +54,9 @@ router.post(
 );
 
 // POST /api/nomina/periodos/:id/cerrar
-router.post('/:id/cerrar', verificarRol(GESTIONAR), [idParam], validar, ctrl.cerrar);
+router.post('/:id/cerrar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.cerrar);
 
 // POST /api/nomina/periodos/:id/liquidar
-router.post('/:id/liquidar', verificarRol(GESTIONAR), [idParam], validar, ctrl.liquidar);
+router.post('/:id/liquidar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.liquidar);
 
 module.exports = router;

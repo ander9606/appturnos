@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./trabajador-empresa.controller');
 const cargosCtrl = require('../cargos/cargos.controller');
@@ -29,6 +30,7 @@ router.post(
   '/invitar',
   verificarToken,
   verificarRol(SOLO_JEFE),
+  verificarSuscripcion,
   [body('cedula').isString().trim().notEmpty().withMessage('cédula requerida')],
   validar,
   ctrl.invitar
@@ -39,6 +41,7 @@ router.post(
   '/:id/aprobar',
   verificarToken,
   verificarRol(SOLO_JEFE),
+  verificarSuscripcion,
   [param('id').isInt({ min: 1 }).toInt()],
   validar,
   ctrl.aprobar
@@ -111,6 +114,7 @@ router.post(
   '/:id/cargos',
   verificarToken,
   verificarRol(SOLO_JEFE),
+  verificarSuscripcion,
   [
     param('id').isInt({ min: 1 }).toInt(),
     body('cargo_id').isInt({ min: 1 }).withMessage('cargo_id requerido'),
@@ -124,6 +128,7 @@ router.delete(
   '/:id/cargos/:cargoId',
   verificarToken,
   verificarRol(SOLO_JEFE),
+  verificarSuscripcion,
   [
     param('id').isInt({ min: 1 }).toInt(),
     param('cargoId').isInt({ min: 1 }).toInt(),

@@ -4,6 +4,7 @@ const express = require('express');
 const { body, param } = require('express-validator');
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./puntos-marcaje.controller');
 
@@ -30,18 +31,19 @@ router.use(verificarToken);
 router.get('/', verificarRol(VER), ctrl.listar);
 
 // POST /api/puntos-marcaje
-router.post('/', verificarRol(GESTIONAR), reglasBase, validar, ctrl.crear);
+router.post('/', verificarRol(GESTIONAR), verificarSuscripcion, reglasBase, validar, ctrl.crear);
 
 // PATCH /api/puntos-marcaje/:id
 router.patch(
   '/:id',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [idParam, ...reglasBase.map((r) => r.optional())],
   validar,
   ctrl.actualizar
 );
 
 // DELETE /api/puntos-marcaje/:id
-router.delete('/:id', verificarRol(GESTIONAR), [idParam], validar, ctrl.eliminar);
+router.delete('/:id', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.eliminar);
 
 module.exports = router;

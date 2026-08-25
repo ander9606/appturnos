@@ -4,6 +4,7 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./ausencias.controller');
 
@@ -48,6 +49,7 @@ router.post(
 router.patch(
   '/:id/estado',
   verificarRol(GESTORES),
+  verificarSuscripcion,
   [
     param('id').isInt({ min: 1 }).withMessage('id inválido'),
     body('estado').isIn(['aprobada','rechazada']).withMessage('estado inválido'),

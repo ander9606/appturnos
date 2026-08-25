@@ -5,6 +5,7 @@ const { verificarToken, verificarRol } = require('../../../middleware/authMiddle
 const { ROLES }        = require('../../../config/constants');
 const { body, param, query } = require('express-validator');
 const { validar: validarCampos } = require('../../../middleware/validator');
+const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const ctrl             = require('./compensatorios.controller');
 
 const router = express.Router();
@@ -25,6 +26,7 @@ router.get(
 router.put(
   '/:id/asignar',
   verificarRol(ROLES_GESTOR),
+  verificarSuscripcion,
   param('id').isInt({ min: 1 }),
   body('fechaAsignada').isDate().withMessage('fechaAsignada debe ser YYYY-MM-DD'),
   validarCampos,

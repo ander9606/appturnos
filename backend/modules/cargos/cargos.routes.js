@@ -5,6 +5,7 @@ const { body, param } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./cargos.controller');
 
@@ -28,6 +29,7 @@ router.post(
   '/',
   verificarToken,
   verificarRol(PUEDE_GESTIONAR),
+  verificarSuscripcion,
   [
     codigoOpcional,
     body('nombre').isString().trim().isLength({ min: 2, max: 100 }),
@@ -44,6 +46,7 @@ router.patch(
   '/:id',
   verificarToken,
   verificarRol(PUEDE_GESTIONAR),
+  verificarSuscripcion,
   [
     param('id').isInt({ min: 1 }).toInt(),
     body('nombre').optional().isString().trim().isLength({ min: 2, max: 100 }),
@@ -61,6 +64,7 @@ router.delete(
   '/:id',
   verificarToken,
   verificarRol(PUEDE_GESTIONAR),
+  verificarSuscripcion,
   [param('id').isInt({ min: 1 }).toInt()],
   validar,
   ctrl.eliminar
@@ -80,6 +84,7 @@ router.put(
   '/:id/funciones',
   verificarToken,
   verificarRol(PUEDE_GESTIONAR),
+  verificarSuscripcion,
   [
     param('id').isInt({ min: 1 }).toInt(),
     body('funciones').isArray({ max: 50 }).withMessage('funciones debe ser un arreglo'),
