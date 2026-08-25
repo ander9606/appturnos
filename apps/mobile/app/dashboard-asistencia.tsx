@@ -55,7 +55,14 @@ const ESTADO_CONFIG: Record<EstadoAsistencia, {
   },
 };
 
-type Filtro = 'todos' | EstadoAsistencia;
+type Filtro = 'todos' | EstadoAsistencia | 'compensatorio';
+
+/** true si la fila corresponde al filtro dado ('todos' siempre calza). */
+function calzaFiltro(fila: FilaDashboard, filtro: Filtro): boolean {
+  if (filtro === 'todos') return true;
+  if (filtro === 'compensatorio') return fila.registroHoy?.tipo_dia === 'compensatorio';
+  return fila.estado === filtro;
+}
 
 // ── Fila de trabajador ────────────────────────────────────────────────────
 
@@ -137,11 +144,12 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
 // ── Pantalla principal ────────────────────────────────────────────────────
 
 const FILTROS: { v: Filtro; label: string }[] = [
-  { v: 'todos',      label: 'Todos'      },
-  { v: 'en_jornada', label: 'En jornada' },
-  { v: 'ausente',    label: 'Ausentes'   },
-  { v: 'completo',   label: 'Completos'  },
-  { v: 'especial',   label: 'Especiales' },
+  { v: 'todos',          label: 'Todos'         },
+  { v: 'en_jornada',     label: 'En jornada'    },
+  { v: 'ausente',        label: 'Ausentes'      },
+  { v: 'completo',       label: 'Completos'     },
+  { v: 'especial',       label: 'Especiales'    },
+  { v: 'compensatorio',  label: 'Compensatorio' },
 ];
 
 const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -156,9 +164,7 @@ export default function DashboardAsistenciaScreen() {
     isLoading, isRefetching, refetch,
   } = useDashboardAsistencia();
 
-  const filasFiltradas = filtro === 'todos'
-    ? filas
-    : filas.filter((f) => f.estado === filtro);
+  const filasFiltradas = filas.filter((f) => calzaFiltro(f, filtro));
 
   const d = new Date(`${hoy}T12:00:00`);
   const labelHoy = `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
@@ -212,6 +218,12 @@ export default function DashboardAsistenciaScreen() {
                 {contadores.especiales > 0 && (
                   <CounterPill color="#F59E0B" label={`${contadores.especiales} especial`} />
                 )}
+                {contadores.compensatorios > 0 && (
+                  <CounterPill
+                    color="#8B5CF6"
+                    label={`${contadores.compensatorios} compensatorio${contadores.compensatorios > 1 ? 's' : ''}`}
+                  />
+                )}
               </View>
               <Text className="text-white/60 text-[10px] mt-1">
                 Límite semanal {new Date().getFullYear()}: {limiteSemana}h · Ley 2101
@@ -236,7 +248,7 @@ export default function DashboardAsistenciaScreen() {
                 >
                   <Text className={`text-xs font-semibold ${filtro === f.v ? 'text-white' : 'text-muted-foreground'}`}>
                     {f.label}
-                    {f.v !== 'todos' && ` · ${filas.filter((r) => f.v === 'todos' || r.estado === f.v).length}`}
+                    {f.v !== 'todos' && ` · ${filas.filter((r) => calzaFiltro(r, f.v)).length}`}
                   </Text>
                 </TouchableOpacity>
               )}
