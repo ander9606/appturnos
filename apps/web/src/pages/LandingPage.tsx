@@ -101,6 +101,7 @@ export function LandingPage() {
       <Hero />
       <Stats />
       <Mockups />
+      <ParaTrabajadores />
       <Pain />
       <HowItWorks />
       <Features />
@@ -122,6 +123,12 @@ function Nav() {
           <span className="text-base font-bold tracking-tight text-foreground">Zaturno</span>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href="#trabajadores"
+            className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground sm:block"
+          >
+            Busco turnos
+          </a>
           <Link
             to="/login"
             className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground sm:block"
@@ -357,6 +364,58 @@ function MockupItem({ caption, children }: { caption: string; children: ReactNod
         {caption}
       </span>
     </div>
+  );
+}
+
+// ── Para trabajadores ───────────────────────────────────────────────────
+
+function ParaTrabajadores() {
+  const beneficios = [
+    { icon: Search, text: 'Ve turnos "Disponibles" de otras empresas, no solo de la que te invitó' },
+    { icon: CheckCircle2, text: 'Postúlate con un toque — sin llamadas ni cadenas de WhatsApp' },
+    { icon: Wallet, text: 'Cobra con los recargos nocturnos, dominicales y festivos ya calculados' },
+    { icon: TrendingUp, text: 'Construye tu calificación: entre mejor tu historial, más turnos te llegan' },
+  ];
+  return (
+    <section id="trabajadores" className="bg-muted/60 px-6 py-20 sm:py-24">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 lg:grid-cols-2">
+        <Reveal>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Para trabajadores</p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-4xl">
+            ¿Buscas turnos por día?
+          </h2>
+          <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
+            Activa tu cuenta con la empresa que te invitó y no te quedes ahí: desde la pestaña
+            "Disponibles" puedes ver y postularte a turnos de otras empresas que también usan
+            Zaturno — eventos, restaurantes, seguridad, lo que se ajuste a tu disponibilidad.
+          </p>
+          <ul className="mt-7 flex flex-col gap-4">
+            {beneficios.map((b) => (
+              <li key={b.text} className="flex items-start gap-3">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary-50">
+                  <b.icon size={16} className="text-primary" />
+                </div>
+                <span className="pt-1 text-sm font-medium leading-snug text-foreground">{b.text}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              to="/login"
+              className="rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 hover:bg-primary-600"
+            >
+              Activar mi cuenta
+            </Link>
+            <span className="text-sm text-muted-foreground">¿Tu empresa aún no usa Zaturno? Pídele que te agregue.</span>
+          </div>
+        </Reveal>
+        <Reveal delay={150} className="flex justify-center">
+          <Phone>
+            <OfertaDetalleScreen />
+          </Phone>
+        </Reveal>
+      </div>
+    </section>
   );
 }
 

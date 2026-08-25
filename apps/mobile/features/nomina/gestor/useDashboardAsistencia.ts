@@ -148,11 +148,12 @@ export function useDashboardAsistencia() {
   ]);
 
   const contadores = useMemo(() => ({
-    total:      filas.length,
-    enJornada:  filas.filter((f) => f.estado === 'en_jornada').length,
-    completos:  filas.filter((f) => f.estado === 'completo').length,
-    ausentes:   filas.filter((f) => f.estado === 'ausente').length,
-    especiales: filas.filter((f) => f.estado === 'especial').length,
+    total:          filas.length,
+    enJornada:      filas.filter((f) => f.estado === 'en_jornada').length,
+    completos:      filas.filter((f) => f.estado === 'completo').length,
+    ausentes:       filas.filter((f) => f.estado === 'ausente').length,
+    especiales:     filas.filter((f) => f.estado === 'especial').length,
+    compensatorios: filas.filter((f) => f.registroHoy?.tipo_dia === 'compensatorio').length,
   }), [filas]);
 
   return {
