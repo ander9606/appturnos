@@ -72,6 +72,31 @@ const CompensatoriosModel = {
       [id, empresaId]
     );
   },
+
+  /**
+   * Compensatorios cuya fecha_asignada es hoy y aún no se le avisó al
+   * gestor. Cruza todas las empresas — lo usa compensatorios.worker.js.
+   */
+  async listarHoyPendientesNotificar(hoy) {
+    const [filas] = await pool.query(
+      `SELECT dc.id, dc.empresa_id, t.nombre, t.apellido
+       FROM descansos_compensatorios dc
+       JOIN trabajadores t ON t.id = dc.trabajador_id
+       WHERE dc.fecha_asignada = ? AND dc.estado IN ('asignado', 'tomado')
+         AND dc.notificado_gestor = 0`,
+      [hoy]
+    );
+    return filas;
+  },
+
+  /** Marca un lote de compensatorios como ya notificados al gestor. */
+  async marcarNotificadosGestor(ids) {
+    if (ids.length === 0) return;
+    await pool.query(
+      `UPDATE descansos_compensatorios SET notificado_gestor = 1 WHERE id IN (?)`,
+      [ids]
+    );
+  },
 };
 
 module.exports = CompensatoriosModel;
