@@ -34,6 +34,17 @@ const CompensatoriosModel = {
     return filas;
   },
 
+  /** true si el trabajador ya tiene un descanso asignado/tomado en esa fecha. */
+  async existeFechaAsignada(empresaId, trabajadorId, fecha) {
+    const [filas] = await pool.query(
+      `SELECT 1 FROM descansos_compensatorios
+       WHERE empresa_id = ? AND trabajador_id = ? AND fecha_asignada = ?
+         AND estado IN ('asignado', 'tomado') LIMIT 1`,
+      [empresaId, trabajadorId, fecha]
+    );
+    return filas.length > 0;
+  },
+
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       'SELECT * FROM descansos_compensatorios WHERE id = ? AND empresa_id = ? LIMIT 1',

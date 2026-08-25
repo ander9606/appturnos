@@ -68,6 +68,13 @@ const HORA_FIN_NOCTURNO = 6; // 06:00
 // (convención laboral colombiana: 30 días × 8 h).
 const HORAS_MES_NOMINA = 240;
 
+// Plazo (días corridos tras el domingo/festivo trabajado) dentro del cual el
+// sistema debe ubicar automáticamente el descanso compensatorio (Art. 179
+// CST: siguiente semana, ampliable hasta 4 semanas por acuerdo/política de
+// la empresa). Si no hay día libre disponible dentro del plazo, el
+// compensatorio queda 'pendiente' para asignación manual.
+const COMPENSATORIO_PLAZO_DIAS = 28;
+
 // ── Descuentos de ley (solo aplican a empresas.tipo_contrato = 'laboral') ──
 
 // Salario mínimo mensual legal vigente. Cambia cada 1-ene por decreto del
@@ -148,6 +155,7 @@ module.exports = {
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
   HORAS_MES_NOMINA,
+  COMPENSATORIO_PLAZO_DIAS,
   SMMLV_COP,
   DEDUCCION_SALUD,
   DEDUCCION_PENSION,

@@ -5,26 +5,77 @@ const RegistrosModel      = require('../registros/registros.model');
 const TrabajadoresModel   = require('../../trabajadores/trabajadores.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const AppError            = require('../../../utils/AppError');
-const { ROLES }           = require('../../../config/constants');
+const { ROLES, COMPENSATORIO_PLAZO_DIAS } = require('../../../config/constants');
+const { esDiaFestivo }    = require('../../../utils/laboralUtils');
+const logger              = require('../../../utils/logger');
 
 /** Día de semana: 0=Dom. Devuelve true si es domingo. */
 function esDomingo(fechaISO) {
   return new Date(`${fechaISO}T12:00:00`).getDay() === 0;
 }
 
+function sumarDiasISO(fechaISO, dias) {
+  const d = new Date(`${fechaISO}T12:00:00`);
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Busca el primer día hábil (no domingo/festivo, sin registro ni descanso ya
+ * asignado) disponible para el trabajador dentro del plazo legal, empezando
+ * al día siguiente del domingo/festivo trabajado.
+ */
+async function determinarFechaAutomatica(empresaId, trabajadorId, origenFecha) {
+  for (let i = 1; i <= COMPENSATORIO_PLAZO_DIAS; i++) {
+    const candidata = sumarDiasISO(origenFecha, i);
+    if (esDiaFestivo(candidata)) continue; // esDiaFestivo() ya cubre domingo
+
+    const [registroExistente, yaAsignado] = await Promise.all([
+      RegistrosModel.obtenerPorFecha(empresaId, trabajadorId, candidata),
+      CompensatoriosModel.existeFechaAsignada(empresaId, trabajadorId, candidata),
+    ]);
+    if (registroExistente || yaAsignado) continue;
+
+    return candidata;
+  }
+  return null;
+}
+
 const CompensatoriosService = {
   /**
    * Llamado internamente después de marcar-salida.
-   * Si el día es festivo o domingo, crea el descanso compensatorio automáticamente.
+   * Si el día es festivo o domingo, crea el descanso compensatorio y el
+   * sistema mismo ubica la fecha en la que el trabajador lo tomará. Si no
+   * encuentra un día libre dentro del plazo legal, lo deja 'pendiente' para
+   * que el jefe_nomina/admin lo asigne manualmente.
    */
   async crearSiCorresponde(empresaId, { trabajadorId, periodoId, fecha, esFestivo, registroId }) {
     if (!esFestivo && !esDomingo(fecha)) return null;
-    return CompensatoriosModel.crear(empresaId, {
+
+    const compensatorioId = await CompensatoriosModel.crear(empresaId, {
       trabajadorId,
       periodoId,
       origenFecha: fecha,
       origenRegistroId: registroId,
     });
+    if (!compensatorioId) return null; // ya existía (INSERT IGNORE)
+
+    // La asignación automática es un "mejor esfuerzo": si falla, el compensatorio
+    // queda 'pendiente' (ya creado arriba) para asignación manual, y no debe
+    // tumbar la respuesta de marcar-salida — el registro del día ya se guardó.
+    try {
+      const fechaAutomatica = await determinarFechaAutomatica(empresaId, trabajadorId, fecha);
+      if (fechaAutomatica) {
+        await this._ejecutarAsignacion(empresaId, compensatorioId, {
+          fechaAsignada: fechaAutomatica,
+          asignadoPor: null, // asignado por el sistema, no por un usuario
+        });
+      }
+    } catch (err) {
+      logger.error('[compensatorios] fallo la asignación automática', err.message);
+    }
+
+    return compensatorioId;
   },
 
   /** Lista compensatorios. El trabajador solo ve los suyos. */
@@ -39,8 +90,8 @@ const CompensatoriosService = {
   },
 
   /**
-   * Asigna una fecha de descanso (jefe_nomina / admin_empresa).
-   * Crea automáticamente un registros_diarios con tipo_dia='compensatorio' en esa fecha.
+   * Asigna manualmente una fecha de descanso (jefe_nomina / admin_empresa),
+   * para los casos en que el sistema no pudo ubicar una automáticamente.
    */
   async asignar(empresaId, usuarioId, compensatorioId, { fechaAsignada }) {
     const comp = await CompensatoriosModel.obtenerPorId(empresaId, compensatorioId);
@@ -48,11 +99,24 @@ const CompensatoriosService = {
     if (comp.estado !== 'pendiente') {
       throw new AppError('Este descanso ya fue asignado', 409);
     }
-
-    // Asignar fecha en la tabla
-    const rows = await CompensatoriosModel.asignar(empresaId, compensatorioId, {
+    return this._ejecutarAsignacion(empresaId, compensatorioId, {
       fechaAsignada,
       asignadoPor: usuarioId,
+    });
+  },
+
+  /**
+   * Fija fecha_asignada, crea/actualiza el registro del día como
+   * 'compensatorio' y marca el descanso 'tomado'. Compartido entre la
+   * asignación automática (crearSiCorresponde) y la manual (asignar).
+   */
+  async _ejecutarAsignacion(empresaId, compensatorioId, { fechaAsignada, asignadoPor }) {
+    const comp = await CompensatoriosModel.obtenerPorId(empresaId, compensatorioId);
+    if (!comp) throw new AppError('Descanso compensatorio no encontrado', 404);
+
+    const rows = await CompensatoriosModel.asignar(empresaId, compensatorioId, {
+      fechaAsignada,
+      asignadoPor,
     });
     if (rows === 0) throw new AppError('No se pudo asignar el descanso', 409);
 
@@ -73,7 +137,7 @@ const CompensatoriosService = {
         es_festivo:           existing.es_festivo,
         novedad:              existing.novedad,
         tipo_dia:             'compensatorio',
-        aprobado_por:         usuarioId,
+        aprobado_por:         asignadoPor,
       });
     } else {
       await RegistrosModel.crear(empresaId, {
