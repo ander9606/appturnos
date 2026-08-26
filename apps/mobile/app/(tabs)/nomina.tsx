@@ -96,6 +96,41 @@ function NominaGestorView() {
     refetchLiq();
   }, [refetchPeriodos, refetchLiq]);
 
+  const lineas  = liquidacion?.lineas ?? [];
+  const totales = liquidacion?.totales;
+
+  // ponytail: estos useMemo deben ir antes de cualquier return condicional
+  // (ver el de loadingPeriodos más abajo) — si no, el conteo de hooks cambia
+  // entre el primer render (sin datos) y el siguiente, y React tira
+  // "Rendered more hooks than during the previous render".
+  const composicionEquipo = useMemo(() => {
+    const sum = (k: keyof LiquidacionLinea) => lineas.reduce((s, l) => s + Number(l[k]), 0);
+    return {
+      ordinarias:    sum('horas_ordinarias'),
+      extraNocturna: sum('horas_extra_nocturnas'),
+      extraDiurna:   sum('horas_extra_diurnas'),
+      nocturna:      sum('horas_nocturnas'),
+      festivo:       sum('horas_festivo'),
+    };
+  }, [lineas]);
+
+  // Ordenado por total (de más a menos) y marcado el que tiene una proporción
+  // de recargo/extra notablemente por encima del promedio del equipo — así
+  // salta a la vista en vez de quedar escondido en el medio de la lista.
+  const filas = useMemo(() => {
+    const conRecargo = lineas.map((l) => {
+      const recargoHoras = l.horas_extra_diurnas + l.horas_extra_nocturnas + l.horas_nocturnas + l.horas_festivo;
+      const totalH = l.horas_ordinarias + recargoHoras;
+      return { linea: l, recargoHoras, recargoPct: totalH > 0 ? recargoHoras / totalH : 0 };
+    });
+    const pctPromedio = conRecargo.length > 0
+      ? conRecargo.reduce((s, f) => s + f.recargoPct, 0) / conRecargo.length
+      : 0;
+    return conRecargo
+      .map((f) => ({ ...f, outlier: f.recargoPct > pctPromedio + 0.10 }))
+      .sort((a, b) => b.linea.total - a.linea.total);
+  }, [lineas]);
+
   const handleLiquidar = async () => {
     if (!activePeriodoId) return;
     const ok = await confirm({
@@ -121,19 +156,6 @@ function NominaGestorView() {
     );
   }
 
-  const lineas  = liquidacion?.lineas ?? [];
-  const totales = liquidacion?.totales;
-
-  const composicionEquipo = useMemo(() => {
-    const sum = (k: keyof LiquidacionLinea) => lineas.reduce((s, l) => s + Number(l[k]), 0);
-    return {
-      ordinarias:    sum('horas_ordinarias'),
-      extraNocturna: sum('horas_extra_nocturnas'),
-      extraDiurna:   sum('horas_extra_diurnas'),
-      nocturna:      sum('horas_nocturnas'),
-      festivo:       sum('horas_festivo'),
-    };
-  }, [lineas]);
   const totalHorasEquipo = Object.values(composicionEquipo).reduce((a, b) => a + b, 0);
   const pctRecargoEquipo = totalHorasEquipo > 0
     ? Math.round(((totalHorasEquipo - composicionEquipo.ordinarias) / totalHorasEquipo) * 100)
@@ -145,23 +167,6 @@ function NominaGestorView() {
     { value: composicionEquipo.nocturna,      color: HOUR_TYPE_COLORS.nocturna },
     { value: composicionEquipo.festivo,       color: HOUR_TYPE_COLORS.festivo },
   ];
-
-  // Ordenado por total (de más a menos) y marcado el que tiene una proporción
-  // de recargo/extra notablemente por encima del promedio del equipo — así
-  // salta a la vista en vez de quedar escondido en el medio de la lista.
-  const filas = useMemo(() => {
-    const conRecargo = lineas.map((l) => {
-      const recargoHoras = l.horas_extra_diurnas + l.horas_extra_nocturnas + l.horas_nocturnas + l.horas_festivo;
-      const totalH = l.horas_ordinarias + recargoHoras;
-      return { linea: l, recargoHoras, recargoPct: totalH > 0 ? recargoHoras / totalH : 0 };
-    });
-    const pctPromedio = conRecargo.length > 0
-      ? conRecargo.reduce((s, f) => s + f.recargoPct, 0) / conRecargo.length
-      : 0;
-    return conRecargo
-      .map((f) => ({ ...f, outlier: f.recargoPct > pctPromedio + 0.10 }))
-      .sort((a, b) => b.linea.total - a.linea.total);
-  }, [lineas]);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
