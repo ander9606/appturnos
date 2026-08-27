@@ -39,7 +39,13 @@ function errorHandler(err, req, res, _next) {
   const esOperacional = error instanceof AppError;
   const statusCode = esOperacional ? error.statusCode : 500;
 
-  if (!esOperacional) {
+  // El cliente cortó la conexión antes de que termináramos de leer el body (logout/backgrounding
+  // en mobile con un fetch en vuelo, red inestable, etc.) — raw-body lo reporta como error, pero
+  // no es un bug del servidor: no hay nada que corregir ni alertar. El socket ya está cerrado del
+  // lado del cliente, así que la respuesta de abajo no le llega a nadie de todos modos.
+  const esAbortoDeCliente = error?.type === 'request.aborted';
+
+  if (!esOperacional && !esAbortoDeCliente) {
     logger.error(`${req.method} ${req.originalUrl}`, err.stack || err.message);
     Sentry.captureException(err);
   }
