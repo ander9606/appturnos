@@ -21,7 +21,8 @@
         "NSLocationWhenInUseUsageDescription": "Zaturno necesita tu ubicación para verificar que estás en el punto de trabajo al marcar entrada/salida.",
         "NSFaceIDUsageDescription": "Usa Face ID para acceder rápidamente a Zaturno.",
         "NSCameraUsageDescription": "Zaturno necesita la cámara para adjuntar fotos a los reportes de novedades.",
-        "NSPhotoLibraryUsageDescription": "Zaturno necesita acceso a tus fotos para adjuntarlas a los reportes de novedades."
+        "NSPhotoLibraryUsageDescription": "Zaturno necesita acceso a tus fotos para adjuntarlas a los reportes de novedades.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -82,7 +83,6 @@
         }
       ]
     ],
-    "privacyPolicyUrl": "https://zaturno.app/privacidad",
     "experiments": {
       "typedRoutes": true
     },

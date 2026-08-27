@@ -7,6 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "http://localhost:3001"
       }
@@ -27,7 +30,7 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "prebuildCommand": "npx expo prebuild --clean --platform android",
+      "prebuildCommand": "npx expo prebuild --clean --platform $EAS_BUILD_PLATFORM",
       "android": {
         "buildType": "app-bundle"
       },
