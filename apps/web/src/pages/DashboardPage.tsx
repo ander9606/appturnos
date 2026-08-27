@@ -84,9 +84,10 @@ export function DashboardPage() {
   const debeTurnos = ((liqTurnosData?.data ?? []) as LiquidacionTurnosTrabajador[])
     .reduce((s, t) => s + Number(t.pago_total), 0);
 
-  const proximasOrdenadas = [...ofertasActivas].sort((a, b) =>
-    a.fecha === b.fecha ? a.hora_inicio.localeCompare(b.hora_inicio) : a.fecha.localeCompare(b.fecha)
-  );
+  const hoy = bogotaToday();
+  const proximasOrdenadas = ofertasActivas
+    .filter(o => o.fecha >= hoy)
+    .sort((a, b) => (a.fecha === b.fecha ? a.hora_inicio.localeCompare(b.hora_inicio) : a.fecha.localeCompare(b.fecha)));
   const proximoTurno = proximasOrdenadas[0] ?? null;
   const proximas = proximasOrdenadas.slice(0, 5);
 

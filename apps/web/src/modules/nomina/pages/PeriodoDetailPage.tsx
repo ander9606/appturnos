@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Plus, Pencil, ChevronDown, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Pencil, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
@@ -11,8 +11,18 @@ import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, Ti
 import { ErrorState } from '@/shared/components/ErrorState';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { StatCard } from '@/shared/components/StatCard';
 import { useConfirm } from '@/shared/hooks/useConfirm';
-import { fmtDate, fmtPeriodo, fmtCOP, fmtHrs } from '@/shared/lib/format';
+import { fmtPeriodo, fmtCOP, fmtHrs, fmtDiaSemana, fmtHora } from '@/shared/lib/format';
+
+const TIPO_DIA_LABELS: Record<TipoDia, string> = {
+  ordinario: 'Ordinario',
+  descanso: 'Descanso',
+  compensatorio: 'Compensatorio',
+  incapacidad: 'Incapacidad',
+  vacacion: 'Vacación',
+  licencia: 'Licencia',
+};
 
 const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
@@ -46,7 +56,6 @@ export function PeriodoDetailPage() {
   const [showCrear, setShowCrear] = useState(false);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [expandidosLiq, setExpandidosLiq] = useState<Set<number>>(new Set());
-  const [diasExpandidos, setDiasExpandidos] = useState<Set<number>>(new Set());
   const [descuentoTrabajador, setDescuentoTrabajador] = useState<{ id: number; nombre: string } | null>(null);
 
   const { data: periodosData, isLoading: loadingPeriodos, isError: errorPeriodos, error: errPeriodos, refetch: refetchPeriodos } = usePeriodos();
@@ -94,14 +103,6 @@ export function PeriodoDetailPage() {
     setExpandidosLiq(prev => {
       const next = new Set(prev);
       next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
-      return next;
-    });
-  }
-
-  function toggleDia(registroId: number) {
-    setDiasExpandidos(prev => {
-      const next = new Set(prev);
-      next.has(registroId) ? next.delete(registroId) : next.add(registroId);
       return next;
     });
   }
@@ -240,14 +241,14 @@ export function PeriodoDetailPage() {
                         <tbody>
                           {g.registros.map(r => (
                             <tr key={r.id} className="border-t border-border/60 hover:bg-muted">
-                              <td className="px-3 py-2.5 text-muted-foreground">{fmtDate(r.fecha)}</td>
-                              <td className="px-3 py-2.5 text-muted-foreground">{r.hora_entrada ?? '—'}</td>
-                              <td className="px-3 py-2.5 text-muted-foreground">{r.hora_salida ?? '—'}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{fmtDiaSemana(r.fecha)}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_entrada)}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_salida)}</td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">
                                 {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}
                               </td>
-                              <td className="px-3 py-2.5 text-muted-foreground capitalize">{r.tipo_dia}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">{TIPO_DIA_LABELS[r.tipo_dia]}</td>
                               <td className="px-3 py-2.5 text-muted-foreground max-w-32 truncate">{r.novedad ?? ''}</td>
                               <td className="px-3 py-2.5">
                                 <button
@@ -288,19 +289,19 @@ export function PeriodoDetailPage() {
                 const { trabajadores, total_general, total_neto_general } = liqData.data.totales;
                 return (
                   <div className={`grid gap-4 mb-6 ${esLaboral ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                    <div className="bg-card border border-border rounded-xl p-4">
-                      <p className="text-xs text-muted-foreground mb-1">Trabajadores</p>
-                      <p className="text-2xl font-bold text-foreground">{trabajadores}</p>
-                    </div>
-                    <div className="bg-card border border-border rounded-xl p-4">
-                      <p className="text-xs text-muted-foreground mb-1">{esLaboral ? 'Total bruto' : 'Total a pagar'}</p>
-                      <p className="text-2xl font-bold text-foreground">{fmtCOP(total_general)}</p>
-                    </div>
+                    <StatCard label="Trabajadores" value={trabajadores} icon={Users} />
+                    <StatCard
+                      label={esLaboral ? 'Total bruto' : 'Total a pagar'}
+                      value={fmtCOP(total_general)}
+                      icon={Wallet}
+                    />
                     {esLaboral && (
-                      <div className="bg-card border border-border rounded-xl p-4">
-                        <p className="text-xs text-muted-foreground mb-1">Total neto (con descuentos)</p>
-                        <p className="text-2xl font-bold text-success">{fmtCOP(total_neto_general)}</p>
-                      </div>
+                      <StatCard
+                        label="Total neto (con descuentos)"
+                        value={fmtCOP(total_neto_general)}
+                        icon={DollarSign}
+                        color="success"
+                      />
                     )}
                   </div>
                 );
@@ -317,11 +318,14 @@ export function PeriodoDetailPage() {
 
               <div className="flex flex-col gap-2">
                 {(liqData.data.lineas as LiquidacionLinea[]).map(l => {
-                  const abierto = expandidosLiq.has(l.trabajador_id);
+                  const abierto = expandidosLiq.has(l.trabajador_id) || liqData.data.lineas.length === 1;
                   const otrosDelTrabajador = descuentos.filter(d => d.trabajador_id === l.trabajador_id);
                   const diasTrabajador = registros
                     .filter(r => r.trabajador_id === l.trabajador_id)
                     .sort((a, b) => a.fecha.localeCompare(b.fecha));
+                  const horasExtra = Number(l.horas_extra_diurnas) + Number(l.horas_extra_nocturnas);
+                  const esLaboral = liqData.data.tipo_contrato === 'laboral';
+
                   return (
                     <div key={l.trabajador_id} className="bg-card border border-border rounded-xl overflow-hidden">
                       <button
@@ -337,14 +341,35 @@ export function PeriodoDetailPage() {
                           <ChevronDown size={16} className={`text-muted-foreground transition-transform ${abierto ? 'rotate-180' : ''}`} />
                         </span>
                       </button>
+
                       {abierto && (
                         <div className="border-t border-border">
-                          <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-muted/40 text-xs text-muted-foreground flex-wrap">
-                            <span>
-                              {fmtHrs(l.horas_ordinarias)} hrs ord · {fmtHrs(Number(l.horas_extra_diurnas) + Number(l.horas_extra_nocturnas))} hrs extra · {fmtCOP(l.valor_hora)}/h
-                              {liqData.data.tipo_contrato === 'laboral' && ` · salud -${fmtCOP(l.descuento_salud)} · pensión -${fmtCOP(l.descuento_pension)}`}
-                              {' · '}
-                              {l.numero_cuenta ? `${l.banco} · ${l.tipo_cuenta === 'corriente' ? 'Corriente' : 'Ahorros'} · ${l.numero_cuenta}` : 'Sin datos bancarios'}
+                          {/* Recibo — de horas a neto, un renglón por concepto */}
+                          <div className="px-4 py-3 flex flex-col gap-1.5 text-sm">
+                            <Renglon label="Horas ordinarias" valor={`${fmtHrs(l.horas_ordinarias)} h`} />
+                            {horasExtra > 0 && <Renglon label="Horas extra" valor={`${fmtHrs(horasExtra)} h`} />}
+                            <Renglon label="Valor hora" valor={fmtCOP(l.valor_hora)} />
+                            <div className="border-t border-border my-1" />
+                            <Renglon label="Total bruto" valor={fmtCOP(l.total)} fuerte />
+                            {esLaboral && (
+                              <>
+                                <Renglon label="Salud" valor={`-${fmtCOP(l.descuento_salud)}`} tono="danger" />
+                                <Renglon label="Pensión" valor={`-${fmtCOP(l.descuento_pension)}`} tono="danger" />
+                              </>
+                            )}
+                            {l.otros_descuentos.map(d => (
+                              <Renglon key={d.id} label={d.motivo || TIPO_DESCUENTO_LABELS[d.tipo]} valor={`-${fmtCOP(d.monto)}`} tono="danger" />
+                            ))}
+                            <div className="border-t border-border my-1" />
+                            <Renglon label="Total neto" valor={fmtCOP(l.neto)} fuerte tono="success" grande />
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-t border-border bg-muted/40 text-xs flex-wrap">
+                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                              <Landmark size={13} className="flex-shrink-0" />
+                              {l.numero_cuenta
+                                ? `${l.banco} · ${l.tipo_cuenta === 'corriente' ? 'Corriente' : 'Ahorros'} · ${l.numero_cuenta}`
+                                : 'Sin datos bancarios'}
                             </span>
                             <button
                               onClick={() => setDescuentoTrabajador({ id: l.trabajador_id, nombre: `${l.nombre} ${l.apellido}` })}
@@ -361,40 +386,46 @@ export function PeriodoDetailPage() {
                             </button>
                           </div>
 
+                          <div className="px-4 pt-3 pb-1">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                              Días trabajados ({diasTrabajador.length})
+                            </p>
+                          </div>
+
                           {diasTrabajador.length === 0 ? (
                             <p className="text-xs text-muted-foreground px-4 py-3">Sin registros de días</p>
                           ) : (
-                            diasTrabajador.map(r => {
-                              const diaAbierto = diasExpandidos.has(r.id);
-                              return (
-                                <div key={r.id} className="border-t border-border/60">
-                                  <button
-                                    onClick={() => toggleDia(r.id)}
-                                    className="w-full flex items-center justify-between px-4 py-2 text-sm hover:bg-muted transition-colors"
-                                  >
-                                    <span className="text-foreground">{fmtDate(r.fecha)}</span>
-                                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      {r.hora_entrada ?? '—'} – {r.hora_salida ?? '—'}
-                                      <ChevronDown size={14} className={`transition-transform ${diaAbierto ? 'rotate-180' : ''}`} />
-                                    </span>
-                                  </button>
-                                  {diaAbierto && (
-                                    <div className="px-4 py-2.5 bg-muted/40 text-xs text-muted-foreground grid grid-cols-2 gap-1.5">
-                                      <span>Hrs ordinarias: {fmtHrs(r.horas_ordinarias)}</span>
-                                      <span>Hrs extra: {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}</span>
-                                      <span className="capitalize">Tipo día: {r.tipo_dia}</span>
-                                      {r.novedad && <span className="col-span-2">Novedad: {r.novedad}</span>}
-                                      <button
-                                        onClick={() => setCorrigiendoId(r.id)}
-                                        className="col-span-2 flex items-center gap-1 text-success hover:text-success-600 font-medium mt-0.5"
-                                      >
-                                        <Pencil size={12} /> Corregir
-                                      </button>
-                                    </div>
-                                  )}
+                            diasTrabajador.map(r => (
+                              <div key={r.id} className="flex items-center gap-3 px-4 py-2.5 border-t border-border/60 text-sm">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-foreground font-medium">{fmtDiaSemana(r.fecha)}</span>
+                                    {r.tipo_dia !== 'ordinario' && (
+                                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-info-light text-info">
+                                        {TIPO_DIA_LABELS[r.tipo_dia]}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {r.novedad && <p className="text-xs text-muted-foreground mt-0.5">{r.novedad}</p>}
                                 </div>
-                              );
-                            })
+                                {r.hora_entrada ? (
+                                  <span className="text-xs text-muted-foreground text-right flex-shrink-0">
+                                    {fmtHora(r.hora_entrada)} – {fmtHora(r.hora_salida)}
+                                    <br />
+                                    {fmtHrs(r.horas_ordinarias)} h{Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas) > 0 && ` + ${fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra`}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground/60 flex-shrink-0">Sin marcaje</span>
+                                )}
+                                <button
+                                  onClick={() => setCorrigiendoId(r.id)}
+                                  className="text-muted-foreground/60 hover:text-success transition-colors flex-shrink-0"
+                                  aria-label="Corregir registro"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              </div>
+                            ))
                           )}
                         </div>
                       )}
@@ -434,6 +465,25 @@ export function PeriodoDetailPage() {
   );
 }
 
+/** Un renglón del recibo: etiqueta a la izquierda, monto/valor a la derecha. */
+function Renglon({
+  label, valor, fuerte, grande, tono,
+}: {
+  label: string;
+  valor: string;
+  fuerte?: boolean;
+  grande?: boolean;
+  tono?: 'danger' | 'success';
+}) {
+  const colorValor = tono === 'danger' ? 'text-danger' : tono === 'success' ? 'text-success' : 'text-foreground';
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className={fuerte ? 'font-medium text-foreground' : 'text-muted-foreground'}>{label}</span>
+      <span className={`tabular-nums ${fuerte ? 'font-semibold' : ''} ${grande ? 'text-base' : ''} ${colorValor}`}>{valor}</span>
+    </div>
+  );
+}
+
 function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () => void }) {
   const corregir = useCorregirRegistro();
   const [form, setForm] = useState({
@@ -462,7 +512,7 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
   return (
     <Modal onClose={onClose}>
       <h2 className="text-lg font-semibold text-foreground mb-1">Corregir registro</h2>
-      <p className="text-sm text-muted-foreground mb-4">{fmtDate(registro.fecha)}</p>
+      <p className="text-sm text-muted-foreground mb-4">{fmtDiaSemana(registro.fecha)}</p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <div>

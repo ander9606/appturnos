@@ -43,6 +43,22 @@ export function fmtHrs(n: number) {
   return Number(n).toFixed(1);
 }
 
+/** Fecha con nombre de día, sin año — ej. "Jueves 6 ago". Para filas dentro de un
+ *  período ya identificado (el año/mes ya está en el encabezado de la página). */
+export function fmtDiaSemana(s: string): string {
+  const d = new Date(s + 'T00:00:00');
+  const dia = new Intl.DateTimeFormat('es-CO', { weekday: 'long' }).format(d);
+  const diaMes = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' }).format(d);
+  return `${capitalizar(dia)} ${diaMes}`;
+}
+
+/** "09:12:00" (TIME de MySQL) → "9:12 a. m." Legible en vez de 24h con segundos. */
+export function fmtHora(s: string | null): string {
+  if (!s) return '—';
+  const [h, m] = s.split(':').map(Number);
+  return new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(2000, 0, 1, h, m));
+}
+
 const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
 
 /** Fecha de hoy en Bogotá (UTC-5, sin DST) como YYYY-MM-DD, para comparar contra columnas `date` del backend. */
