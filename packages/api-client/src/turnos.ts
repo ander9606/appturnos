@@ -251,6 +251,8 @@ export const turnosApi = {
     estado?: EstadoOferta;
     disponibles?: boolean;
     fecha?: string;
+    fecha_desde?: string;
+    fecha_hasta?: string;
     page?: number;
     limit?: number;
     para_quien?: ParaQuienOferta;
@@ -259,6 +261,8 @@ export const turnosApi = {
     if (params?.estado) qs.set('estado', params.estado);
     if (params?.disponibles) qs.set('disponibles', '1');
     if (params?.fecha) qs.set('fecha', params.fecha);
+    if (params?.fecha_desde) qs.set('fecha_desde', params.fecha_desde);
+    if (params?.fecha_hasta) qs.set('fecha_hasta', params.fecha_hasta);
     if (params?.page)  qs.set('page',  String(params.page));
     if (params?.limit) qs.set('limit', String(params.limit));
     if (params?.para_quien) qs.set('para_quien', params.para_quien);

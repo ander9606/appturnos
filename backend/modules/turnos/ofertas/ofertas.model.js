@@ -88,10 +88,12 @@ function parsearPuestos(fila) {
 }
 
 const OfertasModel = {
-  async listar(empresaId, { fecha, estado, disponibles, antiguedadMinMin, paraQuien, limit, offset }) {
+  async listar(empresaId, { fecha, fechaDesde, fechaHasta, estado, disponibles, antiguedadMinMin, paraQuien, limit, offset }) {
     const where = ['empresa_id = ?'];
     const params = [empresaId];
     if (fecha) { where.push('fecha = ?'); params.push(fecha); }
+    if (fechaDesde) { where.push('fecha >= ?'); params.push(fechaDesde); }
+    if (fechaHasta) { where.push('fecha <= ?'); params.push(fechaHasta); }
     if (estado) { where.push('estado = ?'); params.push(estado); }
     if (paraQuien === 'nomina') {
       where.push("para_quien IN ('nomina','ambos')");
@@ -135,7 +137,7 @@ const OfertasModel = {
    *     `oferta_destinatarios` — sin delay ni filtro de cargo (el gestor ya
    *     lo eligió a mano).
    */
-  async listarMultiEmpresa(usuarioId, empresaIds, { fecha, estado, disponibles, paraQuien, limit, offset }) {
+  async listarMultiEmpresa(usuarioId, empresaIds, { fecha, fechaDesde, fechaHasta, estado, disponibles, paraQuien, limit, offset }) {
     if (!empresaIds || empresaIds.length === 0) {
       return { data: [], total: 0 };
     }
@@ -144,6 +146,8 @@ const OfertasModel = {
     const params = [empresaIds];
 
     if (fecha) { where.push('o.fecha = ?'); params.push(fecha); }
+    if (fechaDesde) { where.push('o.fecha >= ?'); params.push(fechaDesde); }
+    if (fechaHasta) { where.push('o.fecha <= ?'); params.push(fechaHasta); }
     if (estado) { where.push('o.estado = ?'); params.push(estado); }
     if (paraQuien === 'nomina') {
       where.push("o.para_quien IN ('nomina','ambos')");

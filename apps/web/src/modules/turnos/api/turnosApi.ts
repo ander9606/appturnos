@@ -3,7 +3,7 @@ import type { EstadoOferta, EstadoAsignacion } from '../types';
 
 export const turnosApi = {
   // Ofertas
-  listarOfertas: (params?: { estado?: EstadoOferta; fecha?: string; page?: number; limit?: number }) =>
+  listarOfertas: (params?: { estado?: EstadoOferta; fecha?: string; fecha_desde?: string; fecha_hasta?: string; page?: number; limit?: number }) =>
     api.get('/turnos/ofertas', { params }).then(r => r.data),
 
   obtenerOferta: (id: number) =>

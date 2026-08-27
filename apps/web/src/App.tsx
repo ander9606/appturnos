@@ -9,6 +9,7 @@ import { RegistroEmpresaPage } from '@/pages/RegistroEmpresaPage';
 import { PrivacidadPage } from '@/pages/PrivacidadPage';
 import { TerminosPage } from '@/pages/TerminosPage';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { CalendarioPage } from '@/pages/CalendarioPage';
 import { NominaPage } from '@/modules/nomina/pages/NominaPage';
 import { PeriodoDetailPage } from '@/modules/nomina/pages/PeriodoDetailPage';
 import { EquipoPage } from '@/modules/equipo/pages/EquipoPage';
@@ -44,6 +45,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_nomina', 'jefe_turnos', 'nomina']} />}>
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="calendario" element={<CalendarioPage />} />
             </Route>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_nomina', 'nomina']} />}>
               <Route path="nomina" element={<NominaPage />} />

@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router';
-import { LayoutDashboard, Users, Calendar, Settings, DollarSign, LogOut, Plug, Building2 } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, CalendarDays, Settings, DollarSign, LogOut, Plug, Building2 } from 'lucide-react';
 import { useAuthStore } from '@/modules/auth/authStore';
 import type { Rol } from '@/modules/auth/authStore';
 
@@ -19,6 +19,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
   ],
   admin_empresa: [
     { label: 'Inicio',         to: '/dashboard',     icon: LayoutDashboard },
+    { label: 'Calendario',     to: '/calendario',     icon: CalendarDays },
     { label: 'Turnos',         to: '/turnos',         icon: Calendar },
     { label: 'Nómina',         to: '/nomina',         icon: DollarSign, accent: 'success' },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
@@ -26,19 +27,22 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'logiq360',       to: '/integracion',    icon: Plug, bottom: true },
   ],
   jefe_nomina: [
-    { label: 'Inicio',  to: '/dashboard', icon: LayoutDashboard },
-    { label: 'Nómina',  to: '/nomina',    icon: DollarSign, accent: 'success' },
-    { label: 'Equipo',  to: '/equipo',    icon: Users },
+    { label: 'Inicio',      to: '/dashboard',   icon: LayoutDashboard },
+    { label: 'Calendario',  to: '/calendario',  icon: CalendarDays },
+    { label: 'Nómina',      to: '/nomina',      icon: DollarSign, accent: 'success' },
+    { label: 'Equipo',      to: '/equipo',      icon: Users },
   ],
   jefe_turnos: [
     { label: 'Inicio',        to: '/dashboard',     icon: LayoutDashboard },
+    { label: 'Calendario',    to: '/calendario',    icon: CalendarDays },
     { label: 'Turnos',        to: '/turnos',        icon: Calendar },
     { label: 'Equipo',        to: '/equipo',        icon: Users },
     { label: 'Configuración', to: '/configuracion', icon: Settings, bottom: true },
   ],
   nomina: [
-    { label: 'Inicio',  to: '/dashboard', icon: LayoutDashboard },
-    { label: 'Nómina',  to: '/nomina',    icon: DollarSign, accent: 'success' },
+    { label: 'Inicio',      to: '/dashboard',  icon: LayoutDashboard },
+    { label: 'Calendario',  to: '/calendario', icon: CalendarDays },
+    { label: 'Nómina',      to: '/nomina',     icon: DollarSign, accent: 'success' },
   ],
 };
 

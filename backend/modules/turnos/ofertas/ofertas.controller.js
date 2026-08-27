@@ -11,7 +11,14 @@ async function listar(req, res) {
   const { data, pagination } = await OfertasService.listar(
     req.empresa_id,
     req.usuario,
-    { fecha: req.query.fecha || undefined, estado: req.query.estado || undefined, disponibles, page, limit, paraQuien: req.query.para_quien || undefined },
+    {
+      fecha: req.query.fecha || undefined,
+      fechaDesde: req.query.fecha_desde || undefined,
+      fechaHasta: req.query.fecha_hasta || undefined,
+      estado: req.query.estado || undefined,
+      disponibles, page, limit,
+      paraQuien: req.query.para_quien || undefined,
+    },
     req.empresasActivas   // ← inyectado por resolverEmpresasActivas para TRABAJADOR_TURNOS
   );
   res.json({ success: true, data: { data, pagination } });

@@ -18,11 +18,12 @@ function getErrMsg(err: unknown) {
     : 'Error inesperado';
 }
 
-export function usePeriodos(estado?: EstadoPeriodo, conTotales = false) {
+export function usePeriodos(estado?: EstadoPeriodo, conTotales = false, opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: KEYS.periodos(estado, conTotales),
     queryFn: () => nominaApi.listarPeriodos({ estado, limit: 50, conTotales }),
     staleTime: 60_000,
+    enabled: opts.enabled ?? true,
   });
 }
 

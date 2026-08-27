@@ -27,8 +27,11 @@ import { TipoPeriodoBadge }       from '@/features/nomina/TipoPeriodoBadge';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
+import { MonthCalendar }          from '@/components/ui/MonthCalendar';
+import { getMonthGrid, type CalendarDay } from '@/lib/calendar';
 import { HOUR_TYPE_COLORS }       from '@/lib/designTokens';
-import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { bogotaToday } from '@/lib/formatters';
 import {
   usePeriodos, useLiquidacion,
   useLiquidarPeriodo,
@@ -45,6 +48,11 @@ import { useRouter } from 'expo-router';
 
 const GESTORES = ['admin_empresa', 'jefe_nomina', 'nomina'] as const;
 type RolGestor = typeof GESTORES[number];
+
+const MESES_LARGOS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
 
 export default function NominaScreen() {
   const rol = useAuthStore((s) => s.usuario?.rol) ?? 'trabajador_nomina';
@@ -77,6 +85,21 @@ function NominaGestorView() {
   // quincenales con mensuales cuando la empresa cambia su esquema de facturación.
   const tipoActual        = periodos[0]?.tipo;
   const periodosSelector  = periodos.filter((p) => p.tipo === tipoActual);
+
+  // Vista mensual — bandas de color por período, alterna con la lista de liquidación.
+  const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
+  const [mesCursor, setMesCursor] = useState(() => {
+    const [y, m] = bogotaToday().split('-').map(Number);
+    return { year: y, month: m };
+  });
+  const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  // ponytail: a diferencia de periodosSelector (arriba, filtrado por tipoActual), esto busca en TODOS
+  // los períodos sin filtrar por tipo — si la empresa cambió de ciclo, tocar un día de un período del
+  // tipo viejo lo selecciona pero el selector de chips no lo va a mostrar resaltado al volver a lista.
+  // Upgrade path: aplicar el mismo filtro por tipoActual que ya usa periodosSelector.
+  // También trunca en silencio: usePeriodos() trae como máximo 20 (ver arriba) — no hay rango de
+  // fechas, así que navegar el mes muy atrás puede mostrar un mes vacío aunque el período exista.
+  const periodoDeDia = (fecha: string) => periodos.find((p) => p.fecha_inicio <= fecha && fecha <= p.fecha_fin);
 
   const {
     data: liquidacion,
@@ -113,14 +136,9 @@ function NominaGestorView() {
     }
   };
 
-  if (loadingPeriodos) {
-    return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </SafeAreaView>
-    );
-  }
-
+  // lineas/totales y los useMemo de abajo deben calcularse ANTES del early
+  // return de loadingPeriodos — un hook llamado condicionalmente (solo cuando
+  // ya cargó) rompe las reglas de hooks de React y crashea al terminar de cargar.
   const lineas  = liquidacion?.lineas ?? [];
   const totales = liquidacion?.totales;
 
@@ -162,6 +180,14 @@ function NominaGestorView() {
       .map((f) => ({ ...f, outlier: f.recargoPct > pctPromedio + 0.10 }))
       .sort((a, b) => b.linea.total - a.linea.total);
   }, [lineas]);
+
+  if (loadingPeriodos) {
+    return (
+      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
@@ -209,6 +235,13 @@ function NominaGestorView() {
                       <TipoPeriodoBadge tipo={activePeriodo.tipo} />
                     </>
                   )}
+                  <TouchableOpacity
+                    onPress={() => setViewMode((v) => (v === 'lista' ? 'mes' : 'lista'))}
+                    accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+                    className="p-1"
+                  >
+                    <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={20} color="#fff" />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -231,7 +264,46 @@ function NominaGestorView() {
             </View>
 
             <View className="px-5 gap-3">
-              {periodosSelector.length > 0 && (
+              {viewMode === 'mes' ? (
+                <View className="gap-2">
+                  <View className="flex-row items-center gap-3">
+                    <TouchableOpacity
+                      onPress={() => setMesCursor((c) => (c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 }))}
+                      className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                    >
+                      <Ionicons name="chevron-back" size={16} color={theme.primary} />
+                    </TouchableOpacity>
+                    <Text className="text-sm font-semibold text-foreground flex-1 text-center">
+                      {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setMesCursor((c) => (c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 }))}
+                      className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                    >
+                      <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+                    </TouchableOpacity>
+                  </View>
+                  <MonthCalendar
+                    weeks={mesWeeks}
+                    onDayPress={(day: CalendarDay) => {
+                      const periodo = periodoDeDia(day.date);
+                      if (periodo) { setPeriodoId(periodo.id); setViewMode('lista'); }
+                    }}
+                    renderDay={(day: CalendarDay) => {
+                      const periodo = periodoDeDia(day.date);
+                      if (!periodo) return null;
+                      const bg = periodo.estado === 'abierto' ? 'bg-success-light'
+                        : periodo.estado === 'cerrado' ? 'bg-warning-light' : 'bg-primary-100';
+                      const esCierre = periodo.fecha_fin === day.date;
+                      return (
+                        <View className={`flex-1 -m-1 mt-0 rounded-b-md px-1 py-0.5 ${bg}`}>
+                          {esCierre && <Text className="text-[8px] font-semibold text-foreground">Cierre</Text>}
+                        </View>
+                      );
+                    }}
+                  />
+                </View>
+              ) : periodosSelector.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View className="flex-row gap-2 py-1">
                     {periodosSelector.slice(0, 8).map((p) => (

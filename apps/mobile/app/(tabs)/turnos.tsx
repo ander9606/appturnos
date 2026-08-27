@@ -23,6 +23,8 @@ import { getDateRange, toISODate, bogotaToday } from '@/features/turnos/turnosUt
 import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
+import { MonthCalendar } from '@/components/ui/MonthCalendar';
+import { getMonthGrid, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 
@@ -47,6 +49,33 @@ export default function TurnosScreen() {
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab,    setActiveTab]    = useState<ActiveTab>(() => isWorker ? 'mis_turnos' : 'disponibles');
   const [searchOfertas, setSearchOfertas] = useState('');
+
+  // Vista mensual (solo gestores) — alterna con la lista/WeekStrip por día.
+  const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
+  const [mesCursor, setMesCursor] = useState(() => {
+    const [y, m] = today.split('-').map(Number);
+    return { year: y, month: m };
+  });
+  const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  const { data: ofertasMesResp, isLoading: loadingOfertasMes } = useOfertas(
+    {
+      fecha_desde: mesWeeks[0][0].date,
+      fecha_hasta: mesWeeks[mesWeeks.length - 1][6].date,
+      limit: 300,
+      para_quien: isJefeNomina ? 'nomina' : undefined,
+      disponibles: isWorker ? true : undefined,
+    },
+    { enabled: (isGestor || isWorker) && viewMode === 'mes' },
+  );
+  const ofertasPorDiaMes = useMemo(() => {
+    const map = new Map<string, Oferta[]>();
+    for (const o of ofertasMesResp?.data ?? []) {
+      const lista = map.get(o.fecha) ?? [];
+      lista.push(o);
+      map.set(o.fecha, lista);
+    }
+    return map;
+  }, [ofertasMesResp]);
 
   // ponytail: static range, no pagination state needed
   const allDays = useMemo(() => getDateRange(7, 42), []);
@@ -89,6 +118,17 @@ export default function TurnosScreen() {
     ofertasResp?.data?.forEach((o) => set.add(o.fecha));
     return set;
   }, [misTurnos, ofertasResp]);
+
+  /** Mis turnos del mes visible, agrupados por fecha — para los puntos del calendario mensual. */
+  const misTurnosPorDiaMes = useMemo(() => {
+    const map = new Map<string, Asignacion[]>();
+    (misTurnos ?? []).forEach((a) => {
+      const lista = map.get(a.oferta_fecha) ?? [];
+      lista.push(a);
+      map.set(a.oferta_fecha, lista);
+    });
+    return map;
+  }, [misTurnos]);
 
   /** Asignaciones del día seleccionado */
   const turnosDelDia = useMemo(() => {
@@ -315,6 +355,13 @@ export default function TurnosScreen() {
         </Text>
         {isGestor && (
           <View className="flex-row items-center gap-1 pb-2">
+            <TouchableOpacity
+              onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
+              accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+              className="p-3 active:opacity-60"
+            >
+              <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={24} color={theme.primary} />
+            </TouchableOpacity>
             {!isJefeNomina && (
               <TouchableOpacity
                 onPress={() => router.push('/liquidacion-turnos')}
@@ -356,24 +403,81 @@ export default function TurnosScreen() {
             )}
           </View>
         )}
+        {isWorker && (
+          <TouchableOpacity
+            onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
+            accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+            className="p-3 mb-2 active:opacity-60"
+          >
+            <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={24} color={theme.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
-      <WeekStrip
-        days={allDays}
-        selectedDate={selectedDate}
-        datesWithShifts={datesWithShifts}
-        onSelectDate={setSelectedDate}
-        primaryColor={theme.primary}
-      />
+      {viewMode === 'lista' && (
+        <WeekStrip
+          days={allDays}
+          selectedDate={selectedDate}
+          datesWithShifts={datesWithShifts}
+          onSelectDate={setSelectedDate}
+          primaryColor={theme.primary}
+        />
+      )}
 
       {/* ── Gestor view ────────────────────────────────────────────── */}
       {isGestor ? (
         <View className="flex-1">
-          <GestorTurnosView
-            selectedDate={selectedDate}
-            filtroParaQuien={isJefeNomina ? 'nomina' : undefined}
-          />
+          {viewMode === 'mes' ? (
+            <View className="flex-1 px-5 pt-4">
+              <View className="flex-row items-center gap-3 mb-4">
+                <TouchableOpacity
+                  onPress={() => setMesCursor(c => c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 })}
+                  className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                >
+                  <Ionicons name="chevron-back" size={16} color={theme.primary} />
+                </TouchableOpacity>
+                <Text className="text-sm font-semibold text-foreground flex-1 text-center">
+                  {MESES[mesCursor.month - 1]} {mesCursor.year}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setMesCursor(c => c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 })}
+                  className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                >
+                  <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+                </TouchableOpacity>
+              </View>
+
+              {loadingOfertasMes ? (
+                <ActivityIndicator size="large" color={theme.primary} />
+              ) : (
+                <MonthCalendar
+                  weeks={mesWeeks}
+                  onDayPress={(day: CalendarDay) => { setSelectedDate(day.date); setViewMode('lista'); }}
+                  renderDay={(day: CalendarDay) => {
+                    const delDia = ofertasPorDiaMes.get(day.date) ?? [];
+                    if (delDia.length === 0) return null;
+                    return (
+                      <View className="flex-row flex-wrap gap-0.5">
+                        {delDia.slice(0, 5).map(o => (
+                          <View
+                            key={o.id}
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: o.estado === 'completada' ? '#059669' : o.estado === 'cancelada' ? '#EF4444' : theme.primary }}
+                          />
+                        ))}
+                      </View>
+                    );
+                  }}
+                />
+              )}
+            </View>
+          ) : (
+            <GestorTurnosView
+              selectedDate={selectedDate}
+              filtroParaQuien={isJefeNomina ? 'nomina' : undefined}
+            />
+          )}
 
           {/* FAB — crear turno (única acción flotante; liquidación y postulaciones viven en el header) */}
           <TouchableOpacity
@@ -401,6 +505,63 @@ export default function TurnosScreen() {
           </TouchableOpacity>
         </View>
       ) : (
+        <>
+        {viewMode === 'mes' ? (
+          <View className="flex-1 px-5 pt-4">
+            <View className="flex-row items-center gap-3 mb-4">
+              <TouchableOpacity
+                onPress={() => setMesCursor(c => c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 })}
+                className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+              >
+                <Ionicons name="chevron-back" size={16} color={theme.primary} />
+              </TouchableOpacity>
+              <Text className="text-sm font-semibold text-foreground flex-1 text-center">
+                {MESES[mesCursor.month - 1]} {mesCursor.year}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setMesCursor(c => c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 })}
+                className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+              >
+                <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {loadingOfertasMes || loadingMios ? (
+              <ActivityIndicator size="large" color={theme.primary} />
+            ) : (
+              <MonthCalendar
+                weeks={mesWeeks}
+                onDayPress={(day: CalendarDay) => { setSelectedDate(day.date); setViewMode('lista'); }}
+                renderDay={(day: CalendarDay) => {
+                  const mios = misTurnosPorDiaMes.get(day.date) ?? [];
+                  const disponibles = (ofertasPorDiaMes.get(day.date) ?? []).filter(o => !aplicadosIds.has(o.id));
+                  if (mios.length === 0 && disponibles.length === 0) return null;
+                  return (
+                    <View className="flex-row flex-wrap gap-0.5">
+                      {mios.slice(0, 3).map(a => (
+                        <View key={`m${a.id}`} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }} />
+                      ))}
+                      {disponibles.slice(0, 3).map(o => (
+                        <View key={`d${o.id}`} className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: '#3B82F6' }} />
+                      ))}
+                    </View>
+                  );
+                }}
+              />
+            )}
+
+            <View className="flex-row items-center gap-4 justify-center mt-4">
+              <View className="flex-row items-center gap-1.5">
+                <View className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primary }} />
+                <Text className="text-xs text-muted-foreground">Mis turnos</Text>
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <View className="w-2 h-2 rounded-full border" style={{ borderColor: '#3B82F6' }} />
+                <Text className="text-xs text-muted-foreground">Disponibles</Text>
+              </View>
+            </View>
+          </View>
+        ) : (
         <>
           {/* ── Banner turnos eventuales (trabajador_nomina) ─────── */}
           {isNomina && (
@@ -555,6 +716,8 @@ export default function TurnosScreen() {
             )
           )}
         </>
+        )}
+        </>
       )}
     </SafeAreaView>
   );
@@ -564,6 +727,10 @@ export default function TurnosScreen() {
 
 const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MESES = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
 
 function formatShortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);

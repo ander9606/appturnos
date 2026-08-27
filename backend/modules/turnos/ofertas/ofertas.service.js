@@ -182,7 +182,7 @@ async function validarAceptaExtras(usuario) {
 }
 
 const OfertasService = {
-  async listar(empresaId, usuario, { fecha, estado, disponibles, page, limit, paraQuien }, empresasActivas) {
+  async listar(empresaId, usuario, { fecha, fechaDesde, fechaHasta, estado, disponibles, page, limit, paraQuien }, empresasActivas) {
     const offset = (page - 1) * limit;
 
     if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
@@ -199,14 +199,14 @@ const OfertasService = {
       const idsFiltered = usuario.rol === ROLES.TRABAJADOR_NOMINA ? [empresaId] : ids;
 
       const { data, total } = await OfertasModel.listarMultiEmpresa(usuario.sub, idsFiltered, {
-        fecha, estado, disponibles, paraQuien, limit, offset,
+        fecha, fechaDesde, fechaHasta, estado, disponibles, paraQuien, limit, offset,
       });
       return { data, pagination: { page, limit, total } };
     }
 
     const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
     const { data, total } = await OfertasModel.listar(empresaId, {
-      fecha, estado, disponibles, antiguedadMinMin, paraQuien, limit, offset,
+      fecha, fechaDesde, fechaHasta, estado, disponibles, antiguedadMinMin, paraQuien, limit, offset,
     });
     return { data, pagination: { page, limit, total } };
   },

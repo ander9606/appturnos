@@ -18,11 +18,15 @@ function getErrMsg(err: unknown) {
     : 'Error inesperado';
 }
 
-export function useOfertas(params?: { estado?: EstadoOferta; fecha?: string; limit?: number }) {
+export function useOfertas(
+  params?: { estado?: EstadoOferta; fecha?: string; fecha_desde?: string; fecha_hasta?: string; limit?: number },
+  opts: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: KEYS.ofertas(params),
     queryFn: () => turnosApi.listarOfertas({ ...params, limit: params?.limit ?? 50 }),
     staleTime: 30_000,
+    enabled: opts.enabled ?? true,
   });
 }
 
