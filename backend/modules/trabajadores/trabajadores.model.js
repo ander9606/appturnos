@@ -57,7 +57,9 @@ const TrabajadoresModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}
+      `SELECT ${COLUMNAS},
+         (SELECT AVG(a.pago_total) FROM asignaciones_turno a
+          WHERE a.trabajador_id = t.id AND a.estado = 'completado') AS promedio_pago_turno
        FROM trabajadores t
        LEFT JOIN usuarios u ON u.id = t.usuario_id
        WHERE ${whereSql}
