@@ -9,7 +9,7 @@ const { pool } = require('../../config/database');
  */
 
 const COLUMNAS = `te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
-  te.estado, te.iniciado_por, te.fecha_solicitud, te.fecha_resuelto,
+  te.estado, te.iniciado_por, te.tipo_ofrecido, te.fecha_solicitud, te.fecha_resuelto,
   te.motivo_rechazo,
   e.nombre AS empresa_nombre, e.slug AS empresa_slug, e.logo_url AS empresa_logo,
   e.ciudad AS empresa_ciudad`;
@@ -120,17 +120,17 @@ const TrabajadorEmpresaModel = {
     return filas.map((f) => f.empresa_id);
   },
 
-  async crear({ usuarioId, empresaId, estado, iniciadoPor }) {
+  async crear({ usuarioId, empresaId, estado, iniciadoPor, tipoOfrecido = 'turnos' }) {
     const [res] = await pool.query(
       `INSERT INTO trabajador_empresa
-         (usuario_id, empresa_id, estado, iniciado_por)
-       VALUES (?, ?, ?, ?)`,
-      [usuarioId, empresaId, estado, iniciadoPor]
+         (usuario_id, empresa_id, estado, iniciado_por, tipo_ofrecido)
+       VALUES (?, ?, ?, ?, ?)`,
+      [usuarioId, empresaId, estado, iniciadoPor, tipoOfrecido]
     );
     return res.insertId;
   },
 
-  async cambiarEstado(id, estado, { motivo, trabajadorId, fechaResuelto } = {}) {
+  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto } = {}) {
     const sets = ['estado = ?'];
     const params = [estado];
 
@@ -141,6 +141,10 @@ const TrabajadorEmpresaModel = {
     if (trabajadorId !== undefined) {
       sets.push('trabajador_id = ?');
       params.push(trabajadorId);
+    }
+    if (tipoOfrecido !== undefined) {
+      sets.push('tipo_ofrecido = ?');
+      params.push(tipoOfrecido);
     }
     if (estado !== 'solicitado_por_trabajador' && estado !== 'solicitado_por_empresa') {
       sets.push('fecha_resuelto = ?');
@@ -153,6 +157,29 @@ const TrabajadorEmpresaModel = {
       params
     );
     return res.affectedRows;
+  },
+
+  /**
+   * Archiva las demás relaciones del usuario (activas, o solicitudes/invitaciones
+   * pendientes) al convertirse a nómina — exclusiva a una sola empresa. Deja
+   * intactas las ya cerradas (rechazado/archivado), no hay nada que tocar ahí.
+   */
+  async archivarOtrasRelacionesDeUsuario(usuarioId, exceptoId) {
+    const [filas] = await pool.query(
+      `SELECT id, empresa_id FROM trabajador_empresa
+       WHERE usuario_id = ? AND id != ?
+         AND estado IN ('activo', 'solicitado_por_trabajador', 'solicitado_por_empresa')`,
+      [usuarioId, exceptoId]
+    );
+    if (filas.length) {
+      const ids = filas.map((f) => f.id);
+      await pool.query(
+        `UPDATE trabajador_empresa SET estado = 'archivado', fecha_resuelto = NOW()
+         WHERE id IN (${ids.map(() => '?').join(',')})`,
+        ids
+      );
+    }
+    return filas;
   },
 };
 

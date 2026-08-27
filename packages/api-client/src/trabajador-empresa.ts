@@ -10,6 +10,8 @@ export type EstadoVinculo =
   | 'rechazado'
   | 'archivado';
 
+export type TipoOfrecido = 'turnos' | 'nomina';
+
 export interface Vinculo {
   id: number;
   usuario_id: number;
@@ -17,6 +19,8 @@ export interface Vinculo {
   trabajador_id: number | null;
   estado: EstadoVinculo;
   iniciado_por: 'trabajador' | 'empresa';
+  /** 'nomina' implica exclusividad: al aceptar, el trabajador pasa a rol trabajador_nomina y sus demás vínculos se archivan. */
+  tipo_ofrecido: TipoOfrecido;
   fecha_solicitud: string;
   fecha_resuelto: string | null;
   motivo_rechazo: string | null;
@@ -88,9 +92,9 @@ export const trabajadorEmpresaApi = {
     return api.get<SolicitudAdmin[]>(`/api/trabajador-empresa/solicitudes${suffix}`);
   },
 
-  /** Admin/Jefe: invitar a un trabajador por número de cédula */
-  invitar(cedula: string): Promise<Vinculo> {
-    return api.post<Vinculo>('/api/trabajador-empresa/invitar', { cedula });
+  /** Admin/Jefe: invitar a un trabajador por número de cédula. tipo='nomina' requiere que ya tenga cuenta trabajador_turnos. */
+  invitar(cedula: string, tipo: TipoOfrecido = 'turnos'): Promise<Vinculo> {
+    return api.post<Vinculo>('/api/trabajador-empresa/invitar', { cedula, tipo });
   },
 
   /** Admin/Jefe: aprobar solicitud de un trabajador */

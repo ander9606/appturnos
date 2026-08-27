@@ -37,6 +37,16 @@ function fmtCOP(n: number | null) {
   return n === null ? '—' : fmtCOPBase(n);
 }
 
+/** Igual fórmula que `valorHora()` en backend/utils/laboralUtils.js, pero en reversa:
+ *  si no hay tarifa_hora explícita, se deriva del salario mensual (÷240) — acá hacemos
+ *  el camino inverso para mostrar el mensual aunque solo se haya cargado tarifa_hora. */
+const HORAS_MES_NOMINA = 240;
+function salarioMensual(t: Trabajador): number | null {
+  if (t.salario_base != null) return t.salario_base;
+  if (t.tarifa_hora != null) return t.tarifa_hora * HORAS_MES_NOMINA;
+  return null;
+}
+
 type EstadoFiltro = true | false | undefined;
 
 export function EquipoPage() {
@@ -217,7 +227,7 @@ function TablaTrabajadores({
             <th className="text-left px-4 py-3 font-medium">Cédula</th>
             <th className="text-left px-4 py-3 font-medium">Tipo</th>
             <th className="text-left px-4 py-3 font-medium">Cargo</th>
-            <th className="text-right px-4 py-3 font-medium">Tarifa/hora</th>
+            <th className="text-right px-4 py-3 font-medium">Compensación</th>
             <th className="text-left px-4 py-3 font-medium">Estado</th>
             <th className="px-4 py-3" />
           </tr>
@@ -233,7 +243,21 @@ function TablaTrabajadores({
                 </span>
               </td>
               <td className="px-4 py-3 text-muted-foreground">{t.cargo ?? '—'}</td>
-              <td className="px-4 py-3 text-right text-muted-foreground">{fmtCOP(t.tarifa_hora)}</td>
+              <td className="px-4 py-3 text-right">
+                {t.tipo === 'turnos' ? (
+                  <>
+                    <p className="text-foreground text-sm">Variable por turno</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t.promedio_pago_turno != null ? `prom. ${fmtCOP(Number(t.promedio_pago_turno))}` : 'Sin turnos completados'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-foreground text-sm font-medium">{fmtCOP(salarioMensual(t))}</p>
+                    <p className="text-muted-foreground text-xs">mensual</p>
+                  </>
+                )}
+              </td>
               <td className="px-4 py-3">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${t.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                   {t.activo ? 'Activo' : 'Inactivo'}
@@ -283,10 +307,11 @@ function TablaTrabajadores({
 function InvitarModal({ onClose }: { onClose: () => void }) {
   const invitar = useInvitarTrabajador();
   const [cedula, setCedula] = useState('');
+  const [tipo, setTipo] = useState<'turnos' | 'nomina'>('turnos');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await invitar.mutateAsync(cedula.trim());
+    await invitar.mutateAsync({ cedula: cedula.trim(), tipo });
     onClose();
   };
 
@@ -307,6 +332,30 @@ function InvitarModal({ onClose }: { onClose: () => void }) {
             placeholder="Ej. 1234567890"
             className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Tipo de vínculo</label>
+          <div className="flex gap-2">
+            {(['turnos', 'nomina'] as const).map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setTipo(v)}
+                className={`flex-1 border rounded-lg py-2 text-sm font-medium transition-colors ${
+                  tipo === v ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {v === 'turnos' ? 'Turnos' : 'Nómina'}
+              </button>
+            ))}
+          </div>
+          {tipo === 'nomina' && (
+            <p className="text-xs bg-warning-light text-warning rounded-lg px-3 py-2 mt-2">
+              Nómina implica exclusividad: si acepta, dejará de estar disponible para turnos en otras empresas
+              (sus demás vínculos se archivan). Solo puedes invitar así a alguien que ya tenga cuenta activa
+              como trabajador de turnos.
+            </p>
+          )}
         </div>
         <div className="flex gap-2 pt-1">
           <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>

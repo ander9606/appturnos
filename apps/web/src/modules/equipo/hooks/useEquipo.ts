@@ -72,7 +72,8 @@ export function useDesactivarTrabajador() {
 export function useInvitarTrabajador() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cedula: string) => equipoApi.invitar(cedula),
+    mutationFn: ({ cedula, tipo }: { cedula: string; tipo?: 'turnos' | 'nomina' }) =>
+      equipoApi.invitar(cedula, tipo),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trabajadores'] });
       toast.success('Invitación enviada');

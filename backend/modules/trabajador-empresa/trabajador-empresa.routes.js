@@ -31,7 +31,10 @@ router.post(
   verificarToken,
   verificarRol(SOLO_JEFE),
   verificarSuscripcion,
-  [body('cedula').isString().trim().notEmpty().withMessage('cédula requerida')],
+  [
+    body('cedula').isString().trim().notEmpty().withMessage('cédula requerida'),
+    body('tipo').optional().isIn(['turnos', 'nomina']).withMessage('tipo inválido'),
+  ],
   validar,
   ctrl.invitar
 );

@@ -61,7 +61,8 @@ export function useSolicitudes(estado?: string, enabled = true) {
 export function useInvitar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (cedula: string) => trabajadorEmpresaApi.invitar(cedula),
+    mutationFn: ({ cedula, tipo }: { cedula: string; tipo?: 'turnos' | 'nomina' }) =>
+      trabajadorEmpresaApi.invitar(cedula, tipo),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trabajador-empresa', 'solicitudes'] });
     },

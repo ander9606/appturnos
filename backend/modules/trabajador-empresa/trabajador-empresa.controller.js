@@ -11,8 +11,8 @@ async function solicitar(req, res) {
 
 async function invitar(req, res) {
   const empresaId = req.empresa_id;
-  const { cedula } = req.body;
-  const data = await TrabajadorEmpresaService.invitar(empresaId, cedula);
+  const { cedula, tipo } = req.body;
+  const data = await TrabajadorEmpresaService.invitar(empresaId, cedula, tipo || 'turnos');
   res.status(201).json({ success: true, data, message: 'Invitación enviada' });
 }
 

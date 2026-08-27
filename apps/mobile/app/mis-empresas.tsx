@@ -143,19 +143,28 @@ function InvitacionCard({
   onRechazar: (id: number) => void;
   loading: boolean;
 }) {
+  const esNomina = vinculo.tipo_ofrecido === 'nomina';
   return (
-    <View className="mx-5 mb-3 bg-card rounded-2xl border border-primary-200 overflow-hidden">
+    <View className={`mx-5 mb-3 bg-card rounded-2xl border overflow-hidden ${esNomina ? 'border-warning/50' : 'border-primary-200'}`}>
       <View className="flex-row items-center gap-3 px-4 pt-4 pb-3">
-        <View className="w-11 h-11 rounded-xl bg-primary-50 items-center justify-center">
-          <Ionicons name="mail-outline" size={20} color="#FF5A3C" />
+        <View className={`w-11 h-11 rounded-xl items-center justify-center ${esNomina ? 'bg-warning/10' : 'bg-primary-50'}`}>
+          <Ionicons name={esNomina ? 'briefcase-outline' : 'mail-outline'} size={20} color={esNomina ? '#D97706' : '#FF5A3C'} />
         </View>
         <View className="flex-1">
           <Text className="text-base font-semibold text-foreground">{vinculo.empresa_nombre}</Text>
           <Text className="text-xs text-muted-foreground mt-0.5">
-            Te invitó el {fmtFecha(vinculo.fecha_solicitud)}
+            {esNomina ? 'Invitación a nómina · ' : ''}Te invitó el {fmtFecha(vinculo.fecha_solicitud)}
           </Text>
         </View>
       </View>
+      {esNomina && (
+        <View className="mx-4 mb-3 bg-warning/10 rounded-xl p-3">
+          <Text className="text-xs text-foreground">
+            Salario fijo y aportes de ley calculados automáticamente. A cambio, tu cuenta queda exclusiva para
+            esta empresa: dejas de ver turnos de otras y tus demás vínculos se archivan.
+          </Text>
+        </View>
+      )}
       <View className="flex-row gap-2 px-4 pb-4">
         <TouchableOpacity
           onPress={() => onRechazar(vinculo.id)}
@@ -241,6 +250,19 @@ export default function MisEmpresasScreen() {
   const invitaciones = data?.invitaciones ?? [];
 
   const handleAceptar = async (id: number) => {
+    const vinculo = invitaciones.find((v) => v.id === id);
+    if (vinculo?.tipo_ofrecido === 'nomina') {
+      const ok = await confirm({
+        title: 'Volverte trabajador de nómina',
+        message:
+          `Beneficios: salario fijo y aportes de ley (salud/pensión) calculados automáticamente con ${vinculo.empresa_nombre}. ` +
+          'Cambios en la app: tu pestaña principal pasa a ser "Nómina" y dejas de ver ofertas de turnos de otras empresas. ' +
+          'Tu cuenta queda exclusiva para esta empresa — tus demás vínculos (activos y pendientes) se archivan automáticamente. ¿Confirmas?',
+        confirmLabel: 'Sí, aceptar',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
     setActionLoadingId(id);
     try {
       await aceptar.mutateAsync(id);

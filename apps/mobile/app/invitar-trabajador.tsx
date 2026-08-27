@@ -32,6 +32,7 @@ function getInitials(nombre?: string, apellido?: string) {
 export default function InvitarTrabajadorScreen() {
   const router  = useRouter();
   const [cedula, setCedula] = useState('');
+  const [tipo, setTipo] = useState<'turnos' | 'nomina'>('turnos');
   const [debouncedCedula, setDebouncedCedula] = useState('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,7 +53,7 @@ export default function InvitarTrabajadorScreen() {
 
   function handleInvitar() {
     if (!canSend) return;
-    invitar.mutate(cedula.trim(), {
+    invitar.mutate({ cedula: cedula.trim(), tipo }, {
       onSuccess: () => {
         showToast(`${trabajador!.nombre} ${trabajador!.apellido} recibirá una notificación para unirse a tu empresa.`);
         router.back();
@@ -135,6 +136,42 @@ export default function InvitarTrabajadorScreen() {
                   </Text>
                 </View>
                 <Ionicons name="checkmark-circle" size={22} color={COLORS.success} />
+              </View>
+            )}
+
+            {/* Tipo de invitación */}
+            <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+              Tipo de vínculo
+            </Text>
+            <View className="flex-row gap-2 mb-4">
+              {([
+                { v: 'turnos' as const, label: 'Turnos' },
+                { v: 'nomina' as const, label: 'Nómina' },
+              ]).map(({ v, label }) => {
+                const active = tipo === v;
+                return (
+                  <Pressable
+                    key={v}
+                    onPress={() => setTipo(v)}
+                    className={`flex-1 h-11 rounded-xl items-center justify-center border ${
+                      active ? 'bg-primary border-primary' : 'bg-card border-border'
+                    }`}
+                  >
+                    <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-muted-foreground'}`}>
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {tipo === 'nomina' && (
+              <View className="bg-warning/10 rounded-2xl p-4 mb-6 flex-row gap-3">
+                <Ionicons name="warning-outline" size={20} color="#D97706" style={{ marginTop: 1 }} />
+                <Text className="text-sm text-foreground flex-1">
+                  Nómina implica exclusividad: si el trabajador acepta, dejará de estar disponible para turnos en
+                  otras empresas (sus demás vínculos se archivan automáticamente). Solo puedes invitar así a alguien
+                  que ya tenga cuenta activa como trabajador de turnos.
+                </Text>
               </View>
             )}
 
