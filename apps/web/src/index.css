@@ -69,11 +69,3 @@
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-10px); }
 }
-
-/* Carrusel infinito de pantallas reales en la landing (LandingPage.tsx) — la
-   fila se duplica y se traslada exactamente la mitad de su ancho, así el
-   punto de corte entre la 1ª y la 2ª copia queda invisible. */
-@keyframes zt-marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}

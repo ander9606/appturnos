@@ -9,9 +9,6 @@ export function MonthCalendar({
   renderDay: (day: CalendarDay) => React.ReactNode;
   onDayClick?: (day: CalendarDay) => void;
 }) {
-  // ponytail: cuando Cell es 'button' no lleva type="button", así que por defecto es type="submit" —
-  // hoy inofensivo porque nadie usa este componente dentro de un <form>. Upgrade path: agregar
-  // type={onDayClick ? 'button' : undefined} si algún día se reutiliza dentro de un formulario.
   const Cell = onDayClick ? 'button' : 'div';
   return (
     <div className="border border-border rounded-2xl overflow-hidden bg-border">
@@ -26,6 +23,7 @@ export function MonthCalendar({
         {weeks.flat().map(day => (
           <Cell
             key={day.date}
+            type={onDayClick ? 'button' : undefined}
             onClick={onDayClick ? () => onDayClick(day) : undefined}
             className={`bg-card text-left p-1.5 min-h-20 flex flex-col gap-1 ${day.inCurrentMonth ? '' : 'opacity-40'} ${onDayClick ? 'hover:bg-muted transition-colors' : ''}`}
           >

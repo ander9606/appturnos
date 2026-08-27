@@ -24,16 +24,11 @@ import { calcularResumenPeriodo, analizarDia } from './nominaTrabajadorUtils';
 import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
 import { useRegistrosHistorial } from '../useNomina';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
-import { getMonthGrid, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
 import { bogotaToday } from '@/lib/formatters';
 import type { TipoDia } from '@api-client';
 
 type ActiveTab = 'hoy' | 'nomina';
-
-const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
 
 /** Días que cuentan como "libre" vs una ausencia distinta — no distinguimos más que esto
  *  porque lo único que se pidió fue "saber cuándo estará de descanso". */
@@ -53,12 +48,11 @@ export function NominaTrabajadorView() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
-  // ponytail: sin `enabled` — se dispara en cada visita a la tab Nómina (antes solo se pedía al
-  // entrar a /historial-ganancias), y viene topado a 500 filas por el backend sin paginar por fecha,
-  // así que un trabajador con más antigüedad puede ver meses viejos del calendario sin bandas de
-  // descanso aunque sí las tuvo. Upgrade path: enabled: activeTab === 'nomina' && viewMode === 'mes'
-  // (mismo patrón que useOfertas en turnos.tsx), y agregar fecha_desde/fecha_hasta a listarRegistros.
-  const { data: historialResp } = useRegistrosHistorial();
+  const { data: historialResp } = useRegistrosHistorial({
+    enabled: activeTab === 'nomina' && viewMode === 'mes',
+    fechaDesde: mesWeeks[0][0].date,
+    fechaHasta: mesWeeks[mesWeeks.length - 1][6].date,
+  });
   const tipoDiaPorFecha = useMemo(() => {
     const map = new Map<string, TipoDia>();
     for (const r of historialResp?.data ?? []) map.set(r.fecha, r.tipo_dia);
@@ -262,25 +256,21 @@ export function NominaTrabajadorView() {
                   <View className="gap-2">
                     <View className="flex-row items-center gap-3">
                       <TouchableOpacity
-                        onPress={() => setMesCursor(c => c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 })}
+                        onPress={() => setMesCursor(c => shiftMonth(c, -1))}
                         className="w-8 h-8 items-center justify-center rounded-lg border border-border"
                       >
                         <Ionicons name="chevron-back" size={16} color={theme.primary} />
                       </TouchableOpacity>
                       <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-                        {MESES[mesCursor.month - 1]} {mesCursor.year}
+                        {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
                       </Text>
                       <TouchableOpacity
-                        onPress={() => setMesCursor(c => c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 })}
+                        onPress={() => setMesCursor(c => shiftMonth(c, 1))}
                         className="w-8 h-8 items-center justify-center rounded-lg border border-border"
                       >
                         <Ionicons name="chevron-forward" size={16} color={theme.primary} />
                       </TouchableOpacity>
                     </View>
-                    {/* ponytail: hex crudo (#D1FAE5/#FEF3C7/#0F172A) en vez de clases semánticas
-                        bg-success-light/bg-warning-light/text-foreground — el calendario de gestor
-                        (nomina.tsx) y el de web sí usan los tokens para el mismo patrón. Upgrade path:
-                        cambiar style={{backgroundColor}} por className con los tokens de tailwind.config.js. */}
                     <MonthCalendar
                       weeks={mesWeeks}
                       renderDay={(day: CalendarDay) => {
@@ -289,11 +279,8 @@ export function NominaTrabajadorView() {
                         const esAusencia = tipoDia && DIA_AUSENCIA[tipoDia];
                         if (!esLibre && !esAusencia) return null;
                         return (
-                          <View
-                            className="flex-1 -m-1 mt-0 rounded-b-md items-center justify-end py-0.5"
-                            style={{ backgroundColor: esLibre ? '#D1FAE5' : '#FEF3C7' }}
-                          >
-                            <Text style={{ fontSize: 8, fontWeight: '700', color: '#0F172A' }}>
+                          <View className={`flex-1 -m-1 mt-0 rounded-b-md items-center justify-end py-0.5 ${esLibre ? 'bg-success-light' : 'bg-warning-light'}`}>
+                            <Text className="text-foreground" style={{ fontSize: 8, fontWeight: '700' }}>
                               {esLibre ? 'Libre' : 'Ausencia'}
                             </Text>
                           </View>
@@ -302,11 +289,11 @@ export function NominaTrabajadorView() {
                     />
                     <View className="flex-row items-center gap-4 justify-center mt-1">
                       <View className="flex-row items-center gap-1.5">
-                        <View className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#D1FAE5' }} />
+                        <View className="w-2.5 h-2.5 rounded bg-success-light" />
                         <Text className="text-xs text-muted-foreground">Descanso / vacaciones</Text>
                       </View>
                       <View className="flex-row items-center gap-1.5">
-                        <View className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#FEF3C7' }} />
+                        <View className="w-2.5 h-2.5 rounded bg-warning-light" />
                         <Text className="text-xs text-muted-foreground">Incapacidad / licencia</Text>
                       </View>
                     </View>

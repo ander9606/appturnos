@@ -1,11 +1,20 @@
 import { bogotaToday, toISODate } from './formatters';
 
-// ponytail: el array de nombres de mes, el header de navegación (‹ mes/año ›) y el wraparound
-// diciembre/enero del cursor están copiados en app/(tabs)/turnos.tsx, app/(tabs)/nomina.tsx y
-// features/nomina/trabajador/NominaTrabajadorView.tsx (3-8 veces en total) en vez de vivir acá una
-// sola vez — apps/web/CalendarioPage.tsx sí lo resolvió una vez con un helper cambiarMes(delta).
-// Upgrade path: exportar MESES_LARGOS y un shiftMonth(cursor, delta) desde este archivo (o un
-// useMonthView() hook) e importarlos en los 3 consumidores en vez de retipearlos.
+export const MESES_LARGOS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+export interface MonthCursor {
+  year: number;
+  month: number; // 1-12
+}
+
+/** Cursor de mes ± delta meses, con acarreo de año. */
+export function shiftMonth(cursor: MonthCursor, delta: number): MonthCursor {
+  const total = cursor.year * 12 + (cursor.month - 1) + delta;
+  return { year: Math.floor(total / 12), month: (total % 12) + 1 };
+}
 
 export interface CalendarDay {
   /** YYYY-MM-DD */

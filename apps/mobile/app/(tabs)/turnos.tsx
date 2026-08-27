@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
-import { getMonthGrid, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 
@@ -432,16 +432,16 @@ export default function TurnosScreen() {
             <View className="flex-1 px-5 pt-4">
               <View className="flex-row items-center gap-3 mb-4">
                 <TouchableOpacity
-                  onPress={() => setMesCursor(c => c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 })}
+                  onPress={() => setMesCursor(c => shiftMonth(c, -1))}
                   className="w-8 h-8 items-center justify-center rounded-lg border border-border"
                 >
                   <Ionicons name="chevron-back" size={16} color={theme.primary} />
                 </TouchableOpacity>
                 <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-                  {MESES[mesCursor.month - 1]} {mesCursor.year}
+                  {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setMesCursor(c => c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 })}
+                  onPress={() => setMesCursor(c => shiftMonth(c, 1))}
                   className="w-8 h-8 items-center justify-center rounded-lg border border-border"
                 >
                   <Ionicons name="chevron-forward" size={16} color={theme.primary} />
@@ -510,16 +510,16 @@ export default function TurnosScreen() {
           <View className="flex-1 px-5 pt-4">
             <View className="flex-row items-center gap-3 mb-4">
               <TouchableOpacity
-                onPress={() => setMesCursor(c => c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 })}
+                onPress={() => setMesCursor(c => shiftMonth(c, -1))}
                 className="w-8 h-8 items-center justify-center rounded-lg border border-border"
               >
                 <Ionicons name="chevron-back" size={16} color={theme.primary} />
               </TouchableOpacity>
               <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-                {MESES[mesCursor.month - 1]} {mesCursor.year}
+                {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
               </Text>
               <TouchableOpacity
-                onPress={() => setMesCursor(c => c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 })}
+                onPress={() => setMesCursor(c => shiftMonth(c, 1))}
                 className="w-8 h-8 items-center justify-center rounded-lg border border-border"
               >
                 <Ionicons name="chevron-forward" size={16} color={theme.primary} />
@@ -727,11 +727,6 @@ export default function TurnosScreen() {
 
 const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-const MESES = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
-
 function formatShortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;

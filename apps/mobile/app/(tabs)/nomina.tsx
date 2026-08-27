@@ -28,7 +28,7 @@ import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
 import { MonthCalendar }          from '@/components/ui/MonthCalendar';
-import { getMonthGrid, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
 import { HOUR_TYPE_COLORS }       from '@/lib/designTokens';
 import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { bogotaToday } from '@/lib/formatters';
@@ -48,11 +48,6 @@ import { useRouter } from 'expo-router';
 
 const GESTORES = ['admin_empresa', 'jefe_nomina', 'nomina'] as const;
 type RolGestor = typeof GESTORES[number];
-
-const MESES_LARGOS = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
-];
 
 export default function NominaScreen() {
   const rol = useAuthStore((s) => s.usuario?.rol) ?? 'trabajador_nomina';
@@ -93,13 +88,14 @@ function NominaGestorView() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
-  // ponytail: a diferencia de periodosSelector (arriba, filtrado por tipoActual), esto busca en TODOS
-  // los períodos sin filtrar por tipo — si la empresa cambió de ciclo, tocar un día de un período del
-  // tipo viejo lo selecciona pero el selector de chips no lo va a mostrar resaltado al volver a lista.
-  // Upgrade path: aplicar el mismo filtro por tipoActual que ya usa periodosSelector.
-  // También trunca en silencio: usePeriodos() trae como máximo 20 (ver arriba) — no hay rango de
-  // fechas, así que navegar el mes muy atrás puede mostrar un mes vacío aunque el período exista.
-  const periodoDeDia = (fecha: string) => periodos.find((p) => p.fecha_inicio <= fecha && fecha <= p.fecha_fin);
+  // Consulta aparte (no la de arriba, topada a 20) para que navegar el mes lejos en el tiempo
+  // siga encontrando el período correspondiente en vez de mostrar el mes vacío en silencio.
+  const { data: periodosMesResp } = usePeriodos(undefined, viewMode === 'mes', {
+    fechaDesde: mesWeeks[0][0].date,
+    fechaHasta: mesWeeks[mesWeeks.length - 1][6].date,
+  });
+  const periodosMes = (periodosMesResp?.data ?? []).filter((p) => p.tipo === tipoActual);
+  const periodoDeDia = (fecha: string) => periodosMes.find((p) => p.fecha_inicio <= fecha && fecha <= p.fecha_fin);
 
   const {
     data: liquidacion,
@@ -270,7 +266,7 @@ function NominaGestorView() {
                 <View className="gap-2">
                   <View className="flex-row items-center gap-3">
                     <TouchableOpacity
-                      onPress={() => setMesCursor((c) => (c.month === 1 ? { year: c.year - 1, month: 12 } : { year: c.year, month: c.month - 1 }))}
+                      onPress={() => setMesCursor((c) => shiftMonth(c, -1))}
                       className="w-8 h-8 items-center justify-center rounded-lg border border-border"
                     >
                       <Ionicons name="chevron-back" size={16} color={theme.primary} />
@@ -279,7 +275,7 @@ function NominaGestorView() {
                       {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
                     </Text>
                     <TouchableOpacity
-                      onPress={() => setMesCursor((c) => (c.month === 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: c.month + 1 }))}
+                      onPress={() => setMesCursor((c) => shiftMonth(c, 1))}
                       className="w-8 h-8 items-center justify-center rounded-lg border border-border"
                     >
                       <Ionicons name="chevron-forward" size={16} color={theme.primary} />

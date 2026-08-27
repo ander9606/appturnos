@@ -6,7 +6,7 @@ import { useOfertas } from '@/modules/turnos/hooks/useTurnos';
 import { usePeriodos } from '@/modules/nomina/hooks/useNomina';
 import { MonthCalendar } from '@/shared/components/MonthCalendar';
 import { getMonthGrid, type CalendarDay } from '@/shared/lib/calendar';
-import { fmtDate } from '@/shared/lib/format';
+import { fmtDate, bogotaToday } from '@/shared/lib/format';
 import type { Oferta, EstadoOferta } from '@/modules/turnos/types';
 import type { Periodo, EstadoPeriodo } from '@/modules/nomina/types';
 
@@ -38,11 +38,9 @@ export function CalendarioPage() {
   const showNomina = rol === 'admin_empresa' || rol === 'jefe_nomina' || rol === 'nomina';
 
   const [modo, setModo] = useState<'turnos' | 'nomina'>(showTurnos ? 'turnos' : 'nomina');
-  // ponytail: usa new Date() (hora local del navegador) en vez de bogotaToday() —
-  // upgrade path: reusar bogotaToday() de shared/lib/format.ts, como ya hacen las 3 pantallas de mobile.
   const [cursor, setCursor] = useState(() => {
-    const hoy = new Date();
-    return { year: hoy.getFullYear(), month: hoy.getMonth() + 1 };
+    const [y, m] = bogotaToday().split('-').map(Number);
+    return { year: y, month: m };
   });
   const [diaSeleccionado, setDiaSeleccionado] = useState<string | null>(null);
 
@@ -65,11 +63,11 @@ export function CalendarioPage() {
     return map;
   }, [ofertas]);
 
-  // ponytail: usePeriodos() no acepta rango de fechas — trae los últimos 50 períodos y filtra en
-  // cliente. Si la empresa tiene ciclos semanales o el usuario navega muy atrás, el mes puede
-  // mostrarse vacío sin aviso aunque el período exista. Upgrade path: agregar fecha_desde/fecha_hasta
-  // a GET /nomina/periodos (mismo patrón que ya tiene GET /turnos/ofertas).
-  const { data: periodosData, isLoading: loadingPeriodos } = usePeriodos(undefined, false, { enabled: modo === 'nomina' });
+  const { data: periodosData, isLoading: loadingPeriodos } = usePeriodos(undefined, false, {
+    enabled: modo === 'nomina',
+    fechaDesde: primerDia,
+    fechaHasta: ultimoDia,
+  });
   const periodos: Periodo[] = periodosData?.data?.data ?? [];
   const periodoDeDia = (fecha: string) => periodos.find(p => p.fecha_inicio <= fecha && fecha <= p.fecha_fin);
 
@@ -84,8 +82,8 @@ export function CalendarioPage() {
   };
 
   const irAHoy = () => {
-    const hoy = new Date();
-    setCursor({ year: hoy.getFullYear(), month: hoy.getMonth() + 1 });
+    const [y, m] = bogotaToday().split('-').map(Number);
+    setCursor({ year: y, month: m });
     setDiaSeleccionado(null);
   };
 
