@@ -5,7 +5,7 @@ const AsignacionesService = require('../asignaciones/asignaciones.service');
 
 async function listar(req, res) {
   const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
-  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const disponibles = req.query.disponibles === 'true' || req.query.disponibles === '1';
 
   const { data, pagination } = await OfertasService.listar(
