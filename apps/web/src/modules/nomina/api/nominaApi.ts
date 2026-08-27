@@ -2,7 +2,7 @@ import { api } from '@/shared/api/axios';
 import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento, EstadoDescuento } from '../types';
 
 export const nominaApi = {
-  listarPeriodos: (params?: { estado?: EstadoPeriodo; page?: number; limit?: number; conTotales?: boolean }) =>
+  listarPeriodos: (params?: { estado?: EstadoPeriodo; fecha_desde?: string; fecha_hasta?: string; page?: number; limit?: number; conTotales?: boolean }) =>
     api.get('/nomina/periodos', { params }).then(r => r.data),
 
   crearPeriodo: (data: { fecha_inicio: string; fecha_fin: string; tipo?: TipoPeriodo }) =>

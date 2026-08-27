@@ -8,12 +8,23 @@ const COLUMNAS = `id, empresa_id, fecha_inicio, fecha_fin, tipo, estado,
   cerrado_por, cerrado_at, created_at`;
 
 const PeriodosModel = {
-  async listar(empresaId, { estado, limit, offset }) {
+  async listar(empresaId, { estado, fechaDesde, fechaHasta, limit, offset }) {
     const where = ['empresa_id = ?'];
     const params = [empresaId];
     if (estado) {
       where.push('estado = ?');
       params.push(estado);
+    }
+    // Solapamiento de rango: el período cubre algún día entre fechaDesde y fechaHasta
+    // (no que haya empezado dentro del rango) — así una vista de calendario mensual
+    // también encuentra el período que ya estaba abierto antes del mes visible.
+    if (fechaDesde) {
+      where.push('fecha_fin >= ?');
+      params.push(fechaDesde);
+    }
+    if (fechaHasta) {
+      where.push('fecha_inicio <= ?');
+      params.push(fechaHasta);
     }
     const whereSql = where.join(' AND ');
 

@@ -5,7 +5,8 @@ import { nominaApi } from '../api/nominaApi';
 import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento } from '../types';
 
 const KEYS = {
-  periodos: (estado?: EstadoPeriodo, conTotales?: boolean) => ['nomina', 'periodos', estado, conTotales] as const,
+  periodos: (estado?: EstadoPeriodo, conTotales?: boolean, fechaDesde?: string, fechaHasta?: string) =>
+    ['nomina', 'periodos', estado, conTotales, fechaDesde, fechaHasta] as const,
   registros: (params: object) => ['nomina', 'registros', params] as const,
   liquidacion: (id: number) => ['nomina', 'liquidacion', id] as const,
   trabajadores: () => ['trabajadores', 'nomina'] as const,
@@ -18,10 +19,17 @@ function getErrMsg(err: unknown) {
     : 'Error inesperado';
 }
 
-export function usePeriodos(estado?: EstadoPeriodo, conTotales = false, opts: { enabled?: boolean } = {}) {
+export function usePeriodos(
+  estado?: EstadoPeriodo,
+  conTotales = false,
+  opts: { enabled?: boolean; fechaDesde?: string; fechaHasta?: string } = {},
+) {
   return useQuery({
-    queryKey: KEYS.periodos(estado, conTotales),
-    queryFn: () => nominaApi.listarPeriodos({ estado, limit: 50, conTotales }),
+    queryKey: KEYS.periodos(estado, conTotales, opts.fechaDesde, opts.fechaHasta),
+    queryFn: () => nominaApi.listarPeriodos({
+      estado, conTotales, limit: 50,
+      fecha_desde: opts.fechaDesde, fecha_hasta: opts.fechaHasta,
+    }),
     staleTime: 60_000,
     enabled: opts.enabled ?? true,
   });

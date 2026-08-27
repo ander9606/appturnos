@@ -5,17 +5,25 @@ import type { EstadoPeriodo, TipoPeriodo, TipoDia } from '@api-client';
 // ── Query keys ────────────────────────────────────────────────────────────
 
 export const NOMINA_KEYS = {
-  periodos:     (estado?: EstadoPeriodo) => ['periodos', estado] as const,
+  periodos:     (estado?: EstadoPeriodo, fechaDesde?: string, fechaHasta?: string) =>
+    ['periodos', estado, fechaDesde, fechaHasta] as const,
   registros:    (params: object)         => ['registros', params] as const,
   liquidacion:  (periodoId: number)      => ['liquidacion', periodoId] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
 
-export function usePeriodos(estado?: EstadoPeriodo, enabled = true) {
+export function usePeriodos(
+  estado?: EstadoPeriodo,
+  enabled = true,
+  opts: { fechaDesde?: string; fechaHasta?: string } = {},
+) {
   return useQuery({
-    queryKey: NOMINA_KEYS.periodos(estado),
-    queryFn:  () => nominaApi.listarPeriodos({ estado, limit: 20 }),
+    queryKey: NOMINA_KEYS.periodos(estado, opts.fechaDesde, opts.fechaHasta),
+    queryFn:  () => nominaApi.listarPeriodos({
+      estado, limit: 20,
+      fecha_desde: opts.fechaDesde, fecha_hasta: opts.fechaHasta,
+    }),
     staleTime: 60_000,
     enabled,
   });
@@ -35,12 +43,18 @@ export function useRegistros(params: {
   });
 }
 
-/** Últimos registros del trabajador autenticado, sin filtrar por período — para el historial de ganancias. */
-export function useRegistrosHistorial() {
+/** Últimos registros del trabajador autenticado, sin filtrar por período — para el historial de
+ *  ganancias y para el calendario mensual (que sí acota por fecha_desde/fecha_hasta). */
+export function useRegistrosHistorial(opts: { enabled?: boolean; fechaDesde?: string; fechaHasta?: string } = {}) {
   return useQuery({
-    queryKey: ['registros', 'historial'] as const,
-    queryFn:  () => nominaApi.listarRegistros({ limit: 500 }),
+    queryKey: ['registros', 'historial', opts.fechaDesde, opts.fechaHasta] as const,
+    queryFn:  () => nominaApi.listarRegistros({
+      limit: 500,
+      fecha_desde: opts.fechaDesde,
+      fecha_hasta: opts.fechaHasta,
+    }),
     staleTime: 60_000,
+    enabled: opts.enabled ?? true,
   });
 }
 

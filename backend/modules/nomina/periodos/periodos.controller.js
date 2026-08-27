@@ -13,6 +13,8 @@ async function listar(req, res) {
   const pideTotales = req.query.conTotales === '1' || req.query.conTotales === 'true';
   const { data, pagination } = await PeriodosService.listar(req.empresa_id, {
     estado: req.query.estado || undefined,
+    fechaDesde: req.query.fecha_desde || undefined,
+    fechaHasta: req.query.fecha_hasta || undefined,
     page,
     limit,
     conTotales: pideTotales && VER_TOTALES.includes(req.usuario.rol),

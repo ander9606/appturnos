@@ -179,9 +179,11 @@ export interface TrabajadorNominaPerfil {
 export const nominaApi = {
   // ── Períodos ──────────────────────────────────────────────────────────
 
-  listarPeriodos(params?: { estado?: EstadoPeriodo; page?: number; limit?: number }) {
+  listarPeriodos(params?: { estado?: EstadoPeriodo; fecha_desde?: string; fecha_hasta?: string; page?: number; limit?: number }) {
     const qs = new URLSearchParams();
     if (params?.estado) qs.set('estado', params.estado);
+    if (params?.fecha_desde) qs.set('fecha_desde', params.fecha_desde);
+    if (params?.fecha_hasta) qs.set('fecha_hasta', params.fecha_hasta);
     if (params?.page)   qs.set('page',   String(params.page));
     if (params?.limit)  qs.set('limit',  String(params.limit));
     const q = qs.toString() ? `?${qs}` : '';
