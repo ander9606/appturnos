@@ -19,6 +19,7 @@ const ConfiguracionService = {
       tiene_webhook_secret: Boolean(cfg.webhook_secret),
       tiene_api_key: Boolean(cfg.api_key),
       tiene_incoming_secret: Boolean(cfg.incoming_secret),
+      tiene_logiq360_api_key: Boolean(cfg.logiq360_api_key),
       configurado: true,
     };
   },
@@ -37,6 +38,7 @@ const ConfiguracionService = {
       incoming_secret: tomar('incoming_secret'),
       logiq360_tenant_id: tomar('logiq360_tenant_id'),
       logiq360_base_url: tomar('logiq360_base_url'),
+      logiq360_api_key: tomar('logiq360_api_key'),
     });
     return ConfiguracionService.obtenerConfig(empresaId);
   },
@@ -80,9 +82,16 @@ const ConfiguracionService = {
       webhook_url: webhookUrl || b.webhook_url,
       webhook_secret: b.webhook_secret,
       api_key: b.api_key,
-      incoming_secret: appTurnosApiKey,
+      // b.incoming_secret es S_A (logiq360 firma sus webhooks salientes con esto) —
+      // verificarFirmaLogiq360 lo necesita para validar la firma de cada webhook
+      // entrante. appTurnosApiKey es un secreto DISTINTO: el que logiq360 debe
+      // presentar como X-API-Key al consultar los endpoints pull de Zaturno: va
+      // en logiq360_api_key, nunca en incoming_secret (bug histórico — mezclar
+      // ambos aquí rompía la verificación de firma de todo webhook entrante).
+      incoming_secret: b.incoming_secret,
       logiq360_tenant_id: b.tenant_id,
       logiq360_base_url: b.logiq360_base_url,
+      logiq360_api_key: appTurnosApiKey,
     });
 
     // La gratuidad ya NO se otorga aquí de forma permanente: se deriva en vivo de
