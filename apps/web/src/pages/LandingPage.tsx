@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   Calendar, MapPin, Wallet, Users, Bell, ShieldCheck,
-  Bell as BellIcon, Search, Star, Lock, Mail, ChevronRight, Home,
+  Bell as BellIcon, Search, Star, ChevronRight, Home,
   CalendarDays, Wallet as WalletIcon, Apple, PlayCircle,
   ChevronLeft, CheckCircle2, Plus, Minus, Briefcase, Crosshair, TrendingUp,
 } from 'lucide-react';
@@ -56,37 +56,6 @@ function Reveal({
       {children}
     </div>
   );
-}
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduced(query.matches);
-    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
-    query.addEventListener('change', handler);
-    return () => query.removeEventListener('change', handler);
-  }, []);
-
-  return reduced;
-}
-
-/** Detecta dispositivos sin puntero preciso (táctiles) — ahí un carrusel que
- *  gira solo y solo se pausa con :hover es inutilizable; conviene un scroll
- *  nativo deslizable en su lugar. */
-function useCoarsePointer() {
-  const [coarse, setCoarse] = useState(false);
-
-  useEffect(() => {
-    const query = window.matchMedia('(hover: none), (pointer: coarse)');
-    setCoarse(query.matches);
-    const handler = (e: MediaQueryListEvent) => setCoarse(e.matches);
-    query.addEventListener('change', handler);
-    return () => query.removeEventListener('change', handler);
-  }, []);
-
-  return coarse;
 }
 
 /**
@@ -225,6 +194,7 @@ function Stats() {
 // ── Mockups gallery ──────────────────────────────────────────────────────
 
 function Mockups() {
+  const [role, setRole] = useState<Role>('trabajador');
   return (
     <section id="app" className="relative overflow-hidden px-6 py-20 sm:py-24">
       <div
@@ -238,83 +208,153 @@ function Mockups() {
           Pantallas reales, no bocetos
         </h2>
         <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-          Esto es exactamente lo que tu equipo ve al abrir zaturno — desde que crea un turno
-          hasta que revisa cuánto lleva acumulado en el período.
+          Navega la app como si la tuvieras en la mano — elige qué tipo de usuario quieres ver
+          y tocá la barra inferior para moverte entre pantallas.
         </p>
       </Reveal>
 
-      <MockupsCarousel />
+      <Reveal delay={100} className="mx-auto mt-10 flex max-w-xs flex-col items-center gap-1.5">
+        <label htmlFor="role-select" className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Estás viendo la app como
+        </label>
+        <RoleSelect value={role} onChange={setRole} />
+      </Reveal>
 
-      <Reveal delay={200}>
+      <Reveal delay={150} className="mt-10 flex justify-center">
+        <PhoneSimulator role={role} />
+      </Reveal>
+
+      <Reveal delay={250}>
         <StoreBadges />
       </Reveal>
     </section>
   );
 }
 
-const MOCKUP_SCREENS = [
-  { caption: 'Inicio de sesión', screen: <LoginScreen /> },
-  { caption: 'Mis turnos', screen: <TurnosScreen /> },
-  { caption: 'Crear turno', screen: <CrearTurnoScreen /> },
-  { caption: 'Marcar ingreso', screen: <MarcarIngresoScreen /> },
-  { caption: 'Detalle y valor del turno', screen: <OfertaDetalleScreen /> },
-  { caption: 'Nómina', screen: <NominaScreen /> },
-  { caption: 'Valor acumulado', screen: <AcumuladoScreen /> },
-  { caption: 'Equipo', screen: <EquipoScreen /> },
+type Role = 'trabajador' | 'jefe_turnos' | 'nomina';
+type Tab = 'inicio' | 'turnos' | 'nomina' | 'equipo';
+type Detail =
+  | { kind: 'turno'; org: string; title: string; meta: string; pago?: string; cobertura?: string }
+  | { kind: 'miembro'; nombre: string; rol: string; inicial: string; color: string }
+  | { kind: 'crear' }
+  | { kind: 'marcaje' }
+  | { kind: 'acumulado' };
+
+function isGestorRole(role: Role): role is 'jefe_turnos' | 'nomina' {
+  return role === 'jefe_turnos' || role === 'nomina';
+}
+
+const ROLES: { value: Role; label: string }[] = [
+  { value: 'trabajador', label: 'Trabajador' },
+  { value: 'jefe_turnos', label: 'Jefe de turnos' },
+  { value: 'nomina', label: 'Nómina / Admin' },
 ];
 
+function RoleSelect({ value, onChange }: { value: Role; onChange: (r: Role) => void }) {
+  return (
+    <select
+      id="role-select"
+      value={value}
+      onChange={(e) => onChange(e.target.value as Role)}
+      className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-center text-sm font-bold text-foreground shadow-sm outline-none transition-colors focus-visible:border-primary"
+    >
+      {ROLES.map((r) => (
+        <option key={r.value} value={r.value}>
+          {r.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 /**
- * Carrusel infinito: la fila se duplica y se traslada -50% en loop, así que el
- * corte entre la 1ª y 2ª copia es invisible. Se pausa por completo con :hover
- * (así el usuario puede mirar y agrandar la pantalla que le interese) y se
- * desactiva del todo si el usuario prefiere menos movimiento.
+ * Un solo iPhone, interactivo: la barra inferior cambia de pestaña y tocar
+ * una tarjeta abre su detalle (con volver) — igual que en la app real, pero
+ * 100% visual, sin llamadas a la API. `role` decide qué ve cada tipo de
+ * usuario, tal como en la app real (ver Role Matrix en CLAUDE.md).
  */
-function MockupsCarousel() {
-  const reducedMotion = usePrefersReducedMotion();
-  const coarsePointer = useCoarsePointer();
+function PhoneSimulator({ role }: { role: Role }) {
+  const [tab, setTab] = useState<Tab>('inicio');
+  const [detail, setDetail] = useState<Detail | null>(null);
 
-  if (reducedMotion) {
-    return (
-      <div className="mx-auto mt-14 flex max-w-7xl flex-wrap justify-center gap-7 px-1">
-        {MOCKUP_SCREENS.map((m) => (
-          <MockupItem key={m.caption} caption={m.caption}>
-            <Phone size="sm">{m.screen}</Phone>
-          </MockupItem>
-        ))}
-      </div>
-    );
-  }
+  useEffect(() => {
+    setTab('inicio');
+    setDetail(null);
+  }, [role]);
 
-  // Táctil: nada de auto-rotación imparable — se desliza con el dedo, a su
-  // propio ritmo, con snap para que cada pantalla quede centrada al soltar.
-  if (coarsePointer) {
-    return (
-      <div className="mt-14 flex snap-x snap-mandatory gap-7 overflow-x-auto px-6 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {MOCKUP_SCREENS.map((m) => (
-          <div key={m.caption} className="snap-center">
-            <MockupItem caption={m.caption}>
-              <Phone size="sm">{m.screen}</Phone>
-            </MockupItem>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const openDetail = (d: Detail) => setDetail(d);
+  const closeDetail = () => setDetail(null);
+  const goTab = (t: Tab) => {
+    setDetail(null);
+    setTab(t);
+  };
 
   return (
-    <div
-      className="group/carousel relative mt-14 overflow-hidden py-2"
-      style={{ maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)' }}
-    >
-      <div className="flex w-max animate-[zt-marquee_44s_linear_infinite] gap-7 group-hover/carousel:[animation-play-state:paused]">
-        {[...MOCKUP_SCREENS, ...MOCKUP_SCREENS].map((m, i) => (
-          <MockupItem key={`${m.caption}-${i}`} caption={m.caption}>
-            <Phone size="sm">{m.screen}</Phone>
-          </MockupItem>
-        ))}
-      </div>
-    </div>
+    <Phone>
+      {detail ? (
+        <DetailScreen detail={detail} onBack={closeDetail} />
+      ) : (
+        <TabScreen role={role} tab={tab} onTabSelect={goTab} onOpenDetail={openDetail} />
+      )}
+    </Phone>
   );
+}
+
+function TabScreen({
+  role,
+  tab,
+  onTabSelect,
+  onOpenDetail,
+}: {
+  role: Role;
+  tab: Tab;
+  onTabSelect: (t: Tab) => void;
+  onOpenDetail: (d: Detail) => void;
+}) {
+  const isGestor = isGestorRole(role);
+
+  if (tab === 'inicio') {
+    return isGestor ? (
+      <GestorDashboardScreen role={role} onTabSelect={onTabSelect} onOpenDetail={onOpenDetail} />
+    ) : (
+      <DashboardScreen onTabSelect={onTabSelect} onOpenDetail={onOpenDetail} />
+    );
+  }
+  if (tab === 'turnos') {
+    return isGestor ? (
+      <GestorTurnosScreen onTabSelect={onTabSelect} onOpenDetail={onOpenDetail} />
+    ) : (
+      <TurnosScreen onTabSelect={onTabSelect} onOpenDetail={onOpenDetail} />
+    );
+  }
+  if (tab === 'nomina') {
+    return role === 'nomina' ? (
+      <NominaGestorScreen onTabSelect={onTabSelect} onOpenDetail={onOpenDetail} />
+    ) : (
+      <NominaScreen onTabSelect={onTabSelect} onOpenDetail={onOpenDetail} />
+    );
+  }
+  return (
+    <EquipoScreen
+      onTabSelect={onTabSelect}
+      onOpenDetail={isGestor ? onOpenDetail : undefined}
+    />
+  );
+}
+
+function DetailScreen({ detail, onBack }: { detail: Detail; onBack: () => void }) {
+  switch (detail.kind) {
+    case 'turno':
+      return <OfertaDetalleScreen turno={detail} onBack={onBack} />;
+    case 'miembro':
+      return <MiembroDetalleScreen miembro={detail} onBack={onBack} />;
+    case 'marcaje':
+      return <MarcarIngresoScreen onBack={onBack} />;
+    case 'acumulado':
+      return <AcumuladoScreen onBack={onBack} />;
+    case 'crear':
+      return <CrearTurnoScreen onBack={onBack} />;
+  }
 }
 
 function StoreBadges() {
@@ -350,19 +390,6 @@ function StoreBadge({
         <div className="text-[9px] font-medium uppercase tracking-wide text-white/60">{eyebrow}</div>
         <div className="text-sm font-bold text-white">{store}</div>
       </div>
-    </div>
-  );
-}
-
-function MockupItem({ caption, children }: { caption: string; children: ReactNode }) {
-  return (
-    <div className="group relative flex flex-shrink-0 flex-col items-center gap-3.5 hover:z-10">
-      <div className="transition-transform duration-300 ease-out group-hover:-translate-y-2 group-hover:scale-110">
-        {children}
-      </div>
-      <span className="text-sm font-semibold text-muted-foreground transition-colors group-hover:text-primary">
-        {caption}
-      </span>
     </div>
   );
 }
@@ -740,7 +767,7 @@ function StatusRow({ dark }: { dark?: boolean }) {
   );
 }
 
-function TabBar({ active, accent = '#FF5A3C' }: { active: 'inicio' | 'turnos' | 'nomina' | 'equipo'; accent?: string }) {
+function TabBar({ active, accent = '#FF5A3C', onSelect }: { active: Tab; accent?: string; onSelect?: (t: Tab) => void }) {
   const tabs = [
     { key: 'inicio', icon: Home, label: 'Inicio' },
     { key: 'turnos', icon: CalendarDays, label: 'Turnos' },
@@ -752,17 +779,31 @@ function TabBar({ active, accent = '#FF5A3C' }: { active: 'inicio' | 'turnos' | 
       {tabs.map((t) => {
         const isActive = t.key === active;
         return (
-          <div key={t.key} className="flex flex-1 flex-col items-center gap-0.5" style={{ color: isActive ? accent : PLACEHOLDER }}>
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => onSelect?.(t.key)}
+            aria-current={isActive ? 'page' : undefined}
+            aria-label={t.label}
+            className="flex flex-1 flex-col items-center gap-0.5"
+            style={{ color: isActive ? accent : PLACEHOLDER }}
+          >
             <t.icon size={13} />
             <span className="text-[7px] font-bold">{t.label}</span>
-          </div>
+          </button>
         );
       })}
     </div>
   );
 }
 
-function DashboardScreen() {
+function DashboardScreen({
+  onTabSelect,
+  onOpenDetail,
+}: {
+  onTabSelect?: (t: Tab) => void;
+  onOpenDetail?: (d: Detail) => void;
+} = {}) {
   return (
     <>
       <div className="rounded-b-[22px] bg-primary px-4 pb-5 pt-2">
@@ -786,7 +827,12 @@ function DashboardScreen() {
       </div>
 
       <div className="-mt-3.5 flex flex-1 flex-col gap-2.5 px-3 pb-2.5">
-        <div className="rounded-xl border bg-white px-3 py-2.5" style={{ borderColor: ORANGE_LIGHT }}>
+        <button
+          type="button"
+          onClick={() => onOpenDetail?.({ kind: 'marcaje' })}
+          className="rounded-xl border bg-white px-3 py-2.5 text-left"
+          style={{ borderColor: ORANGE_LIGHT }}
+        >
           <span className="rounded-full px-2 py-0.5 text-[8px] font-extrabold" style={{ background: ORANGE_LIGHT, color: '#FF5A3C' }}>
             ● Turno activo
           </span>
@@ -797,7 +843,7 @@ function DashboardScreen() {
           <div className="mt-2 rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
             Marcar salida
           </div>
-        </div>
+        </button>
 
         <div className="flex gap-2">
           {[
@@ -816,14 +862,19 @@ function DashboardScreen() {
           <p className="mb-1.5 text-[10px] font-bold text-muted-foreground">Acciones rápidas</p>
           <div className="flex gap-2">
             {[
-              { icon: CalendarDays, l: 'Mis Turnos' },
-              { icon: WalletIcon, l: 'Quincena' },
-              { icon: Star, l: 'Calificación' },
+              { icon: CalendarDays, l: 'Mis Turnos', tab: 'turnos' as Tab },
+              { icon: WalletIcon, l: 'Quincena', tab: 'nomina' as Tab },
+              { icon: Star, l: 'Calificación', tab: 'equipo' as Tab },
             ].map((a) => (
-              <div key={a.l} className="flex flex-1 flex-col items-center gap-1 rounded-xl border border-border bg-white py-2">
+              <button
+                key={a.l}
+                type="button"
+                onClick={() => onTabSelect?.(a.tab)}
+                className="flex flex-1 flex-col items-center gap-1 rounded-xl border border-border bg-white py-2"
+              >
                 <a.icon size={14} className="text-primary" />
                 <span className="text-center text-[7px] font-bold text-foreground">{a.l}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -831,65 +882,43 @@ function DashboardScreen() {
         <div>
           <div className="mb-1 flex items-center justify-between">
             <span className="text-[10px] font-bold text-muted-foreground">Próximos turnos</span>
-            <span className="text-[9px] font-bold text-primary">Ver todos</span>
+            <button type="button" onClick={() => onTabSelect?.('turnos')} className="text-[9px] font-bold text-primary">
+              Ver todos
+            </button>
           </div>
           {[
-            { t: 'Evento corporativo', d: 'Vie 8 Ago · 6:00 p.m.' },
-            { t: 'Turno nocturno', d: 'Sáb 9 Ago · 9:00 p.m.' },
+            { org: 'Eventos BQ', t: 'Evento corporativo', d: 'Vie 8 Ago · 6:00 p.m.' },
+            { org: 'La Terraza', t: 'Turno nocturno', d: 'Sáb 9 Ago · 9:00 p.m.' },
           ].map((r) => (
-            <div key={r.t} className="flex items-center gap-2 border-b border-border py-1.5 last:border-0">
+            <button
+              key={r.t}
+              type="button"
+              onClick={() => onOpenDetail?.({ kind: 'turno', org: r.org, title: r.t, meta: r.d })}
+              className="flex w-full items-center gap-2 border-b border-border py-1.5 text-left last:border-0"
+            >
               <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-info" />
               <div className="flex-1">
                 <div className="text-[10px] font-bold text-foreground">{r.t}</div>
                 <div className="text-[8px] font-semibold text-muted-foreground">{r.d}</div>
               </div>
               <ChevronRight size={11} className="text-muted-foreground" />
-            </div>
+            </button>
           ))}
         </div>
       </div>
 
-      <TabBar active="inicio" />
+      <TabBar active="inicio" onSelect={onTabSelect} />
     </>
   );
 }
 
-function LoginScreen() {
-  return (
-    <>
-      <div className="rounded-b-[26px] bg-primary pb-4 pt-2">
-        <StatusRow />
-        <div className="mt-2 flex flex-col items-center gap-1.5">
-          <img src={zaturnoLogo} alt="" className="h-8 w-8 rounded-xl ring-1 ring-white/35" />
-          <p className="text-[13px] font-extrabold text-white">Zaturno</p>
-          <p className="text-[8px] font-semibold text-white/75">Gestión de turnos y nómina</p>
-        </div>
-      </div>
-      <div className="-mt-3 flex flex-1 flex-col gap-2 px-3 pb-2">
-        <div className="flex flex-col gap-2 rounded-xl border border-border bg-white px-2.5 py-2">
-          <p className="text-[10px] font-extrabold text-foreground">Inicia sesión</p>
-          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5 text-[8px] font-semibold text-muted-foreground">
-            <Mail size={11} /> correo@empresa.com
-          </div>
-          <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1.5 text-[8px] font-semibold text-muted-foreground">
-            <Lock size={11} /> ••••••••
-          </div>
-          <p className="text-right text-[8px] font-bold text-primary">¿Olvidaste tu contraseña?</p>
-          <div className="rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
-            Iniciar sesión
-          </div>
-        </div>
-        <p className="text-center text-[8px] leading-relaxed text-muted-foreground">
-          ¿Una empresa ya te invitó?
-          <br />
-          <span className="font-bold text-primary">Activa tu cuenta</span>
-        </p>
-      </div>
-    </>
-  );
-}
-
-function TurnosScreen() {
+function TurnosScreen({
+  onTabSelect,
+  onOpenDetail,
+}: {
+  onTabSelect?: (t: Tab) => void;
+  onOpenDetail?: (d: Detail) => void;
+} = {}) {
   const days = [
     { d: 'L', n: 3 }, { d: 'M', n: 4 }, { d: 'M', n: 5, active: true },
     { d: 'J', n: 6 }, { d: 'V', n: 7 }, { d: 'S', n: 8 }, { d: 'D', n: 9 },
@@ -920,10 +949,15 @@ function TurnosScreen() {
           <span className="pb-1.5 text-[9px] font-bold text-muted-foreground">Disponibles</span>
         </div>
         {[
-          { org: 'La Terraza', title: 'Turno de cocina', meta: '5 Ago · 14:00–22:00', tag: 'Confirmado', tagBg: GREEN_LIGHT, tagFg: GREEN, accent: '#FF5A3C' },
-          { org: 'Eventos BQ', title: 'Meseros · evento corporativo', meta: '8 Ago · 18:00–23:00', tag: 'Pendiente', tagBg: BLUE_LIGHT, tagFg: BLUE, accent: BLUE },
+          { org: 'La Terraza', title: 'Turno de cocina', meta: '5 Ago · 14:00–22:00', tag: 'Confirmado', tagBg: GREEN_LIGHT, tagFg: GREEN, accent: '#FF5A3C', pago: '$85.000' },
+          { org: 'Eventos BQ', title: 'Meseros · evento corporativo', meta: '8 Ago · 18:00–23:00', tag: 'Pendiente', tagBg: BLUE_LIGHT, tagFg: BLUE, accent: BLUE, pago: '$70.000' },
         ].map((c) => (
-          <div key={c.org} className="flex overflow-hidden rounded-xl border border-border bg-white">
+          <button
+            key={c.org}
+            type="button"
+            onClick={() => onOpenDetail?.({ kind: 'turno', org: c.org, title: c.title, meta: c.meta, pago: c.pago })}
+            className="flex overflow-hidden rounded-xl border border-border bg-white text-left"
+          >
             <div className="w-1" style={{ background: c.accent }} />
             <div className="flex flex-1 flex-col gap-0.5 px-2.5 py-2">
               <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">{c.org}</span>
@@ -936,10 +970,10 @@ function TurnosScreen() {
                 {c.tag}
               </span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
-      <TabBar active="turnos" />
+      <TabBar active="turnos" onSelect={onTabSelect} />
     </>
   );
 }
@@ -966,15 +1000,20 @@ function Field({
   );
 }
 
-function CrearTurnoScreen() {
+function CrearTurnoScreen({ onBack }: { onBack?: () => void } = {}) {
   return (
     <>
       <div className="border-b border-border bg-white px-3 pb-2 pt-2">
         <StatusRow dark />
-        <div className="mt-1 flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={!onBack}
+          className="mt-1 flex items-center gap-1.5"
+        >
           <ChevronLeft size={14} className="text-foreground" />
           <p className="text-[11px] font-extrabold text-foreground">Nuevo turno</p>
-        </div>
+        </button>
       </div>
       <div className="flex flex-1 flex-col gap-2 px-3 py-2.5">
         <Field label="Título" value="Turno de cocina" icon={Briefcase} />
@@ -1001,15 +1040,15 @@ function CrearTurnoScreen() {
   );
 }
 
-function MarcarIngresoScreen() {
+function MarcarIngresoScreen({ onBack }: { onBack?: () => void } = {}) {
   return (
     <>
       <div className="rounded-b-[20px] bg-primary px-3 pb-4 pt-2">
         <StatusRow />
-        <div className="mt-1.5 flex items-center gap-1.5">
+        <button type="button" onClick={onBack} disabled={!onBack} className="mt-1.5 flex items-center gap-1.5">
           <ChevronLeft size={14} className="text-white" />
           <span className="text-[10px] font-bold text-white">Restaurante La Terraza</span>
-        </div>
+        </button>
       </div>
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-4 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-success-light">
@@ -1040,39 +1079,63 @@ function MetaRow({ icon: Icon, text }: { icon: typeof MapPin; text: string }) {
   );
 }
 
-function OfertaDetalleScreen() {
+function OfertaDetalleScreen({
+  turno,
+  onBack,
+}: {
+  turno?: Extract<Detail, { kind: 'turno' }>;
+  onBack?: () => void;
+} = {}) {
+  const t: Extract<Detail, { kind: 'turno' }> = turno ?? {
+    kind: 'turno',
+    org: 'Eventos BQ',
+    title: 'Meseros · evento corporativo',
+    meta: 'Vie 8 Ago · 18:00 – 23:00',
+    pago: '$85.000',
+  };
+  const isGestor = !!t.cobertura;
   return (
     <>
       <div className="border-b border-border bg-white px-3 pb-2 pt-2">
         <StatusRow dark />
-        <div className="mt-1 flex items-center gap-1.5">
+        <button type="button" onClick={onBack} disabled={!onBack} className="mt-1 flex items-center gap-1.5">
           <ChevronLeft size={14} className="text-foreground" />
           <p className="text-[11px] font-extrabold text-foreground">Detalle del turno</p>
-        </div>
+        </button>
       </div>
       <div className="flex flex-1 flex-col gap-2.5 px-3 py-2.5">
         <div>
-          <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">Eventos BQ</span>
-          <p className="text-[12px] font-extrabold text-foreground">Meseros · evento corporativo</p>
+          <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">{t.org}</span>
+          <p className="text-[12px] font-extrabold text-foreground">{t.title}</p>
         </div>
         <div className="flex flex-col gap-1.5 rounded-xl border border-border bg-white px-2.5 py-2">
-          <MetaRow icon={CalendarDays} text="Vie 8 Ago · 18:00 – 23:00" />
+          <MetaRow icon={CalendarDays} text={t.meta} />
           <MetaRow icon={MapPin} text="Salón Andino, Bogotá" />
-          <MetaRow icon={Briefcase} text="Mesero(a) · 2 plazas libres" />
+          <MetaRow icon={Briefcase} text="Mesero(a) · 2 plazas" />
         </div>
         <div className="rounded-xl px-2.5 py-2.5" style={{ background: GREEN_LIGHT }}>
-          <p className="text-[7px] font-bold uppercase tracking-wide" style={{ color: GREEN }}>Pago por turno</p>
-          <p className="text-[15px] font-extrabold" style={{ color: GREEN }}>$85.000</p>
+          <p className="text-[7px] font-bold uppercase tracking-wide" style={{ color: GREEN }}>
+            {isGestor ? 'Cobertura de plazas' : 'Pago por turno'}
+          </p>
+          <p className="text-[15px] font-extrabold" style={{ color: GREEN }}>
+            {isGestor ? t.cobertura : t.pago ?? '$85.000'}
+          </p>
         </div>
         <div className="mt-auto rounded-lg bg-primary py-1.5 text-center text-[9px] font-extrabold text-white">
-          Aplicar a este turno
+          {isGestor ? 'Editar turno' : 'Aplicar a este turno'}
         </div>
       </div>
     </>
   );
 }
 
-function NominaScreen() {
+function NominaScreen({
+  onTabSelect,
+  onOpenDetail,
+}: {
+  onTabSelect?: (t: Tab) => void;
+  onOpenDetail?: (d: Detail) => void;
+} = {}) {
   const registros = [
     { d: 'Lun 3 Ago', h: '6:58 a.m. – 3:02 p.m.', v: '8h 04' },
     { d: 'Mar 4 Ago', h: '6:55 a.m. – 3:00 p.m.', v: '8h 05' },
@@ -1091,7 +1154,11 @@ function NominaScreen() {
         <p className="text-[12px] font-extrabold text-white">Quincena 1–15 Ago</p>
       </div>
       <div className="-mt-2 flex flex-1 flex-col gap-2.5 px-3 pb-2">
-        <div className="rounded-xl border border-border bg-white px-2.5 py-2">
+        <button
+          type="button"
+          onClick={() => onOpenDetail?.({ kind: 'acumulado' })}
+          className="w-full rounded-xl border border-border bg-white px-2.5 py-2 text-left"
+        >
           <p className="text-[8px] font-bold text-muted-foreground">Total del período</p>
           <p className="text-[15px] font-extrabold text-foreground">$1.240.500</p>
           <div className="mt-1.5 flex h-2 gap-px overflow-hidden rounded">
@@ -1112,7 +1179,7 @@ function NominaScreen() {
               </span>
             ))}
           </div>
-        </div>
+        </button>
         <p className="text-[10px] font-bold text-muted-foreground">Registros</p>
         {registros.map((r) => (
           <div key={r.d} className="flex items-center justify-between border-b border-border py-1.5 last:border-0">
@@ -1126,7 +1193,7 @@ function NominaScreen() {
           </div>
         ))}
       </div>
-      <TabBar active="nomina" accent={GREEN} />
+      <TabBar active="nomina" accent={GREEN} onSelect={onTabSelect} />
     </>
   );
 }
@@ -1142,7 +1209,7 @@ function MiniStat({ label, value, color }: { label: string; value: string; color
   );
 }
 
-function AcumuladoScreen() {
+function AcumuladoScreen({ onBack }: { onBack?: () => void } = {}) {
   return (
     <>
       <div
@@ -1152,10 +1219,10 @@ function AcumuladoScreen() {
         <div className="pointer-events-none absolute -right-5 -top-7 h-16 w-16 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-5 -left-6 h-12 w-12 rounded-full bg-white/10" />
         <StatusRow />
-        <div className="mt-1.5 flex items-center gap-1.5">
+        <button type="button" onClick={onBack} disabled={!onBack} className="mt-1.5 flex items-center gap-1.5">
           <ChevronLeft size={14} className="text-white" />
           <span className="text-[10px] font-bold text-white/85">Resumen del período</span>
-        </div>
+        </button>
       </div>
       <div className="-mt-3 flex flex-1 flex-col gap-3 px-3 pb-2">
         <div className="rounded-xl border border-border bg-white px-3 py-3 text-center">
@@ -1178,12 +1245,18 @@ function AcumuladoScreen() {
   );
 }
 
-function EquipoScreen() {
+function EquipoScreen({
+  onTabSelect,
+  onOpenDetail,
+}: {
+  onTabSelect?: (t: Tab) => void;
+  onOpenDetail?: (d: Detail) => void;
+} = {}) {
   const equipo = [
-    { i: 'CM', n: 'Carlos Martínez', c: 'Cocina · Activo', bg: '#FF5A3C' },
-    { i: 'LR', n: 'Luisa Ramírez', c: 'Salón · Activo', bg: BLUE },
-    { i: 'PV', n: 'Pedro Vargas', c: 'Domicilios · Activo', bg: GREEN },
-    { i: 'AG', n: 'Ana Gómez', c: 'Caja · Activo', bg: VIOLET },
+    { i: 'CM', n: 'Carlos Martínez', rol: 'Cocina', c: 'Cocina · Activo', bg: '#FF5A3C' },
+    { i: 'LR', n: 'Luisa Ramírez', rol: 'Salón', c: 'Salón · Activo', bg: BLUE },
+    { i: 'PV', n: 'Pedro Vargas', rol: 'Domicilios', c: 'Domicilios · Activo', bg: GREEN },
+    { i: 'AG', n: 'Ana Gómez', rol: 'Caja', c: 'Caja · Activo', bg: VIOLET },
   ];
   return (
     <>
@@ -1197,7 +1270,13 @@ function EquipoScreen() {
           <Search size={11} /> Buscar trabajador…
         </div>
         {equipo.map((t) => (
-          <div key={t.i} className="flex items-center gap-2 border-b border-border py-1.5 last:border-0">
+          <button
+            key={t.i}
+            type="button"
+            disabled={!onOpenDetail}
+            onClick={() => onOpenDetail?.({ kind: 'miembro', nombre: t.n, rol: t.rol, inicial: t.i, color: t.bg })}
+            className="flex items-center gap-2 border-b border-border py-1.5 text-left last:border-0"
+          >
             <div
               className="flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
               style={{ background: t.bg }}
@@ -1208,11 +1287,302 @@ function EquipoScreen() {
               <div className="text-[10px] font-bold text-foreground">{t.n}</div>
               <div className="text-[8px] font-semibold text-muted-foreground">{t.c}</div>
             </div>
-            <ChevronRight size={11} className="text-muted-foreground" />
-          </div>
+            {onOpenDetail && <ChevronRight size={11} className="text-muted-foreground" />}
+          </button>
         ))}
       </div>
-      <TabBar active="equipo" accent={BLUE} />
+      <TabBar active="equipo" accent={BLUE} onSelect={onTabSelect} />
+    </>
+  );
+}
+
+// ── Vistas de gestor (jefe de turnos / nómina-admin) ────────────────────
+// Mismos tokens y componentes visuales que las pantallas de trabajador de
+// arriba — solo cambian los datos y las acciones disponibles, igual que en
+// la app real (ver Role Matrix en CLAUDE.md).
+
+function GestorDashboardScreen({
+  role,
+  onTabSelect,
+  onOpenDetail,
+}: {
+  role: Extract<Role, 'jefe_turnos' | 'nomina'>;
+  onTabSelect?: (t: Tab) => void;
+  onOpenDetail?: (d: Detail) => void;
+}) {
+  const isNomina = role === 'nomina';
+  const stats = isNomina
+    ? [
+        { n: '5', l: 'Días restantes', c: 'text-foreground' },
+        { n: '$5.2M', l: 'Por liquidar', c: 'text-info' },
+        { n: '8', l: 'Empleados', c: 'text-success' },
+      ]
+    : [
+        { n: '6', l: 'Turnos hoy', c: 'text-foreground' },
+        { n: '2', l: 'Sin cubrir', c: 'text-danger' },
+        { n: '8', l: 'Activos', c: 'text-success' },
+      ];
+  const actions = isNomina
+    ? [
+        { icon: WalletIcon, l: 'Liquidar', run: () => onTabSelect?.('nomina') },
+        { icon: Users, l: 'Equipo', run: () => onTabSelect?.('equipo') },
+        { icon: CalendarDays, l: 'Turnos', run: () => onTabSelect?.('turnos') },
+      ]
+    : [
+        { icon: Plus, l: 'Nuevo turno', run: () => onOpenDetail?.({ kind: 'crear' }) },
+        { icon: Users, l: 'Equipo', run: () => onTabSelect?.('equipo') },
+        { icon: WalletIcon, l: 'Nómina', run: () => onTabSelect?.('nomina') },
+      ];
+  const nominaRows = [
+    { i: 'CM', n: 'Carlos Martínez', rol: 'Cocina', meta: '76h acumuladas', v: '$687.200', bg: '#FF5A3C' },
+    { i: 'LR', n: 'Luisa Ramírez', rol: 'Salón', meta: '80h acumuladas', v: '$742.100', bg: BLUE },
+  ];
+  const turnosRows = [
+    { org: 'La Terraza', title: 'Turno de cocina', meta: '5 Ago · falta 1 plaza', cobertura: '2/3 plazas' },
+    { org: 'Eventos BQ', title: 'Meseros · evento corporativo', meta: '8 Ago · faltan 2 plazas', cobertura: '0/2 plazas' },
+  ];
+
+  return (
+    <>
+      <div className="rounded-b-[22px] bg-primary px-4 pb-5 pt-2">
+        <StatusRow />
+        <p className="mt-1.5 text-[11px] font-semibold text-white/85">Buenos días</p>
+        <div className="mt-1 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white/25 text-[10px] font-extrabold text-white">
+              {isNomina ? 'MJ' : 'DR'}
+            </div>
+            <span className="text-base font-extrabold text-white">{isNomina ? 'María' : 'Diego'}</span>
+          </div>
+          <div className="relative flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-white/20">
+            <BellIcon size={13} className="text-white" />
+          </div>
+        </div>
+        <p className="mt-0.5 text-[10px] font-semibold text-white/70">{isNomina ? 'Nómina · Admin' : 'Jefe de turnos'}</p>
+      </div>
+
+      <div className="-mt-3.5 flex flex-1 flex-col gap-2.5 px-3 pb-2.5">
+        <div className="flex gap-2">
+          {stats.map((s) => (
+            <div key={s.l} className="flex-1 rounded-lg border border-border bg-white py-1.5 text-center">
+              <div className={`text-[13px] font-extrabold tabular-nums ${s.c}`}>{s.n}</div>
+              <div className="text-[7px] font-bold text-muted-foreground">{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-[10px] font-bold text-muted-foreground">Acciones rápidas</p>
+          <div className="flex gap-2">
+            {actions.map((a) => (
+              <button
+                key={a.l}
+                type="button"
+                onClick={a.run}
+                className="flex flex-1 flex-col items-center gap-1 rounded-xl border border-border bg-white py-2"
+              >
+                <a.icon size={14} className="text-primary" />
+                <span className="text-center text-[7px] font-bold text-foreground">{a.l}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1 text-[10px] font-bold text-muted-foreground">
+            {isNomina ? 'Acumulado del equipo' : 'Turnos por cubrir'}
+          </p>
+          {isNomina
+            ? nominaRows.map((r) => (
+                <button
+                  key={r.i}
+                  type="button"
+                  onClick={() => onOpenDetail?.({ kind: 'miembro', nombre: r.n, rol: r.rol, inicial: r.i, color: r.bg })}
+                  className="flex w-full items-center gap-2 border-b border-border py-1.5 text-left last:border-0"
+                >
+                  <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-success" />
+                  <div className="flex-1">
+                    <div className="text-[10px] font-bold text-foreground">{r.n}</div>
+                    <div className="text-[8px] font-semibold text-muted-foreground">{r.meta}</div>
+                  </div>
+                  <span className="text-[9px] font-extrabold text-foreground">{r.v}</span>
+                </button>
+              ))
+            : turnosRows.map((r) => (
+                <button
+                  key={r.org}
+                  type="button"
+                  onClick={() => onOpenDetail?.({ kind: 'turno', org: r.org, title: r.title, meta: r.meta, cobertura: r.cobertura })}
+                  className="flex w-full items-center gap-2 border-b border-border py-1.5 text-left last:border-0"
+                >
+                  <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-danger" />
+                  <div className="flex-1">
+                    <div className="text-[10px] font-bold text-foreground">{r.title}</div>
+                    <div className="text-[8px] font-semibold text-muted-foreground">{r.meta}</div>
+                  </div>
+                  <span className="text-[9px] font-extrabold text-foreground">{r.cobertura}</span>
+                </button>
+              ))}
+        </div>
+      </div>
+
+      <TabBar active="inicio" accent={isNomina ? GREEN : undefined} onSelect={onTabSelect} />
+    </>
+  );
+}
+
+function GestorTurnosScreen({
+  onTabSelect,
+  onOpenDetail,
+}: {
+  onTabSelect?: (t: Tab) => void;
+  onOpenDetail?: (d: Detail) => void;
+}) {
+  const turnos = [
+    { org: 'La Terraza', title: 'Turno de cocina', meta: '5 Ago · 14:00–22:00', cobertura: '2/3', full: false },
+    { org: 'Eventos BQ', title: 'Meseros · evento corporativo', meta: '8 Ago · 18:00–23:00', cobertura: '0/2', full: false },
+    { org: 'Salón Andino', title: 'Seguridad · turno nocturno', meta: '9 Ago · 21:00–06:00', cobertura: '3/3', full: true },
+  ];
+  return (
+    <>
+      <div className="border-b border-border bg-white px-3 pb-2 pt-2">
+        <StatusRow dark />
+        <div className="mt-1 flex items-center justify-between">
+          <p className="text-[13px] font-extrabold text-foreground">Turnos</p>
+          <button
+            type="button"
+            onClick={() => onOpenDetail?.({ kind: 'crear' })}
+            aria-label="Nuevo turno"
+            className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary text-white"
+          >
+            <Plus size={13} />
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 px-3 py-2.5">
+        {turnos.map((t) => (
+          <button
+            key={t.org}
+            type="button"
+            onClick={() =>
+              onOpenDetail?.({ kind: 'turno', org: t.org, title: t.title, meta: t.meta, cobertura: `${t.cobertura} plazas` })
+            }
+            className="flex overflow-hidden rounded-xl border border-border bg-white text-left"
+          >
+            <div className="w-1" style={{ background: t.full ? GREEN : '#FF5A3C' }} />
+            <div className="flex flex-1 flex-col gap-0.5 px-2.5 py-2">
+              <span className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">{t.org}</span>
+              <span className="text-[11px] font-extrabold text-foreground">{t.title}</span>
+              <span className="text-[8px] font-semibold text-muted-foreground">{t.meta}</span>
+              <span
+                className="mt-0.5 w-fit rounded-full px-1.5 py-0.5 text-[7px] font-extrabold"
+                style={{ background: t.full ? GREEN_LIGHT : ORANGE_LIGHT, color: t.full ? GREEN : '#FF5A3C' }}
+              >
+                {t.cobertura} plazas cubiertas
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+      <TabBar active="turnos" onSelect={onTabSelect} />
+    </>
+  );
+}
+
+function NominaGestorScreen({
+  onTabSelect,
+  onOpenDetail,
+}: {
+  onTabSelect?: (t: Tab) => void;
+  onOpenDetail?: (d: Detail) => void;
+}) {
+  const equipo = [
+    { i: 'CM', n: 'Carlos Martínez', rol: 'Cocina', h: '76h', v: '$687.200', bg: '#FF5A3C' },
+    { i: 'LR', n: 'Luisa Ramírez', rol: 'Salón', h: '80h', v: '$742.100', bg: BLUE },
+    { i: 'PV', n: 'Pedro Vargas', rol: 'Domicilios', h: '68h', v: '$611.400', bg: GREEN },
+  ];
+  return (
+    <>
+      <div
+        className="relative overflow-hidden rounded-b-[18px] px-3 pb-3 pt-2"
+        style={{ background: 'linear-gradient(155deg, #10B981 0%, #059669 55%, #065F46 100%)' }}
+      >
+        <div className="pointer-events-none absolute -right-5 -top-7 h-16 w-16 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-5 -left-6 h-12 w-12 rounded-full bg-white/10" />
+        <StatusRow />
+        <p className="mt-1 text-[11px] font-semibold text-white/85">Nómina</p>
+        <p className="text-[12px] font-extrabold text-white">Quincena 1–15 Ago</p>
+      </div>
+      <div className="-mt-2 flex flex-1 flex-col gap-2.5 px-3 pb-2">
+        <div className="rounded-xl border border-border bg-white px-2.5 py-2">
+          <p className="text-[8px] font-bold text-muted-foreground">Total a liquidar · 8 empleados</p>
+          <p className="text-[15px] font-extrabold text-foreground">$5.180.300</p>
+          <div className="mt-2 rounded-lg py-1.5 text-center text-[9px] font-extrabold text-white" style={{ background: GREEN }}>
+            Liquidar período
+          </div>
+        </div>
+        <p className="text-[10px] font-bold text-muted-foreground">Por empleado</p>
+        {equipo.map((t) => (
+          <button
+            key={t.i}
+            type="button"
+            onClick={() => onOpenDetail?.({ kind: 'miembro', nombre: t.n, rol: t.rol, inicial: t.i, color: t.bg })}
+            className="flex items-center gap-2 border-b border-border py-1.5 text-left last:border-0"
+          >
+            <div
+              className="flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-full text-[8px] font-extrabold text-white"
+              style={{ background: t.bg }}
+            >
+              {t.i}
+            </div>
+            <div className="flex-1">
+              <div className="text-[10px] font-bold text-foreground">{t.n}</div>
+              <div className="text-[8px] font-semibold text-muted-foreground">{t.h} acumuladas</div>
+            </div>
+            <span className="text-[9px] font-extrabold text-foreground">{t.v}</span>
+          </button>
+        ))}
+      </div>
+      <TabBar active="nomina" accent={GREEN} onSelect={onTabSelect} />
+    </>
+  );
+}
+
+function MiembroDetalleScreen({
+  miembro,
+  onBack,
+}: {
+  miembro: Extract<Detail, { kind: 'miembro' }>;
+  onBack?: () => void;
+}) {
+  return (
+    <>
+      <div className="border-b border-border bg-white px-3 pb-2 pt-2">
+        <StatusRow dark />
+        <button type="button" onClick={onBack} disabled={!onBack} className="mt-1 flex items-center gap-1.5">
+          <ChevronLeft size={14} className="text-foreground" />
+          <p className="text-[11px] font-extrabold text-foreground">Perfil</p>
+        </button>
+      </div>
+      <div className="flex flex-1 flex-col items-center gap-3 px-4 py-5 text-center">
+        <div
+          className="flex h-14 w-14 items-center justify-center rounded-full text-[15px] font-extrabold text-white"
+          style={{ background: miembro.color }}
+        >
+          {miembro.inicial}
+        </div>
+        <div>
+          <p className="text-[13px] font-extrabold text-foreground">{miembro.nombre}</p>
+          <p className="text-[9px] font-semibold text-muted-foreground">{miembro.rol} · Activo</p>
+        </div>
+        <div className="flex w-full gap-2">
+          <MiniStat label="Horas mes" value="76h" />
+          <MiniStat label="Acumulado" value="$687.200" color={GREEN} />
+        </div>
+        <div className="w-full rounded-lg border border-border py-2 text-center text-[9px] font-extrabold text-primary">
+          Ver turnos asignados
+        </div>
+      </div>
     </>
   );
 }
