@@ -10,7 +10,7 @@ import '../global.css';
 
 import React, { useEffect } from 'react';
 import { LogBox } from 'react-native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
@@ -42,6 +42,7 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const segments = useSegments();
+  const rootNavigationState = useRootNavigationState();
   const status      = useAuthStore((s) => s.status);
   const usuario     = useAuthStore((s) => s.usuario);
   const rol         = usuario?.rol;
@@ -64,7 +65,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Navigate to the relevant screen when the user taps a push notification
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    // rootNavigationState.key solo existe una vez que el Stack raíz terminó de montar;
+    // sin este guard, un cold-start vía tap en la notificación (que expo-notifications
+    // entrega apenas se registra el listener) puede navegar antes de que exista el
+    // navigator y tirar "Attempted to navigate before mounting the Root Layout component".
+    if (status !== 'authenticated' || !rootNavigationState?.key) return;
     const sub = Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
       const tipo = typeof data.tipo === 'string' ? data.tipo : '';
@@ -72,10 +77,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       router.push((ruta ?? '/notificaciones') as Parameters<typeof router.push>[0]);
     });
     return () => sub.remove();
-  }, [status]);
+  }, [status, rootNavigationState?.key]);
 
   useEffect(() => {
-    if (status === 'unknown') return; // still loading
+    if (status === 'unknown' || !rootNavigationState?.key) return; // still loading / router not ready
 
     const inAuthGroup     = segments[0] === '(auth)';
     // "empresa" vive fuera de (admin) a propósito (ver Stack.Screen abajo) pero
@@ -112,7 +117,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     } else if (status === 'unauthenticated' && !inAuthGroup) {
       router.replace(welcomeRoute);
     }
-  }, [status, segments, rol, hasLaunched, usuario]);
+  }, [status, segments, rol, hasLaunched, usuario, rootNavigationState?.key]);
 
   return (
     <>
