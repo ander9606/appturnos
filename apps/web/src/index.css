@@ -54,6 +54,14 @@
 @layer base {
   html { font-family: var(--font-family-sans); }
   body { @apply bg-background text-foreground; }
+
+  /* Navegación por teclado — un solo lugar para toda la app, en vez del outline
+     por defecto del navegador (o nada, en varios botones sin estilos propios). */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
 
 /* Flotación ambiental sutil para el mockup del hero en la landing (LandingPage.tsx) */

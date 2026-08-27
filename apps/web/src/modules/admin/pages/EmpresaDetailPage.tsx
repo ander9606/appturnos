@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Building2, Users, Briefcase, Calendar, DollarSign, ToggleLeft, ToggleRight, Copy, Check, CreditCard, Zap } from 'lucide-react';
 import { useEmpresa, useCambiarEstadoEmpresa, useGestionarSuscripcion, useGenerarLinkPago } from '../hooks/useAdmin';
+import { ErrorState } from '@/shared/components/ErrorState';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
+import { fmtCOP } from '@/shared/lib/format';
 import type { Plan, OrigenSuscripcion } from '../types';
 
 const PLAN_BADGE: Record<Plan, string> = {
@@ -27,12 +31,10 @@ const ORIGEN_BADGE: Record<OrigenSuscripcion, string> = {
 // solo límites de features (max_trabajadores).
 const PRECIO_MENSUAL_COP = 129000;
 
+// ponytail: created_at es TIMESTAMP (llega "YYYY-MM-DD HH:MM:SS", dateStrings:true en el pool) —
+// el fmtDate compartido asume fechas puras y le agrega T00:00:00, rompería este formato.
 function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(s));
-}
-
-function fmtCOP(n: number) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
 }
 
 function suscripcionActiva(vigente_hasta: string | null): boolean {
@@ -45,12 +47,13 @@ export function EmpresaDetailPage() {
   const navigate = useNavigate();
   const empresaId = Number(id);
 
-  const { data, isLoading } = useEmpresa(empresaId);
+  const { data, isLoading, isError, error, refetch } = useEmpresa(empresaId);
   const empresa = data?.data;
 
   const cambiarEstado      = useCambiarEstadoEmpresa();
   const gestionarSusc      = useGestionarSuscripcion(empresaId);
   const generarLink        = useGenerarLinkPago(empresaId);
+  const { confirmState, confirm, close } = useConfirm();
 
   // Link de pago
   const [linkPlan, setLinkPlan]   = useState<Plan>('basico');
@@ -63,6 +66,7 @@ export function EmpresaDetailPage() {
   const [manualFecha, setManualFecha] = useState('');
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-12 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!empresa)  return <p className="text-muted-foreground text-sm py-12 text-center">Empresa no encontrada</p>;
 
   const activo  = Boolean(empresa.activo);
@@ -126,12 +130,14 @@ export function EmpresaDetailPage() {
             </div>
           </div>
           <button
-            onClick={() => {
-              const msg = activo
+            onClick={() => confirm({
+              title: activo ? 'Desactivar empresa' : 'Activar empresa',
+              detail: activo
                 ? `¿Desactivar ${empresa.nombre}? Todos sus usuarios y trabajadores perderán acceso.`
-                : `¿Activar ${empresa.nombre}?`;
-              if (window.confirm(msg)) cambiarEstado.mutate({ id: empresa.id, activo: !activo });
-            }}
+                : `¿Activar ${empresa.nombre}?`,
+              confirmLabel: activo ? 'Desactivar' : 'Activar',
+              onConfirm: () => { cambiarEstado.mutate({ id: empresa.id, activo: !activo }); close(); },
+            })}
             disabled={cambiarEstado.isPending}
             className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl border transition-colors disabled:opacity-50 ${
               activo
@@ -304,6 +310,16 @@ export function EmpresaDetailPage() {
           </button>
         </div>
       </div>
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }

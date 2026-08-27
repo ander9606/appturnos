@@ -8,6 +8,7 @@ import { nominaApi } from '@/modules/nomina/api/nominaApi';
 import type { Rol } from '@/modules/auth/authStore';
 import type { LiquidacionTurnosTrabajador } from '@/modules/turnos/types';
 import { StatCard } from '@/shared/components/StatCard';
+import { ErrorState } from '@/shared/components/ErrorState';
 import { fmtDate, fmtCOP, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 
 function fmtTime(s: string) {
@@ -29,40 +30,50 @@ export function DashboardPage() {
   const showNomina = rol === 'admin_empresa' || rol === 'jefe_nomina' || rol === 'nomina';
   const showEquipo = rol === 'admin_empresa' || rol === 'jefe_turnos' || rol === 'jefe_nomina';
 
-  const { data: trabajadoresData } = useQuery({
+  const trabajadoresQ = useQuery({
     queryKey: ['trabajadores', { activo: true, dashboard: true }],
     queryFn: () => equipoApi.listar({ activo: true, limit: 1 }),
     enabled: showEquipo,
     staleTime: 60_000,
   });
+  const { data: trabajadoresData } = trabajadoresQ;
 
-  const { data: ofertasData } = useQuery({
+  const ofertasQ = useQuery({
     queryKey: ['turnos', 'ofertas', { dashboard: true }],
     queryFn: () => turnosApi.listarOfertas({ limit: 100 }),
     enabled: showTurnos,
     staleTime: 30_000,
   });
+  const { data: ofertasData } = ofertasQ;
 
-  const { data: asigData } = useQuery({
+  const asigQ = useQuery({
     queryKey: ['turnos', 'asignaciones', { estado: 'pendiente', dashboard: true }],
     queryFn: () => turnosApi.listarAsignaciones({ estado: 'pendiente', limit: 1 }),
     enabled: showTurnos,
     staleTime: 30_000,
   });
+  const { data: asigData } = asigQ;
 
-  const { data: periodosData } = useQuery({
+  const periodosQ = useQuery({
     queryKey: ['nomina', 'periodos', 'abierto', 'dashboard'],
     queryFn: () => nominaApi.listarPeriodos({ estado: 'abierto', limit: 5, conTotales: true }),
     enabled: showNomina,
     staleTime: 60_000,
   });
+  const { data: periodosData } = periodosQ;
 
-  const { data: liqTurnosData } = useQuery({
+  const liqTurnosQ = useQuery({
     queryKey: ['turnos', 'liquidacion', 'dashboard'],
     queryFn: () => turnosApi.liquidacion({ fecha_inicio: inicioMesActual(), fecha_fin: bogotaToday() }),
     enabled: showTurnos,
     staleTime: 60_000,
   });
+  const { data: liqTurnosData } = liqTurnosQ;
+
+  const queries = [trabajadoresQ, ofertasQ, asigQ, periodosQ, liqTurnosQ];
+  const isError = queries.some(q => q.isError);
+  const firstError = queries.find(q => q.isError)?.error;
+  const refetchAll = () => queries.forEach(q => q.refetch());
 
   const trabajadoresCount = trabajadoresData?.data?.pagination?.total ?? 0;
   const ofertas: Array<{ id: number; titulo: string; fecha: string; hora_inicio: string; estado: string }> =
@@ -92,6 +103,10 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {isError ? (
+        <ErrorState error={firstError} onRetry={refetchAll} />
+      ) : (
+      <>
       {/* Cuánto se debe — lo primero que el jefe necesita ver */}
       {(showNomina || showTurnos) && (
         <div className={`grid gap-4 mb-4 ${showNomina && showTurnos ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -185,6 +200,8 @@ export function DashboardPage() {
             ))}
           </ul>
         </div>
+      )}
+      </>
       )}
     </div>
   );

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Check, X } from 'lucide-react';
 import { equipoApi } from '@/modules/equipo/api/equipoApi';
+import { Modal } from '@/shared/components/Modal';
 import type { Trabajador } from '@/modules/equipo/types';
 
 export interface DestinatarioSeleccionado {
@@ -38,14 +39,6 @@ export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose }: Pro
     );
   }, [trabajadores, search]);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   function toggle(t: Trabajador) {
     setElegidos(prev =>
       prev.some(d => d.id === t.id)
@@ -55,9 +48,8 @@ export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose }: Pro
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl w-full max-w-md flex flex-col" style={{ maxHeight: '80vh' }}>
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+    <Modal onClose={onClose} padded={false} className="flex flex-col max-h-[80vh]">
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h3 className="text-base font-semibold text-foreground">Elegir personas</h3>
           <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X size={18} />
@@ -117,7 +109,6 @@ export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose }: Pro
             Listo{elegidos.length > 0 ? ` (${elegidos.length})` : ''}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

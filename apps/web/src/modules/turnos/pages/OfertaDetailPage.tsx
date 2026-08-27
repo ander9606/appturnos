@@ -16,6 +16,11 @@ import {
   useCalificar,
 } from '../hooks/useTurnos';
 import { useCargos } from '@/modules/configuracion/hooks/useConfiguracion';
+import { toast } from 'sonner';
+import { ErrorState } from '@/shared/components/ErrorState';
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto } from '../types';
 import { fmtDate, fmtCOP } from '@/shared/lib/format';
 
@@ -66,8 +71,9 @@ export function OfertaDetailPage() {
   const [showPuestoForm, setShowPuestoForm] = useState(false);
   const [calificandoId, setCalificandoId] = useState<number | null>(null);
 
-  const { data: ofertaData, isLoading } = useOferta(ofertaId);
+  const { data: ofertaData, isLoading, isError, error, refetch } = useOferta(ofertaId);
   const oferta = ofertaData?.data;
+  const { confirmState, confirm, close } = useConfirm();
 
   const { data: puestosData } = usePuestos(ofertaId);
   const puestos: Puesto[] = puestosData?.data ?? oferta?.puestos ?? [];
@@ -92,6 +98,7 @@ export function OfertaDetailPage() {
   const canEditPuestos = oferta?.estado === 'borrador' || oferta?.estado === 'abierta';
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-12 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!oferta) return <p className="text-muted-foreground text-sm py-12 text-center">Oferta no encontrada</p>;
 
   return (
@@ -160,12 +167,15 @@ export function OfertaDetailPage() {
               <button
                 onClick={() => {
                   if (puestos.length === 0) {
-                    window.alert('Agrega al menos un puesto antes de publicar.');
+                    toast.error('Agrega al menos un puesto antes de publicar.');
                     return;
                   }
-                  if (window.confirm('¿Publicar esta oferta? Será visible para el pool de trabajadores.')) {
-                    publicar.mutate(ofertaId);
-                  }
+                  confirm({
+                    title: 'Publicar oferta',
+                    detail: 'Será visible para el pool de trabajadores que califican para sus puestos.',
+                    confirmLabel: 'Publicar',
+                    onConfirm: () => { publicar.mutate(ofertaId); close(); },
+                  });
                 }}
                 disabled={publicar.isPending}
                 className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
@@ -221,10 +231,12 @@ export function OfertaDetailPage() {
                           <Pencil size={13} />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`¿Eliminar puesto "${p.cargo_nombre}"?`))
-                              eliminarPuesto.mutate({ ofertaId, puestoId: p.id });
-                          }}
+                          onClick={() => confirm({
+                            title: 'Eliminar puesto',
+                            detail: `¿Eliminar el puesto "${p.cargo_nombre}"? Esta acción no se puede deshacer.`,
+                            confirmLabel: 'Eliminar',
+                            onConfirm: () => { eliminarPuesto.mutate({ ofertaId, puestoId: p.id }); close(); },
+                          })}
                           className="text-muted-foreground/50 hover:text-danger transition-colors"
                         >
                           <Trash2 size={13} />
@@ -325,7 +337,12 @@ export function OfertaDetailPage() {
                                 Confirmar
                               </button>
                               <button
-                                onClick={() => { if (window.confirm('¿Rechazar esta postulación?')) rechazar.mutate(a.id); }}
+                                onClick={() => confirm({
+                                  title: 'Rechazar postulación',
+                                  detail: `¿Rechazar la postulación de ${a.trabajador_nombre} ${a.trabajador_apellido}?`,
+                                  confirmLabel: 'Rechazar',
+                                  onConfirm: () => { rechazar.mutate(a.id); close(); },
+                                })}
                                 className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
                               >
                                 Rechazar
@@ -334,7 +351,12 @@ export function OfertaDetailPage() {
                           )}
                           {a.estado === 'confirmado' && (
                             <button
-                              onClick={() => { if (window.confirm('¿Cancelar esta asignación confirmada?')) cancelarAsig.mutate(a.id); }}
+                              onClick={() => confirm({
+                                title: 'Cancelar asignación',
+                                detail: `¿Cancelar la asignación confirmada de ${a.trabajador_nombre} ${a.trabajador_apellido}?`,
+                                confirmLabel: 'Cancelar asignación',
+                                onConfirm: () => { cancelarAsig.mutate(a.id); close(); },
+                              })}
                               className="text-xs text-muted-foreground hover:bg-muted px-2 py-1 rounded transition-colors"
                             >
                               Cancelar
@@ -342,7 +364,12 @@ export function OfertaDetailPage() {
                           )}
                           {(a.estado === 'confirmado' || a.estado === 'en_progreso') && (
                             <button
-                              onClick={() => { if (window.confirm('¿Marcar como no presentado?')) noPresentado.mutate(a.id); }}
+                              onClick={() => confirm({
+                                title: 'Marcar como no presentado',
+                                detail: `¿Marcar a ${a.trabajador_nombre} ${a.trabajador_apellido} como no presentado? Esto puede afectar su ranking.`,
+                                confirmLabel: 'Marcar no presentado',
+                                onConfirm: () => { noPresentado.mutate(a.id); close(); },
+                              })}
                               className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
                             >
                               NP
@@ -379,6 +406,16 @@ export function OfertaDetailPage() {
         <CalificarModal
           asignacion={calificandoAsig}
           onClose={() => setCalificandoId(null)}
+        />
+      )}
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
         />
       )}
     </div>
@@ -426,73 +463,71 @@ function PuestoFormModal({
   const isPending = crear.isPending || actualizar.isPending;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          {puesto ? 'Editar puesto' : 'Nuevo puesto'}
-        </h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-4">
+        {puesto ? 'Editar puesto' : 'Nuevo puesto'}
+      </h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Cargo *</label>
+          <select
+            required
+            disabled={!!puesto}
+            value={form.cargo_id}
+            onChange={e => setForm(f => ({ ...f, cargo_id: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground"
+          >
+            <option value="">Seleccionar cargo...</option>
+            {cargos.filter(c => c.activo).map(c => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Cargo *</label>
-            <select
-              required
-              disabled={!!puesto}
-              value={form.cargo_id}
-              onChange={e => setForm(f => ({ ...f, cargo_id: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground"
-            >
-              <option value="">Seleccionar cargo...</option>
-              {cargos.filter(c => c.activo).map(c => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Plazas *</label>
-              <input
-                required
-                type="number"
-                min="1"
-                value={form.plazas}
-                onChange={e => setForm(f => ({ ...f, plazas: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Tarifa/día (COP) *</label>
-              <input
-                required
-                type="number"
-                min="0"
-                step="any"
-                value={form.tarifa_dia}
-                onChange={e => setForm(f => ({ ...f, tarifa_dia: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Notas</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Plazas *</label>
             <input
-              type="text"
-              maxLength={255}
-              value={form.notas}
-              onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
+              required
+              type="number"
+              min="1"
+              value={form.plazas}
+              onChange={e => setForm(f => ({ ...f, plazas: e.target.value }))}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {isPending ? 'Guardando...' : puesto ? 'Guardar' : 'Agregar'}
-            </button>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Tarifa/día (COP) *</label>
+            <input
+              required
+              type="number"
+              min="0"
+              step="any"
+              value={form.tarifa_dia}
+              onChange={e => setForm(f => ({ ...f, tarifa_dia: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Notas</label>
+          <input
+            type="text"
+            maxLength={255}
+            value={form.notas}
+            onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {isPending ? 'Guardando...' : puesto ? 'Guardar' : 'Agregar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -509,46 +544,44 @@ function CalificarModal({ asignacion, onClose }: { asignacion: Asignacion; onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-lg font-semibold text-foreground mb-1">Calificar trabajador</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
-        </p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Calificación</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map(n => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setCalificacion(n)}
-                  className={`w-10 h-10 rounded-lg text-lg transition-colors ${n <= calificacion ? 'bg-warning text-white' : 'bg-muted text-muted-foreground/60'}`}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Comentario</label>
-            <textarea
-              rows={2}
-              value={comentario}
-              onChange={e => setComentario(e.target.value)}
-              maxLength={500}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
-            />
-          </div>
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Calificar trabajador</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">Calificación</label>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" disabled={calificar.isPending} className="flex-1 bg-warning hover:bg-warning/80 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {calificar.isPending ? 'Guardando...' : 'Guardar'}
-            </button>
+            {[1, 2, 3, 4, 5].map(n => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setCalificacion(n)}
+                className={`w-10 h-10 rounded-lg text-lg transition-colors ${n <= calificacion ? 'bg-warning text-white' : 'bg-muted text-muted-foreground/60'}`}
+              >
+                ★
+              </button>
+            ))}
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Comentario</label>
+          <textarea
+            rows={2}
+            value={comentario}
+            onChange={e => setComentario(e.target.value)}
+            maxLength={500}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+          <button type="submit" disabled={calificar.isPending} className="flex-1 bg-warning hover:bg-warning/80 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {calificar.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

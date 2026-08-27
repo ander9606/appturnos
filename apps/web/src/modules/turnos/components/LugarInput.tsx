@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { Search, X, LocateFixed, CheckCircle2 } from 'lucide-react';
 
 interface Sugerencia {
@@ -79,7 +80,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
       },
       () => {
         setLocLoading(false);
-        window.alert('No se pudo obtener tu ubicación. Revisa los permisos del navegador o busca el lugar por texto.');
+        toast.error('No se pudo obtener tu ubicación. Revisa los permisos del navegador o busca el lugar por texto.');
       },
     );
   };

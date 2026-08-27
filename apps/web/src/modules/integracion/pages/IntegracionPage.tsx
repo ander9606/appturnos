@@ -8,6 +8,7 @@ import {
   useUpdateConfigIntegracion, useEmparejar,
   useConciliacion, useVincular,
 } from '../hooks/useIntegracion';
+import { ErrorState } from '@/shared/components/ErrorState';
 import type { TrabajadorPendiente, CandidatoLogiq360 } from '../types';
 
 type Tab = 'estado' | 'configuracion' | 'conciliacion';
@@ -69,12 +70,13 @@ export function IntegracionPage() {
 
 /* ── Tab Estado ── */
 function TabEstado({ conectado, onGoConfig }: { conectado: boolean; onGoConfig: () => void }) {
-  const { data: estadoData, isLoading } = useEstadoIntegracion();
+  const { data: estadoData, isLoading, isError, error, refetch } = useEstadoIntegracion();
   const { data: cfgData } = useConfigIntegracion();
   const estado = estadoData?.data;
   const cfg = cfgData?.data;
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const salientes = estado?.eventos?.salientes ?? [];
   const entrantes = estado?.eventos?.entrantes ?? [];
@@ -196,7 +198,7 @@ function EventCard({ label, value, color, icon: Icon }: {
 
 /* ── Tab Configuración ── */
 function TabConfiguracion() {
-  const { data: cfgData, isLoading } = useConfigIntegracion();
+  const { data: cfgData, isLoading, isError, error, refetch } = useConfigIntegracion();
   const cfg = cfgData?.data;
   const update = useUpdateConfigIntegracion();
   const emparejar = useEmparejar();
@@ -206,6 +208,7 @@ function TabConfiguracion() {
   const [codigo, setCodigo] = useState('');
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const activo = Boolean(cfg?.activo);
 
@@ -334,7 +337,7 @@ function TabConfiguracion() {
 
 /* ── Tab Conciliación ── */
 function TabConciliacion() {
-  const { data, isLoading, refetch } = useConciliacion();
+  const { data, isLoading, isError, error, refetch } = useConciliacion();
   const conciliacion = data?.data;
   const pendientes: TrabajadorPendiente[] = conciliacion?.pendientes ?? [];
   const candidatos: CandidatoLogiq360[] = conciliacion?.candidatos ?? [];
@@ -349,6 +352,7 @@ function TabConciliacion() {
   };
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   if (pendientes.length === 0) {
     return (

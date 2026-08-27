@@ -4,7 +4,12 @@ import { Plus, UserX, UserPlus, Search } from 'lucide-react';
 import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador, useInvitarTrabajador } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { EmptyState } from '@/shared/components/EmptyState';
 import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
+import { fmtCOP as fmtCOPBase } from '@/shared/lib/format';
 import type { TipoTrabajador, Trabajador } from '../types';
 
 /** Mismo código de colores que el resto de la app: Turnos = naranja, Nómina = verde. "Ambos" es su propio color — no reusa el verde para no leerse como "solo nómina". */
@@ -29,8 +34,7 @@ const TIPO_LABEL: Record<TipoTrabajador, string> = {
 };
 
 function fmtCOP(n: number | null) {
-  if (n === null) return '—';
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+  return n === null ? '—' : fmtCOPBase(n);
 }
 
 type EstadoFiltro = true | false | undefined;
@@ -141,7 +145,10 @@ export function EquipoPage() {
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : trabajadores.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No hay trabajadores</p>
+        <EmptyState
+          message={term ? 'Sin resultados para tu búsqueda' : 'No hay trabajadores'}
+          action={!term && isAdmin ? { label: '+ Agregar el primero', onClick: () => setShowCrear(true) } : undefined}
+        />
       ) : tipoFiltro === undefined ? (
         <div className="flex flex-col gap-5">
           {TIPO_ORDEN.map(tipo => {
@@ -200,6 +207,7 @@ function TablaTrabajadores({
   navigate: ReturnType<typeof useNavigate>;
   desactivar: ReturnType<typeof useDesactivarTrabajador>;
 }) {
+  const { confirmState, confirm, close } = useConfirm();
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       <table className="w-full text-sm">
@@ -235,11 +243,12 @@ function TablaTrabajadores({
                 <div className="flex items-center gap-2 justify-end">
                   {isAdmin && Boolean(t.activo) && (
                     <button
-                      onClick={() => {
-                        if (window.confirm(`¿Desactivar a ${t.nombre} ${t.apellido}?`)) {
-                          desactivar.mutate(t.id);
-                        }
-                      }}
+                      onClick={() => confirm({
+                        title: 'Desactivar trabajador',
+                        detail: `¿Desactivar a ${t.nombre} ${t.apellido}? Deja de aparecer en las listas activas, pero conserva su historial.`,
+                        confirmLabel: 'Desactivar',
+                        onConfirm: () => { desactivar.mutate(t.id); close(); },
+                      })}
                       className="text-muted-foreground/60 hover:text-danger transition-colors"
                       title="Desactivar"
                     >
@@ -258,6 +267,15 @@ function TablaTrabajadores({
           ))}
         </tbody>
       </table>
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }
@@ -273,33 +291,31 @@ function InvitarModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-lg font-semibold text-foreground mb-1">Invitar trabajador</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Ingresa la cédula del trabajador. Si ya tiene cuenta, quedará vinculado a tu empresa. Si no, podrá activarla con esta cédula.
-        </p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Cédula *</label>
-            <input
-              required
-              type="text"
-              value={cedula}
-              onChange={e => setCedula(e.target.value)}
-              placeholder="Ej. 1234567890"
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" disabled={invitar.isPending || !cedula.trim()} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {invitar.isPending ? 'Enviando...' : 'Invitar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Invitar trabajador</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        Ingresa la cédula del trabajador. Si ya tiene cuenta, quedará vinculado a tu empresa. Si no, podrá activarla con esta cédula.
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Cédula *</label>
+          <input
+            required
+            type="text"
+            value={cedula}
+            onChange={e => setCedula(e.target.value)}
+            placeholder="Ej. 1234567890"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+          <button type="submit" disabled={invitar.isPending || !cedula.trim()} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {invitar.isPending ? 'Enviando...' : 'Invitar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -338,13 +354,12 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo trabajador</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+    <Modal onClose={onClose} size="lg" scrollable>
+      <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo trabajador</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
               <input required type="text" {...field('nombre')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
@@ -416,8 +431,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
               {crear.isPending ? 'Creando...' : 'Crear'}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }

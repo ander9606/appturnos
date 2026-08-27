@@ -7,6 +7,9 @@ import {
 import { useReportesGlobales, useEmpresas, useCrearEmpresa, useCambiarEstadoEmpresa } from '../hooks/useAdmin';
 import type { EmpresaAdmin, Plan } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
 
 const PLAN_BADGE: Record<Plan, string> = {
   basico: 'bg-muted text-muted-foreground',
@@ -43,6 +46,7 @@ export function SuperAdminPage() {
   const total: number = empresasData?.data?.pagination?.total ?? 0;
 
   const cambiarEstado = useCambiarEstadoEmpresa();
+  const { confirmState, confirm, close } = useConfirm();
 
   return (
     <div className="flex gap-6 h-full">
@@ -220,12 +224,14 @@ export function SuperAdminPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
                         <button
-                          onClick={() => {
-                            const msg = e.activo
+                          onClick={() => confirm({
+                            title: e.activo ? 'Desactivar empresa' : 'Activar empresa',
+                            detail: e.activo
                               ? `¿Desactivar ${e.nombre}? Todos sus usuarios y trabajadores perderán acceso.`
-                              : `¿Activar ${e.nombre}?`;
-                            if (window.confirm(msg)) cambiarEstado.mutate({ id: e.id, activo: !e.activo });
-                          }}
+                              : `¿Activar ${e.nombre}?`,
+                            confirmLabel: e.activo ? 'Desactivar' : 'Activar',
+                            onConfirm: () => { cambiarEstado.mutate({ id: e.id, activo: !e.activo }); close(); },
+                          })}
                           disabled={cambiarEstado.isPending}
                           className="text-muted-foreground/50 hover:text-primary transition-colors disabled:opacity-50"
                           title={e.activo ? 'Desactivar' : 'Activar'}
@@ -252,6 +258,16 @@ export function SuperAdminPage() {
       </div>
 
       {showCrear && <CrearEmpresaModal onClose={() => setShowCrear(false)} />}
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }
@@ -320,48 +336,46 @@ function CrearEmpresaModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Nueva empresa</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal onClose={onClose}>
+      <h2 className="text-lg font-semibold text-foreground mb-4">Nueva empresa</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+          <input required type="text" {...f('nombre')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Slug * <span className="text-muted-foreground font-normal">(solo a-z, 0-9, guiones)</span></label>
+          <input required type="text" pattern="[a-z0-9-]+" {...f('slug')} className="w-full border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
-            <input required type="text" {...f('nombre')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Slug * <span className="text-muted-foreground font-normal">(solo a-z, 0-9, guiones)</span></label>
-            <input required type="text" pattern="[a-z0-9-]+" {...f('slug')} className="w-full border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">NIT</label>
-              <input type="text" {...f('nit')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Ciudad</label>
-              <input type="text" {...f('ciudad')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
+            <label className="block text-sm font-medium text-foreground mb-1">NIT</label>
+            <input type="text" {...f('nit')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Plan</label>
-            <select {...f('plan')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
-              <option value="basico">Básico</option>
-              <option value="profesional">Profesional</option>
-              <option value="empresarial">Empresarial</option>
-            </select>
+            <label className="block text-sm font-medium text-foreground mb-1">Ciudad</label>
+            <input type="text" {...f('ciudad')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
-            <textarea rows={2} {...f('descripcion')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
-          </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {crear.isPending ? 'Creando...' : 'Crear empresa'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Plan</label>
+          <select {...f('plan')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+            <option value="basico">Básico</option>
+            <option value="profesional">Profesional</option>
+            <option value="empresarial">Empresarial</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
+          <textarea rows={2} {...f('descripcion')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+          <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {crear.isPending ? 'Creando...' : 'Crear empresa'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

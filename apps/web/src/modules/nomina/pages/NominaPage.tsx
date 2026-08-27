@@ -4,6 +4,8 @@ import { Plus, ChevronRight, DollarSign, Users, AlertTriangle } from 'lucide-rea
 import { usePeriodos, useCrearPeriodo, useCerrarPeriodo, useLiquidarPeriodo } from '../hooks/useNomina';
 import type { EstadoPeriodo, TipoPeriodo, Periodo } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { StatCard } from '@/shared/components/StatCard';
 import { fmtDate, fmtPeriodo, fmtCOP, bogotaToday } from '@/shared/lib/format';
@@ -89,7 +91,7 @@ export function NominaPage() {
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : periodos.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No hay períodos</p>
+        <EmptyState message="No hay períodos" action={{ label: '+ Crear el primero', onClick: () => setShowModal(true) }} />
       ) : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
@@ -204,52 +206,50 @@ function NuevoPeriodoModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo período</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Fecha inicio</label>
-            <input
-              type="date"
-              required
-              value={form.fecha_inicio}
-              onChange={e => setForm(f => ({ ...f, fecha_inicio: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Fecha fin</label>
-            <input
-              type="date"
-              required
-              value={form.fecha_fin}
-              onChange={e => setForm(f => ({ ...f, fecha_fin: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Tipo</label>
-            <select
-              value={form.tipo}
-              onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoPeriodo }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-            >
-              <option value="semanal">Semanal</option>
-              <option value="quincenal">Quincenal</option>
-              <option value="mensual">Mensual</option>
-            </select>
-          </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {crear.isPending ? 'Creando...' : 'Crear'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <Modal onClose={onClose}>
+      <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo período</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Fecha inicio *</label>
+          <input
+            type="date"
+            required
+            value={form.fecha_inicio}
+            onChange={e => setForm(f => ({ ...f, fecha_inicio: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Fecha fin *</label>
+          <input
+            type="date"
+            required
+            value={form.fecha_fin}
+            onChange={e => setForm(f => ({ ...f, fecha_fin: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Tipo</label>
+          <select
+            value={form.tipo}
+            onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoPeriodo }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          >
+            <option value="semanal">Semanal</option>
+            <option value="quincenal">Quincenal</option>
+            <option value="mensual">Mensual</option>
+          </select>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {crear.isPending ? 'Creando...' : 'Crear'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

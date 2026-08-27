@@ -4,12 +4,14 @@ import { ArrowLeft } from 'lucide-react';
 import { useTrabajador, useActualizarTrabajador } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
+import { ErrorState } from '@/shared/components/ErrorState';
 import type { TipoTrabajador, TipoDocumento, Sexo, TipoCuenta, Trabajador } from '../types';
 
+/** Mismo código de colores que el resto de la app: Turnos = naranja, Nómina = verde, Ambos = azul. */
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
-  nomina: 'bg-purple-100 text-purple-700',
   turnos: 'bg-primary-100 text-primary-600',
-  ambos: 'bg-success-light text-success',
+  nomina: 'bg-success-light text-success',
+  ambos: 'bg-info-light text-info',
 };
 
 function getInitials(nombre: string, apellido: string) {
@@ -52,7 +54,7 @@ export function TrabajadorDetailPage() {
   const { usuario } = useAuthStore();
   const isAdmin = usuario?.rol === 'admin_empresa';
 
-  const { data, isLoading } = useTrabajador(trabajadorId);
+  const { data, isLoading, isError, error, refetch } = useTrabajador(trabajadorId);
   const trabajador: Trabajador | null = data?.data ?? null;
   const actualizar = useActualizarTrabajador();
 
@@ -101,6 +103,7 @@ export function TrabajadorDetailPage() {
   });
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!trabajador) return <p className="text-muted-foreground text-sm py-8 text-center">Trabajador no encontrado</p>;
 
   return (

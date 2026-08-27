@@ -9,6 +9,11 @@ import {
   useSuscripcion, usePagarSuscripcion,
 } from '../hooks/useConfiguracion';
 import { useAuthStore } from '@/modules/auth/authStore';
+import { ErrorState } from '@/shared/components/ErrorState';
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
+import { fmtCOP } from '@/shared/lib/format';
 import type { PuntoMarcaje, Cargo, Gestor, LinkPago } from '../types';
 
 type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores' | 'plan';
@@ -70,12 +75,13 @@ const EMPRESA_FIELDS: { key: string; label: string; type?: string; full?: boolea
 ];
 
 function EmpresaTab() {
-  const { data, isLoading } = useEmpresa();
+  const { data, isLoading, isError, error, refetch } = useEmpresa();
   const update = useUpdateEmpresa();
   const empresa = data?.data;
   const [form, setForm] = useState<Record<string, string> | null>(null);
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!empresa) return null;
 
   const editing = form !== null;
@@ -155,11 +161,12 @@ type PuntoForm = { nombre: string; latitud: string; longitud: string; radio_metr
 const emptyPunto: PuntoForm = { nombre: '', latitud: '', longitud: '', radio_metros: '100' };
 
 function PuntosTab() {
-  const { data, isLoading } = usePuntos();
+  const { data, isLoading, isError, error, refetch } = usePuntos();
   const puntos: PuntoMarcaje[] = data?.data ?? [];
   const create = useCreatePunto();
   const update = useUpdatePunto();
   const del = useDeletePunto();
+  const { confirmState, confirm, close } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<PuntoMarcaje | null>(null);
   const [form, setForm] = useState<PuntoForm>(emptyPunto);
@@ -185,7 +192,7 @@ function PuntosTab() {
           <Plus size={16} /> Nuevo punto
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : (
+      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -216,7 +223,15 @@ function PuntosTab() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
                       <button onClick={() => openEdit(p)} className="text-muted-foreground/60 hover:text-primary transition-colors"><Pencil size={14} /></button>
-                      <button onClick={() => { if (window.confirm('¿Eliminar punto?')) del.mutate(p.id); }} className="text-muted-foreground/60 hover:text-danger transition-colors"><Trash2 size={14} /></button>
+                      <button
+                        onClick={() => confirm({
+                          title: 'Eliminar punto',
+                          detail: `¿Eliminar el punto de marcaje "${p.nombre}"? Esta acción no se puede deshacer.`,
+                          confirmLabel: 'Eliminar',
+                          onConfirm: () => { del.mutate(p.id); close(); },
+                        })}
+                        className="text-muted-foreground/60 hover:text-danger transition-colors"
+                      ><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -226,7 +241,8 @@ function PuntosTab() {
         </div>
       )}
       {showForm && (
-        <Modal title={editing ? 'Editar punto' : 'Nuevo punto'} onClose={() => setShowForm(false)}>
+        <Modal onClose={() => setShowForm(false)}>
+          <h2 className="text-lg font-semibold text-foreground mb-4">{editing ? 'Editar punto' : 'Nuevo punto'}</h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
@@ -253,17 +269,27 @@ function PuntosTab() {
           </form>
         </Modal>
       )}
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }
 
 /* ── Cargos ── */
 function CargosTab() {
-  const { data, isLoading } = useCargos();
+  const { data, isLoading, isError, error, refetch } = useCargos();
   const cargos: Cargo[] = data?.data ?? [];
   const create = useCreateCargo();
   const update = useUpdateCargo();
   const del = useDeleteCargo();
+  const { confirmState, confirm, close } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Cargo | null>(null);
   const [form, setForm] = useState({ nombre: '', descripcion: '' });
@@ -285,7 +311,7 @@ function CargosTab() {
           <Plus size={16} /> Nuevo cargo
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : (
+      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -312,7 +338,15 @@ function CargosTab() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
                       <button onClick={() => openEdit(c)} className="text-muted-foreground/60 hover:text-primary transition-colors"><Pencil size={14} /></button>
-                      <button onClick={() => { if (window.confirm(`¿Eliminar cargo "${c.nombre}"?`)) del.mutate(c.id); }} className="text-muted-foreground/60 hover:text-danger transition-colors"><Trash2 size={14} /></button>
+                      <button
+                        onClick={() => confirm({
+                          title: 'Eliminar cargo',
+                          detail: `¿Eliminar el cargo "${c.nombre}"? Esta acción no se puede deshacer.`,
+                          confirmLabel: 'Eliminar',
+                          onConfirm: () => { del.mutate(c.id); close(); },
+                        })}
+                        className="text-muted-foreground/60 hover:text-danger transition-colors"
+                      ><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -322,7 +356,8 @@ function CargosTab() {
         </div>
       )}
       {showForm && (
-        <Modal title={editing ? 'Editar cargo' : 'Nuevo cargo'} onClose={() => setShowForm(false)}>
+        <Modal onClose={() => setShowForm(false)}>
+          <h2 className="text-lg font-semibold text-foreground mb-4">{editing ? 'Editar cargo' : 'Nuevo cargo'}</h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
@@ -347,13 +382,22 @@ function CargosTab() {
           </form>
         </Modal>
       )}
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }
 
 /* ── Gestores ── */
 function GestoresTab() {
-  const { data, isLoading } = useGestores();
+  const { data, isLoading, isError, error, refetch } = useGestores();
   const gestores: Gestor[] = data?.data ?? [];
   const create = useCreateGestor();
   const toggle = useToggleGestor();
@@ -378,7 +422,7 @@ function GestoresTab() {
           <Plus size={16} /> Nuevo gestor
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : (
+      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -420,7 +464,8 @@ function GestoresTab() {
         </div>
       )}
       {showForm && (
-        <Modal title="Nuevo gestor" onClose={() => setShowForm(false)}>
+        <Modal onClose={() => setShowForm(false)}>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo gestor</h2>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -462,21 +507,22 @@ function GestoresTab() {
 /* ── Mi plan ── */
 const PLAN_LABEL: Record<string, string> = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial' };
 
+// ponytail: formatea tanto suscripcion_vigente_hasta (DATE) como link.expira_at (datetime ISO
+// generado en el backend) — el fmtDate compartido asume fechas puras (columnas DATE) y rompería
+// el segundo caso, así que se queda local en vez de forzar un solo formateador para ambos.
 function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(s));
 }
-function fmtCOP(n: number) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
-}
 
 function PlanTab() {
-  const { data, isLoading } = useSuscripcion();
+  const { data, isLoading, isError, error, refetch } = useSuscripcion();
   const pagar = usePagarSuscripcion();
   const [meses, setMeses] = useState(1);
   const [link, setLink] = useState<LinkPago | null>(null);
   const s = data?.data;
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!s) return null;
 
   const handleGenerar = async () => {
@@ -571,18 +617,6 @@ function PlanTab() {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ── Shared modal ── */
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-foreground mb-4">{title}</h2>
-        {children}
-      </div>
     </div>
   );
 }

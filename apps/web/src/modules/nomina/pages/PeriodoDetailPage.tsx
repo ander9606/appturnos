@@ -9,6 +9,9 @@ import {
 } from '../hooks/useNomina';
 import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, TipoDescuento, DescuentoNomina } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtDate, fmtPeriodo, fmtCOP, fmtHrs } from '@/shared/lib/format';
 
 const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
@@ -46,7 +49,7 @@ export function PeriodoDetailPage() {
   const [diasExpandidos, setDiasExpandidos] = useState<Set<number>>(new Set());
   const [descuentoTrabajador, setDescuentoTrabajador] = useState<{ id: number; nombre: string } | null>(null);
 
-  const { data: periodosData, isLoading: loadingPeriodos } = usePeriodos();
+  const { data: periodosData, isLoading: loadingPeriodos, isError: errorPeriodos, error: errPeriodos, refetch: refetchPeriodos } = usePeriodos();
   const periodo = (periodosData?.data?.data ?? []).find((p: { id: number }) => p.id === periodoId);
 
   const { data: descuentosData } = useDescuentosPeriodo(periodoId);
@@ -55,7 +58,7 @@ export function PeriodoDetailPage() {
   const { data: registrosData, isLoading: loadingReg, isError: errorReg, error: errReg, refetch: refetchReg } = useRegistros({ periodo_id: periodoId });
   const registros: Registro[] = registrosData?.data?.data ?? [];
 
-  const { data: liqData, isLoading: loadingLiq } = useLiquidacion(
+  const { data: liqData, isLoading: loadingLiq, isError: errorLiq, error: errLiq, refetch: refetchLiq } = useLiquidacion(
     tab === 'liquidacion' ? periodoId : null
   );
 
@@ -123,6 +126,15 @@ export function PeriodoDetailPage() {
       <ArrowLeft size={16} /> Volver a Nómina
     </button>
   );
+
+  if (errorPeriodos) {
+    return (
+      <div>
+        {volverBtn}
+        <ErrorState error={errPeriodos} onRetry={refetchPeriodos} />
+      </div>
+    );
+  }
 
   if (!loadingPeriodos && !periodo) {
     return (
@@ -267,6 +279,8 @@ export function PeriodoDetailPage() {
           )}
           {loadingLiq ? (
             <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+          ) : errorLiq ? (
+            <ErrorState error={errLiq} onRetry={refetchLiq} />
           ) : liqData?.data ? (
             <div>
               {(() => {
@@ -446,63 +460,61 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-foreground mb-1">Corregir registro</h2>
-        <p className="text-sm text-muted-foreground mb-4">{fmtDate(registro.fecha)}</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Hora entrada</label>
-              <input
-                type="time"
-                value={form.hora_entrada}
-                onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Hora salida</label>
-              <input
-                type="time"
-                value={form.hora_salida}
-                onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-              />
-            </div>
-          </div>
+    <Modal onClose={onClose}>
+      <h2 className="text-lg font-semibold text-foreground mb-1">Corregir registro</h2>
+      <p className="text-sm text-muted-foreground mb-4">{fmtDate(registro.fecha)}</p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Tipo día</label>
-            <select
-              value={form.tipo_dia}
-              onChange={e => setForm(f => ({ ...f, tipo_dia: e.target.value as TipoDia }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-            >
-              {TIPO_DIA_OPTIONS.map(o => (
-                <option key={o} value={o} className="capitalize">{o.charAt(0).toUpperCase() + o.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Novedad</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Hora entrada</label>
             <input
-              type="text"
-              value={form.novedad}
-              onChange={e => setForm(f => ({ ...f, novedad: e.target.value }))}
+              type="time"
+              value={form.hora_entrada}
+              onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={corregir.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {corregir.isPending ? 'Guardando...' : 'Guardar'}
-            </button>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Hora salida</label>
+            <input
+              type="time"
+              value={form.hora_salida}
+              onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Tipo día</label>
+          <select
+            value={form.tipo_dia}
+            onChange={e => setForm(f => ({ ...f, tipo_dia: e.target.value as TipoDia }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          >
+            {TIPO_DIA_OPTIONS.map(o => (
+              <option key={o} value={o} className="capitalize">{o.charAt(0).toUpperCase() + o.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Novedad</label>
+          <input
+            type="text"
+            value={form.novedad}
+            onChange={e => setForm(f => ({ ...f, novedad: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={corregir.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {corregir.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -537,76 +549,74 @@ function CrearRegistroModal({ periodoId, onClose }: { periodoId: number; onClose
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Agregar registro</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal onClose={onClose}>
+      <h2 className="text-lg font-semibold text-foreground mb-4">Agregar registro</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Trabajador *</label>
+          <select
+            required
+            value={form.trabajador_id}
+            onChange={e => setForm(f => ({ ...f, trabajador_id: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          >
+            <option value="">Seleccionar...</option>
+            {trabajadores.map(t => (
+              <option key={t.id} value={t.id}>{t.nombre} {t.apellido}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
+          <input
+            type="date"
+            required
+            max={hoy}
+            value={form.fecha}
+            onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Trabajador</label>
-            <select
-              required
-              value={form.trabajador_id}
-              onChange={e => setForm(f => ({ ...f, trabajador_id: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-            >
-              <option value="">Seleccionar...</option>
-              {trabajadores.map(t => (
-                <option key={t.id} value={t.id}>{t.nombre} {t.apellido}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Fecha</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Hora entrada *</label>
             <input
-              type="date"
+              type="time"
               required
-              max={hoy}
-              value={form.fecha}
-              onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
+              value={form.hora_entrada}
+              onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Hora entrada</label>
-              <input
-                type="time"
-                required
-                value={form.hora_entrada}
-                onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Hora salida</label>
-              <input
-                type="time"
-                value={form.hora_salida}
-                onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-              />
-            </div>
-          </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Novedad</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Hora salida</label>
             <input
-              type="text"
-              value={form.novedad}
-              onChange={e => setForm(f => ({ ...f, novedad: e.target.value }))}
+              type="time"
+              value={form.hora_salida}
+              onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
             />
           </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {crear.isPending ? 'Guardando...' : 'Guardar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Novedad</label>
+          <input
+            type="text"
+            value={form.novedad}
+            onChange={e => setForm(f => ({ ...f, novedad: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {crear.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -621,6 +631,7 @@ function DescuentoModal({
 }) {
   const crear = useCrearDescuento();
   const eliminar = useEliminarDescuento();
+  const { confirmState, confirm, close: closeConfirm } = useConfirm();
   const [showForm, setShowForm] = useState(descuentos.length === 0);
   const [form, setForm] = useState({ tipo: 'prestamo' as TipoDescuento, motivo: '', monto: '' });
 
@@ -638,97 +649,110 @@ function DescuentoModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-lg font-semibold text-foreground">Descuentos</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={18} /></button>
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">{trabajadorNombre}</p>
+    <Modal onClose={onClose} scrollable>
+      <div className="flex items-center justify-between mb-1">
+        <h2 className="text-lg font-semibold text-foreground">Descuentos</h2>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={18} /></button>
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">{trabajadorNombre}</p>
 
-        {descuentos.length > 0 && (
-          <div className="flex flex-col gap-2 mb-4">
-            {descuentos.map(d => (
-              <div key={d.id} className="border border-border rounded-xl p-3 flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${ESTADO_DESCUENTO_BADGE[d.estado]}`}>
-                      {d.estado === 'pendiente' ? 'Por aceptar' : d.estado === 'aceptado' ? 'Aceptado' : 'Rechazado'}
-                    </span>
-                    <span className="text-xs font-medium text-foreground">{TIPO_DESCUENTO_LABELS[d.tipo]}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{d.motivo}</p>
-                  <p className="text-sm font-semibold text-danger mt-1">-{fmtCOP(d.monto)}</p>
+      {descuentos.length > 0 && (
+        <div className="flex flex-col gap-2 mb-4">
+          {descuentos.map(d => (
+            <div key={d.id} className="border border-border rounded-xl p-3 flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${ESTADO_DESCUENTO_BADGE[d.estado]}`}>
+                    {d.estado === 'pendiente' ? 'Por aceptar' : d.estado === 'aceptado' ? 'Aceptado' : 'Rechazado'}
+                  </span>
+                  <span className="text-xs font-medium text-foreground">{TIPO_DESCUENTO_LABELS[d.tipo]}</span>
                 </div>
-                <button
-                  onClick={() => { if (window.confirm('¿Eliminar este descuento?')) eliminar.mutate(d.id); }}
-                  className="text-muted-foreground/60 hover:text-danger transition-colors flex-shrink-0"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <p className="text-xs text-muted-foreground">{d.motivo}</p>
+                <p className="text-sm font-semibold text-danger mt-1">-{fmtCOP(d.monto)}</p>
               </div>
-            ))}
-          </div>
-        )}
-
-        {showForm ? (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3 border-t border-border pt-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Tipo</label>
-              <select
-                value={form.tipo}
-                onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoDescuento }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+              <button
+                onClick={() => confirm({
+                  title: 'Eliminar descuento',
+                  detail: `¿Eliminar el descuento de "${d.motivo}" por ${fmtCOP(d.monto)}? Esta acción no se puede deshacer.`,
+                  confirmLabel: 'Eliminar',
+                  onConfirm: () => { eliminar.mutate(d.id); closeConfirm(); },
+                })}
+                className="text-muted-foreground/60 hover:text-danger transition-colors flex-shrink-0"
               >
-                {Object.entries(TIPO_DESCUENTO_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Motivo *</label>
-              <input
-                required
-                type="text"
-                placeholder="Ej. Préstamo del 12 de marzo"
-                value={form.motivo}
-                onChange={e => setForm(f => ({ ...f, motivo: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Monto (COP) *</label>
-              <input
-                required
-                type="number"
-                min="1"
-                step="any"
-                value={form.monto}
-                onChange={e => setForm(f => ({ ...f, monto: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Queda pendiente hasta que el trabajador lo acepte desde su app — no se descuenta de su neto todavía.
-            </p>
-            <div className="flex gap-2 pt-1">
-              {descuentos.length > 0 && (
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
-                  Cancelar
-                </button>
-              )}
-              <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-                {crear.isPending ? 'Guardando...' : 'Registrar descuento'}
+                <Trash2 size={14} />
               </button>
             </div>
-          </form>
-        ) : (
-          <button
-            onClick={() => setShowForm(true)}
-            className="w-full flex items-center justify-center gap-1.5 border border-dashed border-border hover:bg-muted text-sm font-medium text-muted-foreground py-2.5 rounded-lg transition-colors"
-          >
-            <Plus size={14} /> Agregar otro descuento
-          </button>
-        )}
-      </div>
-    </div>
+          ))}
+        </div>
+      )}
+
+      {showForm ? (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 border-t border-border pt-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Tipo</label>
+            <select
+              value={form.tipo}
+              onChange={e => setForm(f => ({ ...f, tipo: e.target.value as TipoDescuento }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+            >
+              {Object.entries(TIPO_DESCUENTO_LABELS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Motivo *</label>
+            <input
+              required
+              type="text"
+              placeholder="Ej. Préstamo del 12 de marzo"
+              value={form.motivo}
+              onChange={e => setForm(f => ({ ...f, motivo: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Monto (COP) *</label>
+            <input
+              required
+              type="number"
+              min="1"
+              step="any"
+              value={form.monto}
+              onChange={e => setForm(f => ({ ...f, monto: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Queda pendiente hasta que el trabajador lo acepte desde su app — no se descuenta de su neto todavía.
+          </p>
+          <div className="flex gap-2 pt-1">
+            {descuentos.length > 0 && (
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+                Cancelar
+              </button>
+            )}
+            <button type="submit" disabled={crear.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+              {crear.isPending ? 'Guardando...' : 'Registrar descuento'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button
+          onClick={() => setShowForm(true)}
+          className="w-full flex items-center justify-center gap-1.5 border border-dashed border-border hover:bg-muted text-sm font-medium text-muted-foreground py-2.5 rounded-lg transition-colors"
+        >
+          <Plus size={14} /> Agregar otro descuento
+        </button>
+      )}
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={closeConfirm}
+        />
+      )}
+    </Modal>
   );
 }
