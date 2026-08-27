@@ -53,6 +53,11 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Mismo grupo que backend.yml — un solo deploy al VPS a la vez. cancel-in-progress:
+    # false porque un deploy a medias (docker compose up cortado) es peor que esperar.
+    concurrency:
+      group: vps-deploy
+      cancel-in-progress: false
 
     steps:
       - name: Descargar artefacto
@@ -80,5 +85,9 @@ jobs:
           # Copiar el build al VPS
           scp -r dist/* root@"$HOST":/srv/web/
 
-          # Recrear Caddy con la config actualizada (Caddyfile + bind mount /srv/web)
-          ssh root@"$HOST" "cd /app && docker compose --env-file backend/.env up -d --force-recreate caddy"
+          # Recrear Caddy con la config actualizada (Caddyfile + bind mount /srv/web).
+          # --no-deps: caddy depends_on api en docker-compose.yml — sin esto, Compose
+          # también evalúa/toca el contenedor api al recrear caddy, y si el deploy de
+          # Backend está en medio de su propio stop/rm/up de api en ese momento, chocan
+          # ("Conflict: container name already in use" / "removal already in progress").
+          ssh root@"$HOST" "cd /app && docker compose --env-file backend/.env up -d --force-recreate --no-deps caddy"

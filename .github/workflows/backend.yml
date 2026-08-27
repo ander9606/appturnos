@@ -48,6 +48,11 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Mismo grupo que web.yml — un solo deploy al VPS a la vez. cancel-in-progress:
+    # false porque un deploy a medias (docker compose up cortado) es peor que esperar.
+    concurrency:
+      group: vps-deploy
+      cancel-in-progress: false
 
     steps:
       - name: Deploy vía SSH
