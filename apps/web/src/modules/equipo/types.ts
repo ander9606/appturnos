@@ -27,4 +27,6 @@ export interface Trabajador {
   contacto_emergencia_tel: string | null;
   ranking: number;
   created_at: string;
+  /** Hora habitual de entrada (HH:MM:SS) — si está definida, dispara el recordatorio de inicio de turno. Solo aplica a nómina/ambos. */
+  hora_entrada_esperada: string | null;
 }

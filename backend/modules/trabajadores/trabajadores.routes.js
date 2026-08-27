@@ -60,6 +60,11 @@ function reglasTrabajador({ parcial }) {
     body('experiencias').optional().isArray(),
     body('diplomas').optional().isArray(),
     body('cargo_ids').optional().isArray(),
+    // Solo aplica a nómina/ambos — recordatorioIngreso.worker.js. NULL/'' = sin recordatorio.
+    body('hora_entrada_esperada')
+      .optional({ values: 'falsy' })
+      .matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)
+      .withMessage('hora_entrada_esperada inválida (HH:MM)'),
   ];
 }
 

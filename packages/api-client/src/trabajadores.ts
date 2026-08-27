@@ -44,6 +44,8 @@ export interface Trabajador {
   ant_disciplinarios_fecha: string | null;
   tipo_marcacion: 'libre' | 'fijo' | 'zonal';
   punto_marcaje_id: number | null;
+  /** Hora habitual de entrada (HH:MM:SS) — si está definida, dispara el recordatorio de inicio de turno. Solo aplica a nómina/ambos. */
+  hora_entrada_esperada: string | null;
   activo: boolean;
   external_ref: string | null;
   ranking: number | null;
@@ -120,6 +122,8 @@ export interface CrearTrabajadorPayload {
   cargo_ids?: number[];
   empresa_ids?: number[];
   external_ref?: string;
+  /** HH:MM — pasar null/'' para desactivar el recordatorio. */
+  hora_entrada_esperada?: string | null;
 }
 
 export interface ActualizarTrabajadorPayload extends Partial<CrearTrabajadorPayload> {}

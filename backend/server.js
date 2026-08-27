@@ -152,6 +152,7 @@ async function iniciar() {
   require('./modules/webhooks/wompi.worker').iniciarWorker();
   require('./modules/turnos/turnos.worker').iniciarWorker();
   require('./modules/nomina/registros/registros.worker').iniciarWorker();
+  require('./modules/nomina/registros/recordatorioIngreso.worker').iniciarWorker();
   require('./modules/nomina/compensatorios/compensatorios.worker').iniciarWorker();
 
   const apagar = (senal) => {

@@ -13,7 +13,7 @@ const COLUMNAS = `t.id, t.empresa_id, t.usuario_id, t.nombre, t.apellido, t.cedu
   t.telefono, t.email, t.tipo, t.cargo, t.tarifa_hora, t.salario_base, t.acepta_extras,
   t.eps, t.afp, t.banco, t.tipo_cuenta, t.numero_cuenta,
   t.ant_judiciales_fecha, t.ant_disciplinarios_fecha,
-  t.tipo_marcacion, t.punto_marcaje_id,
+  t.tipo_marcacion, t.punto_marcaje_id, t.hora_entrada_esperada,
   t.activo, t.external_ref, t.ranking, t.total_calificaciones, t.created_at,
   u.foto_perfil`;
 
@@ -24,7 +24,7 @@ const COLUMNAS_BARE = `id, empresa_id, usuario_id, nombre, apellido, cedula,
   telefono, email, tipo, cargo, tarifa_hora, salario_base, acepta_extras,
   eps, afp, banco, tipo_cuenta, numero_cuenta,
   ant_judiciales_fecha, ant_disciplinarios_fecha,
-  tipo_marcacion, punto_marcaje_id,
+  tipo_marcacion, punto_marcaje_id, hora_entrada_esperada,
   activo, external_ref, ranking, total_calificaciones, created_at`;
 
 // Allowlist de columnas modificables vía PUT. Lista fija de código,
@@ -35,7 +35,7 @@ const CAMPOS_EDITABLES = [
   'contacto_emergencia_nombre', 'contacto_emergencia_tel',
   'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
   'ant_judiciales_fecha', 'ant_disciplinarios_fecha',
-  'external_ref',
+  'external_ref', 'hora_entrada_esperada',
 ];
 
 /** Agrupa filas con columna trabajador_id en un Map<trabajador_id, filas[]>. */
@@ -103,6 +103,46 @@ const TrabajadoresModel = {
       [id, empresaId]
     );
     return filas[0];
+  },
+
+  /**
+   * Trabajadores de nómina con horario fijo que todavía no marcaron ingreso
+   * hoy, no están de ausencia aprobada, y no se les avisó ya en el día —
+   * candidatos para recordatorioIngreso.worker.js (el filtro de ventana de
+   * minutos se hace en JS por el wraparound de medianoche).
+   */
+  async listarCandidatosRecordatorioIngreso(hoy) {
+    const [filas] = await pool.query(
+      `SELECT t.id, t.usuario_id, t.empresa_id, t.nombre, t.apellido, t.hora_entrada_esperada
+       FROM trabajadores t
+       WHERE t.activo = 1
+         AND t.tipo IN ('nomina', 'ambos')
+         AND t.hora_entrada_esperada IS NOT NULL
+         AND t.usuario_id IS NOT NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM registros_diarios rd
+           WHERE rd.trabajador_id = t.id AND rd.fecha = ?
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM ausencias a
+           WHERE a.trabajador_id = t.id AND a.estado = 'aprobada'
+             AND ? BETWEEN a.fecha_inicio AND a.fecha_fin
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM recordatorios_ingreso_enviados r
+           WHERE r.trabajador_id = t.id AND r.fecha = ?
+         )`,
+      [hoy, hoy, hoy]
+    );
+    return filas;
+  },
+
+  /** Idempotencia: INSERT IGNORE tolera una segunda llamada el mismo día sin romper. */
+  async marcarRecordatorioIngresoEnviado(trabajadorId, hoy) {
+    await pool.query(
+      'INSERT IGNORE INTO recordatorios_ingreso_enviados (trabajador_id, fecha) VALUES (?, ?)',
+      [trabajadorId, hoy]
+    );
   },
 
   async obtenerPorId(empresaId, id) {
@@ -243,9 +283,9 @@ const TrabajadoresModel = {
             telefono, email, tipo, cargo, tarifa_hora, salario_base,
             contacto_emergencia_nombre, contacto_emergencia_tel,
             eps, afp, banco, tipo_cuenta, numero_cuenta,
-            ant_judiciales_fecha, ant_disciplinarios_fecha,
+            ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada,
             empresas_postulacion, cargos_iniciales, external_ref, creado_por)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           empresaId,
           datos.nombre,
@@ -269,6 +309,7 @@ const TrabajadoresModel = {
           datos.numero_cuenta ?? null,
           datos.ant_judiciales_fecha ?? null,
           datos.ant_disciplinarios_fecha ?? null,
+          datos.hora_entrada_esperada ?? null,
           datos.empresa_ids?.length ? JSON.stringify(datos.empresa_ids) : null,
           datos.cargo_ids?.length ? JSON.stringify(datos.cargo_ids) : null,
           datos.external_ref ?? null,

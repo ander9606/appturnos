@@ -22,6 +22,7 @@ type FormState = {
   nombre: string; apellido: string; cedula: string; tipo_documento: TipoDocumento;
   email: string; telefono: string; sexo: Sexo | ''; fecha_nacimiento: string;
   tipo: TipoTrabajador; cargo: string; tarifa_hora: string; salario_base: string;
+  hora_entrada_esperada: string;
   eps: string; afp: string; banco: string; tipo_cuenta: TipoCuenta | ''; numero_cuenta: string;
 };
 
@@ -39,6 +40,7 @@ function fromTrabajador(t: Trabajador): FormState {
     cargo: t.cargo ?? '',
     tarifa_hora: t.tarifa_hora != null ? String(t.tarifa_hora) : '',
     salario_base: t.salario_base != null ? String(t.salario_base) : '',
+    hora_entrada_esperada: t.hora_entrada_esperada?.slice(0, 5) ?? '',
     eps: t.eps ?? '',
     afp: t.afp ?? '',
     banco: t.banco ?? '',
@@ -61,7 +63,7 @@ export function TrabajadorDetailPage() {
   const [form, setForm] = useState<FormState>({
     nombre: '', apellido: '', cedula: '', tipo_documento: 'CC',
     email: '', telefono: '', sexo: '', fecha_nacimiento: '',
-    tipo: 'nomina', cargo: '', tarifa_hora: '', salario_base: '',
+    tipo: 'nomina', cargo: '', tarifa_hora: '', salario_base: '', hora_entrada_esperada: '',
     eps: '', afp: '', banco: '', tipo_cuenta: '', numero_cuenta: '',
   });
 
@@ -85,6 +87,7 @@ export function TrabajadorDetailPage() {
       cargo: form.cargo || undefined,
       tarifa_hora: form.tarifa_hora ? Number(form.tarifa_hora) : undefined,
       salario_base: form.salario_base ? Number(form.salario_base) : undefined,
+      hora_entrada_esperada: form.tipo !== 'turnos' ? (form.hora_entrada_esperada || undefined) : undefined,
       eps: form.eps || undefined,
       afp: form.afp || undefined,
       banco: form.banco || undefined,
@@ -204,6 +207,13 @@ export function TrabajadorDetailPage() {
               <label className="block text-sm font-medium text-foreground mb-1">Salario base (COP)</label>
               <input type="number" min="0" step="any" {...inp('salario_base')} />
             </div>
+            {form.tipo !== 'turnos' && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Hora habitual de entrada</label>
+                <input type="time" {...inp('hora_entrada_esperada')} />
+                <p className="text-xs text-muted-foreground mt-1">Le avisamos 15 min antes para que no se le olvide marcar ingreso.</p>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">EPS</label>
               <input type="text" {...inp('eps')} />

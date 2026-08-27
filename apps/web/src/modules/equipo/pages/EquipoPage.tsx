@@ -324,7 +324,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
     nombre: '', apellido: '', tipo: 'nomina' as TipoTrabajador,
     email: '', cedula: '', telefono: '', cargo: '',
-    tarifa_hora: '', salario_base: '',
+    tarifa_hora: '', salario_base: '', hora_entrada_esperada: '',
     banco: '', tipo_cuenta: '', numero_cuenta: '',
   });
 
@@ -340,6 +340,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
       cargo: form.cargo || undefined,
       tarifa_hora: form.tarifa_hora ? Number(form.tarifa_hora) : undefined,
       salario_base: form.salario_base ? Number(form.salario_base) : undefined,
+      hora_entrada_esperada: form.tipo !== 'turnos' ? (form.hora_entrada_esperada || undefined) : undefined,
       banco: form.banco || undefined,
       tipo_cuenta: form.tipo_cuenta || undefined,
       numero_cuenta: form.numero_cuenta || undefined,
@@ -405,6 +406,16 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <DeduccionesChecklist tarifaHora={form.tarifa_hora} salarioBase={form.salario_base} />
+
+          {form.tipo !== 'turnos' && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora habitual de entrada</label>
+              <input type="time" {...field('hora_entrada_esperada')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              <p className="text-xs text-muted-foreground mt-1">
+                Opcional — si la dejas, le avisamos 15 min antes para que no se le olvide marcar ingreso.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
