@@ -41,6 +41,7 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `trabajador_empresa.aceptada` | Invitación aceptada | Trabajador acepta una invitación previa del gestor | `trabajador-empresa.service.js:246` |
 | `ausencia.nueva` | Nueva solicitud de ausencia | Trabajador solicita una ausencia | `ausencias.service.js:42` |
 | `nomina.horas_extra_iniciadas` | Horas extra en curso | Trabajador lleva horas extra hoy | `registros.worker.js:56` |
+| `nomina.compensatorios_hoy` | N trabajador(es) de compensatorio hoy | Cron 15 min, resumen diario (una vez por compensatorio) de quién tiene `fecha_asignada` = hoy | `compensatorios.worker.js` |
 | `nomina.entrada` | Entrada registrada | Trabajador marca entrada (registro diario) | `registros.service.js:306` |
 | `nomina.salida` | Salida registrada | Trabajador marca salida (registro diario) | `registros.service.js:382` |
 | `reingreso.solicitado` | Solicitud de reingreso | Trabajador pide reingresar | `registros.service.js:438` |

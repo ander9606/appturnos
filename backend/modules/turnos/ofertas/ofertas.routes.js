@@ -118,19 +118,20 @@ router.post(
 router.put(
   '/:id',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [idParam, ...reglasOferta({ parcial: true })],
   validar,
   ctrl.actualizar
 );
 
 // POST /api/turnos/ofertas/:id/publicar  — pasa una oferta de 'borrador' a 'publicada'
-router.post('/:id/publicar', verificarRol(GESTIONAR), [idParam], validar, ctrl.publicar);
+router.post('/:id/publicar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.publicar);
 
 // DELETE /api/turnos/ofertas/:id  (cancelar)
-router.delete('/:id', verificarRol(GESTIONAR), [idParam], validar, ctrl.cancelar);
+router.delete('/:id', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.cancelar);
 
 // DELETE /api/turnos/ofertas/:id/definitivo  (borrar oferta cancelada sin postulantes)
-router.delete('/:id/definitivo', verificarRol(GESTIONAR), [idParam], validar, ctrl.eliminarDefinitivo);
+router.delete('/:id/definitivo', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.eliminarDefinitivo);
 
 // POST /api/turnos/ofertas/:id/aplicar  — body: { puesto_id }
 router.post(
@@ -154,6 +155,7 @@ router.delete(
 router.post(
   '/:id/asignar',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [
     idParam,
     body('puesto_id').isInt({ min: 1 }).withMessage('puesto_id requerido'),
@@ -167,6 +169,7 @@ router.post(
 router.post(
   '/:id/cerrar',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [
     idParam,
     body('excepciones').optional().isArray().withMessage('excepciones debe ser un array'),
@@ -181,6 +184,7 @@ router.post(
   '/:id/duplicar',
   crearOfertaLimiter,
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [idParam, body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)')],
   validar,
   ctrl.duplicar

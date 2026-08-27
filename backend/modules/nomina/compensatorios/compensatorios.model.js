@@ -34,6 +34,17 @@ const CompensatoriosModel = {
     return filas;
   },
 
+  /** true si el trabajador ya tiene un descanso asignado/tomado en esa fecha. */
+  async existeFechaAsignada(empresaId, trabajadorId, fecha) {
+    const [filas] = await pool.query(
+      `SELECT 1 FROM descansos_compensatorios
+       WHERE empresa_id = ? AND trabajador_id = ? AND fecha_asignada = ?
+         AND estado IN ('asignado', 'tomado') LIMIT 1`,
+      [empresaId, trabajadorId, fecha]
+    );
+    return filas.length > 0;
+  },
+
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       'SELECT * FROM descansos_compensatorios WHERE id = ? AND empresa_id = ? LIMIT 1',
@@ -59,6 +70,31 @@ const CompensatoriosModel = {
       `UPDATE descansos_compensatorios SET estado = 'tomado'
        WHERE id = ? AND empresa_id = ? AND estado = 'asignado'`,
       [id, empresaId]
+    );
+  },
+
+  /**
+   * Compensatorios cuya fecha_asignada es hoy y aún no se le avisó al
+   * gestor. Cruza todas las empresas — lo usa compensatorios.worker.js.
+   */
+  async listarHoyPendientesNotificar(hoy) {
+    const [filas] = await pool.query(
+      `SELECT dc.id, dc.empresa_id, t.nombre, t.apellido
+       FROM descansos_compensatorios dc
+       JOIN trabajadores t ON t.id = dc.trabajador_id
+       WHERE dc.fecha_asignada = ? AND dc.estado IN ('asignado', 'tomado')
+         AND dc.notificado_gestor = 0`,
+      [hoy]
+    );
+    return filas;
+  },
+
+  /** Marca un lote de compensatorios como ya notificados al gestor. */
+  async marcarNotificadosGestor(ids) {
+    if (ids.length === 0) return;
+    await pool.query(
+      `UPDATE descansos_compensatorios SET notificado_gestor = 1 WHERE id IN (?)`,
+      [ids]
     );
   },
 };

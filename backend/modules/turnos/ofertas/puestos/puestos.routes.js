@@ -5,6 +5,7 @@ const { body, param } = require('express-validator');
 
 const { validar } = require('../../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../../../config/constants');
 const ctrl = require('./puestos.controller');
 
@@ -22,6 +23,7 @@ router.get('/', verificarRol(GESTIONAR), ctrl.listar);
 router.post(
   '/',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [
     body('cargo_id').isInt({ min: 1 }).withMessage('cargo_id requerido'),
     body('plazas').optional().isInt({ min: 1 }).withMessage('plazas debe ser un entero ≥ 1'),
@@ -36,6 +38,7 @@ router.post(
 router.patch(
   '/:puestoId',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [
     param('puestoId').isInt({ min: 1 }).toInt(),
     body('plazas').optional().isInt({ min: 1 }),
@@ -50,6 +53,7 @@ router.patch(
 router.delete(
   '/:puestoId',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [param('puestoId').isInt({ min: 1 }).toInt()],
   validar,
   ctrl.eliminar

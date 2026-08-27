@@ -119,29 +119,13 @@ function NominaGestorView() {
     refetchLiq();
   }, [refetchPeriodos, refetchLiq]);
 
-  const handleLiquidar = async () => {
-    if (!activePeriodoId) return;
-    const ok = await confirm({
-      title: 'Liquidar período',
-      message: '¿Confirmas la liquidación? Esta acción es irreversible.',
-      confirmLabel: 'Liquidar',
-    });
-    if (!ok) return;
-    try {
-      await liquidarMutation.mutateAsync(activePeriodoId);
-      showToast('Período liquidado correctamente.');
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Error al liquidar';
-      Alert.alert('Error', msg);
-    }
-  };
-
-  // lineas/totales y los useMemo de abajo deben calcularse ANTES del early
-  // return de loadingPeriodos — un hook llamado condicionalmente (solo cuando
-  // ya cargó) rompe las reglas de hooks de React y crashea al terminar de cargar.
   const lineas  = liquidacion?.lineas ?? [];
   const totales = liquidacion?.totales;
 
+  // ponytail: estos useMemo deben ir antes de cualquier return condicional
+  // (ver el de loadingPeriodos más abajo) — si no, el conteo de hooks cambia
+  // entre el primer render (sin datos) y el siguiente, y React tira
+  // "Rendered more hooks than during the previous render".
   const composicionEquipo = useMemo(() => {
     const sum = (k: keyof LiquidacionLinea) => lineas.reduce((s, l) => s + Number(l[k]), 0);
     return {
@@ -152,17 +136,6 @@ function NominaGestorView() {
       festivo:       sum('horas_festivo'),
     };
   }, [lineas]);
-  const totalHorasEquipo = Object.values(composicionEquipo).reduce((a, b) => a + b, 0);
-  const pctRecargoEquipo = totalHorasEquipo > 0
-    ? Math.round(((totalHorasEquipo - composicionEquipo.ordinarias) / totalHorasEquipo) * 100)
-    : 0;
-  const segmentosEquipo = [
-    { value: composicionEquipo.ordinarias,    color: HOUR_TYPE_COLORS.ordinarias },
-    { value: composicionEquipo.extraNocturna, color: HOUR_TYPE_COLORS.extraNocturna },
-    { value: composicionEquipo.extraDiurna,   color: HOUR_TYPE_COLORS.extraDiurna },
-    { value: composicionEquipo.nocturna,      color: HOUR_TYPE_COLORS.nocturna },
-    { value: composicionEquipo.festivo,       color: HOUR_TYPE_COLORS.festivo },
-  ];
 
   // Ordenado por total (de más a menos) y marcado el que tiene una proporción
   // de recargo/extra notablemente por encima del promedio del equipo — así
@@ -181,6 +154,23 @@ function NominaGestorView() {
       .sort((a, b) => b.linea.total - a.linea.total);
   }, [lineas]);
 
+  const handleLiquidar = async () => {
+    if (!activePeriodoId) return;
+    const ok = await confirm({
+      title: 'Liquidar período',
+      message: '¿Confirmas la liquidación? Esta acción es irreversible.',
+      confirmLabel: 'Liquidar',
+    });
+    if (!ok) return;
+    try {
+      await liquidarMutation.mutateAsync(activePeriodoId);
+      showToast('Período liquidado correctamente.');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Error al liquidar';
+      Alert.alert('Error', msg);
+    }
+  };
+
   if (loadingPeriodos) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
@@ -188,6 +178,18 @@ function NominaGestorView() {
       </SafeAreaView>
     );
   }
+
+  const totalHorasEquipo = Object.values(composicionEquipo).reduce((a, b) => a + b, 0);
+  const pctRecargoEquipo = totalHorasEquipo > 0
+    ? Math.round(((totalHorasEquipo - composicionEquipo.ordinarias) / totalHorasEquipo) * 100)
+    : 0;
+  const segmentosEquipo = [
+    { value: composicionEquipo.ordinarias,    color: HOUR_TYPE_COLORS.ordinarias },
+    { value: composicionEquipo.extraNocturna, color: HOUR_TYPE_COLORS.extraNocturna },
+    { value: composicionEquipo.extraDiurna,   color: HOUR_TYPE_COLORS.extraDiurna },
+    { value: composicionEquipo.nocturna,      color: HOUR_TYPE_COLORS.nocturna },
+    { value: composicionEquipo.festivo,       color: HOUR_TYPE_COLORS.festivo },
+  ];
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>

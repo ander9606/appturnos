@@ -7,6 +7,7 @@ const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { verificarFirmaLogiq360 } = require('../../middleware/verificarFirmaLogiq360');
 const { verificarApiKeyLogiq360 } = require('../../middleware/verificarApiKeyLogiq360');
+const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./integracion.controller');
 
@@ -36,7 +37,7 @@ router.post(
 router.get('/estado', verificarToken, verificarRol(VER_ESTADO), ctrl.estado);
 
 // POST /api/integracion/reintentar-fallidos
-router.post('/reintentar-fallidos', verificarToken, verificarRol(SOLO_ADMIN), ctrl.reintentarFallidos);
+router.post('/reintentar-fallidos', verificarToken, verificarRol(SOLO_ADMIN), verificarSuscripcion, ctrl.reintentarFallidos);
 
 // GET /api/integracion/configuracion
 router.get('/configuracion', verificarToken, verificarRol(SOLO_ADMIN), ctrl.obtenerConfig);
@@ -46,6 +47,7 @@ router.put(
   '/configuracion',
   verificarToken,
   verificarRol(SOLO_ADMIN),
+  verificarSuscripcion,
   [
     body('activo').optional().isBoolean().withMessage('activo debe ser booleano'),
     body('webhook_url').optional({ values: 'falsy' }).isURL().withMessage('webhook_url inválida'),
@@ -58,6 +60,9 @@ router.put(
 );
 
 // POST /api/integracion/emparejar — conectar con logiq360 vía código de pairing
+// Sin verificarSuscripcion a propósito: es la vía de escape para quedar exento
+// de facturación directa vía logiq360 — bloquearla dejaría a una empresa
+// vencida sin forma de conectar y liberarse del cobro.
 router.post(
   '/emparejar',
   verificarToken,
@@ -75,6 +80,7 @@ router.post(
   '/conciliacion/vincular',
   verificarToken,
   verificarRol(SOLO_ADMIN),
+  verificarSuscripcion,
   [
     body('trabajador_id').isInt({ min: 1 }).withMessage('trabajador_id inválido'),
     body('empleado_id').isInt({ min: 1 }).withMessage('empleado_id inválido'),

@@ -5,6 +5,7 @@ const { body, query, param } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./empresas.controller');
 
@@ -58,6 +59,7 @@ router.patch(
   '/me',
   verificarToken,
   verificarRol(SOLO_ADMIN),
+  verificarSuscripcion,
   [
     body('nombre').optional().isString().trim().notEmpty().withMessage('nombre no puede ir vacío'),
     body('nit').optional({ values: 'falsy' }).isString().trim(),

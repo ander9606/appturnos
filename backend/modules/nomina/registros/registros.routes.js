@@ -110,6 +110,7 @@ router.get(
 router.post(
   '/reingresos/:id/aprobar',
   verificarRol(CORREGIR),
+  verificarSuscripcion,
   [idParam],
   validar,
   ctrl.aprobarReingreso
@@ -119,6 +120,7 @@ router.post(
 router.post(
   '/reingresos/:id/rechazar',
   verificarRol(CORREGIR),
+  verificarSuscripcion,
   [idParam],
   validar,
   ctrl.rechazarReingreso
@@ -128,6 +130,7 @@ router.post(
 router.put(
   '/:id',
   verificarRol(CORREGIR),
+  verificarSuscripcion,
   [
     idParam,
     body('hora_entrada').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_entrada inválida'),

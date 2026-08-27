@@ -5,6 +5,7 @@ const { body, param, query } = require('express-validator');
 
 const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
+const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../../config/constants');
 const ctrl = require('./asignaciones.controller');
 
@@ -57,13 +58,13 @@ router.get(
 router.get('/:id', verificarRol([...GESTIONAR, ...TRABAJADOR]), [idParam], validar, ctrl.obtener);
 
 // POST /api/turnos/asignaciones/:id/confirmar
-router.post('/:id/confirmar', verificarRol(GESTIONAR), [idParam], validar, ctrl.confirmar);
+router.post('/:id/confirmar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.confirmar);
 
 // POST /api/turnos/asignaciones/:id/rechazar
-router.post('/:id/rechazar', verificarRol(GESTIONAR), [idParam], validar, ctrl.rechazar);
+router.post('/:id/rechazar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.rechazar);
 
 // POST /api/turnos/asignaciones/:id/cancelar  (confirmado → cancelado, devuelve plaza)
-router.post('/:id/cancelar', verificarRol(GESTIONAR), [idParam], validar, ctrl.cancelar);
+router.post('/:id/cancelar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.cancelar);
 
 // POST /api/turnos/asignaciones/:id/ingreso
 // Sin verificarSuscripcion a propósito: marcar ingreso/egreso es cómo el
@@ -90,6 +91,7 @@ router.post(
 router.patch(
   '/:id/corregir',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [
     idParam,
     body('hora_ingreso_real').optional().isISO8601().withMessage('hora_ingreso_real inválida (usa formato ISO 8601)'),
@@ -100,12 +102,13 @@ router.patch(
 );
 
 // POST /api/turnos/asignaciones/:id/no-presentado  (jefe/admin marca ausencia + 0 estrellas auto)
-router.post('/:id/no-presentado', verificarRol(GESTIONAR), [idParam], validar, ctrl.noPresentado);
+router.post('/:id/no-presentado', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.noPresentado);
 
 // POST /api/turnos/asignaciones/:id/calificar  (jefe/admin califica el turno)
 router.post(
   '/:id/calificar',
   verificarRol(GESTIONAR),
+  verificarSuscripcion,
   [
     idParam,
     body('calificacion')
