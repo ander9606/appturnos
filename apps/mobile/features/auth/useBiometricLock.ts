@@ -60,7 +60,9 @@ export function useBiometricLock(authStatus: AuthStatus) {
       const result = await Promise.race([
         LocalAuthentication.authenticateAsync({
           promptMessage: 'Confirma tu identidad',
-          fallbackLabel: 'Usar PIN',
+          // "código" cubre PIN/patrón (Android) y passcode (iOS) — fallbackLabel
+          // se muestra tal cual en el diálogo nativo de ambas plataformas.
+          fallbackLabel: 'Usar código',
         }),
         new Promise<{ success: false; error: 'timeout' }>((resolve) =>
           setTimeout(() => resolve({ success: false, error: 'timeout' }), 15_000)
@@ -73,12 +75,12 @@ export function useBiometricLock(authStatus: AuthStatus) {
         showToast(
           result.error === 'timeout'
             ? 'La verificación tardó demasiado. Intenta de nuevo.'
-            : 'No se pudo verificar tu identidad. Intenta de nuevo o usa PIN.'
+            : 'No se pudo verificar tu identidad. Intenta de nuevo o usa tu código.'
         );
       }
       return result.success;
     } catch {
-      showToast('No se pudo verificar tu identidad. Intenta de nuevo o usa PIN.');
+      showToast('No se pudo verificar tu identidad. Intenta de nuevo o usa tu código.');
       return false;
     } finally {
       authenticatingRef.current = false;

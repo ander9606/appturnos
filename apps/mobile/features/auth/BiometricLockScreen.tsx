@@ -46,7 +46,7 @@ export function BiometricLockScreen({ onUnlock, onLogout, authenticating }: Prop
           style={{ backgroundColor: theme.primary }}
         >
           <Text className="text-white font-semibold">
-            {authenticating ? 'Verificando…' : 'Usar biometría / PIN'}
+            {authenticating ? 'Verificando…' : 'Usar biometría / código'}
           </Text>
         </Pressable>
 
