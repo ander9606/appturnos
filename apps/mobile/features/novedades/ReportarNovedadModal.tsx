@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 // ponytail: lazy import — native module only loaded when handler runs, not at route discovery time
+import { ApiError } from '@api-client';
 import type { TipoNovedad } from '@api-client';
 import { useCrearNovedad } from './useNovedades';
 
@@ -110,8 +111,9 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
       setHoraEvento(null);
       setFotoB64(null);
       onClose();
-    } catch {
-      Alert.alert('Error', 'No se pudo reportar la novedad. Intenta de nuevo.');
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'No se pudo reportar la novedad. Intenta de nuevo.';
+      Alert.alert('Error', message);
     }
   };
 
