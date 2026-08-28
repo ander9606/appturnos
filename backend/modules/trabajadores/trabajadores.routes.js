@@ -172,7 +172,7 @@ router.get(
   [
     query('tipo').optional().isIn(TIPOS).withMessage('Tipo inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
+    query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('limit inválido'),
   ],
   validar,
   ctrl.listar
