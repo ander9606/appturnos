@@ -14,17 +14,20 @@
     "@hookform/resolvers": "^3.10.0",
     "@tanstack/react-query": "^5.80.7",
     "axios": "^1.9.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.511.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.57.0",
+    "react-leaflet": "^5.0.0",
     "react-router": "^7.6.2",
     "sonner": "^2.0.3",
-    "zustand": "^5.0.5",
-    "zod": "^3.25.56"
+    "zod": "^3.25.56",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.10",
+    "@types/leaflet": "^1.9.22",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react": "^4.5.2",
