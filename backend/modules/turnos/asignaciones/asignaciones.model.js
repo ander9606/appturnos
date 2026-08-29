@@ -21,10 +21,12 @@ const AsignacionesModel = {
     return res.insertId;
   },
 
+  // empresaId null: trabajador_turnos multi-empresa (JWT sin empresa_id fija) — mismo
+  // patrón que obtenerConDetalles más abajo.
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
-      'SELECT * FROM asignaciones_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
-      [id, empresaId]
+      `SELECT * FROM asignaciones_turno WHERE id = ?${empresaId != null ? ' AND empresa_id = ?' : ''} LIMIT 1`,
+      empresaId != null ? [id, empresaId] : [id]
     );
     return filas[0] || null;
   },
