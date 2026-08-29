@@ -95,6 +95,9 @@ appturnos/
 ├── packages/api-client/        # Shared TypeScript client (no bundling — imported as TS source)
 │   └── src/                    # auth, turnos, nomina, trabajadores, client, types, index
 │
+├── apps/web/                   # Vite / React admin & gestor SPA
+│   └── src/                    # modules/, pages/, shared/
+│
 └── apps/mobile/                # Expo / React Native (SDK ~53, Expo Router ~4)
     ├── app/                    # File-based routes (Expo Router)
     │   ├── _layout.tsx         # Root stack: QueryClient, AuthGuard, Stack screens
