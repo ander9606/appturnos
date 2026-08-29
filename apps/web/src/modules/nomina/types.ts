@@ -24,6 +24,11 @@ export interface Registro {
   fecha: string;
   hora_entrada: string | null;
   hora_salida: string | null;
+  /** Ubicación donde se marcó — solo presente si el trabajador tiene tipo_marcacion fijo/zonal. */
+  latitud_entrada: number | null;
+  longitud_entrada: number | null;
+  latitud_salida: number | null;
+  longitud_salida: number | null;
   horas_ordinarias: number;
   horas_extra_diurnas: number;
   horas_extra_nocturnas: number;

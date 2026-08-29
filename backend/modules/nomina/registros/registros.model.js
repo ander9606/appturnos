@@ -94,10 +94,14 @@ const RegistrosModel = {
     const [res] = await pool.query(
       `INSERT INTO registros_diarios
          (empresa_id, trabajador_id, periodo_id, fecha, hora_entrada, hora_entrada_inicial,
+          latitud_entrada, longitud_entrada,
           horas_ordinarias, horas_extra_diurnas, horas_extra_nocturnas,
           horas_nocturnas, horas_festivo, es_festivo)
-       VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0)`,
-      [empresaId, d.trabajador_id, d.periodo_id, d.fecha, d.hora_entrada, d.hora_entrada]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0)`,
+      [
+        empresaId, d.trabajador_id, d.periodo_id, d.fecha, d.hora_entrada, d.hora_entrada,
+        d.latitud ?? null, d.longitud ?? null,
+      ]
     );
     return res.insertId;
   },
@@ -106,23 +110,26 @@ const RegistrosModel = {
    * Inicia una nueva sesión del día tras un reingreso aprobado.
    * Los horas_* acumuladas de la sesión anterior se preservan;
    * hora_entrada se resetea a la nueva entrada y hora_salida se limpia.
+   * latitud_salida/longitud_salida también se limpian — pertenecían a la sesión cerrada.
    */
-  async iniciarReingreso(empresaId, id, horaEntrada) {
+  async iniciarReingreso(empresaId, id, horaEntrada, latitud, longitud) {
     const [res] = await pool.query(
       `UPDATE registros_diarios
-       SET hora_entrada = ?, hora_salida = NULL, sesiones = sesiones + 1, alerta_extra_enviada = 0
+       SET hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?,
+           hora_salida = NULL, latitud_salida = NULL, longitud_salida = NULL,
+           sesiones = sesiones + 1, alerta_extra_enviada = 0
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NOT NULL`,
-      [horaEntrada, id, empresaId]
+      [horaEntrada, latitud ?? null, longitud ?? null, id, empresaId]
     );
     return res.affectedRows;
   },
 
   /** Set hora_entrada on an existing registro that has none yet (race-condition safe). */
-  async actualizarEntrada(empresaId, id, horaEntrada) {
+  async actualizarEntrada(empresaId, id, horaEntrada, latitud, longitud) {
     const [res] = await pool.query(
-      `UPDATE registros_diarios SET hora_entrada = ?
+      `UPDATE registros_diarios SET hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?
        WHERE id = ? AND empresa_id = ? AND hora_entrada IS NULL`,
-      [horaEntrada, id, empresaId]
+      [horaEntrada, latitud ?? null, longitud ?? null, id, empresaId]
     );
     return res.affectedRows;
   },
@@ -131,11 +138,14 @@ const RegistrosModel = {
   async actualizarSalida(empresaId, id, d) {
     const [res] = await pool.query(
       `UPDATE registros_diarios SET
-         hora_salida = ?, horas_ordinarias = ?, horas_extra_diurnas = ?,
+         hora_salida = ?, latitud_salida = ?, longitud_salida = ?,
+         horas_ordinarias = ?, horas_extra_diurnas = ?,
          horas_extra_nocturnas = ?, horas_nocturnas = ?, horas_festivo = ?, es_festivo = ?
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NULL`,
       [
         d.hora_salida,
+        d.latitud ?? null,
+        d.longitud ?? null,
         d.horas_ordinarias,
         d.horas_extra_diurnas,
         d.horas_extra_nocturnas,

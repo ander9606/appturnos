@@ -292,13 +292,13 @@ const RegistrosService = {
         if (!solicitud || solicitud.estado !== 'aprobado') {
           throw new AppError('El reingreso debe ser autorizado por el gestor', 403);
         }
-        const reiniciado = await RegistrosModel.iniciarReingreso(empresaId, existing.id, ahoraHHMMSS());
+        const reiniciado = await RegistrosModel.iniciarReingreso(empresaId, existing.id, ahoraHHMMSS(), latitud, longitud);
         if (reiniciado === 0) throw new AppError('No se pudo iniciar el reingreso', 409);
         await SolicitudesReingresoModel.marcarUsada(solicitud.id);
         return RegistrosModel.obtenerPorId(empresaId, existing.id);
       }
       // Registro sin hora_entrada (edge case).
-      const updated = await RegistrosModel.actualizarEntrada(empresaId, existing.id, ahoraHHMMSS());
+      const updated = await RegistrosModel.actualizarEntrada(empresaId, existing.id, ahoraHHMMSS(), latitud, longitud);
       if (updated === 0) throw new AppError('Ya marcaste tu entrada hoy', 409);
       return RegistrosModel.obtenerPorId(empresaId, existing.id);
     }
@@ -308,6 +308,8 @@ const RegistrosService = {
       periodo_id: periodo.id,
       fecha: hoy,
       hora_entrada: ahoraHHMMSS(),
+      latitud,
+      longitud,
     });
 
     // Notifica a gestores de nómina que el trabajador marcó entrada (best-effort).
@@ -382,6 +384,8 @@ const RegistrosService = {
 
     const updated = await RegistrosModel.actualizarSalida(empresaId, registroId, {
       hora_salida: horaSalida,
+      latitud,
+      longitud,
       ...horas,
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);

@@ -12,6 +12,7 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { StatCard } from '@/shared/components/StatCard';
+import { UbicacionLink } from '@/shared/components/UbicacionLink';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtPeriodo, fmtCOP, fmtHrs, fmtDiaSemana, fmtHora } from '@/shared/lib/format';
 
@@ -407,6 +408,16 @@ export function PeriodoDetailPage() {
                                     )}
                                   </div>
                                   {r.novedad && <p className="text-xs text-muted-foreground mt-0.5">{r.novedad}</p>}
+                                  {(r.latitud_entrada != null || r.latitud_salida != null) && (
+                                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                                      {r.latitud_entrada != null && (
+                                        <UbicacionLink lat={r.latitud_entrada} lng={r.longitud_entrada!} label="Entrada" />
+                                      )}
+                                      {r.latitud_salida != null && (
+                                        <UbicacionLink lat={r.latitud_salida} lng={r.longitud_salida!} label="Salida" />
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                                 {r.hora_entrada ? (
                                   <span className="text-xs text-muted-foreground text-right flex-shrink-0">
