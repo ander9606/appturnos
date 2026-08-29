@@ -361,6 +361,9 @@ export function PeriodoDetailPage() {
                             {l.otros_descuentos.map(d => (
                               <Renglon key={d.id} label={d.motivo || TIPO_DESCUENTO_LABELS[d.tipo]} valor={`-${fmtCOP(d.monto)}`} tono="danger" />
                             ))}
+                            {l.subsidio_transporte > 0 && (
+                              <Renglon label="Auxilio de transporte" valor={`+${fmtCOP(l.subsidio_transporte)}`} tono="success" />
+                            )}
                             <div className="border-t border-border my-1" />
                             <Renglon label="Total neto" valor={fmtCOP(l.neto)} fuerte tono="success" grande />
                           </div>

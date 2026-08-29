@@ -68,7 +68,9 @@ export interface LiquidacionLinea {
   /** Descuentos manuales ya aceptados por el trabajador (préstamos, inasistencias, etc.). */
   otros_descuentos: Array<{ id: number; tipo: TipoDescuento; motivo: string; monto: number }>;
   otros_descuentos_total: number;
-  /** total - descuento_salud - descuento_pension - otros_descuentos_total. */
+  /** Auxilio de transporte proporcional al período. No es IBC — se suma después de las deducciones. 0 si prestación de servicios o si el salario supera el tope legal. */
+  subsidio_transporte: number;
+  /** total - descuento_salud - descuento_pension - otros_descuentos_total + subsidio_transporte. */
   neto: number;
 }
 

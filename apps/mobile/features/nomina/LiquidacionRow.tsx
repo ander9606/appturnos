@@ -184,6 +184,14 @@ export function LiquidacionRow({
                   -${linea.descuento_pension.toLocaleString('es-CO')}
                 </Text>
               </View>
+              {linea.subsidio_transporte > 0 && (
+                <View className="gap-0.5 min-w-[80px]">
+                  <Text className="text-[10px] text-muted-foreground">Aux. transporte</Text>
+                  <Text className="text-sm font-semibold text-success">
+                    +${linea.subsidio_transporte.toLocaleString('es-CO')}
+                  </Text>
+                </View>
+              )}
               <View className="gap-0.5 min-w-[80px]">
                 <Text className="text-[10px] text-muted-foreground">Neto a pagar</Text>
                 <Text className="text-sm font-bold text-success">

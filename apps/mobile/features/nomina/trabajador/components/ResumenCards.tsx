@@ -150,6 +150,12 @@ export function ResumenCards({
                       <Text className="text-xs font-medium text-danger">-{formatCOP(d.monto)}</Text>
                     </View>
                   ))}
+                  {miLiquidacion.subsidio_transporte > 0 && (
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-xs text-muted-foreground">Auxilio de transporte</Text>
+                      <Text className="text-xs font-medium text-success">+{formatCOP(miLiquidacion.subsidio_transporte)}</Text>
+                    </View>
+                  )}
                   <View className="flex-row items-center justify-between pt-1.5 mt-0.5 border-t border-border">
                     <Text className="text-xs font-semibold text-foreground">Neto</Text>
                     <Text className="text-xs font-bold text-success">{formatCOP(miLiquidacion.neto)}</Text>

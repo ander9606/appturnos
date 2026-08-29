@@ -32,6 +32,7 @@ async function generarLiquidacionExcel(liquidacion) {
     { key: 'total', width: 16 },
     { key: 'salud', width: 14 },
     { key: 'pension', width: 14 },
+    { key: 'transporte', width: 18 },
     { key: 'neto', width: 16 },
   ];
 
@@ -48,6 +49,7 @@ async function generarLiquidacionExcel(liquidacion) {
     'Total bruto',
     'Descuento salud',
     'Descuento pensión',
+    'Auxilio transporte',
     'Total neto',
   ]);
   cabecera.font = { bold: true };
@@ -66,13 +68,14 @@ async function generarLiquidacionExcel(liquidacion) {
       l.total,
       l.descuento_salud,
       l.descuento_pension,
+      l.subsidio_transporte,
       l.neto,
     ]);
   }
 
   const filaTotal = ws.addRow([
     '', 'TOTAL', '', '', '', '', '', '', '',
-    liquidacion.totales.total_general, '', '', liquidacion.totales.total_neto_general,
+    liquidacion.totales.total_general, '', '', '', liquidacion.totales.total_neto_general,
   ]);
   filaTotal.font = { bold: true };
 
