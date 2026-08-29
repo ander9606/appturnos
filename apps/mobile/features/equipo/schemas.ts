@@ -43,6 +43,8 @@ export const trabajadorSchema = z.object({
   cargo:        z.string().trim().optional().or(z.literal('')),
   tarifa_hora:  optionalPositiveNumber,
   salario_base: optionalPositiveNumber,
+  hora_entrada_esperada: z.string().trim().optional().or(z.literal(''))
+    .refine((v) => !v || /^([01]\d|2[0-3]):[0-5]\d$/.test(v), { message: 'Hora inválida (HH:MM)' }),
   eps:          optionalText,
   afp:          optionalText,
   banco:        optionalText,

@@ -17,10 +17,22 @@ import {
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { trabajadorSchema, TIPO_OPTIONS, TIPO_HINTS, type TrabajadorFormValues } from './schemas';
 import { Input } from '@/components/ui/Input';
 import { useCargos } from '@/features/turnos/useTurnos';
 import { DeduccionesChecklist } from './DeduccionesChecklist';
+
+function timeToDate(hhmm: string): Date {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function dateToHHMM(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 // ── Pill selector — reutilizado para tipo_documento / sexo / tipo_cuenta ────
 
@@ -105,6 +117,7 @@ export function TrabajadorForm({
   const { data: cargos = [] } = useCargos();
   const cargosActivos = cargos.filter((c) => c.activo);
   const [cargoModalVisible, setCargoModalVisible] = useState(false);
+  const [horaPickerVisible, setHoraPickerVisible] = useState(false);
 
   return (
     <KeyboardAvoidingView
@@ -486,6 +499,57 @@ export function TrabajadorForm({
                   />
                 )}
               />
+            </View>
+
+            {/* Hora habitual de entrada — dispara el recordatorio "no olvides marcar tu turno" */}
+            <View className="mb-4">
+              <Text className="text-sm font-semibold text-foreground mb-1">Hora habitual de entrada</Text>
+              <Controller
+                control={control}
+                name="hora_entrada_esperada"
+                render={({ field }) => (
+                  <>
+                    <View className="flex-row items-center gap-2">
+                      <Pressable
+                        onPress={() => setHoraPickerVisible(true)}
+                        className="flex-1 bg-card border border-border rounded-2xl px-4 h-14 flex-row items-center justify-between active:opacity-70"
+                      >
+                        <Text className={`text-base flex-1 ${field.value ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          {field.value || 'Sin definir'}
+                        </Text>
+                        <Ionicons name="time-outline" size={18} color="#94A3B8" />
+                      </Pressable>
+                      {!!field.value && (
+                        <Pressable
+                          onPress={() => field.onChange('')}
+                          hitSlop={8}
+                          className="w-11 h-11 rounded-xl bg-muted items-center justify-center active:opacity-70"
+                        >
+                          <Ionicons name="close" size={18} color="#64748B" />
+                        </Pressable>
+                      )}
+                    </View>
+                    {horaPickerVisible && (
+                      <DateTimePicker
+                        mode="time"
+                        display="default"
+                        value={timeToDate(field.value || '08:00')}
+                        is24Hour
+                        onChange={(_, date) => {
+                          setHoraPickerVisible(false);
+                          if (date) field.onChange(dateToHHMM(date));
+                        }}
+                      />
+                    )}
+                  </>
+                )}
+              />
+              {errors.hora_entrada_esperada && (
+                <Text className="text-xs text-danger mt-1">{errors.hora_entrada_esperada.message}</Text>
+              )}
+              <Text className="text-xs text-muted-foreground mt-1">
+                Le avisamos 15 min antes para que no se le olvide marcar ingreso.
+              </Text>
             </View>
 
             <DeduccionesChecklist tarifaHora={tarifaHora} salarioBase={salarioBase} />
