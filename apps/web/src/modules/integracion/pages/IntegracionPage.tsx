@@ -124,7 +124,8 @@ function TabEstado({ conectado, onGoConfig }: { conectado: boolean; onGoConfig: 
             <StatusRow label="Webhook URL" ok={Boolean(cfg?.webhook_url)} okLabel="Configurada" koLabel="Sin URL" />
             <StatusRow label="Webhook secret" ok={Boolean(cfg?.tiene_webhook_secret)} okLabel="Configurado" koLabel="Falta" />
             <StatusRow label="API Key (saliente)" ok={Boolean(cfg?.tiene_api_key)} okLabel="Configurada" koLabel="Falta" />
-            <StatusRow label="API Key (entrante)" ok={Boolean(cfg?.tiene_incoming_secret)} okLabel="Configurada" koLabel="Falta" />
+            <StatusRow label="Firma webhooks (entrante)" ok={Boolean(cfg?.tiene_incoming_secret)} okLabel="Configurada" koLabel="Falta" />
+            <StatusRow label="API Key logiq360 (pull)" ok={Boolean(cfg?.tiene_logiq360_api_key)} okLabel="Configurada" koLabel="Falta" />
           </div>
           {cfg?.webhook_url && (
             <p className="text-xs text-muted-foreground mt-3 break-all">{cfg.webhook_url}</p>
@@ -327,7 +328,8 @@ function TabConfiguracion() {
           <div className="flex flex-col gap-2">
             <StatusRow label="Webhook secret" ok={Boolean(cfg?.tiene_webhook_secret)} okLabel="Configurado" koLabel="Falta — re-empareja" />
             <StatusRow label="API Key saliente" ok={Boolean(cfg?.tiene_api_key)} okLabel="Configurada" koLabel="Falta — re-empareja" />
-            <StatusRow label="API Key entrante" ok={Boolean(cfg?.tiene_incoming_secret)} okLabel="Configurada" koLabel="Falta — re-empareja" />
+            <StatusRow label="Firma webhooks (entrante)" ok={Boolean(cfg?.tiene_incoming_secret)} okLabel="Configurada" koLabel="Falta — re-empareja" />
+            <StatusRow label="API Key logiq360 (pull)" ok={Boolean(cfg?.tiene_logiq360_api_key)} okLabel="Configurada" koLabel="Falta — re-empareja" />
           </div>
         </div>
       )}

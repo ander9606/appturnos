@@ -54,6 +54,7 @@ router.put(
     body('webhook_secret').optional({ values: 'falsy' }).isString(),
     body('api_key').optional({ values: 'falsy' }).isString(),
     body('incoming_secret').optional({ values: 'falsy' }).isString(),
+    body('logiq360_api_key').optional({ values: 'falsy' }).isString(),
   ],
   validar,
   ctrl.actualizarConfig

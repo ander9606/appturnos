@@ -14,6 +14,7 @@ export interface ConfigIntegracion {
   tiene_webhook_secret: boolean;
   tiene_api_key: boolean;
   tiene_incoming_secret: boolean;
+  tiene_logiq360_api_key: boolean;
   configurado: boolean;
 }
 
