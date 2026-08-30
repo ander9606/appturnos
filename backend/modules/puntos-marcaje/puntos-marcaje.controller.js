@@ -7,10 +7,15 @@ async function listar(req, res) {
   res.json({ success: true, data, message: 'Puntos de marcaje' });
 }
 
+async function listarParaTurnos(req, res) {
+  const data = await PuntosMarcajeService.listarParaTurnos(req.empresa_id);
+  res.json({ success: true, data, message: 'Ubicaciones disponibles para turnos' });
+}
+
 async function crear(req, res) {
-  const { nombre, descripcion, latitud, longitud, radio_metros, tipo } = req.body;
+  const { nombre, descripcion, latitud, longitud, radio_metros, tipo, alcance } = req.body;
   const data = await PuntosMarcajeService.crear(req.empresa_id, {
-    nombre, descripcion, latitud, longitud, radio_metros, tipo,
+    nombre, descripcion, latitud, longitud, radio_metros, tipo, alcance,
   });
   res.status(201).json({ success: true, data, message: 'Punto de marcaje creado' });
 }
@@ -25,4 +30,4 @@ async function eliminar(req, res) {
   res.json({ success: true, data: null, message: 'Punto eliminado' });
 }
 
-module.exports = { listar, crear, actualizar, eliminar };
+module.exports = { listar, listarParaTurnos, crear, actualizar, eliminar };

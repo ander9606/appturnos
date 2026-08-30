@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Search, X, LocateFixed, CheckCircle2, Map } from 'lucide-react';
+import { Search, X, LocateFixed, CheckCircle2, Map, Library } from 'lucide-react';
 import { MapaSelector } from '@/shared/components/MapaSelector';
+import { usePuntosParaTurnos } from '@/modules/configuracion/hooks/useConfiguracion';
 
 // Mismo radio de referencia que usa mobile (lib/geo.ts → DEFAULT_GEOFENCE_RADIUS).
 const DEFAULT_GEOFENCE_RADIUS = 1000;
@@ -27,7 +28,10 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
   const [locLoading, setLocLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [mapaAbierto, setMapaAbierto] = useState(false);
+  const [bibliotecaAbierta, setBibliotecaAbierta] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { data: puntosData } = usePuntosParaTurnos();
+  const puntos = puntosData?.data ?? [];
 
   const buscar = useCallback(async (q: string) => {
     if (q.trim().length < 3) {
@@ -62,6 +66,11 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
     onChange(s.display_name, parseFloat(s.lat), parseFloat(s.lon));
     setSugerencias([]);
     setOpen(false);
+  };
+
+  const handleSelectPunto = (p: { nombre: string; latitud: number; longitud: number }) => {
+    onChange(p.nombre, p.latitud, p.longitud);
+    setBibliotecaAbierta(false);
   };
 
   const usarUbicacion = () => {
@@ -132,6 +141,15 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
+        {puntos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setBibliotecaAbierta(v => !v)}
+            className="flex items-center gap-1 text-xs text-info hover:text-primary-600 font-medium"
+          >
+            <Library size={13} /> De la biblioteca de ubicaciones
+          </button>
+        )}
         <button
           type="button"
           onClick={usarUbicacion}
@@ -154,6 +172,21 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
           </span>
         )}
       </div>
+
+      {bibliotecaAbierta && (
+        <div className="border border-border rounded-lg overflow-hidden">
+          {puntos.map(p => (
+            <button
+              type="button"
+              key={p.id}
+              onClick={() => handleSelectPunto(p)}
+              className="w-full text-left px-3 py-2 text-xs text-foreground hover:bg-muted border-b border-border last:border-0"
+            >
+              {p.nombre} <span className="text-muted-foreground">· radio {p.radio_metros} m</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {mapaAbierto && (
         <MapaSelector

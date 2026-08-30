@@ -14,7 +14,7 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP } from '@/shared/lib/format';
-import type { PuntoMarcaje, Cargo, Gestor, LinkPago } from '../types';
+import type { PuntoMarcaje, AlcancePunto, Cargo, Gestor, LinkPago } from '../types';
 
 type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores' | 'plan';
 
@@ -157,8 +157,8 @@ function EmpresaTab() {
 }
 
 /* ── Puntos de marcaje ── */
-type PuntoForm = { nombre: string; latitud: string; longitud: string; radio_metros: string };
-const emptyPunto: PuntoForm = { nombre: '', latitud: '', longitud: '', radio_metros: '100' };
+type PuntoForm = { nombre: string; latitud: string; longitud: string; radio_metros: string; alcance: AlcancePunto };
+const emptyPunto: PuntoForm = { nombre: '', latitud: '', longitud: '', radio_metros: '100', alcance: 'todos' };
 
 function PuntosTab() {
   const { data, isLoading, isError, error, refetch } = usePuntos();
@@ -174,12 +174,12 @@ function PuntosTab() {
   const openCreate = () => { setEditing(null); setForm(emptyPunto); setShowForm(true); };
   const openEdit = (p: PuntoMarcaje) => {
     setEditing(p);
-    setForm({ nombre: p.nombre, latitud: String(p.latitud), longitud: String(p.longitud), radio_metros: String(p.radio_metros) });
+    setForm({ nombre: p.nombre, latitud: String(p.latitud), longitud: String(p.longitud), radio_metros: String(p.radio_metros), alcance: p.alcance });
     setShowForm(true);
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { nombre: form.nombre, latitud: Number(form.latitud), longitud: Number(form.longitud), radio_metros: Number(form.radio_metros) };
+    const payload = { nombre: form.nombre, latitud: Number(form.latitud), longitud: Number(form.longitud), radio_metros: Number(form.radio_metros), alcance: form.alcance };
     if (editing) await update.mutateAsync({ id: editing.id, ...payload });
     else await create.mutateAsync(payload);
     setShowForm(false);
@@ -201,13 +201,14 @@ function PuntosTab() {
                 <th className="text-right px-4 py-3 font-medium">Latitud</th>
                 <th className="text-right px-4 py-3 font-medium">Longitud</th>
                 <th className="text-right px-4 py-3 font-medium">Radio (m)</th>
+                <th className="text-left px-4 py-3 font-medium">Disponible para</th>
                 <th className="text-left px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {puntos.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground/60 text-sm">Sin puntos de marcaje</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground/60 text-sm">Sin puntos de marcaje</td></tr>
               )}
               {puntos.map(p => (
                 <tr key={p.id} className="border-t border-border/60 hover:bg-muted">
@@ -215,6 +216,11 @@ function PuntosTab() {
                   <td className="px-4 py-3 text-right text-muted-foreground">{p.latitud}</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{p.longitud}</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{p.radio_metros}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.alcance === 'todos' ? 'bg-info-light text-info' : 'bg-muted text-muted-foreground'}`}>
+                      {p.alcance === 'todos' ? 'Todos + turnos' : 'Solo nómina'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${p.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                       {p.activo ? 'Activo' : 'Inactivo'}
@@ -261,6 +267,13 @@ function PuntosTab() {
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Radio (metros) *</label>
               <input required type="number" min="10" max="5000" value={form.radio_metros} onChange={e => setForm(f => ({ ...f, radio_metros: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Disponible para</label>
+              <select value={form.alcance} onChange={e => setForm(f => ({ ...f, alcance: e.target.value as AlcancePunto }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                <option value="todos">Todos los tipos de trabajadores (también al crear turnos)</option>
+                <option value="nomina">Solo nómina (marcación fija/zonal de trabajadores)</option>
+              </select>
             </div>
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>

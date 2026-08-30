@@ -22,6 +22,7 @@ const reglasBase = [
   body('longitud').isFloat({ min: -180, max: 180 }).withMessage('Longitud inválida'),
   body('radio_metros').optional().isInt({ min: 10, max: 5000 }),
   body('tipo').optional().isIn(['fijo', 'zonal']).withMessage('tipo debe ser fijo o zonal'),
+  body('alcance').optional().isIn(['todos', 'nomina']).withMessage('alcance debe ser todos o nomina'),
   body('activo').optional().isBoolean().withMessage('activo debe ser booleano'),
 ];
 
@@ -29,6 +30,9 @@ router.use(verificarToken);
 
 // GET /api/puntos-marcaje
 router.get('/', verificarRol(VER), ctrl.listar);
+
+// GET /api/puntos-marcaje/para-turnos — biblioteca de ubicaciones (alcance='todos') para crear turnos
+router.get('/para-turnos', verificarRol(VER), ctrl.listarParaTurnos);
 
 // POST /api/puntos-marcaje
 router.post('/', verificarRol(GESTIONAR), verificarSuscripcion, reglasBase, validar, ctrl.crear);
