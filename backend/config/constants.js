@@ -17,6 +17,17 @@ const ROLES = {
 
 const ROLES_VALIDOS = Object.values(ROLES);
 
+// Rol con el que se activa/resincroniza la cuenta de un trabajador según
+// trabajadores.tipo. 'ambos' usa el rol de Turnos por defecto (track
+// principal en campo). Única fuente de verdad — auth.service.js (activación)
+// y trabajadores.service.js (edición por el gestor) deben usar esta misma
+// tabla para que el rol de la cuenta nunca quede desincronizado del tipo.
+const ROL_POR_TIPO = {
+  nomina: ROLES.TRABAJADOR_NOMINA,
+  turnos: ROLES.TRABAJADOR_TURNOS,
+  ambos: ROLES.TRABAJADOR_TURNOS,
+};
+
 // Agrupaciones útiles para verificarRol
 const GRUPOS_ROLES = {
   ADMINS: [ROLES.SUPER_ADMIN, ROLES.ADMIN_EMPRESA],
@@ -143,6 +154,7 @@ const ESTADOS_TRABAJADOR_EMPRESA = {
 module.exports = {
   ROLES,
   ROLES_VALIDOS,
+  ROL_POR_TIPO,
   GRUPOS_ROLES,
   ESTADOS_OFERTA,
   MAX_OFERTAS_ACTIVAS_POR_EMPRESA,
