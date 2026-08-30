@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/features/auth/useAuthStore';
@@ -23,6 +24,7 @@ function TabIcon({ name, focused, color }: { name: IoniconsName; focused: boolea
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isWorker      = rol === 'trabajador_turnos';
   const isNomina      = rol === 'trabajador_nomina';
@@ -46,8 +48,12 @@ export default function TabsLayout() {
           backgroundColor: '#FFFFFF',
           borderTopColor: '#E2E8F0',
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          // Con edge-to-edge, el contenido dibuja detrás de la barra de navegación
+          // de Android — insets.bottom es 0 sin botones (ocupa toda la pantalla),
+          // y el alto de la barra de gestos o de los 3 botones cuando sí los hay,
+          // así el tab bar nunca queda tapado.
+          height: 60 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 4,
         },
         tabBarLabelStyle: {

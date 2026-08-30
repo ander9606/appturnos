@@ -4,6 +4,7 @@
  */
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -18,6 +19,7 @@ function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
 }
 
 export default function AdminLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -28,8 +30,12 @@ export default function AdminLayout() {
           backgroundColor: '#FFFFFF',
           borderTopColor: '#E2E8F0',
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          // Con edge-to-edge, el contenido dibuja detrás de la barra de navegación
+          // de Android — insets.bottom es 0 sin botones (ocupa toda la pantalla),
+          // y el alto de la barra de gestos o de los 3 botones cuando sí los hay,
+          // así el tab bar nunca queda tapado.
+          height: 60 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 4,
         },
         tabBarLabelStyle: {
