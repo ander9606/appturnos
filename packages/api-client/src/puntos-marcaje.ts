@@ -1,6 +1,7 @@
 import { api } from './client';
 
 export type TipoPunto = 'fijo' | 'zonal';
+export type AlcancePunto = 'todos' | 'nomina';
 
 export interface PuntoMarcaje {
   id: number;
@@ -11,6 +12,7 @@ export interface PuntoMarcaje {
   longitud: number;
   radio_metros: number;
   tipo: TipoPunto;
+  alcance: AlcancePunto;
   activo: number;
   created_at: string;
 }
@@ -22,6 +24,7 @@ export interface CrearPuntoMarcajePayload {
   longitud: number;
   radio_metros?: number;
   tipo?: TipoPunto;
+  alcance?: AlcancePunto;
 }
 
 export type ActualizarPuntoMarcajePayload = Partial<CrearPuntoMarcajePayload> & { activo?: boolean };

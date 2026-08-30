@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/axios';
-import type { Empresa, PuntoMarcaje, Cargo, Gestor, Suscripcion, LinkPago } from '../types';
+import type { Empresa, PuntoMarcaje, PuntoParaTurno, Cargo, Gestor, Suscripcion, LinkPago } from '../types';
 
 export const configuracionApi = {
   // Empresa
@@ -13,6 +13,7 @@ export const configuracionApi = {
 
   // Puntos de marcaje
   getPuntos: () => api.get<{ data: PuntoMarcaje[] }>('/puntos-marcaje').then(r => r.data),
+  getPuntosParaTurnos: () => api.get<{ data: PuntoParaTurno[] }>('/puntos-marcaje/para-turnos').then(r => r.data),
   createPunto: (data: Omit<PuntoMarcaje, 'id' | 'activo'>) =>
     api.post<{ data: PuntoMarcaje }>('/puntos-marcaje', data).then(r => r.data),
   updatePunto: (id: number, data: Partial<PuntoMarcaje>) =>

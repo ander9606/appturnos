@@ -8,6 +8,10 @@ const PuntosMarcajeService = {
     return PuntosMarcajeModel.listar(empresaId);
   },
 
+  async listarParaTurnos(empresaId) {
+    return PuntosMarcajeModel.listarParaTurnos(empresaId);
+  },
+
   async crear(empresaId, datos) {
     const id = await PuntosMarcajeModel.crear({ empresaId, ...datos });
     return PuntosMarcajeModel.obtenerPorId(empresaId, id);

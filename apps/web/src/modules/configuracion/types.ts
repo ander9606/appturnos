@@ -12,13 +12,25 @@ export interface Empresa {
   tipo_contrato: TipoContrato;
 }
 
+export type AlcancePunto = 'todos' | 'nomina';
+
 export interface PuntoMarcaje {
   id: number;
   nombre: string;
   latitud: number;
   longitud: number;
   radio_metros: number;
+  alcance: AlcancePunto;
   activo: number;
+}
+
+/** Ubicación de la biblioteca disponible para prellenar un turno (alcance='todos'). */
+export interface PuntoParaTurno {
+  id: number;
+  nombre: string;
+  latitud: number;
+  longitud: number;
+  radio_metros: number;
 }
 
 export interface Cargo {

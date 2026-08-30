@@ -7,10 +7,22 @@ const PuntosMarcajeModel = {
     const filtro = soloActivos ? 'AND activo = 1' : '';
     const [filas] = await pool.query(
       `SELECT id, empresa_id, nombre, descripcion, latitud, longitud,
-              radio_metros, tipo, activo, created_at
+              radio_metros, tipo, alcance, activo, created_at
        FROM puntos_marcaje
        WHERE empresa_id = ? ${filtro}
        ORDER BY tipo, nombre`,
+      [empresaId]
+    );
+    return filas;
+  },
+
+  /** Puntos disponibles como biblioteca de ubicaciones al crear un turno (alcance='todos'). */
+  async listarParaTurnos(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id, nombre, latitud, longitud, radio_metros
+       FROM puntos_marcaje
+       WHERE empresa_id = ? AND alcance = 'todos' AND activo = 1
+       ORDER BY nombre`,
       [empresaId]
     );
     return filas;
@@ -30,7 +42,7 @@ const PuntosMarcajeModel = {
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT id, empresa_id, nombre, descripcion, latitud, longitud,
-              radio_metros, tipo, activo, created_at
+              radio_metros, tipo, alcance, activo, created_at
        FROM puntos_marcaje
        WHERE id = ? AND empresa_id = ? LIMIT 1`,
       [id, empresaId]
@@ -38,12 +50,12 @@ const PuntosMarcajeModel = {
     return filas[0] || null;
   },
 
-  async crear({ empresaId, nombre, descripcion, latitud, longitud, radio_metros, tipo }) {
+  async crear({ empresaId, nombre, descripcion, latitud, longitud, radio_metros, tipo, alcance }) {
     const [res] = await pool.query(
       `INSERT INTO puntos_marcaje
-         (empresa_id, nombre, descripcion, latitud, longitud, radio_metros, tipo)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [empresaId, nombre, descripcion || null, latitud, longitud, radio_metros ?? 100, tipo ?? 'fijo']
+         (empresa_id, nombre, descripcion, latitud, longitud, radio_metros, tipo, alcance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [empresaId, nombre, descripcion || null, latitud, longitud, radio_metros ?? 100, tipo ?? 'fijo', alcance ?? 'todos']
     );
     return res.insertId;
   },
@@ -51,7 +63,7 @@ const PuntosMarcajeModel = {
   async actualizar(empresaId, id, cambios) {
     const sets = [];
     const params = [];
-    const campos = ['nombre', 'descripcion', 'latitud', 'longitud', 'radio_metros', 'tipo', 'activo'];
+    const campos = ['nombre', 'descripcion', 'latitud', 'longitud', 'radio_metros', 'tipo', 'alcance', 'activo'];
     for (const c of campos) {
       if (cambios[c] !== undefined) {
         sets.push(`${c} = ?`);
