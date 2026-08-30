@@ -292,7 +292,7 @@ const TrabajadoresModel = {
           empresaId,
           datos.nombre,
           datos.apellido,
-          datos.cedula ?? null,
+          datos.cedula || null,
           datos.tipo_documento ?? 'CC',
           datos.fecha_nacimiento ?? null,
           datos.sexo ?? null,
@@ -356,7 +356,8 @@ const TrabajadoresModel = {
     for (const campo of CAMPOS_EDITABLES) {
       if (datos[campo] !== undefined) {
         sets.push(`${campo} = ?`);
-        params.push(datos[campo]);
+        // '' se guarda como NULL — cedula '' no debe chocar con el UNIQUE(empresa_id, cedula).
+        params.push(campo === 'cedula' && datos[campo] === '' ? null : datos[campo]);
       }
     }
     if (sets.length === 0) return 0;

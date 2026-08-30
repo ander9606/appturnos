@@ -59,13 +59,27 @@ const TrabajadoresService = {
       }
     }
 
-    const id = await TrabajadoresModel.crear(empresaId, datos);
-    return TrabajadoresModel.obtenerPorId(empresaId, id);
+    try {
+      const id = await TrabajadoresModel.crear(empresaId, datos);
+      return TrabajadoresModel.obtenerPorId(empresaId, id);
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('Ya existe un trabajador con esa cédula en tu empresa', 409);
+      }
+      throw err;
+    }
   },
 
   async actualizar(empresaId, id, datos) {
     await this.obtener(empresaId, id); // 404 si no existe / no es de esta empresa
-    await TrabajadoresModel.actualizar(empresaId, id, datos);
+    try {
+      await TrabajadoresModel.actualizar(empresaId, id, datos);
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('Ya existe un trabajador con esa cédula en tu empresa', 409);
+      }
+      throw err;
+    }
     return TrabajadoresModel.obtenerPorId(empresaId, id);
   },
 
