@@ -19,6 +19,7 @@ import {
   fmtHora,
   calcularElapsedLabel,
   analizarDia,
+  horaEntradaMostrada,
   type EstadoHoy,
   type ResumenPeriodoNomina,
 } from '../nominaTrabajadorUtils';
@@ -127,7 +128,7 @@ export function PeriodoHeaderCard({
         <View className="flex-row items-center gap-4">
           <View className="gap-0.5">
             <Text className="text-white text-sm font-bold">
-              {fmtHora(registroHoy?.hora_entrada)}
+              {fmtHora(horaEntradaMostrada(registroHoy))}
             </Text>
             <Text className="text-white/60 text-[10px]">Entrada</Text>
           </View>
