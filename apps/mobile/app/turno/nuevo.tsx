@@ -14,7 +14,7 @@ import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
 import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
 import { useRoleGuard } from '@/components/RoleGuard';
-import { showToast } from '@/lib/toast';
+import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import type { WizardData } from '@/features/turnos/crear/types';
 
 const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar'];
@@ -65,7 +65,7 @@ export default function NuevoTurnoScreen() {
       const aviso = data.visibilidad === 'dirigida'
         ? `Se notificó a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''}.`
         : 'Los trabajadores con los cargos seleccionados recibirán una notificación.';
-      showToast(`¡"${payload.titulo}" publicado! ${aviso}`);
+      showAnuncioTurno(`¡"${payload.titulo}" publicado! ${aviso}`, 'publicado');
       if (oferta.advertencias && oferta.advertencias.length > 0) {
         Alert.alert('Puede que falte personal', oferta.advertencias.join('\n\n'));
       }
