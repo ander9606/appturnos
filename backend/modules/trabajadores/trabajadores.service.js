@@ -3,7 +3,7 @@
 const TrabajadoresModel = require('./trabajadores.model');
 const AppError = require('../../utils/AppError');
 const { pool } = require('../../config/database');
-const { PLANES } = require('../../config/constants');
+const { PLANES, ROLES, ROL_POR_TIPO } = require('../../config/constants');
 
 /**
  * Lógica de negocio de trabajadores. Recibe siempre el empresaId del
@@ -71,7 +71,7 @@ const TrabajadoresService = {
   },
 
   async actualizar(empresaId, id, datos) {
-    await this.obtener(empresaId, id); // 404 si no existe / no es de esta empresa
+    const actual = await this.obtener(empresaId, id); // 404 si no existe / no es de esta empresa
     try {
       await TrabajadoresModel.actualizar(empresaId, id, datos);
     } catch (err) {
@@ -80,6 +80,22 @@ const TrabajadoresService = {
       }
       throw err;
     }
+
+    // El rol de la cuenta (qué interfaz ve el trabajador: turnos o nómina) se
+    // fija una sola vez al activar la cuenta, a partir de trabajadores.tipo
+    // (ver activarCuenta en auth.service.js) — nunca se revisa después. Si el
+    // gestor cambia el tipo desde "Editar trabajador", hay que resincronizar
+    // el rol o la app le sigue mostrando la interfaz vieja aunque la ficha ya
+    // diga otra cosa. Solo toca cuentas que hoy son de trabajador (nunca un
+    // admin/gestor) y solo si el tipo realmente cambió.
+    if (datos.tipo !== undefined && datos.tipo !== actual.tipo && actual.usuario_id) {
+      const rolNuevo = ROL_POR_TIPO[datos.tipo] || ROLES.TRABAJADOR_TURNOS;
+      await pool.query(
+        'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
+        [rolNuevo, actual.usuario_id, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
+      );
+    }
+
     return TrabajadoresModel.obtenerPorId(empresaId, id);
   },
 
