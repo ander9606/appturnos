@@ -24,6 +24,7 @@ import { queryClient } from '@/lib/queryClient';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
+import { AnuncioTurno } from '@/components/ui/AnuncioTurno';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { destino as destinoNotificacion } from './notificaciones';
 
@@ -138,6 +139,7 @@ function RootLayout() {
       <ErrorBoundary>
         <StatusBanner />
         <Toast />
+        <AnuncioTurno />
         <ConfirmDialog />
         <AuthGuard>
           {/* Default: header visible, slide from right.

@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme }    from '@/lib/theme';
 import { confirm }     from '@/lib/confirmDialog';
 import { showToast }   from '@/lib/toast';
+import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
@@ -129,7 +130,10 @@ function PostulanteRow({
                 loading={cancelarM.isPending} disabled={isBusy}
                 onPress={async () => {
                   if (await confirm({ title: 'Cancelar turno', message: `¿Cancelar el turno de ${nombre}?`, cancelLabel: 'Volver', confirmLabel: 'Cancelar turno', destructive: true })) {
-                    cancelarM.mutate({ asignacionId: asignacion.id, ofertaId });
+                    cancelarM.mutate(
+                      { asignacionId: asignacion.id, ofertaId },
+                      { onSuccess: () => showAnuncioTurno(`Turno de ${nombre} cancelado.`, 'cancelado') }
+                    );
                   }
                 }} />
               {turnoIniciado && (
@@ -500,6 +504,7 @@ export default function OfertaDetailScreen() {
                 if (!ok) return;
                 try {
                   await cancelarOfertaM.mutateAsync(oferta.id);
+                  showAnuncioTurno(`"${oferta.titulo}" cancelado.`, 'cancelado');
                   router.back();
                 } catch (err) {
                   Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
