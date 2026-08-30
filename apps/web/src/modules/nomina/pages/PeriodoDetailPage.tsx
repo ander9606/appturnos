@@ -243,7 +243,7 @@ export function PeriodoDetailPage() {
                           {g.registros.map(r => (
                             <tr key={r.id} className="border-t border-border/60 hover:bg-muted">
                               <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{fmtDiaSemana(r.fecha)}</td>
-                              <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_entrada)}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_entrada_inicial ?? r.hora_entrada)}</td>
                               <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_salida)}</td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">
@@ -424,7 +424,7 @@ export function PeriodoDetailPage() {
                                 </div>
                                 {r.hora_entrada ? (
                                   <span className="text-xs text-muted-foreground text-right flex-shrink-0">
-                                    {fmtHora(r.hora_entrada)} – {fmtHora(r.hora_salida)}
+                                    {fmtHora(r.hora_entrada_inicial ?? r.hora_entrada)} – {fmtHora(r.hora_salida)}
                                     <br />
                                     {fmtHrs(r.horas_ordinarias)} h{Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas) > 0 && ` + ${fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra`}
                                   </span>

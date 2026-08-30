@@ -97,7 +97,7 @@ function DayRow({ isoDate, dayLabel, dayNum, monthLabel, isToday, registro, prim
               <View className="flex-row items-center gap-1.5">
                 <Text className="text-xs text-muted-foreground">Entrada</Text>
                 <Text className="text-sm font-semibold text-foreground">
-                  {fmtHora(registro?.hora_entrada)}
+                  {fmtHora(registro?.hora_entrada_inicial ?? registro?.hora_entrada)}
                 </Text>
               </View>
               <Text className="text-muted-foreground">→</Text>

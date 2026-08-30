@@ -278,6 +278,15 @@ export function fmtHora(t: string | null | undefined): string {
   return t.slice(0, 5);
 }
 
+/**
+ * Hora de entrada a mostrar en UI: la primera apertura del día
+ * (hora_entrada_inicial), no la sesión actual — que tras un reingreso
+ * aprobado sobreescribe hora_entrada con la nueva hora de entrada.
+ */
+export function horaEntradaMostrada(r: RegistroDiario | null | undefined): string | null {
+  return r?.hora_entrada_inicial ?? r?.hora_entrada ?? null;
+}
+
 export function fmtPeriodo(p: PeriodoNomina): string {
   const [, ms, ds] = p.fecha_inicio.split('-');
   const [, me, de] = p.fecha_fin.split('-');

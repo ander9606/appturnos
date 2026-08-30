@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import type { PuntoMarcaje, DescansoCompensatorio } from '@api-client';
 import type { RegistroDiario } from '@api-client';
 import { CompensatorioBanner } from '../../compensatorios/CompensatorioBanner';
-import { fmtHora, calcularElapsedLabel, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
+import { fmtHora, calcularElapsedLabel, horaEntradaMostrada, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
 
 interface Props {
   cargo:          string | null;
@@ -132,7 +132,7 @@ export function IngresoHoyTab({
             <View className="gap-0.5">
               <Text className="text-xs text-muted-foreground">Entrada</Text>
               <Text className="text-base font-bold text-foreground">
-                {fmtHora(registroHoy.hora_entrada)}
+                {fmtHora(horaEntradaMostrada(registroHoy))}
               </Text>
             </View>
             {registroHoy.hora_salida ? (

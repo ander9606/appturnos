@@ -23,6 +23,8 @@ export interface Registro {
   periodo_id: number;
   fecha: string;
   hora_entrada: string | null;
+  /** Primer ingreso del día — no cambia si hubo un reingreso (hora_entrada sí cambia). */
+  hora_entrada_inicial: string | null;
   hora_salida: string | null;
   /** Ubicación donde se marcó — solo presente si el trabajador tiene tipo_marcacion fijo/zonal. */
   latitud_entrada: number | null;

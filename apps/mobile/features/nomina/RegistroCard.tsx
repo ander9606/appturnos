@@ -16,6 +16,7 @@ import {
   analizarDia,
   fmtHora,
   fmtFechaCorta,
+  horaEntradaMostrada,
   TIPO_DIA_LABEL,
 } from './trabajador/nominaTrabajadorUtils';
 import { formatCOP } from '@/lib/formatters';
@@ -127,7 +128,7 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
             <>
               <Text className="text-sm font-medium text-foreground">
                 {registro.hora_entrada
-                  ? `${fmtHora(registro.hora_entrada)} → ${fmtHora(registro.hora_salida)}`
+                  ? `${fmtHora(horaEntradaMostrada(registro))} → ${fmtHora(registro.hora_salida)}`
                   : 'Sin registro'}
               </Text>
               <EstadoLabel />
