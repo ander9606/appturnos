@@ -27,7 +27,9 @@ export default function NuevoTurnoScreen() {
 
   const crearMutation = useCrearOferta();
 
-  useConfirmDiscard(!crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL));
+  const allowNextLeave = useConfirmDiscard(
+    !crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL)
+  );
 
   const patch = useCallback((p: Partial<WizardData>) => {
     setData((prev) => ({ ...prev, ...p }));
@@ -67,11 +69,17 @@ export default function NuevoTurnoScreen() {
       if (oferta.advertencias && oferta.advertencias.length > 0) {
         Alert.alert('Puede que falte personal', oferta.advertencias.join('\n\n'));
       }
-      router.back();
+      // No navega sola: el botón pasa a "Cerrar" para que quede claro que
+      // ya se publicó, en vez de cerrar la pantalla de golpe tras la espera.
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo publicar el turno.';
       Alert.alert('Error', msg);
     }
+  };
+
+  const handleClose = () => {
+    allowNextLeave();
+    router.back();
   };
 
   return (
@@ -108,6 +116,8 @@ export default function NuevoTurnoScreen() {
               onBack={() => setStep(2)}
               onPublish={handlePublish}
               isPublishing={crearMutation.isPending}
+              isPublished={crearMutation.isSuccess}
+              onClose={handleClose}
             />
           )}
         </KeyboardAvoidingView>
