@@ -2,7 +2,7 @@
 
 const ContratosModel = require('./contratos.model');
 const IntegracionService = require('../integracion/integracion.service');
-const TrabajadoresModel = require('../trabajadores/trabajadores.model');
+const TrabajadoresService = require('../trabajadores/trabajadores.service');
 const AppError = require('../../utils/AppError');
 const { ROLES } = require('../../config/constants');
 
@@ -17,8 +17,7 @@ function verificarAcceso(contrato, usuario) {
 
 const ContratosService = {
   async listarMisContratos(empresaId, usuario) {
-    const trabajadorId = await TrabajadoresModel.resolverIdPorUsuario(empresaId, usuario.sub);
-    if (!trabajadorId) throw new AppError('Trabajador no encontrado', 404);
+    const trabajadorId = await TrabajadoresService.resolverIdPorUsuario(empresaId, usuario.sub);
     return ContratosModel.listarPorTrabajador(empresaId, trabajadorId);
   },
 
