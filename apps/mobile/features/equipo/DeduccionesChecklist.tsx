@@ -7,15 +7,22 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { useWatch, type Control } from 'react-hook-form';
 import { empresasApi, calcularDeducciones, HORAS_MES_NOMINA } from '@api-client';
 import { formatCOP } from '@/lib/formatters';
+import type { TrabajadorFormValues } from './schemas';
 
 interface Props {
-  tarifaHora?: number | null;
-  salarioBase?: number | null;
+  control: Control<TrabajadorFormValues>;
 }
 
-export function DeduccionesChecklist({ tarifaHora, salarioBase }: Props) {
+export function DeduccionesChecklist({ control }: Props) {
+  // useWatch aislado acá adentro (en vez de en TrabajadorForm) para que cada
+  // tecla en tarifa_hora/salario_base solo re-renderice este componente chico,
+  // no el formulario completo de ~20 campos.
+  const tarifaHora = useWatch({ control, name: 'tarifa_hora' });
+  const salarioBase = useWatch({ control, name: 'salario_base' });
+
   // Comparte cache con la pantalla "Mi empresa" (mismo queryKey) — no dispara un fetch extra si ya está cargada.
   const { data: empresa } = useQuery({
     queryKey: ['mi-empresa'],

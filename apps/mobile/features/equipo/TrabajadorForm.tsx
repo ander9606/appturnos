@@ -107,8 +107,6 @@ export function TrabajadorForm({
   }, [isDirty, onDirtyChange]);
 
   const tipo = useWatch({ control, name: 'tipo' });
-  const tarifaHora = useWatch({ control, name: 'tarifa_hora' });
-  const salarioBase = useWatch({ control, name: 'salario_base' });
   const muestraSalario = tipo !== 'turnos'; // turnos cobra por oferta_puestos.tarifa_dia, no por salario fijo
   // turnos ya tiene "Cargos certificados" (trabajador_cargos) en la ficha del
   // trabajador — mostrar acá también este picker era redundante.
@@ -552,7 +550,7 @@ export function TrabajadorForm({
               </Text>
             </View>
 
-            <DeduccionesChecklist tarifaHora={tarifaHora} salarioBase={salarioBase} />
+            <DeduccionesChecklist control={control} />
 
             {/* Seguridad social y datos bancarios */}
             <View className="mb-4 mt-1">
