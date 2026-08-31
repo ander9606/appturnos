@@ -229,6 +229,19 @@ const RegistrosService = {
       tipo_dia: datos.tipo_dia !== undefined ? datos.tipo_dia : registro.tipo_dia,
       aprobado_por: usuario.sub,
     });
+
+    // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que crear()/
+    // marcarSalida(). Cubre el caso de completar acá (corrección manual) una salida que
+    // el trabajador olvidó marcar: crearSiCorresponde() es idempotente (INSERT IGNORE
+    // sobre origen_registro_id), así que no duplica el compensatorio si ya existía.
+    await CompensatoriosService.crearSiCorresponde(empresaId, {
+      trabajadorId: registro.trabajador_id,
+      periodoId: registro.periodo_id,
+      fecha: registro.fecha,
+      esFestivo: Boolean(horas.es_festivo),
+      registroId: id,
+    });
+
     return RegistrosModel.obtenerPorId(empresaId, id);
   },
 
