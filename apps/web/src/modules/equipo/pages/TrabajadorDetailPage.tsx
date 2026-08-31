@@ -73,27 +73,34 @@ export function TrabajadorDetailPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await actualizar.mutateAsync({
-      id: trabajadorId,
-      nombre: form.nombre,
-      apellido: form.apellido,
-      cedula: form.cedula || undefined,
-      tipo_documento: form.tipo_documento,
-      email: form.email || undefined,
-      telefono: form.telefono || undefined,
-      sexo: form.sexo || undefined,
-      fecha_nacimiento: form.fecha_nacimiento || undefined,
-      tipo: form.tipo,
-      cargo: form.cargo || undefined,
-      tarifa_hora: form.tarifa_hora ? Number(form.tarifa_hora) : undefined,
-      salario_base: form.salario_base ? Number(form.salario_base) : undefined,
-      hora_entrada_esperada: form.tipo !== 'turnos' ? (form.hora_entrada_esperada || undefined) : undefined,
-      eps: form.eps || undefined,
-      afp: form.afp || undefined,
-      banco: form.banco || undefined,
-      tipo_cuenta: form.tipo_cuenta || undefined,
-      numero_cuenta: form.numero_cuenta || undefined,
-    });
+    try {
+      await actualizar.mutateAsync({
+        id: trabajadorId,
+        nombre: form.nombre,
+        apellido: form.apellido,
+        cedula: form.cedula || undefined,
+        tipo_documento: form.tipo_documento,
+        email: form.email || undefined,
+        telefono: form.telefono || undefined,
+        sexo: form.sexo || undefined,
+        fecha_nacimiento: form.fecha_nacimiento || undefined,
+        tipo: form.tipo,
+        cargo: form.cargo || undefined,
+        tarifa_hora: form.tarifa_hora ? Number(form.tarifa_hora) : undefined,
+        salario_base: form.salario_base ? Number(form.salario_base) : undefined,
+        hora_entrada_esperada: form.tipo !== 'turnos' ? (form.hora_entrada_esperada || undefined) : undefined,
+        eps: form.eps || undefined,
+        afp: form.afp || undefined,
+        banco: form.banco || undefined,
+        tipo_cuenta: form.tipo_cuenta || undefined,
+        numero_cuenta: form.numero_cuenta || undefined,
+      });
+    } catch {
+      // El backend rechaza el paso directo turnos/ambos → nómina (ver toast
+      // de error); la ficha en servidor no cambió, así que revertimos el
+      // <select> para no dejarlo mostrando un tipo que no se guardó.
+      if (trabajador) setForm(fromTrabajador(trabajador));
+    }
   };
 
   const inp = (key: keyof FormState) => ({
