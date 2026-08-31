@@ -29,9 +29,22 @@ export interface CrearPuntoMarcajePayload {
 
 export type ActualizarPuntoMarcajePayload = Partial<CrearPuntoMarcajePayload> & { activo?: boolean };
 
+/** Ubicación de la biblioteca disponible para prellenar un turno (alcance='todos'). */
+export interface PuntoParaTurno {
+  id: number;
+  nombre: string;
+  latitud: number;
+  longitud: number;
+  radio_metros: number;
+}
+
 export const puntosMarcajeApi = {
   listar(): Promise<PuntoMarcaje[]> {
     return api.get<PuntoMarcaje[]>('/api/puntos-marcaje');
+  },
+
+  paraTurnos(): Promise<PuntoParaTurno[]> {
+    return api.get<PuntoParaTurno[]>('/api/puntos-marcaje/para-turnos');
   },
 
   crear(payload: CrearPuntoMarcajePayload): Promise<PuntoMarcaje> {

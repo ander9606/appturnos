@@ -4,6 +4,7 @@ import type { CrearPuntoMarcajePayload, ActualizarPuntoMarcajePayload } from '@a
 
 export const PM_KEYS = {
   lista: ['puntos-marcaje'] as const,
+  paraTurnos: ['puntos-marcaje', 'para-turnos'] as const,
 };
 
 export function usePuntosMarcaje(enabled = true) {
@@ -12,6 +13,15 @@ export function usePuntosMarcaje(enabled = true) {
     queryFn:  () => puntosMarcajeApi.listar(),
     staleTime: 5 * 60_000,
     enabled,
+  });
+}
+
+/** Biblioteca de ubicaciones (alcance='todos') para prellenar el lugar de un turno. */
+export function usePuntosParaTurnos() {
+  return useQuery({
+    queryKey: PM_KEYS.paraTurnos,
+    queryFn:  () => puntosMarcajeApi.paraTurnos(),
+    staleTime: 5 * 60_000,
   });
 }
 
