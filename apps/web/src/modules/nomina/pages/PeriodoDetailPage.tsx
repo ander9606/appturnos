@@ -212,6 +212,8 @@ export function PeriodoDetailPage() {
                 const abierto = expandidos.has(g.trabajadorId) || gruposPorTrabajador.length === 1;
                 const totalOrd = g.registros.reduce((s, r) => s + Number(r.horas_ordinarias), 0);
                 const totalExtra = g.registros.reduce((s, r) => s + Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas), 0);
+                const totalNoct = g.registros.reduce((s, r) => s + Number(r.horas_nocturnas), 0);
+                const totalFestivo = g.registros.reduce((s, r) => s + Number(r.horas_festivo), 0);
                 return (
                   <div key={g.trabajadorId} className="bg-card border border-border rounded-xl overflow-hidden">
                     <button
@@ -221,11 +223,16 @@ export function PeriodoDetailPage() {
                       <span className="font-medium text-foreground">{g.nombre} {g.apellido}</span>
                       <span className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span>{g.registros.length} día{g.registros.length !== 1 ? 's' : ''}</span>
-                        <span>{fmtHrs(totalOrd)} hrs ord · {fmtHrs(totalExtra)} hrs extra</span>
+                        <span>
+                          {fmtHrs(totalOrd)} hrs ord · {fmtHrs(totalExtra)} hrs extra
+                          {totalNoct > 0 && ` · ${fmtHrs(totalNoct)} hrs noct.`}
+                          {totalFestivo > 0 && ` · ${fmtHrs(totalFestivo)} hrs festivo`}
+                        </span>
                         <ChevronDown size={16} className={`transition-transform ${abierto ? 'rotate-180' : ''}`} />
                       </span>
                     </button>
                     {abierto && (
+                      <div className="overflow-x-auto">
                       <table className="w-full text-sm border-t border-border">
                         <thead>
                           <tr className="bg-muted text-muted-foreground text-xs uppercase">
@@ -233,7 +240,9 @@ export function PeriodoDetailPage() {
                             <th className="text-left px-3 py-2.5 font-medium">Entrada</th>
                             <th className="text-left px-3 py-2.5 font-medium">Salida</th>
                             <th className="text-right px-3 py-2.5 font-medium">Hrs Ord</th>
+                            <th className="text-right px-3 py-2.5 font-medium">Hrs Noct</th>
                             <th className="text-right px-3 py-2.5 font-medium">Hrs Extra</th>
+                            <th className="text-right px-3 py-2.5 font-medium">Hrs Festivo</th>
                             <th className="text-left px-3 py-2.5 font-medium">Tipo día</th>
                             <th className="text-left px-3 py-2.5 font-medium">Novedad</th>
                             <th className="px-3 py-2.5" />
@@ -246,8 +255,14 @@ export function PeriodoDetailPage() {
                               <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_entrada_inicial ?? r.hora_entrada)}</td>
                               <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_salida)}</td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
+                              <td className="px-3 py-2.5 text-right text-info">
+                                {Number(r.horas_nocturnas) > 0 ? fmtHrs(r.horas_nocturnas) : ''}
+                              </td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">
                                 {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}
+                              </td>
+                              <td className="px-3 py-2.5 text-right text-danger">
+                                {Number(r.horas_festivo) > 0 ? fmtHrs(r.horas_festivo) : ''}
                               </td>
                               <td className="px-3 py-2.5 text-muted-foreground">{TIPO_DIA_LABELS[r.tipo_dia]}</td>
                               <td className="px-3 py-2.5 text-muted-foreground max-w-32 truncate">{r.novedad ?? ''}</td>
@@ -263,6 +278,7 @@ export function PeriodoDetailPage() {
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     )}
                   </div>
                 );
@@ -348,7 +364,9 @@ export function PeriodoDetailPage() {
                           {/* Recibo — de horas a neto, un renglón por concepto */}
                           <div className="px-4 py-3 flex flex-col gap-1.5 text-sm">
                             <Renglon label="Horas ordinarias" valor={`${fmtHrs(l.horas_ordinarias)} h`} />
+                            {Number(l.horas_nocturnas) > 0 && <Renglon label="Horas nocturnas (+35%)" valor={`${fmtHrs(l.horas_nocturnas)} h`} />}
                             {horasExtra > 0 && <Renglon label="Horas extra" valor={`${fmtHrs(horasExtra)} h`} />}
+                            {Number(l.horas_festivo) > 0 && <Renglon label="Horas festivo/dominical" valor={`${fmtHrs(l.horas_festivo)} h`} />}
                             <Renglon label="Valor hora" valor={fmtCOP(l.valor_hora)} />
                             <div className="border-t border-border my-1" />
                             <Renglon label="Total bruto" valor={fmtCOP(l.total)} fuerte />
@@ -426,7 +444,10 @@ export function PeriodoDetailPage() {
                                   <span className="text-xs text-muted-foreground text-right flex-shrink-0">
                                     {fmtHora(r.hora_entrada_inicial ?? r.hora_entrada)} – {fmtHora(r.hora_salida)}
                                     <br />
-                                    {fmtHrs(r.horas_ordinarias)} h{Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas) > 0 && ` + ${fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra`}
+                                    {fmtHrs(r.horas_ordinarias)} h
+                                    {Number(r.horas_nocturnas) > 0 && ` + ${fmtHrs(r.horas_nocturnas)} h noct.`}
+                                    {Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas) > 0 && ` + ${fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra`}
+                                    {Number(r.horas_festivo) > 0 && ` + ${fmtHrs(r.horas_festivo)} h festivo`}
                                   </span>
                                 ) : (
                                   <span className="text-xs text-muted-foreground/60 flex-shrink-0">Sin marcaje</span>
