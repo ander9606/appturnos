@@ -32,6 +32,7 @@ import type { Vinculo } from '@api-client';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { confirm } from '@/lib/confirmDialog';
 import { nivelRanking, rankingLabel, rankingColor, rankingDescription } from '@/features/turnos/rankingUtils';
+import { CambioRow, CAMBIOS_NOMINA, formatCambiosNomina } from '@/features/empresas/CambiosNomina';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -131,36 +132,6 @@ function SolicitudCard({
           <Text className="text-xs font-semibold text-muted-foreground">Cancelar</Text>
         </TouchableOpacity>
       </View>
-    </View>
-  );
-}
-
-/** Lo que cambia al aceptar una invitación a nómina — misma lista que usa el
- * diálogo de confirmación (handleAceptar), pero como filas con ícono acá
- * donde el trabajador la ve por primera vez, antes de decidir. */
-const CAMBIOS_NOMINA: { tipo: 'pierde' | 'gana'; texto: string }[] = [
-  { tipo: 'pierde', texto: 'Ya no recibe ofertas de turnos de otras empresas — sus demás vínculos se archivan.' },
-  { tipo: 'gana', texto: 'Salario fijo en vez de pago por turno.' },
-  { tipo: 'gana', texto: 'Horas extra y recargos (nocturno, dominical, festivo) calculados automáticamente.' },
-  { tipo: 'gana', texto: 'Aportes de ley a salud y pensión ya descontados; ARL y caja de compensación los paga la empresa.' },
-];
-
-/** Misma lista de CAMBIOS_NOMINA como texto con viñetas, para el diálogo de confirmación (solo texto plano). */
-function formatCambiosNomina() {
-  return CAMBIOS_NOMINA.map((c) => `${c.tipo === 'gana' ? '✓' : '✗'} ${c.texto}`).join('\n');
-}
-
-function CambioRow({ tipo, texto }: { tipo: 'pierde' | 'gana'; texto: string }) {
-  const gana = tipo === 'gana';
-  return (
-    <View className="flex-row items-start gap-2">
-      <Ionicons
-        name={gana ? 'checkmark-circle' : 'close-circle'}
-        size={15}
-        color={gana ? '#059669' : '#DC2626'}
-        style={{ marginTop: 1 }}
-      />
-      <Text className="text-xs text-foreground flex-1">{texto}</Text>
     </View>
   );
 }

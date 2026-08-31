@@ -25,18 +25,33 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
 import { AnuncioTurno } from '@/components/ui/AnuncioTurno';
-import { AvisoEmpresa } from '@/components/ui/AvisoEmpresa';
+import { InvitacionFlotanteCard } from '@/components/ui/InvitacionFlotanteCard';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { showAvisoEmpresa } from '@/lib/avisoEmpresa';
+import { showInvitacionFlotante } from '@/lib/invitacionFlotante';
+import { trabajadorEmpresaApi } from '@api-client';
 import { destino as destinoNotificacion } from './notificaciones';
 
-// Tipos de notificación que requieren una decisión del trabajador (aceptar/
-// rechazar en "Mis empresas") — si llegan mientras la app está abierta, se
-// avisan con AvisoEmpresa (accionable) en vez de solo el banner nativo de push.
-const MENSAJE_AVISO_EMPRESA: Record<string, string> = {
-  invitacion_empresa_nomina: 'Una empresa quiere pasarte a su nómina. Toca para ver los detalles.',
-  invitacion_empresa: 'Tienes una nueva invitación de empresa. Toca para verla.',
-};
+const TIPOS_INVITACION_EMPRESA = new Set(['invitacion_empresa_nomina', 'invitacion_empresa']);
+
+/**
+ * Busca una invitación pendiente y, si la encuentra, la muestra en la tarjeta
+ * flotante (InvitacionFlotanteCard) — el push solo trae empresa_id/tipo, no
+ * los datos completos (empresa_nombre, tipo_ofrecido) que la tarjeta necesita.
+ * `empresaId` filtra a la invitación de un push puntual; sin él, se usa para
+ * el chequeo al iniciar sesión (por si llegó una invitación con la app cerrada).
+ */
+async function buscarYMostrarInvitacionPendiente(empresaId?: number) {
+  try {
+    const { invitaciones } = await trabajadorEmpresaApi.misEmpresas();
+    const vinculo = empresaId
+      ? invitaciones.find((v) => v.empresa_id === empresaId)
+      : invitaciones.find((v) => v.tipo_ofrecido === 'nomina') ?? invitaciones[0];
+    if (vinculo) showInvitacionFlotante(vinculo);
+  } catch {
+    // Best-effort: si falla, el trabajador igual la ve en la campana de
+    // notificaciones o en "Mis empresas" — no es una falla crítica de flujo.
+  }
+}
 
 // ponytail: expo-router activa keep-awake internamente en dev; falla en Android emulator — ruido inofensivo
 LogBox.ignoreLogs(['Unable to activate keep awake']);
@@ -74,6 +89,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [status]);
 
+  // Si ya había una invitación esperando desde antes de abrir la app (llegó
+  // con la app cerrada, o el permiso de push estaba denegado), la mostramos
+  // igual al iniciar sesión — una sola vez por sesión autenticada.
+  useEffect(() => {
+    if (status === 'authenticated') {
+      buscarYMostrarInvitacionPendiente();
+    }
+  }, [status]);
+
   // Navigate to the relevant screen when the user taps a push notification
   useEffect(() => {
     // rootNavigationState.key solo existe una vez que el Stack raíz terminó de montar;
@@ -90,16 +114,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, [status, rootNavigationState?.key]);
 
-  // Aviso accionable cuando llega una invitación de empresa con la app
-  // abierta (setNotificationHandler ya muestra el banner nativo, pero ese no
-  // se puede tocar para navegar sin salir primero a la bandeja del sistema).
+  // Tarjeta flotante invasiva cuando llega una invitación de empresa con la
+  // app abierta (setNotificationHandler ya muestra el banner nativo, pero
+  // ese solo abre la bandeja del sistema — no deja aceptar/rechazar ahí mismo).
   useEffect(() => {
     if (status !== 'authenticated') return;
     const sub = Notifications.addNotificationReceivedListener((notification: any) => {
       const data = (notification.request.content.data ?? {}) as Record<string, unknown>;
       const tipo = typeof data.tipo === 'string' ? data.tipo : '';
-      const mensaje = MENSAJE_AVISO_EMPRESA[tipo];
-      if (mensaje) showAvisoEmpresa(mensaje);
+      if (!TIPOS_INVITACION_EMPRESA.has(tipo)) return;
+      const empresaId = typeof data.empresa_id === 'number' ? data.empresa_id : undefined;
+      buscarYMostrarInvitacionPendiente(empresaId);
     });
     return () => sub.remove();
   }, [status]);
@@ -164,7 +189,7 @@ function RootLayout() {
         <StatusBanner />
         <Toast />
         <AnuncioTurno />
-        <AvisoEmpresa />
+        <InvitacionFlotanteCard />
         <ConfirmDialog />
         <AuthGuard>
           {/* Default: header visible, slide from right.
