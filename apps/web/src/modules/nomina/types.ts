@@ -76,6 +76,19 @@ export interface LiquidacionLinea {
   neto: number;
 }
 
+export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
+
+export interface DescansoCompensatorio {
+  id: number;
+  trabajador_id: number;
+  periodo_id: number;
+  origen_fecha: string;
+  estado: EstadoCompensatorio;
+  fecha_asignada: string | null;
+  trabajador_nombre: string;
+  trabajador_apellido: string;
+}
+
 export type TipoContrato = 'laboral' | 'prestacion_servicios';
 
 export type TipoDescuento = 'prestamo' | 'inasistencia' | 'dano_equipo' | 'anticipo' | 'otro';

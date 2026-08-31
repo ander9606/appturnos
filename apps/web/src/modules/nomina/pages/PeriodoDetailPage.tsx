@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Plus, Pencil, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Pencil, CalendarClock, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
   useCorregirRegistro, useCrearRegistro,
   useDescuentosPeriodo, useCrearDescuento, useEliminarDescuento,
+  useCompensatorios, useReasignarCompensatorio,
 } from '../hooks/useNomina';
-import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, TipoDescuento, DescuentoNomina } from '../types';
+import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, TipoDescuento, DescuentoNomina, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
@@ -58,6 +59,7 @@ export function PeriodoDetailPage() {
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
   const [expandidosLiq, setExpandidosLiq] = useState<Set<number>>(new Set());
   const [descuentoTrabajador, setDescuentoTrabajador] = useState<{ id: number; nombre: string } | null>(null);
+  const [reasignando, setReasignando] = useState<DescansoCompensatorio | null>(null);
 
   const { data: periodosData, isLoading: loadingPeriodos, isError: errorPeriodos, error: errPeriodos, refetch: refetchPeriodos } = usePeriodos();
   const periodo = (periodosData?.data?.data ?? []).find((p: { id: number }) => p.id === periodoId);
@@ -67,6 +69,16 @@ export function PeriodoDetailPage() {
 
   const { data: registrosData, isLoading: loadingReg, isError: errorReg, error: errReg, refetch: refetchReg } = useRegistros({ periodo_id: periodoId });
   const registros: Registro[] = registrosData?.data?.data ?? [];
+
+  const { data: compensatoriosData } = useCompensatorios();
+  const compensatorioPorDia = new Map<string, DescansoCompensatorio>();
+  for (const c of (compensatoriosData?.data ?? []) as DescansoCompensatorio[]) {
+    if (c.fecha_asignada) compensatorioPorDia.set(`${c.trabajador_id}|${c.fecha_asignada}`, c);
+  }
+  /** El registro del día 'compensatorio' no guarda el id del descanso — se cruza por trabajador_id + fecha, mismo criterio que usa el backend en compensatorios.service.js. */
+  function compensatorioDe(r: Registro): DescansoCompensatorio | undefined {
+    return r.tipo_dia === 'compensatorio' ? compensatorioPorDia.get(`${r.trabajador_id}|${r.fecha}`) : undefined;
+  }
 
   const { data: liqData, isLoading: loadingLiq, isError: errorLiq, error: errLiq, refetch: refetchLiq } = useLiquidacion(
     tab === 'liquidacion' ? periodoId : null
@@ -267,12 +279,23 @@ export function PeriodoDetailPage() {
                               <td className="px-3 py-2.5 text-muted-foreground">{TIPO_DIA_LABELS[r.tipo_dia]}</td>
                               <td className="px-3 py-2.5 text-muted-foreground max-w-32 truncate">{r.novedad ?? ''}</td>
                               <td className="px-3 py-2.5">
-                                <button
-                                  onClick={() => setCorrigiendoId(r.id)}
-                                  className="text-muted-foreground/60 hover:text-success transition-colors"
-                                >
-                                  <Pencil size={14} />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => setCorrigiendoId(r.id)}
+                                    className="text-muted-foreground/60 hover:text-success transition-colors"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  {compensatorioDe(r) && (
+                                    <button
+                                      onClick={() => setReasignando(compensatorioDe(r)!)}
+                                      className="text-muted-foreground/60 hover:text-info transition-colors"
+                                      title="Reasignar descanso compensatorio"
+                                    >
+                                      <CalendarClock size={14} />
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -452,13 +475,25 @@ export function PeriodoDetailPage() {
                                 ) : (
                                   <span className="text-xs text-muted-foreground/60 flex-shrink-0">Sin marcaje</span>
                                 )}
-                                <button
-                                  onClick={() => setCorrigiendoId(r.id)}
-                                  className="text-muted-foreground/60 hover:text-success transition-colors flex-shrink-0"
-                                  aria-label="Corregir registro"
-                                >
-                                  <Pencil size={14} />
-                                </button>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <button
+                                    onClick={() => setCorrigiendoId(r.id)}
+                                    className="text-muted-foreground/60 hover:text-success transition-colors"
+                                    aria-label="Corregir registro"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  {compensatorioDe(r) && (
+                                    <button
+                                      onClick={() => setReasignando(compensatorioDe(r)!)}
+                                      className="text-muted-foreground/60 hover:text-info transition-colors"
+                                      aria-label="Reasignar descanso compensatorio"
+                                      title="Reasignar descanso compensatorio"
+                                    >
+                                      <CalendarClock size={14} />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             ))
                           )}
@@ -477,6 +512,13 @@ export function PeriodoDetailPage() {
         <CorregirModal
           registro={corrigiendo}
           onClose={() => setCorrigiendoId(null)}
+        />
+      )}
+
+      {reasignando && (
+        <ReasignarCompensatorioModal
+          compensatorio={reasignando}
+          onClose={() => setReasignando(null)}
         />
       )}
 
@@ -596,6 +638,68 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
           </button>
           <button type="submit" disabled={corregir.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
             {corregir.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// Plazo legal (Art. 179 CST) para tomar el descanso — debe calzar con
+// COMPENSATORIO_PLAZO_DIAS en backend/config/constants.js.
+// ponytail: valor duplicado, no se espera que cambie — upgrade path: exponerlo en /api/nomina/me o config pública
+const COMPENSATORIO_PLAZO_DIAS = 28;
+
+function sumarDiasISO(fechaISO: string, dias: number): string {
+  const d = new Date(`${fechaISO}T12:00:00`);
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+function ReasignarCompensatorioModal({ compensatorio, onClose }: { compensatorio: DescansoCompensatorio; onClose: () => void }) {
+  const reasignar = useReasignarCompensatorio();
+  const min = sumarDiasISO(compensatorio.origen_fecha, 1);
+  const max = sumarDiasISO(compensatorio.origen_fecha, COMPENSATORIO_PLAZO_DIAS);
+  const [fecha, setFecha] = useState(compensatorio.fecha_asignada ?? min);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (fecha === compensatorio.fecha_asignada) {
+      toast.error('Esa ya es la fecha asignada actual');
+      return;
+    }
+    await reasignar.mutateAsync({ id: compensatorio.id, fecha });
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Reasignar descanso compensatorio</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {compensatorio.trabajador_nombre} {compensatorio.trabajador_apellido} · por trabajo el {fmtDiaSemana(compensatorio.origen_fecha)}
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Nueva fecha *</label>
+          <input
+            required
+            type="date"
+            min={min}
+            max={max}
+            value={fecha}
+            onChange={e => setFecha(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+          />
+          <p className="text-xs text-muted-foreground mt-1.5">
+            Plazo legal: hasta el {fmtDiaSemana(max)}
+          </p>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={reasignar.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {reasignar.isPending ? 'Guardando...' : 'Reasignar'}
           </button>
         </div>
       </form>

@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/axios';
-import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento, EstadoDescuento } from '../types';
+import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento, EstadoDescuento, EstadoCompensatorio } from '../types';
 
 export const nominaApi = {
   listarPeriodos: (params?: { estado?: EstadoPeriodo; fecha_desde?: string; fecha_hasta?: string; page?: number; limit?: number; conTotales?: boolean }) =>
@@ -40,4 +40,10 @@ export const nominaApi = {
 
   eliminarDescuento: (id: number) =>
     api.delete(`/nomina/descuentos/${id}`).then(r => r.data),
+
+  listarCompensatorios: (params?: { estado?: EstadoCompensatorio }) =>
+    api.get('/nomina/compensatorios', { params }).then(r => r.data),
+
+  reasignarCompensatorio: (id: number, fechaAsignada: string) =>
+    api.put(`/nomina/compensatorios/${id}/reasignar`, { fechaAsignada }).then(r => r.data),
 };

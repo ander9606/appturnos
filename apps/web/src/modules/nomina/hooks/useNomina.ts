@@ -11,6 +11,7 @@ const KEYS = {
   liquidacion: (id: number) => ['nomina', 'liquidacion', id] as const,
   trabajadores: () => ['trabajadores', 'nomina'] as const,
   descuentos: (periodoId: number) => ['nomina', 'descuentos', periodoId] as const,
+  compensatorios: () => ['nomina', 'compensatorios'] as const,
 };
 
 function getErrMsg(err: unknown) {
@@ -142,6 +143,31 @@ export function useEliminarDescuento() {
       qc.invalidateQueries({ queryKey: ['nomina', 'descuentos'] });
       qc.invalidateQueries({ queryKey: ['nomina', 'liquidacion'] });
       toast.success('Descuento eliminado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+/** Todos los descansos compensatorios de la empresa — para cruzarlos con los registros por trabajador_id + fecha. */
+export function useCompensatorios() {
+  return useQuery({
+    queryKey: KEYS.compensatorios(),
+    queryFn: () => nominaApi.listarCompensatorios(),
+    staleTime: 30_000,
+  });
+}
+
+/** Mueve un descanso compensatorio ya asignado a otra fecha dentro del plazo legal (28 días desde el día festivo/domingo trabajado). */
+export function useReasignarCompensatorio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, fecha }: { id: number; fecha: string }) =>
+      nominaApi.reasignarCompensatorio(id, fecha),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.compensatorios() });
+      qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      qc.invalidateQueries({ queryKey: ['nomina', 'liquidacion'] });
+      toast.success('Descanso reasignado');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
