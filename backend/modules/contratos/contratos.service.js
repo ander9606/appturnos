@@ -17,8 +17,10 @@ function verificarAcceso(contrato, usuario) {
 
 const ContratosService = {
   async listarMisContratos(empresaId, usuario) {
-    const trabajadorId = await TrabajadoresService.resolverIdPorUsuario(empresaId, usuario.sub);
-    return ContratosModel.listarPorTrabajador(empresaId, trabajadorId);
+    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa) — se usa la
+    // empresa real del trabajador resuelto, no la del token.
+    const t = await TrabajadoresService.resolverTrabajadorPorUsuario(empresaId, usuario.sub);
+    return ContratosModel.listarPorTrabajador(t.empresa_id, t.id);
   },
 
   async obtenerPorAsignacion(empresaId, asignacionId, usuario) {
