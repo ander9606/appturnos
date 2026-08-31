@@ -97,9 +97,12 @@ export function TrabajadorDetailPage() {
       });
     } catch {
       // El backend rechaza el paso directo turnos/ambos → nómina (ver toast
-      // de error); la ficha en servidor no cambió, así que revertimos el
-      // <select> para no dejarlo mostrando un tipo que no se guardó.
-      if (trabajador) setForm(fromTrabajador(trabajador));
+      // de error) pero el resto de los campos del mismo submit sí se
+      // guardaron antes del rechazo — hay que refetch, no reusar el
+      // `trabajador` en caché (quedaría desactualizado) para reflejar el
+      // <select> de tipo revertido junto con esos otros cambios reales.
+      const fresh = await refetch();
+      if (fresh.data?.data) setForm(fromTrabajador(fresh.data.data));
     }
   };
 
