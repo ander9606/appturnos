@@ -135,6 +135,36 @@ function SolicitudCard({
   );
 }
 
+/** Lo que cambia al aceptar una invitación a nómina — misma lista que usa el
+ * diálogo de confirmación (handleAceptar), pero como filas con ícono acá
+ * donde el trabajador la ve por primera vez, antes de decidir. */
+const CAMBIOS_NOMINA: { tipo: 'pierde' | 'gana'; texto: string }[] = [
+  { tipo: 'pierde', texto: 'Ya no recibe ofertas de turnos de otras empresas — sus demás vínculos se archivan.' },
+  { tipo: 'gana', texto: 'Salario fijo en vez de pago por turno.' },
+  { tipo: 'gana', texto: 'Horas extra y recargos (nocturno, dominical, festivo) calculados automáticamente.' },
+  { tipo: 'gana', texto: 'Aportes de ley a salud y pensión ya descontados; ARL y caja de compensación los paga la empresa.' },
+];
+
+/** Misma lista de CAMBIOS_NOMINA como texto con viñetas, para el diálogo de confirmación (solo texto plano). */
+function formatCambiosNomina() {
+  return CAMBIOS_NOMINA.map((c) => `${c.tipo === 'gana' ? '✓' : '✗'} ${c.texto}`).join('\n');
+}
+
+function CambioRow({ tipo, texto }: { tipo: 'pierde' | 'gana'; texto: string }) {
+  const gana = tipo === 'gana';
+  return (
+    <View className="flex-row items-start gap-2">
+      <Ionicons
+        name={gana ? 'checkmark-circle' : 'close-circle'}
+        size={15}
+        color={gana ? '#059669' : '#DC2626'}
+        style={{ marginTop: 1 }}
+      />
+      <Text className="text-xs text-foreground flex-1">{texto}</Text>
+    </View>
+  );
+}
+
 function InvitacionCard({
   vinculo, onAceptar, onRechazar, loading,
 }: {
@@ -158,11 +188,11 @@ function InvitacionCard({
         </View>
       </View>
       {esNomina && (
-        <View className="mx-4 mb-3 bg-warning/10 rounded-xl p-3">
-          <Text className="text-xs text-foreground">
-            Salario fijo y aportes de ley calculados automáticamente. A cambio, tu cuenta queda exclusiva para
-            esta empresa: dejas de ver turnos de otras y tus demás vínculos se archivan.
-          </Text>
+        <View className="mx-4 mb-3 bg-warning/10 rounded-xl p-3 gap-2">
+          <Text className="text-[11px] font-semibold text-warning uppercase tracking-wide">Qué cambia si aceptas</Text>
+          {CAMBIOS_NOMINA.map((c) => (
+            <CambioRow key={c.texto} tipo={c.tipo} texto={c.texto} />
+          ))}
         </View>
       )}
       <View className="flex-row gap-2 px-4 pb-4">
@@ -253,11 +283,8 @@ export default function MisEmpresasScreen() {
     const vinculo = invitaciones.find((v) => v.id === id);
     if (vinculo?.tipo_ofrecido === 'nomina') {
       const ok = await confirm({
-        title: 'Volverte trabajador de nómina',
-        message:
-          `Beneficios: salario fijo y aportes de ley (salud/pensión) calculados automáticamente con ${vinculo.empresa_nombre}. ` +
-          'Cambios en la app: tu pestaña principal pasa a ser "Nómina" y dejas de ver ofertas de turnos de otras empresas. ' +
-          'Tu cuenta queda exclusiva para esta empresa — tus demás vínculos (activos y pendientes) se archivan automáticamente. ¿Confirmas?',
+        title: `Pasar a nómina de ${vinculo.empresa_nombre}`,
+        message: `${formatCambiosNomina()}\n\nTu pestaña principal pasa a ser "Nómina". ¿Confirmas?`,
         confirmLabel: 'Sí, aceptar',
         destructive: true,
       });
