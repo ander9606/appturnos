@@ -12,6 +12,7 @@ import * as Location from 'expo-location';
 
 import { MapaSelector } from '@/components/ui/MapaSelector';
 import { DEFAULT_GEOFENCE_RADIUS } from '@/lib/geo';
+import { usePuntosParaTurnos } from '@/features/turnos/usePuntosMarcaje';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,14 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
   const [locLoading, setLocLoading]     = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mapaVisible, setMapaVisible]   = useState(false);
+  const [bibliotecaAbierta, setBibliotecaAbierta] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { data: puntos = [] } = usePuntosParaTurnos();
+
+  const handleSelectPunto = (p: { nombre: string; latitud: number; longitud: number }) => {
+    onChange(p.nombre, p.latitud, p.longitud);
+    setBibliotecaAbierta(false);
+  };
 
   // ── Forward geocoding (texto → sugerencias) ──────────────────────────────
 
@@ -153,6 +161,39 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
               <Ionicons name="location-outline" size={15} color="#64748B" style={{ marginTop: 2 }} />
               <Text className="flex-1 text-sm text-foreground" numberOfLines={2}>
                 {s.display_name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {/* Biblioteca de ubicaciones guardadas */}
+      {puntos.length > 0 && (
+        <TouchableOpacity
+          className="flex-row items-center gap-2 self-start px-3 py-2 bg-muted rounded-xl"
+          onPress={() => setBibliotecaAbierta((v) => !v)}
+        >
+          <Ionicons name="bookmark-outline" size={16} color="#3B82F6" />
+          <Text className="text-sm font-medium text-info">De la biblioteca de ubicaciones</Text>
+        </TouchableOpacity>
+      )}
+
+      {bibliotecaAbierta && (
+        <View
+          className="bg-card rounded-2xl overflow-hidden border border-border"
+          style={{ elevation: 6, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}
+        >
+          {puntos.map((p, i) => (
+            <TouchableOpacity
+              key={p.id}
+              className={`px-4 py-3 flex-row items-start gap-2.5 ${
+                i < puntos.length - 1 ? 'border-b border-border' : ''
+              }`}
+              onPress={() => handleSelectPunto(p)}
+            >
+              <Ionicons name="location-outline" size={15} color="#64748B" style={{ marginTop: 2 }} />
+              <Text className="flex-1 text-sm text-foreground">
+                {p.nombre} <Text className="text-muted-foreground">· radio {p.radio_metros} m</Text>
               </Text>
             </TouchableOpacity>
           ))}

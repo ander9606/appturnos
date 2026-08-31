@@ -83,8 +83,10 @@ export { puntosMarcajeApi } from './puntos-marcaje';
 export type {
   PuntoMarcaje,
   TipoPunto,
+  AlcancePunto,
   CrearPuntoMarcajePayload,
   ActualizarPuntoMarcajePayload,
+  PuntoParaTurno,
 } from './puntos-marcaje';
 export { trabajadoresApi } from './trabajadores';
 export type {
