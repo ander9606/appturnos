@@ -30,6 +30,7 @@ import {
   useDesactivarTrabajador,
   useEliminarTrabajadorDefinitivo,
 } from '@/features/equipo/useEquipo';
+import { useInvitar } from '@/features/empresas/useTrabajadorEmpresa';
 import {
   useAsignacionesTrabajador,
   useCalificar,
@@ -125,6 +126,7 @@ export default function TrabajadorDetailScreen() {
   const { data: t, isLoading, isError, refetch } = useTrabajador(numId);
   const { data: puntosMarcaje = [] } = usePuntosMarcaje(isAdmin && t?.tipo !== 'turnos');
   const actualizar  = useActualizarTrabajador(numId);
+  const invitar     = useInvitar();
   const desactivar  = useDesactivarTrabajador();
   const eliminarDefinitivo = useEliminarTrabajadorDefinitivo();
   const calificar   = useCalificar();
@@ -175,7 +177,54 @@ export default function TrabajadorDetailScreen() {
 
   // ── Submit edit ───────────────────────────────────────────────────────
 
-  async function handleUpdate(data: TrabajadorFormValues) {
+  async function handleUpdate(rawData: TrabajadorFormValues) {
+    // `handleUpdate` solo se invoca desde el form de edición, que ya requiere
+    // `t` cargado (ver el `if (isError || !t) return ...` de abajo) — este
+    // guard es solo para que TS lo sepa acá también.
+    if (!t) return;
+
+    // turnos/ambos → nómina no se guarda directo desde acá: nómina ata la
+    // cuenta a esta empresa en exclusiva, así que el trabajador debe aceptar
+    // o rechazar (igual que "Invitar trabajador"). Enviamos la invitación con
+    // la cédula que ya está en la ficha en vez de mandar al gestor a buscarla
+    // de nuevo en otra pantalla.
+    const pasaANomina = t.tipo !== 'nomina' && rawData.tipo === 'nomina';
+    let data = rawData;
+    let invitacionEnviada = false;
+
+    if (pasaANomina) {
+      if (!rawData.cedula) {
+        Alert.alert(
+          'Falta la cédula',
+          'Este trabajador no tiene cédula registrada. Agrégala y guarda antes de invitarlo a nómina.'
+        );
+        return;
+      }
+      const ok = await confirm({
+        title: 'Enviar solicitud de nómina',
+        message:
+          `Nómina implica exclusividad: si ${rawData.nombre} acepta, dejará de estar disponible para turnos en ` +
+          'otras empresas (sus demás vínculos se archivan automáticamente). No se convierte de inmediato — se le ' +
+          'envía la solicitud y debe aceptarla o rechazarla desde su cuenta.',
+        confirmLabel: 'Enviar solicitud',
+      });
+      if (!ok) return;
+
+      try {
+        await invitar.mutateAsync({ cedula: rawData.cedula, tipo: 'nomina' });
+        invitacionEnviada = true;
+      } catch (err: unknown) {
+        // Seguimos igual al guardado de abajo para no perder el resto de
+        // campos editados en este mismo submit.
+        const msg = err instanceof ApiError ? err.message : 'No se pudo enviar la invitación.';
+        Alert.alert('Error', msg);
+      }
+      // El resto de campos editados en el mismo submit sí se guardan; tipo se
+      // manda sin cambios porque la conversión la resuelve la invitación
+      // cuando el trabajador la acepte, no este formulario.
+      data = { ...rawData, tipo: t.tipo };
+    }
+
     try {
       await actualizar.mutateAsync({
         nombre:       data.nombre,
@@ -202,7 +251,11 @@ export default function TrabajadorDetailScreen() {
         ant_disciplinarios_fecha: data.ant_disciplinarios_fecha || undefined,
       });
       setEditing(false);
-      showToast('Los datos del trabajador fueron actualizados.');
+      showToast(
+        invitacionEnviada
+          ? 'Solicitud de nómina enviada. El trabajador debe aceptarla desde su cuenta.'
+          : 'Los datos del trabajador fueron actualizados.'
+      );
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'message' in err

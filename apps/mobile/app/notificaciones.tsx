@@ -57,6 +57,10 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'trabajador_empresa.solicitud': 'person-add-outline',
   'trabajador_empresa.aprobado':  'checkmark-circle-outline',
   'trabajador_empresa.aceptada':  'checkmark-circle-outline',
+  'trabajador_empresa.archivado_por_conversion': 'close-circle-outline',
+  'trabajador_empresa.bienvenida_nomina': 'briefcase-outline',
+  'invitacion_empresa':          'mail-outline',
+  'invitacion_empresa_nomina':   'briefcase-outline',
   'nomina.ciclo_cambiado':        'sync-outline',
 };
 
@@ -92,6 +96,11 @@ export function destino(n: { tipo: string; data: unknown }): string | null {
   if (TIPOS_GESTOR.has(n.tipo) && d.oferta_id) return `/oferta/${d.oferta_id}`;
   if (d.asignacion_id)   return `/turno/${d.asignacion_id}`;
   if (d.oferta_id)       return `/oferta/${d.oferta_id}`;
+  // Invitación/conversión de empresa (trabajador-empresa.service.js: invitar,
+  // aceptar) — solo traen empresa_id, no relacion_id, así que deben resolverse
+  // antes del fallback de empresa_id de más abajo (ese es para super_admin).
+  if (n.tipo === 'invitacion_empresa_nomina' || n.tipo === 'invitacion_empresa') return '/mis-empresas';
+  if (n.tipo === 'trabajador_empresa.bienvenida_nomina') return '/(tabs)/nomina';
   // Solo presente en notificaciones dirigidas a super_admin (empresa_nueva,
   // pago_rechazado/integracion.desactivada duplicadas a super_admin, vencimiento).
   if (d.empresa_id)      return `/empresa/${d.empresa_id}`;

@@ -32,6 +32,7 @@ import type { Vinculo } from '@api-client';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { confirm } from '@/lib/confirmDialog';
 import { nivelRanking, rankingLabel, rankingColor, rankingDescription } from '@/features/turnos/rankingUtils';
+import { CambioRow, CAMBIOS_NOMINA, formatCambiosNomina } from '@/features/empresas/CambiosNomina';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -158,11 +159,11 @@ function InvitacionCard({
         </View>
       </View>
       {esNomina && (
-        <View className="mx-4 mb-3 bg-warning/10 rounded-xl p-3">
-          <Text className="text-xs text-foreground">
-            Salario fijo y aportes de ley calculados automáticamente. A cambio, tu cuenta queda exclusiva para
-            esta empresa: dejas de ver turnos de otras y tus demás vínculos se archivan.
-          </Text>
+        <View className="mx-4 mb-3 bg-warning/10 rounded-xl p-3 gap-2">
+          <Text className="text-[11px] font-semibold text-warning uppercase tracking-wide">Qué cambia si aceptas</Text>
+          {CAMBIOS_NOMINA.map((c) => (
+            <CambioRow key={c.texto} tipo={c.tipo} texto={c.texto} />
+          ))}
         </View>
       )}
       <View className="flex-row gap-2 px-4 pb-4">
@@ -253,11 +254,8 @@ export default function MisEmpresasScreen() {
     const vinculo = invitaciones.find((v) => v.id === id);
     if (vinculo?.tipo_ofrecido === 'nomina') {
       const ok = await confirm({
-        title: 'Volverte trabajador de nómina',
-        message:
-          `Beneficios: salario fijo y aportes de ley (salud/pensión) calculados automáticamente con ${vinculo.empresa_nombre}. ` +
-          'Cambios en la app: tu pestaña principal pasa a ser "Nómina" y dejas de ver ofertas de turnos de otras empresas. ' +
-          'Tu cuenta queda exclusiva para esta empresa — tus demás vínculos (activos y pendientes) se archivan automáticamente. ¿Confirmas?',
+        title: `Pasar a nómina de ${vinculo.empresa_nombre}`,
+        message: `${formatCambiosNomina()}\n\nTu pestaña principal pasa a ser "Nómina". ¿Confirmas?`,
         confirmLabel: 'Sí, aceptar',
         destructive: true,
       });

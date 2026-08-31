@@ -89,7 +89,26 @@ const TrabajadoresService = {
     // diga otra cosa. Solo toca cuentas que hoy son de trabajador (nunca un
     // admin/gestor) y solo si el tipo realmente cambió.
     if (datos.tipo !== undefined && datos.tipo !== actual.tipo && actual.usuario_id) {
+      const rolActual = ROL_POR_TIPO[actual.tipo] || ROLES.TRABAJADOR_TURNOS;
       const rolNuevo = ROL_POR_TIPO[datos.tipo] || ROLES.TRABAJADOR_TURNOS;
+
+      // turnos/ambos → nómina es un cambio de exclusividad (nómina ata la
+      // cuenta a una sola empresa) y el trabajador_turnos de este flujo tiene
+      // usuarios.empresa_id = NULL por diseño (vive en trabajador_empresa, no
+      // en una sola empresa) — si lo cambiamos aquí sin más, el UPDATE de rol
+      // de arriba deja la cuenta con rol nómina y empresa_id NULL: huérfana.
+      // El único camino seguro es la invitación de trabajador-empresa.service
+      // (invitar + aceptar tipo='nomina'), que sí fija empresa_id, archiva los
+      // demás vínculos y pide consentimiento explícito del trabajador. Revertimos
+      // el tipo en la ficha (ya se guardó arriba) para no dejar el dato a medias.
+      if (rolActual === ROLES.TRABAJADOR_TURNOS && rolNuevo === ROLES.TRABAJADOR_NOMINA) {
+        await TrabajadoresModel.actualizar(empresaId, id, { tipo: actual.tipo });
+        throw new AppError(
+          'No puedes pasar directamente un trabajador de turnos a nómina desde aquí: nómina es exclusivo a una empresa y requiere que el trabajador acepte. Usa "Invitar por cédula" con tipo nómina.',
+          409
+        );
+      }
+
       await pool.query(
         'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
         [rolNuevo, actual.usuario_id, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
