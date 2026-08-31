@@ -25,6 +25,7 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `nomina.compensatorio_asignado` | Descanso compensatorio asignado | Sistema asigna día compensatorio (festivo/domingo trabajado) | `compensatorios.service.js:100` |
 | `nomina.periodo_abierto` | Nuevo período de nómina abierto | Solo `trabajador_nomina` — se abre período | `periodos.service.js:53` |
 | `nomina.periodo_liquidado` | ¡Tu nómina fue pagada! | Solo `trabajador_nomina` — se liquida período | `periodos.service.js:126` |
+| `nomina.recordatorio_salida` | Llevas 8 horas trabajando | Solo `trabajador_nomina` — jornada activa supera las horas ordinarias (empieza a hacer extra) | `registros.worker.js:52` |
 | `reingreso.aprobado` / `reingreso.rechazado` | Reingreso aprobado / no autorizado | Gestor decide sobre solicitud de reingreso | `registros.service.js:455,463` |
 | `invitacion_empresa` | Nueva invitación de empresa | Empresa invita por cédula a alguien sin cuenta vinculada aún | `trabajador-empresa.service.js:161` |
 | `trabajador_empresa.aprobado` | Solicitud aprobada | Gestor aprueba su solicitud de vinculación | `trabajador-empresa.service.js:214` |

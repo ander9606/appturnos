@@ -62,6 +62,7 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'invitacion_empresa':          'mail-outline',
   'invitacion_empresa_nomina':   'briefcase-outline',
   'nomina.ciclo_cambiado':        'sync-outline',
+  'nomina.recordatorio_salida':   'time-outline',
 };
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {
@@ -106,6 +107,7 @@ export function destino(n: { tipo: string; data: unknown }): string | null {
   if (d.empresa_id)      return `/empresa/${d.empresa_id}`;
   if (d.ausencia_id)     return '/ausencias';
   if (d.periodo_id)      return '/(tabs)/nomina';
+  if (d.registro_id)     return '/nomina-ingreso';
   if (d.compensatorio_id) return '/(tabs)/nomina';
   // 'reingreso.solicitado' va al gestor (que aprueba/rechaza en /reingresos-pendientes);
   // 'reingreso.aprobado'/'reingreso.rechazado' van al trabajador (que marca en /nomina-ingreso).

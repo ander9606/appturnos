@@ -9,7 +9,9 @@ const logger = require('../../../utils/logger');
 
 /**
  * Detecta cuándo un trabajador de nómina, todavía en jornada activa, empieza
- * a acumular horas extra — y avisa una sola vez (alerta_extra_enviada).
+ * a acumular horas extra (i.e. superó su jornada ordinaria) — avisa al propio
+ * trabajador para que no olvide marcar salida, y a los gestores, una sola vez
+ * (alerta_extra_enviada).
  */
 
 const INTERVALO_MS = 15 * 60_000; // 15 min
@@ -45,6 +47,17 @@ async function verificarHorasExtra() {
 
     const enExtra = (horas.horas_extra_diurnas + horas.horas_extra_nocturnas) > 0;
     if (!enExtra) continue;
+
+    if (r.usuario_id) {
+      await NotificacionesService.notificar({
+        empresaId: r.empresa_id,
+        usuarioId: r.usuario_id,
+        tipo: 'nomina.recordatorio_salida',
+        titulo: 'Llevas 8 horas trabajando',
+        mensaje: 'Ya cumpliste tu jornada ordinaria. No olvides marcar tu salida cuando termines.',
+        data: { registro_id: r.id },
+      });
+    }
 
     const [gestores] = await pool.query(
       `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,

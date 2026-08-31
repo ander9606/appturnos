@@ -49,6 +49,15 @@ function fmtTime(d: Date | null): string {
 
 // ── Modal: editar registro existente ─────────────────────────────────────
 
+/** Parsea "HH:MM:SS" o "HH:MM" del registro a un Date de hoy con esa hora, para el picker. */
+function horaAFecha(hora: string | null | undefined): Date | null {
+  if (!hora) return null;
+  const [h, m] = hora.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
 function EditarRegistroModal({
   registro,
   onClose,
@@ -59,19 +68,46 @@ function EditarRegistroModal({
   const corregir = useCorregirRegistro();
   const [tipoDia, setTipoDia] = useState<TipoDia>(registro?.tipo_dia ?? 'ordinario');
   const [novedad, setNovedad] = useState(registro?.novedad ?? '');
+  const [horaEntrada, setHoraEntrada] = useState<Date | null>(null);
+  const [horaSalida, setHoraSalida] = useState<Date | null>(null);
+  const [showEntrada, setShowEntrada] = useState(false);
+  const [showSalida, setShowSalida] = useState(false);
 
   React.useEffect(() => {
     if (registro) {
       setTipoDia(registro.tipo_dia);
       setNovedad(registro.novedad ?? '');
+      setHoraEntrada(horaAFecha(registro.hora_entrada));
+      setHoraSalida(horaAFecha(registro.hora_salida));
+      setShowEntrada(false);
+      setShowSalida(false);
     }
   }, [registro]);
 
   if (!registro) return null;
 
+  function onChangeEntrada(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowEntrada(false);
+    if (d) setHoraEntrada(d);
+  }
+  function onChangeSalida(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowSalida(false);
+    if (d) setHoraSalida(d);
+  }
+
   const handleGuardar = async () => {
+    if (horaEntrada && horaSalida && fmtTime(horaSalida) === fmtTime(horaEntrada)) {
+      Alert.alert('La hora de salida no puede ser igual a la de entrada.');
+      return;
+    }
     try {
-      await corregir.mutateAsync({ id: registro.id, tipo_dia: tipoDia, novedad: novedad.trim() || undefined });
+      await corregir.mutateAsync({
+        id: registro.id,
+        tipo_dia: tipoDia,
+        novedad: novedad.trim() || undefined,
+        hora_entrada: horaEntrada ? fmtTime(horaEntrada) : undefined,
+        hora_salida: horaSalida ? fmtTime(horaSalida) : undefined,
+      });
       onClose();
     } catch {
       Alert.alert('Error', 'No se pudo guardar el registro.');
@@ -97,6 +133,58 @@ function EditarRegistroModal({
             <Pressable onPress={onClose} hitSlop={10}>
               <Ionicons name="close" size={22} color="#64748B" />
             </Pressable>
+          </View>
+
+          <View className="flex-row gap-3">
+            <View className="flex-1 gap-1.5">
+              <Text className="text-sm font-semibold text-foreground">Entrada</Text>
+              <TouchableOpacity
+                onPress={() => setShowEntrada(true)}
+                className="bg-card border border-border rounded-xl px-3 py-3 items-center"
+              >
+                <Text className={`text-sm ${!horaEntrada ? 'text-muted-foreground' : 'text-foreground font-semibold'}`}>
+                  {fmtTime(horaEntrada)}
+                </Text>
+              </TouchableOpacity>
+              {showEntrada && (
+                <DateTimePicker
+                  value={horaEntrada ?? new Date()}
+                  mode="time"
+                  display="spinner"
+                  onChange={onChangeEntrada}
+                />
+              )}
+              {showEntrada && Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setShowEntrada(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                  <Text className="text-xs font-semibold text-primary">Listo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View className="flex-1 gap-1.5">
+              <Text className="text-sm font-semibold text-foreground">Salida</Text>
+              <TouchableOpacity
+                onPress={() => setShowSalida(true)}
+                className={`bg-card border rounded-xl px-3 py-3 items-center ${!horaSalida ? 'border-amber-300' : 'border-border'}`}
+              >
+                <Text className={`text-sm ${!horaSalida ? 'text-muted-foreground' : 'text-foreground font-semibold'}`}>
+                  {fmtTime(horaSalida)}
+                </Text>
+              </TouchableOpacity>
+              {showSalida && (
+                <DateTimePicker
+                  value={horaSalida ?? new Date()}
+                  mode="time"
+                  display="spinner"
+                  onChange={onChangeSalida}
+                />
+              )}
+              {showSalida && Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setShowSalida(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                  <Text className="text-xs font-semibold text-primary">Listo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <View className="gap-2">

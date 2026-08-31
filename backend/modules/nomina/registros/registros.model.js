@@ -195,7 +195,7 @@ const RegistrosModel = {
     const [filas] = await pool.query(
       `SELECT r.id, r.empresa_id, r.trabajador_id, r.fecha, r.hora_entrada,
               r.horas_ordinarias, r.horas_nocturnas, r.sesiones,
-              t.nombre, t.apellido
+              t.nombre, t.apellido, t.usuario_id
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
        WHERE r.hora_entrada IS NOT NULL AND r.hora_salida IS NULL AND r.alerta_extra_enviada = 0`
