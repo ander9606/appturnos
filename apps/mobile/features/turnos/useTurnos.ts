@@ -302,6 +302,18 @@ export function useDuplicarOferta() {
   });
 }
 
+/** Marcar una oferta como completada a mano — el jefe/admin decide, sin depender de la fecha ni del estado de las asignaciones. */
+export function useCompletarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ofertaId: number) => turnosApi.completarOferta(ofertaId),
+    onSuccess: (_data, ofertaId) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+    },
+  });
+}
+
 /** Cancelar una oferta completa — libera todas las plazas y notifica a los asignados. */
 export function useCancelarOferta() {
   const qc = useQueryClient();

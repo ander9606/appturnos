@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2 } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -9,6 +9,7 @@ import {
   useActualizarPuesto,
   useEliminarPuesto,
   usePublicarOferta,
+  useCompletarOferta,
   useConfirmarAsignacion,
   useRechazarAsignacion,
   useCancelarAsignacion,
@@ -86,6 +87,7 @@ export function OfertaDetailPage() {
 
   const eliminarPuesto = useEliminarPuesto();
   const publicar = usePublicarOferta();
+  const completar = useCompletarOferta();
   const confirmar = useConfirmarAsignacion();
   const rechazar = useRechazarAsignacion();
   const cancelarAsig = useCancelarAsignacion();
@@ -181,6 +183,20 @@ export function OfertaDetailPage() {
                 className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
               >
                 <Send size={14} /> {publicar.isPending ? 'Publicando...' : 'Publicar oferta'}
+              </button>
+            )}
+            {!['borrador', 'completada', 'cancelada'].includes(oferta.estado) && (
+              <button
+                onClick={() => confirm({
+                  title: 'Marcar como completada',
+                  detail: 'Úsalo cuando el turno ya terminó en la realidad, sin importar si todas las asignaciones están cerradas en el sistema.',
+                  confirmLabel: 'Marcar completada',
+                  onConfirm: () => { completar.mutate(ofertaId); close(); },
+                })}
+                disabled={completar.isPending}
+                className="flex items-center gap-1.5 bg-success hover:bg-success/90 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <CheckCircle2 size={14} /> {completar.isPending ? 'Marcando...' : 'Marcar completada'}
               </button>
             )}
           </div>

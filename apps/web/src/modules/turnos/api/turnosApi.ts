@@ -18,6 +18,9 @@ export const turnosApi = {
   publicarOferta: (id: number) =>
     api.post(`/turnos/ofertas/${id}/publicar`).then(r => r.data),
 
+  completarOferta: (id: number) =>
+    api.post(`/turnos/ofertas/${id}/completar`).then(r => r.data),
+
   cancelarOferta: (id: number) =>
     api.delete(`/turnos/ofertas/${id}`).then(r => r.data),
 

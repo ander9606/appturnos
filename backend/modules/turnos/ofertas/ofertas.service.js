@@ -8,6 +8,7 @@ const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const TrabajadorEmpresaModel = require('../../trabajador-empresa/trabajador-empresa.model');
 const CargosModel = require('../../cargos/cargos.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
 const { ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA } = require('../../../config/constants');
 const { delayPorRanking } = require('../../../utils/rankingUtils');
@@ -367,6 +368,34 @@ const OfertasService = {
       mensaje: `El turno "${oferta.titulo}" del ${oferta.fecha} fue cancelado.`,
       data: { oferta_id: id },
     });
+  },
+
+  /**
+   * Marca una oferta como completada a mano. El jefe/admin puede hacerlo en
+   * cualquier momento del turno (no depende de que la fecha haya pasado ni de
+   * que todas las asignaciones estén en estado terminal) — es una decisión
+   * humana, no un cálculo automático.
+   *
+   * Si la oferta viene de logiq360 (external_ref) primero intenta el cierre
+   * normal vía CostoLaborService, para no perder la emisión de
+   * costo_labor.calculado cuando las condiciones ya se cumplen; si no se
+   * cumplen (turno cerrado antes de que todos terminen), igual se fuerza el
+   * estado — el jefe puede estar completando a propósito antes de tiempo.
+   */
+  async completar(empresaId, id) {
+    const oferta = await OfertasModel.obtenerPorId(empresaId, id);
+    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    if (oferta.estado === 'cancelada') {
+      throw new AppError('No se puede completar una oferta cancelada', 409);
+    }
+    if (oferta.estado === 'completada') return oferta;
+
+    await CostoLaborService.verificarYEmitir(empresaId, id);
+    const actualizada = await OfertasModel.obtenerPorId(empresaId, id);
+    if (actualizada.estado !== 'completada') {
+      await OfertasModel.cambiarEstado(empresaId, id, 'completada');
+    }
+    return OfertasModel.obtenerPorId(empresaId, id);
   },
 
   /** Borra definitivamente una oferta cancelada que nunca tuvo postulantes (ej: se creó por error). */

@@ -16,7 +16,8 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
-  useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta, useCancelarOferta,
+  useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,
+  useCancelarOferta, useCompletarOferta,
 } from '@/features/turnos/useTurnos';
 import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
 import { Badge }   from '@/components/ui/Badge';
@@ -190,6 +191,7 @@ export default function OfertaDetailScreen() {
   const noPresentadoM  = useNoPresentado();
   const duplicarM      = useDuplicarOferta();
   const cancelarOfertaM = useCancelarOferta();
+  const completarOfertaM = useCompletarOferta();
 
   const [showDuplicarPicker, setShowDuplicarPicker] = useState(false);
 
@@ -484,6 +486,31 @@ export default function OfertaDetailScreen() {
                 />
               )}
             </>
+          )}
+
+          {/* ── Marcar completada (gestores) — disponible en cualquier momento del turno ── */}
+          {isGestor && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador' && (
+            <Button
+              label={completarOfertaM.isPending ? 'Marcando…' : 'Marcar completada'}
+              variant="success"
+              fullWidth
+              loading={completarOfertaM.isPending}
+              onPress={async () => {
+                const ok = await confirm({
+                  title: 'Marcar como completada',
+                  message: 'Úsalo cuando el turno ya terminó en la realidad, sin importar si todas las asignaciones están cerradas en el sistema.',
+                  cancelLabel: 'Volver',
+                  confirmLabel: 'Marcar completada',
+                });
+                if (!ok) return;
+                try {
+                  await completarOfertaM.mutateAsync(oferta.id);
+                  showToast(`"${oferta.titulo}" marcado como completado.`);
+                } catch (err) {
+                  Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo completar la oferta.');
+                }
+              }}
+            />
           )}
 
           {/* ── Cancelar oferta (admin_empresa / jefe_turnos) ────── */}

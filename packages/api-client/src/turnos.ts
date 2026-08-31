@@ -285,6 +285,11 @@ export const turnosApi = {
     return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/duplicar`, { fecha });
   },
 
+  /** Marca la oferta como completada a mano (el jefe/admin decide, sin depender de la fecha ni del estado de las asignaciones). */
+  completarOferta(ofertaId: number): Promise<Oferta> {
+    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/completar`, {});
+  },
+
   /** Cancela una oferta completa (todos sus puestos) y notifica a los postulados/asignados. */
   cancelarOferta(ofertaId: number): Promise<null> {
     return api.delete<null>(`/api/turnos/ofertas/${ofertaId}`);

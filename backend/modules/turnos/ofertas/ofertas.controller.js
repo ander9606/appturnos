@@ -49,6 +49,11 @@ async function publicar(req, res) {
   res.json({ success: true, data, message: 'Oferta publicada' });
 }
 
+async function completar(req, res) {
+  const data = await OfertasService.completar(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data, message: 'Oferta marcada como completada' });
+}
+
 async function cancelar(req, res) {
   await OfertasService.cancelar(req.empresa_id, Number(req.params.id));
   res.json({ success: true, data: null, message: 'Oferta cancelada' });
@@ -111,4 +116,4 @@ async function duplicar(req, res) {
   res.status(201).json({ success: true, data, message: 'Oferta duplicada' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, publicar, cancelar, eliminarDefinitivo, aplicar, retirar, asignar, cerrar, duplicar };
+module.exports = { listar, obtener, crear, actualizar, publicar, completar, cancelar, eliminarDefinitivo, aplicar, retirar, asignar, cerrar, duplicar };

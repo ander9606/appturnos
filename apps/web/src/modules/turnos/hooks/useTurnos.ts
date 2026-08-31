@@ -140,6 +140,19 @@ export function usePublicarOferta() {
   });
 }
 
+export function useCompletarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => turnosApi.completarOferta(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
+      qc.invalidateQueries({ queryKey: KEYS.oferta(id) });
+      toast.success('Oferta marcada como completada');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useCancelarOferta() {
   const qc = useQueryClient();
   return useMutation({

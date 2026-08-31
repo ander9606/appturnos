@@ -127,6 +127,9 @@ router.put(
 // POST /api/turnos/ofertas/:id/publicar  — pasa una oferta de 'borrador' a 'publicada'
 router.post('/:id/publicar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.publicar);
 
+// POST /api/turnos/ofertas/:id/completar  — jefe/admin marca la oferta como completada a mano
+router.post('/:id/completar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.completar);
+
 // DELETE /api/turnos/ofertas/:id  (cancelar)
 router.delete('/:id', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.cancelar);
 
