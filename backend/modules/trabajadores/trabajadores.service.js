@@ -224,9 +224,19 @@ const TrabajadoresService = {
 
   // ── Disponibilidad ────────────────────────────────────────────────────────
 
-  async resolverIdPorUsuario(empresaId, usuarioId) {
+  /**
+   * Devuelve la fila completa (incluye empresa_id real del trabajador) — necesario
+   * cuando empresaId puede venir null (TRABAJADOR_TURNOS multi-empresa): el caller
+   * no puede seguir usando req.empresa_id después de esto, debe usar t.empresa_id.
+   */
+  async resolverTrabajadorPorUsuario(empresaId, usuarioId) {
     const t = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuarioId);
     if (!t) throw new AppError('Perfil de trabajador no encontrado', 404);
+    return t;
+  },
+
+  async resolverIdPorUsuario(empresaId, usuarioId) {
+    const t = await TrabajadoresService.resolverTrabajadorPorUsuario(empresaId, usuarioId);
     return t.id;
   },
 

@@ -136,17 +136,23 @@ async function actualizarMarcacion(req, res) {
 }
 
 async function obtenerDisponibilidad(req, res) {
-  const trabajadorId = req.params.id
-    ? Number(req.params.id)
-    : await TrabajadoresService.resolverIdPorUsuario(req.empresa_id, req.usuario.sub);
-  const data = await TrabajadoresService.obtenerDisponibilidad(req.empresa_id, trabajadorId);
+  let trabajadorId = req.params.id ? Number(req.params.id) : null;
+  let empresaId = req.empresa_id;
+  if (!trabajadorId) {
+    // req.empresa_id puede ser null (TRABAJADOR_TURNOS multi-empresa) — se resuelve
+    // la empresa real del trabajador en vez de asumir la del token.
+    const t = await TrabajadoresService.resolverTrabajadorPorUsuario(req.empresa_id, req.usuario.sub);
+    trabajadorId = t.id;
+    empresaId = t.empresa_id;
+  }
+  const data = await TrabajadoresService.obtenerDisponibilidad(empresaId, trabajadorId);
   res.json({ success: true, data });
 }
 
 async function guardarDisponibilidad(req, res) {
-  const trabajadorId = await TrabajadoresService.resolverIdPorUsuario(req.empresa_id, req.usuario.sub);
-  await TrabajadoresService.guardarDisponibilidad(req.empresa_id, trabajadorId, req.body.slots);
-  const data = await TrabajadoresService.obtenerDisponibilidad(req.empresa_id, trabajadorId);
+  const t = await TrabajadoresService.resolverTrabajadorPorUsuario(req.empresa_id, req.usuario.sub);
+  await TrabajadoresService.guardarDisponibilidad(t.empresa_id, t.id, req.body.slots);
+  const data = await TrabajadoresService.obtenerDisponibilidad(t.empresa_id, t.id);
   res.json({ success: true, data });
 }
 
