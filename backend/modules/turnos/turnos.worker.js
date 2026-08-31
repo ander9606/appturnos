@@ -2,10 +2,19 @@
 
 const OfertasModel = require('./ofertas/ofertas.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
+const { ahoraColombiaSQL } = require('../../utils/fechaColombia');
 const logger = require('../../utils/logger');
 
 const INTERVALO_MS = 30 * 60_000; // 30 min
 const HORAS_ANTES  = 24;
+
+async function cerrarOfertasVencidas() {
+  const hoy = ahoraColombiaSQL().slice(0, 10);
+  const cerradas = await OfertasModel.cerrarVencidas(hoy);
+  if (cerradas > 0) {
+    logger.info(`[turnos-worker] ${cerradas} oferta(s) vencida(s) cerrada(s) automáticamente`);
+  }
+}
 
 async function verificarPersonalIncompleto() {
   const ofertas = await OfertasModel.listarProximasConPersonalIncompleto(HORAS_ANTES);
@@ -26,6 +35,9 @@ async function verificarPersonalIncompleto() {
 function iniciarWorker() {
   const timer = setInterval(() => {
     verificarPersonalIncompleto().catch((err) =>
+      logger.error('[turnos-worker]', err.message)
+    );
+    cerrarOfertasVencidas().catch((err) =>
       logger.error('[turnos-worker]', err.message)
     );
   }, INTERVALO_MS);

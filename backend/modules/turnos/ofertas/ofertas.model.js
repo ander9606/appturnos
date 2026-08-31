@@ -292,6 +292,26 @@ const OfertasModel = {
   },
 
   /**
+   * Cierra (estado 'cerrada') ofertas cuya fecha ya pasó y nadie resolvió a mano.
+   * Excluye ofertas con asignaciones 'confirmado'/'en_progreso' — un turno nocturno
+   * que cruza medianoche sigue en curso aunque `fecha` ya sea "ayer"; cerrarlo de
+   * golpe le quitaría la visibilidad al jefe y bloquearía nuevas postulaciones si
+   * necesita reemplazar a alguien a mitad de turno.
+   */
+  async cerrarVencidas(hoy) {
+    const [res] = await pool.query(
+      `UPDATE ofertas_turno o SET o.estado = 'cerrada'
+       WHERE o.estado IN ('abierta', 'publicada', 'en_proceso') AND o.fecha < ?
+         AND NOT EXISTS (
+           SELECT 1 FROM asignaciones_turno a
+           WHERE a.oferta_id = o.id AND a.estado IN ('confirmado', 'en_progreso')
+         )`,
+      [hoy]
+    );
+    return res.affectedRows;
+  },
+
+  /**
    * Crea oferta + puestos en una transacción.
    * @param datos.puestos — array `[{ cargo_id, plazas, tarifa_dia, notas? }]`.
    *                       Si viene vacío, la oferta queda sin puestos (el jefe

@@ -85,8 +85,9 @@ export function DashboardPage() {
     .reduce((s, t) => s + Number(t.pago_total), 0);
 
   const hoy = bogotaToday();
-  const proximasOrdenadas = ofertasActivas
-    .filter(o => o.fecha >= hoy)
+  const ofertasVigentes = ofertasActivas.filter(o => o.fecha >= hoy);
+  const proximasOrdenadas = ofertasVigentes
+    .slice()
     .sort((a, b) => (a.fecha === b.fecha ? a.hora_inicio.localeCompare(b.hora_inicio) : a.fecha.localeCompare(b.fecha)));
   const proximoTurno = proximasOrdenadas[0] ?? null;
   const proximas = proximasOrdenadas.slice(0, 5);
@@ -146,7 +147,7 @@ export function DashboardPage() {
           <>
             <StatCard
               label="Ofertas activas"
-              value={ofertasActivas.length}
+              value={ofertasVigentes.length}
               icon={Calendar}
               onClick={() => navigate('/turnos')}
             />
