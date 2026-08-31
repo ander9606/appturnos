@@ -25,8 +25,18 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
 import { AnuncioTurno } from '@/components/ui/AnuncioTurno';
+import { AvisoEmpresa } from '@/components/ui/AvisoEmpresa';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { showAvisoEmpresa } from '@/lib/avisoEmpresa';
 import { destino as destinoNotificacion } from './notificaciones';
+
+// Tipos de notificación que requieren una decisión del trabajador (aceptar/
+// rechazar en "Mis empresas") — si llegan mientras la app está abierta, se
+// avisan con AvisoEmpresa (accionable) en vez de solo el banner nativo de push.
+const MENSAJE_AVISO_EMPRESA: Record<string, string> = {
+  invitacion_empresa_nomina: 'Una empresa quiere pasarte a su nómina. Toca para ver los detalles.',
+  invitacion_empresa: 'Tienes una nueva invitación de empresa. Toca para verla.',
+};
 
 // ponytail: expo-router activa keep-awake internamente en dev; falla en Android emulator — ruido inofensivo
 LogBox.ignoreLogs(['Unable to activate keep awake']);
@@ -79,6 +89,20 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     });
     return () => sub.remove();
   }, [status, rootNavigationState?.key]);
+
+  // Aviso accionable cuando llega una invitación de empresa con la app
+  // abierta (setNotificationHandler ya muestra el banner nativo, pero ese no
+  // se puede tocar para navegar sin salir primero a la bandeja del sistema).
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const sub = Notifications.addNotificationReceivedListener((notification: any) => {
+      const data = (notification.request.content.data ?? {}) as Record<string, unknown>;
+      const tipo = typeof data.tipo === 'string' ? data.tipo : '';
+      const mensaje = MENSAJE_AVISO_EMPRESA[tipo];
+      if (mensaje) showAvisoEmpresa(mensaje);
+    });
+    return () => sub.remove();
+  }, [status]);
 
   useEffect(() => {
     if (status === 'unknown' || !rootNavigationState?.key) return; // still loading / router not ready
@@ -140,6 +164,7 @@ function RootLayout() {
         <StatusBanner />
         <Toast />
         <AnuncioTurno />
+        <AvisoEmpresa />
         <ConfirmDialog />
         <AuthGuard>
           {/* Default: header visible, slide from right.
