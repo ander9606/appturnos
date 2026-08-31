@@ -141,7 +141,7 @@ export function TurnosPage() {
                 const totalPlazas = o.puestos?.reduce((s, p) => s + p.plazas, 0) ?? 0;
                 const totalAsignados = o.puestos?.reduce((s, p) => s + p.plazas_cubiertas, 0) ?? 0;
                 const pendientes = pendientesPorOferta.get(o.id) ?? 0;
-                const esPasado = o.fecha < today;
+                const esPasado = o.fecha < today && o.estado !== 'completada';
                 return (
                   <tr key={o.id} className={`border-t border-border/60 hover:bg-muted transition-opacity ${esPasado ? 'opacity-50' : ''}`}>
                     <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>{o.titulo}</td>

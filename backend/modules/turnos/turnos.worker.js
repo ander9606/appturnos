@@ -33,6 +33,10 @@ async function verificarPersonalIncompleto() {
 }
 
 function iniciarWorker() {
+  // setInterval no dispara de inmediato — sin esto, ofertas vencidas quedarían
+  // mostrando "abierta" hasta 30 min después de cada reinicio/deploy.
+  cerrarOfertasVencidas().catch((err) => logger.error('[turnos-worker]', err.message));
+
   const timer = setInterval(() => {
     verificarPersonalIncompleto().catch((err) =>
       logger.error('[turnos-worker]', err.message)
