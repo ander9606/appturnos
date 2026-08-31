@@ -300,6 +300,14 @@ export const nominaApi = {
     );
   },
 
+  /** Solo jefe_nomina / admin_empresa. Mueve un descanso ya asignado/tomado a otra fecha dentro del plazo legal. */
+  reasignarCompensatorio(id: number, fechaAsignada: string): Promise<DescansoCompensatorio> {
+    return api.put<DescansoCompensatorio>(
+      `/api/nomina/compensatorios/${id}/reasignar`,
+      { fechaAsignada }
+    );
+  },
+
   // ── Descuentos manuales ────────────────────────────────────────────────
 
   /** Trabajador → solo los suyos; gestor → todos (filtrable por período/estado). */

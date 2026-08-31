@@ -64,6 +64,17 @@ const CompensatoriosModel = {
     return res.affectedRows;
   },
 
+  /** Cambia la fecha_asignada de un descanso ya asignado/tomado (reasignación). */
+  async reasignar(empresaId, id, { fechaAsignada, asignadoPor }) {
+    const [res] = await pool.query(
+      `UPDATE descansos_compensatorios
+       SET estado = 'tomado', fecha_asignada = ?, asignado_por = ?, asignado_en = NOW()
+       WHERE id = ? AND empresa_id = ? AND estado IN ('asignado', 'tomado')`,
+      [fechaAsignada, asignadoPor, id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
   /** Marca como tomado (cuando se registra ese día como compensatorio en registros_diarios). */
   async marcarTomado(empresaId, id) {
     await pool.query(

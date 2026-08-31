@@ -233,6 +233,15 @@ const RegistrosModel = {
     );
     return res.affectedRows;
   },
+
+  /** Borra un registro (usado al mover un compensatorio a otra fecha). */
+  async eliminar(empresaId, id) {
+    const [res] = await pool.query(
+      'DELETE FROM registros_diarios WHERE id = ? AND empresa_id = ?',
+      [id, empresaId]
+    );
+    return res.affectedRows;
+  },
 };
 
 module.exports = RegistrosModel;

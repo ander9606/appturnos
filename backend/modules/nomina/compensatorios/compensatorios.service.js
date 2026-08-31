@@ -106,6 +106,90 @@ const CompensatoriosService = {
   },
 
   /**
+   * Cambia la fecha de un descanso que ya tiene fecha (automática o manual)
+   * a otra fecha dentro del plazo legal. Libera el día anterior (borra el
+   * registro placeholder que se creó para ese día) y crea el nuevo.
+   */
+  async reasignar(empresaId, usuarioId, compensatorioId, { fechaAsignada }) {
+    const comp = await CompensatoriosModel.obtenerPorId(empresaId, compensatorioId);
+    if (!comp) throw new AppError('Descanso compensatorio no encontrado', 404);
+    if (comp.estado === 'pendiente') {
+      throw new AppError('Este descanso aún no tiene fecha asignada — usa asignar()', 409);
+    }
+    if (fechaAsignada === comp.fecha_asignada) {
+      throw new AppError('Esa ya es la fecha asignada actual', 422);
+    }
+
+    const limite = sumarDiasISO(comp.origen_fecha, COMPENSATORIO_PLAZO_DIAS);
+    if (fechaAsignada <= comp.origen_fecha || fechaAsignada > limite) {
+      throw new AppError(
+        `La fecha debe estar entre el ${sumarDiasISO(comp.origen_fecha, 1)} y el ${limite} (28 días desde el ${comp.origen_fecha})`,
+        422
+      );
+    }
+    if (esDiaFestivo(fechaAsignada)) {
+      throw new AppError('No puedes asignar el descanso a un domingo o festivo', 422);
+    }
+
+    const [registroExistente, yaAsignado] = await Promise.all([
+      RegistrosModel.obtenerPorFecha(empresaId, comp.trabajador_id, fechaAsignada),
+      CompensatoriosModel.existeFechaAsignada(empresaId, comp.trabajador_id, fechaAsignada),
+    ]);
+    if (registroExistente) throw new AppError('El trabajador ya tiene un registro ese día', 409);
+    if (yaAsignado) throw new AppError('El trabajador ya tiene otro descanso asignado ese día', 409);
+
+    // Liberar el día anterior: solo se borra si es el placeholder que creamos
+    // nosotros mismos (sin marcaje). Si el jefe asignó el compensatorio sobre
+    // un día que ya tenía un registro real, esos datos se sobreescribieron a
+    // cero en su momento y no hay forma de recuperarlos aquí — se deja tal
+    // cual para no perder más información, y el jefe corrige ese día a mano.
+    if (comp.fecha_asignada) {
+      const registroAnterior = await RegistrosModel.obtenerPorFecha(
+        empresaId, comp.trabajador_id, comp.fecha_asignada
+      );
+      if (registroAnterior?.tipo_dia === 'compensatorio' && !registroAnterior.hora_entrada) {
+        await RegistrosModel.eliminar(empresaId, registroAnterior.id);
+      }
+    }
+
+    const rows = await CompensatoriosModel.reasignar(empresaId, compensatorioId, {
+      fechaAsignada,
+      asignadoPor: usuarioId,
+    });
+    if (rows === 0) throw new AppError('No se pudo reasignar el descanso', 409);
+
+    await RegistrosModel.crear(empresaId, {
+      trabajador_id:         comp.trabajador_id,
+      periodo_id:            comp.periodo_id,
+      fecha:                 fechaAsignada,
+      hora_entrada:          null,
+      hora_salida:           null,
+      horas_ordinarias:      0,
+      horas_extra_diurnas:   0,
+      horas_extra_nocturnas: 0,
+      horas_nocturnas:       0,
+      horas_festivo:         0,
+      es_festivo:            0,
+      novedad:               `Descanso compensatorio por trabajo el ${comp.origen_fecha}`,
+      tipo_dia:              'compensatorio',
+    });
+
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, comp.trabajador_id);
+    if (trabajador?.usuario_id) {
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajador.usuario_id,
+        tipo: 'nomina.compensatorio_asignado',
+        titulo: 'Descanso compensatorio reprogramado',
+        mensaje: `Tu descanso compensatorio por el ${comp.origen_fecha} ahora es el ${fechaAsignada} (antes era el ${comp.fecha_asignada}).`,
+        data: { compensatorio_id: compensatorioId },
+      });
+    }
+
+    return CompensatoriosModel.obtenerPorId(empresaId, compensatorioId);
+  },
+
+  /**
    * Fija fecha_asignada, crea/actualiza el registro del día como
    * 'compensatorio' y marca el descanso 'tomado'. Compartido entre la
    * asignación automática (crearSiCorresponde) y la manual (asignar).

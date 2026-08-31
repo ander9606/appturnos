@@ -22,9 +22,18 @@ import {
   useCompensatoriosTodos,
   useAsignarCompensatorio,
 } from '@/features/nomina/compensatorios/useCompensatorios';
+import { AsignadoRow } from '@/features/nomina/compensatorios/GestorCompensatoriosPanel';
 import { useRoleGuard } from '@/components/RoleGuard';
 
 type Filtro = 'todos' | 'pendiente' | 'asignado';
+
+/** 'asignado' agrupa también 'tomado' — es el estado normal tras la asignación
+ * automática o manual (ver compensatorios.service.js _ejecutarAsignacion). */
+function enBucket(estado: DescansoCompensatorio['estado'], filtro: Filtro): boolean {
+  if (filtro === 'todos') return true;
+  if (filtro === 'asignado') return estado !== 'pendiente';
+  return estado === filtro;
+}
 
 const FILTROS: { v: Filtro; label: string }[] = [
   { v: 'todos',     label: 'Todos'     },
@@ -39,7 +48,7 @@ export default function GestorCompensatoriosScreen() {
   const { data: todos = [], isLoading, isRefetching, refetch } = useCompensatoriosTodos();
 
   const pendientes = todos.filter((c) => c.estado === 'pendiente').length;
-  const lista = filtro === 'todos' ? todos : todos.filter((c) => c.estado === filtro);
+  const lista = todos.filter((c) => enBucket(c.estado, filtro));
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_nomina']);
   if (denied) return denied;
@@ -101,7 +110,7 @@ export default function GestorCompensatoriosScreen() {
                   >
                     <Text className={`text-xs font-semibold ${filtro === f.v ? 'text-white' : 'text-muted-foreground'}`}>
                       {f.label}
-                      {f.v !== 'todos' && ` · ${todos.filter((c) => c.estado === f.v).length}`}
+                      {f.v !== 'todos' && ` · ${todos.filter((c) => enBucket(c.estado, f.v)).length}`}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -204,34 +213,6 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
           <Text className="text-sm font-semibold text-primary">Listo</Text>
         </TouchableOpacity>
       )}
-    </View>
-  );
-}
-
-// ── Fila asignada ─────────────────────────────────────────────────────────────
-
-function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompensatorio }) {
-  return (
-    <View
-      className="bg-card rounded-2xl px-4 py-3 flex-row items-center justify-between"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
-    >
-      <View className="flex-1">
-        <Text className="text-sm font-semibold text-foreground">
-          {c.trabajador_nombre} {c.trabajador_apellido}
-        </Text>
-        <Text className="text-xs text-muted-foreground mt-0.5">
-          Por trabajo el {fmtFechaCorta(c.origen_fecha)}
-        </Text>
-      </View>
-      <View className="items-end gap-1">
-        <View className="bg-green-50 px-2 py-0.5 rounded-full">
-          <Text className="text-[10px] font-semibold text-green-700">Asignado</Text>
-        </View>
-        <Text className="text-xs text-muted-foreground">
-          {fmtFechaCorta(c.fecha_asignada!)}
-        </Text>
-      </View>
     </View>
   );
 }

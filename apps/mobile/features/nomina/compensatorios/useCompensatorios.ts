@@ -29,3 +29,15 @@ export function useAsignarCompensatorio() {
     },
   });
 }
+
+/** Mueve un descanso ya asignado/tomado (incl. el auto-asignado por el sistema) a otra fecha. */
+export function useReasignarCompensatorio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, fecha }: { id: number; fecha: string }) =>
+      nominaApi.reasignarCompensatorio(id, fecha),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['compensatorios'] });
+    },
+  });
+}
