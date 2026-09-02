@@ -83,7 +83,9 @@ function fmtDate(iso: string): string {
 // Notificaciones dirigidas al gestor que igual traen asignacion_id — deben
 // abrir la vista de gestión de la oferta (postulantes/asignaciones), no la
 // vista del trabajador (marcar ingreso/egreso) que es a donde manda asignacion_id.
-const TIPOS_GESTOR = new Set(['turno.ingreso', 'turno.egreso', 'postulacion.nueva']);
+// EXCEPTO para turno.ingreso/turno.egreso: el admin debe ver la asignación específica
+// para poder visualizar detalles y corregir si es necesario.
+const TIPOS_GESTOR = new Set(['postulacion.nueva']);
 
 /**
  * Resuelve a dónde navegar al tocar una notificación. Se usa tanto para el

@@ -18,7 +18,11 @@ import {
   Linking,
   Platform,
   TouchableOpacity,
+  Modal,
+  Pressable,
+  KeyboardAvoidingView,
 } from 'react-native';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -30,7 +34,7 @@ import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
 import { NovedadCard }         from '@/features/novedades/NovedadCard';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar } from '@/features/turnos/useTurnos';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion } from '@/features/turnos/useTurnos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
@@ -39,6 +43,7 @@ import { StarRating }          from '@/features/turnos/StarRating';
 import { Badge }               from '@/components/ui/Badge';
 import { Button }              from '@/components/ui/Button';
 import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
+import { formatDateObj, formatTimeObj, toISODateTime } from '@/lib/formatters';
 import { ApiError }            from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
@@ -95,6 +100,7 @@ export default function TurnoDetailScreen() {
   const [selectedRating, setSelectedRating] = useState(0);
   const [comentario, setComentario] = useState('');
   const [cargandoContrato, setCargandoContrato] = useState(false);
+  const [corrigiendoIngreso, setCorrigiendoIngreso] = useState(false);
 
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
@@ -482,18 +488,27 @@ export default function TurnoDetailScreen() {
                   </Text>
                 </View>
                 {isGestor && (
-                  <TouchableOpacity
-                    onPress={handleDescargarContrato}
-                    disabled={cargandoContrato}
-                    className="flex-row items-center gap-1.5 mt-1"
-                  >
-                    {cargandoContrato ? (
-                      <ActivityIndicator size="small" color="#059669" />
-                    ) : (
-                      <Ionicons name="download-outline" size={16} color="#059669" />
-                    )}
-                    <Text className="text-xs font-semibold text-success">Descargar contrato</Text>
-                  </TouchableOpacity>
+                  <View className="flex-row items-center gap-3 mt-2">
+                    <TouchableOpacity
+                      onPress={handleDescargarContrato}
+                      disabled={cargandoContrato}
+                      className="flex-row items-center gap-1.5 flex-1"
+                    >
+                      {cargandoContrato ? (
+                        <ActivityIndicator size="small" color="#059669" />
+                      ) : (
+                        <Ionicons name="download-outline" size={16} color="#059669" />
+                      )}
+                      <Text className="text-xs font-semibold text-success">Contrato</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setCorrigiendoIngreso(true)}
+                      className="flex-row items-center gap-1.5 flex-1"
+                    >
+                      <Ionicons name="time-outline" size={16} color="#059669" />
+                      <Text className="text-xs font-semibold text-success">Corregir</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
 
@@ -628,6 +643,16 @@ export default function TurnoDetailScreen() {
               <Text className="text-xs text-center text-muted-foreground">
                 Se requiere firma digital para confirmar la salida.
               </Text>
+
+              {isGestor && (
+                <TouchableOpacity
+                  onPress={() => setCorrigiendoIngreso(true)}
+                  className="flex-row items-center justify-center gap-1.5 py-2"
+                >
+                  <Ionicons name="time-outline" size={14} color="#64748B" />
+                  <Text className="text-xs font-semibold text-muted-foreground">Corregir ingreso/egreso</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -687,6 +712,169 @@ export default function TurnoDetailScreen() {
           onClose={() => setNovedadModalVisible(false)}
         />
       )}
+
+      {/* ── Corregir ingreso/egreso modal ─────────────────────── */}
+      {id != null && (
+        <CorregirIngresoEgresoModal
+          visible={corrigiendoIngreso}
+          asignacion={asignacion}
+          onClose={() => setCorrigiendoIngreso(false)}
+        />
+      )}
     </>
+  );
+}
+
+// ── Corregir ingreso/egreso (gestores) ──────────────────────────────────────
+
+function fmtDateTime(d: Date): string {
+  return `${formatDateObj(d)} ${formatTimeObj(d)}`;
+}
+
+function CorregirIngresoEgresoModal({
+  visible,
+  asignacion,
+  onClose,
+}: {
+  visible: boolean;
+  asignacion: any;
+  onClose: () => void;
+}) {
+  const corregir = useCorregirAsignacion();
+  const [ingreso, setIngreso] = useState<Date | null>(null);
+  const [egreso, setEgreso] = useState<Date | null>(null);
+  const [showIngreso, setShowIngreso] = useState(false);
+  const [showEgreso, setShowEgreso] = useState(false);
+
+  useEffect(() => {
+    if (asignacion) {
+      setIngreso(asignacion.hora_ingreso_real ? new Date(asignacion.hora_ingreso_real.replace(' ', 'T')) : null);
+      setEgreso(asignacion.hora_egreso_real ? new Date(asignacion.hora_egreso_real.replace(' ', 'T')) : null);
+      setShowIngreso(false);
+      setShowEgreso(false);
+    }
+  }, [asignacion?.id, visible]);
+
+  if (!visible || !asignacion) return null;
+
+  function onChangeIngreso(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowIngreso(false);
+    if (d) setIngreso(d);
+  }
+
+  function onChangeEgreso(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowEgreso(false);
+    if (d) setEgreso(d);
+  }
+
+  async function handleGuardar() {
+    if (ingreso && egreso && egreso <= ingreso) {
+      Alert.alert('Error', 'La hora de egreso debe ser posterior al ingreso.');
+      return;
+    }
+    try {
+      await corregir.mutateAsync({
+        id: asignacion.id,
+        hora_ingreso_real: ingreso ? toISODateTime(ingreso) : null,
+        hora_egreso_real: egreso ? toISODateTime(egreso) : null,
+      });
+      showToast('Ingreso/egreso corregido correctamente.');
+      onClose();
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo corregir.';
+      Alert.alert('Error', msg);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View className="flex-1 bg-black/50 items-center justify-end">
+        <KeyboardAvoidingView behavior="padding">
+          <View className="w-full bg-background rounded-t-3xl px-6 pt-5 pb-8">
+            <View className="flex-row items-center justify-between mb-5">
+              <View>
+                <Text className="text-lg font-bold text-foreground">Corregir ingreso/egreso</Text>
+                <Text className="text-sm text-muted-foreground">
+                  {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
+                </Text>
+              </View>
+              <Pressable onPress={onClose} hitSlop={10}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} className="max-h-96">
+              <View className="gap-4">
+                <View className="gap-1.5">
+                  <Text className="text-sm font-semibold text-foreground">Ingreso</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowIngreso(true)}
+                    className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+                  >
+                    <Ionicons name="log-in-outline" size={16} color="#64748B" />
+                    <Text className="text-sm text-foreground">{ingreso ? fmtDateTime(ingreso) : 'Sin definir'}</Text>
+                  </TouchableOpacity>
+                  {showIngreso && (
+                    <DateTimePicker
+                      value={ingreso ?? new Date()}
+                      mode="datetime"
+                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                      onChange={onChangeIngreso}
+                    />
+                  )}
+                  {showIngreso && Platform.OS === 'ios' && (
+                    <TouchableOpacity onPress={() => setShowIngreso(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                      <Text className="text-sm font-semibold text-primary">Listo</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <View className="gap-1.5">
+                  <Text className="text-sm font-semibold text-foreground">Egreso</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowEgreso(true)}
+                    className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+                  >
+                    <Ionicons name="log-out-outline" size={16} color="#64748B" />
+                    <Text className="text-sm text-foreground">{egreso ? fmtDateTime(egreso) : 'Sin definir'}</Text>
+                  </TouchableOpacity>
+                  {showEgreso && (
+                    <DateTimePicker
+                      value={egreso ?? new Date()}
+                      mode="datetime"
+                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                      onChange={onChangeEgreso}
+                    />
+                  )}
+                  {showEgreso && Platform.OS === 'ios' && (
+                    <TouchableOpacity onPress={() => setShowEgreso(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                      <Text className="text-sm font-semibold text-primary">Listo</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View className="flex-row gap-3 mt-6">
+              <Button
+                label="Cancelar"
+                variant="secondary"
+                fullWidth
+                disabled={corregir.isPending}
+                onPress={onClose}
+              />
+              <Button
+                label={corregir.isPending ? 'Guardando…' : 'Guardar'}
+                variant="primary"
+                fullWidth
+                loading={corregir.isPending}
+                disabled={corregir.isPending}
+                onPress={handleGuardar}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
   );
 }
