@@ -44,7 +44,7 @@ import { Badge }               from '@/components/ui/Badge';
 import { Button }              from '@/components/ui/Button';
 import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
 import { formatDateObj, formatTimeObj, toISODateTime } from '@/lib/formatters';
-import { ApiError }            from '@api-client';
+import { ApiError, type Asignacion } from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
 
@@ -737,7 +737,7 @@ function CorregirIngresoEgresoModal({
   onClose,
 }: {
   visible: boolean;
-  asignacion: any;
+  asignacion: Asignacion | null | undefined;
   onClose: () => void;
 }) {
   const corregir = useCorregirAsignacion();
@@ -753,7 +753,7 @@ function CorregirIngresoEgresoModal({
       setShowIngreso(false);
       setShowEgreso(false);
     }
-  }, [asignacion?.id, visible]);
+  }, [asignacion?.id, visible]); // eslint-disable-next-line react-hooks/exhaustive-deps
 
   if (!visible || !asignacion) return null;
 
