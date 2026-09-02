@@ -292,6 +292,25 @@ export function useNoPresentado() {
   });
 }
 
+/**
+ * Corrección manual de ingreso/egreso (gestores) — para cuando el trabajador
+ * olvidó marcar. Un campo omitido (no enviado) deja ese valor sin cambios;
+ * el backend rechaza `null` porque falla la validación isISO8601().
+ */
+export function useCorregirAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId, ofertaId: _ofertaId, ...datos }: {
+      asignacionId: number; ofertaId: number;
+      hora_ingreso_real?: string; hora_egreso_real?: string;
+    }) => turnosApi.corregirAsignacion(asignacionId, datos),
+    onSuccess: (data, { ofertaId, asignacionId }) => {
+      aplicarEstadoEnCache(qc, data, ofertaId);
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
+    },
+  });
+}
+
 /** Duplicar una oferta existente a una nueva fecha (gestores). */
 export function useDuplicarOferta() {
   const qc = useQueryClient();

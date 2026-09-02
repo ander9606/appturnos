@@ -44,6 +44,14 @@ export const turnosApi = {
   noPresentado: (id: number) =>
     api.post(`/turnos/asignaciones/${id}/no-presentado`).then(r => r.data),
 
+  /**
+   * Corrección manual de ingreso/egreso por gestor (sin GPS ni firma). Acepta
+   * "YYYY-MM-DDTHH:MM:SS" (hora local, sin offset). Un campo omitido (no `null`)
+   * deja ese valor sin cambios — el backend solo distingue "no vino en el body".
+   */
+  corregirAsignacion: (id: number, data: { hora_ingreso_real?: string; hora_egreso_real?: string }) =>
+    api.patch(`/turnos/asignaciones/${id}/corregir`, data).then(r => r.data),
+
   calificar: (id: number, data: { calificacion: number; comentario?: string }) =>
     api.post(`/turnos/asignaciones/${id}/calificar`, data).then(r => r.data),
 
@@ -59,4 +67,8 @@ export const turnosApi = {
   // Liquidación
   liquidacion: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
     api.get('/turnos/asignaciones/liquidacion', { params }).then(r => r.data),
+
+  /** Período activo de liquidación (segmentos nómina/turnos) — /turnos/eventual vive en otro módulo del backend. */
+  periodoActivoEventual: () =>
+    api.get('/turnos/eventual/periodo-activo').then(r => r.data),
 };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -14,6 +14,7 @@ import {
   useRechazarAsignacion,
   useCancelarAsignacion,
   useNoPresentado,
+  useCorregirAsignacion,
   useCalificar,
 } from '../hooks/useTurnos';
 import { useCargos } from '@/modules/configuracion/hooks/useConfiguracion';
@@ -71,6 +72,7 @@ export function OfertaDetailPage() {
   const [puestoEditando, setPuestoEditando] = useState<Puesto | null>(null);
   const [showPuestoForm, setShowPuestoForm] = useState(false);
   const [calificandoId, setCalificandoId] = useState<number | null>(null);
+  const [corrigiendoAsig, setCorrigiendoAsig] = useState<Asignacion | null>(null);
 
   const { data: ofertaData, isLoading, isError, error, refetch } = useOferta(ofertaId);
   const oferta = ofertaData?.data;
@@ -399,6 +401,16 @@ export function OfertaDetailPage() {
                               <Star size={11} /> Calificar
                             </button>
                           )}
+                          {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
+                            <button
+                              onClick={() => setCorrigiendoAsig(a)}
+                              className="text-muted-foreground/60 hover:text-info transition-colors p-1"
+                              title="Corregir ingreso/egreso"
+                              aria-label="Corregir ingreso/egreso"
+                            >
+                              <Clock size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -422,6 +434,13 @@ export function OfertaDetailPage() {
         <CalificarModal
           asignacion={calificandoAsig}
           onClose={() => setCalificandoId(null)}
+        />
+      )}
+
+      {corrigiendoAsig && (
+        <CorregirAsignacionModal
+          asignacion={corrigiendoAsig}
+          onClose={() => setCorrigiendoAsig(null)}
         />
       )}
 
@@ -540,6 +559,80 @@ function PuestoFormModal({
           </button>
           <button type="submit" disabled={isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
             {isPending ? 'Guardando...' : puesto ? 'Guardar' : 'Agregar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ── Corregir ingreso/egreso ── */
+// Sin conversión vía Date/toISOString a propósito — el valor de datetime-local
+// ya es hora local sin timezone, y el backend guarda el string tal cual llega
+// (mismo criterio que ahoraColombiaSQL() en el backend: evita desfases de zona horaria).
+function toDatetimeLocal(s: string | null): string {
+  return s ? s.replace(' ', 'T').slice(0, 16) : '';
+}
+function fromDatetimeLocal(v: string): string | undefined {
+  if (!v) return undefined;
+  return v.length === 16 ? `${v}:00` : v;
+}
+
+function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; onClose: () => void }) {
+  const corregir = useCorregirAsignacion();
+  const [ingreso, setIngreso] = useState(toDatetimeLocal(asignacion.hora_ingreso_real));
+  const [egreso, setEgreso] = useState(toDatetimeLocal(asignacion.hora_egreso_real));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (ingreso && egreso && egreso <= ingreso) {
+      toast.error('La hora de egreso debe ser posterior al ingreso');
+      return;
+    }
+    await corregir.mutateAsync({
+      id: asignacion.id,
+      // Vacío → se omite del body (no `null`): el backend solo distingue "no venía en
+      // la petición" vía `!== undefined` — enviar null falla la validación isISO8601().
+      hora_ingreso_real: fromDatetimeLocal(ingreso),
+      hora_egreso_real: fromDatetimeLocal(egreso),
+    });
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Corregir ingreso/egreso</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {asignacion.trabajador_nombre} {asignacion.trabajador_apellido} · {asignacion.cargo_nombre}
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Ingreso</label>
+          <input
+            type="datetime-local"
+            value={ingreso}
+            onChange={e => setIngreso(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Egreso</label>
+          <input
+            type="datetime-local"
+            value={egreso}
+            onChange={e => setEgreso(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Dejar un campo vacío no lo modifica. Con ambos definidos, el turno se marca completado y recalcula el pago.
+        </p>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={corregir.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {corregir.isPending ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </form>

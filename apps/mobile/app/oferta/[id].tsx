@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   ActivityIndicator, Alert, Linking, Platform,
+  Modal, Pressable, KeyboardAvoidingView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,11 +18,12 @@ import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,
-  useCancelarOferta, useCompletarOferta,
+  useCancelarOferta, useCompletarOferta, useAsignacion, useCorregirAsignacion,
 } from '@/features/turnos/useTurnos';
 import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
+import { formatDateObj, formatTimeObj, toISODateTime } from '@/lib/formatters';
 import type { AsignacionResumen, EstadoAsignacion, OfertaPuesto } from '@api-client';
 import { ApiError } from '@api-client';
 
@@ -53,7 +55,7 @@ const ESTADO_CFG: Record<EstadoAsignacion, { label: string; variant: BadgeVarian
 
 function PostulanteRow({
   asignacion, ofertaId, esPasado, turnoIniciado,
-  confirmarM, rechazarM, cancelarM, noPresentadoM,
+  confirmarM, rechazarM, cancelarM, noPresentadoM, onCorregir,
 }: {
   asignacion:    AsignacionResumen;
   ofertaId:      number;
@@ -63,11 +65,13 @@ function PostulanteRow({
   rechazarM:     ReturnType<typeof useRechazar>;
   cancelarM:     ReturnType<typeof useCancelar>;
   noPresentadoM: ReturnType<typeof useNoPresentado>;
+  onCorregir:    (a: { id: number; nombre: string }) => void;
 }) {
   const cfg       = ESTADO_CFG[asignacion.estado];
   const isPending = asignacion.estado === 'pendiente';
   const isConf    = asignacion.estado === 'confirmado';
   const isEnProg  = asignacion.estado === 'en_progreso';
+  const isCompletado = asignacion.estado === 'completado';
   const isBusy    = confirmarM.isPending || rechazarM.isPending || cancelarM.isPending || noPresentadoM.isPending;
   const nombre    = `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}`;
 
@@ -156,6 +160,19 @@ function PostulanteRow({
           )}
         </>
       )}
+
+      {/* Corregir ingreso/egreso — disponible incluso con esPasado, que es justo
+          cuando hace falta arreglar una salida que el trabajador olvidó marcar. */}
+      {(isConf || isEnProg || isCompletado) && (
+        <TouchableOpacity
+          onPress={() => onCorregir({ id: asignacion.id, nombre })}
+          className="flex-row items-center gap-1 self-start"
+          hitSlop={6}
+        >
+          <Ionicons name="time-outline" size={13} color="#64748B" />
+          <Text className="text-xs font-semibold text-muted-foreground">Corregir ingreso/egreso</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -221,6 +238,7 @@ export default function OfertaDetailScreen() {
   const [selectedPuestoId, setSelectedPuestoId] = useState<number | null>(null);
   const selectedPuesto = availablePuestos.find((p) => p.id === selectedPuestoId) ?? availablePuestos[0];
   const [funcionesPuesto, setFuncionesPuesto] = useState<OfertaPuesto | null>(null);
+  const [corrigiendoAsig, setCorrigiendoAsig] = useState<{ id: number; nombre: string } | null>(null);
 
   const hasCoords = oferta?.latitud != null && oferta?.longitud != null;
 
@@ -561,6 +579,7 @@ export default function OfertaDetailScreen() {
                     rechazarM={rechazarM}
                     cancelarM={cancelarM}
                     noPresentadoM={noPresentadoM}
+                    onCorregir={setCorrigiendoAsig}
                   />
                 ))
               )}
@@ -570,6 +589,12 @@ export default function OfertaDetailScreen() {
         </ScrollView>
       </SafeAreaView>
 
+      <CorregirAsignacionModal
+        asignacion={corrigiendoAsig}
+        ofertaId={oferta.id}
+        onClose={() => setCorrigiendoAsig(null)}
+      />
+
       <FuncionesCargoModal
         visible={!!funcionesPuesto}
         onClose={() => setFuncionesPuesto(null)}
@@ -577,5 +602,153 @@ export default function OfertaDetailScreen() {
         cargoNombre={funcionesPuesto?.cargo_nombre ?? ''}
       />
     </>
+  );
+}
+
+// ── Corregir ingreso/egreso (gestores) ──────────────────────────────────────
+
+function fmtDateTime(d: Date): string {
+  return `${formatDateObj(d)} ${formatTimeObj(d)}`;
+}
+
+function CorregirAsignacionModal({
+  asignacion,
+  ofertaId,
+  onClose,
+}: {
+  asignacion: { id: number; nombre: string } | null;
+  ofertaId:   number;
+  onClose:    () => void;
+}) {
+  const { data: detalle } = useAsignacion(asignacion?.id ?? null);
+  const corregir = useCorregirAsignacion();
+
+  const [ingreso, setIngreso]       = useState<Date | null>(null);
+  const [egreso, setEgreso]         = useState<Date | null>(null);
+  const [showIngreso, setShowIngreso] = useState(false);
+  const [showEgreso, setShowEgreso]   = useState(false);
+
+  React.useEffect(() => {
+    // Sin toISOString() a propósito — se parsea como hora local del dispositivo
+    // (mismo criterio que ahoraColombiaSQL() en el backend, ver toISODateTime).
+    setIngreso(detalle?.hora_ingreso_real ? new Date(detalle.hora_ingreso_real.replace(' ', 'T')) : null);
+    setEgreso(detalle?.hora_egreso_real ? new Date(detalle.hora_egreso_real.replace(' ', 'T')) : null);
+    setShowIngreso(false);
+    setShowEgreso(false);
+  }, [detalle?.id]);
+
+  if (!asignacion) return null;
+
+  function onChangeIngreso(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowIngreso(false);
+    if (d) setIngreso(d);
+  }
+  function onChangeEgreso(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowEgreso(false);
+    if (d) setEgreso(d);
+  }
+
+  async function handleGuardar() {
+    if (ingreso && egreso && egreso <= ingreso) {
+      Alert.alert('La hora de egreso debe ser posterior al ingreso.');
+      return;
+    }
+    try {
+      await corregir.mutateAsync({
+        asignacionId: asignacion!.id,
+        ofertaId,
+        // Sin definir → se omite del body (no null): el backend solo distingue
+        // "no vino en la petición" — enviar null falla la validación isISO8601().
+        hora_ingreso_real: ingreso ? toISODateTime(ingreso) : undefined,
+        hora_egreso_real:  egreso  ? toISODateTime(egreso)  : undefined,
+      });
+      onClose();
+    } catch (err: unknown) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo corregir la asignación.');
+    }
+  }
+
+  return (
+    <Modal visible={!!asignacion} transparent animationType="slide" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1 justify-end bg-black/40"
+      >
+        <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-lg font-bold text-foreground">Corregir ingreso/egreso</Text>
+              <Text className="text-sm text-muted-foreground">{asignacion.nombre}</Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color="#64748B" />
+            </Pressable>
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Ingreso</Text>
+            <TouchableOpacity
+              onPress={() => setShowIngreso(true)}
+              className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+            >
+              <Ionicons name="log-in-outline" size={16} color="#64748B" />
+              <Text className="text-sm text-foreground">{ingreso ? fmtDateTime(ingreso) : 'Sin definir'}</Text>
+            </TouchableOpacity>
+            {showIngreso && (
+              <DateTimePicker
+                value={ingreso ?? new Date()}
+                mode="datetime"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onChange={onChangeIngreso}
+              />
+            )}
+            {showIngreso && Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowIngreso(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Egreso</Text>
+            <TouchableOpacity
+              onPress={() => setShowEgreso(true)}
+              className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+            >
+              <Ionicons name="log-out-outline" size={16} color="#64748B" />
+              <Text className="text-sm text-foreground">{egreso ? fmtDateTime(egreso) : 'Sin definir'}</Text>
+            </TouchableOpacity>
+            {showEgreso && (
+              <DateTimePicker
+                value={egreso ?? new Date()}
+                mode="datetime"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                onChange={onChangeEgreso}
+              />
+            )}
+            {showEgreso && Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowEgreso(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <Text className="text-xs text-muted-foreground">
+            Con ambos definidos, el turno se marca completado y recalcula el pago.
+          </Text>
+
+          <TouchableOpacity
+            onPress={handleGuardar}
+            disabled={corregir.isPending}
+            className="h-14 bg-foreground rounded-2xl items-center justify-center active:opacity-80 disabled:opacity-40"
+          >
+            {corregir.isPending
+              ? <ActivityIndicator color="#fff" />
+              : <Text className="text-base font-semibold text-white">Guardar cambios</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }

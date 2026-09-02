@@ -47,6 +47,15 @@ export function useLiquidacionTurnos(params: { fecha_inicio: string; fecha_fin: 
   });
 }
 
+/** Período activo (segmentos nómina/turnos) según el ciclo de liquidación de la empresa. */
+export function usePeriodoActivoTurnos() {
+  return useQuery({
+    queryKey: ['turnos', 'periodo-activo'],
+    queryFn: () => turnosApi.periodoActivoEventual(),
+    staleTime: 30_000,
+  });
+}
+
 export function usePuestos(ofertaId: number) {
   return useQuery({
     queryKey: KEYS.puestos(ofertaId),
@@ -208,6 +217,21 @@ export function useNoPresentado() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
       toast.success('Marcado como no presentado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+/** Corrección manual de ingreso/egreso por el gestor — para cuando el trabajador olvidó marcar. */
+export function useCorregirAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; hora_ingreso_real?: string; hora_egreso_real?: string }) =>
+      turnosApi.corregirAsignacion(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
+      qc.invalidateQueries({ queryKey: ['turnos', 'oferta'] });
+      toast.success('Asignación corregida');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });

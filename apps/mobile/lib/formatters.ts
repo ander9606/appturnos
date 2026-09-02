@@ -30,6 +30,14 @@ export function toISODate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Date object → "2026-05-21 14:30:00" usando partes locales del dispositivo — nunca toISOString() (desfasa por timezone, ver bogotaToday). */
+export function toISODateTime(date: Date): string {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  return `${toISODate(date)} ${h}:${m}:${s}`;
+}
+
 // Colombia = UTC-5, sin DST. Necesario para saber qué día/hora es en Bogotá
 // independientemente del timezone configurado en el dispositivo.
 export const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000;
