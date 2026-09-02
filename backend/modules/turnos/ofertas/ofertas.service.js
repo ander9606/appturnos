@@ -447,9 +447,12 @@ const OfertasService = {
     }
 
     // Visibilidad (ranking) + apertura.
-    // Use the JWT's empresaId (null for marketplace workers) so obtenerPorUsuarioId
-    // finds the worker row that was created with empresa_id = null.
-    const trabajador = await resolverTrabajador(empresaId, usuarioId);
+    // Usa empresaOfertaId (ya resuelto arriba), no empresaId del JWT (null para
+    // marketplace multi-empresa) — de lo contrario obtenerPorUsuarioId puede
+    // devolver el trabajador de OTRA empresa vinculada (la más reciente), con
+    // ranking distinto al de la empresa dueña de esta oferta. Mismo criterio
+    // que obtener() (línea 233), que ya usa ofertaEmpresaId correctamente.
+    const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);
 
     // Fetch sin delay primero: necesitamos saber la visibilidad antes de decidir
     // si aplica el delay por ranking (un destinatario directo lo salta).
@@ -566,7 +569,7 @@ const OfertasService = {
       empresaOfertaId = ofertaBase.empresa_id;
     }
 
-    const trabajador = await resolverTrabajador(empresaId, usuarioId);
+    const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);
     const asignacion = await AsignacionesModel.obtenerPorPuestoYTrabajador(
       Number(puestoId),
       trabajador.id
