@@ -51,12 +51,26 @@ const PeriodosModel = {
   },
 
   async crear(empresaId, { fecha_inicio, fecha_fin, tipo }) {
-    const [res] = await pool.query(
-      `INSERT INTO periodos_nomina (empresa_id, fecha_inicio, fecha_fin, tipo)
-       VALUES (?, ?, ?, ?)`,
-      [empresaId, fecha_inicio, fecha_fin, tipo || 'quincenal']
-    );
-    return res.insertId;
+    try {
+      const [res] = await pool.query(
+        `INSERT INTO periodos_nomina (empresa_id, fecha_inicio, fecha_fin, tipo)
+         VALUES (?, ?, ?, ?)`,
+        [empresaId, fecha_inicio, fecha_fin, tipo || 'quincenal']
+      );
+      return res.insertId;
+    } catch (err) {
+      // Race condition: otro proceso ya creó el período con esas fechas.
+      // Retornar el ID del período existente.
+      if (err.code === 'ER_DUP_ENTRY') {
+        const [filas] = await pool.query(
+          `SELECT id FROM periodos_nomina
+           WHERE empresa_id = ? AND fecha_inicio = ? AND fecha_fin = ? LIMIT 1`,
+          [empresaId, fecha_inicio, fecha_fin]
+        );
+        if (filas.length > 0) return filas[0].id;
+      }
+      throw err;
+    }
   },
 
   async cerrar(empresaId, id, cerradoPor) {
