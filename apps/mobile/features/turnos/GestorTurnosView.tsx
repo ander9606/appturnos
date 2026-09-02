@@ -88,6 +88,14 @@ function PostulanteRow({
 
   const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending || noPresentadoMutation.isPending;
 
+  async function handleConfirmar() {
+    try {
+      await confirmarMutation.mutateAsync({ asignacionId: asignacion.id, ofertaId });
+    } catch (err: unknown) {
+      Alert.alert('No se pudo confirmar', apiErrorMessage(err, 'Error al confirmar la postulación'));
+    }
+  }
+
   async function handleRechazar() {
     const ok = await confirm({
       title: 'Rechazar postulación',
@@ -95,7 +103,28 @@ function PostulanteRow({
       confirmLabel: 'Rechazar',
       destructive: true,
     });
-    if (ok) rechazarMutation.mutate({ asignacionId: asignacion.id, ofertaId });
+    if (!ok) return;
+    try {
+      await rechazarMutation.mutateAsync({ asignacionId: asignacion.id, ofertaId });
+    } catch (err: unknown) {
+      Alert.alert('No se pudo rechazar', apiErrorMessage(err, 'Error al rechazar la postulación'));
+    }
+  }
+
+  async function handleCancelar() {
+    const ok = await confirm({
+      title: 'Cancelar asignación',
+      message: `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
+      cancelLabel: 'Volver',
+      confirmLabel: 'Cancelar turno',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await cancelarMutation.mutateAsync({ asignacionId: asignacion.id, ofertaId });
+    } catch (err: unknown) {
+      Alert.alert('No se pudo cancelar', apiErrorMessage(err, 'Error al cancelar la asignación'));
+    }
   }
 
   async function handleNoPresentado() {
@@ -105,7 +134,12 @@ function PostulanteRow({
       confirmLabel: 'Marcar ausente',
       destructive: true,
     });
-    if (ok) noPresentadoMutation.mutate({ asignacionId: asignacion.id, ofertaId });
+    if (!ok) return;
+    try {
+      await noPresentadoMutation.mutateAsync({ asignacionId: asignacion.id, ofertaId });
+    } catch (err: unknown) {
+      Alert.alert('No se pudo marcar', apiErrorMessage(err, 'Error al marcar como no presentado'));
+    }
   }
 
   return (
@@ -142,8 +176,7 @@ function PostulanteRow({
               <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
                 loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
               <Button label={isConfirming ? '…' : 'Confirmar'} variant="success" size="sm"
-                loading={isConfirming} disabled={isBusy}
-                onPress={() => confirmarMutation.mutate({ asignacionId: asignacion.id, ofertaId })} />
+                loading={isConfirming} disabled={isBusy} onPress={handleConfirmar} />
             </View>
           )}
 
@@ -155,17 +188,7 @@ function PostulanteRow({
                 <Text className="text-xs font-semibold text-success">Aceptado</Text>
               </View>
               <Button label={isCancelling ? '…' : 'Cancelar'} variant="secondary" size="sm"
-                loading={isCancelling} disabled={isBusy}
-                onPress={async () => {
-                  const ok = await confirm({
-                    title: 'Cancelar asignación',
-                    message: `¿Cancelar el turno confirmado de ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}? La plaza quedará disponible nuevamente.`,
-                    cancelLabel: 'Volver',
-                    confirmLabel: 'Cancelar turno',
-                    destructive: true,
-                  });
-                  if (ok) cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId });
-                }} />
+                loading={isCancelling} disabled={isBusy} onPress={handleCancelar} />
               {turnoIniciado && (
                 <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
                   loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
