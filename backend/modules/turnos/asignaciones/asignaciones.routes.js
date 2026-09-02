@@ -21,6 +21,7 @@ const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 const reglasCoordenadas = [
   body('latitud').isFloat({ min: -90, max: 90 }).withMessage('latitud requerida y válida'),
   body('longitud').isFloat({ min: -180, max: 180 }).withMessage('longitud requerida y válida'),
+  body('device_id').optional({ values: 'falsy' }).isString().isLength({ max: 64 }).withMessage('device_id inválido'),
 ];
 
 router.use(verificarToken);
@@ -47,6 +48,7 @@ router.get(
     query('oferta_id').optional().isInt({ min: 1 }).withMessage('oferta_id inválido'),
     query('trabajador_id').optional().isInt({ min: 1 }).withMessage('trabajador_id inválido'),
     query('estado').optional().isIn(['pendiente','confirmado','en_progreso','completado','no_presentado','cancelado']).withMessage('estado inválido'),
+    query('sospechoso').optional().isIn(['0', '1']).withMessage('sospechoso inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
     query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('limit inválido'),
   ],
@@ -118,6 +120,15 @@ router.post(
   ],
   validar,
   ctrl.calificar
+);
+
+// PUT /api/turnos/asignaciones/:id/sospechoso/descartar  — gestor revisó, no era fraude
+router.put(
+  '/:id/sospechoso/descartar',
+  verificarRol(GESTIONAR),
+  [idParam],
+  validar,
+  ctrl.descartarSospechoso
 );
 
 module.exports = router;

@@ -173,6 +173,18 @@ export function useReasignarCompensatorio() {
   });
 }
 
+export function useDescartarSospechoso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => nominaApi.descartarSospechoso(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      toast.success('Marcaje ya no está marcado como sospechoso');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useCorregirRegistro() {
   const qc = useQueryClient();
   return useMutation({

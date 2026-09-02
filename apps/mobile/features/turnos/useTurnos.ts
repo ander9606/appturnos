@@ -4,6 +4,7 @@ import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asi
 import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/lib/formatters';
+import { getDeviceId } from '@/lib/deviceId';
 
 // ── Query keys ────────────────────────────────────────────────────────────
 
@@ -222,8 +223,8 @@ export function useRechazar() {
 export function useMarcarIngreso() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, lat, lng }: { id: number; lat: number; lng: number }) =>
-      turnosApi.marcarIngreso(id, lat, lng),
+    mutationFn: async ({ id, lat, lng }: { id: number; lat: number; lng: number }) =>
+      turnosApi.marcarIngreso(id, lat, lng, await getDeviceId()),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });

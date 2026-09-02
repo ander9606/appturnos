@@ -106,7 +106,7 @@ export function useEliminarPuesto() {
   });
 }
 
-export function useAsignaciones(params: { oferta_id?: number; estado?: EstadoAsignacion; limit?: number }) {
+export function useAsignaciones(params: { oferta_id?: number; estado?: EstadoAsignacion; sospechoso?: boolean; limit?: number }) {
   return useQuery({
     queryKey: KEYS.asignaciones(params),
     queryFn: () => turnosApi.listarAsignaciones({ ...params, limit: params.limit ?? 200 }),
@@ -232,6 +232,18 @@ export function useCorregirAsignacion() {
       qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
       qc.invalidateQueries({ queryKey: ['turnos', 'oferta'] });
       toast.success('Asignación corregida');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useDescartarSospechosoAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => turnosApi.descartarSospechoso(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
+      toast.success('Marcaje ya no está marcado como sospechoso');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });

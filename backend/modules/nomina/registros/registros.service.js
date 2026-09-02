@@ -13,6 +13,7 @@ const { pool }                  = require('../../../config/database');
 const { calcularHoras }         = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
 const { haversineMetros }       = require('../../../utils/geoUtils');
+const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
 const AppError                  = require('../../../utils/AppError');
 const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
 
@@ -64,6 +65,41 @@ async function validarGeofence(empresaId, trabajador, latitud, longitud) {
   }
 }
 
+/**
+ * Flags this registro (and any match found) as sospechoso — best-effort, never throws.
+ * Solo dispara si se cumplen las DOS condiciones a la vez: mismo device_id Y
+ * proximidad GPS. Si falta cualquiera de las dos, no hay suficiente señal.
+ */
+async function revisarMarcajeSospechoso(empresaId, registroId, trabajador, fecha, tipo, hora, latitud, longitud, deviceId) {
+  if (latitud == null || longitud == null || deviceId == null) return;
+  try {
+    const cercanos = await RegistrosModel.listarMarcajesCercanos(
+      empresaId, fecha, trabajador.id, tipo, hora, SOSPECHA_VENTANA_SEG
+    );
+    const match = buscarMatch(cercanos, { latitud, longitud, deviceId });
+    if (!match) return;
+
+    await RegistrosModel.marcarSospechoso(empresaId, [registroId, match.registro_id]);
+
+    const otro = await TrabajadoresModel.obtenerPorId(empresaId, match.trabajador_id);
+    const [gestores] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
+      [empresaId]
+    );
+    if (gestores.length > 0) {
+      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+        empresaId,
+        tipo: 'nomina.sospechoso',
+        titulo: 'Posible marcaje fraudulento',
+        mensaje: `${trabajador.nombre} ${trabajador.apellido} y ${otro?.nombre ?? 'otro trabajador'} ${otro?.apellido ?? ''} marcaron desde el mismo dispositivo — revisa sus registros.`,
+        data: { registro_id: registroId, otro_registro_id: match.registro_id, trabajador_id: trabajador.id, otro_trabajador_id: match.trabajador_id },
+      }).catch(() => {});
+    }
+  } catch {
+    // best-effort: un fallo acá no debe impedir que el trabajador marque su entrada/salida.
+  }
+}
+
 /** ISO date of the Monday of the week containing isoDate. */
 function getLunesDeSemana(isoDate) {
   const d = new Date(isoDate + 'T12:00:00Z');
@@ -96,7 +132,7 @@ async function _notificarDecisionReingreso(empresaId, solicitudId, tipo, titulo,
 }
 
 const RegistrosService = {
-  async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, fecha_desde, fecha_hasta, page, limit }) {
+  async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, fecha_desde, fecha_hasta, sospechoso, page, limit }) {
     let trabajadorId = trabajador_id;
     if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
       trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
@@ -108,10 +144,17 @@ const RegistrosService = {
       fecha,
       fechaDesde: fecha_desde,
       fechaHasta: fecha_hasta,
+      sospechoso,
       limit,
       offset,
     });
     return { data, pagination: { page, limit, total } };
+  },
+
+  /** Descarta un flag de sospechoso tras revisión del gestor. */
+  async descartarSospechoso(empresaId, id) {
+    const affected = await RegistrosModel.descartarSospechoso(empresaId, id);
+    if (!affected) throw new AppError('Registro no encontrado', 404);
   },
 
   async crear(empresaId, usuario, datos) {
@@ -281,13 +324,14 @@ const RegistrosService = {
   },
 
   /** Clock-in: creates or updates today's registro with hora_entrada = NOW(). */
-  async marcarEntrada(empresaId, usuario, { latitud, longitud } = {}) {
+  async marcarEntrada(empresaId, usuario, { latitud, longitud, device_id: deviceId } = {}) {
     const trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
     const trabajador   = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
 
     await validarGeofence(empresaId, trabajador, latitud, longitud);
 
     const hoy = hoyISO();
+    const horaEntrada = ahoraHHMMSS();
     let periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
     // Si no hay período abierto, auto-crear según tipo_liquidacion de la empresa.
     if (!periodo) periodo = await PeriodosService.autoCrear(empresaId);
@@ -305,14 +349,16 @@ const RegistrosService = {
         if (!solicitud || solicitud.estado !== 'aprobado') {
           throw new AppError('El reingreso debe ser autorizado por el gestor', 403);
         }
-        const reiniciado = await RegistrosModel.iniciarReingreso(empresaId, existing.id, ahoraHHMMSS(), latitud, longitud);
+        const reiniciado = await RegistrosModel.iniciarReingreso(empresaId, existing.id, horaEntrada, latitud, longitud, deviceId);
         if (reiniciado === 0) throw new AppError('No se pudo iniciar el reingreso', 409);
         await SolicitudesReingresoModel.marcarUsada(solicitud.id);
+        await revisarMarcajeSospechoso(empresaId, existing.id, trabajador, hoy, 'entrada', horaEntrada, latitud, longitud, deviceId);
         return RegistrosModel.obtenerPorId(empresaId, existing.id);
       }
       // Registro sin hora_entrada (edge case).
-      const updated = await RegistrosModel.actualizarEntrada(empresaId, existing.id, ahoraHHMMSS(), latitud, longitud);
+      const updated = await RegistrosModel.actualizarEntrada(empresaId, existing.id, horaEntrada, latitud, longitud, deviceId);
       if (updated === 0) throw new AppError('Ya marcaste tu entrada hoy', 409);
+      await revisarMarcajeSospechoso(empresaId, existing.id, trabajador, hoy, 'entrada', horaEntrada, latitud, longitud, deviceId);
       return RegistrosModel.obtenerPorId(empresaId, existing.id);
     }
 
@@ -320,10 +366,12 @@ const RegistrosService = {
       trabajador_id: trabajadorId,
       periodo_id: periodo.id,
       fecha: hoy,
-      hora_entrada: ahoraHHMMSS(),
+      hora_entrada: horaEntrada,
       latitud,
       longitud,
+      deviceId,
     });
+    await revisarMarcajeSospechoso(empresaId, id, trabajador, hoy, 'entrada', horaEntrada, latitud, longitud, deviceId);
 
     // Notifica a gestores de nómina que el trabajador marcó entrada (best-effort).
     const [gestoresEntrada] = await pool.query(
@@ -344,7 +392,7 @@ const RegistrosService = {
   },
 
   /** Clock-out: sets hora_salida = NOW() and recalculates hours. */
-  async marcarSalida(empresaId, usuario, registroId, { latitud, longitud } = {}) {
+  async marcarSalida(empresaId, usuario, registroId, { latitud, longitud, device_id: deviceId } = {}) {
     const trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
 
     const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
@@ -399,9 +447,12 @@ const RegistrosService = {
       hora_salida: horaSalida,
       latitud,
       longitud,
+      deviceId,
       ...horas,
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);
+
+    await revisarMarcajeSospechoso(empresaId, registroId, trabajador, registro.fecha, 'salida', horaSalida, latitud, longitud, deviceId);
 
     // Notifica a gestores de nómina que el trabajador marcó salida (best-effort).
     const [gestoresSalida] = await pool.query(

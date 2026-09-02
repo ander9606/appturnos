@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Plus, Pencil, CalendarClock, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Pencil, CalendarClock, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
-  useCorregirRegistro, useCrearRegistro,
+  useCorregirRegistro, useCrearRegistro, useDescartarSospechoso,
   useDescuentosPeriodo, useCrearDescuento, useEliminarDescuento,
   useCompensatorios, useReasignarCompensatorio,
 } from '../hooks/useNomina';
@@ -54,6 +54,7 @@ export function PeriodoDetailPage() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<'liquidacion' | 'registros'>('liquidacion');
   const [filtroTrabajador, setFiltroTrabajador] = useState<number | undefined>(undefined);
+  const [soloSospechosos, setSoloSospechosos] = useState(false);
   const [corrigiendoId, setCorrigiendoId] = useState<number | null>(null);
   const [showCrear, setShowCrear] = useState(false);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
@@ -69,6 +70,7 @@ export function PeriodoDetailPage() {
 
   const { data: registrosData, isLoading: loadingReg, isError: errorReg, error: errReg, refetch: refetchReg } = useRegistros({ periodo_id: periodoId });
   const registros: Registro[] = registrosData?.data?.data ?? [];
+  const descartarSospechoso = useDescartarSospechoso();
 
   const { data: compensatoriosData } = useCompensatorios();
   const compensatorioPorDia = new Map<string, DescansoCompensatorio>();
@@ -84,9 +86,11 @@ export function PeriodoDetailPage() {
     tab === 'liquidacion' ? periodoId : null
   );
 
-  const registrosFiltrados = filtroTrabajador
-    ? registros.filter(r => r.trabajador_id === filtroTrabajador)
-    : registros;
+  const registrosFiltrados = registros
+    .filter(r => !filtroTrabajador || r.trabajador_id === filtroTrabajador)
+    .filter(r => !soloSospechosos || r.sospechoso === 1);
+
+  const totalSospechosos = registros.filter(r => r.sospechoso === 1).length;
 
   const trabajadoresEnPeriodo = Array.from(
     new Map(registros.map(r => [r.trabajador_id, { nombre: r.trabajador_nombre, apellido: r.trabajador_apellido }])).entries()
@@ -193,17 +197,31 @@ export function PeriodoDetailPage() {
 
       {tab === 'registros' && (
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <select
-              value={filtroTrabajador ?? ''}
-              onChange={e => setFiltroTrabajador(e.target.value ? Number(e.target.value) : undefined)}
-              className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-            >
-              <option value="">Todos los trabajadores</option>
-              {trabajadoresEnPeriodo.map(t => (
-                <option key={t.id} value={t.id}>{t.nombre} {t.apellido}</option>
-              ))}
-            </select>
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="flex items-center gap-2">
+              <select
+                value={filtroTrabajador ?? ''}
+                onChange={e => setFiltroTrabajador(e.target.value ? Number(e.target.value) : undefined)}
+                className="border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+              >
+                <option value="">Todos los trabajadores</option>
+                {trabajadoresEnPeriodo.map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre} {t.apellido}</option>
+                ))}
+              </select>
+              {(totalSospechosos > 0 || soloSospechosos) && (
+                <button
+                  onClick={() => setSoloSospechosos(v => !v)}
+                  className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                    soloSospechosos
+                      ? 'bg-warning-light text-warning border-warning/40'
+                      : 'border-border text-muted-foreground hover:text-warning hover:border-warning/40'
+                  }`}
+                >
+                  <AlertTriangle size={14} /> Sospechosos ({totalSospechosos})
+                </button>
+              )}
+            </div>
             <button
               onClick={() => setShowCrear(true)}
               className="flex items-center gap-1.5 bg-success hover:bg-success-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
@@ -264,7 +282,16 @@ export function PeriodoDetailPage() {
                           {g.registros.map(r => (
                             <tr key={r.id} className="border-t border-border/60 hover:bg-muted">
                               <td className="px-3 py-2.5 text-muted-foreground whitespace-nowrap">{fmtDiaSemana(r.fecha)}</td>
-                              <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_entrada_inicial ?? r.hora_entrada)}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">
+                                <span className="inline-flex items-center gap-1.5">
+                                  {fmtHora(r.hora_entrada_inicial ?? r.hora_entrada)}
+                                  {r.sospechoso === 1 && (
+                                    <AlertTriangle size={13} className="text-warning shrink-0">
+                                      <title>Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador</title>
+                                    </AlertTriangle>
+                                  )}
+                                </span>
+                              </td>
                               <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_salida)}</td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
                               <td className="px-3 py-2.5 text-right text-info">
@@ -293,6 +320,16 @@ export function PeriodoDetailPage() {
                                       title="Reasignar descanso compensatorio"
                                     >
                                       <CalendarClock size={14} />
+                                    </button>
+                                  )}
+                                  {r.sospechoso === 1 && (
+                                    <button
+                                      onClick={() => descartarSospechoso.mutate(r.id)}
+                                      disabled={descartarSospechoso.isPending}
+                                      className="text-warning/70 hover:text-warning transition-colors disabled:opacity-50"
+                                      title="Descartar: ya lo revisé, no es fraude"
+                                    >
+                                      <X size={14} />
                                     </button>
                                   )}
                                 </div>
@@ -449,6 +486,16 @@ export function PeriodoDetailPage() {
                                       <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-info-light text-info">
                                         {TIPO_DIA_LABELS[r.tipo_dia]}
                                       </span>
+                                    )}
+                                    {r.sospechoso === 1 && (
+                                      <button
+                                        onClick={() => descartarSospechoso.mutate(r.id)}
+                                        disabled={descartarSospechoso.isPending}
+                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-warning-light text-warning disabled:opacity-50"
+                                        title="Mismo dispositivo y ubicación que otro trabajador — click para descartar (ya lo revisé)"
+                                      >
+                                        <AlertTriangle size={10} /> Sospechoso <X size={10} />
+                                      </button>
                                     )}
                                   </div>
                                   {r.novedad && <p className="text-xs text-muted-foreground mt-0.5">{r.novedad}</p>}

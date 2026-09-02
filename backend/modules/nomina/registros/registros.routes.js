@@ -34,6 +34,7 @@ router.get(
     query('fecha_desde').optional().isISO8601().withMessage('fecha_desde inválida'),
     query('fecha_hasta').optional().isISO8601().withMessage('fecha_hasta inválida'),
     rangoFechasMax(366, 'fecha_desde', 'fecha_hasta'),
+    query('sospechoso').optional().isIn(['0', '1']).withMessage('sospechoso inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
     query('limit').optional().isInt({ min: 1, max: 500 }).withMessage('limit inválido'),
   ],
@@ -72,6 +73,7 @@ router.post(
   [
     body('latitud').optional().isFloat({ min: -90,  max: 90  }).withMessage('latitud inválida'),
     body('longitud').optional().isFloat({ min: -180, max: 180 }).withMessage('longitud inválida'),
+    body('device_id').optional({ values: 'falsy' }).isString().isLength({ max: 64 }).withMessage('device_id inválido'),
   ],
   validar,
   ctrl.marcarEntrada
@@ -85,6 +87,7 @@ router.post(
     idParam,
     body('latitud').optional().isFloat({ min: -90,  max: 90  }).withMessage('latitud inválida'),
     body('longitud').optional().isFloat({ min: -180, max: 180 }).withMessage('longitud inválida'),
+    body('device_id').optional({ values: 'falsy' }).isString().isLength({ max: 64 }).withMessage('device_id inválido'),
   ],
   validar,
   ctrl.marcarSalida
@@ -124,6 +127,15 @@ router.post(
   [idParam],
   validar,
   ctrl.rechazarReingreso
+);
+
+// PUT /api/nomina/registros/:id/sospechoso/descartar  — gestor revisó, no era fraude
+router.put(
+  '/:id/sospechoso/descartar',
+  verificarRol(CORREGIR),
+  [idParam],
+  validar,
+  ctrl.descartarSospechoso
 );
 
 // PUT /api/nomina/registros/:id  (corregir)

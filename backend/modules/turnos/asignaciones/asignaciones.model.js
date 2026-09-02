@@ -281,19 +281,54 @@ const AsignacionesModel = {
   },
 
   /** Marca la llegada del trabajador con coordenadas GPS. */
-  async registrarIngreso(empresaId, id, latitud, longitud) {
+  async registrarIngreso(empresaId, id, horaIngreso, latitud, longitud, deviceId) {
     const [res] = await pool.query(
       `UPDATE asignaciones_turno
-       SET hora_ingreso_real = ?, latitud_ingreso = ?, longitud_ingreso = ?,
+       SET hora_ingreso_real = ?, latitud_ingreso = ?, longitud_ingreso = ?, device_ingreso = ?,
            estado = 'en_progreso'
        WHERE id = ? AND empresa_id = ? AND estado = 'confirmado'`,
-      [ahoraColombiaSQL(), latitud, longitud, id, empresaId]
+      [horaIngreso, latitud, longitud, deviceId ?? null, id, empresaId]
     );
     // affectedRows = 0 means another concurrent request already marked ingreso
     if (res.affectedRows === 0) {
       const AppError = require('../../utils/AppError');
       throw new AppError('El ingreso ya fue registrado o el turno no está confirmado', 409);
     }
+    return res.affectedRows;
+  },
+
+  /**
+   * Otros trabajadores de la empresa que marcaron ingreso cerca en el tiempo —
+   * candidatos a comparar por device_id + proximidad GPS (marcaje sospechoso).
+   */
+  async listarIngresosCercanos(empresaId, trabajadorId, horaIngreso, ventanaSeg) {
+    const [filas] = await pool.query(
+      `SELECT id AS registro_id, trabajador_id,
+              latitud_ingreso AS lat, longitud_ingreso AS lng, device_ingreso AS device
+       FROM asignaciones_turno
+       WHERE empresa_id = ? AND trabajador_id != ?
+         AND latitud_ingreso IS NOT NULL AND device_ingreso IS NOT NULL
+         AND ABS(TIMESTAMPDIFF(SECOND, hora_ingreso_real, ?)) <= ?`,
+      [empresaId, trabajadorId, horaIngreso, ventanaSeg]
+    );
+    return filas;
+  },
+
+  /** Marca una o más asignaciones como sospechosas (no bloquea, solo audita). */
+  async marcarSospechoso(empresaId, ids) {
+    if (ids.length === 0) return;
+    await pool.query(
+      `UPDATE asignaciones_turno SET sospechoso = 1 WHERE empresa_id = ? AND id IN (?)`,
+      [empresaId, ids]
+    );
+  },
+
+  /** Descarta el flag de sospechoso tras revisión del gestor. */
+  async descartarSospechoso(empresaId, id) {
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno SET sospechoso = 0 WHERE id = ? AND empresa_id = ?`,
+      [id, empresaId]
+    );
     return res.affectedRows;
   },
 
@@ -329,7 +364,7 @@ const AsignacionesModel = {
   },
 
   /** Listado para jefes/admin, con datos de oferta y trabajador. */
-  async listar(empresaId, { fecha, ofertaId, trabajadorId, estado, limit, offset }) {
+  async listar(empresaId, { fecha, ofertaId, trabajadorId, estado, sospechoso, limit, offset }) {
     const where = ['a.empresa_id = ?'];
     const params = [empresaId];
     if (ofertaId) {
@@ -347,6 +382,10 @@ const AsignacionesModel = {
     if (estado) {
       where.push('a.estado = ?');
       params.push(estado);
+    }
+    if (sospechoso != null) {
+      where.push('a.sospechoso = ?');
+      params.push(sospechoso ? 1 : 0);
     }
     const whereSql = where.join(' AND ');
 

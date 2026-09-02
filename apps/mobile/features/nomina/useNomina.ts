@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { nominaApi, trabajadoresApi } from '@api-client';
 import type { EstadoPeriodo, TipoPeriodo, TipoDia } from '@api-client';
+import { getDeviceId } from '@/lib/deviceId';
 
 // ── Query keys ────────────────────────────────────────────────────────────
 
@@ -138,8 +139,8 @@ export function useNominaPerfil(enabled = true) {
 export function useMarcarEntrada() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (datos?: { latitud?: number; longitud?: number }) =>
-      nominaApi.marcarEntrada(datos),
+    mutationFn: async (datos?: { latitud?: number; longitud?: number }) =>
+      nominaApi.marcarEntrada({ ...datos, device_id: await getDeviceId() }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registros'] });
     },
@@ -159,11 +160,11 @@ export function useActualizarExtras() {
 export function useMarcarSalida() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ registroId, latitud, longitud }: {
+    mutationFn: async ({ registroId, latitud, longitud }: {
       registroId: number;
       latitud?: number;
       longitud?: number;
-    }) => nominaApi.marcarSalida(registroId, { latitud, longitud }),
+    }) => nominaApi.marcarSalida(registroId, { latitud, longitud, device_id: await getDeviceId() }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registros'] });
     },

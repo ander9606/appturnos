@@ -36,6 +36,7 @@ export interface RegistroDiario {
   horas_festivo: number;
   es_festivo: 0 | 1;
   novedad: string | null;
+  sospechoso: 0 | 1; // otro trabajador marcó muy cerca en tiempo/espacio — posible buddy punching, solo auditoría
   tipo_dia: TipoDia;
   aprobado_por: number | null;
   valor_hora_snapshot: number | null; // frozen at period close (migration 010b); null for open periods
@@ -215,6 +216,7 @@ export const nominaApi = {
     fecha?: string;
     fecha_desde?: string;
     fecha_hasta?: string;
+    sospechoso?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -224,12 +226,18 @@ export const nominaApi = {
     if (params.fecha)         qs.set('fecha',         params.fecha);
     if (params.fecha_desde)   qs.set('fecha_desde',   params.fecha_desde);
     if (params.fecha_hasta)   qs.set('fecha_hasta',   params.fecha_hasta);
+    if (params.sospechoso !== undefined) qs.set('sospechoso', params.sospechoso ? '1' : '0');
     if (params.page)          qs.set('page',          String(params.page));
     if (params.limit)         qs.set('limit',         String(params.limit));
     const q = qs.toString() ? `?${qs}` : '';
     return api.get<{ data: RegistroDiario[]; pagination: { page: number; limit: number; total: number } }>(
       `/api/nomina/registros${q}`,
     );
+  },
+
+  /** Descarta el flag de sospechoso de un registro tras revisión del gestor. */
+  descartarSospechoso(registroId: number): Promise<null> {
+    return api.put<null>(`/api/nomina/registros/${registroId}/sospechoso/descartar`);
   },
 
   crearRegistro(datos: {
@@ -258,11 +266,11 @@ export const nominaApi = {
     return api.get<TrabajadorNominaPerfil>('/api/nomina/me');
   },
 
-  marcarEntrada(datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
+  marcarEntrada(datos?: { latitud?: number; longitud?: number; device_id?: string }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros/marcar-entrada', datos ?? {});
   },
 
-  marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
+  marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number; device_id?: string }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>(`/api/nomina/registros/${registroId}/marcar-salida`, datos ?? {});
   },
 

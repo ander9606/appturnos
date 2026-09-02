@@ -14,14 +14,17 @@ export const nominaApi = {
   liquidarPeriodo: (id: number) =>
     api.post(`/nomina/periodos/${id}/liquidar`).then(r => r.data),
 
-  listarRegistros: (params: { periodo_id?: number; trabajador_id?: number; fecha?: string; page?: number; limit?: number }) =>
-    api.get('/nomina/registros', { params }).then(r => r.data),
+  listarRegistros: (params: { periodo_id?: number; trabajador_id?: number; fecha?: string; sospechoso?: boolean; page?: number; limit?: number }) =>
+    api.get('/nomina/registros', { params: { ...params, sospechoso: params.sospechoso === undefined ? undefined : (params.sospechoso ? '1' : '0') } }).then(r => r.data),
 
   crearRegistro: (data: { periodo_id: number; fecha: string; hora_entrada: string; hora_salida?: string; trabajador_id: number; novedad?: string }) =>
     api.post('/nomina/registros', data).then(r => r.data),
 
   corregirRegistro: (id: number, data: { hora_entrada?: string; hora_salida?: string; novedad?: string; tipo_dia?: TipoDia }) =>
     api.put(`/nomina/registros/${id}`, data).then(r => r.data),
+
+  descartarSospechoso: (id: number) =>
+    api.put(`/nomina/registros/${id}/sospechoso/descartar`).then(r => r.data),
 
   obtenerLiquidacion: (periodoId: number) =>
     api.get(`/nomina/liquidacion/${periodoId}`).then(r => r.data),

@@ -39,6 +39,8 @@ export interface Registro {
   es_festivo: number;
   tipo_dia: TipoDia;
   novedad: string | null;
+  /** Otro trabajador marcó a pocos metros/minutos de este registro — posible buddy punching. Solo auditoría, no bloquea. */
+  sospechoso: 0 | 1;
   trabajador_nombre: string;
   trabajador_apellido: string;
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -16,6 +16,7 @@ import {
   useNoPresentado,
   useCorregirAsignacion,
   useCalificar,
+  useDescartarSospechosoAsignacion,
 } from '../hooks/useTurnos';
 import { useCargos } from '@/modules/configuracion/hooks/useConfiguracion';
 import { toast } from 'sonner';
@@ -69,6 +70,7 @@ export function OfertaDetailPage() {
   const navigate = useNavigate();
 
   const [filtroAsig, setFiltroAsig] = useState<EstadoAsignacion | undefined>(undefined);
+  const [soloSospechosos, setSoloSospechosos] = useState(false);
   const [puestoEditando, setPuestoEditando] = useState<Puesto | null>(null);
   const [showPuestoForm, setShowPuestoForm] = useState(false);
   const [calificandoId, setCalificandoId] = useState<number | null>(null);
@@ -83,9 +85,14 @@ export function OfertaDetailPage() {
 
   const { data: asigData, isLoading: loadingAsig } = useAsignaciones({
     oferta_id: ofertaId,
-    estado: filtroAsig,
+    estado: soloSospechosos ? undefined : filtroAsig,
+    sospechoso: soloSospechosos || undefined,
   });
   const asignaciones: Asignacion[] = asigData?.data?.data ?? [];
+
+  // Conteo de sospechosos independiente del filtro de estado — para mostrar el badge del toggle.
+  const { data: sospechososData } = useAsignaciones({ oferta_id: ofertaId, sospechoso: true, limit: 1 });
+  const totalSospechosos = sospechososData?.data?.pagination?.total ?? 0;
 
   const eliminarPuesto = useEliminarPuesto();
   const publicar = usePublicarOferta();
@@ -94,6 +101,7 @@ export function OfertaDetailPage() {
   const rechazar = useRechazarAsignacion();
   const cancelarAsig = useCancelarAsignacion();
   const noPresentado = useNoPresentado();
+  const descartarSospechoso = useDescartarSospechosoAsignacion();
 
   const calificandoAsig = calificandoId !== null
     ? asignaciones.find(a => a.id === calificandoId) ?? null
@@ -286,12 +294,26 @@ export function OfertaDetailPage() {
 
         {/* RIGHT — Asignaciones */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 gap-2">
             <h2 className="text-sm font-semibold text-foreground">Asignaciones</h2>
-            <span className="text-xs text-muted-foreground">{asignaciones.length} resultado{asignaciones.length !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-2">
+              {(totalSospechosos > 0 || soloSospechosos) && (
+                <button
+                  onClick={() => setSoloSospechosos(v => !v)}
+                  className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
+                    soloSospechosos
+                      ? 'bg-warning-light text-warning border-warning/40'
+                      : 'border-border text-muted-foreground hover:text-warning hover:border-warning/40'
+                  }`}
+                >
+                  <AlertTriangle size={12} /> Sospechosos ({totalSospechosos})
+                </button>
+              )}
+              <span className="text-xs text-muted-foreground">{asignaciones.length} resultado{asignaciones.length !== 1 ? 's' : ''}</span>
+            </div>
           </div>
 
-          <div className="flex gap-1 mb-3 border-b border-border overflow-x-auto">
+          <div className={`flex gap-1 mb-3 border-b border-border overflow-x-auto ${soloSospechosos ? 'opacity-40 pointer-events-none' : ''}`}>
             {FILTROS_ASIG.map(f => (
               <button
                 key={String(f.value)}
@@ -337,7 +359,16 @@ export function OfertaDetailPage() {
                           {ESTADO_ASIG_LABEL[a.estado]}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.hora_ingreso_real ?? '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          {a.hora_ingreso_real ?? '—'}
+                          {a.sospechoso === 1 && (
+                            <AlertTriangle size={13} className="text-warning shrink-0">
+                              <title>Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador</title>
+                            </AlertTriangle>
+                          )}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{a.hora_egreso_real ?? '—'}</td>
                       <td className="px-4 py-3 text-center text-muted-foreground">
                         {a.calificacion != null ? (
@@ -409,6 +440,17 @@ export function OfertaDetailPage() {
                               aria-label="Corregir ingreso/egreso"
                             >
                               <Clock size={13} />
+                            </button>
+                          )}
+                          {a.sospechoso === 1 && (
+                            <button
+                              onClick={() => descartarSospechoso.mutate(a.id)}
+                              disabled={descartarSospechoso.isPending}
+                              className="text-warning/70 hover:text-warning transition-colors p-1 disabled:opacity-50"
+                              title="Descartar: ya lo revisé, no es fraude"
+                              aria-label="Descartar marcaje sospechoso"
+                            >
+                              <X size={13} />
                             </button>
                           )}
                         </div>

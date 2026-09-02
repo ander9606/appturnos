@@ -90,6 +90,8 @@ export interface Asignacion {
   estado: EstadoAsignacion;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
+  /** Otro trabajador marcó ingreso desde el mismo dispositivo y ubicación — posible buddy punching. Solo auditoría, no bloquea. */
+  sospechoso: 0 | 1;
   trabajador_nombre: string;
   trabajador_apellido: string;
   cargo_nombre: string;

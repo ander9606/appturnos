@@ -4,7 +4,7 @@ const { pool } = require('../../../config/database');
 
 /** Acceso a datos de registros diarios de nómina (tabla registros_diarios). */
 const RegistrosModel = {
-  async listar(empresaId, { periodoId, trabajadorId, fecha, fechaDesde, fechaHasta, limit, offset }) {
+  async listar(empresaId, { periodoId, trabajadorId, fecha, fechaDesde, fechaHasta, sospechoso, limit, offset }) {
     const where = ['r.empresa_id = ?'];
     const params = [empresaId];
     if (periodoId)   { where.push('r.periodo_id = ?');    params.push(periodoId); }
@@ -12,6 +12,7 @@ const RegistrosModel = {
     if (fecha)       { where.push('r.fecha = ?');         params.push(fecha); }
     if (fechaDesde)  { where.push('r.fecha >= ?');        params.push(fechaDesde); }
     if (fechaHasta)  { where.push('r.fecha <= ?');        params.push(fechaHasta); }
+    if (sospechoso != null) { where.push('r.sospechoso = ?'); params.push(sospechoso ? 1 : 0); }
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
@@ -94,13 +95,13 @@ const RegistrosModel = {
     const [res] = await pool.query(
       `INSERT INTO registros_diarios
          (empresa_id, trabajador_id, periodo_id, fecha, hora_entrada, hora_entrada_inicial,
-          latitud_entrada, longitud_entrada,
+          latitud_entrada, longitud_entrada, device_entrada,
           horas_ordinarias, horas_extra_diurnas, horas_extra_nocturnas,
           horas_nocturnas, horas_festivo, es_festivo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0)`,
       [
         empresaId, d.trabajador_id, d.periodo_id, d.fecha, d.hora_entrada, d.hora_entrada,
-        d.latitud ?? null, d.longitud ?? null,
+        d.latitud ?? null, d.longitud ?? null, d.deviceId ?? null,
       ]
     );
     return res.insertId;
@@ -110,26 +111,26 @@ const RegistrosModel = {
    * Inicia una nueva sesión del día tras un reingreso aprobado.
    * Los horas_* acumuladas de la sesión anterior se preservan;
    * hora_entrada se resetea a la nueva entrada y hora_salida se limpia.
-   * latitud_salida/longitud_salida también se limpian — pertenecían a la sesión cerrada.
+   * latitud_salida/longitud_salida/device_salida también se limpian — pertenecían a la sesión cerrada.
    */
-  async iniciarReingreso(empresaId, id, horaEntrada, latitud, longitud) {
+  async iniciarReingreso(empresaId, id, horaEntrada, latitud, longitud, deviceId) {
     const [res] = await pool.query(
       `UPDATE registros_diarios
-       SET hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?,
-           hora_salida = NULL, latitud_salida = NULL, longitud_salida = NULL,
+       SET hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?, device_entrada = ?,
+           hora_salida = NULL, latitud_salida = NULL, longitud_salida = NULL, device_salida = NULL,
            sesiones = sesiones + 1, alerta_extra_enviada = 0
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NOT NULL`,
-      [horaEntrada, latitud ?? null, longitud ?? null, id, empresaId]
+      [horaEntrada, latitud ?? null, longitud ?? null, deviceId ?? null, id, empresaId]
     );
     return res.affectedRows;
   },
 
   /** Set hora_entrada on an existing registro that has none yet (race-condition safe). */
-  async actualizarEntrada(empresaId, id, horaEntrada, latitud, longitud) {
+  async actualizarEntrada(empresaId, id, horaEntrada, latitud, longitud, deviceId) {
     const [res] = await pool.query(
-      `UPDATE registros_diarios SET hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?
+      `UPDATE registros_diarios SET hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?, device_entrada = ?
        WHERE id = ? AND empresa_id = ? AND hora_entrada IS NULL`,
-      [horaEntrada, latitud ?? null, longitud ?? null, id, empresaId]
+      [horaEntrada, latitud ?? null, longitud ?? null, deviceId ?? null, id, empresaId]
     );
     return res.affectedRows;
   },
@@ -138,7 +139,7 @@ const RegistrosModel = {
   async actualizarSalida(empresaId, id, d) {
     const [res] = await pool.query(
       `UPDATE registros_diarios SET
-         hora_salida = ?, latitud_salida = ?, longitud_salida = ?,
+         hora_salida = ?, latitud_salida = ?, longitud_salida = ?, device_salida = ?,
          horas_ordinarias = ?, horas_extra_diurnas = ?,
          horas_extra_nocturnas = ?, horas_nocturnas = ?, horas_festivo = ?, es_festivo = ?
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NULL`,
@@ -146,6 +147,7 @@ const RegistrosModel = {
         d.hora_salida,
         d.latitud ?? null,
         d.longitud ?? null,
+        d.deviceId ?? null,
         d.horas_ordinarias,
         d.horas_extra_diurnas,
         d.horas_extra_nocturnas,
@@ -230,6 +232,44 @@ const RegistrosModel = {
         id,
         empresaId,
       ]
+    );
+    return res.affectedRows;
+  },
+
+  /**
+   * Registros de OTROS trabajadores de la empresa, mismo día y mismo tipo de marcaje
+   * (entrada u salida), dentro de una ventana de tiempo — candidatos a comparar por
+   * distancia GPS para detectar marcaje sospechoso (dos personas, un solo lugar).
+   */
+  async listarMarcajesCercanos(empresaId, fecha, trabajadorId, tipo, hora, ventanaSeg) {
+    const [col, latCol, lngCol, deviceCol] = tipo === 'entrada'
+      ? ['hora_entrada', 'latitud_entrada', 'longitud_entrada', 'device_entrada']
+      : ['hora_salida', 'latitud_salida', 'longitud_salida', 'device_salida'];
+    const [filas] = await pool.query(
+      `SELECT id AS registro_id, trabajador_id, ${latCol} AS lat, ${lngCol} AS lng, ${deviceCol} AS device
+       FROM registros_diarios
+       WHERE empresa_id = ? AND fecha = ? AND trabajador_id != ?
+         AND ${latCol} IS NOT NULL AND ${deviceCol} IS NOT NULL
+         AND ABS(TIME_TO_SEC(TIMEDIFF(${col}, ?))) <= ?`,
+      [empresaId, fecha, trabajadorId, hora, ventanaSeg]
+    );
+    return filas;
+  },
+
+  /** Marca uno o más registros como sospechosos (no bloquea, solo audita). */
+  async marcarSospechoso(empresaId, ids) {
+    if (ids.length === 0) return;
+    await pool.query(
+      `UPDATE registros_diarios SET sospechoso = 1 WHERE empresa_id = ? AND id IN (?)`,
+      [empresaId, ids]
+    );
+  },
+
+  /** Descarta el flag de sospechoso tras revisión del gestor (no vuelve a evaluarse). */
+  async descartarSospechoso(empresaId, id) {
+    const [res] = await pool.query(
+      `UPDATE registros_diarios SET sospechoso = 0 WHERE id = ? AND empresa_id = ?`,
+      [id, empresaId]
     );
     return res.affectedRows;
   },

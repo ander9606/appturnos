@@ -12,7 +12,44 @@ const CoberturaService = require('../../integracion/cobertura.service');
 const AppError = require('../../../utils/AppError');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 const { calcularHoras } = require('../../../utils/laboralUtils');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
 const logger = require('../../../utils/logger');
+
+/**
+ * Flags this ingreso (and any match found) as sospechoso — best-effort, never throws.
+ * Solo dispara si se cumplen las DOS condiciones a la vez: mismo device_id Y
+ * proximidad GPS. Mismo criterio que revisarMarcajeSospechoso en nómina.
+ */
+async function revisarIngresoSospechoso(empresaId, asignacionId, trabajador, horaIngreso, latitud, longitud, deviceId) {
+  if (latitud == null || longitud == null || deviceId == null) return;
+  try {
+    const cercanos = await AsignacionesModel.listarIngresosCercanos(
+      empresaId, trabajador.id, horaIngreso, SOSPECHA_VENTANA_SEG
+    );
+    const match = buscarMatch(cercanos, { latitud, longitud, deviceId });
+    if (!match) return;
+
+    await AsignacionesModel.marcarSospechoso(empresaId, [asignacionId, match.registro_id]);
+
+    const otro = await TrabajadoresModel.obtenerPorId(empresaId, match.trabajador_id);
+    const [gestores] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1`,
+      [empresaId]
+    );
+    if (gestores.length > 0) {
+      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+        empresaId,
+        tipo: 'turno.sospechoso',
+        titulo: 'Posible marcaje fraudulento',
+        mensaje: `${trabajador.nombre} ${trabajador.apellido} y ${otro?.nombre ?? 'otro trabajador'} ${otro?.apellido ?? ''} marcaron ingreso desde el mismo dispositivo — revisa sus asignaciones.`,
+        data: { asignacion_id: asignacionId, otra_asignacion_id: match.registro_id, trabajador_id: trabajador.id, otro_trabajador_id: match.trabajador_id },
+      }).catch(() => {});
+    }
+  } catch {
+    // best-effort: un fallo acá no debe impedir que el trabajador marque su ingreso.
+  }
+}
 
 /** JOIN best-effort para la notificación — si falla, se loguea en vez de fallar en silencio. */
 function obtenerDetallesParaNotificar(empresaId, id) {
@@ -79,13 +116,14 @@ const AsignacionesService = {
     return asignacion;
   },
 
-  async listar(empresaId, { fecha, oferta_id, trabajador_id, estado, page, limit }) {
+  async listar(empresaId, { fecha, oferta_id, trabajador_id, estado, sospechoso, page, limit }) {
     const offset = (page - 1) * limit;
     const { data, total } = await AsignacionesModel.listar(empresaId, {
       fecha,
       ofertaId: oferta_id,
       trabajadorId: trabajador_id,
       estado,
+      sospechoso,
       limit,
       offset,
     });
@@ -257,7 +295,7 @@ const AsignacionesService = {
     return asignacion;
   },
 
-  async marcarIngreso(empresaId, id, usuarioId, { latitud, longitud }) {
+  async marcarIngreso(empresaId, id, usuarioId, { latitud, longitud, device_id: deviceId }) {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
 
@@ -310,7 +348,9 @@ const AsignacionesService = {
     // Use empresa_id from the DB row — JWT empresa_id is null for marketplace workers.
     const dbEmpresaId = asignacion.empresa_id;
 
-    await AsignacionesModel.registrarIngreso(dbEmpresaId, id, latitud, longitud);
+    const horaIngreso = ahoraColombiaSQL();
+    await AsignacionesModel.registrarIngreso(dbEmpresaId, id, horaIngreso, latitud, longitud, deviceId);
+    await revisarIngresoSospechoso(dbEmpresaId, id, trabajador, horaIngreso, latitud, longitud, deviceId);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.ingreso', {
       external_ref:  asignacion.oferta_external_ref || null,
       empleado_ref:  asignacion.trabajador_external_ref || null,
@@ -700,6 +740,12 @@ const AsignacionesService = {
       ranking: resultado.ranking,
       total_calificaciones: resultado.total,
     };
+  },
+
+  /** Descarta un flag de sospechoso tras revisión del gestor. */
+  async descartarSospechoso(empresaId, id) {
+    const affected = await AsignacionesModel.descartarSospechoso(empresaId, id);
+    if (!affected) throw new AppError('Asignación no encontrada', 404);
   },
 };
 

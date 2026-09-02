@@ -51,6 +51,7 @@ export interface Asignacion {
   pago_total: number | null;
   latitud_ingreso: number | null;
   longitud_ingreso: number | null;
+  sospechoso: 0 | 1; // otro trabajador marcó ingreso desde el mismo dispositivo y ubicación — posible buddy punching, solo auditoría
   firma_digital: string | null;
   created_at: string;
   /** Solo presente en listarPorUsuario (feed "Mis Turnos" multi-empresa del trabajador). */
@@ -328,11 +329,17 @@ export const turnosApi = {
    * @param latitud  Latitud actual del dispositivo
    * @param longitud Longitud actual del dispositivo
    */
-  marcarIngreso(asignacionId: number, latitud: number, longitud: number): Promise<Asignacion> {
+  marcarIngreso(asignacionId: number, latitud: number, longitud: number, deviceId?: string): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/ingreso`, {
       latitud,
       longitud,
+      device_id: deviceId,
     });
+  },
+
+  /** Descarta el flag de sospechoso de una asignación tras revisión del gestor. */
+  descartarSospechoso(asignacionId: number): Promise<null> {
+    return api.put<null>(`/api/turnos/asignaciones/${asignacionId}/sospechoso/descartar`);
   },
 
   /**

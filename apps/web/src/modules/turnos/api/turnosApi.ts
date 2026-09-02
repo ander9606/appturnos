@@ -29,8 +29,10 @@ export const turnosApi = {
     api.get(`/turnos/ofertas/${ofertaId}/puestos`).then(r => r.data),
 
   // Asignaciones
-  listarAsignaciones: (params?: { oferta_id?: number; trabajador_id?: number; estado?: EstadoAsignacion; fecha?: string; page?: number; limit?: number }) =>
-    api.get('/turnos/asignaciones', { params }).then(r => r.data),
+  listarAsignaciones: (params?: { oferta_id?: number; trabajador_id?: number; estado?: EstadoAsignacion; fecha?: string; sospechoso?: boolean; page?: number; limit?: number }) =>
+    api.get('/turnos/asignaciones', {
+      params: { ...params, sospechoso: params?.sospechoso === undefined ? undefined : (params.sospechoso ? '1' : '0') },
+    }).then(r => r.data),
 
   confirmarAsignacion: (id: number) =>
     api.post(`/turnos/asignaciones/${id}/confirmar`).then(r => r.data),
@@ -54,6 +56,9 @@ export const turnosApi = {
 
   calificar: (id: number, data: { calificacion: number; comentario?: string }) =>
     api.post(`/turnos/asignaciones/${id}/calificar`, data).then(r => r.data),
+
+  descartarSospechoso: (id: number) =>
+    api.put(`/turnos/asignaciones/${id}/sospechoso/descartar`).then(r => r.data),
 
   crearPuesto: (ofertaId: number, data: { cargo_id: number; plazas?: number; tarifa_dia: number; notas?: string }) =>
     api.post(`/turnos/ofertas/${ofertaId}/puestos`, data).then(r => r.data),
