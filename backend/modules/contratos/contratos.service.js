@@ -3,6 +3,7 @@
 const ContratosModel = require('./contratos.model');
 const IntegracionService = require('../integracion/integracion.service');
 const TrabajadoresService = require('../trabajadores/trabajadores.service');
+const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
 const { ROLES } = require('../../config/constants');
 
@@ -47,6 +48,8 @@ const ContratosService = {
       throw new AppError('El contrato ya está firmado', 409);
     }
     await ContratosModel.firmar(empresaId, id, firmaB64);
+    // Guarda la firma como atajo reutilizable para el próximo contrato (best-effort).
+    await TrabajadoresModel.guardarFirma(contrato.trabajador_id, firmaB64).catch(() => null);
     await IntegracionService.emitir(empresaId, 'contrato.completado', {
       contrato_id: id,
       asignacion_id: contrato.asignacion_id,

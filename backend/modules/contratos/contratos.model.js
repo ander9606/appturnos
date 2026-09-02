@@ -36,6 +36,7 @@ const ContratosModel = {
               a.trabajador_id, a.estado AS asignacion_estado,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cedula AS trabajador_cedula, t.usuario_id AS trabajador_usuario_id,
+              t.firma_guardada AS trabajador_firma_guardada,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
               e.nombre AS empresa_nombre, e.nit AS empresa_nit
        FROM contratos_diarios c
@@ -72,6 +73,7 @@ const ContratosModel = {
               a.trabajador_id, a.estado AS asignacion_estado,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cedula AS trabajador_cedula, t.usuario_id AS trabajador_usuario_id,
+              t.firma_guardada AS trabajador_firma_guardada,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
               e.nombre AS empresa_nombre, e.nit AS empresa_nit
        FROM contratos_diarios c

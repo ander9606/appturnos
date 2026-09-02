@@ -25,6 +25,8 @@ export interface Contrato extends ContratoResumen {
   lugar: string | null;
   empresa_nombre: string;
   empresa_nit: string | null;
+  /** Última firma guardada del trabajador — atajo para firmar sin redibujar. */
+  trabajador_firma_guardada: string | null;
 }
 
 export const contratosApi = {

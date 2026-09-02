@@ -22,6 +22,7 @@ import {
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }            from '@/lib/theme';
@@ -39,6 +40,7 @@ import { Badge }               from '@/components/ui/Badge';
 import { Button }              from '@/components/ui/Button';
 import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
 import { ApiError }            from '@api-client';
+import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -92,6 +94,7 @@ export default function TurnoDetailScreen() {
   const [now, setNow] = useState(Date.now());
   const [selectedRating, setSelectedRating] = useState(0);
   const [comentario, setComentario] = useState('');
+  const [cargandoContrato, setCargandoContrato] = useState(false);
 
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
@@ -216,6 +219,21 @@ export default function TurnoDetailScreen() {
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo guardar la calificación.';
       Alert.alert('Error', msg);
+    }
+  };
+
+  const handleDescargarContrato = async () => {
+    if (!id) return;
+    setCargandoContrato(true);
+    try {
+      const token = await SecureStore.getItemAsync('appturnos.access_token');
+      const base  = process.env.EXPO_PUBLIC_API_URL;
+      await WebBrowser.openBrowserAsync(`${base}/api/contratos/asignacion/${id}/pdf?token=${token}`);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo abrir el contrato.';
+      Alert.alert('Error', msg);
+    } finally {
+      setCargandoContrato(false);
     }
   };
 
@@ -463,6 +481,20 @@ export default function TurnoDetailScreen() {
                     {hora_egreso_real ? fmtTime(hora_egreso_real.slice(11, 19)) : '—'}
                   </Text>
                 </View>
+                {isGestor && (
+                  <TouchableOpacity
+                    onPress={handleDescargarContrato}
+                    disabled={cargandoContrato}
+                    className="flex-row items-center gap-1.5 mt-1"
+                  >
+                    {cargandoContrato ? (
+                      <ActivityIndicator size="small" color="#059669" />
+                    ) : (
+                      <Ionicons name="download-outline" size={16} color="#059669" />
+                    )}
+                    <Text className="text-xs font-semibold text-success">Descargar contrato</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Calificación */}

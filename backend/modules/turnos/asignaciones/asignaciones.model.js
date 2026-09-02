@@ -508,12 +508,14 @@ const AsignacionesModel = {
               o.lugar, o.latitud, o.longitud,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
-              cal.calificacion, cal.comentario AS calificacion_comentario
+              cal.calificacion, cal.comentario AS calificacion_comentario,
+              COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
        JOIN cargos carg ON carg.id = p.cargo_id
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
+       LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id
        WHERE a.empresa_id = ? AND a.trabajador_id = ?
        ORDER BY o.fecha DESC, o.hora_inicio`,
       [empresaId, trabajadorId]
@@ -535,7 +537,8 @@ const AsignacionesModel = {
               emp.nombre AS empresa_nombre,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
-              cal.calificacion, cal.comentario AS calificacion_comentario
+              cal.calificacion, cal.comentario AS calificacion_comentario,
+              COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
        FROM asignaciones_turno a
        JOIN trabajador_empresa te ON te.trabajador_id = a.trabajador_id
        JOIN ofertas_turno o       ON o.id = a.oferta_id
@@ -543,6 +546,7 @@ const AsignacionesModel = {
        JOIN oferta_puestos p      ON p.id = a.puesto_id
        JOIN cargos carg           ON carg.id = p.cargo_id
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
+       LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id
        WHERE te.usuario_id = ? AND te.estado = 'activo'
        ORDER BY o.fecha DESC, o.hora_inicio`,
       [usuarioId]
@@ -581,6 +585,7 @@ const AsignacionesModel = {
          p.tarifa_dia,
          carg.nombre   AS cargo_nombre,
          cal.calificacion,
+         COALESCE(cd.firmado_trabajador, 0) AS firmado_trabajador,
          t.id          AS trabajador_id,
          t.nombre, t.apellido,
          t.cargo       AS cargo_descripcion,
@@ -592,6 +597,7 @@ const AsignacionesModel = {
        JOIN oferta_puestos p  ON p.id   = a.puesto_id
        JOIN cargos carg       ON carg.id = p.cargo_id
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
+       LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id
        WHERE ${where.join(' AND ')}
        ORDER BY t.apellido, t.nombre, o.fecha`,
       params
@@ -612,18 +618,26 @@ const AsignacionesModel = {
           pago_base:          0,
           pago_extra:         0,
           pago_total:         0,
+          // Turnos completados cuyo contrato aún no firma el trabajador — su pago
+          // no se suma a los totales de arriba hasta que exista la firma.
+          turnos_pendientes_firma: 0,
           turnos:             [],
         });
       }
       const w = workers.get(row.trabajador_id);
+      const firmado = Boolean(row.firmado_trabajador);
       const extra  = Number(row.pago_extra ?? 0);
       const total  = Number(row.pago_total ?? 0);
       const horas  = Number(row.horas_trabajadas ?? 0);
       w.total_turnos++;
-      w.total_horas  = parseFloat((w.total_horas + horas).toFixed(4));
-      w.pago_extra   += extra;
-      w.pago_base    += total - extra;
-      w.pago_total   += total;
+      if (firmado) {
+        w.total_horas  = parseFloat((w.total_horas + horas).toFixed(4));
+        w.pago_extra   += extra;
+        w.pago_base    += total - extra;
+        w.pago_total   += total;
+      } else {
+        w.turnos_pendientes_firma++;
+      }
       w.turnos.push({
         asignacion_id:   row.asignacion_id,
         oferta_titulo:   row.oferta_titulo,
@@ -639,6 +653,7 @@ const AsignacionesModel = {
         pago_extra:      extra,
         pago_total:      total,
         calificacion:    row.calificacion,
+        firmado_trabajador: firmado,
       });
     }
     return Array.from(workers.values());
@@ -833,7 +848,8 @@ const AsignacionesModel = {
               pm.radio_metros AS punto_radio,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cargo AS trabajador_cargo, t.external_ref AS trabajador_external_ref,
-              cal.calificacion, cal.comentario AS calificacion_comentario
+              cal.calificacion, cal.comentario AS calificacion_comentario,
+              COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
        FROM asignaciones_turno a
        JOIN ofertas_turno o    ON o.id   = a.oferta_id
        JOIN empresas emp       ON emp.id = a.empresa_id
@@ -842,6 +858,7 @@ const AsignacionesModel = {
        JOIN trabajadores t     ON t.id   = a.trabajador_id
        LEFT JOIN puntos_marcaje pm ON pm.id = carg.punto_marcaje_id
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
+       LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id
        WHERE a.id = ?${empresaId != null ? ' AND a.empresa_id = ?' : ''} LIMIT 1`,
       empresaId != null ? [id, empresaId] : [id]
     );

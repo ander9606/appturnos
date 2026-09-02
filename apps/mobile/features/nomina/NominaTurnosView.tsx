@@ -73,22 +73,30 @@ export function NominaTurnosView() {
     });
   }, [turnos, periodo]);
 
+  // Turnos completados sin firma no cuentan en el total a cobrar hasta que
+  // el trabajador firme su contrato — mismo criterio que la liquidación del gestor.
   const totales = useMemo(() =>
     turnosQuincena.reduce(
-      (acc, a) => ({
-        count: acc.count + 1,
-        horas: acc.horas + (Number(a.horas_trabajadas) || 0),
-        pago:  acc.pago  + (Number(a.pago_total) || 0),
-      }),
-      { count: 0, horas: 0, pago: 0 }
+      (acc, a) => {
+        const firmado = a.contrato_firmado !== 0;
+        return {
+          count: acc.count + 1,
+          horas: acc.horas + (firmado ? Number(a.horas_trabajadas) || 0 : 0),
+          pago:  acc.pago  + (firmado ? Number(a.pago_total) || 0 : 0),
+          pendientesFirma: acc.pendientesFirma + (firmado ? 0 : 1),
+        };
+      },
+      { count: 0, horas: 0, pago: 0, pendientesFirma: 0 }
     ),
     [turnosQuincena]
   );
 
   // Desglose por empresa — solo aporta valor cuando trabajó para más de una en la quincena.
+  // Mismo filtro de firma que `totales` arriba, para que las dos cifras sumen igual.
   const porEmpresa = useMemo(() => {
     const map = new Map<string, number>();
     for (const a of turnosQuincena) {
+      if (a.contrato_firmado === 0) continue;
       const nombre = a.empresa_nombre ?? 'Otra empresa';
       map.set(nombre, (map.get(nombre) ?? 0) + (Number(a.pago_total) || 0));
     }
@@ -205,6 +213,15 @@ export function NominaTurnosView() {
             <Text className="text-xs text-amber-600">Turno extendido</Text>
           )}
         </View>
+
+        {item.contrato_firmado === 0 && (
+          <View className="flex-row items-center gap-1 mt-0.5">
+            <Ionicons name="warning" size={11} color="#D97706" />
+            <Text className="text-xs text-warning font-medium">
+              Falta tu firma — no cuenta en el total todavía
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   }, [router, theme]);
@@ -307,6 +324,20 @@ export function NominaTurnosView() {
                 </View>
               </View>
             </View>
+
+            {/* Aviso: turnos completados sin firma no cuentan en "A cobrar" */}
+            {totales.pendientesFirma > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push('/mis-contratos')}
+                className="mx-5 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3 flex-row items-center gap-2.5"
+              >
+                <Ionicons name="warning" size={18} color="#D97706" />
+                <Text className="flex-1 text-xs text-warning font-medium">
+                  Tienes {totales.pendientesFirma} turno{totales.pendientesFirma !== 1 ? 's' : ''} sin firmar — fírmalo{totales.pendientesFirma !== 1 ? 's' : ''} para que cuente{totales.pendientesFirma !== 1 ? 'n' : ''} en tu pago
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color="#D97706" />
+              </TouchableOpacity>
+            )}
 
             {/* Desglose por empresa — solo si trabajó para más de una en la quincena */}
             {porEmpresa.length > 1 && (

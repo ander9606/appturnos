@@ -44,4 +44,18 @@ async function pdf(req, res) {
   generarContratoPdf(contrato, res);
 }
 
-module.exports = { listar, obtenerPorAsignacion, obtener, firmar, pdf };
+async function pdfPorAsignacion(req, res) {
+  const contrato = await ContratosService.obtenerPorAsignacion(
+    req.empresa_id,
+    Number(req.params.asignacionId),
+    req.usuario
+  );
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `inline; filename="contrato-${contrato.numero_contrato}.pdf"`
+  );
+  generarContratoPdf(contrato, res);
+}
+
+module.exports = { listar, obtenerPorAsignacion, obtener, firmar, pdf, pdfPorAsignacion };

@@ -513,6 +513,14 @@ const TrabajadoresModel = {
     return res.affectedRows;
   },
 
+  /** Guarda la última firma dibujada como atajo reutilizable en futuros contratos. */
+  async guardarFirma(trabajadorId, firmaB64) {
+    await pool.query(
+      'UPDATE trabajadores SET firma_guardada = ? WHERE id = ?',
+      [firmaB64, trabajadorId]
+    );
+  },
+
   // ── Disponibilidad ────────────────────────────────────────────────────────
 
   async obtenerDisponibilidad(empresaId, trabajadorId) {

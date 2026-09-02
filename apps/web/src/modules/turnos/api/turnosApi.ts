@@ -76,4 +76,8 @@ export const turnosApi = {
   /** Período activo de liquidación (segmentos nómina/turnos) — /turnos/eventual vive en otro módulo del backend. */
   periodoActivoEventual: () =>
     api.get('/turnos/eventual/periodo-activo').then(r => r.data),
+
+  // Contrato del turno (generado al completarse la asignación)
+  descargarContratoPorAsignacion: (asignacionId: number) =>
+    api.get(`/contratos/asignacion/${asignacionId}/pdf`, { responseType: 'blob' }).then(r => r.data),
 };

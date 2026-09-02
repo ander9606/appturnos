@@ -65,6 +65,9 @@ export interface LiquidacionTurno {
   pago_extra: number;
   pago_total: number;
   calificacion: number | null;
+  /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
+   *  su pago no está incluido en los totales de `LiquidacionTurnosTrabajador`. */
+  firmado_trabajador: boolean;
 }
 
 export interface LiquidacionTurnosTrabajador {
@@ -79,7 +82,24 @@ export interface LiquidacionTurnosTrabajador {
   pago_base: number;
   pago_extra: number;
   pago_total: number;
+  /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
+  turnos_pendientes_firma: number;
   turnos: LiquidacionTurno[];
+}
+
+export interface PeriodoTurnoEventual {
+  id: number;
+  segmento: 'nomina' | 'turnos';
+  tipo: 'mensual' | 'quincenal' | 'semanal' | 'trimestral';
+  fecha_inicio: string; // YYYY-MM-DD
+  fecha_fin: string;
+  estado: 'abierto' | 'liquidado';
+}
+
+export interface PeriodosEventualActivos {
+  nomina: PeriodoTurnoEventual;
+  /** Personal de apoyo 100% turnos — sigue el ciclo de liquidación de la empresa. */
+  turnos: PeriodoTurnoEventual;
 }
 
 export interface Asignacion {

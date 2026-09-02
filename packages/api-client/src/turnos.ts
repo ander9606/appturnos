@@ -94,6 +94,9 @@ export interface Asignacion {
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;
+  /** Si es `0`, el contrato del turno completado aún no lo firma el trabajador
+   *  — su pago no cuenta en la liquidación hasta que exista la firma. */
+  contrato_firmado?: 0 | 1;
   // Joined from trabajadores (only in gestor detail view)
   trabajador_nombre?: string;
   trabajador_apellido?: string;
@@ -218,6 +221,9 @@ export interface LiquidacionTurnoLinea {
   pago_extra: number;
   pago_total: number;
   calificacion: number | null;
+  /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
+   *  su pago no está incluido en los totales de `LiquidacionTurnosTrabajador`. */
+  firmado_trabajador: boolean;
 }
 
 export interface LiquidacionTurnosTrabajador {
@@ -232,6 +238,8 @@ export interface LiquidacionTurnosTrabajador {
   pago_base: number;
   pago_extra: number;
   pago_total: number;
+  /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
+  turnos_pendientes_firma: number;
   turnos: LiquidacionTurnoLinea[];
 }
 

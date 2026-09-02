@@ -17,9 +17,14 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
     <View className="py-2.5 border-b border-border gap-1">
       {/* Título + calificación */}
       <View className="flex-row items-start justify-between gap-2">
-        <Text className="text-xs font-medium text-foreground flex-1" numberOfLines={1}>
-          {linea.oferta_titulo}
-        </Text>
+        <View className="flex-row items-center gap-1 flex-1">
+          <Text className="text-xs font-medium text-foreground flex-1" numberOfLines={1}>
+            {linea.oferta_titulo}
+          </Text>
+          {!linea.firmado_trabajador && (
+            <Ionicons name="warning" size={11} color="#D97706" />
+          )}
+        </View>
         {linea.calificacion != null ? (
           <View className="flex-row items-center gap-0.5">
             <Ionicons name="star" size={10} color="#F59E0B" />
@@ -67,6 +72,12 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
           )}
         </View>
       </View>
+
+      {!linea.firmado_trabajador && (
+        <Text className="text-[10px] text-warning font-medium">
+          Contrato sin firmar — no cuenta en el total a pagar
+        </Text>
+      )}
     </View>
   );
 }

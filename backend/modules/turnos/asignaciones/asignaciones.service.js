@@ -430,6 +430,8 @@ const AsignacionesService = {
     if (contrato && !contrato.firmado_trabajador && firma_b64) {
       await ContratosModel.firmar(dbEmpresaId, contrato.id, firma_b64).catch(() => null);
     }
+    // Guarda la firma como atajo reutilizable para el próximo contrato (best-effort).
+    await TrabajadoresModel.guardarFirma(trabajador.id, firma_b64).catch(() => null);
 
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
       external_ref:  asignacion.oferta_external_ref || null,
@@ -558,6 +560,22 @@ const AsignacionesService = {
       });
     }
 
+    // Esta corrección recién cerró el turno sin la firma del trabajador (el
+    // gestor no la captura) — avísale para que firme y el turno cuente en su pago.
+    if (estadoNuevo === 'completado' && asig.estado !== 'completado') {
+      const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(asig.trabajador_id);
+      if (trabajadorUsuarioId) {
+        await NotificacionesService.notificar({
+          empresaId,
+          usuarioId: trabajadorUsuarioId,
+          tipo: 'contrato.pendiente_firma',
+          titulo: 'Falta firmar tu contrato',
+          mensaje: 'El gestor corrigió tu turno y quedó completado. Firma el contrato para que el pago cuente en tu liquidación.',
+          data: { asignacion_id: id, oferta_id: asig.oferta_id },
+        }).catch(() => {});
+      }
+    }
+
     if (estadoNuevo === 'completado') {
       await CostoLaborService.verificarYEmitir(empresaId, asig.oferta_id);
     }
@@ -676,8 +694,8 @@ const AsignacionesService = {
       await NotificacionesService.notificarVarios(idsCerrados, {
         empresaId,
         tipo: 'turno.cerrado_gestor',
-        titulo: 'Jornada finalizada',
-        mensaje: 'El gestor cerró tu jornada. Revisa el resumen en tu perfil.',
+        titulo: 'Jornada finalizada — falta tu firma',
+        mensaje: 'El gestor cerró tu jornada. Firma el contrato para que el pago cuente en tu liquidación.',
         data: { oferta_id: ofertaId },
       }).catch(() => {});
     }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, AlertTriangle, X } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -19,6 +19,8 @@ import {
   useDescartarSospechosoAsignacion,
 } from '../hooks/useTurnos';
 import { useCargos } from '@/modules/configuracion/hooks/useConfiguracion';
+import { turnosApi } from '../api/turnosApi';
+import { descargarBlob } from '@/shared/lib/download';
 import { toast } from 'sonner';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { Modal } from '@/shared/components/Modal';
@@ -75,6 +77,19 @@ export function OfertaDetailPage() {
   const [showPuestoForm, setShowPuestoForm] = useState(false);
   const [calificandoId, setCalificandoId] = useState<number | null>(null);
   const [corrigiendoAsig, setCorrigiendoAsig] = useState<Asignacion | null>(null);
+  const [descargandoContratoId, setDescargandoContratoId] = useState<number | null>(null);
+
+  async function handleDescargarContrato(asignacionId: number) {
+    setDescargandoContratoId(asignacionId);
+    try {
+      const blob = await turnosApi.descargarContratoPorAsignacion(asignacionId);
+      descargarBlob(blob, `contrato-turno-${asignacionId}.pdf`);
+    } catch {
+      toast.error('No se pudo descargar el contrato.');
+    } finally {
+      setDescargandoContratoId(null);
+    }
+  }
 
   const { data: ofertaData, isLoading, isError, error, refetch } = useOferta(ofertaId);
   const oferta = ofertaData?.data;
@@ -430,6 +445,19 @@ export function OfertaDetailPage() {
                               className="flex items-center gap-1 text-xs text-warning hover:bg-warning-light px-2 py-1 rounded transition-colors"
                             >
                               <Star size={11} /> Calificar
+                            </button>
+                          )}
+                          {a.estado === 'completado' && (
+                            <button
+                              onClick={() => handleDescargarContrato(a.id)}
+                              disabled={descargandoContratoId === a.id}
+                              className="text-muted-foreground/60 hover:text-info transition-colors p-1 disabled:opacity-50"
+                              title="Descargar contrato"
+                              aria-label="Descargar contrato"
+                            >
+                              {descargandoContratoId === a.id
+                                ? <Loader2 size={13} className="animate-spin" />
+                                : <Download size={13} />}
                             </button>
                           )}
                           {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
