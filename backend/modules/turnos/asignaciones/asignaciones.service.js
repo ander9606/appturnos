@@ -169,7 +169,7 @@ const AsignacionesService = {
           trabajador.usuario_id, id, ofertaRow.fecha, ofertaRow.hora_inicio, ofertaRow.hora_fin_estimada
         );
         if (solapado) {
-          throw new AppError('Ya tienes un turno confirmado en otra empresa en ese horario', 409);
+          throw new AppError('Este trabajador ya tiene un turno confirmado en otra empresa en ese horario', 409);
         }
       }
     }
@@ -180,7 +180,7 @@ const AsignacionesService = {
         no_existe: ['Asignación no encontrada', 404],
         estado:    ['La asignación no está pendiente de confirmación', 409],
         oferta:    ['La oferta ya no está disponible para confirmar', 409],
-        vencida:   ['No puedes confirmar un turno cuya fecha ya pasó', 409],
+        vencida:   ['No se puede confirmar un turno cuya fecha ya pasó', 409],
         lleno:     ['La oferta ya no tiene plazas disponibles', 409],
         traslape:  ['El trabajador ya tiene un turno confirmado en ese horario', 409],
       };
