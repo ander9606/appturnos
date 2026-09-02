@@ -12,7 +12,6 @@
     "seed:logiq360": "node scripts/seed-logiq360-demo.js",
     "generar-vapid": "node scripts/generar-vapid.js",
     "crear-super-admin": "node scripts/crear-super-admin.js",
-    "limpiar-periodos-vacios": "node scripts/limpiar-periodos-vacios.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },
