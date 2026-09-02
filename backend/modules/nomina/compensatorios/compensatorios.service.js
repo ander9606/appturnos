@@ -138,17 +138,34 @@ const CompensatoriosService = {
     if (registroExistente) throw new AppError('El trabajador ya tiene un registro ese día', 409);
     if (yaAsignado) throw new AppError('El trabajador ya tiene otro descanso asignado ese día', 409);
 
-    // Liberar el día anterior: solo se borra si es el placeholder que creamos
-    // nosotros mismos (sin marcaje). Si el jefe asignó el compensatorio sobre
-    // un día que ya tenía un registro real, esos datos se sobreescribieron a
-    // cero en su momento y no hay forma de recuperarlos aquí — se deja tal
-    // cual para no perder más información, y el jefe corrige ese día a mano.
+    // Liberar el día anterior — ya no es el descanso, no debe seguir apareciendo
+    // como 'compensatorio'. Si es el placeholder que creamos nosotros mismos (sin
+    // marcaje) se borra entero. Si el jefe lo había asignado sobre un día que ya
+    // tenía un registro real, esas horas se sobreescribieron a cero en su momento
+    // (no hay forma de recuperarlas aquí) — se libera el tipo_dia igual y se deja
+    // una novedad para que el jefe confirme/corrija las horas desde Registros.
     if (comp.fecha_asignada) {
       const registroAnterior = await RegistrosModel.obtenerPorFecha(
         empresaId, comp.trabajador_id, comp.fecha_asignada
       );
-      if (registroAnterior?.tipo_dia === 'compensatorio' && !registroAnterior.hora_entrada) {
-        await RegistrosModel.eliminar(empresaId, registroAnterior.id);
+      if (registroAnterior?.tipo_dia === 'compensatorio') {
+        if (!registroAnterior.hora_entrada) {
+          await RegistrosModel.eliminar(empresaId, registroAnterior.id);
+        } else {
+          await RegistrosModel.actualizar(empresaId, registroAnterior.id, {
+            hora_entrada: registroAnterior.hora_entrada,
+            hora_salida: registroAnterior.hora_salida,
+            horas_ordinarias: registroAnterior.horas_ordinarias,
+            horas_extra_diurnas: registroAnterior.horas_extra_diurnas,
+            horas_extra_nocturnas: registroAnterior.horas_extra_nocturnas,
+            horas_nocturnas: registroAnterior.horas_nocturnas,
+            horas_festivo: registroAnterior.horas_festivo,
+            es_festivo: registroAnterior.es_festivo,
+            novedad: 'Ya no es descanso compensatorio (se reasignó a otra fecha) — verifica las horas de este día',
+            tipo_dia: 'ordinario',
+            aprobado_por: usuarioId,
+          });
+        }
       }
     }
 

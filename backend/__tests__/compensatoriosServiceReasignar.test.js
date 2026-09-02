@@ -65,11 +65,11 @@ describe('CompensatoriosService.reasignar', () => {
     expect(NotificacionesService.notificar).toHaveBeenCalled();
   });
 
-  test('no borra el registro viejo si no es el placeholder (tenía horas reales)', async () => {
+  test('si el día anterior tenía horas reales, no lo borra pero libera el tipo_dia', async () => {
     CompensatoriosModel.obtenerPorId.mockResolvedValue(compBase());
     RegistrosModel.obtenerPorFecha.mockImplementation((_e, _t, fecha) =>
       fecha === '2026-08-10'
-        ? { id: 55, tipo_dia: 'compensatorio', hora_entrada: '08:00:00' }
+        ? { id: 55, tipo_dia: 'compensatorio', hora_entrada: '08:00:00', hora_salida: '17:00:00' }
         : null
     );
     CompensatoriosModel.existeFechaAsignada.mockResolvedValue(false);
@@ -79,6 +79,11 @@ describe('CompensatoriosService.reasignar', () => {
     await CompensatoriosService.reasignar(EMPRESA_ID, USUARIO_ID, COMP_ID, { fechaAsignada: '2026-08-15' });
 
     expect(RegistrosModel.eliminar).not.toHaveBeenCalled();
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      EMPRESA_ID,
+      55,
+      expect.objectContaining({ tipo_dia: 'ordinario', hora_entrada: '08:00:00', hora_salida: '17:00:00' })
+    );
   });
 
   test('rechaza fecha fuera del plazo legal (28 días desde origen_fecha)', async () => {

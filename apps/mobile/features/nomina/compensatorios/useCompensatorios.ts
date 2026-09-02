@@ -26,6 +26,7 @@ export function useAsignarCompensatorio() {
       nominaApi.asignarCompensatorio(id, fecha),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['compensatorios'] });
+      qc.invalidateQueries({ queryKey: ['registros'] });
     },
   });
 }
@@ -38,6 +39,10 @@ export function useReasignarCompensatorio() {
       nominaApi.reasignarCompensatorio(id, fecha),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['compensatorios'] });
+      // Libera el día anterior (se borra o vuelve 'ordinario') y crea el nuevo —
+      // sin esto, Registros del período seguía mostrando el día viejo como
+      // 'Compensatorio' hasta un refresh manual.
+      qc.invalidateQueries({ queryKey: ['registros'] });
     },
   });
 }
