@@ -768,15 +768,17 @@ function CorregirIngresoEgresoModal({
   }
 
   async function handleGuardar() {
+    if (!asignacion) return;
     if (ingreso && egreso && egreso <= ingreso) {
       Alert.alert('Error', 'La hora de egreso debe ser posterior al ingreso.');
       return;
     }
     try {
       await corregir.mutateAsync({
-        id: asignacion.id,
-        hora_ingreso_real: ingreso ? toISODateTime(ingreso) : null,
-        hora_egreso_real: egreso ? toISODateTime(egreso) : null,
+        asignacionId: asignacion.id,
+        ofertaId: asignacion.oferta_id,
+        hora_ingreso_real: ingreso ? toISODateTime(ingreso) : undefined,
+        hora_egreso_real: egreso ? toISODateTime(egreso) : undefined,
       });
       showToast('Ingreso/egreso corregido correctamente.');
       onClose();
