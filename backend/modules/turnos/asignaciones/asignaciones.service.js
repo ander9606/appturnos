@@ -106,10 +106,14 @@ const AsignacionesService = {
   async obtener(empresaId, id, usuario) {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
-    // Workers can only view their own asignaciones
+    // Workers can only view their own asignaciones. Resuelve el trabajador
+    // DESDE la asignación (asignacion.trabajador_id) y compara usuario_id —
+    // no busca "cuál es mi trabajador en esta empresa" por separado, porque
+    // esa búsqueda puede devolver una fila distinta si el usuario tiene más
+    // de una fila en `trabajadores` para la misma empresa (la tabla no lo impide).
     if (usuario?.rol === 'trabajador_turnos') {
-      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuario.sub);
-      if (!trabajador || asignacion.trabajador_id !== trabajador.id) {
+      const trabajador = await TrabajadoresModel.obtenerPorId(asignacion.empresa_id, asignacion.trabajador_id);
+      if (!trabajador || trabajador.usuario_id !== usuario.sub) {
         throw new AppError('Asignación no encontrada', 404);
       }
     }
@@ -299,10 +303,13 @@ const AsignacionesService = {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
 
-    // Use empresa_id from the DB row — JWT empresa_id is null/stale for marketplace
-    // workers with trabajador rows in more than one empresa.
-    const trabajador = await resolverTrabajador(asignacion.empresa_id, usuarioId);
-    if (asignacion.trabajador_id !== trabajador.id) {
+    // Resuelve el trabajador DESDE la asignación (asignacion.trabajador_id) y
+    // compara usuario_id — no busca "cuál es mi trabajador en esta empresa"
+    // por separado (resolverTrabajador), porque esa búsqueda puede devolver
+    // una fila distinta si el usuario tiene más de una fila en `trabajadores`
+    // para la misma empresa (la tabla no lo impide).
+    const trabajador = await TrabajadoresModel.obtenerPorId(asignacion.empresa_id, asignacion.trabajador_id);
+    if (!trabajador || trabajador.usuario_id !== usuarioId) {
       throw new AppError('Esta asignación no te pertenece', 403);
     }
     if (asignacion.estado !== 'confirmado') {
@@ -391,8 +398,13 @@ const AsignacionesService = {
     // workers with trabajador rows in more than one empresa.
     const dbEmpresaId = asignacion.empresa_id;
 
-    const trabajador = await resolverTrabajador(dbEmpresaId, usuarioId);
-    if (asignacion.trabajador_id !== trabajador.id) {
+    // Resuelve el trabajador DESDE la asignación (asignacion.trabajador_id) y
+    // compara usuario_id — no busca "cuál es mi trabajador en esta empresa"
+    // por separado (resolverTrabajador), porque esa búsqueda puede devolver
+    // una fila distinta si el usuario tiene más de una fila en `trabajadores`
+    // para la misma empresa (la tabla no lo impide).
+    const trabajador = await TrabajadoresModel.obtenerPorId(dbEmpresaId, asignacion.trabajador_id);
+    if (!trabajador || trabajador.usuario_id !== usuarioId) {
       throw new AppError('Esta asignación no te pertenece', 403);
     }
     if (asignacion.estado !== 'en_progreso') {

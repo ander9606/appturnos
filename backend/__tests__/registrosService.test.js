@@ -147,8 +147,8 @@ describe('RegistrosService.marcarSalida', () => {
   const TRABAJADOR_USUARIO = { sub: 20, rol: ROLES.TRABAJADOR_NOMINA };
 
   beforeEach(() => {
-    TrabajadoresModel.obtenerPorUsuarioId.mockResolvedValue({ id: 5 });
-    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, tipo_marcacion: 'libre' });
+    TrabajadoresModel.obtenerPorUsuarioId.mockResolvedValue({ id: 5, usuario_id: 20 });
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, usuario_id: 20, tipo_marcacion: 'libre' });
     RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
   });
 
@@ -167,6 +167,8 @@ describe('RegistrosService.marcarSalida', () => {
       hora_entrada: '08:00',
       hora_salida: null,
     });
+    // El trabajador al que pertenece este registro (id 99) es de OTRO usuario.
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 99, usuario_id: 999 });
 
     await expect(
       RegistrosService.marcarSalida(1, TRABAJADOR_USUARIO, 1)
