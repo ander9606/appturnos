@@ -564,11 +564,10 @@ const AsignacionesService = {
     // Esta corrección recién cerró el turno sin la firma del trabajador (el
     // gestor no la captura) — avísale para que firme y el turno cuente en su pago.
     if (estadoNuevo === 'completado' && asig.estado !== 'completado') {
-      const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(asig.trabajador_id);
-      if (trabajadorUsuarioId) {
+      if (resultado?.usuario_id) {
         await NotificacionesService.notificar({
           empresaId,
-          usuarioId: trabajadorUsuarioId,
+          usuarioId: resultado.usuario_id,
           tipo: 'contrato.pendiente_firma',
           titulo: 'Falta firmar tu contrato',
           mensaje: 'El gestor corrigió tu turno y quedó completado. Firma el contrato para que el pago cuente en tu liquidación.',
