@@ -758,20 +758,10 @@ function CorregirIngresoEgresoModal({
   if (!visible || !asignacion) return null;
 
   function onChangeIngreso(_: DateTimePickerEvent, d?: Date) {
-<<<<<<< HEAD
-    if (Platform.OS === 'android') setShowIngreso(false);
-=======
->>>>>>> origin/main
     if (d) setIngreso(d);
   }
 
   function onChangeEgreso(_: DateTimePickerEvent, d?: Date) {
-<<<<<<< HEAD
-    if (Platform.OS === 'android') setShowEgreso(false);
-    if (d) setEgreso(d);
-  }
-
-=======
     if (d) setEgreso(d);
   }
 
@@ -818,8 +808,6 @@ function CorregirIngresoEgresoModal({
       setShowEgreso(true);
     }
   }
-
->>>>>>> origin/main
   async function handleGuardar() {
     if (!asignacion) return;
     if (ingreso && egreso && egreso <= ingreso) {
@@ -863,29 +851,17 @@ function CorregirIngresoEgresoModal({
                 <View className="gap-1.5">
                   <Text className="text-sm font-semibold text-foreground">Ingreso</Text>
                   <TouchableOpacity
-<<<<<<< HEAD
-                    onPress={() => setShowIngreso(true)}
-=======
                     onPress={abrirIngreso}
->>>>>>> origin/main
                     className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
                   >
                     <Ionicons name="log-in-outline" size={16} color="#64748B" />
                     <Text className="text-sm text-foreground">{ingreso ? fmtDateTime(ingreso) : 'Sin definir'}</Text>
                   </TouchableOpacity>
-<<<<<<< HEAD
-                  {showIngreso && (
-                    <DateTimePicker
-                      value={ingreso ?? new Date()}
-                      mode="datetime"
-                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
-=======
                   {showIngreso && Platform.OS === 'ios' && (
                     <DateTimePicker
                       value={ingreso ?? new Date()}
                       mode="datetime"
                       display="inline"
->>>>>>> origin/main
                       onChange={onChangeIngreso}
                     />
                   )}
@@ -899,29 +875,17 @@ function CorregirIngresoEgresoModal({
                 <View className="gap-1.5">
                   <Text className="text-sm font-semibold text-foreground">Egreso</Text>
                   <TouchableOpacity
-<<<<<<< HEAD
-                    onPress={() => setShowEgreso(true)}
-=======
                     onPress={abrirEgreso}
->>>>>>> origin/main
                     className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
                   >
                     <Ionicons name="log-out-outline" size={16} color="#64748B" />
                     <Text className="text-sm text-foreground">{egreso ? fmtDateTime(egreso) : 'Sin definir'}</Text>
                   </TouchableOpacity>
-<<<<<<< HEAD
-                  {showEgreso && (
-                    <DateTimePicker
-                      value={egreso ?? new Date()}
-                      mode="datetime"
-                      display={Platform.OS === 'ios' ? 'inline' : 'default'}
-=======
                   {showEgreso && Platform.OS === 'ios' && (
                     <DateTimePicker
                       value={egreso ?? new Date()}
                       mode="datetime"
                       display="inline"
->>>>>>> origin/main
                       onChange={onChangeEgreso}
                     />
                   )}
