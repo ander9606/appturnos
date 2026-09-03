@@ -27,6 +27,7 @@ import { Toast } from '@/components/ui/Toast';
 import { AnuncioTurno } from '@/components/ui/AnuncioTurno';
 import { InvitacionFlotanteCard } from '@/components/ui/InvitacionFlotanteCard';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { AlertDialog } from '@/components/ui/AlertDialog';
 import { showInvitacionFlotante } from '@/lib/invitacionFlotante';
 import { trabajadorEmpresaApi } from '@api-client';
 import { destino as destinoNotificacion } from './notificaciones';
@@ -191,6 +192,7 @@ function RootLayout() {
         <AnuncioTurno />
         <InvitacionFlotanteCard />
         <ConfirmDialog />
+        <AlertDialog />
         <AuthGuard>
           {/* Default: header visible, slide from right.
               Only exceptions are registered explicitly. */}

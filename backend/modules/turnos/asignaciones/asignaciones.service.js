@@ -106,10 +106,10 @@ const AsignacionesService = {
   async obtener(empresaId, id, usuario) {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
-    // Workers can only view their own asignaciones
+    // Workers can only view their own asignaciones. Valida usando usuario_id
+    // directamente de la asignación (ya trae usuario_id del trabajador vinculado).
     if (usuario?.rol === 'trabajador_turnos') {
-      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuario.sub);
-      if (!trabajador || asignacion.trabajador_id !== trabajador.id) {
+      if (asignacion.usuario_id !== usuario.sub) {
         throw new AppError('Asignación no encontrada', 404);
       }
     }
@@ -169,7 +169,7 @@ const AsignacionesService = {
           trabajador.usuario_id, id, ofertaRow.fecha, ofertaRow.hora_inicio, ofertaRow.hora_fin_estimada
         );
         if (solapado) {
-          throw new AppError('Ya tienes un turno confirmado en otra empresa en ese horario', 409);
+          throw new AppError('Este trabajador ya tiene un turno confirmado en otra empresa en ese horario', 409);
         }
       }
     }
@@ -180,7 +180,7 @@ const AsignacionesService = {
         no_existe: ['Asignación no encontrada', 404],
         estado:    ['La asignación no está pendiente de confirmación', 409],
         oferta:    ['La oferta ya no está disponible para confirmar', 409],
-        vencida:   ['No puedes confirmar un turno cuya fecha ya pasó', 409],
+        vencida:   ['No se puede confirmar un turno cuya fecha ya pasó', 409],
         lleno:     ['La oferta ya no tiene plazas disponibles', 409],
         traslape:  ['El trabajador ya tiene un turno confirmado en ese horario', 409],
       };
@@ -299,10 +299,9 @@ const AsignacionesService = {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
 
-    // Use empresa_id from the DB row — JWT empresa_id is null/stale for marketplace
-    // workers with trabajador rows in more than one empresa.
-    const trabajador = await resolverTrabajador(asignacion.empresa_id, usuarioId);
-    if (asignacion.trabajador_id !== trabajador.id) {
+    // Valida la pertenencia usando usuario_id directamente de la asignación.
+    // obtenerConDetalles ya trae usuario_id del trabajador vinculado.
+    if (asignacion.usuario_id !== usuarioId) {
       throw new AppError('Esta asignación no te pertenece', 403);
     }
     if (asignacion.estado !== 'confirmado') {
@@ -350,6 +349,7 @@ const AsignacionesService = {
 
     const horaIngreso = ahoraColombiaSQL();
     await AsignacionesModel.registrarIngreso(dbEmpresaId, id, horaIngreso, latitud, longitud, deviceId);
+    const trabajador = { id: asignacion.trabajador_id, nombre: asignacion.trabajador_nombre, apellido: asignacion.trabajador_apellido };
     await revisarIngresoSospechoso(dbEmpresaId, id, trabajador, horaIngreso, latitud, longitud, deviceId);
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.ingreso', {
       external_ref:  asignacion.oferta_external_ref || null,
@@ -391,8 +391,9 @@ const AsignacionesService = {
     // workers with trabajador rows in more than one empresa.
     const dbEmpresaId = asignacion.empresa_id;
 
-    const trabajador = await resolverTrabajador(dbEmpresaId, usuarioId);
-    if (asignacion.trabajador_id !== trabajador.id) {
+    // Valida la pertenencia usando usuario_id directamente de la asignación.
+    // obtenerConDetalles ya trae usuario_id del trabajador vinculado.
+    if (asignacion.usuario_id !== usuarioId) {
       throw new AppError('Esta asignación no te pertenece', 403);
     }
     if (asignacion.estado !== 'en_progreso') {
@@ -419,7 +420,7 @@ const AsignacionesService = {
           empresaId: dbEmpresaId,
           tipo: 'turno.egreso',
           titulo: 'Trabajador marcó salida',
-          mensaje: `${trabajador.nombre} ${trabajador.apellido} registró su salida del turno.`,
+          mensaje: `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} registró su salida del turno.`,
           data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
         }
       );
@@ -431,7 +432,7 @@ const AsignacionesService = {
       await ContratosModel.firmar(dbEmpresaId, contrato.id, firma_b64).catch(() => null);
     }
     // Guarda la firma como atajo reutilizable para el próximo contrato (best-effort).
-    await TrabajadoresModel.guardarFirma(trabajador.id, firma_b64).catch(() => null);
+    await TrabajadoresModel.guardarFirma(asignacion.trabajador_id, firma_b64).catch(() => null);
 
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
       external_ref:  asignacion.oferta_external_ref || null,

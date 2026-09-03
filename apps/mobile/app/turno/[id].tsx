@@ -22,7 +22,7 @@ import {
   Pressable,
   KeyboardAvoidingView,
 } from 'react-native';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -758,15 +758,68 @@ function CorregirIngresoEgresoModal({
   if (!visible || !asignacion) return null;
 
   function onChangeIngreso(_: DateTimePickerEvent, d?: Date) {
+<<<<<<< HEAD
     if (Platform.OS === 'android') setShowIngreso(false);
+=======
+>>>>>>> origin/main
     if (d) setIngreso(d);
   }
 
   function onChangeEgreso(_: DateTimePickerEvent, d?: Date) {
+<<<<<<< HEAD
     if (Platform.OS === 'android') setShowEgreso(false);
     if (d) setEgreso(d);
   }
 
+=======
+    if (d) setEgreso(d);
+  }
+
+  // En Android, @react-native-community/datetimepicker abre un diálogo nativo
+  // que se autocierra al elegir. Montarlo/desmontarlo con estado (patrón usado
+  // en iOS) hace que el cleanup del efecto intente cerrar un diálogo que el
+  // sistema ya cerró — "Cannot read property 'dismiss' of undefined". La API
+  // imperativa evita ese problema por completo (no monta ningún componente).
+  // AndroidMode no incluye 'datetime' (solo 'date' | 'time'), así que se
+  // encadenan los dos diálogos a mano, igual que hace mode="datetime" del
+  // componente declarativo por debajo.
+  function abrirFechaHoraAndroid(valorActual: Date | null, onResultado: (d: Date) => void) {
+    DateTimePickerAndroid.open({
+      value: valorActual ?? new Date(),
+      mode: 'date',
+      onChange: (_, fecha) => {
+        if (!fecha) return;
+        DateTimePickerAndroid.open({
+          value: valorActual ?? new Date(),
+          mode: 'time',
+          onChange: (_, hora) => {
+            if (!hora) return;
+            const combinado = new Date(fecha);
+            combinado.setHours(hora.getHours(), hora.getMinutes(), 0, 0);
+            onResultado(combinado);
+          },
+        });
+      },
+    });
+  }
+
+  function abrirIngreso() {
+    if (Platform.OS === 'android') {
+      abrirFechaHoraAndroid(ingreso, setIngreso);
+    } else {
+      setShowIngreso(true);
+    }
+  }
+
+  function abrirEgreso() {
+    if (Platform.OS === 'android') {
+      abrirFechaHoraAndroid(egreso, setEgreso);
+    } else {
+      setShowEgreso(true);
+    }
+  }
+
+>>>>>>> origin/main
   async function handleGuardar() {
     if (!asignacion) return;
     if (ingreso && egreso && egreso <= ingreso) {
@@ -810,17 +863,29 @@ function CorregirIngresoEgresoModal({
                 <View className="gap-1.5">
                   <Text className="text-sm font-semibold text-foreground">Ingreso</Text>
                   <TouchableOpacity
+<<<<<<< HEAD
                     onPress={() => setShowIngreso(true)}
+=======
+                    onPress={abrirIngreso}
+>>>>>>> origin/main
                     className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
                   >
                     <Ionicons name="log-in-outline" size={16} color="#64748B" />
                     <Text className="text-sm text-foreground">{ingreso ? fmtDateTime(ingreso) : 'Sin definir'}</Text>
                   </TouchableOpacity>
+<<<<<<< HEAD
                   {showIngreso && (
                     <DateTimePicker
                       value={ingreso ?? new Date()}
                       mode="datetime"
                       display={Platform.OS === 'ios' ? 'inline' : 'default'}
+=======
+                  {showIngreso && Platform.OS === 'ios' && (
+                    <DateTimePicker
+                      value={ingreso ?? new Date()}
+                      mode="datetime"
+                      display="inline"
+>>>>>>> origin/main
                       onChange={onChangeIngreso}
                     />
                   )}
@@ -834,17 +899,29 @@ function CorregirIngresoEgresoModal({
                 <View className="gap-1.5">
                   <Text className="text-sm font-semibold text-foreground">Egreso</Text>
                   <TouchableOpacity
+<<<<<<< HEAD
                     onPress={() => setShowEgreso(true)}
+=======
+                    onPress={abrirEgreso}
+>>>>>>> origin/main
                     className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
                   >
                     <Ionicons name="log-out-outline" size={16} color="#64748B" />
                     <Text className="text-sm text-foreground">{egreso ? fmtDateTime(egreso) : 'Sin definir'}</Text>
                   </TouchableOpacity>
+<<<<<<< HEAD
                   {showEgreso && (
                     <DateTimePicker
                       value={egreso ?? new Date()}
                       mode="datetime"
                       display={Platform.OS === 'ios' ? 'inline' : 'default'}
+=======
+                  {showEgreso && Platform.OS === 'ios' && (
+                    <DateTimePicker
+                      value={egreso ?? new Date()}
+                      mode="datetime"
+                      display="inline"
+>>>>>>> origin/main
                       onChange={onChangeEgreso}
                     />
                   )}

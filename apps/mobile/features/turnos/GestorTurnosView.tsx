@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { confirm } from '@/lib/confirmDialog';
+import { alertError } from '@/lib/alertDialog';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ function PostulanteRow({
     try {
       await confirmarMutation.mutateAsync({ asignacionId: asignacion.id, ofertaId });
     } catch (err: unknown) {
-      Alert.alert('No se pudo confirmar', apiErrorMessage(err, 'Error al confirmar la postulación'));
+      await alertError('No se pudo confirmar', apiErrorMessage(err, 'Error al confirmar la postulación'));
     }
   }
 
@@ -107,7 +107,7 @@ function PostulanteRow({
     try {
       await rechazarMutation.mutateAsync({ asignacionId: asignacion.id, ofertaId });
     } catch (err: unknown) {
-      Alert.alert('No se pudo rechazar', apiErrorMessage(err, 'Error al rechazar la postulación'));
+      await alertError('No se pudo rechazar', apiErrorMessage(err, 'Error al rechazar la postulación'));
     }
   }
 
@@ -123,7 +123,7 @@ function PostulanteRow({
     try {
       await cancelarMutation.mutateAsync({ asignacionId: asignacion.id, ofertaId });
     } catch (err: unknown) {
-      Alert.alert('No se pudo cancelar', apiErrorMessage(err, 'Error al cancelar la asignación'));
+      await alertError('No se pudo cancelar', apiErrorMessage(err, 'Error al cancelar la asignación'));
     }
   }
 
@@ -138,7 +138,7 @@ function PostulanteRow({
     try {
       await noPresentadoMutation.mutateAsync({ asignacionId: asignacion.id, ofertaId });
     } catch (err: unknown) {
-      Alert.alert('No se pudo marcar', apiErrorMessage(err, 'Error al marcar como no presentado'));
+      await alertError('No se pudo marcar', apiErrorMessage(err, 'Error al marcar como no presentado'));
     }
   }
 
@@ -249,7 +249,7 @@ function GestorOfertaItem({
     try {
       await eliminarMutation.mutateAsync(oferta.id);
     } catch (err: unknown) {
-      Alert.alert('No se pudo eliminar', apiErrorMessage(err, 'Error al eliminar la oferta'));
+      await alertError('No se pudo eliminar', apiErrorMessage(err, 'Error al eliminar la oferta'));
     }
   }
 
