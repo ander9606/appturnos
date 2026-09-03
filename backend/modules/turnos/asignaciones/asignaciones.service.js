@@ -432,7 +432,7 @@ const AsignacionesService = {
       await ContratosModel.firmar(dbEmpresaId, contrato.id, firma_b64).catch(() => null);
     }
     // Guarda la firma como atajo reutilizable para el próximo contrato (best-effort).
-    await TrabajadoresModel.guardarFirma(trabajador.id, firma_b64).catch(() => null);
+    await TrabajadoresModel.guardarFirma(asignacion.trabajador_id, firma_b64).catch(() => null);
 
     await IntegracionService.emitir(dbEmpresaId, 'trabajador.egreso', {
       external_ref:  asignacion.oferta_external_ref || null,
