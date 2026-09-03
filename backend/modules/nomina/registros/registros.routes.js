@@ -138,6 +138,15 @@ router.put(
   ctrl.descartarSospechoso
 );
 
+// GET /api/nomina/registros/:id  (obtener uno)
+router.get(
+  '/:id',
+  verificarRol(VER),
+  [idParam],
+  validar,
+  ctrl.obtener
+);
+
 // PUT /api/nomina/registros/:id  (corregir)
 router.put(
   '/:id',

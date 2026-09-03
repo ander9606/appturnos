@@ -202,9 +202,10 @@ function RootLayout() {
             {/* postulaciones usa su propio header personalizado */}
             <Stack.Screen name="postulaciones" options={{ headerShown: false }} />
             {/* Detail screens — slide from right */}
-            <Stack.Screen name="turno/[id]"      options={{ headerShown: true }} />
-            <Stack.Screen name="oferta/[id]"     options={{ headerShown: true }} />
-            <Stack.Screen name="trabajador/[id]" options={{ headerShown: true }} />
+            <Stack.Screen name="turno/[id]"           options={{ headerShown: true }} />
+            <Stack.Screen name="oferta/[id]"          options={{ headerShown: true }} />
+            <Stack.Screen name="trabajador/[id]"      options={{ headerShown: true }} />
+            <Stack.Screen name="registro-detalle/[id]" options={{ headerShown: true }} />
             {/* Empresa (super_admin) — fuera de (admin) para no colar tabs fantasma */}
             <Stack.Screen name="empresa/[id]"    options={{ headerShown: false }} />
             <Stack.Screen name="empresa/nueva"   options={{ headerShown: false }} />

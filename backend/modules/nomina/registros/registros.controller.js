@@ -19,6 +19,11 @@ async function listar(req, res) {
   res.json({ success: true, data: { data, pagination } });
 }
 
+async function obtener(req, res) {
+  const data = await RegistrosService.obtener(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data });
+}
+
 async function crear(req, res) {
   const data = await RegistrosService.crear(req.empresa_id, req.usuario, req.body);
   res.status(201).json({ success: true, data, message: 'Registro creado' });
@@ -80,6 +85,6 @@ async function rechazarReingreso(req, res) {
 }
 
 module.exports = {
-  listar, crear, corregir, descartarSospechoso, obtenerMiPerfil, marcarEntrada, marcarSalida,
+  listar, obtener, crear, corregir, descartarSospechoso, obtenerMiPerfil, marcarEntrada, marcarSalida,
   solicitarReingreso, listarReingresosPendientes, aprobarReingreso, rechazarReingreso,
 };
