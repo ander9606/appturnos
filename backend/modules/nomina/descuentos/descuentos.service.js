@@ -53,8 +53,13 @@ const DescuentosService = {
     const descuento = await DescuentosModel.obtenerPorId(empresaId, descuentoId);
     if (!descuento) throw new AppError('Descuento no encontrado', 404);
 
-    const trab = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuario.sub);
-    if (!trab || trab.id !== descuento.trabajador_id) {
+    // Resuelve el trabajador DESDE el descuento (descuento.trabajador_id) y
+    // compara usuario_id — no busca "cuál es mi trabajador en esta empresa"
+    // por separado, porque esa búsqueda puede devolver una fila distinta si
+    // el usuario tiene más de una fila en `trabajadores` para la misma
+    // empresa (la tabla no lo impide).
+    const trab = await TrabajadoresModel.obtenerPorId(empresaId, descuento.trabajador_id);
+    if (!trab || trab.usuario_id !== usuario.sub) {
       throw new AppError('No autorizado', 403);
     }
 

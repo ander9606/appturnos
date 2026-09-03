@@ -393,15 +393,22 @@ const RegistrosService = {
 
   /** Clock-out: sets hora_salida = NOW() and recalculates hours. */
   async marcarSalida(empresaId, usuario, registroId, { latitud, longitud, device_id: deviceId } = {}) {
-    const trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
-
     const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
     if (!registro) throw new AppError('Registro no encontrado', 404);
-    if (registro.trabajador_id !== trabajadorId) throw new AppError('No autorizado', 403);
+
+    // Resuelve el trabajador DESDE el registro (registro.trabajador_id) y
+    // compara usuario_id — no busca "cuál es mi trabajador en esta empresa"
+    // por separado (resolverTrabajadorPropio), porque esa búsqueda puede
+    // devolver una fila distinta si el usuario tiene más de una fila en
+    // `trabajadores` para la misma empresa (la tabla no lo impide).
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, registro.trabajador_id);
+    if (!trabajador || trabajador.usuario_id !== usuario.sub) {
+      throw new AppError('No autorizado', 403);
+    }
+    const trabajadorId = trabajador.id;
     if (!registro.hora_entrada) throw new AppError('No hay entrada registrada para hoy', 409);
     if (registro.hora_salida)   throw new AppError('Ya marcaste tu salida para hoy', 409);
 
-    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
     await validarGeofence(empresaId, trabajador, latitud, longitud);
 
     const periodo = await PeriodosModel.obtenerPorId(empresaId, registro.periodo_id);
