@@ -27,11 +27,14 @@ const AsignacionesService = require('../modules/turnos/asignaciones/asignaciones
 
 afterEach(() => jest.clearAllMocks());
 
-describe('AsignacionesService.marcarIngreso — trabajador con fila duplicada en otra empresa', () => {
+describe('AsignacionesService.marcarIngreso — validación de pertenencia sin queries redundantes', () => {
   const asignacion = {
     id: 500,
     empresa_id: 7,
     trabajador_id: 99,
+    usuario_id: 42,
+    trabajador_nombre: 'Ana',
+    trabajador_apellido: 'Ruiz',
     estado: 'confirmado',
     oferta_id: 1,
     geofence_info: { tipo: 'libre' },
@@ -44,29 +47,17 @@ describe('AsignacionesService.marcarIngreso — trabajador con fila duplicada en
     AsignacionesModel.obtenerPorId.mockResolvedValue({ id: 500, estado: 'en_progreso' });
   });
 
-  test('permite marcar ingreso aunque exista OTRA fila de trabajador (misma empresa u otra) para el mismo usuario', async () => {
-    // El trabajador REAL de esta asignación (id 99) pertenece al usuario 42.
-    TrabajadoresModel.obtenerPorId.mockResolvedValue({
-      id: 99, usuario_id: 42, empresa_id: 7, nombre: 'Ana', apellido: 'Ruiz',
-    });
-    // Si el código todavía llamara a la resolución "independiente" vieja,
-    // esto simularía el bug devolviendo una fila DISTINTA (id 55) — no debe
-    // ni siquiera invocarse.
-    TrabajadoresModel.obtenerPorUsuarioId.mockResolvedValue({ id: 55, usuario_id: 42, empresa_id: 7 });
-
+  test('permite marcar ingreso validando usuario_id directamente desde la asignación', async () => {
     const resultado = await AsignacionesService.marcarIngreso(7, 500, 42, { latitud: 1, longitud: 1 });
 
-    expect(TrabajadoresModel.obtenerPorId).toHaveBeenCalledWith(7, 99);
+    // No debe llamar a TrabajadoresModel — usuario_id ya viene en obtenerConDetalles
+    expect(TrabajadoresModel.obtenerPorId).not.toHaveBeenCalled();
     expect(TrabajadoresModel.obtenerPorUsuarioId).not.toHaveBeenCalled();
     expect(AsignacionesModel.registrarIngreso).toHaveBeenCalled();
     expect(resultado).toEqual({ id: 500, estado: 'en_progreso' });
   });
 
-  test('rechaza a un usuario que no es dueño del trabajador de la asignación', async () => {
-    TrabajadoresModel.obtenerPorId.mockResolvedValue({
-      id: 99, usuario_id: 42, empresa_id: 7, nombre: 'Ana', apellido: 'Ruiz',
-    });
-
+  test('rechaza a un usuario que no coincide con usuario_id de la asignación', async () => {
     await expect(
       AsignacionesService.marcarIngreso(7, 500, 999, { latitud: 1, longitud: 1 })
     ).rejects.toMatchObject({ statusCode: 403 });
