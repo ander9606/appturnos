@@ -671,6 +671,17 @@ export default function TurnoDetailScreen() {
             </View>
           )}
 
+          {/* ── Gestor: Corregir horario (siempre disponible) ─────────────── */}
+          {isGestor && (
+            <Button
+              label="Corregir horario de entrada/salida"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onPress={() => setCorrigiendoIngreso(true)}
+            />
+          )}
+
           {/* ── Novedades ─────────────────────────────────────── */}
           <View
             className="bg-card rounded-2xl px-5 py-4"
