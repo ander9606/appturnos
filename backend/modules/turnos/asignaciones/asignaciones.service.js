@@ -550,6 +550,9 @@ const AsignacionesService = {
     await AsignacionesModel.corregir(empresaId, id, { horaIngreso, horaEgreso, horasTrabajadas, estado: estadoNuevo });
 
     const resultado = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+    if (!resultado) {
+      throw new AppError('No se pudo recuperar la asignación después de corregir', 500);
+    }
 
     if (resultado?.oferta_external_ref) {
       await IntegracionService.emitir(empresaId, 'trabajador.correccion_horas', {
