@@ -808,7 +808,6 @@ function CorregirIngresoEgresoModal({
       setShowEgreso(true);
     }
   }
-
   async function handleGuardar() {
     if (!asignacion) return;
     if (ingreso && egreso && egreso <= ingreso) {

@@ -32,12 +32,16 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'asignacion.cancelada':        'close-circle-outline',
   'postulacion.rechazada':       'close-circle-outline',
   'turno.ingreso':               'log-in-outline',
+  'turno.egreso':                'log-out-outline',
   'turno.cerrado_gestor':        'checkmark-done-outline',
   'turno.no_presentado_gestor':  'alert-circle-outline',
   'calificacion.recibida':       'star-outline',
   'asignacion.no_presentado':    'alert-circle-outline',
+  'nomina.entrada':              'log-in-outline',
+  'nomina.salida':               'log-out-outline',
   'nomina.periodo_abierto':      'folder-open-outline',
   'nomina.periodo_liquidado':    'cash-outline',
+  'nomina.sospechoso':           'alert-circle-outline',
   'oferta.nueva':                'megaphone-outline',
   'oferta.modificada':           'create-outline',
   'oferta.cancelada':            'close-circle-outline',
@@ -109,6 +113,8 @@ export function destino(n: { tipo: string; data: unknown }): string | null {
   if (d.empresa_id)      return `/empresa/${d.empresa_id}`;
   if (d.ausencia_id)     return '/ausencias';
   if (d.periodo_id)      return '/(tabs)/nomina';
+  // nomina.entrada / nomina.salida → gestor ve detalle del registro para corregir
+  if ((n.tipo === 'nomina.entrada' || n.tipo === 'nomina.salida') && d.registro_id) return `/registro-detalle/${d.registro_id}`;
   if (d.registro_id)     return '/nomina-ingreso';
   if (d.compensatorio_id) return '/(tabs)/nomina';
   // 'reingreso.solicitado' va al gestor (que aprueba/rechaza en /reingresos-pendientes);

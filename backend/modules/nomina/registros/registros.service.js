@@ -132,6 +132,12 @@ async function _notificarDecisionReingreso(empresaId, solicitudId, tipo, titulo,
 }
 
 const RegistrosService = {
+  async obtener(empresaId, registroId) {
+    const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
+    if (!registro) throw new AppError('Registro no encontrado', 404);
+    return registro;
+  },
+
   async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, fecha_desde, fecha_hasta, sospechoso, page, limit }) {
     let trabajadorId = trabajador_id;
     if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {

@@ -235,6 +235,11 @@ export const nominaApi = {
     );
   },
 
+  /** Obtiene un registro específico por ID (para gestores que corrijen). */
+  obtenerRegistro(registroId: number): Promise<RegistroDiario> {
+    return api.get<RegistroDiario>(`/api/nomina/registros/${registroId}`);
+  },
+
   /** Descarta el flag de sospechoso de un registro tras revisión del gestor. */
   descartarSospechoso(registroId: number): Promise<null> {
     return api.put<null>(`/api/nomina/registros/${registroId}/sospechoso/descartar`);
