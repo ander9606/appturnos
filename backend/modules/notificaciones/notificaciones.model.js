@@ -51,7 +51,7 @@ const NotificacionesModel = {
     // Parse JSON data field for each notification
     const filasConDatosParseados = filas.map((f) => ({
       ...f,
-      data: f.data ? JSON.parse(f.data) : null,
+      data: f.data ? (typeof f.data === 'string' ? JSON.parse(f.data) : f.data) : null,
     }));
     return { data: filasConDatosParseados, total, no_leidas };
   },
