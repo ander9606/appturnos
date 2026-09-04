@@ -48,7 +48,12 @@ const NotificacionesModel = {
       `SELECT COUNT(*) AS no_leidas FROM notificaciones WHERE ${noLeidasWhere}`,
       noLeidasParams
     );
-    return { data: filas, total, no_leidas };
+    // Parse JSON data field for each notification
+    const filasConDatosParseados = filas.map((f) => ({
+      ...f,
+      data: f.data ? JSON.parse(f.data) : null,
+    }));
+    return { data: filasConDatosParseados, total, no_leidas };
   },
 
   async marcarLeida(empresaId, usuarioId, id) {
