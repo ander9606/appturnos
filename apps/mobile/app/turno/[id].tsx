@@ -835,7 +835,14 @@ function CorregirIngresoEgresoModal({
       showToast('Ingreso/egreso corregido correctamente.');
       onClose();
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'No se pudo corregir.';
+      let msg = 'No se pudo corregir.';
+      if (err instanceof ApiError) {
+        msg = err.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      } else if (typeof err === 'object' && err !== null && 'message' in err) {
+        msg = String(err.message);
+      }
       Alert.alert('Error', msg);
     }
   }
