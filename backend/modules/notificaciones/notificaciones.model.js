@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
+const logger = require('../../utils/logger');
 
 /** Acceso a datos de notificaciones (tabla notificaciones). */
 const NotificacionesModel = {
@@ -49,10 +50,22 @@ const NotificacionesModel = {
       noLeidasParams
     );
     // Parse JSON data field for each notification
-    const filasConDatosParseados = filas.map((f) => ({
-      ...f,
-      data: f.data ? (typeof f.data === 'string' ? JSON.parse(f.data) : f.data) : null,
-    }));
+    const filasConDatosParseados = filas.map((f) => {
+      let parsedData = null;
+      if (f.data) {
+        if (typeof f.data === 'string') {
+          try {
+            parsedData = JSON.parse(f.data);
+          } catch (err) {
+            logger.error(`[notificaciones] JSON parse error for notification ${f.id}:`, err.message);
+            parsedData = null;
+          }
+        } else {
+          parsedData = f.data;
+        }
+      }
+      return { ...f, data: parsedData };
+    });
     return { data: filasConDatosParseados, total, no_leidas };
   },
 
