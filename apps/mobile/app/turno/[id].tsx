@@ -776,37 +776,24 @@ function CorregirIngresoEgresoModal({
     if (d) setEgreso(d);
   }
 
-  // En Android, @react-native-community/datetimepicker abre un diálogo nativo
-  // que se autocierra al elegir. Montarlo/desmontarlo con estado (patrón usado
-  // en iOS) hace que el cleanup del efecto intente cerrar un diálogo que el
-  // sistema ya cerró — "Cannot read property 'dismiss' of undefined". La API
-  // imperativa evita ese problema por completo (no monta ningún componente).
-  // AndroidMode no incluye 'datetime' (solo 'date' | 'time'), así que se
-  // encadenan los dos diálogos a mano, igual que hace mode="datetime" del
-  // componente declarativo por debajo.
-  function abrirFechaHoraAndroid(valorActual: Date | null, onResultado: (d: Date) => void) {
+  // En Android, abre solo un selector de hora (la fecha viene del turno).
+  function abrirHoraAndroid(valorActual: Date | null, onResultado: (d: Date) => void) {
     DateTimePickerAndroid.open({
       value: valorActual ?? new Date(),
-      mode: 'date',
-      onChange: (_, fecha) => {
-        if (!fecha) return;
-        DateTimePickerAndroid.open({
-          value: valorActual ?? new Date(),
-          mode: 'time',
-          onChange: (_, hora) => {
-            if (!hora) return;
-            const combinado = new Date(fecha);
-            combinado.setHours(hora.getHours(), hora.getMinutes(), 0, 0);
-            onResultado(combinado);
-          },
-        });
+      mode: 'time',
+      onChange: (_, hora) => {
+        if (!hora) return;
+        // Combina la fecha del turno con la hora seleccionada
+        const fecha = new Date(asignacion!.oferta_fecha);
+        fecha.setHours(hora.getHours(), hora.getMinutes(), 0, 0);
+        onResultado(fecha);
       },
     });
   }
 
   function abrirIngreso() {
     if (Platform.OS === 'android') {
-      abrirFechaHoraAndroid(ingreso, setIngreso);
+      abrirHoraAndroid(ingreso, setIngreso);
     } else {
       setShowIngreso(true);
     }
@@ -814,7 +801,7 @@ function CorregirIngresoEgresoModal({
 
   function abrirEgreso() {
     if (Platform.OS === 'android') {
-      abrirFechaHoraAndroid(egreso, setEgreso);
+      abrirHoraAndroid(egreso, setEgreso);
     } else {
       setShowEgreso(true);
     }
@@ -878,8 +865,8 @@ function CorregirIngresoEgresoModal({
                   {showIngreso && Platform.OS === 'ios' && (
                     <DateTimePicker
                       value={ingreso ?? new Date()}
-                      mode="datetime"
-                      display="inline"
+                      mode="time"
+                      display="spinner"
                       onChange={onChangeIngreso}
                     />
                   )}
@@ -902,8 +889,8 @@ function CorregirIngresoEgresoModal({
                   {showEgreso && Platform.OS === 'ios' && (
                     <DateTimePicker
                       value={egreso ?? new Date()}
-                      mode="datetime"
-                      display="inline"
+                      mode="time"
+                      display="spinner"
                       onChange={onChangeEgreso}
                     />
                   )}
