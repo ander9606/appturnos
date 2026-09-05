@@ -15,7 +15,6 @@ const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 const { calcularHoras } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
-const logger = require('../../../utils/logger');
 
 /**
  * Flags this ingreso (and any match found) as sospechoso — best-effort, never throws.
