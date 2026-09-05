@@ -65,8 +65,12 @@ function errorHandler(err, req, res, _next) {
     cuerpo.detalles = error.detalles;
   }
 
-  if (process.env.NODE_ENV !== 'production' && !esOperacional) {
-    cuerpo.stack = err.stack;
+  if (process.env.NODE_ENV !== 'production') {
+    if (!esOperacional) {
+      cuerpo.stack = err.stack;
+      cuerpo.debug_message = err.message;
+      cuerpo.debug_code = error?.code;
+    }
   }
 
   res.status(statusCode).json(cuerpo);
