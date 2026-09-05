@@ -523,12 +523,26 @@ const AsignacionesService = {
   async corregir(empresaId, id, usuarioId, { hora_ingreso_real, hora_egreso_real }) {
     const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
     if (!asig) throw new AppError('Asignación no encontrada', 404);
-    if (!['confirmado', 'en_progreso', 'completado', 'finalizado'].includes(asig.estado)) {
-      throw new AppError('Solo se pueden corregir asignaciones confirmadas, en progreso, completadas o finalizadas', 409);
+    if (!['confirmado', 'en_progreso', 'completado', 'finalizado', 'no_presentado', 'cancelado'].includes(asig.estado)) {
+      throw new AppError('Solo se pueden corregir asignaciones confirmadas, en progreso, completadas, finalizadas, no presentadas o canceladas', 409);
     }
 
     const horaIngreso = hora_ingreso_real !== undefined ? hora_ingreso_real : asig.hora_ingreso_real;
     const horaEgreso  = hora_egreso_real  !== undefined ? hora_egreso_real  : asig.hora_egreso_real;
+
+    // Validar que las horas sean fechas válidas (no NaN)
+    if (horaIngreso) {
+      const dateIng = new Date(horaIngreso);
+      if (isNaN(dateIng.getTime())) {
+        throw new AppError('hora_ingreso_real inválida: no se puede interpretar como fecha', 422);
+      }
+    }
+    if (horaEgreso) {
+      const dateEgr = new Date(horaEgreso);
+      if (isNaN(dateEgr.getTime())) {
+        throw new AppError('hora_egreso_real inválida: no se puede interpretar como fecha', 422);
+      }
+    }
 
     if (horaIngreso && horaEgreso && new Date(horaEgreso) <= new Date(horaIngreso)) {
       throw new AppError('La hora de egreso debe ser posterior al ingreso', 422);
@@ -539,6 +553,9 @@ const AsignacionesService = {
     if (horaIngreso && horaEgreso) {
       estadoNuevo    = 'completado';
       horasTrabajadas = (new Date(horaEgreso) - new Date(horaIngreso)) / 3_600_000;
+      if (!Number.isFinite(horasTrabajadas)) {
+        throw new AppError('No se puede calcular horas_trabajadas: fechas inválidas', 422);
+      }
     } else if (horaIngreso) {
       estadoNuevo    = 'en_progreso';
       horasTrabajadas = null;
