@@ -263,7 +263,7 @@ export default function OfertaDetailScreen() {
 
       // Mostrar warning si el turno ya comenzó
       if (result.warnings && result.warnings.length > 0) {
-        showAnuncioTurno(result.warnings[0], 'warning');
+        showToast(result.warnings[0]);
       }
 
       showToast(`Has solicitado el turno como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
