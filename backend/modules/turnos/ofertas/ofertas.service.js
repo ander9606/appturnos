@@ -474,8 +474,11 @@ const OfertasService = {
     if (oferta.estado !== 'abierta' && oferta.estado !== 'publicada') {
       throw new AppError('La oferta no está abierta a postulaciones', 409);
     }
+
+    // Detectar si el turno ya comenzó — no bloquea, pero devuelve un aviso.
+    const warnings = [];
     if (turnoYaInicio(oferta.fecha, oferta.hora_inicio)) {
-      throw new AppError('No puedes postularte a un turno que ya empezó', 409);
+      warnings.push('El turno ya empezó. Asegúrate de estar cerca para poder marcar ingreso.');
     }
 
     // Puesto existe y pertenece a la oferta.
@@ -538,7 +541,8 @@ const OfertasService = {
       );
     }
 
-    return AsignacionesModel.obtenerPorId(empresaOfertaId, id);
+    const asignacion = await AsignacionesModel.obtenerPorId(empresaOfertaId, id);
+    return warnings.length > 0 ? { ...asignacion, warnings } : asignacion;
   },
 
   async duplicar(empresaId, id, nuevaFecha, creadoPor) {
