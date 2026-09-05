@@ -259,7 +259,13 @@ export default function OfertaDetailScreen() {
   async function handleAplicar() {
     if (!selectedPuesto) return;
     try {
-      await aplicarM.mutateAsync({ ofertaId: id!, puestoId: selectedPuesto.id });
+      const result = await aplicarM.mutateAsync({ ofertaId: id!, puestoId: selectedPuesto.id });
+
+      // Mostrar warning si el turno ya comenzó
+      if (result.warnings && result.warnings.length > 0) {
+        showAnuncioTurno(result.warnings[0], 'warning');
+      }
+
       showToast(`Has solicitado el turno como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
     } catch (err) {
       Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');

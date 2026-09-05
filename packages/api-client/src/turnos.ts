@@ -101,6 +101,8 @@ export interface Asignacion {
   trabajador_nombre?: string;
   trabajador_apellido?: string;
   trabajador_cargo?: string;
+  /** Avisos devueltos por el backend (ej: turno ya empezó). Presente solo cuando hay condiciones que avisar. */
+  warnings?: string[];
 }
 
 export interface CalificacionResponse {

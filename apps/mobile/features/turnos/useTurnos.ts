@@ -171,13 +171,13 @@ export function useConfirmar() {
   });
 }
 
-/** Postular a una oferta. Invalida misTurnos y la oferta en cuestión. */
+/** Postular a una oferta. Devuelve warnings si el turno ya comenzó. Invalida misTurnos y la oferta en cuestión. */
 export function useAplicar() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ ofertaId, puestoId }: { ofertaId: number; puestoId: number }) =>
       turnosApi.aplicar(ofertaId, puestoId),
-    onSuccess: (_, { ofertaId }) => {
+    onSuccess: (data, { ofertaId }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
       qc.invalidateQueries({ queryKey: ['ofertas'] });
