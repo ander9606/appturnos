@@ -10,6 +10,7 @@ const IntegracionService = require('../../integracion/integracion.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const CoberturaService = require('../../integracion/cobertura.service');
 const AppError = require('../../../utils/AppError');
+const logger = require('../../../utils/logger');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 const { calcularHoras } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
@@ -523,6 +524,13 @@ const AsignacionesService = {
   async corregir(empresaId, id, usuarioId, { hora_ingreso_real, hora_egreso_real }) {
     const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
     if (!asig) throw new AppError('Asignación no encontrada', 404);
+
+    // Validación pre-corrección: verificar que datos relacionados aún existan
+    // (oferta, puesto, cargo, trabajador pueden haber sido eliminados)
+    const detalles = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+    if (!detalles) {
+      throw new AppError('No se pueden corregir horas: oferta, puesto, cargo o trabajador fueron eliminados', 410);
+    }
     if (!['confirmado', 'en_progreso', 'completado', 'finalizado', 'no_presentado', 'cancelado'].includes(asig.estado)) {
       throw new AppError('Solo se pueden corregir asignaciones confirmadas, en progreso, completadas, finalizadas, no presentadas o canceladas', 409);
     }
@@ -570,6 +578,10 @@ const AsignacionesService = {
     if (!resultado) {
       throw new AppError('No se pudo recuperar la asignación después de corregir', 500);
     }
+
+    // Log de auditoría: quién corrigió, qué cambió
+    logger.info(`Corrección de turno: asignacion_id=${id}, usuario_id=${usuarioId}, estado_anterior=${asig.estado}, estado_nuevo=${estadoNuevo}, horas_trabajadas=${horasTrabajadas}`);
+
 
     if (resultado?.oferta_external_ref) {
       await IntegracionService.emitir(empresaId, 'trabajador.correccion_horas', {

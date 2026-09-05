@@ -18,6 +18,11 @@ function traducirErrorMySQL(err) {
     case 'ER_ROW_IS_REFERENCED_2':
     case 'ER_ROW_IS_REFERENCED':
       return new AppError('No se puede eliminar: tiene registros asociados', 409);
+    case 'ER_TRUNCATED_WRONG_VALUE':
+    case 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD':
+      return new AppError('Tipo de dato inválido: verifica que las horas sean fechas válidas en formato ISO 8601', 422);
+    case 'ER_DATA_OUT_OF_RANGE':
+      return new AppError('Valor fuera de rango permitido', 422);
     default:
       return null;
   }
