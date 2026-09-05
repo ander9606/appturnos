@@ -523,8 +523,8 @@ const AsignacionesService = {
   async corregir(empresaId, id, usuarioId, { hora_ingreso_real, hora_egreso_real }) {
     const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
     if (!asig) throw new AppError('Asignación no encontrada', 404);
-    if (!['confirmado', 'en_progreso', 'completado'].includes(asig.estado)) {
-      throw new AppError('Solo se pueden corregir asignaciones confirmadas, en progreso o completadas', 409);
+    if (!['confirmado', 'en_progreso', 'completado', 'finalizado'].includes(asig.estado)) {
+      throw new AppError('Solo se pueden corregir asignaciones confirmadas, en progreso, completadas o finalizadas', 409);
     }
 
     const horaIngreso = hora_ingreso_real !== undefined ? hora_ingreso_real : asig.hora_ingreso_real;
