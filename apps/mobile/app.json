@@ -86,6 +86,7 @@
     "experiments": {
       "typedRoutes": true
     },
+    "_comment": "OTA update trigger for staging deployment",
     "extra": {
       "router": {},
       "eas": {
