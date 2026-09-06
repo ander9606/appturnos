@@ -76,11 +76,10 @@ export function NominaTurnosView() {
   const { periodoActual, periodoAnterior } = useMemo(() => {
     const empresaIds = Object.keys(periodosPorEmpresa);
     if (empresaIds.length === 0) return { periodoActual: null, periodoAnterior: null };
-    const periodosFirstEmpresa = periodosPorEmpresa[Number(empresaIds[0])];
-    return {
-      periodoActual: periodosFirstEmpresa?.[0] ?? null,
-      periodoAnterior: periodosFirstEmpresa?.[1] ?? null,
-    };
+    const periodosFirstEmpresa: any[] | undefined = periodosPorEmpresa[Number(empresaIds[0])];
+    const actual = periodosFirstEmpresa?.[0] || null;
+    const anterior = periodosFirstEmpresa?.[1] || null;
+    return { periodoActual: actual, periodoAnterior: anterior };
   }, [periodosPorEmpresa]);
 
   // Filtrar turnos completados: cada turno se filtra por el período de su empresa.
