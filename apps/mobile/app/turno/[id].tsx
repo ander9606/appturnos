@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
@@ -35,7 +36,7 @@ import { useNovedades }        from '@/features/novedades/useNovedades';
 import { NovedadCard }         from '@/features/novedades/NovedadCard';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
 import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion } from '@/features/turnos/useTurnos';
-import { useObtenerContrato, ContratoFirmaModal } from '@/features/contratos';
+import { useObtenerContrato, ContratoFirmaModal, QUERY_KEYS } from '@/features/contratos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
@@ -94,6 +95,7 @@ export default function TurnoDetailScreen() {
   const id = idParam ? parseInt(idParam, 10) : null;
   const router = useRouter();
   const theme  = useTheme();
+  const qc = useQueryClient();
 
   const [signatureVisible, setSignatureVisible] = useState(false);
   const [firmaContratoVisible, setFirmaContratoVisible] = useState(false);
@@ -103,6 +105,7 @@ export default function TurnoDetailScreen() {
   const [comentario, setComentario] = useState('');
   const [cargandoContrato, setCargandoContrato] = useState(false);
   const [corrigiendoIngreso, setCorrigiendoIngreso] = useState(false);
+  const [cargandoModalContrato, setCargandoModalContrato] = useState(false);
 
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
@@ -245,6 +248,22 @@ export default function TurnoDetailScreen() {
       setCargandoContrato(false);
     }
   };
+
+  const handleAbrirModalFirmaContrato = useCallback(async () => {
+    if (!id) return;
+    setCargandoModalContrato(true);
+    try {
+      // Invalidar y recargar la query de contrato
+      // El backend generará el contrato automáticamente si no existe
+      await qc.refetchQueries({ queryKey: QUERY_KEYS.contrato(id) });
+      setFirmaContratoVisible(true);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo cargar el contrato.';
+      showToast(msg, 'error');
+    } finally {
+      setCargandoModalContrato(false);
+    }
+  }, [id, qc]);
 
   const openInMaps = useCallback(() => {
     const lat = asignacion?.latitud;
@@ -500,11 +519,13 @@ export default function TurnoDetailScreen() {
                       </Text>
                     </View>
                     <Button
-                      label="Firmar Contrato"
+                      label={cargandoModalContrato ? 'Cargando contrato…' : 'Firmar Contrato'}
                       variant="primary"
                       size="sm"
                       fullWidth
-                      onPress={() => setFirmaContratoVisible(true)}
+                      loading={cargandoModalContrato}
+                      disabled={cargandoModalContrato}
+                      onPress={handleAbrirModalFirmaContrato}
                     />
                   </View>
                 )}
