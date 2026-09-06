@@ -208,7 +208,12 @@ export default function DashboardScreen() {
 
   const periodoLabel = periodoAbierto ? `Período · ${TIPO_PERIODO_LABEL[periodoAbierto.tipo]}` : 'Período';
 
-  const stats: { value: string | number; label: string; color: string; onPress?: () => void }[] = isNomina
+  // Completados sin firmar → mostrar alerta
+  const completadosSinFirmar = turnos.filter(
+    (a) => a.estado === 'completado' && a.contrato_firmado === 0
+  ).length;
+
+  const stats: { value: string | number; label: string; color: string; alert?: boolean; onPress?: () => void }[] = isNomina
     ? [
         { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—', label: periodoLabel, color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
         { value: nominaPerfil?.acepta_extras ? '✓' : '—',             label: 'Extras activos', color: nominaPerfil?.acepta_extras ? 'text-info' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
@@ -218,7 +223,7 @@ export default function DashboardScreen() {
     ? [
         { value: turnosHoy.length,                                          label: 'Turnos hoy',  color: 'text-foreground', onPress: () => router.push('/(tabs)/turnos') },
         { value: proximos.length,                                           label: 'Próximos',    color: 'text-info',       onPress: () => router.push('/(tabs)/turnos') },
-        { value: turnos.filter((a) => a.estado === 'completado').length,    label: 'Completados', color: 'text-success',    onPress: () => router.push('/(tabs)/turnos') },
+        { value: turnos.filter((a) => a.estado === 'completado').length,    label: 'Completados', color: 'text-success',    alert: completadosSinFirmar > 0, onPress: () => router.push('/(tabs)/turnos') },
       ]
     : isJefeNomina
     ? [
@@ -475,7 +480,7 @@ export default function DashboardScreen() {
         {/* ── Stat cards ───────────────────────────────────────────────── */}
         <View className="flex-row px-4 mt-4 gap-3">
           {stats.map((s) => (
-            <StatCard key={s.label} value={s.value} label={s.label} color={s.color} onPress={s.onPress} />
+            <StatCard key={s.label} value={s.value} label={s.label} color={s.color} alert={s.alert} onPress={s.onPress} />
           ))}
         </View>
 
