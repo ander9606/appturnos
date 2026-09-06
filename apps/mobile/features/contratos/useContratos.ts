@@ -12,7 +12,7 @@ export const QUERY_KEYS = {
 /** Obtiene el contrato de una asignación. */
 export function useObtenerContrato(asignacionId: number | null) {
   return useQuery({
-    queryKey: QUERY_KEYS.contrato(asignacionId!),
+    queryKey: asignacionId ? QUERY_KEYS.contrato(asignacionId) : ['contrato', null],
     queryFn:  () => contratosApi.obtenerPorAsignacion(asignacionId!),
     enabled:  asignacionId !== null,
     staleTime: 60_000,
