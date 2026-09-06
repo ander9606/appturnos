@@ -16,6 +16,8 @@ export function useObtenerContrato(asignacionId: number | null) {
     queryFn:  () => contratosApi.obtenerPorAsignacion(asignacionId!),
     enabled:  asignacionId !== null,
     staleTime: 60_000,
+    retry: 1,
+    throwOnError: false,
   });
 }
 
