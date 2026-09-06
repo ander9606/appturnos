@@ -151,6 +151,20 @@ const ESTADOS_TRABAJADOR_EMPRESA = {
   ARCHIVADO: 'archivado',
 };
 
+/** Cumplimiento Legal — Contratos Diarios */
+const TIPOS_CONTRATO = {
+  LABORAL: 'LABORAL',
+  PRESTACION_SERVICIOS: 'PRESTACION_SERVICIOS',
+};
+
+// Salario mínimo diario (SMMLV ÷ 30 días)
+const SALARIO_MINIMO_DIARIO_COP = Math.ceil(SMMLV_COP / 30);
+
+// Auditoría de acumulación: límite de contratos diarios por trabajador/año
+// Sentencia C-013-20: >50 contratos en 12 meses = riesgo de recalificación
+const CONTRATOS_ACUMULATIVOS_LIMITE = 50;
+const CONTRATOS_ACUMULATIVOS_ALERTA = 40;
+
 module.exports = {
   ROLES,
   ROLES_VALIDOS,
@@ -179,4 +193,8 @@ module.exports = {
   PLANES,
   SUSCRIPCION_ESTANDAR_COP,
   TRIAL_DIAS_GRATIS,
+  TIPOS_CONTRATO,
+  SALARIO_MINIMO_DIARIO_COP,
+  CONTRATOS_ACUMULATIVOS_LIMITE,
+  CONTRATOS_ACUMULATIVOS_ALERTA,
 };
