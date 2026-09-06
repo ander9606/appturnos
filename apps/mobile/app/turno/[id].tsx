@@ -259,7 +259,7 @@ export default function TurnoDetailScreen() {
       setFirmaContratoVisible(true);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo cargar el contrato.';
-      showToast(msg, 'error');
+      showToast(msg);
     } finally {
       setCargandoModalContrato(false);
     }
