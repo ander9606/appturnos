@@ -739,7 +739,7 @@ export default function TurnoDetailScreen() {
       />
 
       {/* ── Contract signature modal ─────────────────────────── */}
-      {firmaContratoVisible && contratoError && (
+      {firmaContratoVisible && contratoError ? (
         <Modal visible transparent>
           <View className="flex-1 bg-black/50 justify-center items-center p-4">
             <View className="bg-card rounded-2xl p-5 gap-3 max-w-xs">
@@ -757,14 +757,13 @@ export default function TurnoDetailScreen() {
             </View>
           </View>
         </Modal>
-      )}
-      {contrato && (
+      ) : contrato ? (
         <ContratoFirmaModal
           visible={firmaContratoVisible}
           contratoId={contrato.id}
           onClose={() => setFirmaContratoVisible(false)}
         />
-      )}
+      ) : null}
 
       {/* ── Novedad modal ─────────────────────────────────────── */}
       {id != null && (
