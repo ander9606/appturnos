@@ -249,21 +249,10 @@ export default function TurnoDetailScreen() {
     }
   };
 
-  const handleAbrirModalFirmaContrato = useCallback(async () => {
-    if (!id) return;
-    setCargandoModalContrato(true);
-    try {
-      // Invalidar y recargar la query de contrato
-      // El backend generará el contrato automáticamente si no existe
-      await qc.refetchQueries({ queryKey: QUERY_KEYS.contrato(id) });
-      setFirmaContratoVisible(true);
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'No se pudo cargar el contrato.';
-      showToast(msg);
-    } finally {
-      setCargandoModalContrato(false);
-    }
-  }, [id, qc]);
+  const handleAbrirModalFirmaContrato = useCallback(() => {
+    // Navegar a contratos pendientes para ver todos los contratos sin firmar
+    router.push('/contratos-pendientes');
+  }, [router]);
 
   const openInMaps = useCallback(() => {
     const lat = asignacion?.latitud;
@@ -519,12 +508,10 @@ export default function TurnoDetailScreen() {
                       </Text>
                     </View>
                     <Button
-                      label={cargandoModalContrato ? 'Cargando contrato…' : 'Firmar Contrato'}
+                      label="Ver Contratos Pendientes"
                       variant="primary"
                       size="sm"
                       fullWidth
-                      loading={cargandoModalContrato}
-                      disabled={cargandoModalContrato}
                       onPress={handleAbrirModalFirmaContrato}
                     />
                   </View>
