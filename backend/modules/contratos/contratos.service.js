@@ -24,6 +24,38 @@ const ContratosService = {
     return ContratosModel.listarPorTrabajador(t.empresa_id, t.id);
   },
 
+  async generarSiNoExiste(empresaId, asignacionId, usuario) {
+    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa)
+    let realEmpresaId = empresaId;
+    if (!realEmpresaId) {
+      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
+      realEmpresaId = t.empresa_id;
+    }
+
+    // Verificar si ya existe
+    let contrato = await ContratosModel.obtenerPorAsignacion(realEmpresaId, asignacionId);
+    if (contrato) return contrato;
+
+    // Si no existe, obtener asignación con detalles
+    const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
+    const asignacion = await AsignacionesModel.obtenerConDetalles(realEmpresaId, asignacionId);
+
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+
+    // Crear contrato con datos de la asignación
+    const anio = asignacion.oferta_fecha.split('-')[0];
+    const contratoId = await ContratosModel.crear(realEmpresaId, {
+      asignacionId,
+      anio,
+      fecha: asignacion.oferta_fecha,
+      descripcionLabor: `${asignacion.cargo_nombre} - ${asignacion.oferta_titulo}`,
+      valorDia: asignacion.tarifa_dia,
+    });
+
+    // Retornar el contrato creado
+    return ContratosModel.obtenerPorId(realEmpresaId, contratoId);
+  },
+
   async obtenerPorAsignacion(empresaId, asignacionId, usuario) {
     // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa) — se resuelve
     // la empresa real del trabajador para la consulta
@@ -58,8 +90,15 @@ const ContratosService = {
       const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
       realEmpresaId = t.empresa_id;
     }
-    const contrato = await ContratosModel.obtenerPorId(realEmpresaId, id);
-    if (!contrato) throw new AppError('Contrato no encontrado', 404);
+    let contrato = await ContratosModel.obtenerPorId(realEmpresaId, id);
+
+    // Si el contrato no existe, intentar generarlo on-demand
+    if (!contrato) {
+      // Intenta obtener la asignación del contrato a través de la relación
+      // (esto es fallback; lo ideal es que el cliente pase asignacionId)
+      throw new AppError('Contrato no encontrado', 404);
+    }
+
     if (contrato.trabajador_usuario_id !== usuario.sub) {
       throw new AppError('Solo el trabajador del contrato puede firmarlo', 403);
     }

@@ -9,9 +9,22 @@ async function listar(req, res) {
 }
 
 async function obtenerPorAsignacion(req, res) {
-  const data = await ContratosService.obtenerPorAsignacion(
-    req.empresa_id, Number(req.params.asignacionId), req.usuario
-  );
+  const asignacionId = Number(req.params.asignacionId);
+  let data;
+  try {
+    data = await ContratosService.obtenerPorAsignacion(
+      req.empresa_id, asignacionId, req.usuario
+    );
+  } catch (err) {
+    // Si el contrato no existe (404), intentar generarlo automáticamente
+    if (err.statusCode === 404 && err.message === 'Contrato no encontrado') {
+      data = await ContratosService.generarSiNoExiste(
+        req.empresa_id, asignacionId, req.usuario
+      );
+    } else {
+      throw err;
+    }
+  }
   res.json({ success: true, data, message: 'Contrato de asignación' });
 }
 
