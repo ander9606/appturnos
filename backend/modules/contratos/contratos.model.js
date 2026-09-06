@@ -13,17 +13,35 @@ const ContratosModel = {
     const numeroContrato = `CT-${datos.anio}-${datos.asignacionId}`;
     const [res] = await ejecutor.query(
       `INSERT INTO contratos_diarios
-         (empresa_id, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+         (empresa_id, tipo_contrato, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia, salario_minimo_validado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         tipo_contrato = VALUES(tipo_contrato),
+         fecha = VALUES(fecha),
+         descripcion_labor = VALUES(descripcion_labor),
+         valor_dia = VALUES(valor_dia),
+         salario_minimo_validado = VALUES(salario_minimo_validado)`,
       [
         empresaId,
+        datos.tipoContrato || 'LABORAL',
         datos.asignacionId,
         numeroContrato,
         datos.fecha,
         datos.descripcionLabor,
         datos.valorDia,
+        datos.salarioMinimoValidado ? 1 : 0,
       ]
     );
+    // Si insertId es 0, significa que fue un update (contrato ya existía)
+    // En ese caso, buscamos el ID del contrato existente
+    if (res.insertId === 0) {
+      const [filas] = await ejecutor.query(
+        `SELECT id FROM contratos_diarios
+         WHERE empresa_id = ? AND asignacion_id = ? LIMIT 1`,
+        [empresaId, datos.asignacionId]
+      );
+      return filas[0]?.id;
+    }
     return res.insertId;
   },
 
@@ -95,6 +113,27 @@ const ContratosModel = {
       [firmaB64, id, empresaId]
     );
     return res.affectedRows;
+  },
+
+  async contarPorTrabajadorUltimo12Meses(empresaId, trabajadorId) {
+    const [resultado] = await pool.query(
+      `SELECT COUNT(*) as cantidad
+       FROM contratos_diarios c
+       JOIN asignaciones_turno a ON a.id = c.asignacion_id
+       WHERE c.empresa_id = ? AND a.trabajador_id = ?
+         AND c.created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)`,
+      [empresaId, trabajadorId]
+    );
+    return resultado[0]?.cantidad || 0;
+  },
+
+  async registrarAuditoria(empresaId, trabajadorId, cantidad, estado, accion) {
+    await pool.query(
+      `INSERT INTO contratos_acumulacion_auditoria
+       (empresa_id, trabajador_id, contratos_ultima_12_meses, estado, accion)
+       VALUES (?, ?, ?, ?, ?)`,
+      [empresaId, trabajadorId, cantidad, estado, accion]
+    );
   },
 };
 
