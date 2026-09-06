@@ -110,7 +110,7 @@ export default function TurnoDetailScreen() {
   // ── Data ──────────────────────────────────────────────────────────────
   const { data: asignacion, isLoading } = useAsignacion(id);
   const { data: novedades = [] } = useNovedades(id);
-  const { data: contrato } = useObtenerContrato(id);
+  const { data: contrato, error: contratoError } = useObtenerContrato(id);
 
   const ingresoMutation    = useMarcarIngreso();
   const egresoMutation     = useMarcarEgreso();
@@ -739,6 +739,25 @@ export default function TurnoDetailScreen() {
       />
 
       {/* ── Contract signature modal ─────────────────────────── */}
+      {firmaContratoVisible && contratoError && (
+        <Modal visible transparent>
+          <View className="flex-1 bg-black/50 justify-center items-center p-4">
+            <View className="bg-card rounded-2xl p-5 gap-3 max-w-xs">
+              <Ionicons name="alert-circle" size={40} color="#EF4444" />
+              <Text className="text-base font-bold text-foreground">Error al cargar el contrato</Text>
+              <Text className="text-sm text-muted-foreground">
+                {contratoError?.message || 'No se pudo obtener los datos del contrato. Intenta más tarde.'}
+              </Text>
+              <Button
+                label="Cerrar"
+                variant="primary"
+                onPress={() => setFirmaContratoVisible(false)}
+                fullWidth
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
       {contrato && (
         <ContratoFirmaModal
           visible={firmaContratoVisible}
