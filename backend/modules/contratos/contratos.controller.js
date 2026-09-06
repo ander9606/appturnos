@@ -72,4 +72,9 @@ async function pdfPorAsignacion(req, res) {
   generarContratoPdf(contrato, res);
 }
 
-module.exports = { listar, obtenerPorAsignacion, obtener, firmar, pdf, pdfPorAsignacion };
+async function listarSinFirmar(req, res) {
+  const data = await ContratosService.listarSinFirmar(req.empresa_id, req.usuario);
+  res.json({ success: true, data, message: 'Contratos sin firmar' });
+}
+
+module.exports = { listar, obtenerPorAsignacion, obtener, firmar, pdf, pdfPorAsignacion, listarSinFirmar };

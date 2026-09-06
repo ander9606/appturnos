@@ -135,6 +135,23 @@ const ContratosModel = {
       [empresaId, trabajadorId, cantidad, estado, accion]
     );
   },
+
+  async listarSinFirmar(empresaId, trabajadorId) {
+    const [filas] = await pool.query(
+      `SELECT c.id, c.numero_contrato, c.fecha, c.valor_dia,
+              c.descripcion_labor, c.tipo_contrato,
+              o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
+              a.id AS asignacion_id
+       FROM contratos_diarios c
+       JOIN asignaciones_turno a ON a.id = c.asignacion_id
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       WHERE c.empresa_id = ? AND a.trabajador_id = ?
+         AND c.firmado_trabajador = 0
+       ORDER BY c.fecha DESC`,
+      [empresaId, trabajadorId]
+    );
+    return filas;
+  },
 };
 
 module.exports = ContratosModel;

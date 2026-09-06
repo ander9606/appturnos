@@ -5,6 +5,7 @@ import { contratosApi, type Contrato } from '@api-client';
 
 export const QUERY_KEYS = {
   contrato: (asignacionId: number) => ['contrato', asignacionId] as const,
+  sinFirmar: () => ['contratos', 'sin-firmar'] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
