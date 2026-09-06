@@ -25,21 +25,40 @@ const ContratosService = {
   },
 
   async obtenerPorAsignacion(empresaId, asignacionId, usuario) {
-    const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
+    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa) — se resuelve
+    // la empresa real del trabajador para la consulta
+    let realEmpresaId = empresaId;
+    if (!realEmpresaId) {
+      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
+      realEmpresaId = t.empresa_id;
+    }
+    const contrato = await ContratosModel.obtenerPorAsignacion(realEmpresaId, asignacionId);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     verificarAcceso(contrato, usuario);
     return contrato;
   },
 
   async obtener(empresaId, id, usuario) {
-    const contrato = await ContratosModel.obtenerPorId(empresaId, id);
+    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa)
+    let realEmpresaId = empresaId;
+    if (!realEmpresaId) {
+      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
+      realEmpresaId = t.empresa_id;
+    }
+    const contrato = await ContratosModel.obtenerPorId(realEmpresaId, id);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     verificarAcceso(contrato, usuario);
     return contrato;
   },
 
   async firmar(empresaId, id, usuario, firmaB64) {
-    const contrato = await ContratosModel.obtenerPorId(empresaId, id);
+    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa)
+    let realEmpresaId = empresaId;
+    if (!realEmpresaId) {
+      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
+      realEmpresaId = t.empresa_id;
+    }
+    const contrato = await ContratosModel.obtenerPorId(realEmpresaId, id);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     if (contrato.trabajador_usuario_id !== usuario.sub) {
       throw new AppError('Solo el trabajador del contrato puede firmarlo', 403);
@@ -47,15 +66,15 @@ const ContratosService = {
     if (contrato.firmado_trabajador) {
       throw new AppError('El contrato ya está firmado', 409);
     }
-    await ContratosModel.firmar(empresaId, id, firmaB64);
+    await ContratosModel.firmar(realEmpresaId, id, firmaB64);
     // Guarda la firma como atajo reutilizable para el próximo contrato (best-effort).
     await TrabajadoresModel.guardarFirma(contrato.trabajador_id, firmaB64).catch(() => null);
-    await IntegracionService.emitir(empresaId, 'contrato.completado', {
+    await IntegracionService.emitir(realEmpresaId, 'contrato.completado', {
       contrato_id: id,
       asignacion_id: contrato.asignacion_id,
       numero_contrato: contrato.numero_contrato,
     });
-    return ContratosModel.obtenerPorId(empresaId, id);
+    return ContratosModel.obtenerPorId(realEmpresaId, id);
   },
 };
 
