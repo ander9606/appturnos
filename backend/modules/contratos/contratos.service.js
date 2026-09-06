@@ -34,13 +34,22 @@ const ContratosService = {
 
     // Verificar si ya existe
     let contrato = await ContratosModel.obtenerPorAsignacion(realEmpresaId, asignacionId);
-    if (contrato) return contrato;
+    if (contrato) {
+      verificarAcceso(contrato, usuario);
+      return contrato;
+    }
 
     // Si no existe, obtener asignación con detalles
     const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
     const asignacion = await AsignacionesModel.obtenerConDetalles(realEmpresaId, asignacionId);
 
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+
+    // Verificar que el usuario es el trabajador asignado
+    const t = await TrabajadoresService.resolverTrabajadorPorUsuario(realEmpresaId, usuario.sub);
+    if (asignacion.trabajador_id !== t.id) {
+      throw new AppError('No tienes permiso para generar este contrato', 403);
+    }
 
     // Crear contrato con datos de la asignación
     const anio = asignacion.oferta_fecha.split('-')[0];
@@ -52,8 +61,10 @@ const ContratosService = {
       valorDia: asignacion.tarifa_dia,
     });
 
-    // Retornar el contrato creado
-    return ContratosModel.obtenerPorId(realEmpresaId, contratoId);
+    // Retornar el contrato creado con verificación de acceso
+    const contratoCreado = await ContratosModel.obtenerPorId(realEmpresaId, contratoId);
+    verificarAcceso(contratoCreado, usuario);
+    return contratoCreado;
   },
 
   async obtenerPorAsignacion(empresaId, asignacionId, usuario) {

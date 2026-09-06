@@ -14,7 +14,11 @@ const ContratosModel = {
     const [res] = await ejecutor.query(
       `INSERT INTO contratos_diarios
          (empresa_id, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         fecha = VALUES(fecha),
+         descripcion_labor = VALUES(descripcion_labor),
+         valor_dia = VALUES(valor_dia)`,
       [
         empresaId,
         datos.asignacionId,
@@ -24,6 +28,16 @@ const ContratosModel = {
         datos.valorDia,
       ]
     );
+    // Si insertId es 0, significa que fue un update (contrato ya existía)
+    // En ese caso, buscamos el ID del contrato existente
+    if (res.insertId === 0) {
+      const [filas] = await ejecutor.query(
+        `SELECT id FROM contratos_diarios
+         WHERE empresa_id = ? AND asignacion_id = ? LIMIT 1`,
+        [empresaId, datos.asignacionId]
+      );
+      return filas[0]?.id;
+    }
     return res.insertId;
   },
 

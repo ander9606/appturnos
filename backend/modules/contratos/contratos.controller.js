@@ -18,6 +18,7 @@ async function obtenerPorAsignacion(req, res) {
   } catch (err) {
     // Si el contrato no existe (404), intentar generarlo automáticamente
     if (err.statusCode === 404 && err.message === 'Contrato no encontrado') {
+      // Fallback: generar contrato desde datos de asignación
       data = await ContratosService.generarSiNoExiste(
         req.empresa_id, asignacionId, req.usuario
       );
