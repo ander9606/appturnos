@@ -56,22 +56,45 @@ export function NominaTurnosView() {
 
   const { data: turnos, isLoading, isError, error, refetch, isRefetching } = useMisTurnos();
 
-  // periodos_nomina ya viene ordenado fecha_inicio DESC — [0] es el actual, [1] el anterior.
+  // periodos_nomina viene con empresa_id — uno por empresa. Agrupar por empresa para filtrar correctamente.
   const { data: periodosResp } = usePeriodos();
   const periodos = periodosResp?.data ?? [];
 
   const [showAnterior, setShowAnterior] = useState(false);
-  const periodoActual = periodos[0];
-  const periodoAnterior = periodos[1];
-  const periodo = showAnterior ? periodoAnterior : periodoActual;
 
+  // Agrupar períodos por empresa_id — multi-empresa support.
+  const periodosPorEmpresa = useMemo(() => {
+    const map: Record<number, any[]> = {};
+    periodos.forEach((p: any) => {
+      if (!map[p.empresa_id]) map[p.empresa_id] = [];
+      map[p.empresa_id].push(p);
+    });
+    return map;
+  }, [periodos]);
+
+  // Para el UI, extrae el período actual/anterior (usa la primera empresa encontrada).
+  const { periodoActual, periodoAnterior } = useMemo(() => {
+    const empresaIds = Object.keys(periodosPorEmpresa);
+    if (empresaIds.length === 0) return { periodoActual: null, periodoAnterior: null };
+    const periodosFirstEmpresa = periodosPorEmpresa[Number(empresaIds[0])];
+    return {
+      periodoActual: periodosFirstEmpresa?.[0] ?? null,
+      periodoAnterior: periodosFirstEmpresa?.[1] ?? null,
+    };
+  }, [periodosPorEmpresa]);
+
+  // Filtrar turnos completados: cada turno se filtra por el período de su empresa.
   const turnosQuincena = useMemo(() => {
-    if (!turnos || !periodo) return [];
+    if (!turnos) return [];
     return turnos.filter((a) => {
       if (a.estado !== 'completado') return false;
+      const periodosEmpresa = periodosPorEmpresa[a.empresa_id] ?? [];
+      if (periodosEmpresa.length === 0) return false;
+      const periodo = showAnterior && periodosEmpresa[1] ? periodosEmpresa[1] : periodosEmpresa[0];
+      if (!periodo) return false;
       return a.oferta_fecha >= periodo.fecha_inicio && a.oferta_fecha <= periodo.fecha_fin;
     });
-  }, [turnos, periodo]);
+  }, [turnos, periodosPorEmpresa, showAnterior]);
 
   // Turnos completados sin firma no cuentan en el total a cobrar hasta que
   // el trabajador firme su contrato — mismo criterio que la liquidación del gestor.
@@ -370,7 +393,7 @@ export function NominaTurnosView() {
               Sin turnos completados
             </Text>
             <Text className="text-sm text-muted-foreground text-center">
-              No tienes turnos completados en el período {periodo ? fmtPeriodo(periodo) : 'actual'}.
+              No tienes turnos completados en el período {showAnterior && periodoAnterior ? fmtPeriodo(periodoAnterior) : periodoActual ? fmtPeriodo(periodoActual) : 'actual'}.
             </Text>
           </View>
         }
