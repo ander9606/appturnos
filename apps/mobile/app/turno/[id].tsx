@@ -34,7 +34,8 @@ import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
 import { NovedadCard }         from '@/features/novedades/NovedadCard';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion, useObtenerContrato, useFirmarContrato } from '@/features/turnos/useTurnos';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion } from '@/features/turnos/useTurnos';
+import { useObtenerContrato, ContratoFirmaModal } from '@/features/contratos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
@@ -114,7 +115,6 @@ export default function TurnoDetailScreen() {
   const ingresoMutation    = useMarcarIngreso();
   const egresoMutation     = useMarcarEgreso();
   const calificarMutation  = useCalificar();
-  const firmarContratoMutation = useFirmarContrato();
 
   // ── Live timer: elapsed (en_progreso) + countdown (confirmado) ───────
   useEffect(() => {
@@ -243,22 +243,6 @@ export default function TurnoDetailScreen() {
       Alert.alert('Error', msg);
     } finally {
       setCargandoContrato(false);
-    }
-  };
-
-  const handleFirmarContrato = async (firmaBase64: string) => {
-    if (!contrato) return;
-    try {
-      await firmarContratoMutation.mutateAsync({
-        contratoId: contrato.id,
-        firma_b64: firmaBase64,
-      });
-      setFirmaContratoVisible(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast('Contrato firmado — ¡ya puedes cobrar tu pago!');
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'No se pudo firmar el contrato.';
-      Alert.alert('Error', msg);
     }
   };
 
@@ -516,12 +500,10 @@ export default function TurnoDetailScreen() {
                       </Text>
                     </View>
                     <Button
-                      label={firmarContratoMutation.isPending ? 'Firmando…' : 'Firmar Contrato'}
+                      label="Firmar Contrato"
                       variant="primary"
                       size="sm"
                       fullWidth
-                      loading={firmarContratoMutation.isPending}
-                      disabled={firmarContratoMutation.isPending}
                       onPress={() => setFirmaContratoVisible(true)}
                     />
                   </View>
@@ -756,15 +738,14 @@ export default function TurnoDetailScreen() {
         loading={egresoMutation.isPending}
       />
 
-      {/* ── Signature modal (firmar contrato) ─────────────────── */}
-      <SignaturePad
-        visible={firmaContratoVisible}
-        onClose={() => setFirmaContratoVisible(false)}
-        onConfirm={handleFirmarContrato}
-        loading={firmarContratoMutation.isPending}
-        title="Firmar Contrato"
-        subtitle="Tu firma autoriza el pago del turno"
-      />
+      {/* ── Contract signature modal ─────────────────────────── */}
+      {contrato && (
+        <ContratoFirmaModal
+          visible={firmaContratoVisible}
+          contratoId={contrato.id}
+          onClose={() => setFirmaContratoVisible(false)}
+        />
+      )}
 
       {/* ── Novedad modal ─────────────────────────────────────── */}
       {id != null && (
