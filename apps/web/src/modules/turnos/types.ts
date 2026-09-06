@@ -120,4 +120,6 @@ export interface Asignacion {
   oferta_titulo?: string;
   // Solo viene poblado en el detalle puntual (obtenerAsignacion), no en el listado.
   calificacion?: number | null;
+  /** Si es 0, el contrato del turno completado aún no fue firmado — su pago no cuenta en liquidación. */
+  contrato_firmado?: 0 | 1;
 }

@@ -43,3 +43,8 @@ export const contratosApi = {
     return api.post(`/api/contratos/${id}/firmar`, { firma_b64 });
   },
 };
+
+export function obtenerContratoURL(asignacionId: number, token: string): string {
+  const base = process.env.EXPO_PUBLIC_API_URL;
+  return `${base}/api/contratos/asignacion/${asignacionId}/pdf?token=${token}`;
+}
