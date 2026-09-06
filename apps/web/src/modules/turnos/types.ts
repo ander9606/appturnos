@@ -115,6 +115,9 @@ export interface Asignacion {
   trabajador_nombre: string;
   trabajador_apellido: string;
   cargo_nombre: string;
+  // Datos de la oferta — presentes al listar asignaciones de una oferta
+  oferta_fecha?: string;
+  oferta_titulo?: string;
   // Solo viene poblado en el detalle puntual (obtenerAsignacion), no en el listado.
   calificacion?: number | null;
 }

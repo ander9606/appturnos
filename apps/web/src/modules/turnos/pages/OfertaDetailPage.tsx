@@ -643,10 +643,6 @@ function PuestoFormModal({
 function toDatetimeLocal(s: string | null): string {
   return s ? s.replace(' ', 'T').slice(0, 16) : '';
 }
-function fromDatetimeLocal(v: string): string | undefined {
-  if (!v) return undefined;
-  return v.length === 16 ? `${v}:00` : v;
-}
 
 function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; onClose: () => void }) {
   const corregir = useCorregirAsignacion();
