@@ -637,8 +637,27 @@ function CorregirAsignacionModal({
   React.useEffect(() => {
     // Sin toISOString() a propósito — se parsea como hora local del dispositivo
     // (mismo criterio que ahoraColombiaSQL() en el backend, ver toISODateTime).
-    setIngreso(detalle?.hora_ingreso_real ? new Date(detalle.hora_ingreso_real.replace(' ', 'T')) : null);
-    setEgreso(detalle?.hora_egreso_real ? new Date(detalle.hora_egreso_real.replace(' ', 'T')) : null);
+    if (detalle?.oferta_fecha) {
+      const fechaBase = new Date(`${detalle.oferta_fecha}T00:00:00`);
+
+      if (detalle.hora_ingreso_real) {
+        const ingresoParsed = new Date(detalle.hora_ingreso_real.replace(' ', 'T'));
+        const ingresoCompleto = new Date(fechaBase);
+        ingresoCompleto.setHours(ingresoParsed.getHours(), ingresoParsed.getMinutes(), 0, 0);
+        setIngreso(ingresoCompleto);
+      } else {
+        setIngreso(null);
+      }
+
+      if (detalle.hora_egreso_real) {
+        const egresoParsed = new Date(detalle.hora_egreso_real.replace(' ', 'T'));
+        const egresoCompleto = new Date(fechaBase);
+        egresoCompleto.setHours(egresoParsed.getHours(), egresoParsed.getMinutes(), 0, 0);
+        setEgreso(egresoCompleto);
+      } else {
+        setEgreso(null);
+      }
+    }
     setShowIngreso(false);
     setShowEgreso(false);
   }, [detalle?.id]);
@@ -647,11 +666,21 @@ function CorregirAsignacionModal({
 
   function onChangeIngreso(_: DateTimePickerEvent, d?: Date) {
     if (Platform.OS === 'android') setShowIngreso(false);
-    if (d) setIngreso(d);
+    if (d && detalle?.oferta_fecha) {
+      // Asegura que siempre usa la fecha del turno, solo cambia la hora
+      const fechaBase = new Date(`${detalle.oferta_fecha}T00:00:00`);
+      fechaBase.setHours(d.getHours(), d.getMinutes(), 0, 0);
+      setIngreso(fechaBase);
+    }
   }
   function onChangeEgreso(_: DateTimePickerEvent, d?: Date) {
     if (Platform.OS === 'android') setShowEgreso(false);
-    if (d) setEgreso(d);
+    if (d && detalle?.oferta_fecha) {
+      // Asegura que siempre usa la fecha del turno, solo cambia la hora
+      const fechaBase = new Date(`${detalle.oferta_fecha}T00:00:00`);
+      fechaBase.setHours(d.getHours(), d.getMinutes(), 0, 0);
+      setEgreso(fechaBase);
+    }
   }
 
   async function handleGuardar() {
@@ -703,8 +732,8 @@ function CorregirAsignacionModal({
             {showIngreso && (
               <DateTimePicker
                 value={ingreso ?? new Date()}
-                mode="datetime"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onChangeIngreso}
               />
             )}
@@ -727,8 +756,8 @@ function CorregirAsignacionModal({
             {showEgreso && (
               <DateTimePicker
                 value={egreso ?? new Date()}
-                mode="datetime"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                 onChange={onChangeEgreso}
               />
             )}

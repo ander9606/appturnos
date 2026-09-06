@@ -759,8 +759,27 @@ function CorregirIngresoEgresoModal({
 
   useEffect(() => {
     if (asignacion) {
-      setIngreso(asignacion.hora_ingreso_real ? new Date(asignacion.hora_ingreso_real.replace(' ', 'T')) : null);
-      setEgreso(asignacion.hora_egreso_real ? new Date(asignacion.hora_egreso_real.replace(' ', 'T')) : null);
+      // Inicializa con la fecha del turno + la hora actual (o la hora guardada si existe)
+      const fechaBase = new Date(`${asignacion.oferta_fecha}T00:00:00`);
+
+      if (asignacion.hora_ingreso_real) {
+        const ingresoParsed = new Date(asignacion.hora_ingreso_real.replace(' ', 'T'));
+        const ingresoCompleto = new Date(fechaBase);
+        ingresoCompleto.setHours(ingresoParsed.getHours(), ingresoParsed.getMinutes(), 0, 0);
+        setIngreso(ingresoCompleto);
+      } else {
+        setIngreso(null);
+      }
+
+      if (asignacion.hora_egreso_real) {
+        const egresoParsed = new Date(asignacion.hora_egreso_real.replace(' ', 'T'));
+        const agresoCompleto = new Date(fechaBase);
+        agresoCompleto.setHours(egresoParsed.getHours(), egresoParsed.getMinutes(), 0, 0);
+        setEgreso(agresoCompleto);
+      } else {
+        setEgreso(null);
+      }
+
       setShowIngreso(false);
       setShowEgreso(false);
     }
@@ -769,11 +788,21 @@ function CorregirIngresoEgresoModal({
   if (!visible || !asignacion) return null;
 
   function onChangeIngreso(_: DateTimePickerEvent, d?: Date) {
-    if (d) setIngreso(d);
+    if (d && asignacion) {
+      // Asegura que siempre usa la fecha del turno, solo cambia la hora
+      const fechaBase = new Date(`${asignacion.oferta_fecha}T00:00:00`);
+      fechaBase.setHours(d.getHours(), d.getMinutes(), 0, 0);
+      setIngreso(fechaBase);
+    }
   }
 
   function onChangeEgreso(_: DateTimePickerEvent, d?: Date) {
-    if (d) setEgreso(d);
+    if (d && asignacion) {
+      // Asegura que siempre usa la fecha del turno, solo cambia la hora
+      const fechaBase = new Date(`${asignacion.oferta_fecha}T00:00:00`);
+      fechaBase.setHours(d.getHours(), d.getMinutes(), 0, 0);
+      setEgreso(fechaBase);
+    }
   }
 
   // En Android, abre solo un selector de hora (la fecha viene del turno).
@@ -784,7 +813,7 @@ function CorregirIngresoEgresoModal({
       onChange: (_, hora) => {
         if (!hora) return;
         // Combina la fecha del turno con la hora seleccionada
-        const fecha = new Date(asignacion!.oferta_fecha);
+        const fecha = new Date(`${asignacion!.oferta_fecha}T00:00:00`);
         fecha.setHours(hora.getHours(), hora.getMinutes(), 0, 0);
         onResultado(fecha);
       },

@@ -643,10 +643,6 @@ function PuestoFormModal({
 function toDatetimeLocal(s: string | null): string {
   return s ? s.replace(' ', 'T').slice(0, 16) : '';
 }
-function fromDatetimeLocal(v: string): string | undefined {
-  if (!v) return undefined;
-  return v.length === 16 ? `${v}:00` : v;
-}
 
 function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; onClose: () => void }) {
   const corregir = useCorregirAsignacion();
@@ -659,12 +655,19 @@ function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignaci
       toast.error('La hora de egreso debe ser posterior al ingreso');
       return;
     }
+
+    // Asegura que la fecha sea siempre la del turno, solo cambia la hora
+    const fechaTurno = asignacion.oferta_fecha;
+    const ensureDate = (datetime: string): string | undefined => {
+      if (!datetime) return undefined;
+      const hora = datetime.slice(11, 16); // Extrae "HH:MM"
+      return `${fechaTurno}T${hora}:00`;
+    };
+
     await corregir.mutateAsync({
       id: asignacion.id,
-      // Vacío → se omite del body (no `null`): el backend solo distingue "no venía en
-      // la petición" vía `!== undefined` — enviar null falla la validación isISO8601().
-      hora_ingreso_real: fromDatetimeLocal(ingreso),
-      hora_egreso_real: fromDatetimeLocal(egreso),
+      hora_ingreso_real: ensureDate(ingreso),
+      hora_egreso_real: ensureDate(egreso),
     });
     onClose();
   };
@@ -695,7 +698,7 @@ function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignaci
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          Dejar un campo vacío no lo modifica. Con ambos definidos, el turno se marca completado y recalcula el pago.
+          Solo se modifica la hora (la fecha siempre será {asignacion.oferta_fecha}). Dejar un campo vacío no lo modifica. Con ambos definidos, el turno se marca completado y recalcula el pago.
         </p>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
