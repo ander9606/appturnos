@@ -32,6 +32,7 @@ interface SignaturePadProps {
   onConfirm: (base64: string) => void;
   loading?: boolean;
   confirmLabel?: string;
+  title?: string;
   subtitle?: string;
 }
 
@@ -75,6 +76,7 @@ export function SignaturePad({
   onConfirm,
   loading = false,
   confirmLabel = 'Confirmar salida',
+  title = 'Firma digital',
   subtitle = 'Dibuja tu firma para confirmar la salida y firmar el contrato',
 }: SignaturePadProps) {
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -159,7 +161,7 @@ export function SignaturePad({
         {/* ── Header ─────────────────────────────────────────────── */}
         <View className="flex-row items-center justify-between px-6 pt-6 pb-4 border-b border-border">
           <View>
-            <Text className="text-lg font-bold text-foreground">Firma digital</Text>
+            <Text className="text-lg font-bold text-foreground">{title}</Text>
             <Text className="text-sm text-muted-foreground mt-0.5">
               {subtitle}
             </Text>

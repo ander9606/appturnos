@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { turnosApi, cargosApi } from '@api-client';
-import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
+import { turnosApi, cargosApi, contratosApi } from '@api-client';
+import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, CrearCargoPayload, ActualizarCargoPayload, Contrato } from '@api-client';
 import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/lib/formatters';
@@ -15,6 +15,7 @@ export const QUERY_KEYS = {
   asignacion:   (id: number) => ['asignacion', id] as const,
   asignaciones: (params: object) => ['asignaciones', params] as const,
   liquidacion:  (params?: object) => ['liquidacion-turnos', params] as const,
+  contrato:     (asignacionId: number) => ['contrato', asignacionId] as const,
   cargos:       ['cargos'] as const,
   funcionesCargo: (cargoId: number) => ['cargo-funciones', cargoId] as const,
 };
@@ -429,6 +430,31 @@ export function useCrearOferta() {
     mutationFn: (payload: CrearOfertaPayload) => turnosApi.crearOferta(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+    },
+  });
+}
+
+// ── Contratos ─────────────────────────────────────────────────────────────
+
+/** Obtiene el contrato de una asignación. */
+export function useObtenerContrato(asignacionId: number | null) {
+  return useQuery({
+    queryKey: QUERY_KEYS.contrato(asignacionId!),
+    queryFn:  () => contratosApi.obtenerPorAsignacion(asignacionId!),
+    enabled:  asignacionId !== null,
+    staleTime: 60_000,
+  });
+}
+
+/** Firma un contrato con una firma digital. */
+export function useFirmarContrato() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ contratoId, firma_b64 }: { contratoId: number; firma_b64: string }) =>
+      contratosApi.firmar(contratoId, firma_b64),
+    onSuccess: (data: Contrato) => {
+      qc.setQueryData(QUERY_KEYS.contrato(data.asignacion_id), data);
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(data.asignacion_id) });
     },
   });
 }

@@ -34,7 +34,7 @@ import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
 import { NovedadCard }         from '@/features/novedades/NovedadCard';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion } from '@/features/turnos/useTurnos';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion, useObtenerContrato, useFirmarContrato } from '@/features/turnos/useTurnos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
@@ -95,6 +95,7 @@ export default function TurnoDetailScreen() {
   const theme  = useTheme();
 
   const [signatureVisible, setSignatureVisible] = useState(false);
+  const [firmaContratoVisible, setFirmaContratoVisible] = useState(false);
   const [novedadModalVisible, setNovedadModalVisible] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [selectedRating, setSelectedRating] = useState(0);
@@ -108,10 +109,12 @@ export default function TurnoDetailScreen() {
   // ── Data ──────────────────────────────────────────────────────────────
   const { data: asignacion, isLoading } = useAsignacion(id);
   const { data: novedades = [] } = useNovedades(id);
+  const { data: contrato } = useObtenerContrato(id);
 
   const ingresoMutation    = useMarcarIngreso();
   const egresoMutation     = useMarcarEgreso();
   const calificarMutation  = useCalificar();
+  const firmarContratoMutation = useFirmarContrato();
 
   // ── Live timer: elapsed (en_progreso) + countdown (confirmado) ───────
   useEffect(() => {
@@ -240,6 +243,22 @@ export default function TurnoDetailScreen() {
       Alert.alert('Error', msg);
     } finally {
       setCargandoContrato(false);
+    }
+  };
+
+  const handleFirmarContrato = async (firmaBase64: string) => {
+    if (!contrato) return;
+    try {
+      await firmarContratoMutation.mutateAsync({
+        contratoId: contrato.id,
+        firma_b64: firmaBase64,
+      });
+      setFirmaContratoVisible(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast('Contrato firmado — ¡ya puedes cobrar tu pago!');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo firmar el contrato.';
+      Alert.alert('Error', msg);
     }
   };
 
@@ -487,6 +506,28 @@ export default function TurnoDetailScreen() {
                     {hora_egreso_real ? fmtTime(hora_egreso_real.slice(11, 19)) : '—'}
                   </Text>
                 </View>
+                {/* Trabajador sin firmar: botón destacado */}
+                {!isGestor && asignacion?.contrato_firmado === 0 && (
+                  <View className="bg-warning/10 border border-warning/30 rounded-xl px-3 py-3 gap-2 mt-2">
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="alert-circle-outline" size={16} color="#F59E0B" />
+                      <Text className="text-xs font-semibold text-warning flex-1">
+                        Debes firmar el contrato para cobrar
+                      </Text>
+                    </View>
+                    <Button
+                      label={firmarContratoMutation.isPending ? 'Firmando…' : 'Firmar Contrato'}
+                      variant="primary"
+                      size="sm"
+                      fullWidth
+                      loading={firmarContratoMutation.isPending}
+                      disabled={firmarContratoMutation.isPending}
+                      onPress={() => setFirmaContratoVisible(true)}
+                    />
+                  </View>
+                )}
+
+                {/* Gestor: botones de descargar y corregir */}
                 {isGestor && (
                   <View className="flex-row items-center gap-3 mt-2">
                     <TouchableOpacity
@@ -707,12 +748,22 @@ export default function TurnoDetailScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* ── Signature modal ───────────────────────────────────── */}
+      {/* ── Signature modal (egreso) ─────────────────────────── */}
       <SignaturePad
         visible={signatureVisible}
         onClose={() => setSignatureVisible(false)}
         onConfirm={handleEgreso}
         loading={egresoMutation.isPending}
+      />
+
+      {/* ── Signature modal (firmar contrato) ─────────────────── */}
+      <SignaturePad
+        visible={firmaContratoVisible}
+        onClose={() => setFirmaContratoVisible(false)}
+        onConfirm={handleFirmarContrato}
+        loading={firmarContratoMutation.isPending}
+        title="Firmar Contrato"
+        subtitle="Tu firma autoriza el pago del turno"
       />
 
       {/* ── Novedad modal ─────────────────────────────────────── */}
