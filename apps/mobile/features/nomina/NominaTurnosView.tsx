@@ -392,7 +392,11 @@ export function NominaTurnosView() {
               Sin turnos completados
             </Text>
             <Text className="text-sm text-muted-foreground text-center">
-              No tienes turnos completados en el período {showAnterior && periodoAnterior ? fmtPeriodo(periodoAnterior) : periodoActual ? fmtPeriodo(periodoActual) : 'actual'}.
+              No tienes turnos completados en el período{' '}
+              {(() => {
+                const p = showAnterior ? periodoAnterior : periodoActual;
+                return p ? fmtPeriodo(p) : 'actual';
+              })()}.
             </Text>
           </View>
         }
