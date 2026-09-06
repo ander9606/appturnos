@@ -8,10 +8,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  ActivityIndicator, RefreshControl, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { Ionicons } from '@expo/vector-icons';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
@@ -61,6 +62,12 @@ export function NominaTurnosView() {
   const periodos = periodosResp?.data ?? [];
 
   const [showAnterior, setShowAnterior] = useState(false);
+  const [filtroFechaInicio, setFiltroFechaInicio] = useState<string | null>(null);
+  const [filtroFechaFin, setFiltroFechaFin] = useState<string | null>(null);
+  const [mostrarFiltroFechas, setMostrarFiltroFechas] = useState(false);
+  const [pickerMode, setPickerMode] = useState<'inicio' | 'fin'>('inicio');
+  const [fechaTemporalInicio, setFechaTemporalInicio] = useState(new Date());
+  const [fechaTemporalFin, setFechaTemporalFin] = useState(new Date());
 
   // Agrupar períodos por empresa_id — multi-empresa support.
   const periodosPorEmpresa = useMemo(() => {
@@ -89,18 +96,25 @@ export function NominaTurnosView() {
     return showAnterior ? periodoAnterior : periodoActual;
   }, [showAnterior, periodoAnterior, periodoActual]);
 
-  // Filtrar turnos completados: cada turno se filtra por el período de su empresa.
+  // Filtrar turnos completados: por fechas personalizadas o por período de su empresa.
   const turnosQuincena = useMemo(() => {
     if (!turnos) return [];
     return turnos.filter((a) => {
       if (a.estado !== 'completado') return false;
+
+      // Si hay filtro de fechas personalizado, usarlo
+      if (filtroFechaInicio && filtroFechaFin) {
+        return a.oferta_fecha >= filtroFechaInicio && a.oferta_fecha <= filtroFechaFin;
+      }
+
+      // Si no, usar el período de la empresa
       const periodosEmpresa = periodosPorEmpresa[a.empresa_id] ?? [];
       if (periodosEmpresa.length === 0) return false;
       const periodo = showAnterior && periodosEmpresa[1] ? periodosEmpresa[1] : periodosEmpresa[0];
       if (!periodo) return false;
       return a.oferta_fecha >= periodo.fecha_inicio && a.oferta_fecha <= periodo.fecha_fin;
     });
-  }, [turnos, periodosPorEmpresa, showAnterior]);
+  }, [turnos, periodosPorEmpresa, showAnterior, filtroFechaInicio, filtroFechaFin]);
 
   // Turnos completados sin firma no cuentan en el total a cobrar hasta que
   // el trabajador firme su contrato — mismo criterio que la liquidación del gestor.
@@ -133,6 +147,35 @@ export function NominaTurnosView() {
       .map(([empresa, pago]) => ({ empresa, pago }))
       .sort((a, b) => b.pago - a.pago);
   }, [turnosQuincena]);
+
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleDateChange = (event: any, selectedDate: Date | undefined) => {
+    if (selectedDate) {
+      if (pickerMode === 'inicio') {
+        setFechaTemporalInicio(selectedDate);
+      } else {
+        setFechaTemporalFin(selectedDate);
+      }
+    }
+  };
+
+  const aplicarFiltroFechas = () => {
+    setFiltroFechaInicio(formatDate(fechaTemporalInicio));
+    setFiltroFechaFin(formatDate(fechaTemporalFin));
+    setMostrarFiltroFechas(false);
+  };
+
+  const limpiarFiltroFechas = () => {
+    setFiltroFechaInicio(null);
+    setFiltroFechaFin(null);
+    setMostrarFiltroFechas(false);
+  };
 
   const onRefresh = useCallback(() => { refetch(); }, [refetch]);
 
@@ -331,6 +374,16 @@ export function NominaTurnosView() {
                   </TouchableOpacity>
                 )}
                 {periodo && <TipoPeriodoBadge tipo={periodo.tipo} />}
+                <TouchableOpacity
+                  onPress={() => setMostrarFiltroFechas(true)}
+                  className="ml-auto px-3 py-1.5 rounded-full border border-white/30 flex-row items-center gap-1.5"
+                  style={filtroFechaInicio ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
+                >
+                  <Ionicons name="calendar" size={12} color="white" />
+                  <Text className="text-white text-xs font-medium">
+                    {filtroFechaInicio ? `${filtroFechaInicio.slice(5, 10)}` : 'Fechas'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               {/* Resumen cards */}
@@ -368,8 +421,8 @@ export function NominaTurnosView() {
               </TouchableOpacity>
             )}
 
-            {/* Desglose por empresa — solo si trabajó para más de una en la quincena */}
-            {porEmpresa.length > 1 && (
+            {/* Desglose por empresa */}
+            {porEmpresa.length > 0 && (
               <View className="mx-5 bg-card border border-border rounded-2xl px-4 py-3 gap-2">
                 <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
                   Por empresa
@@ -410,6 +463,89 @@ export function NominaTurnosView() {
         ItemSeparatorComponent={() => <View className="h-2" />}
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
+
+      {/* Modal: Filtro de fechas */}
+      <Modal
+        visible={mostrarFiltroFechas}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMostrarFiltroFechas(false)}
+      >
+        <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+          <View className="flex-1 px-6 py-4 gap-4">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-lg font-bold text-foreground">Filtrar por fechas</Text>
+              <TouchableOpacity
+                onPress={() => setMostrarFiltroFechas(false)}
+                hitSlop={12}
+              >
+                <Ionicons name="close" size={24} color={theme.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Fecha inicio */}
+            <View className="gap-2">
+              <Text className="text-sm font-semibold text-foreground">Desde</Text>
+              <TouchableOpacity
+                className="bg-card border border-border rounded-lg px-4 py-3 flex-row items-center justify-between"
+                onPress={() => setPickerMode('inicio')}
+              >
+                <Text className="text-base text-foreground font-medium">
+                  {formatDate(fechaTemporalInicio)}
+                </Text>
+                <Ionicons name="calendar" size={20} color={theme.primary} />
+              </TouchableOpacity>
+              {pickerMode === 'inicio' && (
+                <DateTimePicker
+                  value={fechaTemporalInicio}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                />
+              )}
+            </View>
+
+            {/* Fecha fin */}
+            <View className="gap-2">
+              <Text className="text-sm font-semibold text-foreground">Hasta</Text>
+              <TouchableOpacity
+                className="bg-card border border-border rounded-lg px-4 py-3 flex-row items-center justify-between"
+                onPress={() => setPickerMode('fin')}
+              >
+                <Text className="text-base text-foreground font-medium">
+                  {formatDate(fechaTemporalFin)}
+                </Text>
+                <Ionicons name="calendar" size={20} color={theme.primary} />
+              </TouchableOpacity>
+              {pickerMode === 'fin' && (
+                <DateTimePicker
+                  value={fechaTemporalFin}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDateChange}
+                />
+              )}
+            </View>
+
+            {/* Botones de acción */}
+            <View className="flex-row gap-3 mt-auto">
+              <TouchableOpacity
+                onPress={limpiarFiltroFechas}
+                className="flex-1 bg-muted border border-border rounded-lg py-3"
+              >
+                <Text className="text-center font-semibold text-foreground">Limpiar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={aplicarFiltroFechas}
+                className="flex-1 rounded-lg py-3"
+                style={{ backgroundColor: theme.primary }}
+              >
+                <Text className="text-center font-semibold text-white">Aplicar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
