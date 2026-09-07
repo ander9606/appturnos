@@ -13,14 +13,15 @@ const ContratosModel = {
     const numeroContrato = `CT-${datos.anio}-${datos.asignacionId}`;
     const [res] = await ejecutor.query(
       `INSERT INTO contratos_diarios
-         (empresa_id, tipo_contrato, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia, salario_minimo_validado)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         (empresa_id, tipo_contrato, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia, salario_minimo_validado, firmado_trabajador)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
        ON DUPLICATE KEY UPDATE
          tipo_contrato = VALUES(tipo_contrato),
          fecha = VALUES(fecha),
          descripcion_labor = VALUES(descripcion_labor),
          valor_dia = VALUES(valor_dia),
-         salario_minimo_validado = VALUES(salario_minimo_validado)`,
+         salario_minimo_validado = VALUES(salario_minimo_validado),
+         firmado_trabajador = 0`,
       [
         empresaId,
         datos.tipoContrato || 'LABORAL',
