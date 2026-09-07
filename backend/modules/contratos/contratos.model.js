@@ -147,6 +147,7 @@ const ContratosModel = {
        JOIN ofertas_turno o ON o.id = a.oferta_id
        WHERE c.empresa_id = ? AND a.trabajador_id = ?
          AND c.firmado_trabajador = 0
+         AND a.estado = 'completado'
        ORDER BY c.fecha DESC`,
       [empresaId, trabajadorId]
     );
