@@ -174,6 +174,18 @@ const ContratosService = {
     });
     return ContratosModel.obtenerPorId(realEmpresaId, id);
   },
+
+  async listarSinFirmar(empresaId, usuario) {
+    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa)
+    let realEmpresaId = empresaId;
+    if (!realEmpresaId) {
+      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
+      realEmpresaId = t.empresa_id;
+    }
+
+    const t = await TrabajadoresService.resolverTrabajadorPorUsuario(realEmpresaId, usuario.sub);
+    return ContratosModel.listarSinFirmar(realEmpresaId, t.id);
+  },
 };
 
 module.exports = ContratosService;

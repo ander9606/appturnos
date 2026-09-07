@@ -57,6 +57,9 @@ router.use(verificarToken);
 // GET /api/contratos — historial del trabajador autenticado
 router.get('/', verificarRol([ROLES.TRABAJADOR_TURNOS]), ctrl.listar);
 
+// GET /api/contratos/sin-firmar — contratos pendientes de firma
+router.get('/sin-firmar', verificarRol([ROLES.TRABAJADOR_TURNOS]), ctrl.listarSinFirmar);
+
 // GET /api/contratos/asignacion/:asignacionId
 router.get(
   '/asignacion/:asignacionId',

@@ -12,6 +12,20 @@ export interface ContratoResumen {
   hora_fin_estimada: string;
 }
 
+export interface ContratoSinFirmar {
+  id: number;
+  numero_contrato: string;
+  fecha: string;
+  valor_dia: number;
+  descripcion_labor: string;
+  tipo_contrato: string;
+  oferta_titulo: string;
+  hora_inicio: string;
+  hora_fin_estimada: string;
+  lugar: string;
+  asignacion_id: number;
+}
+
 export interface Contrato extends ContratoResumen {
   empresa_id: number;
   asignacion_id: number;
@@ -32,6 +46,9 @@ export interface Contrato extends ContratoResumen {
 export const contratosApi = {
   listar(): Promise<ContratoResumen[]> {
     return api.get('/api/contratos');
+  },
+  listarSinFirmar(): Promise<ContratoSinFirmar[]> {
+    return api.get('/api/contratos/sin-firmar');
   },
   obtenerPorAsignacion(asignacionId: number): Promise<Contrato> {
     return api.get(`/api/contratos/asignacion/${asignacionId}`);
