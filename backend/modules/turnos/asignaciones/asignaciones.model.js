@@ -502,7 +502,12 @@ const AsignacionesModel = {
   /** Turnos y postulaciones de un trabajador (vista "mis-turnos"). Incluye calificación. */
   async listarPorTrabajador(empresaId, trabajadorId) {
     const [filas] = await pool.query(
-      `SELECT a.*,
+      `SELECT a.id, a.empresa_id, a.oferta_id, a.puesto_id, a.trabajador_id, a.estado,
+              a.horas_trabajadas, a.pago_total, a.pago_extra,
+              a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
+              a.created_at, a.updated_at, a.latitud_ingreso, a.longitud_ingreso,
+              a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
+              a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
               o.lugar, o.latitud, o.longitud,
@@ -530,7 +535,12 @@ const AsignacionesModel = {
    */
   async listarPorUsuario(usuarioId) {
     const [filas] = await pool.query(
-      `SELECT a.*,
+      `SELECT a.id, a.empresa_id, a.oferta_id, a.puesto_id, a.trabajador_id, a.estado,
+              a.horas_trabajadas, a.pago_total, a.pago_extra,
+              a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
+              a.created_at, a.updated_at, a.latitud_ingreso, a.longitud_ingreso,
+              a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
+              a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
               o.lugar, o.latitud, o.longitud,
