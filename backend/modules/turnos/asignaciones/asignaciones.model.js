@@ -345,15 +345,13 @@ const AsignacionesModel = {
     const ahora = ahoraColombiaSQL();
     const [res] = await pool.query(
       `UPDATE asignaciones_turno a
-       JOIN oferta_puestos p ON p.id = a.puesto_id
        JOIN ofertas_turno o  ON o.id = a.oferta_id
        SET a.hora_egreso_real = ?,
            a.firma_digital = ?,
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
                LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
-           ) / 60,
-           a.pago_total = p.tarifa_dia
+           ) / 60
        WHERE a.id = ? AND a.empresa_id = ?
          AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL`,
@@ -364,6 +362,14 @@ const AsignacionesModel = {
       const AppError = require('../../utils/AppError');
       throw new AppError('El egreso ya fue registrado o el ingreso no está marcado', 409);
     }
+    return res.affectedRows;
+  },
+
+  async actualizarPagoTotal(empresaId, id, pagoTotal) {
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno SET pago_total = ? WHERE id = ? AND empresa_id = ?`,
+      [pagoTotal, id, empresaId]
+    );
     return res.affectedRows;
   },
 
@@ -788,13 +794,11 @@ const AsignacionesModel = {
     const [resComp] = await pool.query(
       `UPDATE asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
-       JOIN oferta_puestos p ON p.id = a.puesto_id
        SET a.hora_egreso_real = ?,
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
                LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
-           ) / 60,
-           a.pago_total = p.tarifa_dia
+           ) / 60
        WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL
          ${excClause}`,
