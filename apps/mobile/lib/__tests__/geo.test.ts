@@ -1,4 +1,4 @@
-import { haversineMeters, getGeofenceStatus, formatDistance, DEFAULT_GEOFENCE_RADIUS } from '../geo';
+import { haversineMeters, getGeofenceStatus, formatDistance, radioEscaladoPorEspera, DEFAULT_GEOFENCE_RADIUS } from '../geo';
 
 describe('haversineMeters', () => {
   it('devuelve 0 para el mismo punto', () => {
@@ -48,6 +48,23 @@ describe('getGeofenceStatus', () => {
   it('usa DEFAULT_GEOFENCE_RADIUS si no se pasa radio', () => {
     expect(getGeofenceStatus(DEFAULT_GEOFENCE_RADIUS - 1)).toBe('inside');
     expect(getGeofenceStatus(DEFAULT_GEOFENCE_RADIUS + 1)).toBe('near');
+  });
+});
+
+describe('radioEscaladoPorEspera', () => {
+  it('no relaja el radio antes de los 5 s', () => {
+    expect(radioEscaladoPorEspera(0)).toBe(0);
+    expect(radioEscaladoPorEspera(4_999)).toBe(0);
+  });
+
+  it('relaja a 500 m entre 5 s y 10 s', () => {
+    expect(radioEscaladoPorEspera(5_000)).toBe(500);
+    expect(radioEscaladoPorEspera(9_999)).toBe(500);
+  });
+
+  it('relaja a 1000 m (tope) desde los 10 s en adelante', () => {
+    expect(radioEscaladoPorEspera(10_000)).toBe(1000);
+    expect(radioEscaladoPorEspera(60_000)).toBe(1000);
   });
 });
 

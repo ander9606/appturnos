@@ -40,3 +40,18 @@ export function getGeofenceStatus(
   if (distanceM <= radiusM * 2) return 'near';
   return 'outside';
 }
+
+/**
+ * Cuánto se relaja el radio aceptado para marcar según cuánto lleva esperando
+ * un fix GPS confiable — el backend vuelve a validar con el radio real
+ * configurado, así que esto solo evita bloquear el botón indefinidamente por
+ * un GPS lento. 0 = sin relajar (comportamiento normal).
+ */
+export const RADIO_ESCALADO_MS: { despuesDe: number; radioM: number }[] = [
+  { despuesDe: 10_000, radioM: 1000 },
+  { despuesDe: 5_000,  radioM: 500 },
+];
+
+export function radioEscaladoPorEspera(elapsedMs: number): number {
+  return RADIO_ESCALADO_MS.find((p) => elapsedMs >= p.despuesDe)?.radioM ?? 0;
+}
