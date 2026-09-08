@@ -36,7 +36,6 @@ import { useNovedades }        from '@/features/novedades/useNovedades';
 import { NovedadCard }         from '@/features/novedades/NovedadCard';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
 import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion } from '@/features/turnos/useTurnos';
-import { useObtenerContrato, ContratoFirmaModal, QUERY_KEYS } from '@/features/contratos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
@@ -98,14 +97,12 @@ export default function TurnoDetailScreen() {
   const qc = useQueryClient();
 
   const [signatureVisible, setSignatureVisible] = useState(false);
-  const [firmaContratoVisible, setFirmaContratoVisible] = useState(false);
   const [novedadModalVisible, setNovedadModalVisible] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [selectedRating, setSelectedRating] = useState(0);
   const [comentario, setComentario] = useState('');
   const [cargandoContrato, setCargandoContrato] = useState(false);
   const [corrigiendoIngreso, setCorrigiendoIngreso] = useState(false);
-  const [cargandoModalContrato, setCargandoModalContrato] = useState(false);
 
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
@@ -113,7 +110,6 @@ export default function TurnoDetailScreen() {
   // ── Data ──────────────────────────────────────────────────────────────
   const { data: asignacion, isLoading } = useAsignacion(id);
   const { data: novedades = [] } = useNovedades(id);
-  const { data: contrato, error: contratoError } = useObtenerContrato(id);
 
   const ingresoMutation    = useMarcarIngreso();
   const egresoMutation     = useMarcarEgreso();
@@ -249,9 +245,8 @@ export default function TurnoDetailScreen() {
     }
   };
 
-  const handleAbrirModalFirmaContrato = useCallback(() => {
-    // Navegar a contratos pendientes para ver todos los contratos sin firmar
-    router.push('/contratos-pendientes');
+  const handleIrAMisContratos = useCallback(() => {
+    router.push('/mis-contratos?pendientes=1');
   }, [router]);
 
   const openInMaps = useCallback(() => {
@@ -512,7 +507,7 @@ export default function TurnoDetailScreen() {
                       variant="primary"
                       size="sm"
                       fullWidth
-                      onPress={handleAbrirModalFirmaContrato}
+                      onPress={handleIrAMisContratos}
                     />
                   </View>
                 )}
@@ -745,33 +740,6 @@ export default function TurnoDetailScreen() {
         onConfirm={handleEgreso}
         loading={egresoMutation.isPending}
       />
-
-      {/* ── Contract signature modal ─────────────────────────── */}
-      {firmaContratoVisible && contratoError ? (
-        <Modal visible transparent>
-          <View className="flex-1 bg-black/50 justify-center items-center p-4">
-            <View className="bg-card rounded-2xl p-5 gap-3 max-w-xs">
-              <Ionicons name="alert-circle" size={40} color="#EF4444" />
-              <Text className="text-base font-bold text-foreground">Error al cargar el contrato</Text>
-              <Text className="text-sm text-muted-foreground">
-                {contratoError?.message || 'No se pudo obtener los datos del contrato. Intenta más tarde.'}
-              </Text>
-              <Button
-                label="Cerrar"
-                variant="primary"
-                onPress={() => setFirmaContratoVisible(false)}
-                fullWidth
-              />
-            </View>
-          </View>
-        </Modal>
-      ) : contrato ? (
-        <ContratoFirmaModal
-          visible={firmaContratoVisible}
-          contratoId={contrato.id}
-          onClose={() => setFirmaContratoVisible(false)}
-        />
-      ) : null}
 
       {/* ── Novedad modal ─────────────────────────────────────── */}
       {id != null && (

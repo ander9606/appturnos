@@ -410,7 +410,7 @@ export function NominaTurnosView() {
             {/* Aviso: turnos completados sin firma no cuentan en "A cobrar" */}
             {totales.pendientesFirma > 0 && (
               <TouchableOpacity
-                onPress={() => router.push('/mis-contratos')}
+                onPress={() => router.push('/mis-contratos?pendientes=1')}
                 className="mx-5 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3 flex-row items-center gap-2.5"
               >
                 <Ionicons name="warning" size={18} color="#D97706" />

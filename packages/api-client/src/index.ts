@@ -109,7 +109,7 @@ export type {
 export { ausenciasApi } from './ausencias';
 export type { Ausencia, TipoAusencia, EstadoAusencia, CrearAusenciaPayload } from './ausencias';
 export { contratosApi } from './contratos';
-export type { Contrato, ContratoResumen, ContratoSinFirmar } from './contratos';
+export type { Contrato, ContratoResumen } from './contratos';
 export { notificacionesApi } from './notificaciones';
 export type { Notificacion, ListarNotificacionesResponse } from './notificaciones';
 export { novedadesApi } from './novedades';
