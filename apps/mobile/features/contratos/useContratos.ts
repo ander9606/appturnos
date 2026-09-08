@@ -32,8 +32,11 @@ export function useFirmarContrato() {
       contratosApi.firmar(contratoId, firma_b64),
     onSuccess: (data: Contrato) => {
       qc.setQueryData(QUERY_KEYS.contrato(data.asignacion_id), data);
-      // Invalida la asignación para refrescar su estado de contrato
+      // Invalida la asignación (vista gestor) y misTurnos (vista trabajador:
+      // turno individual vía useAsignacion + resumen de nómina/quincena, que
+      // se calculan a partir de contrato_firmado en esa misma cache).
       qc.invalidateQueries({ queryKey: ['asignacion', data.asignacion_id] });
+      qc.invalidateQueries({ queryKey: ['misTurnos'] });
     },
   });
 }
