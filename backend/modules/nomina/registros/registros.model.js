@@ -43,7 +43,11 @@ const RegistrosModel = {
       'SELECT * FROM registros_diarios WHERE id = ? AND empresa_id = ? LIMIT 1',
       [id, empresaId]
     );
-    return filas[0] || null;
+    const row = filas[0];
+    if (row && typeof row.sesiones_detalle === 'string') {
+      row.sesiones_detalle = JSON.parse(row.sesiones_detalle);
+    }
+    return row || null;
   },
 
   async obtenerPorFecha(empresaId, trabajadorId, fecha) {
@@ -109,6 +113,9 @@ const RegistrosModel = {
 
   /**
    * Inicia una nueva sesión del día tras un reingreso aprobado.
+   * Antes de resetear, la sesión que se cierra (hora_entrada/hora_salida vigentes)
+   * se archiva en sesiones_detalle — si no, su hora_salida se perdería para siempre
+   * al limpiarla más abajo, y el detalle del día no podría mostrar esa fracción.
    * Los horas_* acumuladas de la sesión anterior se preservan;
    * hora_entrada se resetea a la nueva entrada y hora_salida se limpia.
    * latitud_salida/longitud_salida/device_salida también se limpian — pertenecían a la sesión cerrada.
@@ -116,7 +123,12 @@ const RegistrosModel = {
   async iniciarReingreso(empresaId, id, horaEntrada, latitud, longitud, deviceId) {
     const [res] = await pool.query(
       `UPDATE registros_diarios
-       SET hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?, device_entrada = ?,
+       SET sesiones_detalle = JSON_ARRAY_APPEND(
+             COALESCE(sesiones_detalle, JSON_ARRAY()), '$',
+             JSON_OBJECT('hora_entrada', TIME_FORMAT(hora_entrada, '%H:%i:%s'),
+                         'hora_salida', TIME_FORMAT(hora_salida, '%H:%i:%s'))
+           ),
+           hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?, device_entrada = ?,
            hora_salida = NULL, latitud_salida = NULL, longitud_salida = NULL, device_salida = NULL,
            sesiones = sesiones + 1, alerta_extra_enviada = 0
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NOT NULL`,

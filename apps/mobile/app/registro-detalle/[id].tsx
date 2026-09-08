@@ -46,6 +46,15 @@ function fmtTime(d: Date | null): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
+/** Todas las sesiones del día en orden: las cerradas (sesiones_detalle) + la vigente. */
+function sesionesDelDia(registro: {
+  sesiones_detalle: { hora_entrada: string; hora_salida: string }[] | null;
+  hora_entrada: string | null;
+  hora_salida: string | null;
+}) {
+  return [...(registro.sesiones_detalle ?? []), { hora_entrada: registro.hora_entrada, hora_salida: registro.hora_salida }];
+}
+
 function fmtFecha(iso: string): string {
   return new Date(iso + 'T00:00:00').toLocaleDateString('es-CO', {
     weekday: 'short',
@@ -93,7 +102,7 @@ export default function RegistroDetalleScreen() {
       setShowModal(false);
       router.back();
     } catch (err) {
-      Alert.alert('Error', 'No se pudo corregir el registro');
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo corregir el registro');
     }
   };
 
@@ -164,25 +173,34 @@ export default function RegistroDetalleScreen() {
               Tiempos Registrados
             </Text>
 
-            <View className="flex-row gap-4">
-              <View className="flex-1 bg-muted rounded-xl px-4 py-3">
-                <Text className="text-xs text-muted-foreground mb-1">Entrada</Text>
-                <Text className="text-2xl font-bold text-foreground">
-                  {fmtHora(registro.hora_entrada)}
-                </Text>
-              </View>
+            {sesionesDelDia(registro).map((sesion, i, arr) => (
+              <View key={i} className="gap-2">
+                {arr.length > 1 && (
+                  <Text className="text-xs font-semibold text-foreground">
+                    Sesión {i + 1}{i === arr.length - 1 && !sesion.hora_salida ? ' (en curso)' : ''}
+                  </Text>
+                )}
+                <View className="flex-row gap-4">
+                  <View className="flex-1 bg-muted rounded-xl px-4 py-3">
+                    <Text className="text-xs text-muted-foreground mb-1">Entrada</Text>
+                    <Text className="text-2xl font-bold text-foreground">
+                      {fmtHora(sesion.hora_entrada)}
+                    </Text>
+                  </View>
 
-              <View className="items-center justify-center">
-                <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
-              </View>
+                  <View className="items-center justify-center">
+                    <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+                  </View>
 
-              <View className="flex-1 bg-muted rounded-xl px-4 py-3">
-                <Text className="text-xs text-muted-foreground mb-1">Salida</Text>
-                <Text className="text-2xl font-bold text-foreground">
-                  {fmtHora(registro.hora_salida)}
-                </Text>
+                  <View className="flex-1 bg-muted rounded-xl px-4 py-3">
+                    <Text className="text-xs text-muted-foreground mb-1">Salida</Text>
+                    <Text className="text-2xl font-bold text-foreground">
+                      {fmtHora(sesion.hora_salida)}
+                    </Text>
+                  </View>
+                </View>
               </View>
-            </View>
+            ))}
           </View>
 
           {/* Horas calculadas */}
@@ -234,20 +252,28 @@ export default function RegistroDetalleScreen() {
             </View>
           )}
 
-          {/* Botón de corrección */}
-          <Button
-            label="Corregir Tiempos"
-            variant="primary"
-            size="lg"
-            fullWidth
-            onPress={() => {
-              setHoraEntrada(horaAFecha(registro.hora_entrada));
-              setHoraSalida(horaAFecha(registro.hora_salida));
-              setShowEntrada(false);
-              setShowSalida(false);
-              setShowModal(true);
-            }}
-          />
+          {/* Botón de corrección — bloqueado en el backend para registros con reingreso */}
+          {registro.sesiones > 1 ? (
+            <View className="bg-muted rounded-2xl px-4 py-3">
+              <Text className="text-xs text-muted-foreground text-center">
+                Este registro tiene reingresos y no se puede corregir aquí. Contacta al administrador del sistema.
+              </Text>
+            </View>
+          ) : (
+            <Button
+              label="Corregir Tiempos"
+              variant="primary"
+              size="lg"
+              fullWidth
+              onPress={() => {
+                setHoraEntrada(horaAFecha(registro.hora_entrada));
+                setHoraSalida(horaAFecha(registro.hora_salida));
+                setShowEntrada(false);
+                setShowSalida(false);
+                setShowModal(true);
+              }}
+            />
+          )}
         </ScrollView>
       </SafeAreaView>
 

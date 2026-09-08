@@ -29,6 +29,7 @@ export interface RegistroDiario {
   hora_salida: string | null;
   sesiones: number;            // cantidad de sesiones del día (1 = normal, 2+ = con reingreso)
   hora_entrada_inicial: string | null; // HH:MM:SS — primer ingreso del día (no cambia en reingresos)
+  sesiones_detalle: { hora_entrada: string; hora_salida: string }[] | null; // sesiones ya cerradas (sin la vigente) — ver hora_entrada/hora_salida para la última
   horas_ordinarias: number;    // totales acumulados de todas las sesiones
   horas_extra_diurnas: number;
   horas_extra_nocturnas: number;
