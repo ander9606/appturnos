@@ -291,6 +291,18 @@ const RegistrosService = {
       registroId: id,
     });
 
+    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(registro.trabajador_id);
+    if (trabajadorUsuarioId) {
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajadorUsuarioId,
+        tipo: 'nomina.correccion',
+        titulo: 'Tu horario fue modificado',
+        mensaje: `Tu horario del ${registro.fecha} fue modificado por ${usuario.nombre || 'tu gestor'}.`,
+        data: { registro_id: id },
+      }).catch(() => {});
+    }
+
     return RegistrosModel.obtenerPorId(empresaId, id);
   },
 

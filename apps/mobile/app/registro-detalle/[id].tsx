@@ -14,13 +14,12 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  TextInput,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { useTheme } from '@/lib/theme';
 import { useRegistroDetalle, useCorregirRegistro } from '@/features/nomina/useRegistroDetalle';
@@ -31,6 +30,20 @@ import { useRoleGuard } from '@/components/RoleGuard';
 function fmtHora(time: string | null): string {
   if (!time) return '—';
   return time.substring(0, 5);
+}
+
+/** Parsea "HH:MM:SS" o "HH:MM" a un Date de hoy con esa hora, para el picker. */
+function horaAFecha(hora: string | null | undefined): Date | null {
+  if (!hora) return null;
+  const [h, m] = hora.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+function fmtTime(d: Date | null): string {
+  if (!d) return '—';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function fmtFecha(iso: string): string {
@@ -49,22 +62,32 @@ export default function RegistroDetalleScreen() {
 
   // Solo gestores pueden acceder
   const denied = useRoleGuard(['admin_empresa', 'jefe_nomina', 'nomina'] as const);
-  if (denied) return denied;
 
   const { data: registro, isLoading } = useRegistroDetalle(registroId);
   const { mutateAsync: corregir, isPending: isCorrigiendo } = useCorregirRegistro();
 
   const [showModal, setShowModal] = useState(false);
-  const [horaEntrada, setHoraEntrada] = useState(registro?.hora_entrada || '');
-  const [horaSalida, setHoraSalida] = useState(registro?.hora_salida || '');
+  const [horaEntrada, setHoraEntrada] = useState<Date | null>(horaAFecha(registro?.hora_entrada));
+  const [horaSalida, setHoraSalida] = useState<Date | null>(horaAFecha(registro?.hora_salida));
+  const [showEntrada, setShowEntrada] = useState(false);
+  const [showSalida, setShowSalida] = useState(false);
+
+  function onChangeEntrada(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowEntrada(false);
+    if (d) setHoraEntrada(d);
+  }
+  function onChangeSalida(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowSalida(false);
+    if (d) setHoraSalida(d);
+  }
 
   const handleCorregir = async () => {
     if (!registro) return;
     try {
       await corregir({
         registroId: registro.id,
-        horaEntrada: horaEntrada || null,
-        horaSalida: horaSalida || null,
+        horaEntrada: horaEntrada ? fmtTime(horaEntrada) : null,
+        horaSalida: horaSalida ? fmtTime(horaSalida) : null,
       });
       showToast('Registro corregido exitosamente');
       setShowModal(false);
@@ -73,6 +96,8 @@ export default function RegistroDetalleScreen() {
       Alert.alert('Error', 'No se pudo corregir el registro');
     }
   };
+
+  if (denied) return denied;
 
   if (isLoading) {
     return (
@@ -216,8 +241,10 @@ export default function RegistroDetalleScreen() {
             size="lg"
             fullWidth
             onPress={() => {
-              setHoraEntrada(registro.hora_entrada || '');
-              setHoraSalida(registro.hora_salida || '');
+              setHoraEntrada(horaAFecha(registro.hora_entrada));
+              setHoraSalida(horaAFecha(registro.hora_salida));
+              setShowEntrada(false);
+              setShowSalida(false);
               setShowModal(true);
             }}
           />
@@ -226,65 +253,88 @@ export default function RegistroDetalleScreen() {
 
       {/* Modal de corrección */}
       <Modal visible={showModal} animationType="slide" transparent onRequestClose={() => setShowModal(false)}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          className="flex-1 justify-end"
-        >
-          <View className="bg-black/40 flex-1 justify-end">
-            <View className="bg-background rounded-t-3xl p-5 gap-4">
-              <Text className="text-lg font-bold text-foreground">Corregir Tiempos</Text>
+        <View className="bg-black/40 flex-1 justify-end">
+          <View className="bg-background rounded-t-3xl p-5 gap-4">
+            <Text className="text-lg font-bold text-foreground">Corregir Tiempos</Text>
 
-              <View className="gap-4">
-                <View>
-                  <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
-                    Hora Entrada (HH:MM)
+            <View className="flex-row gap-4">
+              <View className="flex-1 gap-1.5">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
+                  Entrada
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowEntrada(true)}
+                  className="bg-card border border-border rounded-2xl px-4 py-3 items-center"
+                >
+                  <Text className={`text-base ${!horaEntrada ? 'text-muted-foreground' : 'text-foreground font-semibold'}`}>
+                    {fmtTime(horaEntrada)}
                   </Text>
-                  <TextInput
-                    value={horaEntrada}
-                    onChangeText={setHoraEntrada}
-                    placeholder="08:00"
-                    placeholderTextColor="#94A3B8"
-                    className="bg-card border border-border rounded-2xl px-4 py-3 text-base text-foreground"
+                </TouchableOpacity>
+                {showEntrada && (
+                  <DateTimePicker
+                    value={horaEntrada ?? new Date()}
+                    mode="time"
+                    display="spinner"
+                    onChange={onChangeEntrada}
                   />
-                </View>
-
-                <View>
-                  <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
-                    Hora Salida (HH:MM)
-                  </Text>
-                  <TextInput
-                    value={horaSalida}
-                    onChangeText={setHoraSalida}
-                    placeholder="17:00"
-                    placeholderTextColor="#94A3B8"
-                    className="bg-card border border-border rounded-2xl px-4 py-3 text-base text-foreground"
-                  />
-                </View>
+                )}
+                {showEntrada && Platform.OS === 'ios' && (
+                  <TouchableOpacity onPress={() => setShowEntrada(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                    <Text className="text-xs font-semibold text-primary">Listo</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
-              <View className="flex-row gap-2">
+              <View className="flex-1 gap-1.5">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-1">
+                  Salida
+                </Text>
                 <TouchableOpacity
-                  onPress={() => setShowModal(false)}
-                  className="flex-1 h-12 rounded-2xl items-center justify-center border border-border active:opacity-70"
+                  onPress={() => setShowSalida(true)}
+                  className="bg-card border border-border rounded-2xl px-4 py-3 items-center"
                 >
-                  <Text className="text-sm font-semibold text-muted-foreground">Cancelar</Text>
+                  <Text className={`text-base ${!horaSalida ? 'text-muted-foreground' : 'text-foreground font-semibold'}`}>
+                    {fmtTime(horaSalida)}
+                  </Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleCorregir}
-                  disabled={isCorrigiendo}
-                  className="flex-1 h-12 rounded-2xl items-center justify-center active:opacity-80"
-                  style={{ backgroundColor: theme.primary, opacity: isCorrigiendo ? 0.6 : 1 }}
-                >
-                  {isCorrigiendo ? (
-                    <ActivityIndicator color="white" />
-                  ) : (
-                    <Text className="text-sm font-semibold text-white">Guardar</Text>
-                  )}
-                </TouchableOpacity>
+                {showSalida && (
+                  <DateTimePicker
+                    value={horaSalida ?? new Date()}
+                    mode="time"
+                    display="spinner"
+                    onChange={onChangeSalida}
+                  />
+                )}
+                {showSalida && Platform.OS === 'ios' && (
+                  <TouchableOpacity onPress={() => setShowSalida(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                    <Text className="text-xs font-semibold text-primary">Listo</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
+
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={() => setShowModal(false)}
+                className="flex-1 h-12 rounded-2xl items-center justify-center border border-border active:opacity-70"
+              >
+                <Text className="text-sm font-semibold text-muted-foreground">Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleCorregir}
+                disabled={isCorrigiendo}
+                className="flex-1 h-12 rounded-2xl items-center justify-center active:opacity-80"
+                style={{ backgroundColor: theme.primary, opacity: isCorrigiendo ? 0.6 : 1 }}
+              >
+                {isCorrigiendo ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-sm font-semibold text-white">Guardar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </>
   );

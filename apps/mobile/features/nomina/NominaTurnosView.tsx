@@ -8,7 +8,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Modal,
+  ActivityIndicator, RefreshControl, Modal, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -76,7 +76,7 @@ export function NominaTurnosView() {
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string | null>(null);
   const [filtroFechaFin, setFiltroFechaFin] = useState<string | null>(null);
   const [mostrarFiltroFechas, setMostrarFiltroFechas] = useState(false);
-  const [pickerMode, setPickerMode] = useState<'inicio' | 'fin'>('inicio');
+  const [pickerMode, setPickerMode] = useState<'inicio' | 'fin' | null>(null);
   const [fechaTemporalInicio, setFechaTemporalInicio] = useState(new Date());
   const [fechaTemporalFin, setFechaTemporalFin] = useState(new Date());
 
@@ -167,10 +167,14 @@ export function NominaTurnosView() {
   };
 
   const handleDateChange = (event: any, selectedDate: Date | undefined) => {
+    // En Android el picker es un diálogo nativo que no se auto-cierra vía
+    // React — sin esto, el onChange (que cambia en cada render) reabre el
+    // diálogo apenas se elige una fecha, dejando la pantalla atascada.
+    if (Platform.OS === 'android') setPickerMode(null);
     if (selectedDate) {
       if (pickerMode === 'inicio') {
         setFechaTemporalInicio(selectedDate);
-      } else {
+      } else if (pickerMode === 'fin') {
         setFechaTemporalFin(selectedDate);
       }
     }

@@ -523,7 +523,7 @@ const AsignacionesService = {
    * No requiere GPS ni firma digital. Recalcula horas_trabajadas si ambos extremos están presentes.
    * Estados permitidos: confirmado, en_progreso, completado.
    */
-  async corregir(empresaId, id, usuarioId, { hora_ingreso_real, hora_egreso_real }) {
+  async corregir(empresaId, id, usuarioId, { hora_ingreso_real, hora_egreso_real }, nombreGestor) {
     const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
     if (!asig) throw new AppError('Asignación no encontrada', 404);
 
@@ -584,6 +584,16 @@ const AsignacionesService = {
     // Log de auditoría: quién corrigió, qué cambió
     logger.info(`Corrección de turno: asignacion_id=${id}, usuario_id=${usuarioId}, estado_anterior=${asig.estado}, estado_nuevo=${estadoNuevo}, horas_trabajadas=${horasTrabajadas}`);
 
+    if (resultado?.usuario_id) {
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: resultado.usuario_id,
+        tipo: 'asignacion.correccion',
+        titulo: 'Tu horario fue modificado',
+        mensaje: `Tu horario fue modificado por ${nombreGestor || 'tu gestor'} en el turno "${resultado.oferta_titulo}" del ${fmtFechaCorta(resultado.oferta_fecha)}.`,
+        data: { asignacion_id: id, oferta_id: asig.oferta_id },
+      }).catch(() => {});
+    }
 
     if (resultado?.oferta_external_ref) {
       await IntegracionService.emitir(empresaId, 'trabajador.correccion_horas', {

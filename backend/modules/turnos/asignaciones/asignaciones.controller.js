@@ -68,7 +68,8 @@ async function corregir(req, res) {
     req.empresa_id,
     Number(req.params.id),
     req.usuario.sub,
-    req.body
+    req.body,
+    req.usuario.nombre
   );
   res.json({ success: true, data, message: 'Asignación corregida' });
 }

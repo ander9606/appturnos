@@ -377,7 +377,11 @@ function CrearRegistroModal({
 }) {
   const crear = useCrearRegistro();
 
-  const [fecha,       setFecha]       = useState(new Date());
+  // El último día seleccionable del período: si ya terminó, es su fecha fin,
+  // no "hoy" — un value posterior al maximumDate cuelga el picker nativo de Android.
+  const fechaMaxPeriodo = fechaFin && fechaFin < bogotaToday() ? fechaFin : bogotaToday();
+
+  const [fecha,       setFecha]       = useState(() => new Date(`${fechaMaxPeriodo}T00:00:00`));
   const [horaEntrada, setHoraEntrada] = useState<Date | null>(null);
   const [horaSalida,  setHoraSalida]  = useState<Date | null>(null);
   const [novedad,     setNovedad]     = useState('');
@@ -389,7 +393,7 @@ function CrearRegistroModal({
   // Reset al abrir para un trabajador distinto
   React.useEffect(() => {
     if (creando) {
-      setFecha(new Date());
+      setFecha(new Date(`${fechaMaxPeriodo}T00:00:00`));
       setHoraEntrada(null);
       setHoraSalida(null);
       setNovedad('');
@@ -397,7 +401,7 @@ function CrearRegistroModal({
       setShowEntrada(false);
       setShowSalida(false);
     }
-  }, [creando?.trabajadorId]);
+  }, [creando?.trabajadorId, fechaMaxPeriodo]);
 
   if (!creando) return null;
 
@@ -488,7 +492,7 @@ function CrearRegistroModal({
                 mode="date"
                 display={Platform.OS === 'ios' ? 'inline' : 'default'}
                 minimumDate={fechaInicio ? new Date(`${fechaInicio}T00:00:00`) : undefined}
-                maximumDate={new Date(`${fechaFin && fechaFin < bogotaToday() ? fechaFin : bogotaToday()}T00:00:00`)}
+                maximumDate={new Date(`${fechaMaxPeriodo}T00:00:00`)}
                 onChange={onChangeFecha}
               />
             )}

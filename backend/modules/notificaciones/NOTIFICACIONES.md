@@ -29,6 +29,8 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `reingreso.aprobado` / `reingreso.rechazado` | Reingreso aprobado / no autorizado | Gestor decide sobre solicitud de reingreso | `registros.service.js:455,463` |
 | `invitacion_empresa` | Nueva invitación de empresa | Empresa invita por cédula a alguien sin cuenta vinculada aún | `trabajador-empresa.service.js:161` |
 | `trabajador_empresa.aprobado` | Solicitud aprobada | Gestor aprueba su solicitud de vinculación | `trabajador-empresa.service.js:214` |
+| `asignacion.correccion` | Tu horario fue modificado | Gestor corrige ingreso/egreso real de una asignación de turno | `asignaciones.service.js:590` |
+| `nomina.correccion` | Tu horario fue modificado | Gestor corrige hora_entrada/hora_salida de un registro diario | `registros.service.js:298` |
 
 ## Gestor (`admin_empresa` / `jefe_turnos`, por empresa)
 
