@@ -1,35 +1,38 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, ScrollView, FlatList, Pressable, Text } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { contratosApi, type ContratoSinFirmar, ApiError } from '@api-client';
-import { QUERY_KEYS } from '@/features/contratos';
+import { QUERY_KEYS, ContratoFirmaModal } from '@/features/contratos';
 import { showToast } from '@/lib/toast';
 import { formatDate, formatTime, formatCOP } from '@/lib/formatters';
 
 export default function ContratosPendientesScreen() {
   const router = useRouter();
   const qc = useQueryClient();
+  const [firmandoContratoId, setFirmandoContratoId] = useState<number | null>(null);
 
   const { data: contratos = [], isLoading, error } = useQuery({
     queryKey: QUERY_KEYS.sinFirmar(),
     queryFn: () => contratosApi.listarSinFirmar(),
   });
 
-  const handleFirmarContrato = useCallback(
-    async (contratoId: number, asignacionId: number) => {
-      router.push({
-        pathname: `/turno/[id]`,
-        params: { id: asignacionId, contratoId },
-      });
+  const handleVerTurno = useCallback(
+    (asignacionId: number) => {
+      router.push({ pathname: `/turno/[id]`, params: { id: asignacionId } });
     },
     [router]
   );
 
+  const handleFirmaExitosa = useCallback(() => {
+    setFirmandoContratoId(null);
+    qc.invalidateQueries({ queryKey: QUERY_KEYS.sinFirmar() });
+  }, [qc]);
+
   const renderContrato = ({ item }: { item: ContratoSinFirmar }) => (
     <Pressable
-      onPress={() => handleFirmarContrato(item.id, item.asignacion_id)}
+      onPress={() => handleVerTurno(item.asignacion_id)}
       className="bg-card border border-border rounded-lg p-4 mb-3 active:opacity-70"
     >
       <View className="flex-row justify-between items-start mb-2">
@@ -90,7 +93,7 @@ export default function ContratosPendientesScreen() {
           label="Firmar"
           variant="primary"
           size="sm"
-          onPress={() => handleFirmarContrato(item.id, item.asignacion_id)}
+          onPress={() => setFirmandoContratoId(item.id)}
         />
       </View>
     </Pressable>
@@ -142,6 +145,13 @@ export default function ContratosPendientesScreen() {
           </View>
         )}
       </View>
+
+      <ContratoFirmaModal
+        visible={firmandoContratoId !== null}
+        contratoId={firmandoContratoId}
+        onClose={() => setFirmandoContratoId(null)}
+        onSuccess={handleFirmaExitosa}
+      />
     </>
   );
 }
