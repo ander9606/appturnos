@@ -42,6 +42,48 @@ const PeriodosModel = {
     return { data: filas, total };
   },
 
+  /**
+   * Períodos de todas las empresas activas del usuario — trabajador_turnos
+   * multi-empresa (empresa_id null en el JWT). trabajador_empresa ya trae
+   * empresa_id directo, sin necesidad de pasar por trabajadores.
+   */
+  async listarPorUsuario(usuarioId, { estado, fechaDesde, fechaHasta, limit, offset }) {
+    const where = ['te.usuario_id = ?', "te.estado = 'activo'"];
+    const params = [usuarioId];
+    if (estado) {
+      where.push('p.estado = ?');
+      params.push(estado);
+    }
+    if (fechaDesde) {
+      where.push('p.fecha_fin >= ?');
+      params.push(fechaDesde);
+    }
+    if (fechaHasta) {
+      where.push('p.fecha_inicio <= ?');
+      params.push(fechaHasta);
+    }
+    const whereSql = where.join(' AND ');
+
+    const [filas] = await pool.query(
+      `SELECT DISTINCT p.id, p.empresa_id, p.fecha_inicio, p.fecha_fin, p.tipo, p.estado,
+              p.cerrado_por, p.cerrado_at, p.created_at
+       FROM periodos_nomina p
+       JOIN trabajador_empresa te ON te.empresa_id = p.empresa_id
+       WHERE ${whereSql}
+       ORDER BY p.fecha_inicio DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(DISTINCT p.id) AS total
+       FROM periodos_nomina p
+       JOIN trabajador_empresa te ON te.empresa_id = p.empresa_id
+       WHERE ${whereSql}`,
+      params
+    );
+    return { data: filas, total };
+  },
+
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT ${COLUMNAS} FROM periodos_nomina WHERE id = ? AND empresa_id = ? LIMIT 1`,

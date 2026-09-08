@@ -18,7 +18,7 @@ async function listar(req, res) {
     page,
     limit,
     conTotales: pideTotales && VER_TOTALES.includes(req.usuario.rol),
-  });
+  }, req.usuario);
   res.json({ success: true, data: { data, pagination } });
 }
 

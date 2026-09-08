@@ -47,15 +47,24 @@ async function listarInvolucradosNomina(empresaId) {
  *   abierto → cerrado → liquidado
  */
 const PeriodosService = {
-  async listar(empresaId, { estado, fechaDesde, fechaHasta, page, limit, conTotales }) {
-    // Antes el período "de hoy" solo se auto-creaba/cerraba cuando un
-    // trabajador marcaba entrada (registros.service.js). Si nadie marcó
-    // desde que venció el período anterior, el admin seguía viendo ese
-    // período como "Abierto" indefinidamente. Al listar también se
-    // dispara el mismo chequeo (best-effort, no debe romper el listado).
-    await this.autoCrear(empresaId).catch(() => {});
+  async listar(empresaId, { estado, fechaDesde, fechaHasta, page, limit, conTotales }, usuario) {
     const offset = (page - 1) * limit;
-    const { data, total } = await PeriodosModel.listar(empresaId, { estado, fechaDesde, fechaHasta, limit, offset });
+    let data, total;
+
+    if (empresaId != null) {
+      // Antes el período "de hoy" solo se auto-creaba/cerraba cuando un
+      // trabajador marcaba entrada (registros.service.js). Si nadie marcó
+      // desde que venció el período anterior, el admin seguía viendo ese
+      // período como "Abierto" indefinidamente. Al listar también se
+      // dispara el mismo chequeo (best-effort, no debe romper el listado).
+      await this.autoCrear(empresaId).catch(() => {});
+      ({ data, total } = await PeriodosModel.listar(empresaId, { estado, fechaDesde, fechaHasta, limit, offset }));
+    } else {
+      // trabajador_turnos multi-empresa (empresa_id null en el JWT) — agrega
+      // los períodos de todas sus empresas activas. Sin empresa concreta no
+      // hay autoCrear posible; se listan los que ya existan.
+      ({ data, total } = await PeriodosModel.listarPorUsuario(usuario.sub, { estado, fechaDesde, fechaHasta, limit, offset }));
+    }
 
     if (conTotales) {
       // Reutiliza el mismo cálculo que la pestaña Liquidación (recargos,
