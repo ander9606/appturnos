@@ -45,7 +45,12 @@ const ContratosModel = {
     return res.insertId;
   },
 
-  /** Contrato con datos de trabajador, oferta y empresa (para detalle y PDF). */
+  /**
+   * Contrato con datos de trabajador, oferta y empresa (para detalle y PDF).
+   * empresaId null: TRABAJADOR_TURNOS multi-empresa — el id de contrato ya es
+   * globalmente único, así que se busca sin acotar por empresa (el llamador
+   * verifica pertenencia después con verificarAcceso).
+   */
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT c.id, c.empresa_id, c.asignacion_id, c.numero_contrato, c.fecha,
@@ -62,27 +67,34 @@ const ContratosModel = {
        JOIN trabajadores t ON t.id = a.trabajador_id
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN empresas e ON e.id = c.empresa_id
-       WHERE c.id = ? AND c.empresa_id = ? LIMIT 1`,
-      [id, empresaId]
+       WHERE c.id = ?${empresaId != null ? ' AND c.empresa_id = ?' : ''} LIMIT 1`,
+      empresaId != null ? [id, empresaId] : [id]
     );
     return filas[0] || null;
   },
 
-  async listarPorTrabajador(empresaId, trabajadorId) {
+  /** Todos los contratos del usuario, a través de todas sus empresas activas. */
+  async listarPorUsuario(usuarioId) {
     const [filas] = await pool.query(
       `SELECT c.id, c.numero_contrato, c.fecha, c.valor_dia,
               c.firmado_trabajador, c.firmado_at,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada
        FROM contratos_diarios c
-       JOIN asignaciones_turno a ON a.id = c.asignacion_id
-       JOIN ofertas_turno o ON o.id = a.oferta_id
-       WHERE c.empresa_id = ? AND a.trabajador_id = ?
+       JOIN asignaciones_turno a  ON a.id = c.asignacion_id
+       JOIN trabajador_empresa te ON te.trabajador_id = a.trabajador_id
+       JOIN ofertas_turno o       ON o.id = a.oferta_id
+       WHERE te.usuario_id = ? AND te.estado = 'activo'
        ORDER BY c.fecha DESC`,
-      [empresaId, trabajadorId]
+      [usuarioId]
     );
     return filas;
   },
 
+  /**
+   * Contrato de una asignación. empresaId null: TRABAJADOR_TURNOS
+   * multi-empresa — asignacion_id ya es único en contratos_diarios, así que
+   * se busca sin acotar por empresa (ver obtenerPorId).
+   */
   async obtenerPorAsignacion(empresaId, asignacionId) {
     const [filas] = await pool.query(
       `SELECT c.id, c.empresa_id, c.asignacion_id, c.numero_contrato, c.fecha,
@@ -99,8 +111,8 @@ const ContratosModel = {
        JOIN trabajadores t ON t.id = a.trabajador_id
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN empresas e ON e.id = c.empresa_id
-       WHERE c.asignacion_id = ? AND c.empresa_id = ? LIMIT 1`,
-      [asignacionId, empresaId]
+       WHERE c.asignacion_id = ?${empresaId != null ? ' AND c.empresa_id = ?' : ''} LIMIT 1`,
+      empresaId != null ? [asignacionId, empresaId] : [asignacionId]
     );
     return filas[0] || null;
   },
@@ -136,20 +148,27 @@ const ContratosModel = {
     );
   },
 
-  async listarSinFirmar(empresaId, trabajadorId) {
+  /**
+   * Contratos sin firmar del usuario, a través de todas sus empresas activas.
+   * Un trabajador_turnos marketplace puede tener fila de trabajador en más de
+   * una empresa — filtrar por un solo (empresa, trabajador) resuelto de
+   * antemano escondía los contratos de las demás empresas.
+   */
+  async listarSinFirmarPorUsuario(usuarioId) {
     const [filas] = await pool.query(
       `SELECT c.id, c.numero_contrato, c.fecha, c.valor_dia,
               c.descripcion_labor, c.tipo_contrato,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
               a.id AS asignacion_id
        FROM contratos_diarios c
-       JOIN asignaciones_turno a ON a.id = c.asignacion_id
-       JOIN ofertas_turno o ON o.id = a.oferta_id
-       WHERE c.empresa_id = ? AND a.trabajador_id = ?
+       JOIN asignaciones_turno a  ON a.id = c.asignacion_id
+       JOIN trabajador_empresa te ON te.trabajador_id = a.trabajador_id
+       JOIN ofertas_turno o       ON o.id = a.oferta_id
+       WHERE te.usuario_id = ? AND te.estado = 'activo'
          AND c.firmado_trabajador = 0
          AND a.estado = 'completado'
        ORDER BY c.fecha DESC`,
-      [empresaId, trabajadorId]
+      [usuarioId]
     );
     return filas;
   },

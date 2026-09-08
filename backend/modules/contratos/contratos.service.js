@@ -2,7 +2,6 @@
 
 const ContratosModel = require('./contratos.model');
 const IntegracionService = require('../integracion/integracion.service');
-const TrabajadoresService = require('../trabajadores/trabajadores.service');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
 const {
@@ -35,40 +34,32 @@ function validarSalarioMinimo(valorDia) {
 
 const ContratosService = {
   async listarMisContratos(empresaId, usuario) {
-    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa) — se usa la
-    // empresa real del trabajador resuelto, no la del token.
-    const t = await TrabajadoresService.resolverTrabajadorPorUsuario(empresaId, usuario.sub);
-    return ContratosModel.listarPorTrabajador(t.empresa_id, t.id);
+    // Agrega a través de todas las empresas activas del usuario — un
+    // trabajador_turnos marketplace puede tener fila de trabajador en más de
+    // una, y resolver "la" empresa antes de consultar escondía las demás.
+    return ContratosModel.listarPorUsuario(usuario.sub);
   },
 
   async generarSiNoExiste(empresaId, asignacionId, usuario) {
-    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa)
-    let realEmpresaId = empresaId;
-    if (!realEmpresaId) {
-      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
-      realEmpresaId = t.empresa_id;
-    }
-
-    // Verificar si ya existe
-    let contrato = await ContratosModel.obtenerPorAsignacion(realEmpresaId, asignacionId);
+    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa) — el modelo
+    // ya soporta buscar sin acotar por empresa cuando es null.
+    let contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
     if (contrato) {
       verificarAcceso(contrato, usuario);
       return contrato;
     }
 
-    // Si no existe, obtener asignación con detalles
+    // Si no existe, obtener asignación con detalles (trae su propio empresa_id
+    // real — no hay que adivinarlo resolviendo un trabajador de antemano).
     const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
-    const asignacion = await AsignacionesModel.obtenerConDetalles(realEmpresaId, asignacionId);
-
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, asignacionId);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
 
-    // Verificar que el usuario es el trabajador asignado
-    const t = await TrabajadoresService.resolverTrabajadorPorUsuario(realEmpresaId, usuario.sub);
-    if (asignacion.trabajador_id !== t.id) {
+    if (usuario.rol === ROLES.TRABAJADOR_TURNOS && asignacion.usuario_id !== usuario.sub) {
       throw new AppError('No tienes permiso para generar este contrato', 403);
     }
 
-    contrato = await ContratosService.generarParaAsignacion(realEmpresaId, asignacionId);
+    contrato = await ContratosService.generarParaAsignacion(asignacion.empresa_id, asignacionId);
     verificarAcceso(contrato, usuario);
     return contrato;
   },
@@ -135,47 +126,24 @@ const ContratosService = {
   },
 
   async obtenerPorAsignacion(empresaId, asignacionId, usuario) {
-    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa) — se resuelve
-    // la empresa real del trabajador para la consulta
-    let realEmpresaId = empresaId;
-    if (!realEmpresaId) {
-      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
-      realEmpresaId = t.empresa_id;
-    }
-    const contrato = await ContratosModel.obtenerPorAsignacion(realEmpresaId, asignacionId);
+    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa) — el modelo
+    // ya soporta buscar sin acotar por empresa cuando es null.
+    const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     verificarAcceso(contrato, usuario);
     return contrato;
   },
 
   async obtener(empresaId, id, usuario) {
-    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa)
-    let realEmpresaId = empresaId;
-    if (!realEmpresaId) {
-      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
-      realEmpresaId = t.empresa_id;
-    }
-    const contrato = await ContratosModel.obtenerPorId(realEmpresaId, id);
+    const contrato = await ContratosModel.obtenerPorId(empresaId, id);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     verificarAcceso(contrato, usuario);
     return contrato;
   },
 
   async firmar(empresaId, id, usuario, firmaB64) {
-    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa)
-    let realEmpresaId = empresaId;
-    if (!realEmpresaId) {
-      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
-      realEmpresaId = t.empresa_id;
-    }
-    let contrato = await ContratosModel.obtenerPorId(realEmpresaId, id);
-
-    // Si el contrato no existe, intentar generarlo on-demand
-    if (!contrato) {
-      // Intenta obtener la asignación del contrato a través de la relación
-      // (esto es fallback; lo ideal es que el cliente pase asignacionId)
-      throw new AppError('Contrato no encontrado', 404);
-    }
+    const contrato = await ContratosModel.obtenerPorId(empresaId, id);
+    if (!contrato) throw new AppError('Contrato no encontrado', 404);
 
     if (contrato.trabajador_usuario_id !== usuario.sub) {
       throw new AppError('Solo el trabajador del contrato puede firmarlo', 403);
@@ -183,6 +151,9 @@ const ContratosService = {
     if (contrato.firmado_trabajador) {
       throw new AppError('El contrato ya está firmado', 409);
     }
+    // Empresa real del contrato (nunca adivinada) — necesaria para firmar()
+    // y emitir() aunque el caller (TRABAJADOR_TURNOS) haya llegado con null.
+    const realEmpresaId = contrato.empresa_id;
     await ContratosModel.firmar(realEmpresaId, id, firmaB64);
     // Guarda la firma como atajo reutilizable para el próximo contrato (best-effort).
     await TrabajadoresModel.guardarFirma(contrato.trabajador_id, firmaB64).catch(() => null);
@@ -195,15 +166,10 @@ const ContratosService = {
   },
 
   async listarSinFirmar(empresaId, usuario) {
-    // empresaId puede ser null (TRABAJADOR_TURNOS multi-empresa)
-    let realEmpresaId = empresaId;
-    if (!realEmpresaId) {
-      const t = await TrabajadoresService.resolverTrabajadorPorUsuario(null, usuario.sub);
-      realEmpresaId = t.empresa_id;
-    }
-
-    const t = await TrabajadoresService.resolverTrabajadorPorUsuario(realEmpresaId, usuario.sub);
-    return ContratosModel.listarSinFirmar(realEmpresaId, t.id);
+    // Agrega a través de todas las empresas activas del usuario (ver
+    // listarMisContratos) — este es el bug reportado: un trabajador con
+    // turnos en 2 empresas solo veía los de la que se resolvía por casualidad.
+    return ContratosModel.listarSinFirmarPorUsuario(usuario.sub);
   },
 };
 
