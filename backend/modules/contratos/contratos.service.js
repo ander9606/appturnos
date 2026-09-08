@@ -68,22 +68,44 @@ const ContratosService = {
       throw new AppError('No tienes permiso para generar este contrato', 403);
     }
 
+    contrato = await ContratosService.generarParaAsignacion(realEmpresaId, asignacionId);
+    verificarAcceso(contrato, usuario);
+    return contrato;
+  },
+
+  /**
+   * Crea el contrato diario de una asignación si aún no existe. A diferencia
+   * de generarSiNoExiste, no requiere un `usuario` que la solicite: la usan
+   * los flujos internos (marcarEgreso, corregir, cierre masivo) que completan
+   * una asignación sin que el trabajador haya abierto antes el detalle del
+   * turno — sin esto, el contrato nunca se creaba y el turno no aparecía en
+   * "sin firmar" pese a estar completado.
+   */
+  async generarParaAsignacion(empresaId, asignacionId) {
+    let contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
+    if (contrato) return contrato;
+
+    const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, asignacionId);
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+
     // Validar salario mínimo
     validarSalarioMinimo(asignacion.tarifa_dia);
 
-    // Obtener tipo de contrato de la empresa
-    const empresa = await EmpresasModel.obtenerPorId(realEmpresaId);
-    const tipoContrato = empresa?.tipo_contrato || 'LABORAL';
+    // Obtener tipo de contrato de la empresa (guarda 'laboral'/'prestacion_servicios'
+    // en minúscula; contratos_diarios.tipo_contrato espera 'LABORAL'/'PRESTACION_SERVICIOS')
+    const tipoContratoEmpresa = await EmpresasModel.obtenerTipoContrato(empresaId);
+    const tipoContrato = tipoContratoEmpresa.toUpperCase();
 
     // Auditoría: verificar acumulación de contratos
-    const cantidadContratos = await ContratosModel.contarPorTrabajadorUltimo12Meses(realEmpresaId, asignacion.trabajador_id);
+    const cantidadContratos = await ContratosModel.contarPorTrabajadorUltimo12Meses(empresaId, asignacion.trabajador_id);
 
     let estadoAcumulacion = 'normal';
     let accionAuditoria = 'generacion_permitida';
 
     if (cantidadContratos >= CONTRATOS_ACUMULATIVOS_LIMITE) {
       // Bloquear generación si ya alcanzó el límite
-      await ContratosModel.registrarAuditoria(realEmpresaId, asignacion.trabajador_id, cantidadContratos, 'bloqueado', 'generacion_bloqueada');
+      await ContratosModel.registrarAuditoria(empresaId, asignacion.trabajador_id, cantidadContratos, 'bloqueado', 'generacion_bloqueada');
       throw new AppError(
         `Este trabajador ha excedido el límite de ${CONTRATOS_ACUMULATIVOS_LIMITE} contratos en 12 meses. ` +
         `Se recomienda cambiar a contrato laboral indefinido para cumplir con ley colombiana.`,
@@ -95,11 +117,11 @@ const ContratosService = {
     }
 
     // Registrar auditoría
-    await ContratosModel.registrarAuditoria(realEmpresaId, asignacion.trabajador_id, cantidadContratos, estadoAcumulacion, accionAuditoria);
+    await ContratosModel.registrarAuditoria(empresaId, asignacion.trabajador_id, cantidadContratos, estadoAcumulacion, accionAuditoria);
 
     // Crear contrato con datos de la asignación
     const anio = asignacion.oferta_fecha.split('-')[0];
-    const contratoId = await ContratosModel.crear(realEmpresaId, {
+    const contratoId = await ContratosModel.crear(empresaId, {
       asignacionId,
       anio,
       fecha: asignacion.oferta_fecha,
@@ -109,10 +131,7 @@ const ContratosService = {
       salarioMinimoValidado: true,
     });
 
-    // Retornar el contrato creado con verificación de acceso
-    const contratoCreado = await ContratosModel.obtenerPorId(realEmpresaId, contratoId);
-    verificarAcceso(contratoCreado, usuario);
-    return contratoCreado;
+    return ContratosModel.obtenerPorId(empresaId, contratoId);
   },
 
   async obtenerPorAsignacion(empresaId, asignacionId, usuario) {

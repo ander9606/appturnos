@@ -2,6 +2,7 @@
 
 const AsignacionesModel = require('./asignaciones.model');
 const ContratosModel    = require('../../contratos/contratos.model');
+const ContratosService  = require('../../contratos/contratos.service');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const { pool } = require('../../../config/database');
@@ -426,8 +427,10 @@ const AsignacionesService = {
       );
     }
 
-    // Firmar el minicontrato diario con la misma firma del egreso (best-effort)
-    const contrato = await ContratosModel.obtenerPorAsignacion(dbEmpresaId, id);
+    // Genera el minicontrato diario si aún no existe y lo firma con la misma
+    // firma del egreso (best-effort) — antes solo se firmaba si ya existía,
+    // y solo existía si el trabajador había abierto antes el detalle del turno.
+    const contrato = await ContratosService.generarParaAsignacion(dbEmpresaId, id).catch(() => null);
     if (contrato && !contrato.firmado_trabajador && firma_b64) {
       await ContratosModel.firmar(dbEmpresaId, contrato.id, firma_b64).catch(() => null);
     }
@@ -595,6 +598,9 @@ const AsignacionesService = {
     // Esta corrección recién cerró el turno sin la firma del trabajador (el
     // gestor no la captura) — avísale para que firme y el turno cuente en su pago.
     if (estadoNuevo === 'completado' && asig.estado !== 'completado') {
+      // El gestor cierra el turno sin pasar por la app del trabajador, así que
+      // el contrato nunca se había generado — sin esto no aparecía en "sin firmar".
+      await ContratosService.generarParaAsignacion(empresaId, id).catch(() => {});
       if (resultado?.usuario_id) {
         await NotificacionesService.notificar({
           empresaId,
@@ -703,7 +709,7 @@ const AsignacionesService = {
       ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
       : '';
     const [enProgreso] = await pool.query(
-      `SELECT t.usuario_id FROM asignaciones_turno a
+      `SELECT a.id, t.usuario_id FROM asignaciones_turno a
        JOIN trabajadores t ON t.id = a.trabajador_id
        WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL ${excClause}`,
@@ -718,6 +724,13 @@ const AsignacionesService = {
     );
 
     const { cerradas, noPresentados } = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds);
+
+    // Genera el contrato diario de cada turno recién completado (best-effort)
+    // — el cierre masivo lo completa sin que el trabajador abra la app antes,
+    // así que sin esto nunca aparecían en "sin firmar".
+    await Promise.all(
+      enProgreso.map((r) => ContratosService.generarParaAsignacion(empresaId, r.id).catch(() => {}))
+    );
 
     // Notificaciones best-effort — mensajes distintos por grupo.
     const idsCerrados = enProgreso.map((r) => r.usuario_id).filter(Boolean);

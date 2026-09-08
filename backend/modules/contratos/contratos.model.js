@@ -20,8 +20,7 @@ const ContratosModel = {
          fecha = VALUES(fecha),
          descripcion_labor = VALUES(descripcion_labor),
          valor_dia = VALUES(valor_dia),
-         salario_minimo_validado = VALUES(salario_minimo_validado),
-         firmado_trabajador = 0`,
+         salario_minimo_validado = VALUES(salario_minimo_validado)`,
       [
         empresaId,
         datos.tipoContrato || 'LABORAL',

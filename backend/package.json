@@ -13,6 +13,7 @@
     "generar-vapid": "node scripts/generar-vapid.js",
     "crear-super-admin": "node scripts/crear-super-admin.js",
     "limpiar-periodos-vacios": "node scripts/limpiar-periodos-vacios.js",
+    "backfill-contratos": "node scripts/backfill-contratos-completados.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },

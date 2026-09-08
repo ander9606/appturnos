@@ -196,6 +196,9 @@ const AsignacionesModel = {
       );
 
       // Contrato diario atómico al confirmar. Tarifa la fija el PUESTO.
+      const [[empresaContrato]] = await conn.query(
+        'SELECT tipo_contrato FROM empresas WHERE id = ?', [empresaId]
+      );
       await ContratosModel.crear(
         empresaId,
         {
@@ -204,6 +207,7 @@ const AsignacionesModel = {
           fecha: oferta.fecha,
           descripcionLabor: oferta.descripcion || oferta.titulo,
           valorDia: puesto.tarifa_dia,
+          tipoContrato: (empresaContrato?.tipo_contrato || 'laboral').toUpperCase(),
         },
         conn
       );
@@ -741,6 +745,9 @@ const AsignacionesModel = {
         [puestoId]
       );
 
+      const [[empresaContrato]] = await conn.query(
+        'SELECT tipo_contrato FROM empresas WHERE id = ?', [empresaId]
+      );
       await ContratosModel.crear(
         empresaId,
         {
@@ -749,6 +756,7 @@ const AsignacionesModel = {
           fecha: oferta.fecha,
           descripcionLabor: oferta.descripcion || oferta.titulo,
           valorDia: puesto.tarifa_dia,
+          tipoContrato: (empresaContrato?.tipo_contrato || 'laboral').toUpperCase(),
         },
         conn
       );

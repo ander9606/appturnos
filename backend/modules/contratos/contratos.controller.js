@@ -59,11 +59,19 @@ async function pdf(req, res) {
 }
 
 async function pdfPorAsignacion(req, res) {
-  const contrato = await ContratosService.obtenerPorAsignacion(
-    req.empresa_id,
-    Number(req.params.asignacionId),
-    req.usuario
-  );
+  const asignacionId = Number(req.params.asignacionId);
+  let contrato;
+  try {
+    contrato = await ContratosService.obtenerPorAsignacion(req.empresa_id, asignacionId, req.usuario);
+  } catch (err) {
+    // Mismo fallback que obtenerPorAsignacion: si el contrato aún no existe,
+    // generarlo on-demand en vez de fallar la descarga con 404.
+    if (err.statusCode === 404 && err.message === 'Contrato no encontrado') {
+      contrato = await ContratosService.generarSiNoExiste(req.empresa_id, asignacionId, req.usuario);
+    } else {
+      throw err;
+    }
+  }
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader(
     'Content-Disposition',
