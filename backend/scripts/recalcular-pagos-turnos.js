@@ -12,7 +12,6 @@
 'use strict';
 
 const { pool } = require('../config/database');
-const { calcularHoras, valorHora, calcularPagoNomina } = require('../utils/laboralUtils');
 
 const dryRun = process.argv[2] === 'dry-run';
 
@@ -20,19 +19,16 @@ async function main() {
   console.log(`\nRecalculando pagos de turnos completados... (${dryRun ? 'DRY RUN' : 'REAL'})\n`);
 
   try {
-    // Obtener todos los turnos completados con pago_total NULL o 0
+    // Obtener todos los turnos completados con pago_total NULL o 0.
+    // pago_total es la tarifa del PUESTO al que postuló el trabajador (mismo
+    // criterio que registrarEgreso/cerrarMasivo y que contratos_diarios.valor_dia)
+    // — no un valor hora/salario, que pertenece al modelo de nómina tradicional
+    // y no aplica a trabajadores del marketplace de turnos.
     const [turnos] = await pool.query(`
-      SELECT
-        a.id, a.empresa_id, a.trabajador_id, a.oferta_id,
-        a.hora_ingreso_real, a.hora_egreso_real, a.pago_total,
-        o.fecha AS oferta_fecha,
-        t.tarifa_hora, t.salario_base
+      SELECT a.id, a.empresa_id, p.tarifa_dia
       FROM asignaciones_turno a
-      JOIN ofertas_turno o ON o.id = a.oferta_id
-      JOIN trabajadores t ON t.id = a.trabajador_id
+      JOIN oferta_puestos p ON p.id = a.puesto_id
       WHERE a.estado = 'completado'
-        AND a.hora_ingreso_real IS NOT NULL
-        AND a.hora_egreso_real IS NOT NULL
         AND (a.pago_total IS NULL OR a.pago_total = 0)
       ORDER BY a.id DESC
       LIMIT 1000
@@ -45,47 +41,23 @@ async function main() {
       process.exit(0);
     }
 
-    const extractTime = (dt) => {
-      const s = dt instanceof Date ? dt.toISOString() : String(dt);
-      return s.slice(11, 19);
-    };
-
     let actualizados = 0;
     let errores = 0;
 
     for (const turno of turnos) {
       try {
-        const desglose = calcularHoras({
-          horaEntrada: extractTime(turno.hora_ingreso_real),
-          horaSalida: extractTime(turno.hora_egreso_real),
-          fecha: turno.oferta_fecha,
-        });
-
-        const vhora = turno.tarifa_hora
-          ? Number(turno.tarifa_hora)
-          : turno.salario_base
-          ? Number(turno.salario_base) / 240 // HORAS_MES_NOMINA
-          : 0;
-
-        if (vhora <= 0) {
-          console.log(
-            `⚠️  Asignación ${turno.id} (empresa ${turno.empresa_id}): ` +
-            `tarifa_hora y salario_base no configurados`
-          );
+        if (!turno.tarifa_dia || Number(turno.tarifa_dia) <= 0) {
+          console.log(`⚠️  Asignación ${turno.id} (empresa ${turno.empresa_id}): tarifa_dia del puesto no configurada`);
           errores++;
           continue;
         }
 
-        const pagoTotal = calcularPagoNomina(desglose, vhora);
-        console.log(
-          `✓ Asignación ${turno.id}: pago $${pagoTotal.toLocaleString('es-CO')} ` +
-          `(${desglose.horas_ordinarias.toFixed(1)}h ordinarias)`
-        );
+        console.log(`✓ Asignación ${turno.id}: pago $${Number(turno.tarifa_dia).toLocaleString('es-CO')}`);
 
         if (!dryRun) {
           await pool.query(
             'UPDATE asignaciones_turno SET pago_total = ? WHERE id = ?',
-            [pagoTotal, turno.id]
+            [turno.tarifa_dia, turno.id]
           );
         }
         actualizados++;

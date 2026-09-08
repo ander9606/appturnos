@@ -13,7 +13,7 @@ const CoberturaService = require('../../integracion/cobertura.service');
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
-const { calcularHoras, valorHora, calcularPagoNomina } = require('../../../utils/laboralUtils');
+const { calcularHoras } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
 
@@ -408,32 +408,6 @@ const AsignacionesService = {
 
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
 
-    // Calcula pago_total basado en desglose de horas (después de registrar egreso)
-    try {
-      const turnoActualizado = await AsignacionesModel.obtenerPorId(dbEmpresaId, id);
-      if (turnoActualizado && turnoActualizado.hora_ingreso_real && turnoActualizado.hora_egreso_real) {
-        const extractTime = (dt) => {
-          const s = dt instanceof Date ? dt.toISOString() : String(dt);
-          return s.slice(11, 19);
-        };
-        const desglose = calcularHoras({
-          horaEntrada: extractTime(turnoActualizado.hora_ingreso_real),
-          horaSalida: extractTime(turnoActualizado.hora_egreso_real),
-          fecha: asignacion.oferta_fecha,
-        });
-
-        const trabajador = await TrabajadoresModel.obtenerPorId(dbEmpresaId, turnoActualizado.trabajador_id);
-        const vhora = valorHora(trabajador);
-        if (vhora > 0) {
-          const pagoTotal = calcularPagoNomina(desglose, vhora);
-          await AsignacionesModel.actualizarPagoTotal(dbEmpresaId, id, pagoTotal);
-        }
-      }
-    } catch (err) {
-      logger.error(`[asignaciones] Error calculando pago_total para asignacion ${id}:`, err.message);
-      // No lanzar el error — el egreso ya se registró, esto es best-effort
-    }
-
     // Notifica a jefes de turno y admin que el trabajador marcó salida (best-effort).
     const [gestoresEgreso] = await pool.query(
       `SELECT id FROM usuarios
@@ -640,30 +614,10 @@ const AsignacionesService = {
     }
 
     if (estadoNuevo === 'completado') {
-      // Calcula pago_total si el turno acaba de completarse
-      if (horaIngreso && horaEgreso) {
-        try {
-          const extractTime = (dt) => {
-            const s = dt instanceof Date ? dt.toISOString() : String(dt);
-            return s.slice(11, 19);
-          };
-          const desglose = calcularHoras({
-            horaEntrada: extractTime(horaIngreso),
-            horaSalida: extractTime(horaEgreso),
-            fecha: resultado.oferta_fecha,
-          });
-
-          const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, resultado.trabajador_id_entity);
-          const vhora = valorHora(trabajador);
-          if (vhora > 0) {
-            const pagoTotal = calcularPagoNomina(desglose, vhora);
-            await AsignacionesModel.actualizarPagoTotal(empresaId, id, pagoTotal);
-          }
-        } catch (err) {
-          logger.error(`[asignaciones] Error calculando pago_total en corregir para asignacion ${id}:`, err.message);
-        }
-      }
-
+      // pago_total es la tarifa del PUESTO (mismo criterio que registrarEgreso/
+      // cerrarMasivo y que contratos_diarios.valor_dia) — corregir() es el único
+      // camino a 'completado' que no la fijaba, dejando el turno en $0.
+      await AsignacionesModel.actualizarPagoTotal(empresaId, id, resultado.tarifa_dia);
       await CostoLaborService.verificarYEmitir(empresaId, asig.oferta_id);
     }
 
@@ -774,39 +728,6 @@ const AsignacionesService = {
     );
 
     const { cerradas, noPresentados } = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds);
-
-    // Calcula pago_total para cada turno recién completado (best-effort)
-    await Promise.all(
-      enProgreso.map(async (r) => {
-        try {
-          const turno = await AsignacionesModel.obtenerPorId(empresaId, r.id);
-          if (turno && turno.hora_ingreso_real && turno.hora_egreso_real) {
-            const extractTime = (dt) => {
-              const s = dt instanceof Date ? dt.toISOString() : String(dt);
-              return s.slice(11, 19);
-            };
-            const [[ofertaRow]] = await pool.query(
-              'SELECT fecha FROM ofertas_turno WHERE id = ?',
-              [turno.oferta_id]
-            );
-            const desglose = calcularHoras({
-              horaEntrada: extractTime(turno.hora_ingreso_real),
-              horaSalida: extractTime(turno.hora_egreso_real),
-              fecha: ofertaRow?.fecha,
-            });
-
-            const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, turno.trabajador_id);
-            const vhora = valorHora(trabajador);
-            if (vhora > 0) {
-              const pagoTotal = calcularPagoNomina(desglose, vhora);
-              await AsignacionesModel.actualizarPagoTotal(empresaId, r.id, pagoTotal);
-            }
-          }
-        } catch (err) {
-          logger.error(`[asignaciones] Error calculando pago_total en cerrarMasivo para asignacion ${r.id}:`, err.message);
-        }
-      })
-    );
 
     // Genera el contrato diario de cada turno recién completado (best-effort)
     // — el cierre masivo lo completa sin que el trabajador abra la app antes,
