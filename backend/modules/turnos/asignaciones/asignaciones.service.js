@@ -455,6 +455,14 @@ const AsignacionesService = {
    */
   async asignarDirecto(empresaId, ofertaId, { puesto_id, trabajador_id }) {
     const trabajadorPrevio = await TrabajadoresModel.obtenerPorId(empresaId, trabajador_id);
+    // obtenerPorId ya filtra por empresa_id — si vuelve null, el trabajador_id
+    // recibido no pertenece a esta empresa (de otra empresa vinculada al mismo
+    // usuario, o inexistente). Sin este chequeo, el modelo lo insertaría igual
+    // sin validar la pertenencia — el mismo bug que corrompió data histórica
+    // en la resolución de postulaciones (commit 563a743).
+    if (!trabajadorPrevio) {
+      throw new AppError('El trabajador no pertenece a esta empresa', 404);
+    }
     const rolPrevio = trabajadorPrevio?.rol || trabajadorPrevio?.usuario_rol;
     if (rolPrevio === 'trabajador_turnos' && trabajadorPrevio.usuario_id) {
       const [[ofertaRow]] = await pool.query(

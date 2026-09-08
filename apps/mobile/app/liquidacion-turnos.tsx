@@ -138,7 +138,7 @@ function TrabajadorCard({
       className="bg-card rounded-2xl overflow-hidden"
       style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
     >
-      {/* ── Header ──────────────────────────────────────────────────── */}
+      {/* ── Header: nombre + monto a pagar, visibles sin expandir ─────── */}
       <TouchableOpacity
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
@@ -147,70 +147,48 @@ function TrabajadorCard({
         {/* Barra lateral de color */}
         <View className="w-1.5" style={{ backgroundColor: primary }} />
 
-        <View className="flex-1 px-4 py-4 gap-2">
-          {/* Nombre + chevron */}
-          <View className="flex-row items-start justify-between gap-2">
-            <View className="flex-1">
-              <Text className="text-base font-bold text-foreground">
-                {item.nombre} {item.apellido}
-              </Text>
-              <View className="flex-row items-center gap-2 mt-0.5">
-                {item.cargo && (
-                  <Text className="text-xs text-muted-foreground">{item.cargo}</Text>
-                )}
-                {item.ranking != null && (
-                  <View className="flex-row items-center gap-0.5">
-                    <Ionicons name="star" size={11} color="#F59E0B" />
-                    <Text className="text-xs text-muted-foreground">
-                      {item.ranking.toFixed(1)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            <Ionicons
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color="#94A3B8"
-            />
-          </View>
-
-          {/* Stats */}
-          <View className="flex-row items-center gap-4">
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="briefcase-outline" size={13} color="#64748B" />
+        <View className="flex-1 px-4 py-4 flex-row items-center gap-3">
+          {/* Nombre + meta */}
+          <View className="flex-1 gap-1">
+            <Text className="text-base font-bold text-foreground" numberOfLines={1}>
+              {item.nombre} {item.apellido}
+            </Text>
+            <View className="flex-row items-center gap-3 flex-wrap">
+              {item.cargo && (
+                <Text className="text-xs text-muted-foreground">{item.cargo}</Text>
+              )}
+              {item.ranking != null && (
+                <View className="flex-row items-center gap-0.5">
+                  <Ionicons name="star" size={11} color="#F59E0B" />
+                  <Text className="text-xs text-muted-foreground">{item.ranking.toFixed(1)}</Text>
+                </View>
+              )}
               <Text className="text-xs text-muted-foreground">
-                {item.total_turnos} turno{item.total_turnos !== 1 ? 's' : ''}
-              </Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="time-outline" size={13} color="#64748B" />
-              <Text className="text-xs text-muted-foreground">
-                {item.total_horas.toFixed(1)}h
-              </Text>
-            </View>
-          </View>
-
-          {/* Total a pagar */}
-          <View className="flex-row items-center justify-between mt-1">
-            <View className="gap-0.5">
-              <Text className="text-xs text-muted-foreground">A pagar</Text>
-              <Text className="text-xl font-bold" style={{ color: primary }}>
-                {cop(item.pago_total)}
+                {item.total_turnos} turno{item.total_turnos !== 1 ? 's' : ''} · {item.total_horas.toFixed(1)}h
               </Text>
             </View>
             {hasExtra && (
-              <View className="items-end gap-0.5">
-                <Text className="text-[10px] text-muted-foreground">
-                  Base: {cop(item.pago_base)}
+              <View className="bg-amber-100 self-start px-2 py-0.5 rounded-full mt-0.5">
+                <Text className="text-[10px] font-semibold text-amber-700">
+                  Incluye {cop(item.pago_extra)} extra
                 </Text>
-                <View className="bg-amber-100 px-2.5 py-1 rounded-xl">
-                  <Text className="text-xs font-semibold text-amber-700">
-                    + {cop(item.pago_extra)} extra
-                  </Text>
-                </View>
               </View>
             )}
+          </View>
+
+          {/* Monto a pagar + chevron */}
+          <View className="items-end gap-0.5">
+            <Text className="text-lg font-bold" style={{ color: primary }}>
+              {cop(item.pago_total)}
+            </Text>
+            <View className="flex-row items-center gap-0.5">
+              <Text className="text-[10px] text-muted-foreground">A pagar</Text>
+              <Ionicons
+                name={expanded ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color="#94A3B8"
+              />
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -309,20 +287,13 @@ export default function LiquidacionTurnosScreen() {
             ListHeaderComponent={
               <View className="mb-2 gap-3">
                 {/* Período */}
-                <View className="flex-row items-center justify-between">
-                  <View>
-                    <Text className="text-xs text-muted-foreground uppercase tracking-wide">
-                      Período
-                    </Text>
-                    <Text className="text-base font-semibold text-foreground">
-                      {monthLabel}
-                    </Text>
-                  </View>
-                  <View className="bg-muted px-3 py-1.5 rounded-xl">
-                    <Text className="text-xs text-muted-foreground">
-                      {inicio.slice(8)} – {fin.slice(8)} {SHORT_MONTHS[new Date(`${inicio}T00:00:00`).getMonth()]}
-                    </Text>
-                  </View>
+                <View className="gap-0.5">
+                  <Text className="text-base font-semibold text-foreground">
+                    {monthLabel}
+                  </Text>
+                  <Text className="text-xs text-muted-foreground">
+                    {inicio.slice(8)} – {fin.slice(8)} {SHORT_MONTHS[new Date(`${inicio}T00:00:00`).getMonth()]}
+                  </Text>
                 </View>
 
                 {/* Resumen global */}
