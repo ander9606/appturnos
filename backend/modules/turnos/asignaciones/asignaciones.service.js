@@ -640,6 +640,30 @@ const AsignacionesService = {
     }
 
     if (estadoNuevo === 'completado') {
+      // Calcula pago_total si el turno acaba de completarse
+      if (horaIngreso && horaEgreso) {
+        try {
+          const extractTime = (dt) => {
+            const s = dt instanceof Date ? dt.toISOString() : String(dt);
+            return s.slice(11, 19);
+          };
+          const desglose = calcularHoras({
+            horaEntrada: extractTime(horaIngreso),
+            horaSalida: extractTime(horaEgreso),
+            fecha: resultado.oferta_fecha,
+          });
+
+          const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, resultado.trabajador_id_entity);
+          const vhora = valorHora(trabajador);
+          if (vhora > 0) {
+            const pagoTotal = calcularPagoNomina(desglose, vhora);
+            await AsignacionesModel.actualizarPagoTotal(empresaId, id, pagoTotal);
+          }
+        } catch (err) {
+          logger.error(`[asignaciones] Error calculando pago_total en corregir para asignacion ${id}:`, err.message);
+        }
+      }
+
       await CostoLaborService.verificarYEmitir(empresaId, asig.oferta_id);
     }
 
