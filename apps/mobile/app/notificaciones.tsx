@@ -41,6 +41,7 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'nomina.salida':               'log-out-outline',
   'nomina.periodo_abierto':      'folder-open-outline',
   'nomina.periodo_liquidado':    'cash-outline',
+  'cuenta_cobro.pendiente_firma': 'document-text-outline',
   'nomina.sospechoso':           'alert-circle-outline',
   'oferta.nueva':                'megaphone-outline',
   'oferta.modificada':           'create-outline',
@@ -112,6 +113,9 @@ export function destino(n: { tipo: string; data: unknown }): string | null {
   // pago_rechazado/integracion.desactivada duplicadas a super_admin, vencimiento).
   if (d.empresa_id)      return `/empresa/${d.empresa_id}`;
   if (d.ausencia_id)     return '/ausencias';
+  // cuenta_cobro.pendiente_firma trae cuenta_cobro_id Y periodo_id — debe
+  // resolverse antes del fallback genérico de periodo_id de abajo.
+  if (d.cuenta_cobro_id) return `/cuenta-cobro/${d.cuenta_cobro_id}`;
   if (d.periodo_id)      return '/(tabs)/nomina';
   // nomina.entrada / nomina.salida → gestor ve detalle del registro para corregir
   if ((n.tipo === 'nomina.entrada' || n.tipo === 'nomina.salida') && d.registro_id) return `/registro-detalle/${d.registro_id}`;

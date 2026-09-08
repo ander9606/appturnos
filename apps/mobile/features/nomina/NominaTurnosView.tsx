@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { usePeriodos } from './useNomina';
 import { TipoPeriodoBadge } from './TipoPeriodoBadge';
 import { fmtPeriodo } from './trabajador/nominaTrabajadorUtils';
+import { cuentasCobroApi } from '@api-client';
 import type { Asignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -60,6 +62,15 @@ export function NominaTurnosView() {
   // periodos_nomina viene con empresa_id — uno por empresa. Agrupar por empresa para filtrar correctamente.
   const { data: periodosResp } = usePeriodos();
   const periodos = periodosResp?.data ?? [];
+
+  // Cuentas de cobro pendientes — se generan al cerrar un período con turnos
+  // firmados; siempre [] para trabajadores sin ninguna, así que no requiere
+  // ninguna rama por tipo_contrato de empresa acá.
+  const { data: cuentasSinFirmar } = useQuery({
+    queryKey: ['cuentas-cobro-sin-firmar'],
+    queryFn: () => cuentasCobroApi.listarSinFirmar(),
+    staleTime: 60_000,
+  });
 
   const [showAnterior, setShowAnterior] = useState(false);
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string | null>(null);
@@ -418,6 +429,20 @@ export function NominaTurnosView() {
                   Tienes {totales.pendientesFirma} turno{totales.pendientesFirma !== 1 ? 's' : ''} sin firmar — fírmalo{totales.pendientesFirma !== 1 ? 's' : ''} para que cuente{totales.pendientesFirma !== 1 ? 'n' : ''} en tu pago
                 </Text>
                 <Ionicons name="chevron-forward" size={14} color="#D97706" />
+              </TouchableOpacity>
+            )}
+
+            {/* Aviso: cuentas de cobro generadas al cerrar un período, pendientes de firma */}
+            {(cuentasSinFirmar?.length ?? 0) > 0 && (
+              <TouchableOpacity
+                onPress={() => router.push('/mis-cuentas-cobro?pendientes=1')}
+                className="mx-5 bg-info-light border border-info/30 rounded-2xl px-4 py-3 flex-row items-center gap-2.5"
+              >
+                <Ionicons name="document-text" size={18} color="#3B82F6" />
+                <Text className="flex-1 text-xs text-info font-medium">
+                  Tienes {cuentasSinFirmar!.length} cuenta{cuentasSinFirmar!.length !== 1 ? 's' : ''} de cobro por firmar
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color="#3B82F6" />
               </TouchableOpacity>
             )}
 

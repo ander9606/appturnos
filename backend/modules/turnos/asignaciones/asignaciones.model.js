@@ -611,6 +611,7 @@ const AsignacionesModel = {
          t.id          AS trabajador_id,
          t.nombre, t.apellido,
          t.cargo       AS cargo_descripcion,
+         t.usuario_id, t.cedula,
          t.ranking,
          t.total_calificaciones
        FROM asignaciones_turno a
@@ -632,6 +633,8 @@ const AsignacionesModel = {
           trabajador_id:      row.trabajador_id,
           nombre:             row.nombre,
           apellido:           row.apellido,
+          usuario_id:         row.usuario_id,
+          cedula:             row.cedula,
           cargo:              row.cargo_descripcion,
           ranking:            row.ranking ? Number(row.ranking) : null,
           total_calificaciones: row.total_calificaciones,

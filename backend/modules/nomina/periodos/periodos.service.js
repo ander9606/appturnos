@@ -5,8 +5,19 @@ const PeriodosModel = require('./periodos.model');
 const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const LiquidacionService = require('../liquidacion/liquidacion.service');
+const CuentasCobroService = require('../../cuentas-cobro/cuentas-cobro.service');
 const AppError = require('../../../utils/AppError');
+const logger = require('../../../utils/logger');
 const { toISODate, calcularPeriodoActual, calcularSiguientePeriodo } = require('../../../utils/periodoCiclo');
+
+/** Best-effort: un fallo generando cuentas de cobro nunca debe tumbar el cierre del período. */
+async function generarCuentasDeCobroSiAplica(empresaId, periodoId) {
+  try {
+    await CuentasCobroService.generarParaPeriodo(empresaId, periodoId);
+  } catch (err) {
+    logger.error(`[periodos] no se pudieron generar cuentas de cobro (período ${periodoId}):`, err.message);
+  }
+}
 
 /** Obtiene usuario_id de todos los trabajador_nomina activos de la empresa. */
 async function listarUsuariosNomina(empresaId) {
@@ -107,7 +118,12 @@ const PeriodosService = {
     // Cerrar automáticamente cualquier período abierto que ya venció.
     const vencidos = await PeriodosModel.listarAbiertosVencidos(empresaId, hoy);
     for (const v of vencidos) {
-      await PeriodosModel.cerrarConSnapshot(empresaId, v.id, null).catch(() => {});
+      try {
+        await PeriodosModel.cerrarConSnapshot(empresaId, v.id, null);
+        await generarCuentasDeCobroSiAplica(empresaId, v.id);
+      } catch (err) {
+        logger.error(`[periodos] fallo al auto-cerrar período ${v.id}:`, err.message);
+      }
     }
 
     // Ya hay uno abierto que cubre hoy → no crear.
@@ -129,6 +145,7 @@ const PeriodosService = {
     const abierto = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
     if (abierto) {
       await PeriodosModel.cerrarConSnapshot(empresaId, abierto.id, usuarioId ?? null);
+      await generarCuentasDeCobroSiAplica(empresaId, abierto.id);
     }
     // autoCrear() ya notifica "nuevo período abierto" a trabajador_nomina vía crear().
     const nuevo = await this.autoCrear(empresaId);
@@ -163,6 +180,7 @@ const PeriodosService = {
     // en un solo commit, evitando que modificaciones de sueldo posteriores
     // afecten la liquidación de este período.
     await PeriodosModel.cerrarConSnapshot(empresaId, id, usuarioId);
+    await generarCuentasDeCobroSiAplica(empresaId, id);
     // Auto-crear el período siguiente para que los trabajadores no queden
     // sin período abierto al día siguiente.
     const empresa = await EmpresasModel.obtenerParaAdmin(empresaId);

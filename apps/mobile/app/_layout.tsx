@@ -248,6 +248,9 @@ function RootLayout() {
             {/* Contratos diarios — trabajador_turnos */}
             <Stack.Screen name="mis-contratos" options={{ title: 'Mis contratos' }} />
             <Stack.Screen name="contrato/[id]" options={{ title: 'Contrato' }} />
+            {/* Cuentas de cobro — trabajador_turnos, generadas al cerrar un período */}
+            <Stack.Screen name="mis-cuentas-cobro" options={{ title: 'Mis cuentas de cobro' }} />
+            <Stack.Screen name="cuenta-cobro/[id]" options={{ title: 'Cuenta de cobro' }} />
             {/* Legal */}
             <Stack.Screen name="terminos" options={{ headerShown: false }} />
             <Stack.Screen name="privacidad" options={{ title: 'Política de privacidad' }} />

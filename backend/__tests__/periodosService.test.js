@@ -8,6 +8,11 @@ jest.mock('../modules/nomina/periodos/periodos.model');
 jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
 }));
+// generarCuentasDeCobroSiAplica llama PeriodosModel.obtenerPorId de nuevo internamente —
+// mockeado aparte para no interferir con la cola de mockResolvedValueOnce de estos tests.
+jest.mock('../modules/cuentas-cobro/cuentas-cobro.service', () => ({
+  generarParaPeriodo: jest.fn().mockResolvedValue({ generadas: 0 }),
+}));
 
 const PeriodosModel  = require('../modules/nomina/periodos/periodos.model');
 const PeriodosService = require('../modules/nomina/periodos/periodos.service');

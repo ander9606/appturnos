@@ -110,6 +110,8 @@ export { ausenciasApi } from './ausencias';
 export type { Ausencia, TipoAusencia, EstadoAusencia, CrearAusenciaPayload } from './ausencias';
 export { contratosApi } from './contratos';
 export type { Contrato, ContratoResumen } from './contratos';
+export { cuentasCobroApi } from './cuentas-cobro';
+export type { CuentaCobro, CuentaCobroResumen, CuentaCobroItem } from './cuentas-cobro';
 export { notificacionesApi } from './notificaciones';
 export type { Notificacion, ListarNotificacionesResponse } from './notificaciones';
 export { novedadesApi } from './novedades';
