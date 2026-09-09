@@ -3,7 +3,7 @@
 const ReportesModel = require('./reportes.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
-const { valorHora, calcularPagoNomina } = require('../../utils/laboralUtils');
+const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo } = require('../../utils/laboralUtils');
 
 function redondear(n) {
   return Math.round(n * 100) / 100;
@@ -33,9 +33,29 @@ const ReportesService = {
     const turnos = await ReportesModel.costoTurnos(empresaId, desde, hasta);
     const filasNomina = await ReportesModel.horasNominaPorTrabajador(empresaId, desde, hasta);
 
+    // Mismo criterio que liquidacion.service.js: un asalariado cuesta su
+    // sueldo prorrateado al rango completo, no lo que sumen sus horas_ordinarias
+    // — si no, este reporte subestima el costo real de un asalariado con pocas
+    // horas registradas en el rango.
+    const diasRango = Math.round(
+      (new Date(hasta + 'T12:00:00Z') - new Date(desde + 'T12:00:00Z')) / 86_400_000
+    ) + 1;
+
     let costoNomina = 0;
     const detalleNomina = filasNomina.map((f) => {
-      const total = redondear(calcularPagoNomina(f, valorHora(f)));
+      const vh = valorHora(f);
+      const desglosePago = desglosarPagoNomina(f, vh);
+      const pagoOrdinario = calcularSalarioBasePeriodo({
+        tarifaHora: f.tarifa_hora,
+        salarioBase: f.salario_base,
+        horasOrdinarias: f.horas_ordinarias,
+        valorHoraTrabajador: vh,
+        diasPeriodo: diasRango,
+      });
+      const total = redondear(
+        pagoOrdinario + desglosePago.pago_nocturno + desglosePago.pago_extra_diurno +
+        desglosePago.pago_extra_nocturno + desglosePago.pago_festivo
+      );
       costoNomina += total;
       return { trabajador_id: f.trabajador_id, nombre: f.nombre, apellido: f.apellido, total };
     });

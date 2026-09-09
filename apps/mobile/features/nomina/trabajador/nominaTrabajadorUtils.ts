@@ -5,7 +5,10 @@
  * - El salario base SIEMPRE se paga íntegro — no hay descuentos por jornadas cortas.
  * - Horas nocturnas (21:00–06:00): recargo +35 % sobre cada hora, independiente de extras.
  * - Horas extra se determinan semanalmente (Lun–Dom) contra el límite legal del año
- *   según Ley 2101: 2023→46h, 2024→44h, 2025→42h, 2026+→40h.
+ *   según Ley 2101 (reducción progresiva, corte 15 de julio de cada año):
+ *   48h hasta jul-2023, 47h 2023-2024, 46h 2024-2025, 44h 2025-2026, 42h desde jul-2026.
+ *   La ley se detiene en 42h — no baja más. Mismo valor que JORNADA_SEMANAL_HORAS
+ *   en el backend (constants.js), que ya usa 42 sin escalonar por año.
  * - Domingo o festivo trabajado genera automáticamente 1 día de descanso compensatorio
  *   (Art. 179 CST) — sin recargo económico adicional.
  */
@@ -25,18 +28,21 @@ const RECARGO_EXTRA = {
   FESTIVO:         0.75,  // +75 % por hora en festivo (salario ya cubre la base)
 } as const;
 
-// Límites semanales según Ley 2101 de 2021 (reducción progresiva)
-// ponytail: tabla fija hasta 2026+, no se espera nueva ley pronto — upgrade path: fetch from backend config
+// Límites semanales según Ley 2101 de 2021 (reducción progresiva, corte cada
+// 15 de julio). Se aproxima por año calendario (no por fecha exacta de corte)
+// — igual que el backend, que ya no escalona y usa 42h fijo (constants.js).
+// ponytail: tope final de la ley es 42h, no baja más — no hace falta seguir
+// agregando años — upgrade path: fetch from backend config si la ley cambia otra vez.
 const LIMITE_SEMANAL: Record<number, number> = {
-  2023: 46,
-  2024: 44,
-  2025: 42,
+  2023: 47,
+  2024: 46,
+  2025: 44,
 };
-const LIMITE_SEMANAL_MINIMO = 40; // 2026 en adelante
+const LIMITE_SEMANAL_FINAL = 42; // 2026 en adelante — tope final de la ley, no baja más.
 
 /** Límite legal de horas ordinarias semanales según el año (Ley 2101). */
 export function getJornadaLegalSemanal(year: number): number {
-  return LIMITE_SEMANAL[year] ?? (year >= 2026 ? LIMITE_SEMANAL_MINIMO : 46);
+  return LIMITE_SEMANAL[year] ?? (year >= 2026 ? LIMITE_SEMANAL_FINAL : 48);
 }
 
 // ── Tipos públicos ─────────────────────────────────────────────────────────

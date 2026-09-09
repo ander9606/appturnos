@@ -264,6 +264,33 @@ function valorHora(trabajador) {
 }
 
 /**
+ * Salario base de un trabajador para un período de nómina.
+ *
+ * Un trabajador con salario mensual asignado (`salario_base`) cobra su sueldo
+ * fijo COMPLETO cada período, prorrateado por días — nunca depende de cuántas
+ * `horas_ordinarias` haya marcado ese período (jornada corta no le descuenta
+ * el sueldo; eso se maneja aparte con descuentos manuales por inasistencia).
+ * Las horas extra/recargo se calculan por separado sobre las horas reales
+ * (ver desglosarPagoNomina) y se SUMAN a este salario base.
+ *
+ * Un trabajador por `tarifa_hora` (sin salario mensual) sigue cobrando por
+ * hora realmente ordinaria trabajada — no hay salario fijo que prorratear.
+ *
+ * @param {object} params
+ * @param {number|null} params.tarifaHora        trabajador.tarifa_hora
+ * @param {number|null} params.salarioBase       trabajador.salario_base (mensual)
+ * @param {number} params.horasOrdinarias        Solo se usa si es por tarifa_hora.
+ * @param {number} params.valorHoraTrabajador    Solo se usa si es por tarifa_hora.
+ * @param {number} params.diasPeriodo            Días calendario del período.
+ */
+function calcularSalarioBasePeriodo({ tarifaHora, salarioBase, horasOrdinarias, valorHoraTrabajador, diasPeriodo }) {
+  if (tarifaHora != null) {
+    return (Number(horasOrdinarias) || 0) * (Number(valorHoraTrabajador) || 0);
+  }
+  return (Number(salarioBase) || 0) / 30 * Number(diasPeriodo);
+}
+
+/**
  * Pago total de un desglose de horas aplicando los recargos de ley.
  * Las horas ordinarias se pagan a 1.0; el resto aplica su recargo.
  * @param {object} desglose  Campos horas_ordinarias, horas_extra_diurnas,
@@ -352,6 +379,7 @@ module.exports = {
   valorHora,
   calcularPagoNomina,
   desglosarPagoNomina,
+  calcularSalarioBasePeriodo,
   calcularDeducciones,
   calcularSubsidioTransporte,
 };

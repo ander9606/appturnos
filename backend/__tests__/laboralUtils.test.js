@@ -9,6 +9,7 @@ const {
   valorHora,
   calcularPagoNomina,
   desglosarPagoNomina,
+  calcularSalarioBasePeriodo,
 } = require('../utils/laboralUtils');
 
 // ── calcularPascua ────────────────────────────────────────────────────────────
@@ -358,5 +359,38 @@ describe('desglosarPagoNomina', () => {
     expect(d).toEqual({
       pago_ordinario: 0, pago_nocturno: 0, pago_extra_diurno: 0, pago_extra_nocturno: 0, pago_festivo: 0, total: 0,
     });
+  });
+});
+
+// ── calcularSalarioBasePeriodo ──────────────────────────────────────────────────
+
+describe('calcularSalarioBasePeriodo', () => {
+  test('asalariado: prorratea el salario mensual por días del período, sin importar las horas', () => {
+    // Quincena de 15 días, salario 2.150.000 → 2.150.000/30*15 = 1.075.000
+    const pago = calcularSalarioBasePeriodo({
+      tarifaHora: null, salarioBase: 2_150_000, horasOrdinarias: 5, valorHoraTrabajador: 8_958.33, diasPeriodo: 15,
+    });
+    expect(pago).toBeCloseTo(1_075_000, 0);
+  });
+
+  test('asalariado: el resultado no cambia aunque horas_ordinarias sea 0', () => {
+    const pago = calcularSalarioBasePeriodo({
+      tarifaHora: null, salarioBase: 2_150_000, horasOrdinarias: 0, valorHoraTrabajador: 8_958.33, diasPeriodo: 15,
+    });
+    expect(pago).toBeCloseTo(1_075_000, 0);
+  });
+
+  test('por tarifa_hora: paga horas_ordinarias × valor_hora, no prorratea salario', () => {
+    const pago = calcularSalarioBasePeriodo({
+      tarifaHora: 7_500, salarioBase: null, horasOrdinarias: 41.9, valorHoraTrabajador: 7_500, diasPeriodo: 15,
+    });
+    expect(pago).toBeCloseTo(314_250, 0);
+  });
+
+  test('sin tarifa_hora ni salario_base → 0', () => {
+    const pago = calcularSalarioBasePeriodo({
+      tarifaHora: null, salarioBase: null, horasOrdinarias: 10, valorHoraTrabajador: 0, diasPeriodo: 15,
+    });
+    expect(pago).toBe(0);
   });
 });

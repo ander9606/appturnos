@@ -59,6 +59,15 @@ export function PeriodoHeaderCard({
   const analisisHoy = registroHoy ? analizarDia(registroHoy, valorHora) : null;
   const mask = (v: string) => (visible ? v : '••••••');
 
+  // La liquidación real (misma que ve el gestor) es la fuente de verdad para el
+  // extra del PERÍODO — el estimado del cliente (resumen.valorExtraCOP) usa una
+  // fórmula distinta y puede no coincidir. Solo se usa como respaldo si todavía
+  // no llega la liquidación.
+  const pagoExtraPeriodo = miLiquidacion
+    ? Number(miLiquidacion.pago_nocturno) + Number(miLiquidacion.pago_extra_diurno) +
+      Number(miLiquidacion.pago_extra_nocturno) + Number(miLiquidacion.pago_festivo)
+    : resumen.valorExtraCOP;
+
   return (
     <View
       className="pt-4 pb-6 px-6 rounded-b-[28px] gap-3"
@@ -104,10 +113,10 @@ export function PeriodoHeaderCard({
           )}
         </View>
 
-        {resumen.valorExtraCOP > 0 && (
+        {pagoExtraPeriodo > 0 && (
           <View className="bg-white/25 rounded-xl px-2.5 py-1.5 gap-0.5 items-center">
             <Text className="text-white text-sm font-extrabold">
-              +{mask(formatCOP(resumen.valorExtraCOP))}
+              +{mask(formatCOP(pagoExtraPeriodo))}
             </Text>
             <Text className="text-white/70 text-[9px]">Extra período</Text>
           </View>

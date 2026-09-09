@@ -66,6 +66,13 @@ export function ResumenCards({
   const tieneDeduccionLegal = tipoContrato === 'laboral' && miLiquidacion && miLiquidacion.neto !== miLiquidacion.total;
   const tieneDescuentos = tieneDeduccionLegal || pendientes.length > 0 || rechazados.length > 0;
 
+  // Misma fuente de verdad que ve el gestor — reemplaza el estimado del cliente
+  // (resumen.valorExtraCOP, fórmula distinta) apenas llega la liquidación real.
+  const pagoExtraPeriodo = miLiquidacion
+    ? Number(miLiquidacion.pago_nocturno) + Number(miLiquidacion.pago_extra_diurno) +
+      Number(miLiquidacion.pago_extra_nocturno) + Number(miLiquidacion.pago_festivo)
+    : resumen.valorExtraCOP;
+
   const handleResponder = async (id: number, aceptar: boolean) => {
     if (!aceptar) {
       const ok = await new Promise<boolean>((resolve) =>
@@ -97,8 +104,8 @@ export function ResumenCards({
       <View className="flex-row gap-2">
         <StatCard
           label="Extra período"
-          value={resumen.valorExtraCOP > 0 ? `+${formatCOP(resumen.valorExtraCOP)}` : '$0'}
-          valueClass={resumen.valorExtraCOP > 0 ? 'text-success' : 'text-muted-foreground'}
+          value={pagoExtraPeriodo > 0 ? `+${formatCOP(pagoExtraPeriodo)}` : '$0'}
+          valueClass={pagoExtraPeriodo > 0 ? 'text-success' : 'text-muted-foreground'}
         />
         <StatCard
           label="Días regist."
@@ -272,32 +279,76 @@ export function ResumenCards({
                 </View>
               )}
 
-              {/* Horas con recargo por tipo */}
-              {tieneExtras && (
-                <View className="bg-primary-50 rounded-xl px-3 py-3 gap-1.5">
-                  <Text className="text-xs font-semibold text-primary-600">
-                    Horas con recargo acumuladas
+              {/* Salario base resaltado — para que quede claro qué es fijo y qué es extra */}
+              {miLiquidacion && Number(miLiquidacion.pago_ordinario) > 0 && (
+                <View className="bg-muted rounded-xl px-3 py-3">
+                  <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                    Salario base
                   </Text>
-                  <View className="flex-row flex-wrap gap-x-4 gap-y-2">
-                    {resumen.horasExtraDiurnas > 0 && (
-                      <HoraChip label="Extra diurna" horas={resumen.horasExtraDiurnas} color={HOUR_TYPE_COLORS.extraDiurna} />
+                  <View className="flex-row items-center justify-between gap-2">
+                    <Text className="text-xs text-muted-foreground flex-1">
+                      {Number(miLiquidacion.horas_ordinarias).toFixed(1)}h ordinarias × {formatCOP(miLiquidacion.valor_hora)}
+                    </Text>
+                    <Text className="text-base font-bold text-foreground">
+                      {formatCOP(miLiquidacion.pago_ordinario)}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Horas con recargo por tipo — en pesos cuando ya llegó la liquidación real */}
+              {tieneExtras && (
+                miLiquidacion ? (
+                  <View className="bg-warning-light rounded-xl px-3 py-3 gap-1.5">
+                    <Text className="text-xs font-semibold text-warning uppercase tracking-wide">
+                      ⚡ Horas extra y recargos
+                    </Text>
+                    {Number(miLiquidacion.horas_nocturnas) > 0 && (
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas (+35%)`} valor={Number(miLiquidacion.pago_nocturno)} />
                     )}
-                    {resumen.horasExtraNocturnas > 0 && (
-                      <HoraChip label="Extra noct." horas={resumen.horasExtraNocturnas} color={HOUR_TYPE_COLORS.extraNocturna} />
+                    {Number(miLiquidacion.horas_extra_diurnas) > 0 && (
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna (+25%)`} valor={Number(miLiquidacion.pago_extra_diurno)} />
                     )}
-                    {resumen.horasNocturnas > 0 && (
-                      <HoraChip label="Nocturnas" horas={resumen.horasNocturnas} color={HOUR_TYPE_COLORS.nocturna} />
+                    {Number(miLiquidacion.horas_extra_nocturnas) > 0 && (
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna (+75%)`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
                     )}
-                    {resumen.horasFestivo > 0 && (
-                      <HoraChip label="Festivo" horas={resumen.horasFestivo} color={HOUR_TYPE_COLORS.festivo} />
+                    {Number(miLiquidacion.horas_festivo) > 0 && (
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical (+75%)`} valor={Number(miLiquidacion.pago_festivo)} />
+                    )}
+                    <View className="border-t border-warning/30 my-0.5" />
+                    <View className="flex-row items-center justify-between">
+                      <Text className="text-xs font-semibold text-warning">Subtotal extra</Text>
+                      <Text className="text-sm font-bold text-warning">+{formatCOP(pagoExtraPeriodo)}</Text>
+                    </View>
+                  </View>
+                ) : null
+              )}
+
+              {!miLiquidacion && tieneExtras && (
+                  <View className="bg-primary-50 rounded-xl px-3 py-3 gap-1.5">
+                    <Text className="text-xs font-semibold text-primary-600">
+                      Horas con recargo acumuladas
+                    </Text>
+                    <View className="flex-row flex-wrap gap-x-4 gap-y-2">
+                      {resumen.horasExtraDiurnas > 0 && (
+                        <HoraChip label="Extra diurna" horas={resumen.horasExtraDiurnas} color={HOUR_TYPE_COLORS.extraDiurna} />
+                      )}
+                      {resumen.horasExtraNocturnas > 0 && (
+                        <HoraChip label="Extra noct." horas={resumen.horasExtraNocturnas} color={HOUR_TYPE_COLORS.extraNocturna} />
+                      )}
+                      {resumen.horasNocturnas > 0 && (
+                        <HoraChip label="Nocturnas" horas={resumen.horasNocturnas} color={HOUR_TYPE_COLORS.nocturna} />
+                      )}
+                      {resumen.horasFestivo > 0 && (
+                        <HoraChip label="Festivo" horas={resumen.horasFestivo} color={HOUR_TYPE_COLORS.festivo} />
+                      )}
+                    </View>
+                    {resumen.valorExtraCOP > 0 && (
+                      <Text className="text-xs font-semibold text-success mt-0.5">
+                        Total adicional: +{formatCOP(resumen.valorExtraCOP)}
+                      </Text>
                     )}
                   </View>
-                  {resumen.valorExtraCOP > 0 && (
-                    <Text className="text-xs font-semibold text-success mt-0.5">
-                      Total adicional: +{formatCOP(resumen.valorExtraCOP)}
-                    </Text>
-                  )}
-                </View>
               )}
             </View>
           )}
@@ -346,6 +397,15 @@ function StatCard({ label, value, valueClass }: { label: string; value: string; 
     >
       <Text className={`text-base font-extrabold ${valueClass}`}>{value}</Text>
       <Text className="text-[10px] text-muted-foreground">{label}</Text>
+    </View>
+  );
+}
+
+function FilaConcepto({ label, valor }: { label: string; valor: number }) {
+  return (
+    <View className="flex-row items-center justify-between gap-2">
+      <Text className="text-xs text-amber-700 flex-1">{label}</Text>
+      <Text className="text-xs font-semibold text-amber-700">{formatCOP(valor)}</Text>
     </View>
   );
 }

@@ -7,7 +7,7 @@ const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const DescuentosModel = require('../descuentos/descuentos.model');
 const AppError = require('../../../utils/AppError');
 const { ROLES, HORAS_MES_NOMINA } = require('../../../config/constants');
-const { valorHora, desglosarPagoNomina, calcularDeducciones, calcularSubsidioTransporte } = require('../../../utils/laboralUtils');
+const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, calcularDeducciones, calcularSubsidioTransporte } = require('../../../utils/laboralUtils');
 
 function redondear(n) {
   return Math.round(n * 100) / 100;
@@ -45,7 +45,7 @@ const LiquidacionService = {
       descuentosPorTrabajador.set(d.trabajador_id, lista);
     }
 
-    // Salario mínimo proporcional al período (salario_base es mensual / 30 días conv.)
+    // Días del período — usado para prorratear el salario mensual (salario_base / 30 días conv.)
     const diasPeriodo = Math.round(
       (new Date(periodo.fecha_fin + 'T12:00:00Z') - new Date(periodo.fecha_inicio + 'T12:00:00Z')) / 86_400_000
     ) + 1;
@@ -64,12 +64,27 @@ const LiquidacionService = {
         ? Number(f.valor_hora_snapshot)
         : valorHora(f);
       const desglosePago = desglosarPagoNomina(desglose, vh);
-      const pagoPorHoras = redondear(desglosePago.total);
 
-      // Garantía: el trabajador no puede ganar menos que su salario proporcional al período.
-      const salarioMinPeriodo = redondear(Number(f.salario_base) / 30 * diasPeriodo);
-      const ajusteMinimo      = Math.max(0, redondear(salarioMinPeriodo - pagoPorHoras));
-      const total             = redondear(pagoPorHoras + ajusteMinimo);
+      // Asalariado (salario_base): el sueldo fijo se paga íntegro, prorrateado
+      // por días del período — no depende de horas_ordinarias registradas.
+      // Por tarifa_hora: sigue siendo horas_ordinarias × valor_hora.
+      // Si el período ya cerró, usa el salario congelado (igual que vh arriba)
+      // — un cambio de sueldo posterior no debe recalcular períodos pasados.
+      const salarioBase = f.salario_base_snapshot != null
+        ? Number(f.salario_base_snapshot)
+        : f.salario_base;
+      const pagoOrdinario = redondear(calcularSalarioBasePeriodo({
+        tarifaHora: f.tarifa_hora,
+        salarioBase,
+        horasOrdinarias: desglose.horas_ordinarias,
+        valorHoraTrabajador: vh,
+        diasPeriodo,
+      }));
+      const pagoNocturno      = redondear(desglosePago.pago_nocturno);
+      const pagoExtraDiurno   = redondear(desglosePago.pago_extra_diurno);
+      const pagoExtraNocturno = redondear(desglosePago.pago_extra_nocturno);
+      const pagoFestivo       = redondear(desglosePago.pago_festivo);
+      const total = redondear(pagoOrdinario + pagoNocturno + pagoExtraDiurno + pagoExtraNocturno + pagoFestivo);
 
       // Descuentos de ley: solo si la empresa contrata por nómina laboral.
       // Prestación de servicios se autoliquida — no calculamos ese descuento aquí.
@@ -101,14 +116,11 @@ const LiquidacionService = {
         dias_registrados: f.dias_registrados,
         ...desglose,
         valor_hora: redondear(vh),
-        pago_ordinario: redondear(desglosePago.pago_ordinario),
-        pago_nocturno: redondear(desglosePago.pago_nocturno),
-        pago_extra_diurno: redondear(desglosePago.pago_extra_diurno),
-        pago_extra_nocturno: redondear(desglosePago.pago_extra_nocturno),
-        pago_festivo: redondear(desglosePago.pago_festivo),
-        pago_por_horas: pagoPorHoras,
-        salario_minimo_periodo: salarioMinPeriodo,
-        ajuste_minimo: ajusteMinimo,
+        pago_ordinario: pagoOrdinario,
+        pago_nocturno: pagoNocturno,
+        pago_extra_diurno: pagoExtraDiurno,
+        pago_extra_nocturno: pagoExtraNocturno,
+        pago_festivo: pagoFestivo,
         total,
         descuento_salud: redondear(deducciones.salud),
         descuento_pension: redondear(deducciones.pension),

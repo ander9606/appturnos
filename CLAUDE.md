@@ -188,7 +188,7 @@ React Hook Form v7 + Zod v3 + `@hookform/resolvers`. Define schemas in a co-loca
 `lib/geo.ts` — `haversineMeters()` + `getGeofenceStatus()`. The client blocks the "Marcar ingreso" button for UX; the backend re-validates lat/lng on the ingreso endpoint for security. Geofence radius default: 100 m.
 
 ### Dual-Role Nómina Screen
-`app/(tabs)/nomina.tsx` renders `NominaTrabajadorView` or `NominaGestorView` based on role. Workers see their own `registros_diarios` aggregated client-side (`calcularResumenHoras()`); they do not have access to the liquidation endpoint (returns 403).
+`app/(tabs)/nomina.tsx` renders `NominaTrabajadorView` or `NominaGestorView` based on role. Workers see their own `registros_diarios` aggregated client-side (`calcularResumenHoras()`) for day-to-day/weekly estimates, but `trabajador_nomina` can also call the liquidación endpoint — the service filters the result to their own line only. Use the liquidación fields (`pago_ordinario`, `pago_nocturno`, `pago_extra_diurno`, `pago_extra_nocturno`, `pago_festivo`, `ajuste_minimo`, `total`, `neto`) as the source of truth for period-level totals; the client-side estimate can diverge (different formula, no salario-mínimo floor).
 
 ### i18n
 Single locale `es-CO`. All user-visible strings go through `t('key')` from `lib/i18n`. Strings are in `lib/i18n/es-CO.json`.

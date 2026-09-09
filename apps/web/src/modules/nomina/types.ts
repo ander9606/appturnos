@@ -61,15 +61,17 @@ export interface LiquidacionLinea {
   horas_nocturnas: number;
   horas_festivo: number;
   valor_hora: number;
-  /** Pesos por concepto — ya con el recargo de ley aplicado, suman pago_por_horas. */
+  /**
+   * Pesos por concepto, ya con el recargo de ley aplicado, suman `total`.
+   * `pago_ordinario` es el salario mensual prorrateado al período si el
+   * trabajador tiene `salario_base` (siempre completo, no depende de
+   * horas_ordinarias); si es por `tarifa_hora`, es horas_ordinarias × tarifa.
+   */
   pago_ordinario: number;
   pago_nocturno: number;
   pago_extra_diurno: number;
   pago_extra_nocturno: number;
   pago_festivo: number;
-  pago_por_horas: number;
-  salario_minimo_periodo: number;
-  ajuste_minimo: number;
   total: number;
   /** Descuento de salud (4% del total). 0 si la empresa es prestación de servicios. */
   descuento_salud: number;

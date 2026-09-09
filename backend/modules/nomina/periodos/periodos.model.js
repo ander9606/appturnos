@@ -150,8 +150,11 @@ const PeriodosModel = {
         [cerradoPor, periodoId, empresaId],
       );
 
-      // 2. Congelar valor_hora en todos los registros del período.
+      // 2. Congelar valor_hora y salario_base en todos los registros del período.
       //    240 = HORAS_MES_NOMINA (30 días × 8 h, ley laboral colombiana).
+      //    salario_base_snapshot: si el jefe sube/baja el sueldo después de
+      //    cerrar, la liquidación de este período no debe recalcularse con el
+      //    valor nuevo — solo el próximo período abierto lo usa.
       await conn.query(
         `UPDATE registros_diarios r
          JOIN  trabajadores t ON t.id = r.trabajador_id
@@ -159,7 +162,8 @@ const PeriodosModel = {
                  WHEN t.tarifa_hora  IS NOT NULL THEN t.tarifa_hora
                  WHEN t.salario_base IS NOT NULL THEN t.salario_base / 240
                  ELSE 0
-               END
+               END,
+               r.salario_base_snapshot = t.salario_base
          WHERE r.periodo_id = ? AND r.empresa_id = ?`,
         [periodoId, empresaId],
       );
