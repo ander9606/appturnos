@@ -112,11 +112,25 @@ export function usePostulacionesPendientes(opts: { enabled?: boolean } = {}) {
   });
 }
 
-/** Asignaciones ya confirmadas de toda la empresa — pestaña "Confirmados" del inbox. */
+/** Asignaciones ya confirmadas de toda la empresa — pestaña "Aceptados" del inbox. */
 export function useAsignacionesConfirmadas(opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: QUERY_KEYS.asignaciones({ estado: 'confirmado' }),
     queryFn:  () => turnosApi.listarAsignaciones({ estado: 'confirmado', limit: 200 }),
+    staleTime: 30_000,
+    enabled:  opts.enabled ?? true,
+  });
+}
+
+/**
+ * Postulaciones rechazadas de toda la empresa — pestaña "Rechazados" del inbox.
+ * Rechazar deja estado='cancelado' (mismo estado que cancelar un confirmado);
+ * se distingue por rechazado_por, filtrado client-side en el consumidor.
+ */
+export function useAsignacionesRechazadas(opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ estado: 'cancelado', origen: 'rechazo' }),
+    queryFn:  () => turnosApi.listarAsignaciones({ estado: 'cancelado', limit: 200 }),
     staleTime: 30_000,
     enabled:  opts.enabled ?? true,
   });

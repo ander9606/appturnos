@@ -402,7 +402,8 @@ const AsignacionesModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT a.*, o.titulo AS oferta_titulo, o.fecha AS oferta_fecha, o.hora_inicio,
+      `SELECT a.*, o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              o.fecha AS oferta_fecha, o.hora_inicio,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre
        FROM asignaciones_turno a

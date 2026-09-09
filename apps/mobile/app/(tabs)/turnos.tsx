@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
-import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes } from '@/features/turnos/useTurnos';
+import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes, useLiquidacionTurnos } from '@/features/turnos/useTurnos';
 import { usePeriodosEventual } from '@/features/turnos/useTurnosEventual';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
@@ -95,6 +95,14 @@ export default function TurnosScreen() {
   const { data: periodosEventual } = usePeriodosEventual(isNomina);
   const periodoEventual = periodosEventual?.nomina;
   const pendientesCount = pendientesResp?.data?.length ?? 0;
+
+  // Saldo a pagar del mes en curso — solo para quien gestiona pagos de turnos.
+  const inicioMes = `${today.slice(0, 7)}-01`;
+  const { data: liquidacionMes } = useLiquidacionTurnos(
+    { fecha_inicio: inicioMes, fecha_fin: today },
+    { enabled: isGestor && !isJefeNomina },
+  );
+  const totalAPagarMes = (liquidacionMes ?? []).reduce((s, w) => s + w.pago_total, 0);
 
   // Backend excluye 'nomina' de GET /ofertas.
   const {
@@ -349,68 +357,58 @@ export default function TurnosScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
-        <Text className="text-xl font-bold text-foreground">
-          {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
-        </Text>
-        {isGestor && (
-          <View className="flex-row items-center gap-1 pb-2">
+      <View className="bg-card px-6 pt-3 pb-2 border-b border-border">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-xl font-bold text-foreground">
+            {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
+          </Text>
+          {(isGestor || isWorker) && (
             <TouchableOpacity
               onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
               accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
-              className="p-3 active:opacity-60"
+              className="p-2 -mr-2 active:opacity-60"
             >
-              <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={24} color={theme.primary} />
+              <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={22} color={theme.primary} />
             </TouchableOpacity>
-            {!isJefeNomina && (
-              <TouchableOpacity
-                onPress={() => router.push('/liquidacion-turnos')}
-                accessibilityLabel="Liquidación de turnos"
-                className="p-3 active:opacity-60"
+          )}
+        </View>
+
+        {/* Saldo a pagar del mes + postulantes pendientes — igual patrón que Nómina */}
+        {isGestor && !isJefeNomina && (
+          <View className="flex-row gap-2 mt-2.5">
+            <TouchableOpacity
+              onPress={() => router.push('/liquidacion-turnos')}
+              activeOpacity={0.8}
+              className="flex-1 flex-row items-center justify-between rounded-2xl px-4 py-2.5"
+              style={{ backgroundColor: theme.primary + '15' }}
+            >
+              <View>
+                <Text className="text-[11px] font-medium" style={{ color: theme.primary }}>
+                  Total a pagar este mes
+                </Text>
+                <Text className="text-base font-extrabold" style={{ color: theme.primary }}>
+                  ${totalAPagarMes.toLocaleString('es-CO')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/postulaciones')}
+              activeOpacity={0.8}
+              accessibilityLabel="Ver postulaciones"
+              className="items-center justify-center rounded-2xl"
+              style={{ backgroundColor: pendientesCount > 0 ? '#FEF3C7' : '#F1F5F9', minWidth: 68, paddingHorizontal: 12 }}
+            >
+              <Ionicons name="people" size={18} color={pendientesCount > 0 ? '#D97706' : '#64748B'} />
+              <Text
+                className="text-[10px] font-bold mt-0.5"
+                style={{ color: pendientesCount > 0 ? '#D97706' : '#64748B' }}
               >
-                <Ionicons name="cash-outline" size={26} color={theme.primary} />
-              </TouchableOpacity>
-            )}
-            {!isJefeNomina && (
-              <TouchableOpacity
-                onPress={() => router.push('/postulaciones')}
-                accessibilityLabel="Ver postulaciones"
-                className="p-3 active:opacity-60"
-                style={{ position: 'relative' }}
-              >
-                <Ionicons name="people" size={26} color={theme.primary} />
-                {pendientesCount > 0 && (
-                  <View style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    minWidth: 16,
-                    height: 16,
-                    borderRadius: 8,
-                    backgroundColor: '#EF4444',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingHorizontal: 3,
-                    borderWidth: 1.5,
-                    borderColor: '#fff',
-                  }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700', lineHeight: 12 }}>
-                      {pendientesCount > 99 ? '99+' : pendientesCount}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
+                {pendientesCount > 0 ? `${pendientesCount} pend.` : 'Al día'}
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
-        {isWorker && (
-          <TouchableOpacity
-            onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
-            accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
-            className="p-3 mb-2 active:opacity-60"
-          >
-            <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={24} color={theme.primary} />
-          </TouchableOpacity>
         )}
       </View>
 
@@ -429,8 +427,8 @@ export default function TurnosScreen() {
       {isGestor ? (
         <View className="flex-1">
           {viewMode === 'mes' ? (
-            <View className="flex-1 px-5 pt-4">
-              <View className="flex-row items-center gap-3 mb-4">
+            <View className="flex-1 px-5 pt-3">
+              <View className="flex-row items-center gap-3 mb-3">
                 <TouchableOpacity
                   onPress={() => setMesCursor(c => shiftMonth(c, -1))}
                   className="w-8 h-8 items-center justify-center rounded-lg border border-border"
@@ -507,8 +505,8 @@ export default function TurnosScreen() {
       ) : (
         <>
         {viewMode === 'mes' ? (
-          <View className="flex-1 px-5 pt-4">
-            <View className="flex-row items-center gap-3 mb-4">
+          <View className="flex-1 px-5 pt-3">
+            <View className="flex-row items-center gap-3 mb-3">
               <TouchableOpacity
                 onPress={() => setMesCursor(c => shiftMonth(c, -1))}
                 className="w-8 h-8 items-center justify-center rounded-lg border border-border"

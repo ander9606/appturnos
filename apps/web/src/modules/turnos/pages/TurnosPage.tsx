@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, ChevronRight, XCircle } from 'lucide-react';
+import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes } from '../hooks/useTurnos';
-import type { EstadoOferta, Oferta, VisibilidadOferta } from '../types';
+import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes, useLiquidacionTurnos } from '../hooks/useTurnos';
+import type { EstadoOferta, Oferta, VisibilidadOferta, LiquidacionTurnosTrabajador } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { StatCard } from '@/shared/components/StatCard';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
 import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
-import { fmtDate, bogotaToday } from '@/shared/lib/format';
+import { fmtDate, fmtCOP, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -59,17 +60,13 @@ export function TurnosPage() {
   }
   const totalPendientes = pendientesData?.data?.pagination?.total ?? 0;
 
+  const { data: liqData } = useLiquidacionTurnos({ fecha_inicio: inicioMesActual(), fecha_fin: today });
+  const totalAPagarMes = (liqData?.data ?? []).reduce((s: number, w: LiquidacionTurnosTrabajador) => s + Number(w.pago_total), 0);
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-foreground">Turnos</h1>
-          {totalPendientes > 0 && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-warning-light text-warning">
-              {totalPendientes} postulante{totalPendientes !== 1 ? 's' : ''} esperando revisión
-            </span>
-          )}
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-foreground">Turnos</h1>
         {vista === 'ofertas' && (
           <button
             onClick={() => setShowCrear(true)}
@@ -95,6 +92,24 @@ export function TurnosPage() {
           </button>
         ))}
       </div>
+
+      {vista === 'ofertas' && (
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <StatCard
+            label="Total a pagar este mes"
+            value={fmtCOP(totalAPagarMes)}
+            icon={DollarSign}
+            color="default"
+            onClick={() => setVista('pagos')}
+          />
+          <StatCard
+            label={totalPendientes > 0 ? `${totalPendientes} postulante${totalPendientes !== 1 ? 's' : ''} esperando revisión` : 'Postulaciones al día'}
+            value={totalPendientes}
+            icon={totalPendientes > 0 ? AlertTriangle : Users}
+            color={totalPendientes > 0 ? 'warning' : 'success'}
+          />
+        </div>
+      )}
 
       {vista === 'pagos' ? (
         <LiquidacionTurnosView />
