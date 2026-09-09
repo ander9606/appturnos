@@ -401,10 +401,10 @@ export default function TrabajadorDetailScreen() {
   // Los trabajadores 'turnos' no tienen tarifa fija: cobran por turno aceptado (tarifa_dia de la oferta).
   const salarioLabel = t.tipo === 'turnos'
     ? 'Por turno aceptado'
-    : t.tarifa_hora != null
-    ? `$${Number(t.tarifa_hora).toLocaleString('es-CO')} / hora`
     : t.salario_base != null
     ? `$${Number(t.salario_base).toLocaleString('es-CO')} / mes`
+    : t.tarifa_hora != null
+    ? `$${Number(t.tarifa_hora).toLocaleString('es-CO')} / hora`
     : 'Sin configurar';
 
   return (

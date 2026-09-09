@@ -253,13 +253,15 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
 
 /**
  * Valor de la hora ordinaria de un trabajador.
- * Usa `tarifa_hora` si está definida; si no, lo deriva del salario mensual.
+ * Usa `salario_base` (÷240) si está definido; si no, cae a `tarifa_hora`.
+ * Un trabajador solo debería tener uno de los dos, pero si por error quedan
+ * ambos cargados, el salario mensual manda — es el dato "de contrato".
  */
 function valorHora(trabajador) {
-  if (trabajador.tarifa_hora != null) return Number(trabajador.tarifa_hora);
   if (trabajador.salario_base != null) {
     return Number(trabajador.salario_base) / HORAS_MES_NOMINA;
   }
+  if (trabajador.tarifa_hora != null) return Number(trabajador.tarifa_hora);
   return 0;
 }
 
@@ -275,19 +277,21 @@ function valorHora(trabajador) {
  *
  * Un trabajador por `tarifa_hora` (sin salario mensual) sigue cobrando por
  * hora realmente ordinaria trabajada — no hay salario fijo que prorratear.
+ * Si por error quedan ambos campos cargados, `salario_base` manda (igual
+ * que en `valorHora`) — evita que una tarifa vieja/residual le baje el sueldo
+ * fijo a alguien que ya pasó a nómina mensual.
  *
  * @param {object} params
- * @param {number|null} params.tarifaHora        trabajador.tarifa_hora
  * @param {number|null} params.salarioBase       trabajador.salario_base (mensual)
  * @param {number} params.horasOrdinarias        Solo se usa si es por tarifa_hora.
  * @param {number} params.valorHoraTrabajador    Solo se usa si es por tarifa_hora.
  * @param {number} params.diasPeriodo            Días calendario del período.
  */
-function calcularSalarioBasePeriodo({ tarifaHora, salarioBase, horasOrdinarias, valorHoraTrabajador, diasPeriodo }) {
-  if (tarifaHora != null) {
-    return (Number(horasOrdinarias) || 0) * (Number(valorHoraTrabajador) || 0);
+function calcularSalarioBasePeriodo({ salarioBase, horasOrdinarias, valorHoraTrabajador, diasPeriodo }) {
+  if (salarioBase != null) {
+    return (Number(salarioBase) || 0) / 30 * Number(diasPeriodo);
   }
-  return (Number(salarioBase) || 0) / 30 * Number(diasPeriodo);
+  return (Number(horasOrdinarias) || 0) * (Number(valorHoraTrabajador) || 0);
 }
 
 /**

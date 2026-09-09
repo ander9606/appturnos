@@ -222,8 +222,9 @@ describe('valorHora', () => {
     expect(valorHora({ salario_base: 2_400_000 })).toBe(10_000);
   });
 
-  test('tarifa_hora tiene prioridad sobre salario_base', () => {
-    expect(valorHora({ tarifa_hora: 15000, salario_base: 2_400_000 })).toBe(15000);
+  test('salario_base tiene prioridad sobre tarifa_hora', () => {
+    // 2_400_000 / 240 = 10_000, no los 15_000 de tarifa_hora
+    expect(valorHora({ tarifa_hora: 15000, salario_base: 2_400_000 })).toBe(10_000);
   });
 
   test('sin salario → 0', () => {
@@ -385,6 +386,14 @@ describe('calcularSalarioBasePeriodo', () => {
       tarifaHora: 7_500, salarioBase: null, horasOrdinarias: 41.9, valorHoraTrabajador: 7_500, diasPeriodo: 15,
     });
     expect(pago).toBeCloseTo(314_250, 0);
+  });
+
+  test('ambos definidos → salario_base tiene prioridad, ignora tarifa_hora', () => {
+    // Igual que arriba pero con salarioBase cargado: debe prorratear, no pagar por horas.
+    const pago = calcularSalarioBasePeriodo({
+      tarifaHora: 7_500, salarioBase: 2_150_000, horasOrdinarias: 41.9, valorHoraTrabajador: 7_500, diasPeriodo: 15,
+    });
+    expect(pago).toBeCloseTo(1_075_000, 0);
   });
 
   test('sin tarifa_hora ni salario_base → 0', () => {

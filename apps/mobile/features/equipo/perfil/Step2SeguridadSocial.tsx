@@ -124,7 +124,7 @@ export function Step2SeguridadSocial({ data, onChange, onBack, onNext }: Props) 
           <View className="flex-1 h-px bg-border" />
         </View>
         <Text className="text-xs text-muted-foreground -mt-2">
-          Solo uno es necesario. Tarifa/hora tiene prioridad sobre salario mensual.
+          Solo uno es necesario. Salario mensual tiene prioridad sobre tarifa/hora.
         </Text>
         <Input
           label="Tarifa por hora (COP)"

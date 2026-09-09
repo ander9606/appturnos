@@ -30,10 +30,10 @@ export function TrabajadorCard({ trabajador: t, onPress }: Props) {
   // Los trabajadores 'turnos' no tienen tarifa fija: cobran por turno aceptado (tarifa_dia de la oferta).
   const salarioLabel = tipo === 'turnos'
     ? null
-    : tarifa_hora != null
-    ? `$${Number(tarifa_hora).toLocaleString('es-CO')} / h`
     : salario_base != null
     ? `$${Number(salario_base).toLocaleString('es-CO')} / mes`
+    : tarifa_hora != null
+    ? `$${Number(tarifa_hora).toLocaleString('es-CO')} / h`
     : null;
 
   return (

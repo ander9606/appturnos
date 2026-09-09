@@ -37,9 +37,8 @@ function fmtCOP(n: number | null) {
   return n === null ? '—' : fmtCOPBase(n);
 }
 
-/** Igual fórmula que `valorHora()` en backend/utils/laboralUtils.js, pero en reversa:
- *  si no hay tarifa_hora explícita, se deriva del salario mensual (÷240) — acá hacemos
- *  el camino inverso para mostrar el mensual aunque solo se haya cargado tarifa_hora. */
+/** Misma prioridad que `valorHora()` en backend/utils/laboralUtils.js: salario_base
+ *  manda si está definido; si no, se deriva del mensual equivalente a tarifa_hora × 240. */
 const HORAS_MES_NOMINA = 240;
 function salarioMensual(t: Trabajador): number | null {
   if (t.salario_base != null) return t.salario_base;
