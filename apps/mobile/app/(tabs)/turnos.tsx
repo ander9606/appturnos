@@ -96,6 +96,15 @@ export default function TurnosScreen() {
   const periodoEventual = periodosEventual?.nomina;
   const pendientesCount = pendientesResp?.data?.length ?? 0;
 
+  /** Postulantes pendientes por oferta — para resaltar en el calendario del gestor. */
+  const pendientesPorOferta = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const a of pendientesResp?.data ?? []) {
+      map.set(a.oferta_id, (map.get(a.oferta_id) ?? 0) + 1);
+    }
+    return map;
+  }, [pendientesResp]);
+
   // Saldo a pagar del mes en curso — solo para quien gestiona pagos de turnos.
   const inicioMes = `${today.slice(0, 7)}-01`;
   const { data: liquidacionMes } = useLiquidacionTurnos(
@@ -461,7 +470,7 @@ export default function TurnosScreen() {
                           <View
                             key={o.id}
                             className="w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: o.estado === 'completada' ? '#059669' : o.estado === 'cancelada' ? '#EF4444' : theme.primary }}
+                            style={{ backgroundColor: colorOferta(o, pendientesPorOferta, today, theme.primary) }}
                           />
                         ))}
                       </View>
@@ -469,6 +478,14 @@ export default function TurnosScreen() {
                   }}
                 />
               )}
+
+              <View className="flex-row items-center gap-x-3 gap-y-1.5 justify-center mt-3 flex-wrap">
+                <LeyendaPunto color={CAL_COLOR.borrador} label="Borrador" />
+                <LeyendaPunto color={theme.primary} label="Publicada" />
+                <LeyendaPunto color={CAL_COLOR.urgente} label="Necesita atención" />
+                <LeyendaPunto color={CAL_COLOR.completada} label="Completada" />
+                <LeyendaPunto color={CAL_COLOR.cancelada} label="Cancelada" />
+              </View>
             </View>
           ) : (
             <GestorTurnosView
@@ -532,12 +549,19 @@ export default function TurnosScreen() {
                 onDayPress={(day: CalendarDay) => { setSelectedDate(day.date); setViewMode('lista'); }}
                 renderDay={(day: CalendarDay) => {
                   const mios = misTurnosPorDiaMes.get(day.date) ?? [];
+                  // Naranja sólido solo si ya está aceptado (confirmado/en curso/completado) —
+                  // una postulación pendiente todavía no es un turno asegurado.
+                  const aceptados  = mios.filter(a => a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado');
+                  const pendientes = mios.filter(a => a.estado === 'pendiente');
                   const disponibles = (ofertasPorDiaMes.get(day.date) ?? []).filter(o => !aplicadosIds.has(o.id));
-                  if (mios.length === 0 && disponibles.length === 0) return null;
+                  if (aceptados.length === 0 && pendientes.length === 0 && disponibles.length === 0) return null;
                   return (
                     <View className="flex-row flex-wrap gap-0.5">
-                      {mios.slice(0, 3).map(a => (
-                        <View key={`m${a.id}`} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }} />
+                      {aceptados.slice(0, 3).map(a => (
+                        <View key={`a${a.id}`} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }} />
+                      ))}
+                      {pendientes.slice(0, 2).map(a => (
+                        <View key={`p${a.id}`} className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: theme.primary }} />
                       ))}
                       {disponibles.slice(0, 3).map(o => (
                         <View key={`d${o.id}`} className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: '#3B82F6' }} />
@@ -548,10 +572,14 @@ export default function TurnosScreen() {
               />
             )}
 
-            <View className="flex-row items-center gap-4 justify-center mt-4">
+            <View className="flex-row items-center gap-4 justify-center mt-4 flex-wrap">
               <View className="flex-row items-center gap-1.5">
                 <View className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primary }} />
-                <Text className="text-xs text-muted-foreground">Mis turnos</Text>
+                <Text className="text-xs text-muted-foreground">Aceptado</Text>
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <View className="w-2 h-2 rounded-full border" style={{ borderColor: theme.primary }} />
+                <Text className="text-xs text-muted-foreground">Postulación pendiente</Text>
               </View>
               <View className="flex-row items-center gap-1.5">
                 <View className="w-2 h-2 rounded-full border" style={{ borderColor: '#3B82F6' }} />
@@ -744,4 +772,42 @@ function turnosSolapan(oferta: Oferta, confirmados: Asignacion[]): boolean {
     const aFin = a.hora_fin_estimada ?? '23:59:59';
     return a.hora_inicio < ofFin && aFin > oferta.hora_inicio;
   });
+}
+
+const CAL_COLOR = {
+  borrador:   '#94A3B8', // gris — no publicada, no requiere acción
+  urgente:    '#F59E0B', // ámbar — puestos sin cubrir cerca de la fecha, o postulantes sin revisar
+  completada: '#059669', // verde
+  cancelada:  '#EF4444', // rojo
+  // Naranja (activa, sin urgencia) usa `primary` del theme — es el acento del módulo Turnos.
+};
+
+/**
+ * Color del punto de calendario del gestor para una oferta.
+ * "Completada con incidencia" (no_presentado/sospechoso) queda fuera a propósito:
+ * requeriría traer las asignaciones de cada oferta del mes (N+1), no solo el listado —
+ * upgrade path: que el backend agregue un flag `tiene_incidencias` a GET /ofertas.
+ */
+function colorOferta(o: Oferta, pendientesPorOferta: Map<number, number>, today: string, primary: string): string {
+  if (o.estado === 'cancelada')  return CAL_COLOR.cancelada;
+  if (o.estado === 'completada') return CAL_COLOR.completada;
+  if (o.estado === 'borrador')   return CAL_COLOR.borrador;
+
+  const totalPlazas = o.puestos?.reduce((s, p) => s + p.plazas, 0) ?? 0;
+  const cubiertas   = o.puestos?.reduce((s, p) => s + p.plazas_cubiertas, 0) ?? 0;
+  const incompleta  = cubiertas < totalPlazas;
+  const pendientes  = pendientesPorOferta.get(o.id) ?? 0;
+  const diasHasta   = (new Date(`${o.fecha}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86_400_000;
+  const urgente = pendientes > 0 || (incompleta && diasHasta <= 3);
+
+  return urgente ? CAL_COLOR.urgente : primary;
+}
+
+function LeyendaPunto({ color, label }: { color: string; label: string }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <View className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+      <Text className="text-xs text-muted-foreground">{label}</Text>
+    </View>
+  );
 }
