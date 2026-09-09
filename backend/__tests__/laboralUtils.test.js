@@ -8,6 +8,7 @@ const {
   horaAMinutos,
   valorHora,
   calcularPagoNomina,
+  desglosarPagoNomina,
 } = require('../utils/laboralUtils');
 
 // ── calcularPascua ────────────────────────────────────────────────────────────
@@ -324,5 +325,38 @@ describe('calcularPagoNomina', () => {
     // ser robusta ante campos faltantes.
     const desglose = {};
     expect(calcularPagoNomina(desglose, VH)).toBe(0);
+  });
+});
+
+// ── desglosarPagoNomina ────────────────────────────────────────────────────────
+
+describe('desglosarPagoNomina', () => {
+  const VH = 10_000;
+
+  test('desglosa cada concepto y suma al mismo total que calcularPagoNomina', () => {
+    // Mismo caso que "jornada mixta completa" arriba: 129_250 en total.
+    const desglose = {
+      horas_ordinarias: 8,
+      horas_nocturnas: 0.5,
+      horas_extra_diurnas: 2,
+      horas_extra_nocturnas: 1,
+      horas_festivo: 0,
+    };
+    const d = desglosarPagoNomina(desglose, VH);
+    expect(d.pago_ordinario).toBeCloseTo(80_000, 0);
+    expect(d.pago_nocturno).toBeCloseTo(6_750, 0);
+    expect(d.pago_extra_diurno).toBeCloseTo(25_000, 0);
+    expect(d.pago_extra_nocturno).toBeCloseTo(17_500, 0);
+    expect(d.pago_festivo).toBe(0);
+    const suma = d.pago_ordinario + d.pago_nocturno + d.pago_extra_diurno + d.pago_extra_nocturno + d.pago_festivo;
+    expect(d.total).toBeCloseTo(suma, 6);
+    expect(d.total).toBeCloseTo(calcularPagoNomina(desglose, VH), 6);
+  });
+
+  test('tolera valores undefined/null en el desglose', () => {
+    const d = desglosarPagoNomina({}, VH);
+    expect(d).toEqual({
+      pago_ordinario: 0, pago_nocturno: 0, pago_extra_diurno: 0, pago_extra_nocturno: 0, pago_festivo: 0, total: 0,
+    });
   });
 });

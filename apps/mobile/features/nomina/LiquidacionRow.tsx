@@ -21,6 +21,15 @@ const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
 };
 const TIPO_DESCUENTO_OPTIONS = Object.keys(TIPO_DESCUENTO_LABELS) as TipoDescuento[];
 
+function FilaConcepto({ label, valor }: { label: string; valor: number }) {
+  return (
+    <View className="flex-row items-center justify-between gap-2">
+      <Text className="text-xs text-amber-700 flex-1">{label}</Text>
+      <Text className="text-xs font-semibold text-amber-700">${valor.toLocaleString('es-CO')}</Text>
+    </View>
+  );
+}
+
 interface LiquidacionRowProps {
   linea: LiquidacionLinea;
   compensatorios?: DescansoCompensatorio[];
@@ -71,6 +80,8 @@ export function LiquidacionRow({
 
   const extrasTotal = linea.horas_extra_diurnas + linea.horas_extra_nocturnas;
   const tieneDescuentos = linea.descuento_salud + linea.descuento_pension > 0;
+  const pagoExtraTotal =
+    linea.pago_nocturno + linea.pago_extra_diurno + linea.pago_extra_nocturno + linea.pago_festivo;
 
   return (
     <TouchableOpacity
@@ -145,30 +156,51 @@ export function LiquidacionRow({
         />
       </View>
 
-      {/* ── Expanded: hour breakdown + link ──────────────────── */}
+      {/* ── Expanded: recibo — salario base resaltado + extra/recargos en pesos ── */}
       {expanded && (
         <View className="px-4 pb-4 border-t border-border">
-          <View className="flex-row flex-wrap gap-x-4 gap-y-2 mt-3">
-            {[
-              { l: 'Ordinarias',   v: linea.horas_ordinarias,      c: 'text-foreground' },
-              { l: 'Extra diurna', v: linea.horas_extra_diurnas,   c: 'text-primary-500' },
-              { l: 'Extra noct.',  v: linea.horas_extra_nocturnas, c: 'text-primary-600' },
-              { l: 'Nocturnas',    v: linea.horas_nocturnas,       c: 'text-info' },
-              { l: 'Festivo',      v: linea.horas_festivo,         c: 'text-danger' },
-            ].filter(item => item.v > 0).map((item) => (
-              <View key={item.l} className="gap-0.5 min-w-[80px]">
-                <Text className="text-[10px] text-muted-foreground">{item.l}</Text>
-                <Text className={`text-sm font-semibold ${item.c}`}>
-                  {item.v.toFixed(1)}h
-                </Text>
-              </View>
-            ))}
-            <View className="gap-0.5 min-w-[80px]">
-              <Text className="text-[10px] text-muted-foreground">Valor/hora</Text>
-              <Text className="text-sm font-semibold text-muted-foreground">
-                ${linea.valor_hora.toLocaleString('es-CO')}
+          <View className="bg-muted/60 rounded-xl px-3 py-2.5 mt-3">
+            <Text className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+              Salario base
+            </Text>
+            <View className="flex-row items-center justify-between gap-2">
+              <Text className="text-xs text-muted-foreground flex-1">
+                {linea.horas_ordinarias.toFixed(1)}h ordinarias × ${linea.valor_hora.toLocaleString('es-CO')}
+              </Text>
+              <Text className="text-base font-bold text-foreground">
+                ${linea.pago_ordinario.toLocaleString('es-CO')}
               </Text>
             </View>
+          </View>
+
+          {pagoExtraTotal > 0 && (
+            <View className="bg-warning-light rounded-xl px-3 py-2.5 mt-2 gap-1.5">
+              <Text className="text-[10px] font-semibold text-warning uppercase tracking-wide">
+                ⚡ Horas extra y recargos
+              </Text>
+              {linea.horas_nocturnas > 0 && (
+                <FilaConcepto label={`${linea.horas_nocturnas.toFixed(1)}h nocturnas (+35%)`} valor={linea.pago_nocturno} />
+              )}
+              {linea.horas_extra_diurnas > 0 && (
+                <FilaConcepto label={`${linea.horas_extra_diurnas.toFixed(1)}h extra diurna (+25%)`} valor={linea.pago_extra_diurno} />
+              )}
+              {linea.horas_extra_nocturnas > 0 && (
+                <FilaConcepto label={`${linea.horas_extra_nocturnas.toFixed(1)}h extra nocturna (+75%)`} valor={linea.pago_extra_nocturno} />
+              )}
+              {linea.horas_festivo > 0 && (
+                <FilaConcepto label={`${linea.horas_festivo.toFixed(1)}h festivo/dominical (+75%)`} valor={linea.pago_festivo} />
+              )}
+              <View className="border-t border-warning/30 my-0.5" />
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xs font-semibold text-warning">Subtotal extra</Text>
+                <Text className="text-sm font-bold text-warning">${pagoExtraTotal.toLocaleString('es-CO')}</Text>
+              </View>
+            </View>
+          )}
+
+          <View className="flex-row items-center justify-between mt-3 pt-3 border-t border-border">
+            <Text className="text-sm font-semibold text-foreground">Total bruto</Text>
+            <Text className="text-base font-bold text-foreground">${linea.total.toLocaleString('es-CO')}</Text>
           </View>
           {tieneDescuentos && (
             <View className="flex-row flex-wrap gap-x-4 gap-y-2 mt-3 pt-3 border-t border-border">

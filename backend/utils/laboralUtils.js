@@ -271,15 +271,35 @@ function valorHora(trabajador) {
  * @param {number} valorHoraTrabajador
  */
 function calcularPagoNomina(desglose, valorHoraTrabajador) {
+  return desglosarPagoNomina(desglose, valorHoraTrabajador).total;
+}
+
+/**
+ * Igual que calcularPagoNomina() pero devuelve el monto de cada concepto por
+ * separado en vez de solo la suma — para que la UI pueda mostrar "salario
+ * base $X + horas extra $Y" en vez de un solo total sin desglosar.
+ * @param {object} desglose  Campos horas_ordinarias, horas_extra_diurnas,
+ *                           horas_extra_nocturnas, horas_nocturnas, horas_festivo.
+ * @param {number} valorHoraTrabajador
+ */
+function desglosarPagoNomina(desglose, valorHoraTrabajador) {
   const n = (v) => Number(v) || 0;
-  return (
-    valorHoraTrabajador *
-    (n(desglose.horas_ordinarias) +
-      RECARGOS.NOCTURNA * n(desglose.horas_nocturnas) +
-      RECARGOS.EXTRA_DIURNA * n(desglose.horas_extra_diurnas) +
-      RECARGOS.EXTRA_NOCTURNA * n(desglose.horas_extra_nocturnas) +
-      RECARGOS.FESTIVO_DIURNO * n(desglose.horas_festivo))
-  );
+  const vh = Number(valorHoraTrabajador) || 0;
+
+  const pago_ordinario      = vh * n(desglose.horas_ordinarias);
+  const pago_nocturno       = vh * RECARGOS.NOCTURNA * n(desglose.horas_nocturnas);
+  const pago_extra_diurno   = vh * RECARGOS.EXTRA_DIURNA * n(desglose.horas_extra_diurnas);
+  const pago_extra_nocturno = vh * RECARGOS.EXTRA_NOCTURNA * n(desglose.horas_extra_nocturnas);
+  const pago_festivo        = vh * RECARGOS.FESTIVO_DIURNO * n(desglose.horas_festivo);
+
+  return {
+    pago_ordinario,
+    pago_nocturno,
+    pago_extra_diurno,
+    pago_extra_nocturno,
+    pago_festivo,
+    total: pago_ordinario + pago_nocturno + pago_extra_diurno + pago_extra_nocturno + pago_festivo,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -331,6 +351,7 @@ module.exports = {
   horaAMinutos,
   valorHora,
   calcularPagoNomina,
+  desglosarPagoNomina,
   calcularDeducciones,
   calcularSubsidioTransporte,
 };

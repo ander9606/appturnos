@@ -7,7 +7,7 @@ const ICON_BG: Record<StatColor, string> = {
 };
 
 export function StatCard({
-  label, value, icon: Icon, color = 'default', valueSmall, onClick,
+  label, value, icon: Icon, color = 'default', valueSmall, onClick, caption,
 }: {
   label: string;
   value: number | string;
@@ -15,6 +15,8 @@ export function StatCard({
   color?: StatColor;
   valueSmall?: boolean;
   onClick?: () => void;
+  /** Línea pequeña bajo el label — ej. "incluye $X en horas extra". */
+  caption?: string;
 }) {
   const Wrapper = onClick ? 'button' : 'div';
   return (
@@ -27,6 +29,7 @@ export function StatCard({
       </div>
       <p className={`font-bold text-foreground mb-0.5 ${valueSmall ? 'text-sm' : 'text-2xl'}`}>{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
+      {caption && <p className="text-xs text-warning font-medium mt-1">{caption}</p>}
     </Wrapper>
   );
 }

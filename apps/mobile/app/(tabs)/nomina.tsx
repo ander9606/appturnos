@@ -133,6 +133,12 @@ function NominaGestorView() {
     };
   }, [lineas]);
 
+  const pagoExtraEquipo = lineas.reduce(
+    (s, l) => s + Number(l.pago_nocturno) + Number(l.pago_extra_diurno) +
+      Number(l.pago_extra_nocturno) + Number(l.pago_festivo),
+    0
+  );
+
   // Ordenado por total (de más a menos) y marcado el que tiene una proporción
   // de recargo/extra notablemente por encima del promedio del equipo — así
   // salta a la vista en vez de quedar escondido en el medio de la lista.
@@ -257,6 +263,11 @@ function NominaGestorView() {
                       ? ` · bruto $${totales.total_general.toLocaleString('es-CO')}`
                       : ''}
                   </Text>
+                  {pagoExtraEquipo > 0 && (
+                    <Text className="text-amber-200 text-xs font-semibold mt-0.5">
+                      ⚡ incluye ${pagoExtraEquipo.toLocaleString('es-CO')} en horas extra
+                    </Text>
+                  )}
                 </View>
               )}
             </View>

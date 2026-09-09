@@ -104,6 +104,12 @@ export interface LiquidacionLinea {
   horas_nocturnas: number;
   horas_festivo: number;
   valor_hora: number;
+  /** Pesos por concepto — ya con el recargo de ley aplicado, suman pago_por_horas. */
+  pago_ordinario: number;
+  pago_nocturno: number;
+  pago_extra_diurno: number;
+  pago_extra_nocturno: number;
+  pago_festivo: number;
   pago_por_horas: number;
   salario_minimo_periodo: number;
   ajuste_minimo: number;

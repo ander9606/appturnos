@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Plus, Pencil, CalendarClock, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Pencil, CalendarClock, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
@@ -364,6 +364,11 @@ export function PeriodoDetailPage() {
               {(() => {
                 const esLaboral = liqData.data.tipo_contrato === 'laboral';
                 const { trabajadores, total_general, total_neto_general } = liqData.data.totales;
+                const totalExtraPeriodo = (liqData.data.lineas as LiquidacionLinea[]).reduce(
+                  (s, l) => s + Number(l.pago_nocturno) + Number(l.pago_extra_diurno) +
+                    Number(l.pago_extra_nocturno) + Number(l.pago_festivo),
+                  0
+                );
                 return (
                   <div className={`grid gap-4 mb-6 ${esLaboral ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     <StatCard label="Trabajadores" value={trabajadores} icon={Users} />
@@ -371,6 +376,7 @@ export function PeriodoDetailPage() {
                       label={esLaboral ? 'Total bruto' : 'Total a pagar'}
                       value={fmtCOP(total_general)}
                       icon={Wallet}
+                      caption={totalExtraPeriodo > 0 ? `⚡ incluye ${fmtCOP(totalExtraPeriodo)} en horas extra` : undefined}
                     />
                     {esLaboral && (
                       <StatCard
@@ -400,8 +406,10 @@ export function PeriodoDetailPage() {
                   const diasTrabajador = registros
                     .filter(r => r.trabajador_id === l.trabajador_id)
                     .sort((a, b) => a.fecha.localeCompare(b.fecha));
-                  const horasExtra = Number(l.horas_extra_diurnas) + Number(l.horas_extra_nocturnas);
                   const esLaboral = liqData.data.tipo_contrato === 'laboral';
+                  const pagoExtra =
+                    Number(l.pago_nocturno) + Number(l.pago_extra_diurno) +
+                    Number(l.pago_extra_nocturno) + Number(l.pago_festivo);
 
                   return (
                     <div key={l.trabajador_id} className="bg-card border border-border rounded-xl overflow-hidden">
@@ -411,7 +419,14 @@ export function PeriodoDetailPage() {
                       >
                         <div>
                           <p className="font-medium text-foreground">{l.nombre} {l.apellido}</p>
-                          <p className="text-xs text-muted-foreground">{l.dias_registrados} día{l.dias_registrados !== 1 ? 's' : ''} trabajado{l.dias_registrados !== 1 ? 's' : ''}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                            {l.dias_registrados} día{l.dias_registrados !== 1 ? 's' : ''} trabajado{l.dias_registrados !== 1 ? 's' : ''}
+                            {pagoExtra > 0 && (
+                              <span className="inline-flex items-center gap-0.5 text-warning font-medium">
+                                <Zap size={11} /> +{fmtCOP(pagoExtra)} extra
+                              </span>
+                            )}
+                          </p>
                         </div>
                         <span className="flex items-center gap-3">
                           <span className="font-semibold text-success">{fmtCOP(l.neto)}</span>
@@ -421,15 +436,41 @@ export function PeriodoDetailPage() {
 
                       {abierto && (
                         <div className="border-t border-border">
-                          {/* Recibo — de horas a neto, un renglón por concepto */}
-                          <div className="px-4 py-3 flex flex-col gap-1.5 text-sm">
-                            <Renglon label="Horas ordinarias" valor={`${fmtHrs(l.horas_ordinarias)} h`} />
-                            {Number(l.horas_nocturnas) > 0 && <Renglon label="Horas nocturnas (+35%)" valor={`${fmtHrs(l.horas_nocturnas)} h`} />}
-                            {horasExtra > 0 && <Renglon label="Horas extra" valor={`${fmtHrs(horasExtra)} h`} />}
-                            {Number(l.horas_festivo) > 0 && <Renglon label="Horas festivo/dominical" valor={`${fmtHrs(l.horas_festivo)} h`} />}
-                            <Renglon label="Valor hora" valor={fmtCOP(l.valor_hora)} />
-                            <div className="border-t border-border my-1" />
-                            <Renglon label="Total bruto" valor={fmtCOP(l.total)} fuerte />
+                          {/* Recibo — salario base resaltado, luego recargos/extra desglosados, luego neto */}
+                          <div className="px-4 py-3 flex flex-col gap-3 text-sm">
+                            <div className="bg-muted/60 rounded-lg px-3 py-2.5">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Salario base</p>
+                              <Renglon
+                                label={`${fmtHrs(l.horas_ordinarias)} h ordinarias × ${fmtCOP(l.valor_hora)}`}
+                                valor={fmtCOP(l.pago_ordinario)}
+                                fuerte
+                                grande
+                              />
+                            </div>
+
+                            {pagoExtra > 0 && (
+                              <div className="bg-warning-light rounded-lg px-3 py-2.5 flex flex-col gap-1.5">
+                                <p className="text-xs font-semibold text-warning uppercase tracking-wide mb-0.5 flex items-center gap-1">
+                                  <Zap size={12} /> Horas extra y recargos
+                                </p>
+                                {Number(l.horas_nocturnas) > 0 && (
+                                  <Renglon label={`${fmtHrs(l.horas_nocturnas)} h nocturnas (+35%)`} valor={fmtCOP(l.pago_nocturno)} />
+                                )}
+                                {Number(l.horas_extra_diurnas) > 0 && (
+                                  <Renglon label={`${fmtHrs(l.horas_extra_diurnas)} h extra diurna (+25%)`} valor={fmtCOP(l.pago_extra_diurno)} />
+                                )}
+                                {Number(l.horas_extra_nocturnas) > 0 && (
+                                  <Renglon label={`${fmtHrs(l.horas_extra_nocturnas)} h extra nocturna (+75%)`} valor={fmtCOP(l.pago_extra_nocturno)} />
+                                )}
+                                {Number(l.horas_festivo) > 0 && (
+                                  <Renglon label={`${fmtHrs(l.horas_festivo)} h festivo/dominical (+75%)`} valor={fmtCOP(l.pago_festivo)} />
+                                )}
+                                <div className="border-t border-warning/30 my-0.5" />
+                                <Renglon label="Subtotal extra" valor={fmtCOP(pagoExtra)} fuerte tono="warning" />
+                              </div>
+                            )}
+
+                            <Renglon label="Total bruto" valor={fmtCOP(l.total)} fuerte grande />
                             {esLaboral && (
                               <>
                                 <Renglon label="Salud" valor={`-${fmtCOP(l.descuento_salud)}`} tono="danger" />
@@ -597,9 +638,9 @@ function Renglon({
   valor: string;
   fuerte?: boolean;
   grande?: boolean;
-  tono?: 'danger' | 'success';
+  tono?: 'danger' | 'success' | 'warning';
 }) {
-  const colorValor = tono === 'danger' ? 'text-danger' : tono === 'success' ? 'text-success' : 'text-foreground';
+  const colorValor = tono === 'danger' ? 'text-danger' : tono === 'success' ? 'text-success' : tono === 'warning' ? 'text-warning' : 'text-foreground';
   return (
     <div className="flex items-center justify-between gap-3">
       <span className={fuerte ? 'font-medium text-foreground' : 'text-muted-foreground'}>{label}</span>

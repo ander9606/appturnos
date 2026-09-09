@@ -7,7 +7,7 @@ const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const DescuentosModel = require('../descuentos/descuentos.model');
 const AppError = require('../../../utils/AppError');
 const { ROLES, HORAS_MES_NOMINA } = require('../../../config/constants');
-const { valorHora, calcularPagoNomina, calcularDeducciones, calcularSubsidioTransporte } = require('../../../utils/laboralUtils');
+const { valorHora, desglosarPagoNomina, calcularDeducciones, calcularSubsidioTransporte } = require('../../../utils/laboralUtils');
 
 function redondear(n) {
   return Math.round(n * 100) / 100;
@@ -63,7 +63,8 @@ const LiquidacionService = {
       const vh = f.valor_hora_snapshot != null
         ? Number(f.valor_hora_snapshot)
         : valorHora(f);
-      const pagoPorHoras = redondear(calcularPagoNomina(desglose, vh));
+      const desglosePago = desglosarPagoNomina(desglose, vh);
+      const pagoPorHoras = redondear(desglosePago.total);
 
       // Garantía: el trabajador no puede ganar menos que su salario proporcional al período.
       const salarioMinPeriodo = redondear(Number(f.salario_base) / 30 * diasPeriodo);
@@ -100,6 +101,11 @@ const LiquidacionService = {
         dias_registrados: f.dias_registrados,
         ...desglose,
         valor_hora: redondear(vh),
+        pago_ordinario: redondear(desglosePago.pago_ordinario),
+        pago_nocturno: redondear(desglosePago.pago_nocturno),
+        pago_extra_diurno: redondear(desglosePago.pago_extra_diurno),
+        pago_extra_nocturno: redondear(desglosePago.pago_extra_nocturno),
+        pago_festivo: redondear(desglosePago.pago_festivo),
         pago_por_horas: pagoPorHoras,
         salario_minimo_periodo: salarioMinPeriodo,
         ajuste_minimo: ajusteMinimo,
