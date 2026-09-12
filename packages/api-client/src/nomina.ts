@@ -27,6 +27,11 @@ export interface RegistroDiario {
   fecha: string;           // YYYY-MM-DD
   hora_entrada: string | null; // HH:MM:SS — entrada de la sesión activa
   hora_salida: string | null;
+  /** Ubicación donde se marcó — null si el dispositivo no dio GPS o negó el permiso. */
+  latitud_entrada: number | null;
+  longitud_entrada: number | null;
+  latitud_salida: number | null;
+  longitud_salida: number | null;
   sesiones: number;            // cantidad de sesiones del día (1 = normal, 2+ = con reingreso)
   hora_entrada_inicial: string | null; // HH:MM:SS — primer ingreso del día (no cambia en reingresos)
   sesiones_detalle: { hora_entrada: string; hora_salida: string }[] | null; // sesiones ya cerradas (sin la vigente) — ver hora_entrada/hora_salida para la última

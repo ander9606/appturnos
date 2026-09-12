@@ -26,7 +26,7 @@ export interface Registro {
   /** Primer ingreso del día — no cambia si hubo un reingreso (hora_entrada sí cambia). */
   hora_entrada_inicial: string | null;
   hora_salida: string | null;
-  /** Ubicación donde se marcó — solo presente si el trabajador tiene tipo_marcacion fijo/zonal. */
+  /** Ubicación donde se marcó — null si el dispositivo no dio GPS o negó el permiso. */
   latitud_entrada: number | null;
   longitud_entrada: number | null;
   latitud_salida: number | null;

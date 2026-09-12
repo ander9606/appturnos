@@ -11,6 +11,7 @@ import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, Tip
 import { bogotaToday } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import { actionToast } from '@/lib/actionToast';
+import { obtenerUbicacionActual } from '@/lib/currentLocation';
 import { useGeofence } from '@/features/turnos/useGeofence';
 import {
   usePeriodos,
@@ -152,17 +153,29 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const reingresoMutation = useSolicitarReingreso();
   const isMutating        = entradaMutation.isPending || salidaMutation.isPending || reingresoMutation.isPending;
 
-  const handleEntrada = useCallback(async () => {
-    try {
-      const coords = requiereGeofence && geo.currentLocation
+  // Con geofence (fijo/zonal) el fix ya lo trae useGeofence (vigilancia continua
+  // para validar cercanía). Sin geofence (libre) no hay nada vigilando — se pide
+  // un fix puntual solo para registrar desde dónde marcó; nunca bloquea el marcaje
+  // si falla o el permiso está denegado (backend ya trata lat/lng como opcionales).
+  const obtenerCoordsParaMarcaje = useCallback(async () => {
+    if (requiereGeofence) {
+      return geo.currentLocation
         ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
         : undefined;
+    }
+    const { latitud, longitud } = await obtenerUbicacionActual();
+    return latitud != null ? { latitud, longitud } : undefined;
+  }, [requiereGeofence, geo.currentLocation]);
+
+  const handleEntrada = useCallback(async () => {
+    try {
+      const coords = await obtenerCoordsParaMarcaje();
       await entradaMutation.mutateAsync(coords);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar entrada';
       Alert.alert('Error', msg);
     }
-  }, [requiereGeofence, geo.currentLocation, entradaMutation]);
+  }, [obtenerCoordsParaMarcaje, entradaMutation]);
 
   const handleSalida = useCallback(async () => {
     if (!registroHoy?.hora_entrada) return;
@@ -186,16 +199,14 @@ export function useNominaTrabajador(): NominaTrabajadorState {
       : false;
 
     try {
-      const coords = requiereGeofence && geo.currentLocation
-        ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
-        : undefined;
+      const coords = await obtenerCoordsParaMarcaje();
       const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, jornada_continua: jornadaContinua, ...coords });
       if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
       Alert.alert('Error', msg);
     }
-  }, [registroHoy, requiereGeofence, geo.currentLocation, salidaMutation]);
+  }, [registroHoy, obtenerCoordsParaMarcaje, salidaMutation]);
 
   // La confirmación (con explicación + motivo opcional) vive en la pantalla, en un
   // modal propio — un Alert nativo no permite pedir texto de forma consistente en iOS/Android.

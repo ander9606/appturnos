@@ -22,8 +22,9 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { useTheme } from '@/lib/theme';
-import { useRegistroDetalle, useCorregirRegistro } from '@/features/nomina/useRegistroDetalle';
+import { useRegistroDetalle, useCorregirRegistro, useDescartarSospechoso } from '@/features/nomina/useRegistroDetalle';
 import { Button } from '@/components/ui/Button';
+import { UbicacionLink } from '@/components/ui/UbicacionLink';
 import { showToast } from '@/lib/toast';
 import { useRoleGuard } from '@/components/RoleGuard';
 
@@ -74,6 +75,7 @@ export default function RegistroDetalleScreen() {
 
   const { data: registro, isLoading } = useRegistroDetalle(registroId);
   const { mutateAsync: corregir, isPending: isCorrigiendo } = useCorregirRegistro();
+  const { mutateAsync: descartarSospechoso, isPending: isDescartando } = useDescartarSospechoso();
 
   const [showModal, setShowModal] = useState(false);
   const [horaEntrada, setHoraEntrada] = useState<Date | null>(horaAFecha(registro?.hora_entrada));
@@ -103,6 +105,16 @@ export default function RegistroDetalleScreen() {
       router.back();
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo corregir el registro');
+    }
+  };
+
+  const handleDescartarSospechoso = async () => {
+    if (!registro) return;
+    try {
+      await descartarSospechoso(registro.id);
+      showToast('Marcaje ya no está marcado como sospechoso');
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo descartar el marcaje');
     }
   };
 
@@ -147,6 +159,28 @@ export default function RegistroDetalleScreen() {
           contentContainerStyle={{ padding: 20, gap: 16, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Sospechoso — mismo dispositivo y ubicación que otro trabajador (posible buddy punching) */}
+          {registro.sospechoso === 1 && (
+            <View className="flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3">
+              <Ionicons name="warning-outline" size={20} color="#d97706" />
+              <Text className="flex-1 text-warning text-xs">
+                Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador.
+              </Text>
+              <TouchableOpacity
+                onPress={handleDescartarSospechoso}
+                disabled={isDescartando}
+                className="px-3 py-1.5 rounded-xl border border-warning/40"
+                accessibilityRole="button"
+              >
+                {isDescartando ? (
+                  <ActivityIndicator size="small" color="#d97706" />
+                ) : (
+                  <Text className="text-warning text-xs font-semibold">Descartar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Trabajador */}
           <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
             <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
@@ -202,6 +236,21 @@ export default function RegistroDetalleScreen() {
               </View>
             ))}
           </View>
+
+          {/* Ubicación — solo si el dispositivo dio GPS al marcar */}
+          {(registro.latitud_entrada != null || registro.latitud_salida != null) && (
+            <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-2">
+              <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">
+                Ubicación
+              </Text>
+              {registro.latitud_entrada != null && (
+                <UbicacionLink lat={registro.latitud_entrada} lng={registro.longitud_entrada!} label="Entrada" />
+              )}
+              {registro.latitud_salida != null && (
+                <UbicacionLink lat={registro.latitud_salida} lng={registro.longitud_salida!} label="Salida" />
+              )}
+            </View>
+          )}
 
           {/* Horas calculadas */}
           {registro.horas_ordinarias > 0 && (

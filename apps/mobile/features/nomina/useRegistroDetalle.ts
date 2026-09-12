@@ -13,6 +13,17 @@ export function useRegistroDetalle(registroId: number | null) {
   });
 }
 
+export function useDescartarSospechoso() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (registroId: number) => nominaApi.descartarSospechoso(registroId),
+    onSuccess: (_, registroId) => {
+      queryClient.invalidateQueries({ queryKey: ['registros', 'detalle', registroId] });
+      queryClient.invalidateQueries({ queryKey: ['registros'] });
+    },
+  });
+}
+
 export function useCorregirRegistro() {
   const queryClient = useQueryClient();
   return useMutation({
