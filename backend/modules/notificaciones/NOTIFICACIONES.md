@@ -31,6 +31,11 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `trabajador_empresa.aprobado` | Solicitud aprobada | Gestor aprueba su solicitud de vinculación | `trabajador-empresa.service.js:214` |
 | `asignacion.correccion` | Tu horario fue modificado | Gestor corrige ingreso/egreso real de una asignación de turno | `asignaciones.service.js:590` |
 | `nomina.correccion` | Tu horario fue modificado | Gestor corrige hora_entrada/hora_salida de un registro diario | `registros.service.js:298` |
+| `contrato.pendiente_firma` | Falta firmar tu contrato | Gestor corrige un turno ya completado y el minicontrato queda por firmar | `asignaciones.service.js:623` |
+| `nomina.recordatorio_ingreso` | Tu turno está por empezar | Cron 15 min, `trabajador_nomina` con horario fijo dentro de los 15 min previos a su hora de entrada y sin marcar aún | `recordatorioIngreso.worker.js:41` |
+| `nomina.descuento_pendiente` | Tienes un descuento por aceptar | Gestor registra un descuento de nómina | `descuentos.service.js:27` |
+| `nomina.ciclo_cambiado` | Cambió el ciclo de nómina | Cambia `empresas.tipo_liquidacion`; también llega a gestores | `periodos.service.js:171` |
+| `trabajador_empresa.bienvenida_nomina` | Ya eres parte de la nómina de {empresa} | Acepta una invitación de nómina (conversión turnos → nómina) | `trabajador-empresa.service.js:322` |
 
 ## Gestor (`admin_empresa` / `jefe_turnos`, por empresa)
 
@@ -48,6 +53,10 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `nomina.entrada` | Entrada registrada | Trabajador marca entrada (registro diario) | `registros.service.js:306` |
 | `nomina.salida` | Salida registrada | Trabajador marca salida (registro diario) | `registros.service.js:382` |
 | `reingreso.solicitado` | Solicitud de reingreso | Trabajador pide reingresar | `registros.service.js:438` |
+| `turno.sospechoso` | Posible marcaje fraudulento | Dos trabajadores marcan ingreso a turnos distintos desde el mismo dispositivo | `asignaciones.service.js:44` |
+| `nomina.sospechoso` | Posible marcaje fraudulento | Dos trabajadores marcan registro diario desde el mismo dispositivo | `registros.service.js:93` |
+| `nomina.descuento_respondido` | Descuento aceptado / rechazado | Trabajador responde a un descuento pendiente | `descuentos.service.js:69` |
+| `trabajador_empresa.archivado_por_conversion` | Trabajador ya no disponible | Uno de sus trabajadores se convirtió a nómina de otra empresa | `trabajador-empresa.service.js:313` |
 
 ## Solo `admin_empresa`
 
@@ -71,3 +80,17 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 - Nada notifica a `jefe_nomina` ni a `nomina` (rol de solo lectura) específicamente — comparten
   los tipos de nómina solo si también son `admin_empresa`.
 - No hay notificación al **crear** un período/oferta desde cero, solo en cambios sobre algo existente.
+
+## Navegación al tocar (`destino()` en `apps/mobile/app/notificaciones.tsx`)
+
+Cada `tipo` debe resolver a una pantalla útil (revisado 2026-09-12, ver `git log` de ese archivo
+para el detalle). Antes de esa revisión, estos tipos caían al fallback genérico (bandeja de
+notificaciones) o —peor— a una pantalla bloqueada por rol:
+- `nomina.sospechoso` / `nomina.horas_extra_iniciadas` (gestor) mandaban a `/nomina-ingreso`,
+  bloqueada por `useRoleGuard(['trabajador_nomina'])` — ahora van a `/registro-detalle/[id]`.
+- `integracion.activada` / `integracion.desactivada` (copia propia de `admin_empresa`, sin `data`)
+  no navegaban a ningún lado — ahora van a `/integracion/config`.
+- `nomina.compensatorios_hoy`, `nomina.descuento_pendiente`, `nomina.descuento_respondido`,
+  `nomina.ciclo_cambiado` (sin período nuevo) y `nomina.recordatorio_ingreso` no tenían caso en
+  `destino()` — ahora resuelven a `/gestor-compensatorios`, `/(tabs)/nomina` (los tres de
+  descuento/ciclo) y `/nomina-ingreso` respectivamente.
