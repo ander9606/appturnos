@@ -304,16 +304,16 @@ export function ResumenCards({
                       ⚡ Horas extra y recargos
                     </Text>
                     {Number(miLiquidacion.horas_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas (+35%)`} valor={Number(miLiquidacion.pago_nocturno)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas × ${formatCOP(miLiquidacion.valor_hora)} × 1.35`} valor={Number(miLiquidacion.pago_nocturno)} />
                     )}
                     {Number(miLiquidacion.horas_extra_diurnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna (+25%)`} valor={Number(miLiquidacion.pago_extra_diurno)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna × ${formatCOP(miLiquidacion.valor_hora)} × 1.25`} valor={Number(miLiquidacion.pago_extra_diurno)} />
                     )}
                     {Number(miLiquidacion.horas_extra_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna (+75%)`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna × ${formatCOP(miLiquidacion.valor_hora)} × 1.75`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
                     )}
                     {Number(miLiquidacion.horas_festivo) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical (+75%)`} valor={Number(miLiquidacion.pago_festivo)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical × ${formatCOP(miLiquidacion.valor_hora)} × 1.75`} valor={Number(miLiquidacion.pago_festivo)} />
                     )}
                     <View className="border-t border-warning/30 my-0.5" />
                     <View className="flex-row items-center justify-between">

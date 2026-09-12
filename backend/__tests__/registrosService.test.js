@@ -94,6 +94,7 @@ describe('RegistrosService.crear', () => {
         horas_ordinarias: 7,
         horas_extra_diurnas: 0,
         jornada_continua: false,
+        horas_acumuladas_semana: 0,
       })
     );
     expect(result.id).toBe(77);
@@ -170,6 +171,7 @@ describe('RegistrosService.corregir', () => {
         horas_ordinarias: 8,
         horas_extra_diurnas: 1,
         jornada_continua: false,
+        horas_acumuladas_semana: 34,
       })
     );
   });
@@ -296,7 +298,7 @@ describe('RegistrosService.marcarSalida', () => {
 
     expect(RegistrosModel.actualizarSalida).toHaveBeenCalledWith(
       1, 1,
-      expect.objectContaining({ horas_ordinarias: expect.any(Number) })
+      expect.objectContaining({ horas_ordinarias: expect.any(Number), horas_acumuladas_semana: 0 })
     );
     expect(result.id).toBe(1);
     expect(result).toHaveProperty('advertencia'); // null o string

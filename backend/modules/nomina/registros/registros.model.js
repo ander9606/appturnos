@@ -72,8 +72,8 @@ const RegistrosModel = {
       `INSERT INTO registros_diarios
          (empresa_id, trabajador_id, periodo_id, fecha, hora_entrada, hora_salida,
           horas_ordinarias, horas_extra_diurnas, horas_extra_nocturnas, horas_nocturnas,
-          horas_festivo, es_festivo, novedad, tipo_dia, jornada_continua)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          horas_festivo, es_festivo, novedad, tipo_dia, jornada_continua, horas_acumuladas_semana)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresaId,
         d.trabajador_id,
@@ -90,6 +90,7 @@ const RegistrosModel = {
         d.novedad,
         d.tipo_dia || 'ordinario',
         d.jornada_continua ? 1 : 0,
+        d.horas_acumuladas_semana || 0,
       ]
     );
     return res.insertId;
@@ -155,7 +156,7 @@ const RegistrosModel = {
          hora_salida = ?, latitud_salida = ?, longitud_salida = ?, device_salida = ?,
          horas_ordinarias = ?, horas_extra_diurnas = ?,
          horas_extra_nocturnas = ?, horas_nocturnas = ?, horas_festivo = ?, es_festivo = ?,
-         jornada_continua = ?
+         jornada_continua = ?, horas_acumuladas_semana = ?
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NULL`,
       [
         d.hora_salida,
@@ -169,6 +170,7 @@ const RegistrosModel = {
         d.horas_festivo,
         d.es_festivo,
         d.jornada_continua ? 1 : 0,
+        d.horas_acumuladas_semana || 0,
         id,
         empresaId,
       ]
@@ -230,7 +232,7 @@ const RegistrosModel = {
       `UPDATE registros_diarios SET
          hora_entrada = ?, hora_salida = ?, horas_ordinarias = ?, horas_extra_diurnas = ?,
          horas_extra_nocturnas = ?, horas_nocturnas = ?, horas_festivo = ?, es_festivo = ?,
-         novedad = ?, tipo_dia = ?, aprobado_por = ?, jornada_continua = ?
+         novedad = ?, tipo_dia = ?, aprobado_por = ?, jornada_continua = ?, horas_acumuladas_semana = ?
        WHERE id = ? AND empresa_id = ?`,
       [
         d.hora_entrada,
@@ -245,6 +247,7 @@ const RegistrosModel = {
         d.tipo_dia,
         d.aprobado_por,
         d.jornada_continua ? 1 : 0,
+        d.horas_acumuladas_semana || 0,
         id,
         empresaId,
       ]

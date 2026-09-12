@@ -165,6 +165,7 @@ const CompensatoriosService = {
             tipo_dia: 'ordinario',
             aprobado_por: usuarioId,
             jornada_continua: registroAnterior.jornada_continua,
+            horas_acumuladas_semana: registroAnterior.horas_acumuladas_semana,
           });
         }
       }
@@ -241,6 +242,7 @@ const CompensatoriosService = {
         tipo_dia:             'compensatorio',
         aprobado_por:         asignadoPor,
         jornada_continua:     existing.jornada_continua,
+        horas_acumuladas_semana: existing.horas_acumuladas_semana,
       });
     } else {
       await RegistrosModel.crear(empresaId, {

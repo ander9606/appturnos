@@ -26,6 +26,12 @@ export interface Registro {
   /** Primer ingreso del día — no cambia si hubo un reingreso (hora_entrada sí cambia). */
   hora_entrada_inicial: string | null;
   hora_salida: string | null;
+  /** Cantidad de sesiones del día (1 = normal, 2+ = con reingreso). */
+  sesiones: number;
+  /** Sesiones ya cerradas (sin la vigente) — ver hora_entrada/hora_salida para la última. */
+  sesiones_detalle: { hora_entrada: string; hora_salida: string }[] | null;
+  /** Trabajador marcó que no tomó almuerzo — omite el descuento automático de 1h en jornadas > 6h. */
+  jornada_continua: 0 | 1;
   /** Ubicación donde se marcó — null si el dispositivo no dio GPS o negó el permiso. */
   latitud_entrada: number | null;
   longitud_entrada: number | null;
@@ -36,6 +42,8 @@ export interface Registro {
   horas_extra_nocturnas: number;
   horas_nocturnas: number;
   horas_festivo: number;
+  /** Horas ordinarias+nocturnas ya acumuladas esta semana (lunes–ayer) antes de este día — explica por qué el resto pasó a extra. */
+  horas_acumuladas_semana: number;
   es_festivo: number;
   tipo_dia: TipoDia;
   novedad: string | null;

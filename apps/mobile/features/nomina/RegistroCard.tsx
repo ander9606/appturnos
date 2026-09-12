@@ -18,6 +18,10 @@ import {
   fmtFechaCorta,
   horaEntradaMostrada,
   TIPO_DIA_LABEL,
+  minutosAlmuerzoDescontados,
+  esJornadaLarga,
+  fmtDuracionMin,
+  explicarHorasExtra,
 } from './trabajador/nominaTrabajadorUtils';
 import { formatCOP } from '@/lib/formatters';
 
@@ -35,7 +39,10 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
   const tipoDiaLabel = TIPO_DIA_LABEL[registro.tipo_dia] ?? null;
   const esEspecial   = tipoDiaLabel !== null;
   const sinSalida    = Boolean(registro.hora_entrada) && !registro.hora_salida;
-  const canExpand    = analisis.tieneExtras || registro.novedad || sinSalida;
+  const minutosAlmuerzo   = minutosAlmuerzoDescontados(registro);
+  const mostrarAlmuerzo   = minutosAlmuerzo > 0 || (registro.jornada_continua === 1 && esJornadaLarga(registro));
+  const explicacionExtra  = explicarHorasExtra(registro);
+  const canExpand    = analisis.tieneExtras || registro.novedad || sinSalida || mostrarAlmuerzo;
 
   const d = new Date(`${registro.fecha}T00:00:00`);
 
@@ -164,6 +171,22 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
               jefe de nómina o administrador que lo edite desde el panel de gestión.
             </Text>
           )}
+          {minutosAlmuerzo > 0 && (
+            <Text className="text-xs text-muted-foreground">
+              🍽️ -{fmtDuracionMin(minutosAlmuerzo)} almuerzo (automático, jornadas &gt; 6h)
+            </Text>
+          )}
+          {minutosAlmuerzo === 0 && registro.jornada_continua === 1 && esJornadaLarga(registro) && (
+            <Text className="text-xs text-success">
+              ✓ Jornada continua marcada — sin descuento de almuerzo
+            </Text>
+          )}
+          {explicacionExtra && (
+            <Text className="text-xs text-muted-foreground">
+              Llevabas {explicacionExtra.acumuladoSemana.toFixed(1)}h esta semana → {explicacionExtra.cupoUsado.toFixed(1)}h
+              de tu cupo ({explicacionExtra.topeSemanal}h) + {explicacionExtra.horasExtra.toFixed(1)}h extra
+            </Text>
+          )}
           {analisis.tieneExtras && (
             <View className="flex-row flex-wrap gap-x-4 gap-y-1">
               {Number(registro.horas_ordinarias) > 0 && (
@@ -173,7 +196,7 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
               )}
               {Number(registro.horas_nocturnas) > 0 && (
                 <Text className="text-xs text-info">
-                  {Number(registro.horas_nocturnas).toFixed(1)}h noct. (+35 %)
+                  {Number(registro.horas_nocturnas).toFixed(1)}h noct. (+135 %)
                 </Text>
               )}
               {Number(registro.horas_extra_diurnas) > 0 && (
@@ -188,7 +211,7 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
               )}
               {Number(registro.horas_festivo) > 0 && (
                 <Text className="text-xs text-danger font-medium">
-                  {Number(registro.horas_festivo).toFixed(1)}h festivo (+75 %)
+                  {Number(registro.horas_festivo).toFixed(1)}h festivo (+175 %)
                 </Text>
               )}
             </View>

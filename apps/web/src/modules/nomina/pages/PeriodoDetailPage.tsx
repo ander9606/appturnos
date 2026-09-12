@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Plus, Pencil, CalendarClock, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Pencil, CalendarClock, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap, Utensils, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
@@ -16,6 +16,7 @@ import { StatCard } from '@/shared/components/StatCard';
 import { UbicacionLink } from '@/shared/components/UbicacionLink';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtPeriodo, fmtCOP, fmtHrs, fmtDiaSemana, fmtHora } from '@/shared/lib/format';
+import { minutosAlmuerzoDescontados, esJornadaLarga, fmtDuracionMin, explicarHorasExtra } from '../utils';
 
 const TIPO_DIA_LABELS: Record<TipoDia, string> = {
   ordinario: 'Ordinario',
@@ -47,6 +48,39 @@ const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
 };
 
 const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario','descanso','compensatorio','incapacidad','vacacion','licencia'];
+
+/** Ícono inline con tooltip: por qué el total del día no coincide con entrada→salida. */
+function AlmuerzoIndicator({ r }: { r: Registro }) {
+  const minutos = minutosAlmuerzoDescontados(r);
+  if (minutos > 0) {
+    return (
+      <Utensils size={12} className="text-muted-foreground/60 shrink-0">
+        <title>{`Se descontó ${fmtDuracionMin(minutos)} de almuerzo automáticamente (jornada > 6h)`}</title>
+      </Utensils>
+    );
+  }
+  if (r.jornada_continua === 1 && esJornadaLarga(r)) {
+    return (
+      <Utensils size={12} className="text-success shrink-0">
+        <title>Jornada continua: el trabajador marcó que no tomó almuerzo — sin descuento</title>
+      </Utensils>
+    );
+  }
+  return null;
+}
+
+/** Ícono inline con tooltip: por qué el día tuvo horas extra (tope semanal, no diario). */
+function ExtraIndicator({ r }: { r: Registro }) {
+  const explicacion = explicarHorasExtra(r);
+  if (!explicacion) return null;
+  return (
+    <Info size={12} className="text-muted-foreground/60 shrink-0">
+      <title>
+        {`Llevaba ${fmtHrs(explicacion.acumuladoSemana)}h esta semana → ${fmtHrs(explicacion.cupoUsado)}h de su cupo (${explicacion.topeSemanal}h) + ${fmtHrs(explicacion.horasExtra)}h extra`}
+      </title>
+    </Info>
+  );
+}
 
 export function PeriodoDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -292,13 +326,21 @@ export function PeriodoDetailPage() {
                                   )}
                                 </span>
                               </td>
-                              <td className="px-3 py-2.5 text-muted-foreground">{fmtHora(r.hora_salida)}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground">
+                                <span className="inline-flex items-center gap-1.5">
+                                  {fmtHora(r.hora_salida)}
+                                  <AlmuerzoIndicator r={r} />
+                                </span>
+                              </td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">{fmtHrs(r.horas_ordinarias)}</td>
                               <td className="px-3 py-2.5 text-right text-info">
                                 {Number(r.horas_nocturnas) > 0 ? fmtHrs(r.horas_nocturnas) : ''}
                               </td>
                               <td className="px-3 py-2.5 text-right text-muted-foreground">
-                                {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}
+                                <span className="inline-flex items-center gap-1">
+                                  {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}
+                                  <ExtraIndicator r={r} />
+                                </span>
                               </td>
                               <td className="px-3 py-2.5 text-right text-danger">
                                 {Number(r.horas_festivo) > 0 ? fmtHrs(r.horas_festivo) : ''}
@@ -454,16 +496,16 @@ export function PeriodoDetailPage() {
                                   <Zap size={12} /> Horas extra y recargos
                                 </p>
                                 {Number(l.horas_nocturnas) > 0 && (
-                                  <Renglon label={`${fmtHrs(l.horas_nocturnas)} h nocturnas (+35%)`} valor={fmtCOP(l.pago_nocturno)} />
+                                  <Renglon label={`${fmtHrs(l.horas_nocturnas)} h nocturnas × ${fmtCOP(l.valor_hora)} × 1.35`} valor={fmtCOP(l.pago_nocturno)} />
                                 )}
                                 {Number(l.horas_extra_diurnas) > 0 && (
-                                  <Renglon label={`${fmtHrs(l.horas_extra_diurnas)} h extra diurna (+25%)`} valor={fmtCOP(l.pago_extra_diurno)} />
+                                  <Renglon label={`${fmtHrs(l.horas_extra_diurnas)} h extra diurna × ${fmtCOP(l.valor_hora)} × 1.25`} valor={fmtCOP(l.pago_extra_diurno)} />
                                 )}
                                 {Number(l.horas_extra_nocturnas) > 0 && (
-                                  <Renglon label={`${fmtHrs(l.horas_extra_nocturnas)} h extra nocturna (+75%)`} valor={fmtCOP(l.pago_extra_nocturno)} />
+                                  <Renglon label={`${fmtHrs(l.horas_extra_nocturnas)} h extra nocturna × ${fmtCOP(l.valor_hora)} × 1.75`} valor={fmtCOP(l.pago_extra_nocturno)} />
                                 )}
                                 {Number(l.horas_festivo) > 0 && (
-                                  <Renglon label={`${fmtHrs(l.horas_festivo)} h festivo/dominical (+75%)`} valor={fmtCOP(l.pago_festivo)} />
+                                  <Renglon label={`${fmtHrs(l.horas_festivo)} h festivo/dominical × ${fmtCOP(l.valor_hora)} × 1.75`} valor={fmtCOP(l.pago_festivo)} />
                                 )}
                                 <div className="border-t border-warning/30 my-0.5" />
                                 <Renglon label="Subtotal extra" valor={fmtCOP(pagoExtra)} fuerte tono="warning" />
@@ -553,11 +595,16 @@ export function PeriodoDetailPage() {
                                 </div>
                                 {r.hora_entrada ? (
                                   <span className="text-xs text-muted-foreground text-right flex-shrink-0">
-                                    {fmtHora(r.hora_entrada_inicial ?? r.hora_entrada)} – {fmtHora(r.hora_salida)}
+                                    <span className="inline-flex items-center gap-1">
+                                      {fmtHora(r.hora_entrada_inicial ?? r.hora_entrada)} – {fmtHora(r.hora_salida)}
+                                      <AlmuerzoIndicator r={r} />
+                                    </span>
                                     <br />
                                     {fmtHrs(r.horas_ordinarias)} h
                                     {Number(r.horas_nocturnas) > 0 && ` + ${fmtHrs(r.horas_nocturnas)} h noct.`}
-                                    {Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas) > 0 && ` + ${fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra`}
+                                    {Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas) > 0 && (
+                                      <> + {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra <ExtraIndicator r={r} /></>
+                                    )}
                                     {Number(r.horas_festivo) > 0 && ` + ${fmtHrs(r.horas_festivo)} h festivo`}
                                   </span>
                                 ) : (

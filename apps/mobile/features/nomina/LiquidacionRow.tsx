@@ -179,16 +179,16 @@ export function LiquidacionRow({
                 ⚡ Horas extra y recargos
               </Text>
               {linea.horas_nocturnas > 0 && (
-                <FilaConcepto label={`${linea.horas_nocturnas.toFixed(1)}h nocturnas (+35%)`} valor={linea.pago_nocturno} />
+                <FilaConcepto label={`${linea.horas_nocturnas.toFixed(1)}h nocturnas × $${linea.valor_hora.toLocaleString('es-CO')} × 1.35`} valor={linea.pago_nocturno} />
               )}
               {linea.horas_extra_diurnas > 0 && (
-                <FilaConcepto label={`${linea.horas_extra_diurnas.toFixed(1)}h extra diurna (+25%)`} valor={linea.pago_extra_diurno} />
+                <FilaConcepto label={`${linea.horas_extra_diurnas.toFixed(1)}h extra diurna × $${linea.valor_hora.toLocaleString('es-CO')} × 1.25`} valor={linea.pago_extra_diurno} />
               )}
               {linea.horas_extra_nocturnas > 0 && (
-                <FilaConcepto label={`${linea.horas_extra_nocturnas.toFixed(1)}h extra nocturna (+75%)`} valor={linea.pago_extra_nocturno} />
+                <FilaConcepto label={`${linea.horas_extra_nocturnas.toFixed(1)}h extra nocturna × $${linea.valor_hora.toLocaleString('es-CO')} × 1.75`} valor={linea.pago_extra_nocturno} />
               )}
               {linea.horas_festivo > 0 && (
-                <FilaConcepto label={`${linea.horas_festivo.toFixed(1)}h festivo/dominical (+75%)`} valor={linea.pago_festivo} />
+                <FilaConcepto label={`${linea.horas_festivo.toFixed(1)}h festivo/dominical × $${linea.valor_hora.toLocaleString('es-CO')} × 1.75`} valor={linea.pago_festivo} />
               )}
               <View className="border-t border-warning/30 my-0.5" />
               <View className="flex-row items-center justify-between">

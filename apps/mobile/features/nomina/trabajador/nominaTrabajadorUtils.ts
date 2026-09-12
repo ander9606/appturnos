@@ -3,14 +3,18 @@
  *
  * Reglas de negocio (modelo salario fijo + extras semanales):
  * - El salario base SIEMPRE se paga íntegro — no hay descuentos por jornadas cortas.
- * - Horas nocturnas (21:00–06:00): recargo +35 % sobre cada hora, independiente de extras.
+ * - Horas nocturnas, extra y festivo se pagan encima del salario base con el
+ *   multiplicador COMPLETO de ley (×1.35 / ×1.25 / ×1.75 / ×1.75) — el mismo
+ *   que usa la liquidación real (desglosarPagoNomina en el backend), para que
+ *   el estimado que ve el trabajador coincida con lo que efectivamente se le paga.
  * - Horas extra se determinan semanalmente (Lun–Dom) contra el límite legal del año
  *   según Ley 2101 (reducción progresiva, corte 15 de julio de cada año):
  *   48h hasta jul-2023, 47h 2023-2024, 46h 2024-2025, 44h 2025-2026, 42h desde jul-2026.
  *   La ley se detiene en 42h — no baja más. Mismo valor que JORNADA_SEMANAL_HORAS
  *   en el backend (constants.js), que ya usa 42 sin escalonar por año.
  * - Domingo o festivo trabajado genera automáticamente 1 día de descanso compensatorio
- *   (Art. 179 CST) — sin recargo económico adicional.
+ *   (Art. 179 CST) — la hora festiva trabajada igual lleva su recargo (×1.75); lo que
+ *   el compensatorio no lleva es un pago adicional POR EL DÍA DE DESCANSO en sí.
  */
 
 import type { RegistroDiario, PeriodoNomina, TipoDia, TipoPeriodo } from '@api-client';
@@ -25,12 +29,24 @@ const HORAS_MES_NOMINA = 240; // 30 d × 8 h
 // Espejo de JORNADA_CONTINUA_UMBRAL_HORAS en backend/config/constants.js.
 export const JORNADA_CONTINUA_UMBRAL_HORAS = 6;
 
-// Recargo ADICIONAL sobre el salario base (solo lo que se suma)
+// Tope semanal FIJO que usa calcularHoras() en el backend para clasificar
+// ordinaria vs extra (JORNADA_SEMANAL_HORAS en backend/config/constants.js) —
+// a diferencia de getJornadaLegalSemanal() más abajo (que sí escalona por año
+// y solo se usa para el resumen informativo del límite legal por semana), este
+// es el número que realmente decidió el desglose ordinarias/extra de cada día.
+const JORNADA_SEMANAL_HORAS = 42;
+
+// Espejo de RECARGOS en backend/config/constants.js — mismo multiplicador
+// completo que usa la liquidación real (desglosarPagoNomina), sumado encima
+// del salario base (que se paga siempre íntegro, ver calcularSalarioBasePeriodo).
+// Antes este estimado usaba "solo el adicional" (+35 %/+75 %) para nocturna y
+// festivo, asumiendo que el salario ya cubría su base — eso hacía que el
+// trabajador viera un número distinto al de la Liquidación oficial.
 const RECARGO_EXTRA = {
-  NOCTURNA:        0.35,  // +35 % por hora nocturna
-  EXTRA_DIURNA:    1.25,  // pago completo (adicional al salario)
-  EXTRA_NOCTURNA:  1.75,  // pago completo (adicional al salario)
-  FESTIVO:         0.75,  // +75 % por hora en festivo (salario ya cubre la base)
+  NOCTURNA:        1.35,
+  EXTRA_DIURNA:    1.25,
+  EXTRA_NOCTURNA:  1.75,
+  FESTIVO:         1.75,
 } as const;
 
 // Límites semanales según Ley 2101 de 2021 (reducción progresiva, corte cada
@@ -95,13 +111,28 @@ export interface ResumenSemana {
 
 // ── Helpers internos ───────────────────────────────────────────────────────
 
-function totalMinutosRegistro(r: RegistroDiario): number | null {
-  if (!r.hora_entrada || !r.hora_salida) return null;
-  const [hE, mE] = r.hora_entrada.split(':').map(Number);
-  const [hS, mS] = r.hora_salida.split(':').map(Number);
+interface SesionSimple {
+  hora_entrada: string | null;
+  hora_salida: string | null;
+}
+
+/** Minutos entre entrada y salida de UNA sesión (cruza medianoche si sale < entra). */
+function spanMinutosSesion(s: SesionSimple): number | null {
+  if (!s.hora_entrada || !s.hora_salida) return null;
+  const [hE, mE] = s.hora_entrada.split(':').map(Number);
+  const [hS, mS] = s.hora_salida.split(':').map(Number);
   let diffMin = (hS * 60 + mS) - (hE * 60 + mE);
   if (diffMin < 0) diffMin += 24 * 60;
   return diffMin;
+}
+
+/**
+ * Todas las sesiones del día en orden: las cerradas (sesiones_detalle) + la
+ * vigente (hora_entrada/hora_salida) — mismo criterio que usa
+ * registro-detalle/[id].tsx para reconstruir un día con reingreso.
+ */
+function sesionesDelRegistro(r: RegistroDiario): SesionSimple[] {
+  return [...(r.sesiones_detalle ?? []), { hora_entrada: r.hora_entrada, hora_salida: r.hora_salida }];
 }
 
 /** ISO string de la fecha del lunes de la semana a la que pertenece `fecha`. */
@@ -262,15 +293,19 @@ function minutosTranscurridosDesde(horaEntrada: string): number {
   return Math.floor(diffMs / 60_000);
 }
 
-/** Tiempo transcurrido desde hora_entrada hasta ahora, formateado ("1h 23m", "45m"). */
-export function calcularElapsedLabel(horaEntrada: string): string {
-  const totalMin = minutosTranscurridosDesde(horaEntrada);
-  if (isNaN(totalMin)) return '—';
+/** Formatea minutos totales como "1h 23m" / "45m" / "2h". */
+export function fmtDuracionMin(totalMin: number): string {
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
+}
+
+/** Tiempo transcurrido desde hora_entrada hasta ahora, formateado ("1h 23m", "45m"). */
+export function calcularElapsedLabel(horaEntrada: string): string {
+  const totalMin = minutosTranscurridosDesde(horaEntrada);
+  return isNaN(totalMin) ? '—' : fmtDuracionMin(totalMin);
 }
 
 /** Minutos transcurridos desde hora_entrada hasta ahora (para lógica de descanso). */
@@ -288,6 +323,75 @@ export function calcularElapsedMinutes(horaEntrada: string): number {
  */
 export function debePreguntarJornadaContinua(horaEntrada: string): boolean {
   return calcularElapsedMinutes(horaEntrada) > JORNADA_CONTINUA_UMBRAL_HORAS * 60;
+}
+
+/**
+ * Minutos de almuerzo descontados automáticamente en un registro ya cerrado
+ * (Art. 167 CST) — se derivan comparando la suma del span de CADA sesión
+ * (entrada→salida, incluye las cerradas por reingreso vía sesiones_detalle)
+ * contra el total de horas ya clasificadas, en vez de pedirle un campo nuevo
+ * al backend. calcularHoras() en el backend aplica el descuento por sesión
+ * (cada marcarSalida evalúa solo el span de ESA sesión), así que sumar todas
+ * las sesiones reproduce exactamente el mismo total, con o sin reingreso.
+ */
+export function minutosAlmuerzoDescontados(r: RegistroDiario): number {
+  const sesiones = sesionesDelRegistro(r);
+  let span = 0;
+  let huboSesionCerrada = false;
+  for (const s of sesiones) {
+    const m = spanMinutosSesion(s);
+    if (m != null) { span += m; huboSesionCerrada = true; }
+  }
+  if (!huboSesionCerrada) return 0;
+
+  const trabajado = Math.round(
+    (Number(r.horas_ordinarias) + Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas)
+      + Number(r.horas_nocturnas) + Number(r.horas_festivo)) * 60
+  );
+  const almuerzo = span - trabajado;
+  return almuerzo > 0 ? almuerzo : 0;
+}
+
+/**
+ * True si ALGUNA sesión del día superó el umbral de jornada continua — el
+ * punto exacto en el que esa sesión, individualmente, habría disparado el
+ * descuento de almuerzo en el backend (que evalúa sesión por sesión, no el
+ * día completo).
+ */
+export function esJornadaLarga(r: RegistroDiario): boolean {
+  return sesionesDelRegistro(r).some((s) => {
+    const m = spanMinutosSesion(s);
+    return m != null && m > JORNADA_CONTINUA_UMBRAL_HORAS * 60;
+  });
+}
+
+export interface ExplicacionHorasExtra {
+  /** Horas ordinarias+nocturnas que ya llevaba esta semana antes de hoy. */
+  acumuladoSemana: number;
+  /** Cuánto de la jornada de hoy sí cupo en el tope semanal (42h). */
+  cupoUsado: number;
+  /** Cuánto de la jornada de hoy quedó fuera del cupo y pasó a extra. */
+  horasExtra: number;
+  /** Tope semanal usado (JORNADA_SEMANAL_HORAS) — para el texto. */
+  topeSemanal: number;
+}
+
+/**
+ * Explica por qué un día tuvo horas extra: no es que "trabajaste más de 8h",
+ * es que el cupo ordinario (42h/semana, no por día) ya se agotó antes de hoy.
+ * null si el día no tuvo horas extra por tope semanal — nada que explicar
+ * (un día festivo también puede tener horas "extra" en el sentido coloquial,
+ * pero esas van a horas_festivo, no a horas_extra_*, así que no aplica aquí).
+ */
+export function explicarHorasExtra(r: RegistroDiario): ExplicacionHorasExtra | null {
+  const horasExtra = Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas);
+  if (horasExtra <= 0) return null;
+  return {
+    acumuladoSemana: Number(r.horas_acumuladas_semana),
+    cupoUsado: Number(r.horas_ordinarias) + Number(r.horas_nocturnas),
+    horasExtra,
+    topeSemanal: JORNADA_SEMANAL_HORAS,
+  };
 }
 
 // ── Formatters ──────────────────────────────────────────────────────────────

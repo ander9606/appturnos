@@ -219,6 +219,7 @@ const RegistrosService = {
       novedad: datos.novedad || null,
       tipo_dia: 'ordinario',
       jornada_continua: jornadaContinua,
+      horas_acumuladas_semana: ordinariasAcumCrear,
     });
 
     // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que marcarSalida.
@@ -289,6 +290,7 @@ const RegistrosService = {
       tipo_dia: datos.tipo_dia !== undefined ? datos.tipo_dia : registro.tipo_dia,
       aprobado_por: usuario.sub,
       jornada_continua: jornadaContinua,
+      horas_acumuladas_semana: ordinariasAcumCorregir,
     });
 
     // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que crear()/
@@ -488,6 +490,7 @@ const RegistrosService = {
       deviceId,
       ...horas,
       jornada_continua: Boolean(jornadaContinua),
+      horas_acumuladas_semana: ordinariasAcum,
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);
 

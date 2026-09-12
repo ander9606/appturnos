@@ -23,6 +23,7 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 
 import { useTheme } from '@/lib/theme';
 import { useRegistroDetalle, useCorregirRegistro, useDescartarSospechoso } from '@/features/nomina/useRegistroDetalle';
+import { minutosAlmuerzoDescontados, esJornadaLarga, fmtDuracionMin, explicarHorasExtra } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { Button } from '@/components/ui/Button';
 import { UbicacionLink } from '@/components/ui/UbicacionLink';
 import { showToast } from '@/lib/toast';
@@ -82,6 +83,7 @@ export default function RegistroDetalleScreen() {
   const [horaSalida, setHoraSalida] = useState<Date | null>(horaAFecha(registro?.hora_salida));
   const [showEntrada, setShowEntrada] = useState(false);
   const [showSalida, setShowSalida] = useState(false);
+  const [verDetalle, setVerDetalle] = useState(false);
 
   function onChangeEntrada(_: DateTimePickerEvent, d?: Date) {
     if (Platform.OS === 'android') setShowEntrada(false);
@@ -139,6 +141,11 @@ export default function RegistroDetalleScreen() {
       </SafeAreaView>
     );
   }
+
+  const minutosAlmuerzo = minutosAlmuerzoDescontados(registro);
+  const explicacionExtra = explicarHorasExtra(registro);
+  const jornadaContinuaSinDescuento = minutosAlmuerzo === 0 && registro.jornada_continua === 1 && esJornadaLarga(registro);
+  const tieneDetalleTiempos = minutosAlmuerzo > 0 || jornadaContinuaSinDescuento || explicacionExtra !== null;
 
   return (
     <>
@@ -235,6 +242,34 @@ export default function RegistroDetalleScreen() {
                 </View>
               </View>
             ))}
+            {tieneDetalleTiempos && (
+              <TouchableOpacity
+                onPress={() => setVerDetalle((v) => !v)}
+                className="flex-row items-center gap-1 self-start"
+                accessibilityRole="button"
+              >
+                <Text className="text-xs font-semibold text-primary">
+                  {verDetalle ? 'Ocultar detalle' : 'Ver detalle'}
+                </Text>
+                <Ionicons name={verDetalle ? 'chevron-up' : 'chevron-down'} size={12} color={theme.primary} />
+              </TouchableOpacity>
+            )}
+            {verDetalle && minutosAlmuerzo > 0 && (
+              <Text className="text-xs text-muted-foreground">
+                🍽️ Se descontó {fmtDuracionMin(minutosAlmuerzo)} de almuerzo automáticamente (jornada mayor a 6h).
+              </Text>
+            )}
+            {verDetalle && jornadaContinuaSinDescuento && (
+              <Text className="text-xs text-success">
+                ✓ El trabajador marcó jornada continua — sin descuento de almuerzo.
+              </Text>
+            )}
+            {verDetalle && explicacionExtra && (
+              <Text className="text-xs text-muted-foreground">
+                Llevaba {explicacionExtra.acumuladoSemana.toFixed(1)}h esta semana → {explicacionExtra.cupoUsado.toFixed(1)}h
+                de su cupo ({explicacionExtra.topeSemanal}h) + {explicacionExtra.horasExtra.toFixed(1)}h extra.
+              </Text>
+            )}
           </View>
 
           {/* Ubicación — solo si el dispositivo dio GPS al marcar */}

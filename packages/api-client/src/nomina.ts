@@ -39,6 +39,8 @@ export interface RegistroDiario {
   horas_extra_diurnas: number;
   horas_extra_nocturnas: number;
   horas_nocturnas: number;
+  /** Horas ordinarias+nocturnas ya acumuladas esta semana (lunes–ayer) antes de este día — explica por qué el resto pasó a extra. */
+  horas_acumuladas_semana: number;
   horas_festivo: number;
   es_festivo: 0 | 1;
   /** Trabajador marcó que no tomó almuerzo — omite el descuento automático de 1h en jornadas > 6h. */
