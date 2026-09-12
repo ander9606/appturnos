@@ -87,14 +87,45 @@ describe('RegistrosService.crear', () => {
       hora_salida: '16:00',
     });
 
+    // 8h > umbral de jornada continua (6h) → se descuenta 1h de almuerzo por defecto.
+    expect(RegistrosModel.crear).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        horas_ordinarias: 7,
+        horas_extra_diurnas: 0,
+        jornada_continua: false,
+      })
+    );
+    expect(result.id).toBe(77);
+  });
+
+  test('jornada_continua: true → no descuenta almuerzo', async () => {
+    PeriodosModel.obtenerPorId.mockResolvedValue({
+      id: 1,
+      estado: 'abierto',
+      fecha_inicio: '2026-06-01',
+      fecha_fin: '2026-06-30',
+    });
+    RegistrosModel.crear.mockResolvedValue(78);
+    RegistrosModel.obtenerPorId.mockResolvedValue({ id: 78, horas_ordinarias: 8 });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+
+    await RegistrosService.crear(1, GESTOR, {
+      trabajador_id: 5,
+      periodo_id: 1,
+      fecha: '2026-06-10',
+      hora_entrada: '08:00',
+      hora_salida: '16:00',
+      jornada_continua: true,
+    });
+
     expect(RegistrosModel.crear).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
         horas_ordinarias: 8,
-        horas_extra_diurnas: 0,
+        jornada_continua: true,
       })
     );
-    expect(result.id).toBe(77);
   });
 
   test('sin trabajador_id en rol gestor → AppError 422', async () => {
@@ -130,12 +161,42 @@ describe('RegistrosService.corregir', () => {
 
     await RegistrosService.corregir(1, GESTOR, 99, {});
 
+    // 10h > umbral de jornada continua (6h) → 1h de almuerzo se descuenta antes
+    // de repartir ordinarias/extra, dejando 9h efectivas (8 ordinarias + 1 extra).
     expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
       1,
       99,
       expect.objectContaining({
         horas_ordinarias: 8,
-        horas_extra_diurnas: 2,
+        horas_extra_diurnas: 1,
+        jornada_continua: false,
+      })
+    );
+  });
+
+  test('preserva jornada_continua ya persistida si la corrección no la envía', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue({
+      id: 99,
+      trabajador_id: 5,
+      periodo_id: 1,
+      fecha: '2026-06-12',
+      hora_entrada: '07:00',
+      hora_salida: '17:00',
+      sesiones: 1,
+      jornada_continua: 1,
+    });
+    PeriodosModel.obtenerPorId.mockResolvedValue({ id: 1, estado: 'abierto' });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+    RegistrosModel.actualizar.mockResolvedValue(1);
+
+    await RegistrosService.corregir(1, GESTOR, 99, {});
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      1,
+      99,
+      expect.objectContaining({
+        horas_ordinarias: 10, // sin descuento: jornada_continua persistida = true
+        jornada_continua: true,
       })
     );
   });

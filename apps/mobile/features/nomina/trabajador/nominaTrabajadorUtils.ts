@@ -20,6 +20,11 @@ import { toISODate, BOGOTA_OFFSET_MS } from '@/lib/formatters';
 
 const HORAS_MES_NOMINA = 240; // 30 d × 8 h
 
+// Umbral de jornada continua (Art. 167 CST): por debajo de esto no aplica
+// descanso obligatorio, así que no tiene sentido preguntar por almuerzo.
+// Espejo de JORNADA_CONTINUA_UMBRAL_HORAS en backend/config/constants.js.
+export const JORNADA_CONTINUA_UMBRAL_HORAS = 6;
+
 // Recargo ADICIONAL sobre el salario base (solo lo que se suma)
 const RECARGO_EXTRA = {
   NOCTURNA:        0.35,  // +35 % por hora nocturna
@@ -272,6 +277,17 @@ export function calcularElapsedLabel(horaEntrada: string): string {
 export function calcularElapsedMinutes(horaEntrada: string): number {
   const totalMin = minutosTranscurridosDesde(horaEntrada);
   return isNaN(totalMin) ? 0 : totalMin;
+}
+
+/**
+ * True si la jornada en curso ya superó el umbral de jornada continua — punto
+ * en el que backend (calcularHoras) empezaría a descontar 1h de almuerzo por
+ * defecto. Se usa para decidir si vale la pena ofrecer la ventana de "jornada
+ * continua" al marcar salida (por debajo del umbral el descuento no aplicaría
+ * de todas formas).
+ */
+export function debePreguntarJornadaContinua(horaEntrada: string): boolean {
+  return calcularElapsedMinutes(horaEntrada) > JORNADA_CONTINUA_UMBRAL_HORAS * 60;
 }
 
 // ── Formatters ──────────────────────────────────────────────────────────────

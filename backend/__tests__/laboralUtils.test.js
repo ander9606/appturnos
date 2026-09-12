@@ -5,6 +5,7 @@ const {
   festivosDeAnio,
   esDiaFestivo,
   calcularHoras,
+  calcularMinutosAlmuerzo,
   horaAMinutos,
   valorHora,
   calcularPagoNomina,
@@ -125,8 +126,11 @@ describe('horaAMinutos', () => {
 // ── calcularHoras ──────────────────────────────────────────────────────────────
 
 describe('calcularHoras — jornada normal (no festivo)', () => {
+  // jornadaContinua: true en estos casos para aislar la lógica de extras/nocturno
+  // del descuento de almuerzo (probado aparte más abajo) — sin esto, cualquier
+  // turno > 6h aquí perdería 1h por defecto y rompería estas aserciones.
   test('8 horas diurnas exactas → solo ordinarias', () => {
-    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', esFestivo: false });
+    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', esFestivo: false, jornadaContinua: true });
     expect(r.horas_ordinarias).toBe(8);
     expect(r.horas_extra_diurnas).toBe(0);
     expect(r.horas_extra_nocturnas).toBe(0);
@@ -138,7 +142,7 @@ describe('calcularHoras — jornada normal (no festivo)', () => {
 
   test('8 horas con tramo nocturno → ordinarias + nocturnas', () => {
     // 20:00 – 04:00 (8 h) → 1 h ordinaria diurna (20–21) + 7 h nocturnas (21–04)
-    const r = calcularHoras({ horaEntrada: '20:00', horaSalida: '04:00', esFestivo: false });
+    const r = calcularHoras({ horaEntrada: '20:00', horaSalida: '04:00', esFestivo: false, jornadaContinua: true });
     expect(r.horas_ordinarias).toBeCloseTo(1, 1);
     expect(r.horas_nocturnas).toBeCloseTo(7, 1);
     expect(r.total_horas).toBeCloseTo(8, 1);
@@ -150,7 +154,7 @@ describe('calcularHoras — jornada normal (no festivo)', () => {
     // El tope de ordinarias es semanal (42h), no por turno — con 34h ya acumuladas
     // esta semana, quedan 8h de cupo ordinario antes de pasar a extra.
     const r = calcularHoras({
-      horaEntrada: '07:00', horaSalida: '17:00', esFestivo: false, horasOrdinariasAcumuladas: 34,
+      horaEntrada: '07:00', horaSalida: '17:00', esFestivo: false, horasOrdinariasAcumuladas: 34, jornadaContinua: true,
     });
     expect(r.horas_ordinarias).toBe(8);
     expect(r.horas_extra_diurnas).toBe(2);
@@ -164,7 +168,7 @@ describe('calcularHoras — jornada normal (no festivo)', () => {
     // ordinarias nocturnas: 21–22 = 1 h
     // extra nocturnas: 22–02 = 4 h
     const r = calcularHoras({
-      horaEntrada: '14:00', horaSalida: '02:00', esFestivo: false, horasOrdinariasAcumuladas: 34,
+      horaEntrada: '14:00', horaSalida: '02:00', esFestivo: false, horasOrdinariasAcumuladas: 34, jornadaContinua: true,
     });
     expect(r.total_horas).toBeCloseTo(12, 1);
     expect(r.horas_ordinarias).toBeCloseTo(7, 1);
@@ -176,7 +180,7 @@ describe('calcularHoras — jornada normal (no festivo)', () => {
   test('horaSalida 1 minuto antes de horaEntrada → jornada de ~24h (cruza medianoche)', () => {
     // El código trata fin <= inicio como turno que cruza medianoche.
     // '08:01' → '08:00' significa que el trabajador salió justo 1 min antes → 23h 59m.
-    const r = calcularHoras({ horaEntrada: '08:01', horaSalida: '08:00', esFestivo: false });
+    const r = calcularHoras({ horaEntrada: '08:01', horaSalida: '08:00', esFestivo: false, jornadaContinua: true });
     expect(r.total_horas).toBeCloseTo(23.98, 1); // 23 h 59 m
     expect(r.total_horas).toBeGreaterThan(23);
   });
@@ -190,7 +194,7 @@ describe('calcularHoras — jornada normal (no festivo)', () => {
 
 describe('calcularHoras — jornada en festivo', () => {
   test('todas las horas van a horas_festivo', () => {
-    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', esFestivo: true });
+    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', esFestivo: true, jornadaContinua: true });
     expect(r.horas_festivo).toBe(8);
     expect(r.horas_ordinarias).toBe(0);
     expect(r.horas_extra_diurnas).toBe(0);
@@ -198,15 +202,87 @@ describe('calcularHoras — jornada en festivo', () => {
   });
 
   test('detecta festivo por fecha (Navidad 2025)', () => {
-    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', fecha: '2025-12-25' });
+    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', fecha: '2025-12-25', jornadaContinua: true });
     expect(r.es_festivo).toBe(1);
     expect(r.horas_festivo).toBeCloseTo(8, 1);
   });
 
   test('detecta no-festivo por fecha (martes normal)', () => {
-    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', fecha: '2025-03-11' });
+    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', fecha: '2025-03-11', jornadaContinua: true });
     expect(r.es_festivo).toBe(0);
     expect(r.horas_ordinarias).toBeCloseTo(8, 1);
+  });
+});
+
+// ── calcularMinutosAlmuerzo ──────────────────────────────────────────────────
+
+describe('calcularMinutosAlmuerzo', () => {
+  test('jornada ≤ umbral → ningún minuto', () => {
+    const minutos = calcularMinutosAlmuerzo(horaAMinutos('08:00'), horaAMinutos('14:00'), false);
+    expect(minutos.size).toBe(0);
+  });
+
+  test('jornada > umbral → 60 minutos, tomados del final', () => {
+    const inicio = horaAMinutos('08:00');
+    const fin = horaAMinutos('16:00');
+    const minutos = calcularMinutosAlmuerzo(inicio, fin, false);
+    expect(minutos.size).toBe(60);
+    expect(minutos.has(fin - 1)).toBe(true); // 15:59
+    expect(minutos.has(inicio)).toBe(false); // 08:00 no se toca
+  });
+
+  test('jornadaContinua: true → ningún minuto aunque la jornada sea larga', () => {
+    const minutos = calcularMinutosAlmuerzo(horaAMinutos('08:00'), horaAMinutos('16:00'), true);
+    expect(minutos.size).toBe(0);
+  });
+
+  test('salta minutos nocturnos: el almuerzo se toma solo del bloque diurno', () => {
+    // 20:00–04:00: solo 20:00–21:00 es diurno (60 min) — se consume entero.
+    const inicio = horaAMinutos('20:00');
+    const fin = horaAMinutos('04:00') + 24 * 60;
+    const minutos = calcularMinutosAlmuerzo(inicio, fin, false);
+    expect(minutos.size).toBe(60);
+    for (const m of minutos) {
+      expect(m).toBeGreaterThanOrEqual(inicio);
+      expect(m).toBeLessThan(inicio + 60); // dentro de 20:00–21:00
+    }
+  });
+});
+
+// ── calcularHoras — descuento de almuerzo ──────────────────────────────────────
+
+describe('calcularHoras — descuento de almuerzo', () => {
+  test('jornada de 5h (≤ umbral) → no descuenta almuerzo', () => {
+    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '13:00' });
+    expect(r.total_horas).toBe(5);
+    expect(r.horas_ordinarias).toBe(5);
+  });
+
+  test('jornada de exactamente 6h (umbral) → no descuenta (solo aplica si supera el umbral)', () => {
+    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '14:00' });
+    expect(r.total_horas).toBe(6);
+    expect(r.horas_ordinarias).toBe(6);
+  });
+
+  test('jornada de 7h (> umbral) → descuenta 1h de almuerzo por defecto', () => {
+    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '15:00' });
+    expect(r.total_horas).toBe(6);
+    expect(r.horas_ordinarias).toBe(6);
+  });
+
+  test('jornadaContinua: true evita el descuento aunque la jornada sea larga', () => {
+    const r = calcularHoras({ horaEntrada: '08:00', horaSalida: '16:00', jornadaContinua: true });
+    expect(r.total_horas).toBe(8);
+    expect(r.horas_ordinarias).toBe(8);
+  });
+
+  test('turno que cruza a nocturno: el almuerzo se descuenta del bloque diurno, no del nocturno', () => {
+    // 20:00–04:00 (8h): solo 1h es diurna (20–21), el resto (21–04) es nocturna.
+    // El almuerzo (1h) se toma de esa única hora diurna; las 7h nocturnas quedan intactas.
+    const r = calcularHoras({ horaEntrada: '20:00', horaSalida: '04:00' });
+    expect(r.horas_ordinarias).toBe(0);
+    expect(r.horas_nocturnas).toBeCloseTo(7, 1);
+    expect(r.total_horas).toBeCloseTo(7, 1);
   });
 });
 

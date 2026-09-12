@@ -160,11 +160,12 @@ export function useActualizarExtras() {
 export function useMarcarSalida() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ registroId, latitud, longitud }: {
+    mutationFn: async ({ registroId, latitud, longitud, jornada_continua }: {
       registroId: number;
       latitud?: number;
       longitud?: number;
-    }) => nominaApi.marcarSalida(registroId, { latitud, longitud, device_id: await getDeviceId() }),
+      jornada_continua?: boolean;
+    }) => nominaApi.marcarSalida(registroId, { latitud, longitud, jornada_continua, device_id: await getDeviceId() }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registros'] });
     },

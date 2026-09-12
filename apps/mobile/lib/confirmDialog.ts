@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { createOverlayStore } from './overlayStore';
 
 export interface ConfirmOptions {
   title: string;
@@ -8,26 +8,8 @@ export interface ConfirmOptions {
   destructive?: boolean;  // botón de confirmar en rojo — para acciones irreversibles
 }
 
-interface ConfirmState {
-  options: ConfirmOptions | null;
-  resolve: ((value: boolean) => void) | null;
-  open(options: ConfirmOptions): Promise<boolean>;
-  close(result: boolean): void;
-}
-
-/** Store mínimo para el diálogo global — ver components/ui/ConfirmDialog.tsx (montado en _layout.tsx). */
-export const useConfirmStore = create<ConfirmState>((set, get) => ({
-  options: null,
-  resolve: null,
-  open: (options) =>
-    new Promise<boolean>((resolve) => {
-      set({ options, resolve });
-    }),
-  close: (result) => {
-    get().resolve?.(result);
-    set({ options: null, resolve: null });
-  },
-}));
+/** Store del diálogo global — ver components/ui/ConfirmDialog.tsx (montado en _layout.tsx). */
+export const useConfirmStore = createOverlayStore<ConfirmOptions>();
 
 /**
  * Reemplazo con estilo propio de Alert.alert para confirmaciones de 2 botones

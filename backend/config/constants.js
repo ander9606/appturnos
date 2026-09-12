@@ -75,6 +75,13 @@ const HORAS_EXTRA_MAX_SEMANA  = 12;       // límite legal de horas extra por se
 const HORA_INICIO_NOCTURNO = 21; // 21:00
 const HORA_FIN_NOCTURNO = 6; // 06:00
 
+// Almuerzo: Art. 167 CST solo obliga descanso si la jornada continua supera
+// 6h. Por defecto se asume que el trabajador lo tomó y se descuenta del
+// cierre de jornada; `jornada_continua` (registros_diarios) permite marcar
+// que NO lo tomó y omitir el descuento (ver calcularHoras en laboralUtils.js).
+const JORNADA_CONTINUA_UMBRAL_HORAS = 6;
+const DURACION_ALMUERZO_MIN = 60;
+
 // Divisor para convertir el salario mensual en valor de la hora ordinaria
 // (convención laboral colombiana: 30 días × 8 h).
 const HORAS_MES_NOMINA = 240;
@@ -180,6 +187,8 @@ module.exports = {
   HORAS_EXTRA_MAX_SEMANA,
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
+  JORNADA_CONTINUA_UMBRAL_HORAS,
+  DURACION_ALMUERZO_MIN,
   HORAS_MES_NOMINA,
   COMPENSATORIO_PLAZO_DIAS,
   SMMLV_COP,

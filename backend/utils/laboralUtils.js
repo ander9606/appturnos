@@ -21,6 +21,8 @@ const {
   JORNADA_SEMANAL_HORAS,
   HORA_INICIO_NOCTURNO,
   HORA_FIN_NOCTURNO,
+  JORNADA_CONTINUA_UMBRAL_HORAS,
+  DURACION_ALMUERZO_MIN,
   HORAS_MES_NOMINA,
   RECARGOS,
   SMMLV_COP,
@@ -161,6 +163,37 @@ function redondear(horas) {
 }
 
 /**
+ * Minutos (índices absolutos dentro de [inicio, fin), pueden superar 1439 si
+ * el turno cruza medianoche) que se descuentan como almuerzo.
+ *
+ * Por defecto, si la jornada supera JORNADA_CONTINUA_UMBRAL_HORAS se asume
+ * que el trabajador tomó su hora de almuerzo (Art. 167 CST) y se descuentan
+ * DURACION_ALMUERZO_MIN minutos — tomados del FINAL DEL BLOQUE DIURNO (se
+ * escanea hacia atrás desde `fin` saltando minutos nocturnos) para no
+ * comerse horas nocturnas ya causadas. `jornadaContinua: true` (el
+ * trabajador indica que NO tomó almuerzo al cerrar) omite el descuento.
+ *
+ * @param {number} inicio  Minuto de inicio del turno (ver horaAMinutos).
+ * @param {number} fin     Minuto de fin (> inicio; ya ajustado si cruza medianoche).
+ * @param {boolean} jornadaContinua
+ * @returns {Set<number>}
+ */
+function calcularMinutosAlmuerzo(inicio, fin, jornadaContinua) {
+  const totalMin = fin - inicio;
+  let pendiente =
+    !jornadaContinua && totalMin > JORNADA_CONTINUA_UMBRAL_HORAS * 60 ? DURACION_ALMUERZO_MIN : 0;
+
+  const minutos = new Set();
+  for (let m = fin - 1; m >= inicio && pendiente > 0; m--) {
+    if (!esMinutoNocturno(m)) {
+      minutos.add(m);
+      pendiente--;
+    }
+  }
+  return minutos;
+}
+
+/**
  * Desglosa una jornada en sus componentes para liquidación de nómina.
  *
  * @param {object} params
@@ -184,8 +217,15 @@ function redondear(horas) {
  * @param {number} [params.horasOrdinariasAcumuladas=0]
  *   Horas ordinarias + nocturnas ya registradas esta semana (lunes–ayer).
  *   Cuando se supera JORNADA_SEMANAL_HORAS el resto del turno pasa a extra.
+ * @param {boolean} [params.jornadaContinua=false]
+ *   Si la jornada supera JORNADA_CONTINUA_UMBRAL_HORAS, por defecto se asume
+ *   que el trabajador tomó su hora de almuerzo (Art. 167 CST) y se descuentan
+ *   DURACION_ALMUERZO_MIN minutos de la jornada. Marcar `jornadaContinua: true`
+ *   (el trabajador indica que NO tomó almuerzo al cerrar) omite ese descuento.
  */
-function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinariasAcumuladas = 0 } = {}) {
+function calcularHoras({
+  horaEntrada, horaSalida, fecha, esFestivo, horasOrdinariasAcumuladas = 0, jornadaContinua = false,
+} = {}) {
   const vacio = {
     horas_ordinarias: 0,
     horas_extra_diurnas: 0,
@@ -208,6 +248,8 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
   const festivo =
     typeof esFestivo === 'boolean' ? esFestivo : fecha ? esDiaFestivo(fecha) : false;
 
+  const esAlmuerzo = calcularMinutosAlmuerzo(inicio, fin, jornadaContinua);
+
   let ordinariasDiurnas = 0;
   let ordinariasNocturnas = 0;
   let extraDiurnas = 0;
@@ -217,9 +259,10 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
   // Minutos ordinarios restantes para completar la jornada semanal (42 h).
   const minOrdinarioRestante = Math.max(0, (JORNADA_SEMANAL_HORAS - horasOrdinariasAcumuladas) * 60);
 
+  let minutosContados = 0; // excluye almuerzo del acumulado semanal
   for (let m = inicio; m < fin; m++) {
-    const trabajados = m - inicio; // minutos acumulados del turno actual
-    const esOrdinario = trabajados < minOrdinarioRestante;
+    if (esAlmuerzo.has(m)) continue;
+    const esOrdinario = minutosContados < minOrdinarioRestante;
     const nocturno = esMinutoNocturno(m);
 
     if (festivo) {
@@ -232,6 +275,7 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
     } else {
       extraDiurnas++;
     }
+    minutosContados++;
   }
 
   return {
@@ -243,7 +287,7 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
     horas_nocturnas: redondear(ordinariasNocturnas / 60),
     horas_festivo: redondear(festivoMin / 60),
     es_festivo: festivo ? 1 : 0,
-    total_horas: redondear(totalMin / 60),
+    total_horas: redondear((totalMin - esAlmuerzo.size) / 60),
   };
 }
 
@@ -379,6 +423,7 @@ module.exports = {
   festivosDeAnio,
   esDiaFestivo,
   calcularHoras,
+  calcularMinutosAlmuerzo,
   horaAMinutos,
   valorHora,
   calcularPagoNomina,

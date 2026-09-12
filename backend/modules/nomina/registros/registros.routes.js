@@ -60,6 +60,7 @@ router.post(
       .withMessage('hora_salida inválida (HH:MM)'),
     body('trabajador_id').optional().isInt({ min: 1 }).withMessage('trabajador_id inválido'),
     body('novedad').optional({ values: 'falsy' }).isString(),
+    body('jornada_continua').optional().isBoolean().withMessage('jornada_continua inválido'),
   ],
   validar,
   ctrl.crear
@@ -88,6 +89,7 @@ router.post(
     body('latitud').optional().isFloat({ min: -90,  max: 90  }).withMessage('latitud inválida'),
     body('longitud').optional().isFloat({ min: -180, max: 180 }).withMessage('longitud inválida'),
     body('device_id').optional({ values: 'falsy' }).isString().isLength({ max: 64 }).withMessage('device_id inválido'),
+    body('jornada_continua').optional().isBoolean().withMessage('jornada_continua inválido'),
   ],
   validar,
   ctrl.marcarSalida
@@ -158,6 +160,7 @@ router.put(
     body('hora_salida').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_salida inválida'),
     body('novedad').optional({ values: 'falsy' }).isString(),
     body('tipo_dia').optional().isIn(TIPOS_DIA).withMessage('tipo_dia inválido'),
+    body('jornada_continua').optional().isBoolean().withMessage('jornada_continua inválido'),
   ],
   validar,
   ctrl.corregir

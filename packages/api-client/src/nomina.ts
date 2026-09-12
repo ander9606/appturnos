@@ -36,6 +36,8 @@ export interface RegistroDiario {
   horas_nocturnas: number;
   horas_festivo: number;
   es_festivo: 0 | 1;
+  /** Trabajador marcó que no tomó almuerzo — omite el descuento automático de 1h en jornadas > 6h. */
+  jornada_continua: 0 | 1;
   novedad: string | null;
   sospechoso: 0 | 1; // otro trabajador marcó muy cerca en tiempo/espacio — posible buddy punching, solo auditoría
   tipo_dia: TipoDia;
@@ -261,6 +263,7 @@ export const nominaApi = {
     hora_salida?: string;
     trabajador_id?: number;
     novedad?: string;
+    jornada_continua?: boolean;
   }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros', datos);
   },
@@ -270,6 +273,7 @@ export const nominaApi = {
     novedad?: string;
     hora_entrada?: string;
     hora_salida?: string;
+    jornada_continua?: boolean;
   }): Promise<RegistroDiario> {
     return api.put<RegistroDiario>(`/api/nomina/registros/${id}`, datos);
   },
@@ -284,7 +288,7 @@ export const nominaApi = {
     return api.post<RegistroDiario>('/api/nomina/registros/marcar-entrada', datos ?? {});
   },
 
-  marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number; device_id?: string }): Promise<RegistroDiario> {
+  marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number; device_id?: string; jornada_continua?: boolean }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>(`/api/nomina/registros/${registroId}/marcar-salida`, datos ?? {});
   },
 

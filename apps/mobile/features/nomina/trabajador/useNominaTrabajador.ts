@@ -10,6 +10,7 @@ import { ApiError } from '@api-client';
 import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina } from '@api-client';
 import { bogotaToday } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
+import { actionToast } from '@/lib/actionToast';
 import { useGeofence } from '@/features/turnos/useGeofence';
 import {
   usePeriodos,
@@ -25,6 +26,7 @@ import {
   getValorHora,
   calcularResumenPeriodo,
   getEstadoHoy,
+  debePreguntarJornadaContinua,
   type EstadoHoy,
   type ResumenPeriodoNomina,
 } from './nominaTrabajadorUtils';
@@ -163,18 +165,31 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   }, [requiereGeofence, geo.currentLocation, entradaMutation]);
 
   const handleSalida = useCallback(async () => {
-    if (!registroHoy) return;
+    if (!registroHoy?.hora_entrada) return;
     const ok = await confirm({
       title: 'Confirmar salida',
       message: '¿Confirmas que deseas marcar tu salida?',
       confirmLabel: 'Marcar salida',
     });
     if (!ok) return;
+
+    // Por defecto se descuenta 1h de almuerzo en jornadas largas (Art. 167 CST).
+    // Solo se ofrece la ventana cuando ya es relevante: si la jornada no llega
+    // al umbral, el descuento no aplicaría de todas formas. Es una ventana con
+    // tiempo límite (no un diálogo bloqueante) — si no responde a tiempo, se
+    // asume el comportamiento por defecto (si tomó almuerzo).
+    const jornadaContinua = debePreguntarJornadaContinua(registroHoy.hora_entrada)
+      ? await actionToast({
+          message: 'Por defecto se descuenta 1h de almuerzo en jornadas largas. ¿Trabajaste jornada continua, sin tomar almuerzo?',
+          actionLabel: 'Sí, jornada continua',
+        })
+      : false;
+
     try {
       const coords = requiereGeofence && geo.currentLocation
         ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
         : undefined;
-      const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
+      const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, jornada_continua: jornadaContinua, ...coords });
       if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';

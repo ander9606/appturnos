@@ -24,6 +24,7 @@ import { queryClient } from '@/lib/queryClient';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
+import { ActionToast } from '@/components/ui/ActionToast';
 import { AnuncioTurno } from '@/components/ui/AnuncioTurno';
 import { InvitacionFlotanteCard } from '@/components/ui/InvitacionFlotanteCard';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -189,6 +190,7 @@ function RootLayout() {
       <ErrorBoundary>
         <StatusBanner />
         <Toast />
+        <ActionToast />
         <AnuncioTurno />
         <InvitacionFlotanteCard />
         <ConfirmDialog />

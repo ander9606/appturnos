@@ -195,11 +195,13 @@ const RegistrosService = {
     const { ordinarias: ordinariasAcumCrear } =
       await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunesCrear, datos.fecha);
 
+    const jornadaContinua = Boolean(datos.jornada_continua);
     const horas = calcularHoras({
       horaEntrada: datos.hora_entrada,
       horaSalida: datos.hora_salida,
       fecha: datos.fecha,
       horasOrdinariasAcumuladas: ordinariasAcumCrear,
+      jornadaContinua,
     });
 
     const id = await RegistrosModel.crear(empresaId, {
@@ -216,6 +218,7 @@ const RegistrosService = {
       es_festivo: horas.es_festivo,
       novedad: datos.novedad || null,
       tipo_dia: 'ordinario',
+      jornada_continua: jornadaContinua,
     });
 
     // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que marcarSalida.
@@ -261,8 +264,16 @@ const RegistrosService = {
     const { ordinarias: ordinariasAcumCorregir } =
       await RegistrosModel.sumarOrdinariasEnSemana(empresaId, registro.trabajador_id, lunesCorregir, registro.fecha);
 
+    // Si no viene en la corrección, se preserva el flag ya persistido — de lo
+    // contrario cada corregir() reintroduciría el descuento de almuerzo en un
+    // día que el trabajador ya había marcado como jornada continua.
+    const jornadaContinua = datos.jornada_continua !== undefined
+      ? Boolean(datos.jornada_continua)
+      : Boolean(registro.jornada_continua);
+
     const horas = calcularHoras({
       horaEntrada, horaSalida, fecha: registro.fecha, horasOrdinariasAcumuladas: ordinariasAcumCorregir,
+      jornadaContinua,
     });
 
     await RegistrosModel.actualizar(empresaId, id, {
@@ -277,6 +288,7 @@ const RegistrosService = {
       novedad: datos.novedad !== undefined ? datos.novedad : registro.novedad,
       tipo_dia: datos.tipo_dia !== undefined ? datos.tipo_dia : registro.tipo_dia,
       aprobado_por: usuario.sub,
+      jornada_continua: jornadaContinua,
     });
 
     // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que crear()/
@@ -410,7 +422,7 @@ const RegistrosService = {
   },
 
   /** Clock-out: sets hora_salida = NOW() and recalculates hours. */
-  async marcarSalida(empresaId, usuario, registroId, { latitud, longitud, device_id: deviceId } = {}) {
+  async marcarSalida(empresaId, usuario, registroId, { latitud, longitud, device_id: deviceId, jornada_continua: jornadaContinua } = {}) {
     const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
     if (!registro) throw new AppError('Registro no encontrado', 404);
 
@@ -454,6 +466,7 @@ const RegistrosService = {
       horaSalida,
       fecha: registro.fecha,
       horasOrdinariasAcumuladas: ordinariasBase,
+      jornadaContinua: Boolean(jornadaContinua),
     });
 
     // Totales del día = sesiones previas + esta sesión.
@@ -474,6 +487,7 @@ const RegistrosService = {
       longitud,
       deviceId,
       ...horas,
+      jornada_continua: Boolean(jornadaContinua),
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);
 

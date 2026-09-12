@@ -164,6 +164,7 @@ const CompensatoriosService = {
             novedad: 'Ya no es descanso compensatorio (se reasignó a otra fecha) — verifica las horas de este día',
             tipo_dia: 'ordinario',
             aprobado_por: usuarioId,
+            jornada_continua: registroAnterior.jornada_continua,
           });
         }
       }
@@ -239,6 +240,7 @@ const CompensatoriosService = {
         novedad:              existing.novedad,
         tipo_dia:             'compensatorio',
         aprobado_por:         asignadoPor,
+        jornada_continua:     existing.jornada_continua,
       });
     } else {
       await RegistrosModel.crear(empresaId, {
