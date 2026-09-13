@@ -237,6 +237,22 @@ export function useCorregirAsignacion() {
   });
 }
 
+/** Agrega o edita el bono extra (ej. propina) de un turno puntual — solo gestor/admin. */
+export function useAgregarBono() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; monto: number; motivo?: string }) =>
+      turnosApi.agregarBono(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
+      qc.invalidateQueries({ queryKey: ['turnos', 'oferta'] });
+      qc.invalidateQueries({ queryKey: ['turnos', 'liquidacion'] });
+      toast.success('Bono actualizado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useDescartarSospechosoAsignacion() {
   const qc = useQueryClient();
   return useMutation({

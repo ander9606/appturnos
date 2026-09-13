@@ -134,7 +134,15 @@ export default function ContratoScreen() {
                 <Text style={s.summaryEmphasized}>{fmtLegal(contrato.fecha)}</Text>, de{' '}
                 <Text style={s.summaryEmphasized}>{fmtH(contrato.hora_inicio)}</Text> a{' '}
                 <Text style={s.summaryEmphasized}>{fmtH(contrato.hora_fin_estimada)}</Text>, por{' '}
-                <Text style={s.summaryEmphasized}>{formatCOP(contrato.valor_dia)}</Text>.
+                <Text style={s.summaryEmphasized}>{formatCOP(contrato.valor_dia)}</Text>
+                {contrato.bono_monto > 0 && (
+                  <>
+                    {' '}más un bono de{' '}
+                    <Text style={s.summaryEmphasized}>{formatCOP(contrato.bono_monto)}</Text>
+                    {contrato.bono_motivo ? ` (${contrato.bono_motivo})` : ''}
+                  </>
+                )}
+                .
               </Text>
             </View>
           )}
@@ -191,6 +199,13 @@ export default function ContratoScreen() {
               El CONTRATANTE pagará al CONTRATISTA la suma de{' '}
               <Text style={s.clauseEmphasized}>{formatCOP(contrato.valor_dia)} (COP)</Text>{' '}
               por la jornada pactada, una vez el CONTRATISTA haya completado la labor y firmado el presente contrato.
+              {contrato.bono_monto > 0 && (
+                <>
+                  {' '}Adicionalmente, el CONTRATANTE reconoce un bono extra de{' '}
+                  <Text style={s.clauseEmphasized}>{formatCOP(contrato.bono_monto)} (COP)</Text>
+                  {contrato.bono_motivo ? ` por concepto de: ${contrato.bono_motivo}.` : '.'}
+                </>
+              )}
             </Clausula>
 
             <Clausula num={nums.natura} titulo="NATURALEZA JURÍDICA">

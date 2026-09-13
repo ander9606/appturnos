@@ -353,7 +353,7 @@ const AsignacionesModel = {
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
                LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
            ) / 60,
-           a.pago_total = p.tarifa_dia
+           a.pago_total = p.tarifa_dia + a.bono_monto
        WHERE a.id = ? AND a.empresa_id = ?
          AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL`,
@@ -371,6 +371,26 @@ const AsignacionesModel = {
     const [res] = await pool.query(
       `UPDATE asignaciones_turno SET pago_total = ? WHERE id = ? AND empresa_id = ?`,
       [pagoTotal, id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
+  /**
+   * Agrega o edita el bono manual (ej. propina) de un turno. El delta se
+   * refleja de inmediato en `pago_total` (permanece NULL si el turno aún no
+   * se completó — mismo criterio que registrarEgreso/cerrarMasivo, que ya
+   * suman `bono_monto` al fijar `pago_total = tarifa_dia` al cerrar).
+   */
+  async asignarBono(empresaId, id, { monto, motivo, creadoPor }) {
+    const [res] = await pool.query(
+      `UPDATE asignaciones_turno
+       SET pago_total      = pago_total - bono_monto + ?,
+           bono_monto      = ?,
+           bono_motivo     = ?,
+           bono_creado_por = ?,
+           bono_creado_at  = NOW()
+       WHERE id = ? AND empresa_id = ?`,
+      [monto, monto, motivo, creadoPor, id, empresaId]
     );
     return res.affectedRows;
   },
@@ -517,6 +537,7 @@ const AsignacionesModel = {
     const [filas] = await pool.query(
       `SELECT a.id, a.empresa_id, a.oferta_id, a.puesto_id, a.trabajador_id, a.estado,
               a.horas_trabajadas, a.pago_total, a.pago_extra,
+              a.bono_monto, a.bono_motivo,
               a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
               a.latitud_ingreso, a.longitud_ingreso,
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
@@ -550,6 +571,7 @@ const AsignacionesModel = {
     const [filas] = await pool.query(
       `SELECT a.id, a.empresa_id, a.oferta_id, a.puesto_id, a.trabajador_id, a.estado,
               a.horas_trabajadas, a.pago_total, a.pago_extra,
+              a.bono_monto, a.bono_motivo,
               a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
               a.latitud_ingreso, a.longitud_ingreso,
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
@@ -598,6 +620,8 @@ const AsignacionesModel = {
          a.horas_trabajadas,
          a.pago_total,
          COALESCE(a.pago_extra, 0)   AS pago_extra,
+         COALESCE(a.bono_monto, 0)   AS bono_monto,
+         a.bono_motivo,
          a.hora_ingreso_real,
          a.hora_egreso_real,
          o.titulo      AS oferta_titulo,
@@ -643,6 +667,7 @@ const AsignacionesModel = {
           total_horas:        0,
           pago_base:          0,
           pago_extra:         0,
+          bono_monto:         0,
           pago_total:         0,
           // Turnos completados cuyo contrato aún no firma el trabajador — su pago
           // no se suma a los totales de arriba hasta que exista la firma.
@@ -653,13 +678,15 @@ const AsignacionesModel = {
       const w = workers.get(row.trabajador_id);
       const firmado = Boolean(row.firmado_trabajador);
       const extra  = Number(row.pago_extra ?? 0);
+      const bono   = Number(row.bono_monto ?? 0);
       const total  = Number(row.pago_total ?? 0);
       const horas  = Number(row.horas_trabajadas ?? 0);
       w.total_turnos++;
       if (firmado) {
         w.total_horas  = parseFloat((w.total_horas + horas).toFixed(4));
         w.pago_extra   += extra;
-        w.pago_base    += total - extra;
+        w.bono_monto   += bono;
+        w.pago_base    += total - extra - bono;
         w.pago_total   += total;
       } else {
         w.turnos_pendientes_firma++;
@@ -677,6 +704,8 @@ const AsignacionesModel = {
         tarifa_dia:      Number(row.tarifa_dia),
         cargo_nombre:    row.cargo_nombre,
         pago_extra:      extra,
+        bono_monto:      bono,
+        bono_motivo:     row.bono_motivo || null,
         pago_total:      total,
         calificacion:    row.calificacion,
         firmado_trabajador: firmado,
@@ -806,7 +835,7 @@ const AsignacionesModel = {
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
                LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
            ) / 60,
-           a.pago_total = p.tarifa_dia
+           a.pago_total = p.tarifa_dia + a.bono_monto
        WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL
          ${excClause}`,

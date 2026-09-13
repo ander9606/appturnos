@@ -46,6 +46,9 @@ function generarContratoPdf(contrato, stream) {
     }`
   );
   linea('Valor del día', `$ ${Number(contrato.valor_dia).toLocaleString('es-CO')}`);
+  if (Number(contrato.bono_monto) > 0) {
+    linea('Bono extra', `$ ${Number(contrato.bono_monto).toLocaleString('es-CO')}${contrato.bono_motivo ? ` (${contrato.bono_motivo})` : ''}`);
+  }
   doc.moveDown(1);
 
   doc

@@ -35,7 +35,7 @@ import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
 import { NovedadCard }         from '@/features/novedades/NovedadCard';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion } from '@/features/turnos/useTurnos';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion, useAgregarBono } from '@/features/turnos/useTurnos';
 import { useGeofence }         from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
@@ -103,6 +103,7 @@ export default function TurnoDetailScreen() {
   const [comentario, setComentario] = useState('');
   const [cargandoContrato, setCargandoContrato] = useState(false);
   const [corrigiendoIngreso, setCorrigiendoIngreso] = useState(false);
+  const [editandoBono, setEditandoBono] = useState(false);
 
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
@@ -287,7 +288,7 @@ export default function TurnoDetailScreen() {
 
   const { estado, oferta_titulo, oferta_fecha, hora_inicio, hora_fin_estimada,
           lugar, tarifa_dia, hora_ingreso_real, hora_egreso_real,
-          horas_trabajadas, pago_total,
+          horas_trabajadas, pago_total, bono_monto, bono_motivo,
           calificacion, calificacion_comentario,
           oferta_descripcion, oferta_externo_notas,
           empresa_nombre, empresa_tipo_liquidacion,
@@ -398,6 +399,13 @@ export default function TurnoDetailScreen() {
                 )}
 
                 <InfoRow icon="cash-outline" label="Tarifa" value={`$${tarifa_dia.toLocaleString('es-CO')} / turno`} />
+                {Number(bono_monto) > 0 && (
+                  <InfoRow
+                    icon="gift-outline"
+                    label={bono_motivo ? `Bono extra · ${bono_motivo}` : 'Bono extra'}
+                    value={`$${Number(bono_monto).toLocaleString('es-CO')}`}
+                  />
+                )}
                 {empresa_tipo_liquidacion && (
                   <InfoRow
                     icon="calendar-number-outline"
@@ -708,6 +716,17 @@ export default function TurnoDetailScreen() {
             />
           )}
 
+          {/* ── Gestor: Agregar/editar bono extra (bloqueado si ya se firmó el contrato) ── */}
+          {isGestor && asignacion.contrato_firmado !== 1 && (
+            <Button
+              label={Number(bono_monto) > 0 ? 'Editar bono extra' : 'Agregar bono extra'}
+              variant="secondary"
+              size="md"
+              fullWidth
+              onPress={() => setEditandoBono(true)}
+            />
+          )}
+
           {/* ── Novedades ─────────────────────────────────────── */}
           <View
             className="bg-card rounded-2xl px-5 py-4"
@@ -756,6 +775,15 @@ export default function TurnoDetailScreen() {
           visible={corrigiendoIngreso}
           asignacion={asignacion}
           onClose={() => setCorrigiendoIngreso(false)}
+        />
+      )}
+
+      {/* ── Bono extra modal ───────────────────────────────────── */}
+      {id != null && (
+        <BonoModal
+          visible={editandoBono}
+          asignacion={asignacion}
+          onClose={() => setEditandoBono(false)}
         />
       )}
     </>
@@ -972,6 +1000,115 @@ function CorregirIngresoEgresoModal({
                 fullWidth
                 loading={corregir.isPending}
                 disabled={corregir.isPending}
+                onPress={handleGuardar}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Bono extra (gestores) ────────────────────────────────────────────────
+
+function BonoModal({
+  visible,
+  asignacion,
+  onClose,
+}: {
+  visible: boolean;
+  asignacion: Asignacion | null | undefined;
+  onClose: () => void;
+}) {
+  const agregarBono = useAgregarBono();
+  const [monto, setMonto] = useState('');
+  const [motivo, setMotivo] = useState('');
+
+  useEffect(() => {
+    if (asignacion && visible) {
+      setMonto(asignacion.bono_monto ? String(asignacion.bono_monto) : '');
+      setMotivo(asignacion.bono_motivo ?? '');
+    }
+  }, [asignacion?.id, visible]); // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  if (!visible || !asignacion) return null;
+
+  async function handleGuardar() {
+    const montoNum = Number(monto.replace(/[^0-9.]/g, '')) || 0;
+    if (montoNum > 0 && !motivo.trim()) {
+      Alert.alert('Falta el motivo', 'Escribe por qué se le da este bono al trabajador.');
+      return;
+    }
+    try {
+      await agregarBono.mutateAsync({ asignacionId: asignacion!.id, monto: montoNum, motivo: motivo.trim() || undefined });
+      showToast(montoNum > 0 ? 'Bono guardado.' : 'Bono quitado.');
+      onClose();
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo guardar el bono.';
+      Alert.alert('Error', msg);
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View className="flex-1 bg-black/50 items-center justify-end">
+        <KeyboardAvoidingView behavior="padding">
+          <View className="w-full bg-background rounded-t-3xl px-6 pt-5 pb-8">
+            <View className="flex-row items-center justify-between mb-5">
+              <View>
+                <Text className="text-lg font-bold text-foreground">Bono extra</Text>
+                <Text className="text-sm text-muted-foreground">
+                  {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
+                </Text>
+              </View>
+              <Pressable onPress={onClose} hitSlop={10}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </Pressable>
+            </View>
+
+            <View className="gap-4">
+              <View className="gap-1.5">
+                <Text className="text-sm font-semibold text-foreground">Monto (COP)</Text>
+                <TextInput
+                  value={monto}
+                  onChangeText={setMonto}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#94A3B8"
+                  className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
+                />
+              </View>
+              <View className="gap-1.5">
+                <Text className="text-sm font-semibold text-foreground">Motivo</Text>
+                <TextInput
+                  value={motivo}
+                  onChangeText={setMotivo}
+                  placeholder="Ej. propina del cliente"
+                  placeholderTextColor="#94A3B8"
+                  maxLength={255}
+                  className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
+                />
+              </View>
+              <Text className="text-xs text-muted-foreground">
+                Se suma al pago del turno y queda registrado en el contrato. Deja el monto en 0 para quitarlo.
+              </Text>
+            </View>
+
+            <View className="flex-row gap-3 mt-6">
+              <Button
+                label="Cancelar"
+                variant="secondary"
+                fullWidth
+                disabled={agregarBono.isPending}
+                onPress={onClose}
+              />
+              <Button
+                label={agregarBono.isPending ? 'Guardando…' : 'Guardar'}
+                variant="primary"
+                fullWidth
+                loading={agregarBono.isPending}
+                disabled={agregarBono.isPending}
                 onPress={handleGuardar}
               />
             </View>

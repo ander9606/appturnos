@@ -27,6 +27,9 @@ export interface Contrato extends ContratoResumen {
   empresa_nit: string | null;
   /** Última firma guardada del trabajador — atajo para firmar sin redibujar. */
   trabajador_firma_guardada: string | null;
+  /** Bono extra (ej. propina) asignado al turno — 0 si no tiene. */
+  bono_monto: number;
+  bono_motivo: string | null;
 }
 
 export const contratosApi = {

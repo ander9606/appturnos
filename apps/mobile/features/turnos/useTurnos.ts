@@ -326,6 +326,22 @@ export function useCorregirAsignacion() {
   });
 }
 
+/** Agrega o edita el bono extra (ej. propina) de un turno puntual (jefe/admin). */
+export function useAgregarBono() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId, monto, motivo }: {
+      asignacionId: number; monto: number; motivo?: string;
+    }) => turnosApi.agregarBono(asignacionId, { monto, motivo }),
+    onSuccess: (_data, { asignacionId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: ['liquidacion-turnos'] });
+    },
+  });
+}
+
 /** Duplicar una oferta existente a una nueva fecha (gestores). */
 export function useDuplicarOferta() {
   const qc = useQueryClient();

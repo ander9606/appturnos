@@ -78,6 +78,7 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'contrato.pendiente_firma':     'document-text-outline',
   'postulacion.nueva':            'person-add-outline',
   'turno.sospechoso':             'alert-circle-outline',
+  'turno.bono':                   'gift-outline',
 };
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {

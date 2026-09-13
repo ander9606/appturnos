@@ -63,6 +63,9 @@ export interface LiquidacionTurno {
   tarifa_dia: number;
   cargo_nombre: string;
   pago_extra: number;
+  /** Bono extra (ej. propina) de este turno — ya sumado dentro de `pago_total`. */
+  bono_monto: number;
+  bono_motivo: string | null;
   pago_total: number;
   calificacion: number | null;
   /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
@@ -81,6 +84,8 @@ export interface LiquidacionTurnosTrabajador {
   total_horas: number;
   pago_base: number;
   pago_extra: number;
+  /** Suma de bonos extra (ej. propinas) de los turnos firmados — ya incluida en `pago_total`. */
+  bono_monto: number;
   pago_total: number;
   /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
   turnos_pendientes_firma: number;
@@ -122,4 +127,7 @@ export interface Asignacion {
   calificacion?: number | null;
   /** Si es 0, el contrato del turno completado aún no fue firmado — su pago no cuenta en liquidación. */
   contrato_firmado?: 0 | 1;
+  /** Bono extra (ej. propina) asignado al turno — ya sumado dentro de `pago_total`. */
+  bono_monto?: number;
+  bono_motivo?: string | null;
 }

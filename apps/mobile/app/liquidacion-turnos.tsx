@@ -63,6 +63,7 @@ function buildMonthLabel(inicio: string): string {
 function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: string }) {
   const router = useRouter();
   const hasExtra = t.pago_extra > 0;
+  const hasBono = t.bono_monto > 0;
   return (
     <TouchableOpacity
       onPress={() => router.push(`/turno/${t.asignacion_id}`)}
@@ -95,13 +96,20 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
         <View className="flex-row items-center gap-1">
           <Ionicons name="cash-outline" size={12} color="#64748B" />
           <Text className="text-xs text-muted-foreground">
-            Base: {cop(t.pago_total - t.pago_extra)}
+            Base: {cop(t.pago_total - t.pago_extra - t.bono_monto)}
           </Text>
         </View>
         {hasExtra && (
           <View className="bg-amber-100 px-2 py-0.5 rounded-full">
             <Text className="text-[10px] font-semibold text-amber-700">
               Extra +{cop(t.pago_extra)}
+            </Text>
+          </View>
+        )}
+        {hasBono && (
+          <View className="bg-success-light px-2 py-0.5 rounded-full">
+            <Text className="text-[10px] font-semibold text-success">
+              Bono +{cop(t.bono_monto)}
             </Text>
           </View>
         )}
@@ -132,6 +140,7 @@ function TrabajadorCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasExtra = item.pago_extra > 0;
+  const hasBono = item.bono_monto > 0;
 
   return (
     <View
@@ -171,6 +180,13 @@ function TrabajadorCard({
               <View className="bg-amber-100 self-start px-2 py-0.5 rounded-full mt-0.5">
                 <Text className="text-[10px] font-semibold text-amber-700">
                   Incluye {cop(item.pago_extra)} extra
+                </Text>
+              </View>
+            )}
+            {hasBono && (
+              <View className="bg-success-light self-start px-2 py-0.5 rounded-full mt-0.5">
+                <Text className="text-[10px] font-semibold text-success">
+                  Incluye {cop(item.bono_monto)} en bonos
                 </Text>
               </View>
             )}

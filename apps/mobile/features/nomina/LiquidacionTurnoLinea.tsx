@@ -12,6 +12,7 @@ interface Props {
 
 export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
   const tieneExtra = Number(linea.pago_extra) > 0;
+  const tieneBono = Number(linea.bono_monto) > 0;
 
   return (
     <View className="py-2.5 border-b border-border gap-1">
@@ -68,6 +69,11 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
           {tieneExtra && (
             <Text className="text-[10px] text-amber-600 font-medium">
               +{formatCOP(Number(linea.pago_extra))} extra
+            </Text>
+          )}
+          {tieneBono && (
+            <Text className="text-[10px] text-success font-medium">
+              +{formatCOP(Number(linea.bono_monto))} bono
             </Text>
           )}
         </View>

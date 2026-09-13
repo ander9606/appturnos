@@ -74,6 +74,16 @@ async function corregir(req, res) {
   res.json({ success: true, data, message: 'Asignación corregida' });
 }
 
+async function agregarBono(req, res) {
+  const data = await AsignacionesService.agregarBono(
+    req.empresa_id,
+    Number(req.params.id),
+    req.usuario,
+    { monto: Number(req.body.monto), motivo: req.body.motivo || null }
+  );
+  res.json({ success: true, data, message: 'Bono actualizado' });
+}
+
 async function noPresentado(req, res) {
   const data = await AsignacionesService.marcarNoPresentado(
     req.empresa_id,
@@ -107,5 +117,5 @@ async function descartarSospechoso(req, res) {
 
 module.exports = {
   listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, corregir,
-  noPresentado, calificar, liquidacion, descartarSospechoso,
+  noPresentado, calificar, liquidacion, descartarSospechoso, agregarBono,
 };

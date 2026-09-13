@@ -103,6 +103,26 @@ router.patch(
   ctrl.corregir
 );
 
+// PUT /api/turnos/asignaciones/:id/bono  (jefe/admin agrega o edita el bono extra de un turno)
+router.put(
+  '/:id/bono',
+  verificarRol(GESTIONAR),
+  verificarSuscripcion,
+  [
+    idParam,
+    body('monto').isFloat({ min: 0 }).withMessage('monto debe ser un número mayor o igual a 0'),
+    body('motivo').optional({ values: 'falsy' }).isString().isLength({ max: 255 }).withMessage('motivo inválido (máx. 255 caracteres)'),
+    body('motivo').custom((value, { req }) => {
+      if (Number(req.body.monto) > 0 && !String(value || '').trim()) {
+        throw new Error('motivo es obligatorio cuando el bono es mayor a 0');
+      }
+      return true;
+    }),
+  ],
+  validar,
+  ctrl.agregarBono
+);
+
 // POST /api/turnos/asignaciones/:id/no-presentado  (jefe/admin marca ausencia + 0 estrellas auto)
 router.post('/:id/no-presentado', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.noPresentado);
 

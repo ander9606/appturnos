@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -15,6 +15,7 @@ import {
   useCancelarAsignacion,
   useNoPresentado,
   useCorregirAsignacion,
+  useAgregarBono,
   useCalificar,
   useDescartarSospechosoAsignacion,
 } from '../hooks/useTurnos';
@@ -77,6 +78,7 @@ export function OfertaDetailPage() {
   const [showPuestoForm, setShowPuestoForm] = useState(false);
   const [calificandoId, setCalificandoId] = useState<number | null>(null);
   const [corrigiendoAsig, setCorrigiendoAsig] = useState<Asignacion | null>(null);
+  const [bonoAsig, setBonoAsig] = useState<Asignacion | null>(null);
   const [descargandoContratoId, setDescargandoContratoId] = useState<number | null>(null);
 
   async function handleDescargarContrato(asignacionId: number) {
@@ -470,6 +472,16 @@ export function OfertaDetailPage() {
                               <Clock size={13} />
                             </button>
                           )}
+                          {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && a.contrato_firmado !== 1 && (
+                            <button
+                              onClick={() => setBonoAsig(a)}
+                              className={`transition-colors p-1 ${(a.bono_monto ?? 0) > 0 ? 'text-warning' : 'text-muted-foreground/60 hover:text-warning'}`}
+                              title={(a.bono_monto ?? 0) > 0 ? `Bono: ${fmtCOP(a.bono_monto ?? 0)}` : 'Agregar bono extra'}
+                              aria-label="Agregar o editar bono extra"
+                            >
+                              <Gift size={13} />
+                            </button>
+                          )}
                           {a.sospechoso === 1 && (
                             <button
                               onClick={() => descartarSospechoso.mutate(a.id)}
@@ -511,6 +523,13 @@ export function OfertaDetailPage() {
         <CorregirAsignacionModal
           asignacion={corrigiendoAsig}
           onClose={() => setCorrigiendoAsig(null)}
+        />
+      )}
+
+      {bonoAsig && (
+        <BonoAsignacionModal
+          asignacion={bonoAsig}
+          onClose={() => setBonoAsig(null)}
         />
       )}
 
@@ -706,6 +725,68 @@ function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignaci
           </button>
           <button type="submit" disabled={corregir.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
             {corregir.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ── Bono extra ── */
+function BonoAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; onClose: () => void }) {
+  const agregarBono = useAgregarBono();
+  const [monto, setMonto] = useState(String(asignacion.bono_monto ?? ''));
+  const [motivo, setMotivo] = useState(asignacion.bono_motivo ?? '');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const montoNum = Number(monto) || 0;
+    if (montoNum > 0 && !motivo.trim()) {
+      toast.error('Escribe el motivo del bono.');
+      return;
+    }
+    await agregarBono.mutateAsync({ id: asignacion.id, monto: montoNum, motivo: motivo.trim() || undefined });
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Bono extra</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {asignacion.trabajador_nombre} {asignacion.trabajador_apellido} · {asignacion.cargo_nombre}
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Monto (COP)</label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            value={monto}
+            onChange={e => setMonto(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Motivo</label>
+          <input
+            type="text"
+            maxLength={255}
+            value={motivo}
+            onChange={e => setMotivo(e.target.value)}
+            placeholder="Ej. propina del cliente"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Se suma al pago del turno y queda registrado en el contrato. Deja el monto en 0 para quitarlo.
+        </p>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={agregarBono.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {agregarBono.isPending ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
       </form>

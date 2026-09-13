@@ -49,6 +49,9 @@ export interface Asignacion {
   hora_egreso_real: string | null;
   horas_trabajadas: number | null;
   pago_total: number | null;
+  /** Bono extra (ej. propina) que el gestor asignó a este turno — ya sumado dentro de `pago_total`. */
+  bono_monto?: number;
+  bono_motivo?: string | null;
   latitud_ingreso: number | null;
   longitud_ingreso: number | null;
   sospechoso: 0 | 1; // otro trabajador marcó ingreso desde el mismo dispositivo y ubicación — posible buddy punching, solo auditoría
@@ -221,6 +224,9 @@ export interface LiquidacionTurnoLinea {
   tarifa_dia: number;
   cargo_nombre: string;
   pago_extra: number;
+  /** Bono extra (ej. propina) de este turno — ya sumado dentro de `pago_total`. */
+  bono_monto: number;
+  bono_motivo: string | null;
   pago_total: number;
   calificacion: number | null;
   /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
@@ -239,6 +245,8 @@ export interface LiquidacionTurnosTrabajador {
   total_horas: number;
   pago_base: number;
   pago_extra: number;
+  /** Suma de bonos extra (ej. propinas) de los turnos firmados — ya incluida en `pago_total`. */
+  bono_monto: number;
   pago_total: number;
   /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
   turnos_pendientes_firma: number;
@@ -422,6 +430,15 @@ export const turnosApi = {
     datos: { hora_ingreso_real?: string; hora_egreso_real?: string }
   ): Promise<Asignacion> {
     return api.patch<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/corregir`, datos);
+  },
+
+  /**
+   * Agrega o edita el bono extra (ej. propina) de un turno puntual. Solo
+   * gestores/admin, y solo mientras el contrato del turno no esté firmado.
+   * `monto: 0` quita el bono.
+   */
+  agregarBono(asignacionId: number, datos: { monto: number; motivo?: string }): Promise<Asignacion> {
+    return api.put<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/bono`, datos);
   },
 
   /**

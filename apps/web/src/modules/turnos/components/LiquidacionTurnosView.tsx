@@ -199,6 +199,9 @@ export function LiquidacionTurnosView() {
                                       <span>Horas trabajadas: {fmtHrs(t.horas_trabajadas)}</span>
                                       <span>Tarifa día: {fmtCOP(t.tarifa_dia)}</span>
                                       {t.pago_extra > 0 && <span>Pago extra: {fmtCOP(t.pago_extra)}</span>}
+                                      {t.bono_monto > 0 && (
+                                        <span>Bono: {fmtCOP(t.bono_monto)}{t.bono_motivo ? ` (${t.bono_motivo})` : ''}</span>
+                                      )}
                                       {t.calificacion != null && <span>Calificación: {t.calificacion}★</span>}
                                     </div>
                                     <button

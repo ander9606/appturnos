@@ -54,6 +54,10 @@ export const turnosApi = {
   corregirAsignacion: (id: number, data: { hora_ingreso_real?: string; hora_egreso_real?: string }) =>
     api.patch(`/turnos/asignaciones/${id}/corregir`, data).then(r => r.data),
 
+  /** Agrega o edita el bono extra (ej. propina) de un turno. `monto: 0` lo quita. */
+  agregarBono: (id: number, data: { monto: number; motivo?: string }) =>
+    api.put(`/turnos/asignaciones/${id}/bono`, data).then(r => r.data),
+
   calificar: (id: number, data: { calificacion: number; comentario?: string }) =>
     api.post(`/turnos/asignaciones/${id}/calificar`, data).then(r => r.data),
 

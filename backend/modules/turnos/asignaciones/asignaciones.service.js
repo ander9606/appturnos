@@ -634,12 +634,49 @@ const AsignacionesService = {
     if (estadoNuevo === 'completado') {
       // pago_total es la tarifa del PUESTO (mismo criterio que registrarEgreso/
       // cerrarMasivo y que contratos_diarios.valor_dia) — corregir() es el único
-      // camino a 'completado' que no la fijaba, dejando el turno en $0.
-      await AsignacionesModel.actualizarPagoTotal(empresaId, id, resultado.tarifa_dia);
+      // camino a 'completado' que no la fijaba, dejando el turno en $0. Suma el
+      // bono_monto ya asignado para no perderlo si el turno se corrige otra vez.
+      await AsignacionesModel.actualizarPagoTotal(
+        empresaId, id, Number(resultado.tarifa_dia) + Number(resultado.bono_monto || 0)
+      );
       await CostoLaborService.verificarYEmitir(empresaId, asig.oferta_id);
     }
 
     return resultado;
+  },
+
+  /**
+   * Agrega o edita el bono manual (ej. propina) de un turno puntual.
+   * Bloqueado una vez el contrato del turno ya fue firmado — mismo criterio
+   * de inmutabilidad que un período de nómina liquidado (ver descuentos.service.js).
+   */
+  async agregarBono(empresaId, id, usuario, { monto, motivo }) {
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    if (asignacion.contrato_firmado) {
+      throw new AppError('No se puede modificar el bono: el contrato de este turno ya fue firmado', 409);
+    }
+
+    await AsignacionesModel.asignarBono(empresaId, id, {
+      monto,
+      motivo: motivo || null,
+      creadoPor: usuario.sub,
+    });
+
+    if (asignacion.usuario_id) {
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: asignacion.usuario_id,
+        tipo: 'turno.bono',
+        titulo: monto > 0 ? 'Recibiste un bono extra' : 'Tu bono fue actualizado',
+        mensaje: monto > 0
+          ? `Te asignaron un bono de $${Number(monto).toLocaleString('es-CO')} en "${asignacion.oferta_titulo}"${motivo ? ` por: ${motivo}` : ''}.`
+          : `Se quitó el bono asignado a tu turno "${asignacion.oferta_titulo}".`,
+        data: { asignacion_id: id },
+      }).catch(() => {});
+    }
+
+    return AsignacionesModel.obtenerConDetalles(empresaId, id);
   },
 
   async marcarNoPresentado(empresaId, id) {
