@@ -73,7 +73,7 @@ export function LandingPage() {
       <ParaTrabajadores />
       <Pain />
       <HowItWorks />
-      <Features />
+      <ProductSplit />
       <Sectors />
       <FinalCta />
       <Footer />
@@ -535,8 +535,8 @@ function StoreBadge({
 
 function ParaTrabajadores() {
   const beneficios = [
-    { icon: Search, text: 'Ve turnos "Disponibles" de otras empresas, no solo de la que te invitó' },
-    { icon: CheckCircle2, text: 'Postúlate con un toque — sin llamadas ni cadenas de WhatsApp' },
+    { icon: CheckCircle2, text: 'Regístrate gratis en la app — no necesitas cédula ni que una empresa te invite primero' },
+    { icon: Search, text: 'Postúlate con un toque a turnos "Disponibles" de cualquier empresa del directorio' },
     { icon: Wallet, text: 'Cobra con los recargos nocturnos, dominicales y festivos ya calculados' },
     { icon: TrendingUp, text: 'Construye tu calificación: entre mejor tu historial, más turnos te llegan' },
   ];
@@ -549,9 +549,9 @@ function ParaTrabajadores() {
             ¿Buscas turnos por día?
           </h2>
           <p className="mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
-            Activa tu cuenta con la empresa que te invitó y no te quedes ahí: desde la pestaña
-            "Disponibles" puedes ver y postularte a turnos de otras empresas que también usan
-            Zaturno — eventos, restaurantes, seguridad, lo que se ajuste a tu disponibilidad.
+            Regístrate tú mismo desde la app, sin esperar la invitación de ninguna empresa: desde
+            el directorio te postulas a turnos de empresas que ya usan Zaturno — eventos,
+            restaurantes, seguridad, lo que se ajuste a tu disponibilidad.
           </p>
           <ul className="mt-7 flex flex-col gap-4">
             {beneficios.map((b) => (
@@ -564,13 +564,13 @@ function ParaTrabajadores() {
             ))}
           </ul>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link
-              to="/login"
+            <a
+              href="#app"
               className="rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 hover:bg-primary-600"
             >
-              Activar mi cuenta
-            </Link>
-            <span className="text-sm text-muted-foreground">¿Tu empresa aún no usa Zaturno? Pídele que te agregue.</span>
+              Regístrate gratis
+            </a>
+            <span className="text-sm text-muted-foreground">¿Ya trabajas en una empresa que usa Zaturno? Pídele que te agregue directamente.</span>
           </div>
         </Reveal>
         <Reveal delay={150} className="flex justify-center">
@@ -735,39 +735,139 @@ function Legend({ color, label }: { color: string; label: string }) {
   );
 }
 
-// ── Features ─────────────────────────────────────────────────────────────
+// ── Product split (Turnos vs. Nómina) ───────────────────────────────────
+// El naranja (primary) es la marca de Turnos y el verde (success) la de
+// Nómina — mismo mapeo que THEME_COLORS.nomina en mobile/lib/designTokens.ts
+// y el comentario de apps/web/src/index.css. En escritorio, el producto que
+// no está activo asoma como una pestaña en el borde (derecha si se ve
+// Turnos, izquierda si se ve Nómina); en móvil esa pestaña no cabe, así que
+// dos píldoras arriba cumplen el mismo rol.
 
-function Features() {
-  const items = [
-    { icon: MapPin, title: 'Geofencing en check-in', body: 'El empleado solo puede marcar entrada si está físicamente en el lugar de trabajo. Validación en el servidor — no se puede falsificar desde el teléfono.' },
-    { icon: Wallet, title: 'Nómina con recargos automáticos', body: 'Horas nocturnas (21:00–06:00), dominicales y festivos colombianos calculados al centavo. Incluye los festivos de Ley Emiliani y los móviles de Semana Santa.' },
-    { icon: Users, title: 'Roles diferenciados', body: 'Admin, jefe de turnos, jefe de nómina, trabajador — cada uno ve solo lo que le corresponde. El trabajador no ve la nómina de sus compañeros.' },
-    { icon: Bell, title: 'Notificaciones push', body: 'Alertas en tiempo real para reingresos pendientes, cambios de turno y cierres de período. Sin depender de WhatsApp.' },
-    { icon: Calendar, title: 'Períodos flexibles', body: 'Semanal, quincenal o mensual — configura el esquema que tu empresa usa. Cambiar el período no afecta el histórico de nóminas anteriores.' },
-    { icon: ShieldCheck, title: 'Multi-empresa segura', body: 'Cada empresa opera en aislamiento total. Los datos de tus trabajadores nunca se mezclan con los de otro cliente. Arquitectura multi-tenant desde el diseño.' },
-  ];
+type ProductKey = 'turnos' | 'nomina';
+type ProductItem = { icon: typeof MapPin; title: string; body: string };
+type ProductSide = {
+  label: string;
+  tagline: string;
+  icon: typeof MapPin;
+  accentText: string;
+  accentBg: string;
+  accentBgLight: string;
+  border: string;
+  items: ProductItem[];
+};
+
+const PRODUCT_SIDES: Record<ProductKey, ProductSide> = {
+  turnos: {
+    label: 'Turnos',
+    tagline: 'Convoca personal y cubre turnos',
+    icon: CalendarDays,
+    accentText: 'text-primary',
+    accentBg: 'bg-primary',
+    accentBgLight: 'bg-primary-50',
+    border: 'border-primary',
+    items: [
+      { icon: Search, title: 'Convoca personal en minutos', body: 'Publica un turno abierto y cualquier trabajador activo en la red de zaturno puede postularse — no dependes solo de tu plantilla fija.' },
+      { icon: MapPin, title: 'Geofencing en check-in', body: 'El empleado solo puede marcar entrada si está físicamente en el lugar de trabajo. Validación en el servidor — no se puede falsificar desde el teléfono.' },
+      { icon: Bell, title: 'Notificaciones push', body: 'Alertas en tiempo real para cambios de turno, reingresos pendientes y turnos por cubrir. Sin depender de WhatsApp.' },
+    ],
+  },
+  nomina: {
+    label: 'Nómina',
+    tagline: 'Controla y liquida la nómina',
+    icon: WalletIcon,
+    accentText: 'text-success',
+    accentBg: 'bg-success',
+    accentBgLight: 'bg-success-light',
+    border: 'border-success',
+    items: [
+      { icon: Wallet, title: 'Recargos automáticos', body: 'Horas nocturnas (21:00–06:00), dominicales y festivos colombianos calculados al centavo. Incluye Ley Emiliani y los festivos móviles de Semana Santa.' },
+      { icon: Calendar, title: 'Períodos flexibles', body: 'Semanal, quincenal o mensual — configura el esquema que tu empresa usa. Cambiar el período no afecta el histórico de nóminas anteriores.' },
+      { icon: ShieldCheck, title: 'Snapshot al cerrar el período', body: 'Al cerrar un período la tarifa de cada hora queda congelada. Si luego cambias el salario de alguien, lo ya liquidado no se recalcula.' },
+    ],
+  },
+};
+
+function ProductSplit() {
+  const [active, setActive] = useState<ProductKey>('turnos');
+  const other: ProductKey = active === 'turnos' ? 'nomina' : 'turnos';
+  const cur = PRODUCT_SIDES[active];
+  const oth = PRODUCT_SIDES[other];
+
   return (
     <section className="bg-muted/60 px-6 py-20 sm:py-24">
       <div className="mx-auto max-w-6xl">
-        <Reveal>
+        <Reveal className="text-center">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Funcionalidades</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Todo lo que necesitas, nada que no
+            Convoca personal por turnos o controla tu nómina
           </h2>
+          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
+            Son dos beneficios independientes en la misma app: úsalos por separado según lo que tu
+            empresa necesite hoy, o juntos para cubrir todo el ciclo.
+          </p>
         </Reveal>
-        <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl bg-border sm:grid-cols-2">
-          {items.map(({ icon: Icon, title, body }, i) => (
-            <Reveal key={title} delay={(i % 2) * 90}>
-              <div className="h-full border-l-[3px] border-transparent bg-card px-8 py-9 transition-all duration-300 hover:-translate-y-1 hover:border-primary">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
-                  <Icon size={20} className="text-primary" />
+
+        <Reveal delay={80} className="mt-8 flex justify-center gap-2 md:hidden">
+          {(Object.keys(PRODUCT_SIDES) as ProductKey[]).map((key) => {
+            const s = PRODUCT_SIDES[key];
+            const isActive = key === active;
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={isActive}
+                onClick={() => setActive(key)}
+                className={`rounded-full px-4 py-2 text-sm font-bold transition-colors ${
+                  isActive ? `${s.accentBg} text-white shadow-sm` : 'border border-border bg-card text-muted-foreground'
+                }`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </Reveal>
+
+        <Reveal delay={120} className="relative mt-10">
+          <div className={`overflow-hidden rounded-3xl border-t-4 bg-card transition-colors duration-300 ${cur.border}`}>
+            <div className="px-8 py-10 sm:px-12 sm:py-12">
+              <div className="flex items-center gap-3">
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${cur.accentBgLight}`}>
+                  <cur.icon size={20} className={cur.accentText} />
                 </div>
-                <h3 className="text-base font-bold text-foreground">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+                <div>
+                  <p className={`text-xs font-bold uppercase tracking-wide ${cur.accentText}`}>{cur.label}</p>
+                  <p className="text-sm font-semibold text-muted-foreground">{cur.tagline}</p>
+                </div>
               </div>
-            </Reveal>
-          ))}
-        </div>
+              <div className="mt-8 grid gap-8 sm:grid-cols-3">
+                {cur.items.map((it) => (
+                  <div key={it.title}>
+                    <it.icon size={18} className={cur.accentText} />
+                    <h3 className="mt-3 text-sm font-bold text-foreground">{it.title}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{it.body}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setActive(other)}
+            aria-label={`Ver ${oth.label}`}
+            className={`absolute top-1/2 hidden -translate-y-1/2 flex-col items-center gap-2 rounded-2xl border border-border bg-card px-3 py-5 shadow-lg transition-transform hover:scale-105 md:flex ${
+              other === 'nomina' ? 'right-0 translate-x-1/2' : 'left-0 -translate-x-1/2'
+            }`}
+          >
+            <oth.icon size={18} className={oth.accentText} />
+            <span
+              className={`text-[11px] font-extrabold uppercase tracking-wide [writing-mode:vertical-rl] ${oth.accentText}`}
+            >
+              {oth.label}
+            </span>
+            <ChevronRight size={14} className={`text-muted-foreground ${other === 'turnos' ? 'rotate-180' : ''}`} />
+          </button>
+        </Reveal>
       </div>
     </section>
   );
