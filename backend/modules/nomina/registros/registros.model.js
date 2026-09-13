@@ -40,7 +40,10 @@ const RegistrosModel = {
 
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
-      'SELECT * FROM registros_diarios WHERE id = ? AND empresa_id = ? LIMIT 1',
+      `SELECT r.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido
+       FROM registros_diarios r
+       JOIN trabajadores t ON t.id = r.trabajador_id
+       WHERE r.id = ? AND r.empresa_id = ? LIMIT 1`,
       [id, empresaId]
     );
     const row = filas[0];

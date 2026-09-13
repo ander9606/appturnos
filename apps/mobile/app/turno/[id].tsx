@@ -292,7 +292,8 @@ export default function TurnoDetailScreen() {
           calificacion, calificacion_comentario,
           oferta_descripcion, oferta_externo_notas,
           empresa_nombre, empresa_tipo_liquidacion,
-          encargado_nombre, encargado_telefono } = asignacion;
+          encargado_nombre, encargado_telefono,
+          trabajador_nombre, trabajador_apellido } = asignacion;
 
   const hasMapCoords = asignacion.latitud != null && asignacion.longitud != null;
 
@@ -345,6 +346,15 @@ export default function TurnoDetailScreen() {
                   <Badge label={estadoConfig.label} variant={estadoConfig.badgeVariant} />
                 )}
               </View>
+
+              {isGestor && trabajador_nombre && (
+                <View className="flex-row items-center gap-1.5 mt-1">
+                  <Ionicons name="person-outline" size={13} color="#64748B" />
+                  <Text className="text-sm font-semibold text-foreground">
+                    {trabajador_nombre} {trabajador_apellido}
+                  </Text>
+                </View>
+              )}
 
               <View className="mt-3">
                 <InfoRow icon="calendar-outline" label="Fecha"   value={fmtDate(oferta_fecha)} />
