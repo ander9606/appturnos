@@ -11,7 +11,7 @@ export function TerminosPage() {
 
 const TERMINOS_TEXT = `TÉRMINOS Y CONDICIONES DE USO — ZATURNO
 
-Fecha de vigencia: 1 de julio de 2026
+Fecha de vigencia: 13 de septiembre de 2026
 
 1. ACEPTACIÓN
 Al usar la aplicación Zaturno aceptas estos términos en su totalidad. Si no estás de acuerdo, no uses la aplicación.
@@ -19,10 +19,15 @@ Al usar la aplicación Zaturno aceptas estos términos en su totalidad. Si no es
 2. DESCRIPCIÓN DEL SERVICIO
 Zaturno es una plataforma de gestión de turnos y nómina para empresas colombianas. Permite administrar trabajadores, asignaciones de turnos, marcaciones de ingreso/egreso y liquidaciones de nómina.
 
+El pago de cada turno se calcula según la tarifa pactada y los recargos de ley (nocturno, dominical, festivo, horas extra). Además, cuando aplica:
+• Se descuenta automáticamente 1 hora de almuerzo en jornadas mayores a 6 horas, salvo que el trabajador marque que tuvo una jornada continua sin ese descanso.
+• El gestor de la empresa puede asignar manualmente un bono extra a un turno puntual (por ejemplo, una propina), visible en el detalle del turno y en el contrato correspondiente.
+
 3. DATOS PERSONALES Y PRIVACIDAD
 Recopilamos los siguientes datos para prestar el servicio:
 • Nombre, correo electrónico y número de celular (identificación y comunicación).
-• Ubicación geográfica durante el marcaje de ingreso/egreso (validación de geofence).
+• Ubicación geográfica durante el marcaje de ingreso/egreso, incluido el marcaje libre sin punto fijo asignado.
+• Identificador del dispositivo usado para marcar, para detectar posible fraude (ej. dos personas marcando desde el mismo teléfono).
 • Firma electrónica en contratos diarios (almacenada como imagen codificada).
 • Datos laborales y salariales proporcionados por la empresa empleadora.
 
