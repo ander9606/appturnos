@@ -57,11 +57,11 @@ export default function TurnosScreen() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
-  const { data: ofertasMesResp, isLoading: loadingOfertasMes } = useOfertas(
+  const { data: ofertasMesResp, isLoading: loadingOfertasMes, isError: errorOfertasMes, refetch: refetchOfertasMes } = useOfertas(
     {
       fecha_desde: mesWeeks[0][0].date,
       fecha_hasta: mesWeeks[mesWeeks.length - 1][6].date,
-      limit: 300,
+      limit: 200, // tope del backend (ofertas.routes.js) — pedir más hace que la validación rechace TODA la respuesta
       para_quien: isJefeNomina ? 'nomina' : undefined,
       disponibles: isWorker ? true : undefined,
     },
@@ -457,6 +457,12 @@ export default function TurnosScreen() {
 
               {loadingOfertasMes ? (
                 <ActivityIndicator size="large" color={theme.primary} />
+              ) : errorOfertasMes ? (
+                <View className="items-center justify-center gap-2 py-10">
+                  <Ionicons name="warning-outline" size={32} color="#94A3B8" />
+                  <Text className="text-sm text-muted-foreground">No se pudieron cargar los turnos del mes</Text>
+                  <Button label="Reintentar" onPress={() => refetchOfertasMes()} variant="secondary" size="sm" />
+                </View>
               ) : (
                 <MonthCalendar
                   weeks={mesWeeks}
@@ -543,6 +549,17 @@ export default function TurnosScreen() {
 
             {loadingOfertasMes || loadingMios ? (
               <ActivityIndicator size="large" color={theme.primary} />
+            ) : errorOfertasMes || errorMios ? (
+              <View className="items-center justify-center gap-2 py-10">
+                <Ionicons name="warning-outline" size={32} color="#94A3B8" />
+                <Text className="text-sm text-muted-foreground">No se pudieron cargar los turnos del mes</Text>
+                <Button
+                  label="Reintentar"
+                  onPress={() => { refetchOfertasMes(); refetchMios(); }}
+                  variant="secondary"
+                  size="sm"
+                />
+              </View>
             ) : (
               <MonthCalendar
                 weeks={mesWeeks}
