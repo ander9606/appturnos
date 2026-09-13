@@ -753,6 +753,7 @@ type ProductSide = {
   accentBg: string;
   accentBgLight: string;
   border: string;
+  screen: ReactNode;
   items: ProductItem[];
 };
 
@@ -765,6 +766,7 @@ const PRODUCT_SIDES: Record<ProductKey, ProductSide> = {
     accentBg: 'bg-primary',
     accentBgLight: 'bg-primary-50',
     border: 'border-primary',
+    screen: <GestorTurnosScreen />,
     items: [
       { icon: Search, title: 'Convoca personal en minutos', body: 'Publica un turno abierto y cualquier trabajador activo en la red de zaturno puede postularse — no dependes solo de tu plantilla fija.' },
       { icon: MapPin, title: 'Geofencing en check-in', body: 'El empleado solo puede marcar entrada si está físicamente en el lugar de trabajo. Validación en el servidor — no se puede falsificar desde el teléfono.' },
@@ -779,6 +781,7 @@ const PRODUCT_SIDES: Record<ProductKey, ProductSide> = {
     accentBg: 'bg-success',
     accentBgLight: 'bg-success-light',
     border: 'border-success',
+    screen: <NominaGestorScreen />,
     items: [
       { icon: Wallet, title: 'Recargos automáticos', body: 'Horas nocturnas (21:00–06:00), dominicales y festivos colombianos calculados al centavo. Incluye Ley Emiliani y los festivos móviles de Semana Santa.' },
       { icon: Calendar, title: 'Períodos flexibles', body: 'Semanal, quincenal o mensual — configura el esquema que tu empresa usa. Cambiar el período no afecta el histórico de nóminas anteriores.' },
@@ -829,24 +832,33 @@ function ProductSplit() {
 
         <Reveal delay={120} className="relative mt-10">
           <div className={`overflow-hidden rounded-3xl border-t-4 bg-card transition-colors duration-300 ${cur.border}`}>
-            <div className="px-8 py-10 sm:px-12 sm:py-12">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${cur.accentBgLight}`}>
-                  <cur.icon size={20} className={cur.accentText} />
-                </div>
-                <div>
-                  <p className={`text-xs font-bold uppercase tracking-wide ${cur.accentText}`}>{cur.label}</p>
-                  <p className="text-sm font-semibold text-muted-foreground">{cur.tagline}</p>
-                </div>
-              </div>
-              <div className="mt-8 grid gap-8 sm:grid-cols-3">
-                {cur.items.map((it) => (
-                  <div key={it.title}>
-                    <it.icon size={18} className={cur.accentText} />
-                    <h3 className="mt-3 text-sm font-bold text-foreground">{it.title}</h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{it.body}</p>
+            <div className="grid gap-10 px-8 py-10 sm:px-12 sm:py-12 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${cur.accentBgLight}`}>
+                    <cur.icon size={20} className={cur.accentText} />
                   </div>
-                ))}
+                  <div>
+                    <p className={`text-xs font-bold uppercase tracking-wide ${cur.accentText}`}>{cur.label}</p>
+                    <p className="text-sm font-semibold text-muted-foreground">{cur.tagline}</p>
+                  </div>
+                </div>
+                <ul className="mt-8 flex flex-col gap-5">
+                  {cur.items.map((it) => (
+                    <li key={it.title} className="flex items-start gap-3">
+                      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${cur.accentBgLight}`}>
+                        <it.icon size={16} className={cur.accentText} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-foreground">{it.title}</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{it.body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex justify-center lg:justify-end">
+                <Phone>{cur.screen}</Phone>
               </div>
             </div>
           </div>
