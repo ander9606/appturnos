@@ -114,6 +114,8 @@ app.use('/api/trabajador-empresa', require('./modules/trabajador-empresa/trabaja
 app.use('/api/cargos', require('./modules/cargos/cargos.routes'));
 // Puntos de marcaje GPS por empresa. Ref: 015_puntos_marcaje.
 app.use('/api/puntos-marcaje', require('./modules/puntos-marcaje/puntos-marcaje.routes'));
+// Proxy a Nominatim (búsqueda/reverse geocoding) — ver geocoding.service.js.
+app.use('/api/geocoding', require('./modules/geocoding/geocoding.routes'));
 // Panel de super_admin: gestión cross-tenant de empresas y reportes globales.
 app.use('/api/admin', require('./modules/admin/admin.routes'));
 // Novedades de turno: reportes de retraso, ausencia, incidente u otro por asignación.

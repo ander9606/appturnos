@@ -79,6 +79,8 @@ export type {
 } from './turnosEventual';
 export { cargosApi } from './cargos';
 export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult, CargoCertificado, CargoFuncion } from './cargos';
+export { geocodingApi } from './geocoding';
+export type { SugerenciaLugar, DireccionInversa } from './geocoding';
 export { puntosMarcajeApi } from './puntos-marcaje';
 export type {
   PuntoMarcaje,

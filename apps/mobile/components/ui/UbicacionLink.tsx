@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { TouchableOpacity, Text, Linking, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { geocodingApi } from '@api-client';
 
-// Nominatim solo permite ~1 req/seg y pide no golpearlo en bloque — por eso esto
-// resuelve la dirección al toque (bajo demanda), no de una para todas las filas
+// Resuelve la dirección al toque (bajo demanda), no de una para todas las filas
 // visibles, y cachea en memoria para no repetir la consulta si se vuelve a abrir.
-// Mismo servicio y misma caché-por-sesión que el equivalente en web
-// (apps/web/src/shared/components/UbicacionLink.tsx).
+// El reverse geocoding en sí (rate-limit + User-Agent hacia Nominatim) vive en
+// el backend — ver backend/modules/geocoding/geocoding.service.js.
 const cache = new Map<string, string>();
 
 interface Props {
@@ -32,11 +32,7 @@ export function UbicacionLink({ lat, lng, label }: Props) {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-        { headers: { 'Accept-Language': 'es' } },
-      );
-      const data = await res.json();
+      const data = await geocodingApi.reverse(lat, lng);
       const nombre: string = data.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       cache.set(key, nombre);
       setDireccion(nombre);

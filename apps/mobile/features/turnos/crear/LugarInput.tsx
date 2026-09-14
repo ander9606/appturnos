@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { geocodingApi, type SugerenciaLugar } from '@api-client';
 
 import { MapaSelector } from '@/components/ui/MapaSelector';
 import { DEFAULT_GEOFENCE_RADIUS } from '@/lib/geo';
@@ -16,12 +17,7 @@ import { usePuntosParaTurnos } from '@/features/turnos/usePuntosMarcaje';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type Sugerencia = {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-};
+type Sugerencia = SugerenciaLugar;
 
 type Props = {
   value: string;
@@ -57,11 +53,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
     }
     setBuscando(true);
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&countrycodes=co`,
-        { headers: { 'Accept-Language': 'es', 'User-Agent': 'AppTurnos/1.0' } },
-      );
-      const data: Sugerencia[] = await res.json();
+      const data = await geocodingApi.buscar(q);
       setSugerencias(data);
       setDropdownOpen(data.length > 0);
     } catch {
@@ -100,11 +92,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
       const lng = pos.coords.longitude;
 
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-          { headers: { 'Accept-Language': 'es', 'User-Agent': 'AppTurnos/1.0' } },
-        );
-        const data = await res.json();
+        const data = await geocodingApi.reverse(lat, lng);
         onChange(data.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng);
       } catch {
         // Reverse geocoding failed — just store coordinates
