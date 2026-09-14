@@ -105,6 +105,10 @@ jobs:
         env:
           SENTRY_ORG: zaturno
           SENTRY_PROJECT: react-native
+          # El script solo evita leer el expo config (donde no está configurado, ya
+          # que el plugin se llama "@sentry/react-native" y no "@sentry/react-native/expo")
+          # si ORG, PROJECT y URL están las tres presentes.
+          SENTRY_URL: https://sentry.io/
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
   # ── Promover a producción (manual) ────────────────────────────
