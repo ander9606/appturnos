@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { LoginPage } from '@/modules/auth/LoginPage';
+import { RecuperarPasswordPage } from '@/modules/auth/RecuperarPasswordPage';
 import { ProtectedRoute, RoleRoute } from '@/modules/auth/ProtectedRoute';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { Layout } from '@/shared/components/Layout';
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="/bienvenida" element={<WelcomePage />} />
         <Route path="/registro" element={<RegistroEmpresaPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/recuperar" element={<RecuperarPasswordPage />} />
         <Route path="/privacidad" element={<PrivacidadPage />} />
         <Route path="/terminos" element={<TerminosPage />} />
         <Route element={<ProtectedRoute />}>
