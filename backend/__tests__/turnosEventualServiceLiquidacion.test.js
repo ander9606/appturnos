@@ -61,6 +61,20 @@ describe('TurnosEventualService.liquidacion', () => {
     expect(result.total_general).toBe(300);
   });
 
+  test('castea horas/total: mysql2 devuelve SUM() como string (DECIMAL)', async () => {
+    TurnosEventualModel.obtenerPorId.mockResolvedValue(periodoNomina);
+    TurnosEventualModel.liquidacion.mockResolvedValue([
+      { trabajador_id: 1, nombre_completo: 'Ana Ruiz', turnos: 3, horas: '24.50', total: '500000.00' },
+    ]);
+
+    const usuario = { sub: 1, rol: ROLES.ADMIN_EMPRESA };
+    const result = await TurnosEventualService.liquidacion(7, 5, usuario);
+
+    expect(result.lineas[0].horas).toBe(24.5);
+    expect(result.lineas[0].total).toBe(500000);
+    expect(result.total_general).toBe(500000);
+  });
+
   test('período inexistente → 404 (sin importar el rol)', async () => {
     TurnosEventualModel.obtenerPorId.mockResolvedValue(null);
 

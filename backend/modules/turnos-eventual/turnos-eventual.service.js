@@ -59,8 +59,10 @@ const TurnosEventualService = {
       trabajadorId = trabajador.id;
     }
 
-    const lineas = await TurnosEventualModel.liquidacion(empresaId, periodoId, paraQuien, trabajadorId);
-    const total_general = lineas.reduce((s, l) => s + Number(l.total || 0), 0);
+    const filas = await TurnosEventualModel.liquidacion(empresaId, periodoId, paraQuien, trabajadorId);
+    // ponytail: SUM() sobre columnas DECIMAL vuelve como string en mysql2 (sin decimalNumbers) — castear antes de responder al cliente.
+    const lineas = filas.map((l) => ({ ...l, horas: Number(l.horas) || 0, total: Number(l.total) || 0 }));
+    const total_general = lineas.reduce((s, l) => s + l.total, 0);
     return { periodo, lineas, total_general };
   },
 
