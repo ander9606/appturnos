@@ -83,9 +83,22 @@ jobs:
           # Client ID público de Google OAuth (no sensible — mismo valor que en eas.json).
           # Hardcodeado en vez de secret: no requiere configurar nada en GitHub.
           EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com"
-          # Habilita la subida de sourcemaps (ver SENTRY_DISABLE_AUTO_UPLOAD en eas.json) —
-          # sin esto los crashes de Sentry solo muestran posiciones del bundle minificado.
-          # Org/proyecto no son sensibles (slugs de zaturno en sentry.io); el token sí.
+
+      # `eas update` sube el bundle directo a EAS, sin dejar sourcemaps locales ni
+      # subirlos a Sentry — la integración nativa (Gradle/Xcode, ver eas.json) solo
+      # aplica a `eas build`. Por eso se exporta el mismo bundle por separado (mismas
+      # variables EXPO_PUBLIC_* que arriba, si difieren el Debug ID no calza con el
+      # bundle que en verdad se publicó) y se sube con el script oficial del SDK.
+      - name: Exportar bundle + sourcemaps para Sentry
+        run: npx expo export --source-maps --output-dir dist
+        env:
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
+          EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com"
+
+      - name: Subir sourcemaps a Sentry
+        run: node node_modules/@sentry/react-native/scripts/expo-upload-sourcemaps.js dist
+        env:
           SENTRY_ORG: zaturno
           SENTRY_PROJECT: react-native
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
