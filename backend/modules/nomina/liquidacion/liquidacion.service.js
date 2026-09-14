@@ -5,12 +5,48 @@ const PeriodosModel = require('../periodos/periodos.model');
 const EmpresasModel = require('../../empresas/empresas.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const DescuentosModel = require('../descuentos/descuentos.model');
+const RegistrosModel = require('../registros/registros.model');
+const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
+const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const { ROLES, HORAS_MES_NOMINA } = require('../../../config/constants');
 const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, calcularDeducciones, calcularSubsidioTransporte } = require('../../../utils/laboralUtils');
+const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 
 function redondear(n) {
   return Math.round(n * 100) / 100;
+}
+
+/**
+ * Nombra una coordenada de marcaje sin llamar a un servicio externo cuando es
+ * posible:
+ * 1. Si el trabajador es 'fijo' y tiene punto asignado, es ese punto (ya
+ *    validado por geofence al marcar) — no hace falta ni comparar distancia.
+ * 2. Si no, pero la coordenada cae dentro del radio de CUALQUIER punto de
+ *    marcaje de la empresa (zonal, fijo de otro trabajador, etc.), usamos su
+ *    nombre — más barato y más útil que una dirección, incluso para 'libre'.
+ * 3. Solo si no hay ningún punto conocido cerca cae a Nominatim (con caché y
+ *    límite de 1 req/s ya resueltos por GeocodingService).
+ */
+async function nombrarUbicacion(latRaw, lngRaw, trabajador, puntosPorId, puntos) {
+  if (latRaw == null || lngRaw == null) return null;
+  const lat = Number(latRaw);
+  const lng = Number(lngRaw);
+
+  if (trabajador.tipo_marcacion === 'fijo' && trabajador.punto_marcaje_id) {
+    const punto = puntosPorId.get(trabajador.punto_marcaje_id);
+    if (punto) return punto.nombre;
+  }
+
+  const { ok, punto } = estaEnAlgunPunto(lat, lng, puntos);
+  if (ok) return punto.nombre;
+
+  try {
+    const data = await GeocodingService.reverse(lat, lng);
+    return data?.display_name ?? `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  } catch {
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }
 }
 
 const LiquidacionService = {
@@ -142,6 +178,30 @@ const LiquidacionService = {
         total_neto_general: redondear(totalNetoGeneral),
       },
     };
+  },
+
+  /**
+   * Registros diarios del período con su ubicación de entrada/salida ya
+   * resuelta a un nombre legible (para el Excel exportable). Ordenados por
+   * trabajador y fecha, a diferencia de RegistrosModel.listar (fecha DESC).
+   */
+  async marcajesConUbicacion(empresaId, periodoId) {
+    const [{ data: registros }, puntos] = await Promise.all([
+      RegistrosModel.listar(empresaId, { periodoId, limit: 5000, offset: 0 }),
+      PuntosMarcajeModel.listar(empresaId),
+    ]);
+    const puntosPorId = new Map(puntos.map((p) => [p.id, p]));
+
+    const conUbicacion = await Promise.all(registros.map(async (r) => ({
+      ...r,
+      ubicacion_entrada: await nombrarUbicacion(r.latitud_entrada, r.longitud_entrada, r, puntosPorId, puntos),
+      ubicacion_salida: await nombrarUbicacion(r.latitud_salida, r.longitud_salida, r, puntosPorId, puntos),
+    })));
+
+    return conUbicacion.sort((a, b) =>
+      `${a.trabajador_apellido}${a.trabajador_nombre}${a.fecha}`
+        .localeCompare(`${b.trabajador_apellido}${b.trabajador_nombre}${b.fecha}`)
+    );
   },
 };
 

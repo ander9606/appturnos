@@ -16,7 +16,8 @@ const RegistrosModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT r.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+      `SELECT r.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido, t.cedula,
+              t.tipo_marcacion, t.punto_marcaje_id,
               sr.estado AS reingreso_estado
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id

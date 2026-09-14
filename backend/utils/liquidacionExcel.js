@@ -5,9 +5,11 @@ const ExcelJS = require('exceljs');
 /**
  * Genera el libro Excel de una liquidación y devuelve su contenido como Buffer.
  * @param {object} liquidacion  Salida de LiquidacionService.generar.
+ * @param {object[]} [marcajes]  Salida de LiquidacionService.marcajesConUbicacion — si
+ *   se pasa, agrega una segunda hoja con el detalle diario de entrada/salida y ubicación.
  * @returns {Promise<Buffer>}
  */
-async function generarLiquidacionExcel(liquidacion) {
+async function generarLiquidacionExcel(liquidacion, marcajes) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'App Turnos';
   const ws = wb.addWorksheet('Liquidación');
@@ -79,7 +81,46 @@ async function generarLiquidacionExcel(liquidacion) {
   ]);
   filaTotal.font = { bold: true };
 
+  if (marcajes?.length) agregarHojaMarcajes(wb, marcajes);
+
   return wb.xlsx.writeBuffer();
+}
+
+/** Segunda hoja: detalle diario de entrada/salida con la ubicación resuelta. */
+function agregarHojaMarcajes(wb, marcajes) {
+  const ws = wb.addWorksheet('Marcajes');
+
+  ws.columns = [
+    { key: 'cedula', width: 16 },
+    { key: 'trabajador', width: 28 },
+    { key: 'fecha', width: 12 },
+    { key: 'hora_entrada', width: 12 },
+    { key: 'ubicacion_entrada', width: 40 },
+    { key: 'hora_salida', width: 12 },
+    { key: 'ubicacion_salida', width: 40 },
+    { key: 'sospechoso', width: 12 },
+  ];
+
+  const cabecera = ws.addRow([
+    'Cédula', 'Trabajador', 'Fecha',
+    'Hora entrada', 'Ubicación entrada',
+    'Hora salida', 'Ubicación salida',
+    'Sospechoso',
+  ]);
+  cabecera.font = { bold: true };
+
+  for (const m of marcajes) {
+    ws.addRow([
+      m.cedula || '',
+      `${m.trabajador_nombre} ${m.trabajador_apellido}`,
+      m.fecha,
+      m.hora_entrada || '',
+      m.ubicacion_entrada || '',
+      m.hora_salida || '',
+      m.ubicacion_salida || '',
+      m.sospechoso ? 'Sí' : 'No',
+    ]);
+  }
 }
 
 module.exports = { generarLiquidacionExcel };
