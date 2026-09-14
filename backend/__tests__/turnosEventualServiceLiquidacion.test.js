@@ -31,7 +31,7 @@ describe('TurnosEventualService.liquidacion', () => {
     const result = await TurnosEventualService.liquidacion(7, 5, usuario);
 
     expect(TrabajadoresModel.obtenerPorUsuarioId).toHaveBeenCalledWith(7, 42);
-    expect(TurnosEventualModel.liquidacion).toHaveBeenCalledWith(7, 5, ['nomina', 'ambos'], 99);
+    expect(TurnosEventualModel.liquidacion).toHaveBeenCalledWith(7, 5, ['nomina'], 99);
     expect(result.lineas).toHaveLength(1);
     expect(result.total_general).toBe(500000);
   });
@@ -56,9 +56,20 @@ describe('TurnosEventualService.liquidacion', () => {
     const result = await TurnosEventualService.liquidacion(7, 5, usuario);
 
     expect(TrabajadoresModel.obtenerPorUsuarioId).not.toHaveBeenCalled();
-    expect(TurnosEventualModel.liquidacion).toHaveBeenCalledWith(7, 5, ['nomina', 'ambos'], undefined);
+    expect(TurnosEventualModel.liquidacion).toHaveBeenCalledWith(7, 5, ['nomina'], undefined);
     expect(result.lineas).toHaveLength(2);
     expect(result.total_general).toBe(300);
+  });
+
+  test('segmento turnos: filtra por tipo turnos+ambos, no nomina', async () => {
+    const periodoTurnos = { ...periodoNomina, id: 6, segmento: 'turnos' };
+    TurnosEventualModel.obtenerPorId.mockResolvedValue(periodoTurnos);
+    TurnosEventualModel.liquidacion.mockResolvedValue([]);
+
+    const usuario = { sub: 1, rol: ROLES.ADMIN_EMPRESA };
+    await TurnosEventualService.liquidacion(7, 6, usuario);
+
+    expect(TurnosEventualModel.liquidacion).toHaveBeenCalledWith(7, 6, ['turnos', 'ambos'], undefined);
   });
 
   test('castea horas/total: mysql2 devuelve SUM() como string (DECIMAL)', async () => {
