@@ -929,8 +929,8 @@ function CorregirIngresoEgresoModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 bg-black/50 items-center justify-end">
-        <KeyboardAvoidingView behavior="padding">
+      <View className="flex-1 bg-black/50 justify-end">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View className="w-full bg-background rounded-t-3xl px-6 pt-5 pb-8">
             <View className="flex-row items-center justify-between mb-5">
               <View>
@@ -1062,8 +1062,8 @@ function BonoModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 bg-black/50 items-center justify-end">
-        <KeyboardAvoidingView behavior="padding">
+      <View className="flex-1 bg-black/50 justify-end">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View className="w-full bg-background rounded-t-3xl px-6 pt-5 pb-8">
             <View className="flex-row items-center justify-between mb-5">
               <View>
