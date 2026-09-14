@@ -112,11 +112,23 @@ async function validarDestinatarios(empresaId, visibilidad, trabajadorIds) {
   }
 }
 
+/**
+ * Roles que deben recibir el aviso de una oferta según a quién va dirigida —
+ * mismo criterio que OfertasService.listar() usa para filtrar qué puede ver
+ * cada rol, para no avisarle a alguien de algo que después no puede abrir.
+ */
+function rolesParaAviso(paraQuien) {
+  if (paraQuien === 'nomina') return [ROLES.TRABAJADOR_NOMINA];
+  if (paraQuien === 'turnos') return [ROLES.TRABAJADOR_TURNOS];
+  return [ROLES.TRABAJADOR_NOMINA, ROLES.TRABAJADOR_TURNOS]; // 'ambos'
+}
+
 /** Notifica a trabajadores con los cargos solicitados por la oferta (best-effort). */
 async function notificarPoolPorPuestos(empresaId, oferta) {
   if (oferta.visibilidad === 'dirigida') {
     return notificarDestinatariosDirectos(empresaId, oferta);
   }
+  const roles = rolesParaAviso(oferta.para_quien);
   for (const puesto of oferta.puestos || []) {
     const [destinatarios] = await pool.query(
       `SELECT DISTINCT u.id AS usuario_id
@@ -127,8 +139,10 @@ async function notificarPoolPorPuestos(empresaId, oferta) {
        WHERE te.empresa_id = ?
          AND tc.cargo_id   = ?
          AND te.estado     = 'activo'
-         AND u.activo      = 1`,
-      [empresaId, puesto.cargo_id]
+         AND u.activo      = 1
+         AND u.rol IN (?)
+         AND (u.rol != ? OR t.acepta_extras = 1)`,
+      [empresaId, puesto.cargo_id, roles, ROLES.TRABAJADOR_NOMINA]
     );
     if (destinatarios.length > 0) {
       await NotificacionesService.notificarVarios(
@@ -147,7 +161,26 @@ async function notificarPoolPorPuestos(empresaId, oferta) {
 
 /** Notifica solo a los destinatarios elegidos a mano de un turno dirigido (best-effort). */
 async function notificarDestinatariosDirectos(empresaId, oferta) {
-  const usuarioIds = (oferta.destinatarios || [])
+  const destinatarios = oferta.destinatarios || [];
+  const trabajadorIds = destinatarios.map((d) => d.trabajador_id).filter(Boolean);
+
+  // Un trabajador_nomina sin acepta_extras no puede abrir la oferta (ver
+  // validarAceptaExtras) aunque lo hayan elegido a mano — avisarle igual solo
+  // lo lleva a un 403 sin explicación.
+  let sinExtras = new Set();
+  if (trabajadorIds.length > 0) {
+    const [filas] = await pool.query(
+      `SELECT t.id AS trabajador_id
+       FROM trabajadores t
+       JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.id IN (?) AND u.rol = ? AND t.acepta_extras = 0`,
+      [trabajadorIds, ROLES.TRABAJADOR_NOMINA]
+    );
+    sinExtras = new Set(filas.map((f) => f.trabajador_id));
+  }
+
+  const usuarioIds = destinatarios
+    .filter((d) => !sinExtras.has(d.trabajador_id))
     .map((d) => d.usuario_id)
     .filter(Boolean);
   if (usuarioIds.length === 0) return;

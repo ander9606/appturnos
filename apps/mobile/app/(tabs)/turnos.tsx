@@ -16,6 +16,7 @@ import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes, useLiquidacionTurnos } from '@/features/turnos/useTurnos';
 import { usePeriodosEventual } from '@/features/turnos/useTurnosEventual';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
+import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
@@ -57,7 +58,7 @@ export default function TurnosScreen() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
-  const { data: ofertasMesResp, isLoading: loadingOfertasMes, isError: errorOfertasMes, refetch: refetchOfertasMes } = useOfertas(
+  const { data: ofertasMesResp, isLoading: loadingOfertasMes, isError: errorOfertasMes, error: errOfertasMes, refetch: refetchOfertasMes } = useOfertas(
     {
       fecha_desde: mesWeeks[0][0].date,
       fecha_hasta: mesWeeks[mesWeeks.length - 1][6].date,
@@ -549,6 +550,8 @@ export default function TurnosScreen() {
 
             {loadingOfertasMes || loadingMios ? (
               <ActivityIndicator size="large" color={theme.primary} />
+            ) : isNomina && esErrorTurnosExtraApagadas(errOfertasMes) ? (
+              <TurnosExtraOptIn />
             ) : errorOfertasMes || errorMios ? (
               <View className="items-center justify-center gap-2 py-10">
                 <Ionicons name="warning-outline" size={32} color="#94A3B8" />
@@ -688,6 +691,8 @@ export default function TurnosScreen() {
               <View className="flex-1 items-center justify-center">
                 <ActivityIndicator size="large" color={theme.primary} />
               </View>
+            ) : isNomina && esErrorTurnosExtraApagadas(errOfertas) ? (
+              <TurnosExtraOptIn />
             ) : errorOfertas ? (
               <View className="flex-1 items-center justify-center gap-3 px-6">
                 <Ionicons name="warning-outline" size={48} color="#94A3B8" />

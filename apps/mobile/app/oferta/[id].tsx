@@ -21,6 +21,7 @@ import {
   useCancelarOferta, useCompletarOferta, useAsignacion, useCorregirAsignacion,
 } from '@/features/turnos/useTurnos';
 import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
+import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
 import { formatDateObj, formatTimeObj, toISODateTime } from '@/lib/formatters';
@@ -191,7 +192,7 @@ export default function OfertaDetailScreen() {
   // Backend restringe cancelar oferta a admin_empresa/jefe_turnos (no jefe_nomina).
   const puedeCancelarOferta = rol === 'admin_empresa' || rol === 'jefe_turnos';
 
-  const { data: oferta, isLoading } = useOferta(id);
+  const { data: oferta, isLoading, error } = useOferta(id);
   const { data: misTurnos }         = useMisTurnos({ enabled: isWorker });
   const esPasado      = oferta ? oferta.fecha < bogotaToday() : false;
   const turnoIniciado = oferta ? turnoYaInicio(oferta.fecha, oferta.hora_inicio) : false;
@@ -282,11 +283,28 @@ export default function OfertaDetailScreen() {
   }
 
   if (!oferta) {
+    const apiErr = error instanceof ApiError ? error : null;
+    const esExtrasApagadas = esErrorTurnosExtraApagadas(error);
+    const esDelayRanking   = apiErr?.status === 403 && apiErr.message.includes('ranking');
+    const esNoEncontrada   = apiErr?.status === 404;
+
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Detalle del turno', headerShown: true }} />
-        <Ionicons name="search-outline" size={48} color="#94A3B8" />
-        <Text className="text-base font-semibold text-foreground text-center">Turno no encontrado</Text>
+        {esExtrasApagadas ? (
+          <TurnosExtraOptIn />
+        ) : (
+          <View className="flex-1 items-center justify-center gap-4 px-6">
+            <Ionicons name="search-outline" size={48} color="#94A3B8" />
+            <Text className="text-base font-semibold text-foreground text-center">
+              {esDelayRanking
+                ? 'Este turno aún no está disponible para tu nivel de calificación'
+                : esNoEncontrada
+                  ? 'Este turno ya no está disponible'
+                  : 'Turno no encontrado'}
+            </Text>
+          </View>
+        )}
       </SafeAreaView>
     );
   }

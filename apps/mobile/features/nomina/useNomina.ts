@@ -153,6 +153,10 @@ export function useActualizarExtras() {
     mutationFn: (acepta: boolean) => trabajadoresApi.actualizarExtras(acepta),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nomina-perfil'] });
+      // Activar el flag desbloquea listas/detalles de ofertas que antes daban 403 —
+      // sin esto quedarían con el error viejo en caché hasta un pull-to-refresh manual.
+      qc.invalidateQueries({ queryKey: ['ofertas'] });
+      qc.invalidateQueries({ queryKey: ['oferta'] });
     },
   });
 }
