@@ -150,6 +150,7 @@ export function RecuperarPasswordPage() {
                     <input
                       {...form2.register('codigo')}
                       inputMode="numeric"
+                      autoComplete="one-time-code"
                       maxLength={6}
                       autoFocus
                       className={INPUT}
