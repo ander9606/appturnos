@@ -24,7 +24,9 @@ export function UbicacionLink({ lat, lng, label }: Props) {
 
   const handlePress = async () => {
     if (direccion) {
-      Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`);
+      // Sin catch acá, un rechazo (ningún mapa instalado) queda como unhandled
+      // rejection y Sentry lo reporta como crash sin ningún contexto útil.
+      Linking.openURL(`https://www.google.com/maps?q=${lat},${lng}`).catch(() => {});
       return;
     }
     if (loading) return;

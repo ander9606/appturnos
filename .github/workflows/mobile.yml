@@ -83,6 +83,12 @@ jobs:
           # Client ID público de Google OAuth (no sensible — mismo valor que en eas.json).
           # Hardcodeado en vez de secret: no requiere configurar nada en GitHub.
           EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com"
+          # Habilita la subida de sourcemaps (ver SENTRY_DISABLE_AUTO_UPLOAD en eas.json) —
+          # sin esto los crashes de Sentry solo muestran posiciones del bundle minificado.
+          # Org/proyecto no son sensibles (slugs de zaturno en sentry.io); el token sí.
+          SENTRY_ORG: zaturno
+          SENTRY_PROJECT: react-native
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
   # ── Promover a producción (manual) ────────────────────────────
   # Dispara desde GitHub Actions → "Run workflow", pasando el group_id que
