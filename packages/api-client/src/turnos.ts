@@ -98,8 +98,13 @@ export interface Asignacion {
   calificacion: number | null;
   calificacion_comentario: string | null;
   /** Si es `0`, el contrato del turno completado aún no lo firma el trabajador
-   *  — su pago no cuenta en la liquidación hasta que exista la firma. */
+   *  — su pago no cuenta en la liquidación hasta que exista la firma. Siempre
+   *  viene `0` cuando trabajador_tipo es 'nomina' aunque no exista contrato
+   *  (no aplica — su turno eventual se paga como bono, no como contrato). */
   contrato_firmado?: 0 | 1;
+  /** tipo del trabajador dueño de la asignación ('nomina' = turno eventual
+   *  pagado como bono, sin contrato civil independiente). */
+  trabajador_tipo?: 'nomina' | 'turnos' | 'ambos';
   // Joined from trabajadores (only in gestor detail view)
   trabajador_nombre?: string;
   trabajador_apellido?: string;

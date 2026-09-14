@@ -511,8 +511,9 @@ export default function TurnoDetailScreen() {
                     {hora_egreso_real ? fmtTime(hora_egreso_real.slice(11, 19)) : '—'}
                   </Text>
                 </View>
-                {/* Trabajador sin firmar: botón destacado */}
-                {!isGestor && asignacion?.contrato_firmado === 0 && (
+                {/* Trabajador sin firmar: botón destacado — no aplica a turnos
+                    eventuales de nómina (se pagan como bono, sin contrato) */}
+                {!isGestor && asignacion?.trabajador_tipo !== 'nomina' && asignacion?.contrato_firmado === 0 && (
                   <View className="bg-warning/10 border border-warning/30 rounded-xl px-3 py-3 gap-2 mt-2">
                     <View className="flex-row items-center gap-2">
                       <Ionicons name="alert-circle-outline" size={16} color="#F59E0B" />
@@ -530,21 +531,24 @@ export default function TurnoDetailScreen() {
                   </View>
                 )}
 
-                {/* Gestor: botones de descargar y corregir */}
+                {/* Gestor: botones de descargar y corregir — "Contrato" no aplica
+                    a turnos eventuales de nómina (se pagan como bono) */}
                 {isGestor && (
                   <View className="flex-row items-center gap-3 mt-2">
-                    <TouchableOpacity
-                      onPress={handleDescargarContrato}
-                      disabled={cargandoContrato}
-                      className="flex-row items-center gap-1.5 flex-1"
-                    >
-                      {cargandoContrato ? (
-                        <ActivityIndicator size="small" color="#059669" />
-                      ) : (
-                        <Ionicons name="download-outline" size={16} color="#059669" />
-                      )}
-                      <Text className="text-xs font-semibold text-success">Contrato</Text>
-                    </TouchableOpacity>
+                    {asignacion?.trabajador_tipo !== 'nomina' && (
+                      <TouchableOpacity
+                        onPress={handleDescargarContrato}
+                        disabled={cargandoContrato}
+                        className="flex-row items-center gap-1.5 flex-1"
+                      >
+                        {cargandoContrato ? (
+                          <ActivityIndicator size="small" color="#059669" />
+                        ) : (
+                          <Ionicons name="download-outline" size={16} color="#059669" />
+                        )}
+                        <Text className="text-xs font-semibold text-success">Contrato</Text>
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity
                       onPress={() => setCorrigiendoIngreso(true)}
                       className="flex-row items-center gap-1.5 flex-1"

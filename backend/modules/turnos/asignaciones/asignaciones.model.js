@@ -907,6 +907,7 @@ const AsignacionesModel = {
               pm.radio_metros AS punto_radio,
               t.id AS trabajador_id_entity, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cargo AS trabajador_cargo, t.external_ref AS trabajador_external_ref, t.usuario_id,
+              t.tipo AS trabajador_tipo,
               cal.calificacion, cal.comentario AS calificacion_comentario,
               COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
        FROM asignaciones_turno a

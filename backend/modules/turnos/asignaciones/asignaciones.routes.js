@@ -13,7 +13,10 @@ const router = express.Router();
 
 // Permisos según la matriz de 06-AUTH.md.
 const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
-const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS];
+// trabajador_nomina puede tomar turnos eventuales (extra) — marca ingreso/egreso
+// igual que trabajador_turnos, pero su turno se paga como bono, no como
+// contrato civil independiente (ver asignaciones.service.js#marcarEgreso).
+const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 
 const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 

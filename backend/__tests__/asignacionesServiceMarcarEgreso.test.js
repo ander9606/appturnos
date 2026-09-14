@@ -13,6 +13,7 @@ jest.mock('../config/database', () => ({
 jest.mock('../modules/turnos/asignaciones/asignaciones.model');
 jest.mock('../modules/trabajadores/trabajadores.model');
 jest.mock('../modules/contratos/contratos.model');
+jest.mock('../modules/contratos/contratos.service');
 jest.mock('../modules/integracion/integracion.service', () => ({ emitir: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../modules/integracion/costo-labor.service', () => ({ verificarYEmitir: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../modules/notificaciones/notificaciones.service', () => ({
@@ -23,6 +24,7 @@ jest.mock('../modules/notificaciones/notificaciones.service', () => ({
 const AsignacionesModel = require('../modules/turnos/asignaciones/asignaciones.model');
 const TrabajadoresModel = require('../modules/trabajadores/trabajadores.model');
 const ContratosModel    = require('../modules/contratos/contratos.model');
+const ContratosService  = require('../modules/contratos/contratos.service');
 const AsignacionesService = require('../modules/turnos/asignaciones/asignaciones.service');
 
 afterEach(() => jest.clearAllMocks());
@@ -45,6 +47,7 @@ describe('AsignacionesService.marcarEgreso', () => {
     AsignacionesModel.registrarEgreso.mockResolvedValue(undefined);
     AsignacionesModel.obtenerPorId.mockResolvedValue({ id: 500, estado: 'completado' });
     ContratosModel.obtenerPorAsignacion.mockResolvedValue(null);
+    ContratosService.generarParaAsignacion.mockResolvedValue(null);
     TrabajadoresModel.guardarFirma.mockResolvedValue(undefined);
   });
 
@@ -61,5 +64,21 @@ describe('AsignacionesService.marcarEgreso', () => {
       AsignacionesService.marcarEgreso(7, 500, 999, { firma_b64: 'data:...' })
     ).rejects.toMatchObject({ statusCode: 403 });
     expect(AsignacionesModel.registrarEgreso).not.toHaveBeenCalled();
+  });
+
+  test('trabajador_nomina en turno eventual: no genera contrato (es bono, la firma_digital del egreso ya lo confirma)', async () => {
+    AsignacionesModel.obtenerConDetalles.mockResolvedValue({ ...asignacion, trabajador_tipo: 'nomina' });
+
+    await AsignacionesService.marcarEgreso(7, 500, 42, { firma_b64: 'data:...' });
+
+    expect(ContratosService.generarParaAsignacion).not.toHaveBeenCalled();
+  });
+
+  test('trabajador_turnos: sí genera contrato como antes', async () => {
+    AsignacionesModel.obtenerConDetalles.mockResolvedValue({ ...asignacion, trabajador_tipo: 'turnos' });
+
+    await AsignacionesService.marcarEgreso(7, 500, 42, { firma_b64: 'data:...' });
+
+    expect(ContratosService.generarParaAsignacion).toHaveBeenCalledWith(7, 500);
   });
 });
