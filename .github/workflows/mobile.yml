@@ -90,7 +90,11 @@ jobs:
       # variables EXPO_PUBLIC_* que arriba, si difieren el Debug ID no calza con el
       # bundle que en verdad se publicó) y se sube con el script oficial del SDK.
       - name: Exportar bundle + sourcemaps para Sentry
-        run: npx expo export --source-maps --output-dir dist
+        # --platform android: por defecto (--platform all) expo export también
+        # arma el bundle de web, y esta app no es compatible con web
+        # (react-native-maps importa módulos nativos). Agregar "ios" acá cuando
+        # la app se distribuya también en esa plataforma.
+        run: npx expo export --source-maps --output-dir dist --platform android
         env:
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
