@@ -10,7 +10,7 @@ const { SUSCRIPCION_ESTANDAR_COP } = require('../../config/constants');
 const AdminModel = {
   // ── Empresas ──────────────────────────────────────────────────────────────
 
-  /** Lista todas las empresas con conteo de trabajadores y usuarios. */
+  /** Lista todas las empresas con conteo de trabajadores, usuarios e ingresos históricos. */
   async listarEmpresas({ busqueda, activo, plan, limit, offset }) {
     const where = ['1=1'];
     const params = [];
@@ -40,18 +40,29 @@ const AdminModel = {
          COUNT(DISTINCT CASE WHEN t.tipo = 'turnos' THEN t.id END) AS trabajadores_turnos,
          COUNT(DISTINCT CASE WHEN t.tipo = 'nomina' THEN t.id END) AS trabajadores_nomina,
          COUNT(DISTINCT CASE WHEN t.tipo = 'ambos'  THEN t.id END) AS trabajadores_ambos,
-         (MAX(ic.activo) = 1 AND MAX(ic.api_key) IS NOT NULL) AS logiq360_conectado
+         (MAX(ic.activo) = 1 AND MAX(ic.api_key) IS NOT NULL) AS logiq360_conectado,
+         COALESCE(MAX(wp.meses_pagados), 0) AS ingresos_meses_pagados
        FROM empresas e
        LEFT JOIN trabajadores t ON t.empresa_id = e.id
        LEFT JOIN usuarios u     ON u.empresa_id = e.id
        LEFT JOIN integracion_config ic ON ic.empresa_id = e.id
+       LEFT JOIN (
+         SELECT empresa_id, SUM(meses) AS meses_pagados
+         FROM wompi_eventos
+         WHERE estado = 'procesado'
+         GROUP BY empresa_id
+       ) wp ON wp.empresa_id = e.id
        WHERE ${whereSql}
        GROUP BY e.id
        ORDER BY e.nombre
        LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
-    filas.forEach((f) => { f.logiq360_conectado = Boolean(f.logiq360_conectado); });
+    filas.forEach((f) => {
+      f.logiq360_conectado = Boolean(f.logiq360_conectado);
+      f.ingresos_totales_cop = Number(f.ingresos_meses_pagados) * SUSCRIPCION_ESTANDAR_COP;
+      delete f.ingresos_meses_pagados;
+    });
 
     const [[{ total }]] = await pool.query(
       `SELECT COUNT(*) AS total FROM empresas e WHERE ${whereSql}`,
@@ -196,12 +207,6 @@ const AdminModel = {
        WHERE estado = 'abierto'`
     );
 
-    const [planDist] = await pool.query(
-      `SELECT plan, COUNT(*) AS total
-       FROM empresas
-       GROUP BY plan`
-    );
-
     // logiq360_conectado se deriva en vivo (misma condición que listarEmpresas);
     // pago_directo = suscripcion_origen 'wompi' entre empresas activas.
     const [[integraciones]] = await pool.query(
@@ -236,6 +241,52 @@ const AdminModel = {
          AND procesado_at <  DATE_FORMAT(CURDATE(), '%Y-%m-01')`
     );
 
+    // Generado en lo que va del mes actual: pagos Wompi ya procesados (no proyección).
+    const [[mesActual]] = await pool.query(
+      `SELECT COALESCE(SUM(meses), 0) AS meses_pagados
+       FROM wompi_eventos
+       WHERE estado = 'procesado'
+         AND procesado_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`
+    );
+
+    // Histórico de ingresos (últimos 6 meses, incluye el actual en curso) para
+    // la tendencia de MRR. Se rellenan en JS los meses sin pagos procesados
+    // para que el arreglo siempre tenga 6 puntos consecutivos.
+    const [historicoRows] = await pool.query(
+      `SELECT DATE_FORMAT(procesado_at, '%Y-%m') AS mes, COALESCE(SUM(meses), 0) AS meses_pagados
+       FROM wompi_eventos
+       WHERE estado = 'procesado'
+         AND procesado_at >= DATE_FORMAT(CURDATE() - INTERVAL 5 MONTH, '%Y-%m-01')
+       GROUP BY mes`
+    );
+    const mesesPagadosPorMes = new Map(historicoRows.map((r) => [r.mes, Number(r.meses_pagados)]));
+    const hoy = new Date();
+    const mrrHistorico = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      mrrHistorico.push({
+        mes,
+        ingresos_cop: (mesesPagadosPorMes.get(mes) ?? 0) * SUSCRIPCION_ESTANDAR_COP,
+      });
+    }
+
+    // Renovaciones en riesgo: empresas activas que pagan directo (no logiq360)
+    // cuya suscripción vence en 7 días o menos, o ya venció. Mismo criterio que
+    // el email de suscripcion.worker.js, pero como lista continua (no solo los
+    // checkpoints 7/3/0/-3) para verla de un vistazo en el panel.
+    const [renovacionesRows] = await pool.query(
+      `SELECT e.id, e.nombre, e.suscripcion_vigente_hasta,
+              DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes
+       FROM empresas e
+       WHERE e.activo = 1
+         AND e.suscripcion_origen != 'logiq360'
+         AND e.suscripcion_vigente_hasta IS NOT NULL
+         AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) <= 7
+       ORDER BY dias_restantes ASC
+       LIMIT 20`
+    );
+
     return {
       empresas: {
         total: Number(empresas.total_empresas),
@@ -255,19 +306,23 @@ const AdminModel = {
       nomina: {
         periodos_abiertos: Number(periodos.periodos_abiertos),
       },
-      distribucion_planes: planDist.reduce((acc, row) => {
-        acc[row.plan] = Number(row.total);
-        return acc;
-      }, {}),
       integraciones: {
         logiq360: Number(integraciones.empresas_logiq360) || 0,
         pago_directo: Number(integraciones.empresas_pago_directo) || 0,
       },
       ingresos: {
+        mes_actual: Number(mesActual.meses_pagados) * SUSCRIPCION_ESTANDAR_COP,
         proyeccion_mes_actual: Number(proyeccion.empresas_pagando) * SUSCRIPCION_ESTANDAR_COP,
         ganado_mes_pasado: Number(mesPasado.meses_pagados) * SUSCRIPCION_ESTANDAR_COP,
         tarifa_cop: SUSCRIPCION_ESTANDAR_COP,
+        mrr_historico: mrrHistorico,
       },
+      renovaciones_riesgo: renovacionesRows.map((r) => ({
+        id: r.id,
+        nombre: r.nombre,
+        vigente_hasta: r.suscripcion_vigente_hasta,
+        dias_restantes: Number(r.dias_restantes),
+      })),
     };
   },
 

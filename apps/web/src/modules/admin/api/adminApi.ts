@@ -5,7 +5,7 @@ export const adminApi = {
   getReportes: () =>
     api.get('/admin/reportes/global').then(r => r.data),
 
-  listarEmpresas: (params?: { busqueda?: string; plan?: Plan; activo?: boolean; page?: number; limit?: number }) =>
+  listarEmpresas: (params?: { busqueda?: string; activo?: boolean; page?: number; limit?: number }) =>
     api.get('/admin/empresas', { params }).then(r => r.data),
 
   obtenerEmpresa: (id: number) =>

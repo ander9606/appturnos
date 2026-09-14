@@ -18,7 +18,7 @@ export function useReportesGlobales() {
   });
 }
 
-export function useEmpresas(params?: { busqueda?: string; plan?: Plan; activo?: boolean; page?: number; limit?: number }) {
+export function useEmpresas(params?: { busqueda?: string; activo?: boolean; page?: number; limit?: number }) {
   return useQuery({
     queryKey: ['admin', 'empresas', params],
     queryFn: () => adminApi.listarEmpresas({ limit: 50, ...params }),

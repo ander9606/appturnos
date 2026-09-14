@@ -162,15 +162,15 @@ export default function AdminDashboard() {
             <View className="flex-row flex-wrap px-4 gap-3">
               <MetricCard
                 icon="📈"
-                value={formatCOP(data.ingresos?.proyeccion_mes_actual)}
-                label="Proyección este mes"
+                value={formatCOP(data.ingresos?.mes_actual)}
+                label="Ingresos este mes"
                 sub={`${data.integraciones.pago_directo} empresa${data.integraciones.pago_directo === 1 ? '' : 's'} pagando`}
                 accent="#22C55E"
               />
               <MetricCard
                 icon="💰"
                 value={formatCOP(data.ingresos?.ganado_mes_pasado)}
-                label="Ganado el mes pasado"
+                label="Mes pasado"
                 sub="Pagos Wompi procesados"
                 accent="#22C55E"
               />

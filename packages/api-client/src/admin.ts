@@ -25,6 +25,8 @@ export interface EmpresaAdmin {
   trabajadores_nomina: number;
   trabajadores_ambos: number;
   logiq360_conectado: boolean;
+  /** Ingresos históricos (COP) generados por esta empresa vía Wompi. */
+  ingresos_totales_cop?: number;
   total_ofertas?: number;
   total_periodos?: number;
   created_at: string;
@@ -94,16 +96,23 @@ export interface ReportesGlobales {
   nomina: {
     periodos_abiertos: number;
   };
-  distribucion_planes: Partial<Record<PlanEmpresa, number>>;
   integraciones: {
     logiq360: number;
     pago_directo: number;
   };
   ingresos: {
+    mes_actual: number;
     proyeccion_mes_actual: number;
     ganado_mes_pasado: number;
     tarifa_cop: number;
+    mrr_historico: { mes: string; ingresos_cop: number }[];
   };
+  renovaciones_riesgo: {
+    id: number;
+    nombre: string;
+    vigente_hasta: string;
+    dias_restantes: number;
+  }[];
 }
 
 export interface LinkPagoResponse {

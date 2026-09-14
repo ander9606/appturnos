@@ -22,6 +22,8 @@ export interface EmpresaAdmin {
   total_periodos?: number;
   /** Derivado en vivo de integracion_config — no confundir con suscripcion_origen. */
   logiq360_conectado: boolean;
+  /** Ingresos históricos (COP) generados por esta empresa vía Wompi. Solo en el listado. */
+  ingresos_totales_cop?: number;
 }
 
 export type EstadoWompiEvento = 'recibido' | 'procesado' | 'error' | 'ignorado' | 'rechazado';
@@ -41,11 +43,33 @@ export interface WompiEvento {
   procesado_at: string | null;
 }
 
+export interface MrrMes {
+  /** 'YYYY-MM' */
+  mes: string;
+  ingresos_cop: number;
+}
+
+export interface RenovacionRiesgo {
+  id: number;
+  nombre: string;
+  vigente_hasta: string;
+  /** Negativo = ya vencida hace N días. */
+  dias_restantes: number;
+}
+
 export interface ReportesGlobales {
   empresas: { total: number; activas: number; inactivas: number };
   usuarios: { total: number };
   trabajadores: { total: number; activos: number };
   turnos: { ultimo_mes: number };
   nomina: { periodos_abiertos: number };
-  distribucion_planes: Partial<Record<Plan, number>>;
+  integraciones: { logiq360: number; pago_directo: number };
+  ingresos: {
+    mes_actual: number;
+    ganado_mes_pasado: number;
+    proyeccion_mes_actual: number;
+    tarifa_cop: number;
+    mrr_historico: MrrMes[];
+  };
+  renovaciones_riesgo: RenovacionRiesgo[];
 }
