@@ -35,15 +35,15 @@ export interface LiquidacionEventualResponse {
 }
 
 export const turnosEventualApi = {
-  periodoActivo(): Promise<PeriodosEventualActivos> {
+  async periodoActivo(): Promise<PeriodosEventualActivos> {
     return api.get<PeriodosEventualActivos>('/api/turnos/eventual/periodo-activo');
   },
 
-  liquidacion(periodoId: number): Promise<LiquidacionEventualResponse> {
+  async liquidacion(periodoId: number): Promise<LiquidacionEventualResponse> {
     return api.get<LiquidacionEventualResponse>(`/api/turnos/eventual/${periodoId}/liquidacion`);
   },
 
-  liquidar(periodoId: number): Promise<PeriodoTurnoEventual> {
+  async liquidar(periodoId: number): Promise<PeriodoTurnoEventual> {
     return api.post<PeriodoTurnoEventual>(`/api/turnos/eventual/${periodoId}/liquidar`, {});
   },
 };
