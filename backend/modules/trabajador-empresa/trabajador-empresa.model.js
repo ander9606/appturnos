@@ -66,7 +66,8 @@ const TrabajadorEmpresaModel = {
        ORDER BY te.fecha_solicitud DESC`,
       [usuarioId]
     );
-    return filas;
+    // ROUND(AVG(...)) es DECIMAL — mysql2 lo devuelve como string, el cliente espera number.
+    return filas.map((f) => ({ ...f, ranking: f.ranking != null ? Number(f.ranking) : null }));
   },
 
   /** Solicitudes pendientes para una empresa (panel del jefe de turnos). */

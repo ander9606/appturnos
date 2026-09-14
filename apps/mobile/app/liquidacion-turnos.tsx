@@ -169,7 +169,7 @@ function TrabajadorCard({
               {item.ranking != null && (
                 <View className="flex-row items-center gap-0.5">
                   <Ionicons name="star" size={11} color="#F59E0B" />
-                  <Text className="text-xs text-muted-foreground">{item.ranking.toFixed(1)}</Text>
+                  <Text className="text-xs text-muted-foreground">{Number(item.ranking).toFixed(1)}</Text>
                 </View>
               )}
               <Text className="text-xs text-muted-foreground">

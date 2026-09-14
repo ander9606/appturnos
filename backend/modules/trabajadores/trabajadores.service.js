@@ -127,7 +127,15 @@ const TrabajadoresService = {
       TrabajadoresModel.listarDiplomas(trabajador.id),
       TrabajadoresModel.listarCargos(trabajador.id),
     ]);
-    return { ...trabajador, experiencias, diplomas, cargos };
+    // mysql2 devuelve las columnas DECIMAL (ranking) como string — el cliente
+    // espera number | null y llama .toFixed() directo, así que se castea aquí.
+    return {
+      ...trabajador,
+      ranking: trabajador.ranking != null ? Number(trabajador.ranking) : null,
+      experiencias,
+      diplomas,
+      cargos,
+    };
   },
 
   /** El propio trabajador actualiza los campos escalares de su perfil. */

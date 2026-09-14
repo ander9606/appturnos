@@ -62,7 +62,7 @@ export function StarRating(props: StarRatingProps) {
             className="text-muted-foreground font-medium ml-1"
             style={{ fontSize: size * 0.6 }}
           >
-            {value.toFixed(1)}
+            {Number(value).toFixed(1)}
           </Text>
         )}
       </View>
