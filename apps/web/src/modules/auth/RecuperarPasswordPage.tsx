@@ -97,7 +97,7 @@ export function RecuperarPasswordPage() {
 
         <div className="relative -mt-10 rounded-2xl border border-border bg-card p-6 shadow-xl shadow-black/[0.04]">
           {step === 'email' ? (
-            <>
+            <div key="email">
               <h2 className="text-lg font-bold text-foreground">¿Olvidaste tu contraseña?</h2>
               <p className="mb-5 mt-0.5 text-sm text-muted-foreground">
                 Ingresa tu correo y te enviaremos un código para restablecerla.
@@ -136,9 +136,9 @@ export function RecuperarPasswordPage() {
                   {form1.formState.isSubmitting ? 'Enviando…' : 'Enviar código'}
                 </button>
               </form>
-            </>
+            </div>
           ) : (
-            <>
+            <div key="reset">
               <h2 className="text-lg font-bold text-foreground">Restablecer contraseña</h2>
               <p className="mb-5 mt-0.5 text-sm text-muted-foreground">Ingresa el código enviado a {email}</p>
 
@@ -236,7 +236,7 @@ export function RecuperarPasswordPage() {
                   </button>
                 </div>
               </form>
-            </>
+            </div>
           )}
         </div>
 
