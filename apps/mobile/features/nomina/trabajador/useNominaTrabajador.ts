@@ -7,12 +7,13 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { ApiError } from '@api-client';
-import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina } from '@api-client';
+import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina, LineaLiquidacionEventual, PeriodoTurnoEventual } from '@api-client';
 import { bogotaToday } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import { actionToast } from '@/lib/actionToast';
 import { obtenerUbicacionActual } from '@/lib/currentLocation';
 import { useGeofence } from '@/features/turnos/useGeofence';
+import { usePeriodosEventual, useLiquidacionEventual } from '@/features/turnos/useTurnosEventual';
 import {
   usePeriodos,
   useRegistros,
@@ -57,6 +58,11 @@ export interface NominaTrabajadorState {
   miLiquidacion: LiquidacionLinea | undefined;
   tipoContrato:  TipoContrato | undefined;
   misDescuentos: DescuentoNomina[];
+
+  // Turnos eventuales (extra, trimestral) — solo si activó acepta_extras.
+  aceptaExtras:     boolean;
+  periodoEventual:  PeriodoTurnoEventual | undefined;
+  miLineaEventual:  LineaLiquidacionEventual | undefined;
 
   // Geofence
   geo: ReturnType<typeof useGeofence>;
@@ -135,6 +141,16 @@ export function useNominaTrabajador(): NominaTrabajadorState {
 
   // ── Descuentos manuales propios (préstamos, inasistencias, etc.) ─────────
   const { data: misDescuentos = [] } = useMisDescuentos(periodoActivo?.id);
+
+  // ── Turnos eventuales (extra, trimestral) — solo si activó acepta_extras ──
+  // Bloque secundario: no se suma a `loading`, no debe bloquear el spinner principal.
+  const aceptaExtras = Boolean(perfil?.acepta_extras);
+  const { data: periodosEventual } = usePeriodosEventual(aceptaExtras);
+  const periodoEventual = periodosEventual?.nomina;
+  const { data: liquidacionEventual } = useLiquidacionEventual(
+    aceptaExtras ? periodoEventual?.id ?? null : null
+  );
+  const miLineaEventual = liquidacionEventual?.lineas[0];
 
   // ── Geofence ───────────────────────────────────────────────────────────
   const requiereGeofence = tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal';
@@ -244,6 +260,9 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     miLiquidacion,
     tipoContrato,
     misDescuentos,
+    aceptaExtras,
+    periodoEventual,
+    miLineaEventual,
     geo,
     marcajeBloqueado,
     isMutating,

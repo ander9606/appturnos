@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { RegistroCard } from '../RegistroCard';
 import { PeriodoHeaderCard } from './components/PeriodoHeaderCard';
 import { ResumenCards } from './components/ResumenCards';
+import { TurnosEventualCard } from './components/TurnosEventualCard';
 import { IngresoHoyTab } from './components/IngresoHoyTab';
 import { useNominaTrabajador } from './useNominaTrabajador';
 import { calcularResumenPeriodo, analizarDia } from './nominaTrabajadorUtils';
@@ -84,6 +85,9 @@ export function NominaTrabajadorView() {
     miLiquidacion,
     tipoContrato,
     misDescuentos,
+    aceptaExtras,
+    periodoEventual,
+    miLineaEventual,
     loading,
     loadingRegistros,
     isRefetching,
@@ -219,6 +223,11 @@ export function NominaTrabajadorView() {
               />
               {/* onVerDetalles omitted — ResumenCards is immediately below */}
               <View className="px-5 gap-3">
+                <TurnosEventualCard
+                  aceptaExtras={aceptaExtras}
+                  periodo={periodoEventual}
+                  linea={miLineaEventual}
+                />
                 <ResumenCards
                   resumen={resumen}
                   periodos={periodos}

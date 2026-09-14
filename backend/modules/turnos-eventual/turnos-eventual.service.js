@@ -2,7 +2,9 @@
 
 const TurnosEventualModel = require('./turnos-eventual.model');
 const EmpresasModel = require('../empresas/empresas.model');
+const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
+const { ROLES } = require('../../config/constants');
 const { calcularPeriodoActual } = require('../../utils/periodoCiclo');
 
 /**
@@ -43,11 +45,21 @@ const TurnosEventualService = {
     return { nomina, turnos };
   },
 
-  async liquidacion(empresaId, periodoId) {
+  async liquidacion(empresaId, periodoId, usuario) {
     const periodo = await TurnosEventualModel.obtenerPorId(empresaId, periodoId);
     if (!periodo) throw new AppError('Período no encontrado', 404);
     const { paraQuien } = SEGMENTOS[periodo.segmento];
-    const lineas = await TurnosEventualModel.liquidacion(empresaId, periodoId, paraQuien);
+
+    // trabajador_nomina solo ve su propia línea — nunca la de sus compañeros
+    // (mismo patrón que liquidacion.service.js#generar para nómina regular).
+    let trabajadorId;
+    if (usuario?.rol === ROLES.TRABAJADOR_NOMINA) {
+      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuario.sub);
+      if (!trabajador) throw new AppError('Tu usuario no está vinculado a un trabajador activo', 403);
+      trabajadorId = trabajador.id;
+    }
+
+    const lineas = await TurnosEventualModel.liquidacion(empresaId, periodoId, paraQuien, trabajadorId);
     const total_general = lineas.reduce((s, l) => s + Number(l.total || 0), 0);
     return { periodo, lineas, total_general };
   },

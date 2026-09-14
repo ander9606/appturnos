@@ -16,6 +16,7 @@ import { bogotaToday } from '@/features/turnos/turnosUtils';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import { confirm } from '@/lib/confirmDialog';
 import type { LineaLiquidacionEventual, SegmentoTurnoEventual } from '@api-client';
 
@@ -89,7 +90,9 @@ function LineaRow({ item }: { item: LineaLiquidacionEventual }) {
 
 export default function LiquidacionEventualScreen() {
   const theme = useTheme();
-  const [segmento, setSegmento] = useState<SegmentoTurnoEventual>('turnos');
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  const esTrabajador = rol === 'trabajador_nomina';
+  const [segmento, setSegmento] = useState<SegmentoTurnoEventual>(esTrabajador ? 'nomina' : 'turnos');
   const { data: periodos, isLoading: loadingPeriodo, refetch: refetchPeriodo } = usePeriodosEventual();
   const periodo = periodos?.[segmento];
   const { data: liquidacion, isLoading: loadingLiq, refetch: refetchLiq, isRefetching } = useLiquidacionEventual(periodo?.id ?? null);
@@ -100,9 +103,9 @@ export default function LiquidacionEventualScreen() {
   const totalGeneral = liquidacion?.total_general ?? 0;
 
   const hoy = bogotaToday();
-  const puedeL = periodo && periodo.estado === 'abierto' && periodo.fecha_fin < hoy;
+  const puedeL = !esTrabajador && periodo && periodo.estado === 'abierto' && periodo.fecha_fin < hoy;
 
-  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'trabajador_nomina']);
   if (denied) return denied;
 
   async function handleLiquidar() {
@@ -131,7 +134,7 @@ export default function LiquidacionEventualScreen() {
       />
 
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-        <SegmentoToggle value={segmento} onChange={setSegmento} />
+        {!esTrabajador && <SegmentoToggle value={segmento} onChange={setSegmento} />}
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#7C3AED" />
@@ -186,7 +189,9 @@ export default function LiquidacionEventualScreen() {
                       <Text className="text-2xl font-bold text-violet-700">{cop(totalGeneral)}</Text>
                     </View>
                     <View className="items-end gap-0.5">
-                      <Text className="text-xs text-violet-500">{lineas.length} trabajador{lineas.length !== 1 ? 'es' : ''}</Text>
+                      {!esTrabajador && (
+                        <Text className="text-xs text-violet-500">{lineas.length} trabajador{lineas.length !== 1 ? 'es' : ''}</Text>
+                      )}
                       <Text className="text-xs text-violet-500">
                         {lineas.reduce((s, l) => s + l.turnos, 0)} turnos
                       </Text>
@@ -202,7 +207,9 @@ export default function LiquidacionEventualScreen() {
                 <Ionicons name="briefcase-outline" size={48} color="#CBD5E1" />
                 <Text className="text-base font-semibold text-foreground text-center">Sin turnos eventuales</Text>
                 <Text className="text-sm text-muted-foreground text-center">
-                  No hay turnos completados en este período.
+                  {esTrabajador
+                    ? 'Aún no tienes turnos eventuales completados en este período.'
+                    : 'No hay turnos completados en este período.'}
                 </Text>
               </View>
             }

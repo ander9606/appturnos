@@ -414,6 +414,17 @@ function NominaGestorView() {
                     <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                   </TouchableOpacity>
 
+                  <TouchableOpacity
+                    onPress={() => router.push('/liquidacion-eventual')}
+                    className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Turnos eventuales (extra)</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+
                   <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Aprobaciones</Text>
 
                   <TouchableOpacity
