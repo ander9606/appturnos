@@ -12,7 +12,10 @@ module.exports = {
    * Devuelve un array de trabajadores con sus turnos y totales a pagar.
    */
   async liquidacion(empresaId, { fechaInicio, fechaFin }) {
-    const where = ['a.empresa_id = ?', "a.estado = 'completado'"];
+    // t.tipo != 'nomina': esta es la liquidación de personal de turnos (mensual/
+    // quincenal/semanal) — un trabajador_nomina que toma un turno eventual se
+    // paga en el segmento 'nomina' de turnos-eventual (trimestral, bono), no acá.
+    const where = ['a.empresa_id = ?', "a.estado = 'completado'", "t.tipo != 'nomina'"];
     const params = [empresaId];
 
     if (fechaInicio) { where.push('o.fecha >= ?'); params.push(fechaInicio); }

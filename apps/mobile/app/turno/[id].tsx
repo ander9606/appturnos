@@ -540,8 +540,8 @@ export default function TurnoDetailScreen() {
                     <Ionicons name="gift-outline" size={16} color="#059669" />
                     <Text className="text-xs font-medium text-success flex-1">
                       {isGestor
-                        ? 'Turno extra — no requiere contrato, se paga como bono en su próxima liquidación.'
-                        : 'Este turno se paga como bono en tu próxima liquidación. No necesitas firmar ningún contrato.'}
+                        ? 'Turno extra — se paga en su próxima liquidación.'
+                        : 'Este turno se paga en tu próxima liquidación.'}
                     </Text>
                   </View>
                 )}

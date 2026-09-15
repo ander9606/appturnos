@@ -12,6 +12,8 @@ const KEYS = {
   trabajadores: () => ['trabajadores', 'nomina'] as const,
   descuentos: (periodoId: number) => ['nomina', 'descuentos', periodoId] as const,
   compensatorios: () => ['nomina', 'compensatorios'] as const,
+  periodoActivoEventual: () => ['nomina', 'eventual', 'periodo-activo'] as const,
+  liquidacionEventual: (id: number) => ['nomina', 'eventual', 'liquidacion', id] as const,
 };
 
 function getErrMsg(err: unknown) {
@@ -95,6 +97,36 @@ export function useLiquidarPeriodo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nomina', 'periodos'] });
       toast.success('Período liquidado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+/** Período activo del segmento 'nomina' de turnos eventuales (extra) — trimestral. */
+export function usePeriodoActivoEventual() {
+  return useQuery({
+    queryKey: KEYS.periodoActivoEventual(),
+    queryFn: () => nominaApi.periodoActivoEventual(),
+    staleTime: 60_000,
+  });
+}
+
+export function useLiquidacionEventual(periodoId: number | null) {
+  return useQuery({
+    queryKey: KEYS.liquidacionEventual(periodoId!),
+    queryFn: () => nominaApi.liquidacionEventual(periodoId!),
+    enabled: periodoId !== null,
+    staleTime: 60_000,
+  });
+}
+
+export function useLiquidarEventual() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (periodoId: number) => nominaApi.liquidarEventual(periodoId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nomina', 'eventual'] });
+      toast.success('Período de turnos extra liquidado');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });

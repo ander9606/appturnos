@@ -49,4 +49,15 @@ export const nominaApi = {
 
   reasignarCompensatorio: (id: number, fechaAsignada: string) =>
     api.put(`/nomina/compensatorios/${id}/reasignar`, { fechaAsignada }).then(r => r.data),
+
+  // Turnos eventuales (extra) del segmento 'nomina' — trabajadores de nómina que
+  // además toman turnos ocasionales, pagados como bono trimestral (no contrato).
+  periodoActivoEventual: () =>
+    api.get('/turnos/eventual/periodo-activo').then(r => r.data),
+
+  liquidacionEventual: (periodoId: number) =>
+    api.get(`/turnos/eventual/${periodoId}/liquidacion`).then(r => r.data),
+
+  liquidarEventual: (periodoId: number) =>
+    api.post(`/turnos/eventual/${periodoId}/liquidar`).then(r => r.data),
 };

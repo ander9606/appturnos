@@ -107,6 +107,20 @@ export interface PeriodosEventualActivos {
   turnos: PeriodoTurnoEventual;
 }
 
+export interface LineaLiquidacionEventual {
+  trabajador_id: number;
+  nombre_completo: string;
+  turnos: number;
+  horas: number;
+  total: number;
+}
+
+export interface LiquidacionEventualResponse {
+  periodo: PeriodoTurnoEventual;
+  lineas: LineaLiquidacionEventual[];
+  total_general: number;
+}
+
 export interface Asignacion {
   id: number;
   oferta_id: number;

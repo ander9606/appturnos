@@ -9,6 +9,7 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { StatCard } from '@/shared/components/StatCard';
 import { fmtDate, fmtPeriodo, fmtCOP, bogotaToday } from '@/shared/lib/format';
+import { LiquidacionEventualView } from '../components/LiquidacionEventualView';
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
@@ -24,6 +25,7 @@ const TIPO_LABEL: Record<TipoPeriodo, string> = {
 
 export function NominaPage() {
   const navigate = useNavigate();
+  const [vista, setVista] = useState<'periodos' | 'eventual'>('periodos');
   const [filtroEstado, setFiltroEstado] = useState<EstadoPeriodo | undefined>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'cerrar' | 'liquidar'; periodo: Periodo } | null>(null);
@@ -50,14 +52,36 @@ export function NominaPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Nómina</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 bg-success hover:bg-success-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
-        >
-          <Plus size={16} /> Nuevo período
-        </button>
+        {vista === 'periodos' && (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-1.5 bg-success hover:bg-success-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+          >
+            <Plus size={16} /> Nuevo período
+          </button>
+        )}
       </div>
 
+      <div className="flex gap-1 mb-4 border-b border-border">
+        {([{ value: 'periodos' as const, label: 'Períodos' }, { value: 'eventual' as const, label: 'Turnos extra' }]).map(t => (
+          <button
+            key={t.value}
+            onClick={() => setVista(t.value)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              vista === t.value
+                ? 'border-success text-success'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {vista === 'eventual' ? (
+        <LiquidacionEventualView />
+      ) : (
+      <>
       <div className="flex gap-1 mb-4 border-b border-border">
         {tabs.map(t => (
           <button
@@ -169,6 +193,8 @@ export function NominaPage() {
             </tbody>
           </table>
         </div>
+      )}
+      </>
       )}
 
       {showModal && <NuevoPeriodoModal onClose={() => setShowModal(false)} />}
