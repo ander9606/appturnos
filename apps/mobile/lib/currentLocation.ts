@@ -6,7 +6,7 @@ export async function obtenerUbicacionActual(): Promise<{ latitud?: number; long
     const Location = await import('expo-location');
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') return {};
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
     return { latitud: loc.coords.latitude, longitud: loc.coords.longitude };
   } catch {
     return {};

@@ -108,7 +108,7 @@ export function useGeofence({
           // mayShowUserSettingsDialog (default true en Android) puede abrir un diálogo
           // del sistema pidiendo "ubicación mejorada" — no tiene sentido en un poll de
           // fondo que nadie está mirando, y puede sumar una espera extra si aparece.
-          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced, mayShowUserSettingsDialog: false }),
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High, mayShowUserSettingsDialog: false }),
           new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('timeout')), FIX_TIMEOUT_MS)
           ),
