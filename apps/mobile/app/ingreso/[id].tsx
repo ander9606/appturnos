@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAsignacion, useMarcarIngreso } from '@/features/turnos/useTurnos';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
+import { obtenerUbicacionActual } from '@/lib/currentLocation';
 import { GeoFenceIndicator }               from '@/features/turnos/GeoFenceIndicator';
 import { Button }                          from '@/components/ui/Button';
 import { fmtRange, getEstadoConfig }       from '@/features/turnos/turnosUtils';
@@ -96,10 +97,16 @@ export default function IngresoScreen() {
   const handleIngreso = async () => {
     if (!asignacion || !canMark) return;
     try {
+      // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling
+      // y currentLocation queda en null — sin este intento puntual, el ingreso se
+      // registraba con lat/lng en 0,0. Best-effort: nunca bloquea si falla o el
+      // permiso está negado (ver obtenerUbicacionActual).
+      const sinGeofence = geofenceTargets === null;
+      const ubicacion = sinGeofence && !currentLocation ? await obtenerUbicacionActual() : null;
       await ingresoMutation.mutateAsync({
         id: asignacion.id,
-        lat: currentLocation?.lat ?? 0,
-        lng: currentLocation?.lng ?? 0,
+        lat: currentLocation?.lat ?? ubicacion?.latitud ?? 0,
+        lng: currentLocation?.lng ?? ubicacion?.longitud ?? 0,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast(t('ingreso.success'));
