@@ -531,6 +531,21 @@ export default function TurnoDetailScreen() {
                   </View>
                 )}
 
+                {/* Turno eventual de nómina: no hay contrato que firmar — se
+                    paga como bono en la próxima liquidación trimestral. Sin
+                    este aviso, no se mostraba nada y el trabajador podía
+                    quedar esperando un contrato que nunca aparece. */}
+                {asignacion?.trabajador_tipo === 'nomina' && (
+                  <View className="bg-white/60 rounded-xl px-3 py-3 flex-row items-center gap-2 mt-2">
+                    <Ionicons name="gift-outline" size={16} color="#059669" />
+                    <Text className="text-xs font-medium text-success flex-1">
+                      {isGestor
+                        ? 'Turno extra — no requiere contrato, se paga como bono en su próxima liquidación.'
+                        : 'Este turno se paga como bono en tu próxima liquidación. No necesitas firmar ningún contrato.'}
+                    </Text>
+                  </View>
+                )}
+
                 {/* Gestor: botones de descargar y corregir — "Contrato" no aplica
                     a turnos eventuales de nómina (se pagan como bono) */}
                 {isGestor && (
