@@ -182,13 +182,17 @@ router.post(
   ctrl.cerrar
 );
 
-// POST /api/turnos/ofertas/:id/duplicar  — copia la oferta a una nueva fecha
+// POST /api/turnos/ofertas/:id/duplicar  — copia la oferta a una nueva fecha/hora
 router.post(
   '/:id/duplicar',
   crearOfertaLimiter,
   verificarRol(GESTIONAR),
   verificarSuscripcion,
-  [idParam, body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)')],
+  [
+    idParam,
+    body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)'),
+    body('hora_inicio').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_inicio inválida (HH:MM)'),
+  ],
   validar,
   ctrl.duplicar
 );

@@ -326,7 +326,7 @@ module.exports = {
     await OfertasModel.eliminarDefinitivo(empresaId, id);
   },
 
-  async duplicar(empresaId, id, nuevaFecha, creadoPor) {
+  async duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio) {
     const original = await OfertasModel.obtenerPorId(empresaId, id);
     if (!original) throw new AppError('Oferta no encontrada', 404);
     const activas = await OfertasModel.contarActivasPorEmpresa(empresaId);
@@ -336,7 +336,7 @@ module.exports = {
         409
       );
     }
-    const nuevaId = await OfertasModel.duplicar(empresaId, id, nuevaFecha, creadoPor);
+    const nuevaId = await OfertasModel.duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio);
     return OfertasModel.obtenerPorId(empresaId, nuevaId);
   },
 };

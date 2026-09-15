@@ -111,7 +111,8 @@ async function duplicar(req, res) {
     req.empresa_id,
     Number(req.params.id),
     req.body.fecha,
-    req.usuario.sub
+    req.usuario.sub,
+    req.body.hora_inicio || null
   );
   res.status(201).json({ success: true, data, message: 'Oferta duplicada' });
 }

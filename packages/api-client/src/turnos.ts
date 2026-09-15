@@ -304,9 +304,13 @@ export const turnosApi = {
     return api.post<Oferta>('/api/turnos/ofertas', payload);
   },
 
-  /** Duplica una oferta a una nueva fecha (copia título, horario, lugar y puestos). */
-  duplicarOferta(ofertaId: number, fecha: string): Promise<Oferta> {
-    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/duplicar`, { fecha });
+  /**
+   * Duplica una oferta a una nueva fecha (copia título, lugar y puestos).
+   * `hora_inicio` (HH:MM:SS) es opcional — si se omite, conserva el horario original;
+   * si se envía, la hora de fin se recalcula para conservar la misma duración.
+   */
+  duplicarOferta(ofertaId: number, fecha: string, hora_inicio?: string): Promise<Oferta> {
+    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/duplicar`, { fecha, hora_inicio });
   },
 
   /** Marca la oferta como completada a mano (el jefe/admin decide, sin depender de la fecha ni del estado de las asignaciones). */

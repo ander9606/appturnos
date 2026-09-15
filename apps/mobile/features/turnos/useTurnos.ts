@@ -342,12 +342,12 @@ export function useAgregarBono() {
   });
 }
 
-/** Duplicar una oferta existente a una nueva fecha (gestores). */
+/** Duplicar una oferta existente a una nueva fecha/hora (gestores). */
 export function useDuplicarOferta() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ ofertaId, fecha }: { ofertaId: number; fecha: string }) =>
-      turnosApi.duplicarOferta(ofertaId, fecha),
+    mutationFn: ({ ofertaId, fecha, hora_inicio }: { ofertaId: number; fecha: string; hora_inicio?: string }) =>
+      turnosApi.duplicarOferta(ofertaId, fecha, hora_inicio),
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() }),
   });
 }

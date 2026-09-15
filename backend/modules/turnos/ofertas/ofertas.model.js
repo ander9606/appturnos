@@ -2,6 +2,14 @@
 
 const { pool } = require('../../../config/database');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+const { horaAMinutos } = require('../../../utils/laboralUtils');
+
+const MIN_POR_DIA = 24 * 60;
+
+function minutosAHora(minutos) {
+  const m = ((minutos % MIN_POR_DIA) + MIN_POR_DIA) % MIN_POR_DIA;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
+}
 
 /**
  * Acceso a datos de ofertas de turno (tabla ofertas_turno).
@@ -455,8 +463,10 @@ const OfertasModel = {
 
   /**
    * Copia una oferta a una nueva fecha, con plazas_cubiertas = 0 en todos los puestos.
+   * Si se pasa `nuevaHoraInicio`, la hora de fin se desplaza el mismo delta para
+   * conservar la duración original del turno.
    */
-  async duplicar(empresaId, id, nuevaFecha, creadoPor) {
+  async duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio) {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -467,6 +477,16 @@ const OfertasModel = {
       );
       if (!original) { await conn.rollback(); return null; }
 
+      let horaInicio = original.hora_inicio;
+      let horaFinEstimada = original.hora_fin_estimada;
+      if (nuevaHoraInicio) {
+        if (horaFinEstimada) {
+          const delta = horaAMinutos(nuevaHoraInicio) - horaAMinutos(original.hora_inicio);
+          horaFinEstimada = minutosAHora(horaAMinutos(horaFinEstimada) + delta);
+        }
+        horaInicio = nuevaHoraInicio;
+      }
+
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
            (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
@@ -474,7 +494,7 @@ const OfertasModel = {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
           empresaId, original.titulo, original.descripcion, nuevaFecha,
-          original.hora_inicio, original.hora_fin_estimada,
+          horaInicio, horaFinEstimada,
           original.lugar, original.latitud, original.longitud,
           original.para_quien, creadoPor,
         ]
