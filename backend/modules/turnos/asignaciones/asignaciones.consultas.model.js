@@ -206,6 +206,7 @@ module.exports = {
               o.lugar, o.latitud, o.longitud,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
+              t.tipo AS trabajador_tipo,
               ${SELECT_GEOFENCE_COLS}
               cal.calificacion, cal.comentario AS calificacion_comentario,
               COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
@@ -213,6 +214,7 @@ module.exports = {
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
        JOIN cargos carg ON carg.id = p.cargo_id
+       JOIN trabajadores t ON t.id = a.trabajador_id
        ${JOIN_PUNTO_MARCAJE}
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
        LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id
@@ -243,6 +245,7 @@ module.exports = {
               emp.nombre AS empresa_nombre,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
+              t.tipo AS trabajador_tipo,
               ${SELECT_GEOFENCE_COLS}
               cal.calificacion, cal.comentario AS calificacion_comentario,
               COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
@@ -252,6 +255,7 @@ module.exports = {
        JOIN empresas emp          ON emp.id = a.empresa_id
        JOIN oferta_puestos p      ON p.id = a.puesto_id
        JOIN cargos carg           ON carg.id = p.cargo_id
+       JOIN trabajadores t        ON t.id = a.trabajador_id
        ${JOIN_PUNTO_MARCAJE}
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
        LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id

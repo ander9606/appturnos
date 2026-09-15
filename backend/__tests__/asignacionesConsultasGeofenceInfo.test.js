@@ -37,3 +37,29 @@ describe('AsignacionesModel — geofence_info en listados "mis-turnos"', () => {
     expect(fila.geofence_info).toEqual({ tipo: 'libre' });
   });
 });
+
+// Mismo patrón que el bug de geofence_info arriba: obtenerConDetalles (vista
+// gestor) traía trabajador_tipo para decidir contrato-vs-bono en turno/[id].tsx,
+// pero listarPorTrabajador/listarPorUsuario ("mis-turnos", la vista que el propio
+// trabajador usa) no lo traían — un trabajador_nomina viendo SU PROPIO turno
+// eventual seguía viendo "Debes firmar el contrato para cobrar" pese al fix.
+describe('AsignacionesModel — trabajador_tipo en listados "mis-turnos"', () => {
+  // pool.query está mockeado: un test que solo revise la fila devuelta pasaría
+  // igual aunque se borre el JOIN/columna real (el mock ya trae el campo puesto
+  // a mano). Lo que protege contra el regreso del bug es el SQL en sí.
+  test('listarPorTrabajador consulta trabajadores.tipo', async () => {
+    pool.query.mockResolvedValue([[filaTipoLibre]]);
+    await AsignacionesModel.listarPorTrabajador(1, 1);
+    const sql = pool.query.mock.calls[0][0];
+    expect(sql).toMatch(/t\.tipo AS trabajador_tipo/);
+    expect(sql).toMatch(/JOIN trabajadores t\s+ON t\.id = a\.trabajador_id/);
+  });
+
+  test('listarPorUsuario consulta trabajadores.tipo', async () => {
+    pool.query.mockResolvedValue([[filaTipoLibre]]);
+    await AsignacionesModel.listarPorUsuario(1);
+    const sql = pool.query.mock.calls[0][0];
+    expect(sql).toMatch(/t\.tipo AS trabajador_tipo/);
+    expect(sql).toMatch(/JOIN trabajadores t\s+ON t\.id = a\.trabajador_id/);
+  });
+});
