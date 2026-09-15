@@ -65,6 +65,14 @@ export function useGeofence({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number | null>(null);
 
+  // getLastKnownPositionAsync sin maxAge puede devolver un fix de horas de
+  // antigüedad (ej. de la casa del trabajador) bajo techo/estructura metálica
+  // donde el fix fresco nunca llega — y se usaba con la misma confianza que
+  // uno actual, mostrando "Fuera del área" en vez de avisar que no hay
+  // ubicación confiable. 2 min alcanza para una acción de marcaje que el
+  // trabajador hace de pie, en el momento.
+  const MAX_EDAD_UBICACION_MS = 2 * 60_000;
+
   const hasTargets = targets !== null && targets.length > 0;
 
   useEffect(() => {
@@ -117,9 +125,10 @@ export function useGeofence({
         aplicarFix(loc.coords.latitude, loc.coords.longitude);
       } catch {
         // Fix fresco no llegó a tiempo (señal débil, emulador, o superó el timeout)
-        // — se usa el último conocido por el SO como respaldo antes de declarar indisponible.
+        // — se usa el último conocido por el SO como respaldo antes de declarar indisponible,
+        // pero solo si no es demasiado viejo (ver MAX_EDAD_UBICACION_MS arriba).
         try {
-          const last = await Location.getLastKnownPositionAsync({});
+          const last = await Location.getLastKnownPositionAsync({ maxAge: MAX_EDAD_UBICACION_MS });
           if (cancelled) return;
           if (last) aplicarFix(last.coords.latitude, last.coords.longitude);
           else setUnavailable(true);
@@ -140,8 +149,9 @@ export function useGeofence({
       if (intervalRef.current) return; // already polling
       // ponytail: muestra la última ubicación conocida (casi instantánea) mientras se
       // resuelve el fix fresco, para no dejar "Calculando distancia…" varios segundos.
+      // maxAge evita mostrar un fix viejo como si fuera la posición actual.
       try {
-        const last = await Location.getLastKnownPositionAsync({});
+        const last = await Location.getLastKnownPositionAsync({ maxAge: MAX_EDAD_UBICACION_MS });
         if (!cancelled && last) aplicarFix(last.coords.latitude, last.coords.longitude);
       } catch {
         // sin respaldo — poll() de abajo sigue intentando el fix fresco
