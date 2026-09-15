@@ -80,7 +80,7 @@ export interface Asignacion {
   cargo_codigo?: string;
   cargo_nombre?: string;
   tipo_geofence?: TipoGeofence;
-  // Constructed by model (only on obtenerConDetalles)
+  // Constructed by model — obtenerConDetalles, listarPorTrabajador, listarPorUsuario
   geofence_info?: GeofenceInfo;
   // Hour breakdown (computed on-the-fly for completado shifts — all optional)
   horas_ordinarias?: number;

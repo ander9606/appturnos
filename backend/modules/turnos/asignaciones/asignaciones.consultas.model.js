@@ -3,6 +3,44 @@
 const { pool } = require('../../../config/database');
 
 /**
+ * Construye geofence_info según tipo_geofence del cargo — misma regla para
+ * cualquier fila que traiga las columnas de la selección de abajo (tipo_geofence,
+ * punto_*, lugar/latitud/longitud de la oferta). Antes solo vivía inline en
+ * obtenerConDetalles (vista gestor); listarPorTrabajador/listarPorUsuario (la
+ * vista "mis-turnos" que usa el trabajador para marcar ingreso) nunca la
+ * calculaban, así que el cliente creía que esos turnos no tenían geofence
+ * — el fix de useGeofence.ts en el celular nunca corría, y el ingreso se
+ * mandaba con lat/lng en 0,0.
+ */
+function construirGeofenceInfo(row) {
+  const tipo = row.tipo_geofence ?? 'oferta';
+  if (tipo === 'fijo' && row.punto_latitud != null) {
+    return {
+      tipo: 'fijo',
+      nombre: row.punto_nombre,
+      latitud: Number(row.punto_latitud),
+      longitud: Number(row.punto_longitud),
+      radio_metros: row.punto_radio ?? 100,
+    };
+  }
+  if (tipo === 'libre') return { tipo: 'libre' };
+  if (tipo === 'zonal') return { tipo: 'zonal' };
+  return {
+    tipo: 'oferta',
+    nombre: row.lugar,
+    latitud: row.latitud != null ? Number(row.latitud) : null,
+    longitud: row.longitud != null ? Number(row.longitud) : null,
+    radio_metros: 1000,
+  };
+}
+
+const SELECT_GEOFENCE_COLS = `carg.tipo_geofence,
+              pm.id   AS punto_id,      pm.nombre AS punto_nombre,
+              pm.latitud AS punto_latitud, pm.longitud AS punto_longitud,
+              pm.radio_metros AS punto_radio,`;
+const JOIN_PUNTO_MARCAJE = 'LEFT JOIN puntos_marcaje pm ON pm.id = carg.punto_marcaje_id';
+
+/**
  * Lecturas y listados de asignaciones (sin mutar estado ni pago).
  * Ver asignaciones.model.js para el resto de AsignacionesModel.
  */
@@ -168,19 +206,21 @@ module.exports = {
               o.lugar, o.latitud, o.longitud,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
+              ${SELECT_GEOFENCE_COLS}
               cal.calificacion, cal.comentario AS calificacion_comentario,
               COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
        JOIN cargos carg ON carg.id = p.cargo_id
+       ${JOIN_PUNTO_MARCAJE}
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
        LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id
        WHERE a.empresa_id = ? AND a.trabajador_id = ?
        ORDER BY o.fecha DESC, o.hora_inicio`,
       [empresaId, trabajadorId]
     );
-    return filas;
+    return filas.map((row) => ({ ...row, geofence_info: construirGeofenceInfo(row) }));
   },
 
   /**
@@ -203,6 +243,7 @@ module.exports = {
               emp.nombre AS empresa_nombre,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
+              ${SELECT_GEOFENCE_COLS}
               cal.calificacion, cal.comentario AS calificacion_comentario,
               COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
        FROM asignaciones_turno a
@@ -211,13 +252,14 @@ module.exports = {
        JOIN empresas emp          ON emp.id = a.empresa_id
        JOIN oferta_puestos p      ON p.id = a.puesto_id
        JOIN cargos carg           ON carg.id = p.cargo_id
+       ${JOIN_PUNTO_MARCAJE}
        LEFT JOIN calificaciones_turno cal ON cal.asignacion_id = a.id
        LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id
        WHERE te.usuario_id = ? AND te.estado = 'activo'
        ORDER BY o.fecha DESC, o.hora_inicio`,
       [usuarioId]
     );
-    return filas;
+    return filas.map((row) => ({ ...row, geofence_info: construirGeofenceInfo(row) }));
   },
 
   /**
@@ -260,30 +302,7 @@ module.exports = {
     const row = filas[0];
     if (!row) return null;
 
-    // Construye geofence_info según tipo_geofence del cargo
-    const tipo = row.tipo_geofence ?? 'oferta';
-    if (tipo === 'fijo' && row.punto_latitud != null) {
-      row.geofence_info = {
-        tipo: 'fijo',
-        nombre: row.punto_nombre,
-        latitud: Number(row.punto_latitud),
-        longitud: Number(row.punto_longitud),
-        radio_metros: row.punto_radio ?? 100,
-      };
-    } else if (tipo === 'libre') {
-      row.geofence_info = { tipo: 'libre' };
-    } else if (tipo === 'zonal') {
-      row.geofence_info = { tipo: 'zonal' };
-    } else {
-      row.geofence_info = {
-        tipo: 'oferta',
-        nombre: row.lugar,
-        latitud: row.latitud != null ? Number(row.latitud) : null,
-        longitud: row.longitud != null ? Number(row.longitud) : null,
-        radio_metros: 1000,
-      };
-    }
-
+    row.geofence_info = construirGeofenceInfo(row);
     return row;
   },
 };
