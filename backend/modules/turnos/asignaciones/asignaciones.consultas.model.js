@@ -40,6 +40,14 @@ const SELECT_GEOFENCE_COLS = `carg.tipo_geofence,
               pm.radio_metros AS punto_radio,`;
 const JOIN_PUNTO_MARCAJE = 'LEFT JOIN puntos_marcaje pm ON pm.id = carg.punto_marcaje_id';
 
+// Mismo patrón que geofence_info y trabajador_tipo: obtenerConDetalles (vista
+// gestor) ya traía estos campos, listarPorTrabajador/listarPorUsuario ("mis-
+// turnos") no — el trabajador nunca veía a quién llamar al llegar (encargado),
+// la cadencia de pago de la empresa, ni las notas externas de la oferta,
+// porque turno/[id].tsx los renderiza sin gate de rol (silencioso, sin crash).
+const SELECT_DETALLE_OFERTA_COLS = `o.externo_notas AS oferta_externo_notas,
+              o.encargado_nombre, o.encargado_telefono,`;
+
 /**
  * Lecturas y listados de asignaciones (sin mutar estado ni pago).
  * Ver asignaciones.model.js para el resto de AsignacionesModel.
@@ -204,6 +212,8 @@ module.exports = {
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
               o.lugar, o.latitud, o.longitud,
+              ${SELECT_DETALLE_OFERTA_COLS}
+              emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
               t.tipo AS trabajador_tipo,
@@ -212,6 +222,7 @@ module.exports = {
               COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN empresas emp ON emp.id = a.empresa_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
        JOIN cargos carg ON carg.id = p.cargo_id
        JOIN trabajadores t ON t.id = a.trabajador_id
@@ -242,7 +253,8 @@ module.exports = {
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
               o.lugar, o.latitud, o.longitud,
-              emp.nombre AS empresa_nombre,
+              ${SELECT_DETALLE_OFERTA_COLS}
+              emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
               t.tipo AS trabajador_tipo,

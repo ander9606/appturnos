@@ -59,7 +59,6 @@ export interface Asignacion {
   created_at: string;
   /** Solo presente en listarPorUsuario (feed "Mis Turnos" multi-empresa del trabajador). */
   empresa_nombre?: string;
-  /** Solo presente en obtenerConDetalles (detalle de una asignación). */
   empresa_tipo_liquidacion?: TipoLiquidacion;
   // Joined from ofertas_turno
   oferta_titulo: string;

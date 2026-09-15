@@ -63,3 +63,29 @@ describe('AsignacionesModel — trabajador_tipo en listados "mis-turnos"', () =>
     expect(sql).toMatch(/JOIN trabajadores t\s+ON t\.id = a\.trabajador_id/);
   });
 });
+
+// Mismo patrón otra vez, revisando la pantalla completa: turno/[id].tsx renderiza
+// encargado_nombre/telefono, empresa_tipo_liquidacion y oferta_externo_notas sin
+// gate de rol (igual que geofence_info y trabajador_tipo) — el trabajador viendo
+// su propio turno via mis-turnos nunca los recibía, así que esas secciones de la
+// pantalla quedaban vacías en silencio (sin crash, solo información faltante).
+describe('AsignacionesModel — encargado/liquidacion/notas en listados "mis-turnos"', () => {
+  test('listarPorTrabajador consulta encargado, tipo_liquidacion y notas externas', async () => {
+    pool.query.mockResolvedValue([[filaTipoLibre]]);
+    await AsignacionesModel.listarPorTrabajador(1, 1);
+    const sql = pool.query.mock.calls[0][0];
+    expect(sql).toMatch(/o\.encargado_nombre, o\.encargado_telefono/);
+    expect(sql).toMatch(/o\.externo_notas AS oferta_externo_notas/);
+    expect(sql).toMatch(/emp\.tipo_liquidacion AS empresa_tipo_liquidacion/);
+    expect(sql).toMatch(/JOIN empresas emp ON emp\.id = a\.empresa_id/);
+  });
+
+  test('listarPorUsuario consulta encargado, tipo_liquidacion y notas externas', async () => {
+    pool.query.mockResolvedValue([[filaTipoLibre]]);
+    await AsignacionesModel.listarPorUsuario(1);
+    const sql = pool.query.mock.calls[0][0];
+    expect(sql).toMatch(/o\.encargado_nombre, o\.encargado_telefono/);
+    expect(sql).toMatch(/o\.externo_notas AS oferta_externo_notas/);
+    expect(sql).toMatch(/emp\.tipo_liquidacion AS empresa_tipo_liquidacion/);
+  });
+});
