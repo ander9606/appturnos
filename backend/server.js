@@ -31,12 +31,19 @@ if (corsOrigins.length === 0 && process.env.NODE_ENV === 'production') {
 app.use(cors(corsOrigins.length ? { origin: corsOrigins, credentials: true } : {}));
 
 // ─── Rate limiting ────────────────────────────────────────────
-// Límite general: 200 req / 15 min por IP (protege todos los endpoints).
+// Límite general: 1000 req / 15 min por IP (protege todos los endpoints).
+// 200 se agotaba rápido cuando varias personas de una misma oficina/wifi
+// comparten IP pública — cada una dispara su propio polling de pantallas
+// (TanStack Query) y entre todas devoraban el cupo de una sola persona,
+// dejando la app entera en 429 ("se cayó el servidor" para el usuario).
+// /api/health fuera del límite: nunca debe negarse un health check —
+// justo cuando hay más tráfico real es cuando más se necesita.
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path === '/api/health',
   message: { success: false, message: 'Demasiadas solicitudes, intenta más tarde' },
 }));
 
