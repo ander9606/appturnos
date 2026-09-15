@@ -2,6 +2,13 @@
 
 const { pool } = require('../../config/database');
 
+// latitud/longitud son DECIMAL — mysql2 los devuelve como string sin decimalNumbers.
+// El cliente (LugarInput, MapaSelector, geofence) espera number y llama .toFixed()
+// directo, así que sin este cast truena con "undefined is not a function".
+function castCoords(row) {
+  return { ...row, latitud: Number(row.latitud), longitud: Number(row.longitud) };
+}
+
 const PuntosMarcajeModel = {
   async listar(empresaId, { soloActivos = true } = {}) {
     const filtro = soloActivos ? 'AND activo = 1' : '';
@@ -13,7 +20,7 @@ const PuntosMarcajeModel = {
        ORDER BY tipo, nombre`,
       [empresaId]
     );
-    return filas;
+    return filas.map(castCoords);
   },
 
   /** Puntos disponibles como biblioteca de ubicaciones al crear un turno (alcance='todos'). */
@@ -25,7 +32,7 @@ const PuntosMarcajeModel = {
        ORDER BY nombre`,
       [empresaId]
     );
-    return filas;
+    return filas.map(castCoords);
   },
 
   async listarZonales(empresaId) {
@@ -36,7 +43,7 @@ const PuntosMarcajeModel = {
        ORDER BY nombre`,
       [empresaId]
     );
-    return filas;
+    return filas.map(castCoords);
   },
 
   async obtenerPorId(empresaId, id) {
@@ -47,7 +54,7 @@ const PuntosMarcajeModel = {
        WHERE id = ? AND empresa_id = ? LIMIT 1`,
       [id, empresaId]
     );
-    return filas[0] || null;
+    return filas[0] ? castCoords(filas[0]) : null;
   },
 
   async crear({ empresaId, nombre, descripcion, latitud, longitud, radio_metros, tipo, alcance }) {
