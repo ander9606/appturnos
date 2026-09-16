@@ -1,77 +1,142 @@
 'use strict';
 
+const { ahoraColombiaSQL } = require('./fechaColombia');
+
 /**
  * Cálculo de límites de período según un ciclo de liquidación.
- * Puramente calendario — sin conocimiento de nómina, empresa ni timezone.
+ * Usa hora de Colombia (UTC-5), no UTC.
  * Usado por nómina (períodos) y turnos eventuales, que comparten el mismo
  * concepto de ciclo pero aplican cadencias distintas.
  */
 
 const CICLOS = ['mensual', 'quincenal', 'semanal', 'trimestral'];
 
-/** Returns YYYY-MM-DD for a Date (UTC-safe). */
+/** Formatea números a 2 dígitos para YYYY-MM-DD */
+function pad(n) {
+  return String(n).padStart(2, '0');
+}
+
+/** Returns YYYY-MM-DD para una fecha local (no UTC). Usa solo para display — no guardes. */
 function toISODate(d) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  return `${y}-${pad(m)}-${pad(day)}`;
 }
 
 /** Returns { fecha_inicio, fecha_fin, tipo } for the period that contains today. */
 function calcularPeriodoActual(tipo) {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth(); // 0-indexed
-  const d = now.getDate();
+  // IMPORTANTE: Usa hora de Colombia (UTC-5), no UTC, para cálculos de período
+  const hoyColombia = ahoraColombiaSQL().slice(0, 10); // YYYY-MM-DD
+  const [ys, ms, ds] = hoyColombia.split('-');
+  const y = Number(ys);
+  const m_1based = Number(ms);
+  const d = Number(ds);
   let inicio, fin;
+
   if (tipo === 'mensual') {
-    inicio = new Date(y, m, 1);
-    fin    = new Date(y, m + 1, 0);
+    // Primer día del mes actual
+    inicio = `${y}-${pad(m_1based)}-01`;
+    // Último día del mes actual: primero del mes siguiente - 1 día
+    const nextMonthStr = m_1based === 12 ? `${y + 1}-01-01` : `${y}-${pad(m_1based + 1)}-01`;
+    const nextMonthDate = new Date(nextMonthStr);
+    nextMonthDate.setDate(nextMonthDate.getDate() - 1);
+    fin = toISODate(nextMonthDate);
   } else if (tipo === 'quincenal') {
     if (d <= 15) {
-      inicio = new Date(y, m, 1);
-      fin    = new Date(y, m, 15);
+      inicio = `${y}-${pad(m_1based)}-01`;
+      fin = `${y}-${pad(m_1based)}-15`;
     } else {
-      inicio = new Date(y, m, 16);
-      fin    = new Date(y, m + 1, 0);
+      inicio = `${y}-${pad(m_1based)}-16`;
+      // Último día del mes
+      const nextMonthStr = m_1based === 12 ? `${y + 1}-01-01` : `${y}-${pad(m_1based + 1)}-01`;
+      const nextMonthDate = new Date(nextMonthStr);
+      nextMonthDate.setDate(nextMonthDate.getDate() - 1);
+      fin = toISODate(nextMonthDate);
     }
   } else if (tipo === 'trimestral') {
-    const q = Math.floor(m / 3); // 0..3
-    inicio = new Date(y, q * 3, 1);
-    fin    = new Date(y, q * 3 + 3, 0);
+    const q = Math.floor((m_1based - 1) / 3); // 0..3
+    const startMonth = q * 3 + 1;
+    const endMonth = (q + 1) * 3;
+    inicio = `${y}-${pad(startMonth)}-01`;
+    // Último día del trimestre
+    const endMonthNextStr = endMonth === 12 ? `${y + 1}-01-01` : `${y}-${pad(endMonth + 1)}-01`;
+    const nextMonthDate = new Date(endMonthNextStr);
+    nextMonthDate.setDate(nextMonthDate.getDate() - 1);
+    fin = toISODate(nextMonthDate);
   } else {
-    // semanal: lunes → domingo
-    const dow = now.getDay();
-    const lunes = new Date(now);
-    lunes.setDate(d - (dow === 0 ? 6 : dow - 1));
-    const domingo = new Date(lunes);
-    domingo.setDate(lunes.getDate() + 6);
-    inicio = lunes;
-    fin    = domingo;
+    // semanal: lunes → domingo (basado en fecha de Colombia)
+    const fechaColombia = new Date(y, m_1based - 1, d);
+    const dow = fechaColombia.getDay(); // 0=domingo, 1=lunes...6=sábado
+    const dayOfWeek = dow === 0 ? 7 : dow; // 1=lunes...7=domingo
+    const lunesDate = new Date(y, m_1based - 1, d - dayOfWeek + 1);
+    const domingoDate = new Date(y, m_1based - 1, d + (7 - dayOfWeek) + 1);
+
+    inicio = toISODate(lunesDate);
+    fin = toISODate(domingoDate);
   }
-  return { fecha_inicio: toISODate(inicio), fecha_fin: toISODate(fin), tipo };
+  return { fecha_inicio: inicio, fecha_fin: fin, tipo };
 }
 
 /** Returns { fecha_inicio, fecha_fin, tipo } for the period that follows fechaFin. */
 function calcularSiguientePeriodo(tipo, fechaFin) {
-  const last = new Date(fechaFin + 'T12:00:00Z');
-  const nextStart = new Date(last);
-  nextStart.setUTCDate(nextStart.getUTCDate() + 1);
-  const y = nextStart.getUTCFullYear();
-  const m = nextStart.getUTCMonth();
-  const d = nextStart.getUTCDate();
-  let fin;
+  // fechaFin es YYYY-MM-DD. El día siguiente es el inicio del siguiente período.
+  const [ys, ms, ds] = fechaFin.split('-');
+  const y = Number(ys);
+  const m_1based = Number(ms);
+  const d = Number(ds);
+
+  // Calcular el día siguiente
+  let siguienteDate = new Date(y, m_1based - 1, d);
+  siguienteDate.setDate(siguienteDate.getDate() + 1);
+
+  // Extraer año, mes, día del día siguiente
+  const siguiente_y = siguienteDate.getFullYear();
+  const siguiente_m_1based = siguienteDate.getMonth() + 1;
+  const siguiente_d = siguienteDate.getDate();
+
+  let inicio, fin;
+
   if (tipo === 'mensual') {
-    fin = new Date(Date.UTC(y, m + 1, 0));
+    inicio = `${siguiente_y}-${pad(siguiente_m_1based)}-01`;
+    // Último día del mes siguiente
+    const nextMonthStr = siguiente_m_1based === 12 ? `${siguiente_y + 1}-01-01` : `${siguiente_y}-${pad(siguiente_m_1based + 1)}-01`;
+    const nextMonthDate = new Date(nextMonthStr);
+    nextMonthDate.setDate(nextMonthDate.getDate() - 1);
+    fin = toISODate(nextMonthDate);
   } else if (tipo === 'quincenal') {
-    fin = d <= 15
-      ? new Date(Date.UTC(y, m, 15))
-      : new Date(Date.UTC(y, m + 1, 0));
+    if (siguiente_d <= 15) {
+      inicio = `${siguiente_y}-${pad(siguiente_m_1based)}-01`;
+      fin = `${siguiente_y}-${pad(siguiente_m_1based)}-15`;
+    } else {
+      inicio = `${siguiente_y}-${pad(siguiente_m_1based)}-16`;
+      const nextMonthStr = siguiente_m_1based === 12 ? `${siguiente_y + 1}-01-01` : `${siguiente_y}-${pad(siguiente_m_1based + 1)}-01`;
+      const nextMonthDate = new Date(nextMonthStr);
+      nextMonthDate.setDate(nextMonthDate.getDate() - 1);
+      fin = toISODate(nextMonthDate);
+    }
   } else if (tipo === 'trimestral') {
-    const q = Math.floor(m / 3);
-    fin = new Date(Date.UTC(y, q * 3 + 3, 0));
+    const q = Math.floor((siguiente_m_1based - 1) / 3);
+    const startMonth = q * 3 + 1;
+    const endMonth = (q + 1) * 3;
+    inicio = `${siguiente_y}-${pad(startMonth)}-01`;
+    const endMonthNextStr = endMonth === 12 ? `${siguiente_y + 1}-01-01` : `${siguiente_y}-${pad(endMonth + 1)}-01`;
+    const nextMonthDate = new Date(endMonthNextStr);
+    nextMonthDate.setDate(nextMonthDate.getDate() - 1);
+    fin = toISODate(nextMonthDate);
   } else {
-    fin = new Date(nextStart);
-    fin.setUTCDate(nextStart.getUTCDate() + 6);
+    // semanal
+    const fechaColombia = new Date(siguiente_y, siguiente_m_1based - 1, siguiente_d);
+    const dow = fechaColombia.getDay();
+    const dayOfWeek = dow === 0 ? 7 : dow;
+    const lunesDate = new Date(siguiente_y, siguiente_m_1based - 1, siguiente_d - dayOfWeek + 1);
+    const domingoDate = new Date(siguiente_y, siguiente_m_1based - 1, siguiente_d + (7 - dayOfWeek) + 1);
+
+    inicio = toISODate(lunesDate);
+    fin = toISODate(domingoDate);
   }
-  return { fecha_inicio: toISODate(nextStart), fecha_fin: toISODate(fin), tipo };
+
+  return { fecha_inicio: inicio, fecha_fin: fin, tipo };
 }
 
 module.exports = { CICLOS, toISODate, calcularPeriodoActual, calcularSiguientePeriodo };
