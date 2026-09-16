@@ -20,7 +20,7 @@ import { PeriodoBadge } from '@/features/nomina/PeriodoBadge';
 import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { usePeriodos, useNominaPerfil, useRegistrosHistorial } from '@/features/nomina/useNomina';
-import { calcularResumenPeriodo, getValorHora, fmtPeriodo, type ResumenPeriodoNomina } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { calcularResumenPeriodo, getValorHora, fmtPeriodo, TIPO_PERIODO_LABEL_SALARIO, type ResumenPeriodoNomina } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import type { PeriodoNomina, RegistroDiario, Asignacion } from '@api-client';
 
 export default function HistorialGananciasScreen() {
@@ -212,7 +212,9 @@ function HistorialNomina() {
         ListHeaderComponent={
           <View className="pt-2 pb-4 gap-3">
             <View className="gap-1">
-              <Text className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Salario mensual (fijo)</Text>
+              <Text className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                {filas.length > 0 ? TIPO_PERIODO_LABEL_SALARIO[filas[0].periodo.tipo] : TIPO_PERIODO_LABEL_SALARIO.mensual}
+              </Text>
               <Text className="text-2xl font-extrabold text-foreground">
                 {perfil?.salario_base != null ? formatCOP(perfil.salario_base) : '—'}
               </Text>

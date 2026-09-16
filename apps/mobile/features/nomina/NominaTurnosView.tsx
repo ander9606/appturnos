@@ -108,7 +108,7 @@ export function NominaTurnosView() {
   }, [showAnterior, periodoAnterior, periodoActual]);
 
   // Filtrar turnos completados: por fechas personalizadas o por período de su empresa.
-  const turnosQuincena = useMemo(() => {
+  const turnosPeriodo = useMemo(() => {
     if (!turnos) return [];
     return turnos.filter((a) => {
       if (a.estado !== 'completado') return false;
@@ -130,7 +130,7 @@ export function NominaTurnosView() {
   // Turnos completados sin firma no cuentan en el total a cobrar hasta que
   // el trabajador firme su contrato — mismo criterio que la liquidación del gestor.
   const totales = useMemo(() =>
-    turnosQuincena.reduce(
+    turnosPeriodo.reduce(
       (acc, a) => {
         const firmado = a.contrato_firmado !== 0;
         return {
@@ -142,14 +142,14 @@ export function NominaTurnosView() {
       },
       { count: 0, horas: 0, pago: 0, pendientesFirma: 0 }
     ),
-    [turnosQuincena]
+    [turnosPeriodo]
   );
 
-  // Desglose por empresa — solo aporta valor cuando trabajó para más de una en la quincena.
+  // Desglose por empresa — solo aporta valor cuando trabajó para más de una en el período.
   // Mismo filtro de firma que `totales` arriba, para que las dos cifras sumen igual.
   const porEmpresa = useMemo(() => {
     const map = new Map<string, number>();
-    for (const a of turnosQuincena) {
+    for (const a of turnosPeriodo) {
       if (a.contrato_firmado === 0) continue;
       const nombre = a.empresa_nombre ?? 'Otra empresa';
       map.set(nombre, (map.get(nombre) ?? 0) + (Number(a.pago_total) || 0));
@@ -157,7 +157,7 @@ export function NominaTurnosView() {
     return Array.from(map.entries())
       .map(([empresa, pago]) => ({ empresa, pago }))
       .sort((a, b) => b.pago - a.pago);
-  }, [turnosQuincena]);
+  }, [turnosPeriodo]);
 
   const formatDate = (date: Date): string => {
     const year = date.getFullYear();
@@ -336,7 +336,7 @@ export function NominaTurnosView() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       <FlatList
-        data={turnosQuincena}
+        data={turnosPeriodo}
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
         contentContainerClassName="gap-2 pb-8"

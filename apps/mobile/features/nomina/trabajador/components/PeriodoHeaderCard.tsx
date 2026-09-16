@@ -20,6 +20,7 @@ import {
   calcularElapsedLabel,
   analizarDia,
   horaEntradaMostrada,
+  TIPO_PERIODO_LABEL_SALARIO,
   type EstadoHoy,
   type ResumenPeriodoNomina,
 } from '../nominaTrabajadorUtils';
@@ -108,7 +109,7 @@ export function PeriodoHeaderCard({
               <Text className="text-white text-lg font-extrabold">
                 {salarioBase != null ? mask(formatCOP(salarioBase)) : '—'}
               </Text>
-              <Text className="text-white/70 text-[10px]">Salario mensual</Text>
+              <Text className="text-white/70 text-[10px]">{periodo ? TIPO_PERIODO_LABEL_SALARIO[periodo.tipo] : 'Salario (fijo)'}</Text>
             </>
           )}
         </View>

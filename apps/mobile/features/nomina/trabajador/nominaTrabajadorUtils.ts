@@ -434,6 +434,12 @@ export const TIPO_PERIODO_LABEL: Record<TipoPeriodo, string> = {
   mensual:   'Mensual',
 };
 
+export const TIPO_PERIODO_LABEL_SALARIO: Record<TipoPeriodo, string> = {
+  semanal:   'Salario semanal (fijo)',
+  quincenal: 'Salario quincenal (fijo)',
+  mensual:   'Salario mensual (fijo)',
+};
+
 export const TIPO_DIA_LABEL: Partial<Record<TipoDia, string>> = {
   descanso:      'Descanso',
   compensatorio: 'Compensatorio',
