@@ -5,6 +5,7 @@ const ContratosModel    = require('../../contratos/contratos.model');
 const ContratosService  = require('../../contratos/contratos.service');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
+const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
 const { pool } = require('../../../config/database');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const IntegracionService = require('../../integracion/integracion.service');
@@ -241,6 +242,10 @@ module.exports = {
     // Si este egreso completó la oferta entera, emite costo_labor.calculado
     // a logiq360 y marca la oferta como completada (best-effort).
     await CostoLaborService.verificarYEmitir(dbEmpresaId, asignacion.oferta_id);
+
+    // Auto-crear períodos de turnos si es necesario (best-effort)
+    await PeriodosTurnosService.autoCrear(dbEmpresaId).catch(() => {});
+
     return AsignacionesModel.obtenerPorId(dbEmpresaId, id);
   },
 
@@ -360,6 +365,9 @@ module.exports = {
         empresaId, id, Number(resultado.tarifa_dia) + Number(resultado.bono_monto || 0)
       );
       await CostoLaborService.verificarYEmitir(empresaId, asig.oferta_id);
+
+      // Auto-crear períodos de turnos si es necesario (best-effort)
+      await PeriodosTurnosService.autoCrear(empresaId).catch(() => {});
     }
 
     return resultado;
@@ -464,6 +472,9 @@ module.exports = {
     }
 
     await CostoLaborService.verificarYEmitir(empresaId, ofertaId);
+
+    // Auto-crear períodos de turnos si es necesario (best-effort)
+    await PeriodosTurnosService.autoCrear(empresaId).catch(() => {});
 
     return { cerradas, noPresentados, excluidos: excepcionesIds.length };
   },
