@@ -62,7 +62,7 @@ describe('PeriodosService.crear', () => {
   });
 
   test('fecha_inicio === fecha_fin → se crea sin error', async () => {
-    PeriodosModel.crear.mockResolvedValue(99);
+    PeriodosModel.crear.mockResolvedValue({ id: 99, esNuevo: true });
     PeriodosModel.obtenerPorId.mockResolvedValue({
       id: 99,
       fecha_inicio: '2026-06-01',
@@ -78,7 +78,7 @@ describe('PeriodosService.crear', () => {
   });
 
   test('llamada exitosa invoca PeriodosModel.crear', async () => {
-    PeriodosModel.crear.mockResolvedValue(42);
+    PeriodosModel.crear.mockResolvedValue({ id: 42, esNuevo: true });
     PeriodosModel.obtenerPorId.mockResolvedValue({
       id: 42,
       fecha_inicio: '2026-06-01',

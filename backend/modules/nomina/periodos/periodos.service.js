@@ -93,23 +93,25 @@ const PeriodosService = {
     if (datos.fecha_fin < datos.fecha_inicio) {
       throw new AppError('fecha_fin no puede ser anterior a fecha_inicio', 422);
     }
-    const id = await PeriodosModel.crear(empresaId, datos);
+    const { id, esNuevo } = await PeriodosModel.crear(empresaId, datos);
     const periodo = await PeriodosModel.obtenerPorId(empresaId, id);
 
-    // Notificar a todos los trabajadores de nómina de la empresa (best-effort).
-    const destinatarios = await listarUsuariosNomina(empresaId);
-    if (destinatarios.length > 0) {
-      const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
-        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
-      const fin = new Date(periodo.fecha_fin + 'T00:00:00')
-        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
-      await NotificacionesService.notificarVarios(destinatarios, {
-        empresaId,
-        tipo: 'nomina.periodo_abierto',
-        titulo: 'Nuevo período de nómina abierto',
-        mensaje: `Período ${inicio} – ${fin} disponible. Ya puedes registrar tu jornada.`,
-        data: { periodo_id: id },
-      });
+    // Solo notificar si el período es VERDADERAMENTE NUEVO (no una race condition devolviendo uno existente).
+    if (esNuevo) {
+      const destinatarios = await listarUsuariosNomina(empresaId);
+      if (destinatarios.length > 0) {
+        const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
+          .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+        const fin = new Date(periodo.fecha_fin + 'T00:00:00')
+          .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+        await NotificacionesService.notificarVarios(destinatarios, {
+          empresaId,
+          tipo: 'nomina.periodo_abierto',
+          titulo: 'Nuevo período de nómina abierto',
+          mensaje: `Período ${inicio} – ${fin} disponible. Ya puedes registrar tu jornada.`,
+          data: { periodo_id: id },
+        });
+      }
     }
 
     return periodo;
