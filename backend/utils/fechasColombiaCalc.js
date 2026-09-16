@@ -53,11 +53,32 @@ function obtenerUltimoDiaMes(año, mes) {
 /**
  * Suma días a una fecha (string YYYY-MM-DD)
  * Ejemplo: agregarDias("2026-09-28", 5) => "2026-10-03"
+ *
+ * Usa aritmética pura sin Date objects para evitar problemas de zona horaria.
  */
 function agregarDias(dateStr, diasAAgregar) {
   const { y, m, d } = parseISO(dateStr);
-  const date = new Date(y, m - 1, d + diasAAgregar);
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  let year = y, month = m, day = d + diasAAgregar;
+
+  while (day > diasEnMes(year, month)) {
+    day -= diasEnMes(year, month);
+    month++;
+    if (month > 12) {
+      month = 1;
+      year++;
+    }
+  }
+
+  while (day < 1) {
+    month--;
+    if (month < 1) {
+      month = 12;
+      year--;
+    }
+    day += diasEnMes(year, month);
+  }
+
+  return `${year}-${pad(month)}-${pad(day)}`;
 }
 
 /**
@@ -71,14 +92,47 @@ function restarDias(dateStr, diasARestar) {
 /**
  * Calcula la diferencia en días entre dos fechas (string YYYY-MM-DD)
  * Ejemplo: diferenciaEnDias("2026-09-30", "2026-09-16") => 14
+ *
+ * Usa aritmética pura sin Date objects para evitar problemas de zona horaria.
  */
 function diferenciaEnDias(fecha1, fecha2) {
   const { y: y1, m: m1, d: d1 } = parseISO(fecha1);
   const { y: y2, m: m2, d: d2 } = parseISO(fecha2);
-  const date1 = new Date(y1, m1 - 1, d1);
-  const date2 = new Date(y2, m2 - 1, d2);
-  const diffMS = date1 - date2;
-  return Math.floor(diffMS / (1000 * 60 * 60 * 24));
+
+  let dias = 0;
+  let year = y2, month = m2, day = d2;
+
+  // Si fecha2 es anterior a fecha1, contar hacia adelante
+  if (y2 < y1 || (y2 === y1 && m2 < m1) || (y2 === y1 && m2 === m1 && d2 < d1)) {
+    while (year < y1 || (year === y1 && month < m1) || (year === y1 && month === m1 && day < d1)) {
+      day++;
+      if (day > diasEnMes(year, month)) {
+        day = 1;
+        month++;
+        if (month > 12) {
+          month = 1;
+          year++;
+        }
+      }
+      dias++;
+    }
+    return dias;
+  }
+
+  // Si fecha1 es anterior o igual a fecha2, contar hacia atrás (resultado negativo)
+  while (year > y1 || (year === y1 && month > m1) || (year === y1 && month === m1 && day > d1)) {
+    day--;
+    if (day < 1) {
+      month--;
+      if (month < 1) {
+        month = 12;
+        year--;
+      }
+      day = diasEnMes(year, month);
+    }
+    dias--;
+  }
+  return dias;
 }
 
 /**
@@ -122,15 +176,16 @@ function calcularPeriodo(tipo, dateStr = null) {
 
   if (tipo === 'semanal') {
     // Semana: lunes a domingo (lunes = 1, domingo = 7)
-    const fechaDate = new Date(y, m - 1, d);
-    const dow = fechaDate.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+    // Usar UTC para evitar problemas de zona horaria del servidor
+    const fechaDate = new Date(`${y}-${pad(m)}-${pad(d)}T12:00:00Z`);
+    const dow = fechaDate.getUTCDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
     const dayOfWeek = dow === 0 ? 7 : dow; // Convertir a: 1 = lunes, ..., 7 = domingo
 
-    const lunesDate = new Date(y, m - 1, d - dayOfWeek + 1);
-    const domingoDate = new Date(y, m - 1, d + (7 - dayOfWeek) + 1);
+    const lunesOffset = -(dayOfWeek - 1);
+    const domingoOffset = 7 - (dayOfWeek - 1);
 
-    const inicio = `${lunesDate.getFullYear()}-${pad(lunesDate.getMonth() + 1)}-${pad(lunesDate.getDate())}`;
-    const fin = `${domingoDate.getFullYear()}-${pad(domingoDate.getMonth() + 1)}-${pad(domingoDate.getDate())}`;
+    const inicio = agregarDias(hoyStr, lunesOffset);
+    const fin = agregarDias(hoyStr, domingoOffset);
     return { fecha_inicio: inicio, fecha_fin: fin, tipo };
   }
 
