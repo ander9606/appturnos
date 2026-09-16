@@ -8,6 +8,7 @@ const LiquidacionService = require('../liquidacion/liquidacion.service');
 const CuentasCobroService = require('../../cuentas-cobro/cuentas-cobro.service');
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { toISODate, calcularPeriodoActual, calcularSiguientePeriodo } = require('../../../utils/periodoCiclo');
 
 /** Best-effort: un fallo generando cuentas de cobro nunca debe tumbar el cierre del período. */
@@ -122,7 +123,8 @@ const PeriodosService = {
     const empresa = await EmpresasModel.obtenerParaAdmin(empresaId);
     if (!empresa) return null;
     const tipo = empresa.tipo_liquidacion || 'mensual';
-    const hoy  = toISODate(new Date());
+    // IMPORTANTE: Usar hora de Colombia, no UTC, para calcular "hoy"
+    const hoy  = ahoraColombiaSQL().slice(0, 10);
 
     // Cerrar automáticamente cualquier período abierto que ya venció.
     const vencidos = await PeriodosModel.listarAbiertosVencidos(empresaId, hoy);
