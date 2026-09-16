@@ -152,7 +152,8 @@ const PeriodosService = {
    * con el ciclo nuevo. Notifica a trabajadores de nómina y gestores.
    */
   async recalcularPorCambioDeCiclo(empresaId, usuarioId) {
-    const hoy = toISODate(new Date());
+    // IMPORTANTE: Usar hora de Colombia, no UTC, para calcular "hoy"
+    const hoy = ahoraColombiaSQL().slice(0, 10);
     const abierto = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
     if (abierto) {
       await PeriodosModel.cerrarConSnapshot(empresaId, abierto.id, usuarioId ?? null);
@@ -199,7 +200,6 @@ const PeriodosService = {
       const tipo = empresa.tipo_liquidacion;
       const siguiente = calcularSiguientePeriodo(tipo, periodo.fecha_fin);
       // Solo crear si no existe ya uno abierto en ese rango.
-      const hoyStr = toISODate(new Date());
       const existente = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, siguiente.fecha_inicio);
       if (!existente) {
         await this.crear(empresaId, siguiente).catch(() => {}); // best-effort
