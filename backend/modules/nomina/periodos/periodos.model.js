@@ -99,17 +99,17 @@ const PeriodosModel = {
          VALUES (?, ?, ?, ?)`,
         [empresaId, fecha_inicio, fecha_fin, tipo || 'quincenal']
       );
-      return res.insertId;
+      return { id: res.insertId, esNuevo: true };
     } catch (err) {
       // Race condition: otro proceso ya creó el período con esas fechas.
-      // Retornar el ID del período existente.
+      // Retornar el ID del período existente sin disparar notificación.
       if (err.code === 'ER_DUP_ENTRY') {
         const [filas] = await pool.query(
           `SELECT id FROM periodos_nomina
            WHERE empresa_id = ? AND fecha_inicio = ? AND fecha_fin = ? LIMIT 1`,
           [empresaId, fecha_inicio, fecha_fin]
         );
-        if (filas.length > 0) return filas[0].id;
+        if (filas.length > 0) return { id: filas[0].id, esNuevo: false };
       }
       throw err;
     }
