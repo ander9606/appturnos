@@ -20,7 +20,7 @@ const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 
 const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
-// Coordenadas GPS obligatorias para el marcaje de ingreso.
+// Coordenadas GPS obligatorias para el marcaje de ingreso y egreso.
 const reglasCoordenadas = [
   body('latitud').isFloat({ min: -90, max: 90 }).withMessage('latitud requerida y válida'),
   body('longitud').isFloat({ min: -180, max: 180 }).withMessage('longitud requerida y válida'),
@@ -87,7 +87,7 @@ router.post(
 router.post(
   '/:id/egreso',
   verificarRol(TRABAJADOR),
-  [idParam, body('firma_b64').isString().notEmpty().withMessage('firma_b64 requerida')],
+  [idParam, body('firma_b64').isString().notEmpty().withMessage('firma_b64 requerida'), ...reglasCoordenadas],
   validar,
   ctrl.egreso
 );

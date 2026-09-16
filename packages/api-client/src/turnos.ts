@@ -369,11 +369,14 @@ export const turnosApi = {
   },
 
   /**
-   * Marca egreso con firma digital (base64 PNG).
+   * Marca egreso con firma digital (base64 PNG). Requiere ubicación GPS —
+   * igual que marcarIngreso, el backend valida geofence según el cargo.
    */
-  marcarEgreso(asignacionId: number, firmaB64: string): Promise<Asignacion> {
+  marcarEgreso(asignacionId: number, firmaB64: string, latitud: number, longitud: number): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/egreso`, {
       firma_b64: firmaB64,
+      latitud,
+      longitud,
     });
   },
 

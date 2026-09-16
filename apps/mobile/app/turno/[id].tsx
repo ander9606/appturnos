@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
@@ -36,7 +36,7 @@ import { useNovedades }        from '@/features/novedades/useNovedades';
 import { NovedadCard }         from '@/features/novedades/NovedadCard';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
 import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useCorregirAsignacion, useAgregarBono } from '@/features/turnos/useTurnos';
-import { useGeofence }         from '@/features/turnos/useGeofence';
+import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
 import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
 import { TurnoTimeline }       from '@/features/turnos/TurnoTimeline';
@@ -45,9 +45,10 @@ import { Badge }               from '@/components/ui/Badge';
 import { Button }              from '@/components/ui/Button';
 import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
 import { formatDateObj, formatTimeObj, toISODateTime } from '@/lib/formatters';
-import { ApiError, type Asignacion } from '@api-client';
+import { ApiError, puntosMarcajeApi, type Asignacion, type PuntoMarcaje } from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
+import { obtenerUbicacionActual } from '@/lib/currentLocation';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -124,19 +125,45 @@ export default function TurnoDetailScreen() {
   }, [asignacion?.estado]);
 
   // ── Geofence targets from geofence_info ───────────────────────────────
-  const geofenceTargets = useMemo(() => {
+  // Activo durante 'confirmado' (para el ingreso) y 'en_progreso' (para el
+  // egreso) — antes solo cubría 'confirmado', así que al llegar a en_progreso
+  // el poll se apagaba y el egreso nunca tenía una ubicación fresca.
+  const activoParaGeofence = asignacion?.estado === 'confirmado' || asignacion?.estado === 'en_progreso';
+  const isLibre = asignacion?.geofence_info?.tipo === 'libre';
+  const isZonal = asignacion?.geofence_info?.tipo === 'zonal';
+
+  const { data: zonalPuntos } = useQuery<PuntoMarcaje[]>({
+    queryKey: ['puntos-marcaje'],
+    queryFn:  () => puntosMarcajeApi.listar(),
+    enabled:  isZonal && activoParaGeofence,
+    staleTime: 5 * 60_000,
+  });
+
+  const geofenceTargets = useMemo<GeofenceTarget[] | null>(() => {
     const gf = asignacion?.geofence_info;
     if (!gf) return null;
-    if (gf.tipo === 'libre' || gf.tipo === 'zonal') return null;
-    if (gf.latitud != null && gf.longitud != null) {
-      return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+    switch (gf.tipo) {
+      case 'libre':
+        return null;
+      case 'fijo':
+        if (gf.latitud == null) return null;
+        return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+      case 'oferta':
+        if (gf.latitud == null || gf.longitud == null) return null;
+        return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+      case 'zonal':
+        if (!zonalPuntos?.length) return null;
+        return zonalPuntos
+          .filter((p) => p.tipo === 'zonal' && Boolean(p.activo))
+          .map((p) => ({ lat: Number(p.latitud), lng: Number(p.longitud), radiusM: p.radio_metros }));
+      default:
+        return null;
     }
-    return null;
-  }, [asignacion?.geofence_info]);
+  }, [asignacion?.geofence_info, zonalPuntos]);
 
   const { distanceM, status: geoStatus, canMark, permissionDenied, locationUnavailable, currentLocation } = useGeofence({
     targets: geofenceTargets,
-    enabled: asignacion?.estado === 'confirmado',
+    enabled: activoParaGeofence,
   });
 
   // ── Ventana de ingreso: habilitado 30 min antes del hora_inicio ──────
@@ -187,13 +214,22 @@ export default function TurnoDetailScreen() {
     );
   }, [minutosParaIngreso]);
 
+  // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling
+  // y currentLocation queda en null — best-effort, nunca bloquea si falla o el
+  // permiso está negado (ver obtenerUbicacionActual).
+  async function ubicacionParaMarcaje() {
+    if (currentLocation) return currentLocation;
+    if (geofenceTargets !== null) return null; // hay geofence real: solo vale el fix vigilado por useGeofence
+    const u = await obtenerUbicacionActual();
+    return u.latitud != null && u.longitud != null ? { lat: u.latitud, lng: u.longitud } : null;
+  }
+
   const handleIngreso = async () => {
     if (!asignacion || !canMark) return;
-    const lat = currentLocation?.lat ?? 0;
-    const lng = currentLocation?.lng ?? 0;
+    const ubicacion = await ubicacionParaMarcaje();
 
     try {
-      await ingresoMutation.mutateAsync({ id: asignacion.id, lat, lng });
+      await ingresoMutation.mutateAsync({ id: asignacion.id, lat: ubicacion?.lat ?? 0, lng: ubicacion?.lng ?? 0 });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast('Ingreso registrado — tu llegada ha sido confirmada.');
     } catch (err) {
@@ -203,9 +239,11 @@ export default function TurnoDetailScreen() {
   };
 
   const handleEgreso = async (firmaBase64: string) => {
-    if (!asignacion) return;
+    if (!asignacion || !canMark) return;
+    const ubicacion = await ubicacionParaMarcaje();
+
     try {
-      await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64 });
+      await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64, lat: ubicacion?.lat ?? 0, lng: ubicacion?.lng ?? 0 });
       setSignatureVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast('Salida registrada — ¡turno completado, buen trabajo!');
@@ -641,20 +679,24 @@ export default function TurnoDetailScreen() {
                 </View>
               )}
 
-              <GeoFenceIndicator
-                distanceM={distanceM}
-                status={geoStatus}
-                permissionDenied={permissionDenied}
-                locationUnavailable={locationUnavailable}
-              />
+              {!isLibre && (
+                <>
+                  <GeoFenceIndicator
+                    distanceM={distanceM}
+                    status={geoStatus}
+                    permissionDenied={permissionDenied}
+                    locationUnavailable={locationUnavailable}
+                  />
 
-              {dentroVentana && !canMark && distanceM !== null && (
-                <View className="flex-row items-start gap-2">
-                  <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
-                  <Text className="flex-1 text-xs text-muted-foreground">
-                    Acércate al punto de trabajo para habilitar el marcaje de entrada.
-                  </Text>
-                </View>
+                  {dentroVentana && !canMark && distanceM !== null && (
+                    <View className="flex-row items-start gap-2">
+                      <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
+                      <Text className="flex-1 text-xs text-muted-foreground">
+                        Acércate al punto de trabajo para habilitar el marcaje de entrada.
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
 
               <Button
@@ -696,11 +738,32 @@ export default function TurnoDetailScreen() {
                 )}
               </View>
 
+              {!isLibre && (
+                <>
+                  <GeoFenceIndicator
+                    distanceM={distanceM}
+                    status={geoStatus}
+                    permissionDenied={permissionDenied}
+                    locationUnavailable={locationUnavailable}
+                  />
+
+                  {!canMark && distanceM !== null && (
+                    <View className="flex-row items-start gap-2">
+                      <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
+                      <Text className="flex-1 text-xs text-muted-foreground">
+                        Acércate al punto de trabajo para habilitar el marcaje de salida.
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+
               <Button
                 label="Marcar Salida"
                 variant="primary"
                 size="lg"
                 fullWidth
+                disabled={!canMark}
                 onPress={() => setSignatureVisible(true)}
               />
               <Text className="text-xs text-center text-muted-foreground">

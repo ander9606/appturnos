@@ -144,7 +144,7 @@ module.exports = {
     return AsignacionesModel.obtenerPorId(dbEmpresaId, id);
   },
 
-  async marcarEgreso(empresaId, id, usuarioId, { firma_b64 }) {
+  async marcarEgreso(empresaId, id, usuarioId, { latitud, longitud, firma_b64 }) {
     // obtenerConDetalles handles null empresaId; obtenerPorId does not.
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
@@ -162,12 +162,40 @@ module.exports = {
       throw new AppError('Debes marcar el ingreso antes de marcar la salida', 409);
     }
 
+    // Validación de geofence según tipo_geofence del cargo — mismo criterio que
+    // marcarIngreso más arriba, ahora también en la salida (antes solo pedía firma).
+    const gf = asignacion.geofence_info;
+    if (gf.tipo === 'fijo' && gf.latitud != null) {
+      const { ok } = estaEnAlgunPunto(latitud, longitud, [{
+        latitud: gf.latitud, longitud: gf.longitud, radio_metros: gf.radio_metros,
+      }]);
+      if (!ok) {
+        throw new AppError(`Debes estar en "${gf.nombre}" para registrar la salida`, 422);
+      }
+    } else if (gf.tipo === 'zonal') {
+      const puntos = await PuntosMarcajeModel.listarZonales(dbEmpresaId);
+      if (puntos.length > 0) {
+        const { ok } = estaEnAlgunPunto(latitud, longitud, puntos);
+        if (!ok) {
+          throw new AppError('Debes estar en uno de los puntos zonales autorizados para registrar la salida', 422);
+        }
+      }
+    } else if (gf.tipo === 'oferta' && gf.latitud != null) {
+      const { ok } = estaEnAlgunPunto(latitud, longitud, [{
+        latitud: gf.latitud, longitud: gf.longitud, radio_metros: gf.radio_metros,
+      }]);
+      if (!ok) {
+        throw new AppError('Estás fuera del área de trabajo del turno', 422);
+      }
+    }
+    // tipo 'libre' → sin validación
+
     const minutosTranscurridos = Math.floor((Date.now() - new Date(asignacion.hora_ingreso_real)) / 60_000);
     if (minutosTranscurridos < 1) {
       throw new AppError('Debes esperar al menos 1 minuto entre el ingreso y la salida', 422);
     }
 
-    await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64);
+    await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64, latitud, longitud);
 
     // Notifica a jefes de turno y admin que el trabajador marcó salida (best-effort).
     const [gestoresEgreso] = await pool.query(

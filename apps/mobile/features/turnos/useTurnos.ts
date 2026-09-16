@@ -246,12 +246,12 @@ export function useMarcarIngreso() {
   });
 }
 
-/** Marcar egreso con firma. */
+/** Marcar egreso con firma + ubicación (el backend valida geofence según el cargo). */
 export function useMarcarEgreso() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, firma }: { id: number; firma: string }) =>
-      turnosApi.marcarEgreso(id, firma),
+    mutationFn: ({ id, firma, lat, lng }: { id: number; firma: string; lat: number; lng: number }) =>
+      turnosApi.marcarEgreso(id, firma, lat, lng),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });

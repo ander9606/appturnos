@@ -14,18 +14,23 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAsignacion, useMarcarEgreso } from '@/features/turnos/useTurnos';
+import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
+import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }  from '@/features/turnos/SignaturePad';
 import { Button }        from '@/components/ui/Button';
 import { fmtRange, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
-import { ApiError }      from '@api-client';
+import { ApiError, puntosMarcajeApi } from '@api-client';
+import type { PuntoMarcaje } from '@api-client';
 import { t }             from '@/lib/i18n';
 import { showAnuncioTurno } from '@/lib/anuncioTurno';
+import { obtenerUbicacionActual } from '@/lib/currentLocation';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -58,15 +63,68 @@ export default function EgresoScreen() {
   const { data: asignacion, isLoading } = useAsignacion(id);
   const egresoMutation = useMarcarEgreso();
 
+  // Fetch zonal puntos-marcaje only when geofence type is 'zonal'
+  const isZonal = asignacion?.geofence_info?.tipo === 'zonal';
+  const { data: zonalPuntos } = useQuery<PuntoMarcaje[]>({
+    queryKey: ['puntos-marcaje'],
+    queryFn:  () => puntosMarcajeApi.listar(),
+    enabled:  isZonal && asignacion?.estado === 'en_progreso',
+    staleTime: 5 * 60_000,
+  });
+
+  const geofenceTargets = useMemo<GeofenceTarget[] | null>(() => {
+    const gf = asignacion?.geofence_info;
+    if (!gf) return null;
+
+    switch (gf.tipo) {
+      case 'libre':
+        return null; // no restriction
+
+      case 'fijo':
+        if (gf.latitud == null) return null;
+        return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+
+      case 'oferta':
+        if (gf.latitud == null || gf.longitud == null) return null;
+        return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+
+      case 'zonal':
+        if (!zonalPuntos?.length) return null;
+        return (zonalPuntos as PuntoMarcaje[])
+          .filter((p: PuntoMarcaje) => p.tipo === 'zonal' && Boolean(p.activo))
+          .map((p: PuntoMarcaje) => ({ lat: Number(p.latitud), lng: Number(p.longitud), radiusM: p.radio_metros }));
+
+      default:
+        return null;
+    }
+  }, [asignacion?.geofence_info, zonalPuntos]);
+
+  const { distanceM, status: geoStatus, canMark, permissionDenied, locationUnavailable, currentLocation } = useGeofence({
+    targets: geofenceTargets,
+    enabled: asignacion?.estado === 'en_progreso',
+  });
+
+  const isLibre = asignacion?.geofence_info?.tipo === 'libre';
+
   const elapsedLabel = useMemo(() => {
     if (!asignacion?.hora_ingreso_real) return null;
     return calcElapsed(asignacion.hora_ingreso_real);
   }, [asignacion?.hora_ingreso_real]);
 
   const handleEgreso = async (firmaBase64: string) => {
-    if (!asignacion) return;
+    if (!asignacion || !canMark) return;
+    // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling
+    // y currentLocation queda en null — best-effort, nunca bloquea si falla o el
+    // permiso está negado (ver obtenerUbicacionActual).
+    const sinGeofence = geofenceTargets === null;
+    const ubicacion = sinGeofence && !currentLocation ? await obtenerUbicacionActual() : null;
     try {
-      await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64 });
+      await egresoMutation.mutateAsync({
+        id: asignacion.id,
+        firma: firmaBase64,
+        lat: currentLocation?.lat ?? ubicacion?.latitud ?? 0,
+        lng: currentLocation?.lng ?? ubicacion?.longitud ?? 0,
+      });
       setSignatureVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showAnuncioTurno(t('egreso.success'), 'completado');
@@ -203,6 +261,36 @@ export default function EgresoScreen() {
             </View>
           )}
 
+          {/* ── GPS / Geofence ──────────────────────────────────── */}
+          {isLibre ? (
+            <View className="bg-success/10 rounded-2xl border border-success/20 px-5 py-4">
+              <Text className="text-sm font-semibold text-success">Sin restricción de ubicación</Text>
+              <Text className="text-xs text-success/70 mt-0.5">
+                Este cargo permite marcar desde cualquier lugar.
+              </Text>
+            </View>
+          ) : (
+            <View
+              className="bg-card rounded-2xl border border-border px-5 py-5 gap-4"
+              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+            >
+              <Text className="text-sm font-semibold text-foreground">{t('ingreso.ubicacion')}</Text>
+
+              <GeoFenceIndicator
+                distanceM={distanceM}
+                status={geoStatus}
+                permissionDenied={permissionDenied}
+                locationUnavailable={locationUnavailable}
+              />
+
+              {!canMark && distanceM !== null && !permissionDenied && (
+                <Text className="text-xs text-center text-muted-foreground">
+                  Acércate al punto de trabajo para habilitar el registro de salida.
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* ── Firma ───────────────────────────────────────────── */}
           <View className="bg-card rounded-2xl border border-border px-5 py-5 gap-3"
             style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
@@ -224,6 +312,7 @@ export default function EgresoScreen() {
             variant="primary"
             size="lg"
             fullWidth
+            disabled={!canMark}
             onPress={() => setSignatureVisible(true)}
           />
 

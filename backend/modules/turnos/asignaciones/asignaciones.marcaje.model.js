@@ -65,7 +65,7 @@ module.exports = {
    * `pago_total` toma la tarifa del PUESTO al que postuló el trabajador
    * (no la oferta — desde la migración 013 la tarifa vive por puesto).
    */
-  async registrarEgreso(empresaId, id, firmaB64) {
+  async registrarEgreso(empresaId, id, firmaB64, latitud, longitud) {
     const ahora = ahoraColombiaSQL();
     const [res] = await pool.query(
       `UPDATE asignaciones_turno a
@@ -73,6 +73,8 @@ module.exports = {
        JOIN ofertas_turno o  ON o.id = a.oferta_id
        SET a.hora_egreso_real = ?,
            a.firma_digital = ?,
+           a.latitud_egreso = ?,
+           a.longitud_egreso = ?,
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
                LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
@@ -81,7 +83,7 @@ module.exports = {
        WHERE a.id = ? AND a.empresa_id = ?
          AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL`,
-      [ahora, firmaB64, ahora, id, empresaId]
+      [ahora, firmaB64, latitud ?? null, longitud ?? null, ahora, id, empresaId]
     );
     // affectedRows = 0 means concurrent egreso, missing ingreso, or invalid state
     if (res.affectedRows === 0) {

@@ -239,7 +239,11 @@ export default function NominaIngresoScreen() {
         )}
 
         {/* ── Geofence (tipo_marcacion 'fijo' o 'zonal') ───────── */}
-        {(tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal') && (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado') && (
+        {/* También en 'en_jornada': el backend valida geofence en marcarSalida
+            igual que en marcarEntrada — sin esto, el trabajador solo se enteraba
+            de que estaba fuera de zona con el Alert de error, sin aviso previo. */}
+        {(tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal') &&
+          (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado' || estadoHoy === 'en_jornada') && (
           <GeoFenceIndicator
             distanceM={geo.distanceM}
             status={geo.status}
@@ -267,7 +271,7 @@ export default function NominaIngresoScreen() {
         {estadoHoy === 'en_jornada' && periodoAbierto && (
           <TouchableOpacity
             onPress={handleSalida}
-            disabled={isMutating}
+            disabled={isMutating || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#dc2626', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
