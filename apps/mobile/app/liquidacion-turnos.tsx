@@ -266,7 +266,6 @@ export default function LiquidacionTurnosScreen() {
           headerShown: true,
           headerTitle: 'Liquidación',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Turnos',
           headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,

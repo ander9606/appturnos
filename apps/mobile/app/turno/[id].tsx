@@ -345,7 +345,6 @@ export default function TurnoDetailScreen() {
           headerShown: true,
           headerTitle: oferta_titulo,
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Turnos',
           headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,

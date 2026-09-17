@@ -90,7 +90,6 @@ export default function NuevoTurnoScreen() {
           headerShown: true,
           headerTitle: TITLES[step - 1],
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Salir',
           headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,

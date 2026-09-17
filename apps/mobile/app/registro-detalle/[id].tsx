@@ -154,7 +154,6 @@ export default function RegistroDetalleScreen() {
           headerShown: true,
           headerTitle: 'Detalle de Registro',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Atrás',
           headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,

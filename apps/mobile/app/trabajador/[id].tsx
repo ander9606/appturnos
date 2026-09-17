@@ -381,7 +381,6 @@ export default function TrabajadorDetailScreen() {
           options={{
             title: 'Editar trabajador',
             headerShown: true,
-            headerBackTitle: '',
             headerRight,
           }}
         />
@@ -413,7 +412,6 @@ export default function TrabajadorDetailScreen() {
         options={{
           title: `${t.apellido}, ${t.nombre}`,
           headerShown: true,
-          headerBackTitle: 'Equipo',
           animation: 'slide_from_right',
           headerRight,
         }}

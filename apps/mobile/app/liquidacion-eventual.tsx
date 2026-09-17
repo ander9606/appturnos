@@ -126,7 +126,6 @@ export default function LiquidacionEventualScreen() {
           headerShown: true,
           headerTitle: 'Turnos eventuales',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Atrás',
           headerTintColor: '#7C3AED',
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,

@@ -174,7 +174,6 @@ export default function IngresoScreen() {
           headerShown: true,
           headerTitle: t('ingreso.title'),
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Turno',
           headerTintColor: '#FF5A3C',
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,

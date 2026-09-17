@@ -85,7 +85,6 @@ export default function NuevoTrabajadorScreen() {
         options={{
           title: 'Nuevo trabajador',
           headerShown: true,
-          headerBackTitle: 'Equipo',
           animation: 'slide_from_right',
         }}
       />

@@ -188,7 +188,7 @@ export default function DirectorioEmpresasScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Buscar empresa', headerBackTitle: 'Mis empresas' }} />
+      <Stack.Screen options={{ title: 'Buscar empresa' }} />
 
       {/* Search bar */}
       <View className="px-4 pt-3 pb-1">
