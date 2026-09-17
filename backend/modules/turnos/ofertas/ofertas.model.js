@@ -320,6 +320,26 @@ const OfertasModel = {
   },
 
   /**
+   * Ofertas que cerrarVencidas() salta a propósito (todavía tienen 'confirmado'/
+   * 'en_progreso' colgados) pero ya llevan al menos 2 días vencidas — margen
+   * de sobra para no tocar un turno nocturno legítimo que cruza medianoche
+   * (cerrarVencidas ya las protege con `fecha < hoy`; acá se espera 2 días más
+   * antes de asumir que nadie las va a resolver a mano).
+   */
+  async listarVencidasConPendientes(hoy) {
+    const [filas] = await pool.query(
+      `SELECT DISTINCT o.id, o.empresa_id
+       FROM ofertas_turno o
+       JOIN asignaciones_turno a ON a.oferta_id = o.id
+       WHERE o.estado IN ('abierta', 'publicada', 'en_proceso')
+         AND o.fecha <= DATE_SUB(?, INTERVAL 2 DAY)
+         AND a.estado IN ('confirmado', 'en_progreso')`,
+      [hoy]
+    );
+    return filas;
+  },
+
+  /**
    * Crea oferta + puestos en una transacción.
    * @param datos.puestos — array `[{ cargo_id, plazas, tarifa_dia, notas? }]`.
    *                       Si viene vacío, la oferta queda sin puestos (el jefe

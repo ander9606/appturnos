@@ -28,7 +28,9 @@ import {
   useConfirmar,
   useRechazar,
   useCancelar,
+  useNoPresentado,
 } from '@/features/turnos/useTurnos';
+import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui/Button';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -70,14 +72,20 @@ interface Section {
 
 function PostulanteItem({
   asignacion,
+  esPasado,
+  turnoIniciado,
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
+  noPresentadoMutation,
 }: {
   asignacion: Asignacion;
+  esPasado: boolean;
+  turnoIniciado: boolean;
   confirmarMutation: ReturnType<typeof useConfirmar>;
   rechazarMutation:  ReturnType<typeof useRechazar>;
   cancelarMutation:  ReturnType<typeof useCancelar>;
+  noPresentadoMutation: ReturnType<typeof useNoPresentado>;
 }) {
   const isPending   = asignacion.estado === 'pendiente';
   const isConfirmed = asignacion.estado === 'confirmado';
@@ -92,8 +100,11 @@ function PostulanteItem({
   const isCancelling =
     cancelarMutation.isPending &&
     (cancelarMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
+  const isMarkingNP =
+    noPresentadoMutation.isPending &&
+    (noPresentadoMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
 
-  const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending;
+  const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending || noPresentadoMutation.isPending;
 
   async function handleRechazar() {
     const ok = await confirm({
@@ -116,6 +127,16 @@ function PostulanteItem({
     if (ok) cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId: asignacion.oferta_id });
   }
 
+  async function handleNoPresentado() {
+    const ok = await confirm({
+      title: 'No se presentó',
+      message: `¿Marcar a ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} como no presentado? Esto registra 0 estrellas automáticamente y afecta su ranking.`,
+      confirmLabel: 'Marcar ausente',
+      destructive: true,
+    });
+    if (ok) noPresentadoMutation.mutate({ asignacionId: asignacion.id, ofertaId: asignacion.oferta_id });
+  }
+
   return (
     <View className="py-2.5 border-b border-border gap-1.5">
       <View className="flex-row items-start justify-between">
@@ -129,8 +150,14 @@ function PostulanteItem({
         </View>
       </View>
 
+      {/* Pendiente sobre un turno ya pasado → solo Rechazar (confirmar ya no aplica, el backend lo rechazaría igual) */}
+      {isPending && esPasado && (
+        <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
+          loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
+      )}
+
       {/* Pendiente → Rechazar + Confirmar */}
-      {isPending && (
+      {isPending && !esPasado && (
         <View className="flex-row gap-2">
           <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
             loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
@@ -140,15 +167,33 @@ function PostulanteItem({
         </View>
       )}
 
-      {/* Confirmado → chip Aceptado + Cancelar turno */}
-      {isConfirmed && (
+      {/* Confirmado sobre un turno ya pasado → chip Aceptado + No vino (cancelar ya no
+          tiene sentido: el turno ya ocurrió, "cancelado" mentiría sobre lo que pasó). */}
+      {isConfirmed && esPasado && (
         <View className="flex-row items-center gap-2">
+          <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
+            <Ionicons name="checkmark-circle" size={14} color="#059669" />
+            <Text className="text-xs font-semibold text-success">Aceptado</Text>
+          </View>
+          <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
+            loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+        </View>
+      )}
+
+      {/* Confirmado, turno futuro o de hoy → chip Aceptado + Cancelar turno
+          (+ No vino si ya empezó y sigue sin marcar ingreso) */}
+      {isConfirmed && !esPasado && (
+        <View className="flex-row items-center gap-2 flex-wrap">
           <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
             <Ionicons name="checkmark-circle" size={14} color="#059669" />
             <Text className="text-xs font-semibold text-success">Aceptado</Text>
           </View>
           <Button label={isCancelling ? '…' : 'Cancelar turno'} variant="danger" size="sm"
             loading={isCancelling} disabled={isBusy} onPress={handleCancelar} />
+          {turnoIniciado && (
+            <Button label={isMarkingNP ? '…' : 'No vino'} variant="secondary" size="sm"
+              loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+          )}
         </View>
       )}
 
@@ -167,16 +212,22 @@ function PostulanteItem({
 
 function OfertaCard({
   group,
+  today,
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
+  noPresentadoMutation,
 }: {
   group: OfertaGroup;
+  today: string;
   confirmarMutation: ReturnType<typeof useConfirmar>;
   rechazarMutation:  ReturnType<typeof useRechazar>;
   cancelarMutation:  ReturnType<typeof useCancelar>;
+  noPresentadoMutation: ReturnType<typeof useNoPresentado>;
 }) {
   const router = useRouter();
+  const esPasado = group.fecha < today;
+  const turnoIniciado = turnoYaInicio(group.fecha, group.horaInicio);
 
   return (
     <View
@@ -224,9 +275,12 @@ function OfertaCard({
           <PostulanteItem
             key={a.id}
             asignacion={a}
+            esPasado={esPasado}
+            turnoIniciado={turnoIniciado}
             confirmarMutation={confirmarMutation}
             rechazarMutation={rechazarMutation}
             cancelarMutation={cancelarMutation}
+            noPresentadoMutation={noPresentadoMutation}
           />
         ))}
       </View>
@@ -249,9 +303,11 @@ export default function PostulacionesScreen() {
   const { data: resp, isLoading, isRefetching, isError, refetch } =
     tab === 'pendientes' ? pendientesQuery : tab === 'aceptados' ? aceptadosQuery : rechazadosQuery;
 
-  const confirmarMutation = useConfirmar();
-  const rechazarMutation  = useRechazar();
-  const cancelarMutation  = useCancelar();
+  const confirmarMutation    = useConfirmar();
+  const rechazarMutation     = useRechazar();
+  const cancelarMutation     = useCancelar();
+  const noPresentadoMutation = useNoPresentado();
+  const today = useMemo(() => bogotaToday(), []);
 
   const totalPendientes = pendientesQuery.data?.data.length ?? 0;
 
@@ -416,9 +472,11 @@ export default function PostulacionesScreen() {
             <View className="px-5">
               <OfertaCard
                 group={item}
+                today={today}
                 confirmarMutation={confirmarMutation}
                 rechazarMutation={rechazarMutation}
                 cancelarMutation={cancelarMutation}
+                noPresentadoMutation={noPresentadoMutation}
               />
             </View>
           )}
