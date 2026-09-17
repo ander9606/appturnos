@@ -1108,21 +1108,28 @@ function CorregirIngresoEgresoModal({
             </ScrollView>
 
             <View className="flex-row gap-3 mt-6">
-              <Button
-                label="Cancelar"
-                variant="secondary"
-                fullWidth
-                disabled={corregir.isPending}
-                onPress={onClose}
-              />
-              <Button
-                label={corregir.isPending ? 'Guardando…' : 'Guardar'}
-                variant="primary"
-                fullWidth
-                loading={corregir.isPending}
-                disabled={corregir.isPending}
-                onPress={handleGuardar}
-              />
+              {/* fullWidth resuelve w-full al 100% del contenedor flex-row, no
+                  de la mitad — sin envolver cada botón en flex-1, el segundo
+                  quedaba empujado fuera de la pantalla. */}
+              <View className="flex-1">
+                <Button
+                  label="Cancelar"
+                  variant="secondary"
+                  fullWidth
+                  disabled={corregir.isPending}
+                  onPress={onClose}
+                />
+              </View>
+              <View className="flex-1">
+                <Button
+                  label={corregir.isPending ? 'Guardando…' : 'Guardar'}
+                  variant="primary"
+                  fullWidth
+                  loading={corregir.isPending}
+                  disabled={corregir.isPending}
+                  onPress={handleGuardar}
+                />
+              </View>
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -1235,21 +1242,28 @@ function BonoModal({
             </ScrollView>
 
             <View className="flex-row gap-3 mt-6">
-              <Button
-                label="Cancelar"
-                variant="secondary"
-                fullWidth
-                disabled={agregarBono.isPending}
-                onPress={onClose}
-              />
-              <Button
-                label={agregarBono.isPending ? 'Guardando…' : 'Guardar'}
-                variant="primary"
-                fullWidth
-                loading={agregarBono.isPending}
-                disabled={agregarBono.isPending}
-                onPress={handleGuardar}
-              />
+              {/* fullWidth resuelve w-full al 100% del contenedor flex-row, no
+                  de la mitad — sin envolver cada botón en flex-1, el segundo
+                  quedaba empujado fuera de la pantalla. */}
+              <View className="flex-1">
+                <Button
+                  label="Cancelar"
+                  variant="secondary"
+                  fullWidth
+                  disabled={agregarBono.isPending}
+                  onPress={onClose}
+                />
+              </View>
+              <View className="flex-1">
+                <Button
+                  label={agregarBono.isPending ? 'Guardando…' : 'Guardar'}
+                  variant="primary"
+                  fullWidth
+                  loading={agregarBono.isPending}
+                  disabled={agregarBono.isPending}
+                  onPress={handleGuardar}
+                />
+              </View>
             </View>
           </View>
         </KeyboardAvoidingView>
