@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { Button } from '@/components/ui/Button';
 
 import {
   useRegistros, useCorregirRegistro, useCrearRegistro,
@@ -149,19 +150,6 @@ function EditarRegistroModal({
                   {fmtTime(horaEntrada)}
                 </Text>
               </TouchableOpacity>
-              {showEntrada && (
-                <DateTimePicker
-                  value={horaEntrada ?? new Date()}
-                  mode="time"
-                  display="spinner"
-                  onChange={onChangeEntrada}
-                />
-              )}
-              {showEntrada && Platform.OS === 'ios' && (
-                <TouchableOpacity onPress={() => setShowEntrada(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
-                  <Text className="text-xs font-semibold text-primary">Listo</Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             <View className="flex-1 gap-1.5">
@@ -174,21 +162,43 @@ function EditarRegistroModal({
                   {fmtTime(horaSalida)}
                 </Text>
               </TouchableOpacity>
-              {showSalida && (
-                <DateTimePicker
-                  value={horaSalida ?? new Date()}
-                  mode="time"
-                  display="spinner"
-                  onChange={onChangeSalida}
-                />
+            </View>
+          </View>
+
+          {/* ponytail: pickers fuera de las columnas flex-1 — el spinner de iOS ignora el ancho del padre y se salía de pantalla */}
+          {showEntrada && (
+            <View className="gap-1.5">
+              <DateTimePicker
+                value={horaEntrada ?? new Date()}
+                mode="time"
+                display="spinner"
+                onChange={onChangeEntrada}
+                style={{ width: '100%' }}
+              />
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setShowEntrada(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                  <Text className="text-xs font-semibold text-primary">Listo</Text>
+                </TouchableOpacity>
               )}
-              {showSalida && Platform.OS === 'ios' && (
+            </View>
+          )}
+
+          {showSalida && (
+            <View className="gap-1.5">
+              <DateTimePicker
+                value={horaSalida ?? new Date()}
+                mode="time"
+                display="spinner"
+                onChange={onChangeSalida}
+                style={{ width: '100%' }}
+              />
+              {Platform.OS === 'ios' && (
                 <TouchableOpacity onPress={() => setShowSalida(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
                   <Text className="text-xs font-semibold text-primary">Listo</Text>
                 </TouchableOpacity>
               )}
             </View>
-          </View>
+          )}
 
           <View className="gap-2">
             <Text className="text-sm font-semibold text-foreground">Tipo de día</Text>
@@ -222,16 +232,16 @@ function EditarRegistroModal({
             />
           </View>
 
-          <TouchableOpacity
-            onPress={handleGuardar}
-            disabled={corregir.isPending}
-            className="h-14 bg-foreground rounded-2xl items-center justify-center active:opacity-80 disabled:opacity-40"
-          >
-            {corregir.isPending
-              ? <ActivityIndicator color="#fff" />
-              : <Text className="text-base font-semibold text-white">Guardar cambios</Text>
-            }
-          </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <Button label="Cancelar" variant="secondary" style={{ flex: 1 }} onPress={onClose} />
+            <Button
+              label="Guardar cambios"
+              variant="success"
+              style={{ flex: 1 }}
+              loading={corregir.isPending}
+              onPress={handleGuardar}
+            />
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -518,19 +528,6 @@ function CrearRegistroModal({
                   {fmtTime(horaEntrada)}
                 </Text>
               </TouchableOpacity>
-              {showEntrada && (
-                <DateTimePicker
-                  value={horaEntrada ?? new Date()}
-                  mode="time"
-                  display="spinner"
-                  onChange={onChangeEntrada}
-                />
-              )}
-              {showEntrada && Platform.OS === 'ios' && (
-                <TouchableOpacity onPress={() => setShowEntrada(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
-                  <Text className="text-xs font-semibold text-primary">Listo</Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             {/* Salida */}
@@ -544,21 +541,43 @@ function CrearRegistroModal({
                   {fmtTime(horaSalida)}
                 </Text>
               </TouchableOpacity>
-              {showSalida && (
-                <DateTimePicker
-                  value={horaSalida ?? new Date()}
-                  mode="time"
-                  display="spinner"
-                  onChange={onChangeSalida}
-                />
+            </View>
+          </View>
+
+          {/* ponytail: pickers fuera de las columnas flex-1 — el spinner de iOS ignora el ancho del padre y se salía de pantalla */}
+          {showEntrada && (
+            <View className="gap-1.5">
+              <DateTimePicker
+                value={horaEntrada ?? new Date()}
+                mode="time"
+                display="spinner"
+                onChange={onChangeEntrada}
+                style={{ width: '100%' }}
+              />
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setShowEntrada(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                  <Text className="text-xs font-semibold text-primary">Listo</Text>
+                </TouchableOpacity>
               )}
-              {showSalida && Platform.OS === 'ios' && (
+            </View>
+          )}
+
+          {showSalida && (
+            <View className="gap-1.5">
+              <DateTimePicker
+                value={horaSalida ?? new Date()}
+                mode="time"
+                display="spinner"
+                onChange={onChangeSalida}
+                style={{ width: '100%' }}
+              />
+              {Platform.OS === 'ios' && (
                 <TouchableOpacity onPress={() => setShowSalida(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
                   <Text className="text-xs font-semibold text-primary">Listo</Text>
                 </TouchableOpacity>
               )}
             </View>
-          </View>
+          )}
 
           {/* Novedad */}
           <View className="gap-1.5">
