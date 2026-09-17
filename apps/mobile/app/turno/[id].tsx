@@ -808,8 +808,16 @@ export default function TurnoDetailScreen() {
             />
           )}
 
-          {/* ── Gestor: Agregar/editar bono extra (bloqueado si ya se firmó el contrato) ── */}
-          {isGestor && asignacion.contrato_firmado !== 1 && (
+          {/* ── Gestor: Agregar/editar bono extra — solo turnos confirmados, en
+              progreso o completados (nunca cancelados/no-presentados/pendientes).
+              Si el contrato ya fue firmado, el backend revierte la firma y
+              pide al trabajador refirmar con el nuevo monto (ver aviso en
+              BonoModal) en vez de bloquear el cambio — el contrato se
+              autofirma al marcar salida, así que bloquear por firma lo
+              dejaba casi inutilizable. Mismo criterio que la versión web
+              (OfertaDetailPage.tsx). ── */}
+          {isGestor
+            && (estado === 'confirmado' || estado === 'en_progreso' || estado === 'completado') && (
             <Button
               label={Number(bono_monto) > 0 ? 'Editar bono extra' : 'Agregar bono extra'}
               variant="secondary"
@@ -1185,6 +1193,14 @@ function BonoModal({
               <Text className="text-xs text-muted-foreground">
                 Se suma al pago del turno y queda registrado en el contrato. Deja el monto en 0 para quitarlo.
               </Text>
+              {asignacion.contrato_firmado === 1 && (
+                <View className="flex-row items-start gap-2 bg-warning/10 border border-warning/30 rounded-xl px-3 py-2.5">
+                  <Ionicons name="alert-circle-outline" size={15} color="#F59E0B" style={{ marginTop: 1 }} />
+                  <Text className="flex-1 text-xs text-warning">
+                    El contrato de este turno ya fue firmado. Si cambias el bono, el trabajador deberá volver a firmarlo.
+                  </Text>
+                </View>
+              )}
             </View>
 
             <View className="flex-row gap-3 mt-6">

@@ -129,6 +129,17 @@ const ContratosModel = {
     return res.affectedRows;
   },
 
+  /** Revierte la firma: se usa cuando un bono agregado después de firmar cambia el monto pactado. */
+  async resetearFirma(empresaId, id) {
+    const [res] = await pool.query(
+      `UPDATE contratos_diarios
+       SET firmado_trabajador = 0, firmado_at = NULL, firma_b64 = NULL
+       WHERE id = ? AND empresa_id = ?`,
+      [id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
   async contarPorTrabajadorUltimo12Meses(empresaId, trabajadorId) {
     const [resultado] = await pool.query(
       `SELECT COUNT(*) as cantidad

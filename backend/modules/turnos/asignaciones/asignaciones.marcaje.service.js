@@ -374,16 +374,19 @@ module.exports = {
   },
 
   /**
-   * Agrega o edita el bono manual (ej. propina) de un turno puntual.
-   * Bloqueado una vez el contrato del turno ya fue firmado — mismo criterio
-   * de inmutabilidad que un período de nómina liquidado (ver descuentos.service.js).
+   * Agrega o edita el bono manual (ej. propina) de un turno puntual. Si el
+   * contrato ya estaba firmado, en vez de bloquear el cambio se revierte la
+   * firma y se notifica al trabajador para que vuelva a firmar con el monto
+   * actualizado — el contrato se autofirma al marcar salida (mismo instante
+   * en que el turno queda completado), así que bloquear por firma dejaba al
+   * bono prácticamente inutilizable en turnos ya finalizados.
    */
   async agregarBono(empresaId, id, usuario, { monto, motivo }) {
     const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
     if (!asignacion) throw new AppError('Asignación no encontrada', 404);
-    if (asignacion.contrato_firmado) {
-      throw new AppError('No se puede modificar el bono: el contrato de este turno ya fue firmado', 409);
-    }
+
+    const cambio = Number(asignacion.bono_monto || 0) !== Number(monto || 0)
+      || (asignacion.bono_motivo || '') !== (motivo || '');
 
     await AsignacionesModel.asignarBono(empresaId, id, {
       monto,
@@ -391,15 +394,25 @@ module.exports = {
       creadoPor: usuario.sub,
     });
 
+    let debeRefirmar = false;
+    if (asignacion.contrato_firmado && cambio) {
+      const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, id);
+      if (contrato) {
+        await ContratosModel.resetearFirma(empresaId, contrato.id);
+        debeRefirmar = true;
+      }
+    }
+
     if (asignacion.usuario_id) {
+      const avisoRefirma = debeRefirmar ? ' Debes volver a firmar el contrato para confirmarlo.' : '';
       await NotificacionesService.notificar({
         empresaId,
         usuarioId: asignacion.usuario_id,
         tipo: 'turno.bono',
         titulo: monto > 0 ? 'Recibiste un bono extra' : 'Tu bono fue actualizado',
-        mensaje: monto > 0
+        mensaje: (monto > 0
           ? `Te asignaron un bono de $${Number(monto).toLocaleString('es-CO')} en "${asignacion.oferta_titulo}"${motivo ? ` por: ${motivo}` : ''}.`
-          : `Se quitó el bono asignado a tu turno "${asignacion.oferta_titulo}".`,
+          : `Se quitó el bono asignado a tu turno "${asignacion.oferta_titulo}".`) + avisoRefirma,
         data: { asignacion_id: id },
       }).catch(() => {});
     }

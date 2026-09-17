@@ -472,7 +472,7 @@ export function OfertaDetailPage() {
                               <Clock size={13} />
                             </button>
                           )}
-                          {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && a.contrato_firmado !== 1 && (
+                          {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
                             <button
                               onClick={() => setBonoAsig(a)}
                               className={`transition-colors p-1 ${(a.bono_monto ?? 0) > 0 ? 'text-warning' : 'text-muted-foreground/60 hover:text-warning'}`}
@@ -781,6 +781,11 @@ function BonoAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; 
         <p className="text-xs text-muted-foreground">
           Se suma al pago del turno y queda registrado en el contrato. Deja el monto en 0 para quitarlo.
         </p>
+        {asignacion.contrato_firmado === 1 && (
+          <p className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-lg px-3 py-2">
+            El contrato de este turno ya fue firmado. Si cambias el bono, el trabajador deberá volver a firmarlo.
+          </p>
+        )}
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
             Cancelar
