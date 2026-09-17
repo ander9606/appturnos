@@ -5,12 +5,14 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Switch,
   Alert,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
+import { useTheme }    from '@/lib/theme';
 import { Button }      from '@/components/ui/Button';
 import { LugarInput }   from './LugarInput';
 import { TrabajadorPickerModal } from './TrabajadorPickerModal';
@@ -25,6 +27,7 @@ type Props = {
 };
 
 export function Step1Basicos({ data, onChange, onNext }: Props) {
+  const theme = useTheme();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [showFecha, setShowFecha] = useState(false);
   const [showInicio, setShowInicio] = useState(false);
@@ -163,8 +166,25 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         </View>
       </View>
 
+      <View className="flex-row items-center justify-between bg-muted rounded-2xl px-4 py-3">
+        <View className="flex-1 mr-4">
+          <Text className="text-sm font-semibold text-foreground">Ubicación libre</Text>
+          <Text className="text-xs text-muted-foreground mt-0.5">
+            El trabajador podrá marcar entrada y salida desde cualquier lugar — para turnos sin un punto fijo (rutas, entregas, mandados).
+          </Text>
+        </View>
+        <Switch
+          value={data.ubicacion_libre}
+          onValueChange={(v) => onChange({ ubicacion_libre: v })}
+          trackColor={{ true: theme.primary }}
+          thumbColor="#fff"
+        />
+      </View>
+
       <View className="gap-1.5">
-        <Text className="text-sm font-semibold text-foreground">Lugar</Text>
+        <Text className="text-sm font-semibold text-foreground">
+          Lugar{data.ubicacion_libre ? ' (opcional)' : ''}
+        </Text>
         <LugarInput
           value={data.lugar}
           latitud={data.latitud}

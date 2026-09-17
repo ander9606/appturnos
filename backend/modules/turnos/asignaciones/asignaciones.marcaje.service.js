@@ -71,8 +71,13 @@ module.exports = {
       throw new AppError('Solo puedes marcar ingreso en un turno confirmado', 409);
     }
 
-    // Validación de geofence según tipo_geofence del cargo
+    // Validación de geofence según tipo_geofence del cargo. 'libre' (ej.
+    // camioneros, que no entran y salen del mismo punto) no exige ubicación
+    // — mismo criterio que validarGeofence en nomina/registros.service.js.
     const gf = asignacion.geofence_info;
+    if (gf.tipo !== 'libre' && (latitud == null || longitud == null)) {
+      throw new AppError('Debes enviar tu ubicación para registrar el ingreso', 422);
+    }
     if (gf.tipo === 'fijo' && gf.latitud != null) {
       const { ok } = estaEnAlgunPunto(latitud, longitud, [{
         latitud: gf.latitud, longitud: gf.longitud, radio_metros: gf.radio_metros,
@@ -165,7 +170,11 @@ module.exports = {
 
     // Validación de geofence según tipo_geofence del cargo — mismo criterio que
     // marcarIngreso más arriba, ahora también en la salida (antes solo pedía firma).
+    // 'libre' no exige ubicación (ver marcarIngreso).
     const gf = asignacion.geofence_info;
+    if (gf.tipo !== 'libre' && (latitud == null || longitud == null)) {
+      throw new AppError('Debes enviar tu ubicación para registrar la salida', 422);
+    }
     if (gf.tipo === 'fijo' && gf.latitud != null) {
       const { ok } = estaEnAlgunPunto(latitud, longitud, [{
         latitud: gf.latitud, longitud: gf.longitud, radio_metros: gf.radio_metros,

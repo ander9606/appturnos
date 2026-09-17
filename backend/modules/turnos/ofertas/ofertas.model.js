@@ -18,7 +18,7 @@ function minutosAHora(minutos) {
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-  lugar, latitud, longitud, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
+  lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
@@ -75,6 +75,7 @@ const CAMPOS_EDITABLES = [
   'lugar',
   'latitud',
   'longitud',
+  'ubicacion_libre',
   'encargado_nombre',
   'encargado_telefono',
   'para_quien',
@@ -357,9 +358,9 @@ const OfertasModel = {
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
            (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-            lugar, latitud, longitud, encargado_nombre, encargado_telefono,
+            lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono,
             estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresaId,
           datos.titulo,
@@ -370,6 +371,7 @@ const OfertasModel = {
           datos.lugar ?? null,
           datos.latitud ?? null,
           datos.longitud ?? null,
+          datos.ubicacion_libre ? 1 : 0,
           datos.encargado_nombre ?? null,
           datos.encargado_telefono ?? null,
           datos.estado ?? 'abierta',
@@ -510,12 +512,12 @@ const OfertasModel = {
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
            (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-            lugar, latitud, longitud, estado, para_quien, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+            lugar, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
           empresaId, original.titulo, original.descripcion, nuevaFecha,
           horaInicio, horaFinEstimada,
-          original.lugar, original.latitud, original.longitud,
+          original.lugar, original.latitud, original.longitud, original.ubicacion_libre,
           original.para_quien, creadoPor,
         ]
       );

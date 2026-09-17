@@ -54,6 +54,8 @@ export interface Asignacion {
   bono_motivo?: string | null;
   latitud_ingreso: number | null;
   longitud_ingreso: number | null;
+  latitud_egreso: number | null;
+  longitud_egreso: number | null;
   sospechoso: 0 | 1; // otro trabajador marcó ingreso desde el mismo dispositivo y ubicación — posible buddy punching, solo auditoría
   firma_digital: string | null;
   created_at: string;
@@ -156,6 +158,8 @@ export interface Oferta {
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
+  /** Sin restricción de ubicación al marcar ingreso/egreso — gana sobre el tipo_geofence del cargo. */
+  ubicacion_libre: 0 | 1;
   encargado_nombre: string | null;
   encargado_telefono: string | null;
   estado: EstadoOferta;
@@ -181,6 +185,8 @@ export interface CrearOfertaPayload {
   lugar?: string;
   latitud?: number;
   longitud?: number;
+  /** Sin restricción de ubicación al marcar ingreso/egreso (ej. rutas, entregas). Default: false. */
+  ubicacion_libre?: boolean;
   encargado_nombre?: string;
   encargado_telefono?: string;
   para_quien?: ParaQuienOferta;
@@ -193,6 +199,26 @@ export interface CrearOfertaPayload {
     tarifa_dia: number;
     notas?: string;
   }>;
+}
+
+/**
+ * Edición parcial de una oferta ya creada (PUT). Solo aplica mientras está en
+ * 'abierta' o 'borrador' — el backend rechaza el resto de estados. Refleja
+ * CAMPOS_EDITABLES en ofertas.model.js; puestos/destinatarios no son editables acá.
+ */
+export interface ActualizarOfertaPayload {
+  titulo?: string;
+  descripcion?: string;
+  fecha?: string;
+  hora_inicio?: string;
+  hora_fin_estimada?: string;
+  lugar?: string;
+  latitud?: number;
+  longitud?: number;
+  ubicacion_libre?: boolean;
+  encargado_nombre?: string;
+  encargado_telefono?: string;
+  para_quien?: ParaQuienOferta;
 }
 
 export interface OfertaDetalle extends Oferta {
@@ -304,6 +330,14 @@ export const turnosApi = {
   },
 
   /**
+   * Edita una oferta existente (parcial). Solo mientras esté 'abierta' o
+   * 'borrador' — el backend rechaza el resto de estados con 409.
+   */
+  actualizarOferta(ofertaId: number, payload: ActualizarOfertaPayload): Promise<Oferta> {
+    return api.put<Oferta>(`/api/turnos/ofertas/${ofertaId}`, payload);
+  },
+
+  /**
    * Duplica una oferta a una nueva fecha (copia título, lugar y puestos).
    * `hora_inicio` (HH:MM:SS) es opcional — si se omite, conserva el horario original;
    * si se envía, la hora de fin se recalcula para conservar la misma duración.
@@ -351,11 +385,13 @@ export const turnosApi = {
   // ── Asignaciones ──────────────────────────────────────────────────────
 
   /**
-   * Marca ingreso con GPS.
+   * Marca ingreso con GPS. lat/lng quedan `undefined` para cargos con
+   * tipo_geofence='libre' sin fix de GPS disponible (ej. camioneros) — el
+   * backend no exige ubicación en ese caso.
    * @param latitud  Latitud actual del dispositivo
    * @param longitud Longitud actual del dispositivo
    */
-  marcarIngreso(asignacionId: number, latitud: number, longitud: number, deviceId?: string): Promise<Asignacion> {
+  marcarIngreso(asignacionId: number, latitud: number | undefined, longitud: number | undefined, deviceId?: string): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/ingreso`, {
       latitud,
       longitud,
@@ -369,10 +405,10 @@ export const turnosApi = {
   },
 
   /**
-   * Marca egreso con firma digital (base64 PNG). Requiere ubicación GPS —
-   * igual que marcarIngreso, el backend valida geofence según el cargo.
+   * Marca egreso con firma digital (base64 PNG). Requiere ubicación GPS salvo
+   * en cargos con tipo_geofence='libre' — igual que marcarIngreso.
    */
-  marcarEgreso(asignacionId: number, firmaB64: string, latitud: number, longitud: number): Promise<Asignacion> {
+  marcarEgreso(asignacionId: number, firmaB64: string, latitud: number | undefined, longitud: number | undefined): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/egreso`, {
       firma_b64: firmaB64,
       latitud,

@@ -45,6 +45,9 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublishe
         <SummaryRow icon="text-outline"     label="Título"   value={data.titulo} />
         <SummaryRow icon="calendar-outline" label="Fecha"    value={fecha} />
         <SummaryRow icon="time-outline"     label="Horario"  value={`${inicio}${fin}`} />
+        {data.ubicacion_libre ? (
+          <SummaryRow icon="navigate-circle-outline" label="Ubicación" value="Libre — sin restricción geográfica" />
+        ) : null}
         {data.lugar ? (
           <SummaryRow icon="location-outline" label="Lugar" value={data.lugar} />
         ) : null}

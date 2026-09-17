@@ -15,7 +15,7 @@ module.exports = {
        SET hora_ingreso_real = ?, latitud_ingreso = ?, longitud_ingreso = ?, device_ingreso = ?,
            estado = 'en_progreso'
        WHERE id = ? AND empresa_id = ? AND estado = 'confirmado'`,
-      [horaIngreso, latitud, longitud, deviceId ?? null, id, empresaId]
+      [horaIngreso, latitud ?? null, longitud ?? null, deviceId ?? null, id, empresaId]
     );
     // affectedRows = 0 means another concurrent request already marked ingreso
     if (res.affectedRows === 0) {

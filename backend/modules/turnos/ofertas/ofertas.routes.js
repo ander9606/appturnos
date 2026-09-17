@@ -59,6 +59,9 @@ function reglasOferta({ parcial }) {
       .optional({ values: 'falsy' })
       .isFloat({ min: -180, max: 180 })
       .withMessage('longitud inválida'),
+    // Turno sin restricción geográfica al marcar ingreso/egreso (ej. rutas,
+    // entregas, mandados) — gana sobre el tipo_geofence del cargo asignado.
+    body('ubicacion_libre').optional().isBoolean().withMessage('ubicacion_libre inválido'),
     // Puestos y destinatarios solo se aceptan en crear (no en PUT de actualizar
     // — todavía no se soporta editar destinatarios de una oferta ya creada).
     ...(parcial

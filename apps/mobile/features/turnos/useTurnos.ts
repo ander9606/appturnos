@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi, cargosApi } from '@api-client';
-import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
+import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, ActualizarOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
 import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/lib/formatters';
@@ -245,7 +245,7 @@ export function useRechazar() {
 export function useMarcarIngreso() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, lat, lng }: { id: number; lat: number; lng: number }) =>
+    mutationFn: async ({ id, lat, lng }: { id: number; lat?: number; lng?: number }) =>
       turnosApi.marcarIngreso(id, lat, lng, await getDeviceId()),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
@@ -258,7 +258,7 @@ export function useMarcarIngreso() {
 export function useMarcarEgreso() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, firma, lat, lng }: { id: number; firma: string; lat: number; lng: number }) =>
+    mutationFn: ({ id, firma, lat, lng }: { id: number; firma: string; lat?: number; lng?: number }) =>
       turnosApi.marcarEgreso(id, firma, lat, lng),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
@@ -467,6 +467,19 @@ export function useCrearOferta() {
     mutationFn: (payload: CrearOfertaPayload) => turnosApi.crearOferta(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+    },
+  });
+}
+
+/** Edita una oferta existente (solo mientras está 'abierta' o 'borrador'). */
+export function useActualizarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...payload }: { id: number } & ActualizarOfertaPayload) =>
+      turnosApi.actualizarOferta(id, payload),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(id) });
     },
   });
 }

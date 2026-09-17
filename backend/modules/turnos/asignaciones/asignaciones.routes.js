@@ -20,10 +20,13 @@ const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 
 const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
-// Coordenadas GPS obligatorias para el marcaje de ingreso y egreso.
+// Coordenadas GPS del marcaje de ingreso/egreso — opcionales a nivel de ruta
+// (igual que registros.routes.js en nómina): un cargo con tipo_geofence='libre'
+// (ej. camioneros, que no entran y salen del mismo punto) puede marcar sin GPS.
+// El service exige la ubicación cuando el geofence sí la necesita (fijo/zonal/oferta).
 const reglasCoordenadas = [
-  body('latitud').isFloat({ min: -90, max: 90 }).withMessage('latitud requerida y válida'),
-  body('longitud').isFloat({ min: -180, max: 180 }).withMessage('longitud requerida y válida'),
+  body('latitud').optional().isFloat({ min: -90, max: 90 }).withMessage('latitud inválida'),
+  body('longitud').optional().isFloat({ min: -180, max: 180 }).withMessage('longitud inválida'),
   body('device_id').optional({ values: 'falsy' }).isString().isLength({ max: 64 }).withMessage('device_id inválido'),
 ];
 

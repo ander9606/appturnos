@@ -47,6 +47,7 @@ import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtil
 import { formatDateObj, formatTimeObj, toISODateTime } from '@/lib/formatters';
 import { ApiError, puntosMarcajeApi, type Asignacion, type PuntoMarcaje } from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
+import { UbicacionLink }       from '@/components/ui/UbicacionLink';
 import { showToast }           from '@/lib/toast';
 import { obtenerUbicacionActual } from '@/lib/currentLocation';
 
@@ -229,7 +230,7 @@ export default function TurnoDetailScreen() {
     const ubicacion = await ubicacionParaMarcaje();
 
     try {
-      await ingresoMutation.mutateAsync({ id: asignacion.id, lat: ubicacion?.lat ?? 0, lng: ubicacion?.lng ?? 0 });
+      await ingresoMutation.mutateAsync({ id: asignacion.id, lat: ubicacion?.lat, lng: ubicacion?.lng });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast('Ingreso registrado — tu llegada ha sido confirmada.');
     } catch (err) {
@@ -243,7 +244,7 @@ export default function TurnoDetailScreen() {
     const ubicacion = await ubicacionParaMarcaje();
 
     try {
-      await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64, lat: ubicacion?.lat ?? 0, lng: ubicacion?.lng ?? 0 });
+      await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64, lat: ubicacion?.lat, lng: ubicacion?.lng });
       setSignatureVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast('Salida registrada — ¡turno completado, buen trabajo!');
@@ -511,6 +512,26 @@ export default function TurnoDetailScreen() {
               egresoTime={hora_egreso_real}
             />
           </View>
+
+          {/* ── Ubicación marcada — sobre todo relevante en turnos con
+              geofence 'libre' (ej. camioneros): no se valida contra un punto
+              fijo, pero igual se guarda dónde se marcó cada extremo. ────── */}
+          {(asignacion.latitud_ingreso != null || asignacion.latitud_egreso != null) && (
+            <View
+              className="bg-card rounded-2xl px-5 py-4 gap-2"
+              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
+            >
+              <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">
+                Ubicación marcada
+              </Text>
+              {asignacion.latitud_ingreso != null && (
+                <UbicacionLink lat={asignacion.latitud_ingreso} lng={asignacion.longitud_ingreso!} label="Entrada" />
+              )}
+              {asignacion.latitud_egreso != null && (
+                <UbicacionLink lat={asignacion.latitud_egreso} lng={asignacion.longitud_egreso!} label="Salida" />
+              )}
+            </View>
+          )}
 
           {/* ── Completado: resumen ────────────────────────────── */}
           {estado === 'completado' && (

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, Linking, Platform,
+  ActivityIndicator, Alert, Linking, Platform, Switch,
   Modal, Pressable, KeyboardAvoidingView,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -19,6 +19,7 @@ import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,
   useCancelarOferta, useCompletarOferta, useAsignacion, useCorregirAsignacion,
+  useActualizarOferta,
 } from '@/features/turnos/useTurnos';
 import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
 import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
@@ -209,6 +210,9 @@ export default function OfertaDetailScreen() {
   const noPresentadoM  = useNoPresentado();
   const cancelarOfertaM = useCancelarOferta();
   const completarOfertaM = useCompletarOferta();
+  const actualizarOfertaM = useActualizarOferta();
+  // El backend solo permite editar mientras la oferta sigue 'abierta' o 'borrador'.
+  const ofertaEsEditable = oferta?.estado === 'abierta' || oferta?.estado === 'borrador';
 
   const [showDuplicarModal, setShowDuplicarModal] = useState(false);
 
@@ -254,6 +258,16 @@ export default function OfertaDetailScreen() {
     Linking.openURL(url).catch(() =>
       Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`)
     );
+  }
+
+  async function handleToggleUbicacionLibre(value: boolean) {
+    if (!oferta) return;
+    try {
+      await actualizarOfertaM.mutateAsync({ id: oferta.id, ubicacion_libre: value });
+      showToast(value ? 'Turno marcado con ubicación libre.' : 'Ubicación libre desactivada.');
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar el turno.');
+    }
   }
 
   async function handleAplicar() {
@@ -393,6 +407,39 @@ export default function OfertaDetailScreen() {
                   )}
                 </View>
               )}
+
+              {/* Ubicación libre: gestor puede editarla mientras la oferta siga
+                  abierta/borrador; el resto solo ve el aviso si está activa. */}
+              {isGestor && ofertaEsEditable ? (
+                <View className="flex-row items-center gap-3">
+                  <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
+                    <Ionicons name="navigate-circle-outline" size={16} color="#64748B" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-foreground">Ubicación libre</Text>
+                    <Text className="text-xs text-muted-foreground">
+                      Sin restricción al marcar ingreso/egreso
+                    </Text>
+                  </View>
+                  <Switch
+                    value={oferta.ubicacion_libre === 1}
+                    onValueChange={handleToggleUbicacionLibre}
+                    disabled={actualizarOfertaM.isPending}
+                    trackColor={{ true: theme.primary }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              ) : oferta.ubicacion_libre === 1 ? (
+                <View className="flex-row items-center gap-3">
+                  <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
+                    <Ionicons name="navigate-circle-outline" size={16} color="#64748B" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs text-muted-foreground">Ubicación</Text>
+                    <Text className="text-sm font-medium text-foreground">Libre — sin restricción geográfica</Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
           </View>
 
@@ -836,7 +883,7 @@ function CorregirAsignacionModal({
   return (
     <Modal visible={!!asignacion} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="height"
         className="flex-1 justify-end bg-black/40"
       >
         <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">

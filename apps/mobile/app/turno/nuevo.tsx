@@ -48,6 +48,7 @@ export default function NuevoTurnoScreen() {
       lugar:             data.lugar.trim() || undefined,
       latitud:           data.latitud ?? undefined,
       longitud:          data.longitud ?? undefined,
+      ubicacion_libre:   data.ubicacion_libre,
       encargado_nombre:   data.encargado_nombre.trim() || undefined,
       encargado_telefono: data.encargado_telefono.trim() || undefined,
       para_quien:        data.para_quien,

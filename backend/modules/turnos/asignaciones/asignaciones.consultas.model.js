@@ -11,8 +11,14 @@ const { pool } = require('../../../config/database');
  * calculaban, así que el cliente creía que esos turnos no tenían geofence
  * — el fix de useGeofence.ts en el celular nunca corría, y el ingreso se
  * mandaba con lat/lng en 0,0.
+ *
+ * `ofertas_turno.ubicacion_libre` (migración 090) es un override por turno
+ * puntual — a diferencia de cargos.tipo_geofence, que aplica a todos los
+ * turnos de ese cargo. Cuando está activo, gana sin importar el cargo del
+ * puesto (útil para un turno suelto de entrega/ruta sin crear un cargo aparte).
  */
 function construirGeofenceInfo(row) {
+  if (row.ubicacion_libre) return { tipo: 'libre' };
   const tipo = row.tipo_geofence ?? 'oferta';
   if (tipo === 'fijo' && row.punto_latitud != null) {
     return {
@@ -213,11 +219,12 @@ module.exports = {
               a.bono_monto, a.bono_motivo,
               a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
               a.latitud_ingreso, a.longitud_ingreso,
+              a.latitud_egreso, a.longitud_egreso,
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
-              o.lugar, o.latitud, o.longitud,
+              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
@@ -254,11 +261,12 @@ module.exports = {
               a.bono_monto, a.bono_motivo,
               a.hora_ingreso_real, a.hora_egreso_real, a.firma_digital,
               a.latitud_ingreso, a.longitud_ingreso,
+              a.latitud_egreso, a.longitud_egreso,
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
-              o.lugar, o.latitud, o.longitud,
+              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
@@ -294,7 +302,7 @@ module.exports = {
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.externo_notas AS oferta_externo_notas,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
-              o.lugar, o.latitud, o.longitud,
+              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
               o.encargado_nombre, o.encargado_telefono,
               o.external_ref AS oferta_external_ref,
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
