@@ -15,7 +15,7 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes, useLiquidacionTurnos } from '@/features/turnos/useTurnos';
 import { usePeriodosEventual } from '@/features/turnos/useTurnosEventual';
-import { useNominaPerfil } from '@/features/nomina/useNomina';
+import { useNominaPerfil, usePeriodos } from '@/features/nomina/useNomina';
 import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
@@ -106,13 +106,16 @@ export default function TurnosScreen() {
     return map;
   }, [pendientesResp]);
 
-  // Saldo a pagar del mes en curso — solo para quien gestiona pagos de turnos.
-  const inicioMes = `${today.slice(0, 7)}-01`;
-  const { data: liquidacionMes } = useLiquidacionTurnos(
-    { fecha_inicio: inicioMes, fecha_fin: today },
-    { enabled: isGestor && !isJefeNomina },
+  // Saldo a pagar del período abierto — solo para quien gestiona pagos de turnos.
+  // Antes usaba un mes calendario fijo (día 1 → hoy), lo que mostraba "mensual"
+  // aunque la empresa facture quincenal — el período real sale de periodos_nomina.
+  const { data: periodoAbiertoResp } = usePeriodos('abierto', isGestor && !isJefeNomina);
+  const periodoAbierto = periodoAbiertoResp?.data?.[0];
+  const { data: liquidacionPeriodo } = useLiquidacionTurnos(
+    { fecha_inicio: periodoAbierto?.fecha_inicio ?? today, fecha_fin: today },
+    { enabled: isGestor && !isJefeNomina && periodoAbierto !== undefined },
   );
-  const totalAPagarMes = (liquidacionMes ?? []).reduce((s, w) => s + w.pago_total, 0);
+  const totalAPagarPeriodo = (liquidacionPeriodo ?? []).reduce((s, w) => s + w.pago_total, 0);
 
   // Backend excluye 'nomina' de GET /ofertas.
   const {
@@ -394,10 +397,10 @@ export default function TurnosScreen() {
             >
               <View>
                 <Text className="text-[11px] font-medium" style={{ color: theme.primary }}>
-                  Total a pagar este mes
+                  Total a pagar
                 </Text>
                 <Text className="text-base font-extrabold" style={{ color: theme.primary }}>
-                  ${totalAPagarMes.toLocaleString('es-CO')}
+                  ${totalAPagarPeriodo.toLocaleString('es-CO')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={theme.primary} />

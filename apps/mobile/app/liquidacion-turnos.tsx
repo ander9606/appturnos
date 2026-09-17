@@ -5,7 +5,7 @@
  * completados en el período seleccionado.  Cada card es expandible para
  * ver el desglose turno por turno (pago base + extra + total).
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,10 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useLiquidacionTurnos } from '@/features/turnos/useTurnos';
+import { usePeriodos } from '@/features/nomina/useNomina';
+import { PeriodoSelector } from '@/features/nomina/PeriodoSelector';
+import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
+import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -41,21 +45,6 @@ function fmtHora(ts: string | null): string {
 }
 function cop(n: number): string {
   return '$' + Math.round(n).toLocaleString('es-CO');
-}
-function buildDefaultRange(): { inicio: string; fin: string } {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth() + 1;
-  const inicio = `${y}-${String(m).padStart(2, '0')}-01`;
-  const lastDay = new Date(y, m, 0).getDate();
-  const fin = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
-  return { inicio, fin };
-}
-function buildMonthLabel(inicio: string): string {
-  const d = new Date(`${inicio}T00:00:00`);
-  const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  return `${nombres[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 // ── TurnoLineaRow ─────────────────────────────────────────────────────────
@@ -238,8 +227,14 @@ function TrabajadorCard({
 export default function LiquidacionTurnosScreen() {
   const theme  = useTheme();
   const router = useRouter();
-  const { inicio, fin } = useMemo(() => buildDefaultRange(), []);
-  const monthLabel = useMemo(() => buildMonthLabel(inicio), [inicio]);
+
+  // periodos_nomina — mismo período que ve el trabajador de turnos, no un mes
+  // calendario fijo (una empresa quincenal no factura por mes completo).
+  const { data: periodosResp, refetch: refetchPeriodos } = usePeriodos();
+  const periodos = periodosResp?.data ?? [];
+  const [periodoId, setPeriodoId] = useState<number | undefined>(undefined);
+  const activePeriodoId = periodoId ?? periodos[0]?.id;
+  const periodo = periodos.find((p) => p.id === activePeriodoId);
 
   const {
     data,
@@ -247,7 +242,10 @@ export default function LiquidacionTurnosScreen() {
     isError,
     refetch,
     isRefetching,
-  } = useLiquidacionTurnos({ fecha_inicio: inicio, fecha_fin: fin });
+  } = useLiquidacionTurnos(
+    { fecha_inicio: periodo?.fecha_inicio ?? '', fecha_fin: periodo?.fecha_fin ?? '' },
+    { enabled: periodo !== undefined },
+  );
 
   const trabajadores = data ?? [];
 
@@ -255,6 +253,8 @@ export default function LiquidacionTurnosScreen() {
     () => trabajadores.reduce((s, w) => s + w.pago_total, 0),
     [trabajadores]
   );
+
+  const onRefresh = useCallback(() => { refetch(); refetchPeriodos(); }, [refetch, refetchPeriodos]);
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
@@ -295,7 +295,7 @@ export default function LiquidacionTurnosScreen() {
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
-                onRefresh={refetch}
+                onRefresh={onRefresh}
                 tintColor={theme.primary}
                 colors={[theme.primary]}
               />
@@ -303,13 +303,16 @@ export default function LiquidacionTurnosScreen() {
             ListHeaderComponent={
               <View className="mb-2 gap-3">
                 {/* Período */}
-                <View className="gap-0.5">
-                  <Text className="text-base font-semibold text-foreground">
-                    {monthLabel}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {inicio.slice(8)} – {fin.slice(8)} {SHORT_MONTHS[new Date(`${inicio}T00:00:00`).getMonth()]}
-                  </Text>
+                <View className="gap-2">
+                  <PeriodoSelector periodos={periodos} activeId={activePeriodoId} onSelect={setPeriodoId} />
+                  {periodo && (
+                    <View className="flex-row items-center gap-1.5">
+                      <Text className="text-base font-semibold text-foreground">
+                        {fmtPeriodo(periodo)}
+                      </Text>
+                      <TipoPeriodoBadge tipo={periodo.tipo} />
+                    </View>
+                  )}
                 </View>
 
                 {/* Resumen global */}
@@ -349,7 +352,7 @@ export default function LiquidacionTurnosScreen() {
                   Sin turnos completados
                 </Text>
                 <Text className="text-sm text-muted-foreground text-center">
-                  No hay asignaciones completadas en {monthLabel.toLowerCase()}.
+                  No hay asignaciones completadas en el período{periodo ? ` ${fmtPeriodo(periodo)}` : ''}.
                 </Text>
               </View>
             }
