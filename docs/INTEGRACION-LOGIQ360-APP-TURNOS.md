@@ -63,32 +63,54 @@ costo_labor.calculado ──────────────►  Actualizar 
 CONSULTAS SÍNCRONAS (pull cuando se necesita):
 
 App Turnos → logiq360:
-  GET /api/v1/public/ordenes/:external_ref   Detalles de la orden para mostrar al operario
-  GET /api/v1/public/ordenes/:ref/productos  Lista de productos a montar
+  GET /api/integracion/public/ping                   Health check (reconciliación diaria)
+  GET /api/integracion/public/empleados               Candidatos para conciliación de personal
+  GET /api/integracion/public/ordenes/:id             ⚠️ expuesto, no consumido (ver nota)
+  GET /api/integracion/public/ordenes/:id/productos   ⚠️ expuesto, no consumido (ver nota)
 
 logiq360 → App Turnos:
-  GET /api/v1/public/estado/:external_ref    Estado actual de la oferta/contratos
-  GET /api/v1/public/en-sitio/:external_ref  Quién está en campo ahora
+  GET /api/integracion/public/ping                   Test de conectividad
+  GET /api/integracion/public/estado/:external_ref   Estado actual de la oferta/contratos
+  GET /api/integracion/public/en-sitio/:external_ref Quién está en campo ahora
+  GET /api/integracion/public/trabajadores           Sincronizar personal de turnos → empleados
 ```
+
+> ⚠️ **Endpoints huérfanos (verificado 2026-09-17):** `public/ordenes/:id` y
+> `public/ordenes/:id/productos` existen y funcionan en logiq360, pero
+> **App Turnos nunca los llama** (cero referencias en `appturnos/backend`).
+> Probablemente quedaron de un diseño anterior a que `productos_resumen`
+> se empezara a enviar embebido dentro del payload de `orden.creada` — ya
+> no hace falta una segunda consulta para eso. Decidir si se conectan a un
+> caso de uso real (ej. refrescar productos sin esperar un nuevo evento) o
+> se retiran.
 
 ---
 
 ## AUTENTICACIÓN ENTRE SISTEMAS
 
+El mecanismo real **no es simétrico** — cada dirección usa una combinación distinta,
+verificada línea por línea contra el código el 2026-09-17:
+
 ```
-Cada sistema actúa como cliente del otro.
-Usan API Keys dedicadas para integración (no las mismas que los usuarios finales).
+1) logiq360 → App Turnos, EVENTOS (POST /api/integracion/eventos)
+   Firma HMAC-SHA256 del body con el secreto S_A (= incoming_secret en App Turnos).
+   Header: X-Logiq360-Signature: sha256=<hmac>
+   Header: X-Logiq360-Event: <tipo_evento>
+   NO envía X-API-Key en esta llamada — la autenticación es solo la firma.
+   Verificado por: middleware/verificarFirmaLogiq360.js (App Turnos)
 
-logiq360 tiene:
-  api_key_para_llamar_app_turnos: "at_live_xxxxx"  → guardada en integraciones_turnos
+2) App Turnos → logiq360, EVENTOS (POST /api/integracion/eventos)
+   Requiere X-API-Key: <key entregada por logiq360 al emparejar> (obligatoria).
+   Si logiq360 configuró incoming_secret, además verifica firma:
+   Header: X-Turnos-Signature: sha256=<hmac>
+   Verificado por: middleware/verificarIntegracionKey.js (logiq360)
 
-App Turnos tiene:
-  api_key_para_llamar_logiq360: "ak_live_xxxxx"     → guardada en su config de integración
+3) Consultas pull en ambas direcciones (GET /api/integracion/public/...)
+   Header: X-API-Key: <key del que consulta>
+   Sin firma HMAC — la API Key es la única credencial.
 
-Las requests llevan siempre:
-  Header: X-API-Key: <key>
-  Header: X-Integration-Source: logiq360  (o app-turnos)
-  Header: X-Event-ID: <uuid>              (para deduplicación)
+No existen los headers X-Integration-Source ni X-Event-ID en la implementación
+real; el event_id viaja dentro del body JSON, no como header.
 ```
 
 ---
@@ -98,27 +120,30 @@ Las requests llevan siempre:
 ### Tabla de eventos salientes
 
 ```sql
--- En logiq360: registro de eventos enviados a sistemas externos
+-- En logiq360: registro de eventos enviados a App Turnos (schema real, IntegracionTurnosModel.js)
 CREATE TABLE integration_events_out (
-  id            INT PRIMARY KEY AUTO_INCREMENT,
-  tenant_id     INT NOT NULL,
-  event_id      VARCHAR(36) NOT NULL,          -- UUID único del evento
-  event_type    VARCHAR(100) NOT NULL,         -- "orden.creada"
-  target_system VARCHAR(50) NOT NULL,          -- "app_turnos"
-  target_url    VARCHAR(500) NOT NULL,
-  payload       JSON NOT NULL,
-  estado        ENUM('pendiente','enviado','fallido','ignorado') DEFAULT 'pendiente',
-  intentos      INT DEFAULT 0,
-  ultimo_error  TEXT NULL,
-  enviado_at    TIMESTAMP NULL,
-  proximo_intento TIMESTAMP NULL,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  id              INT PRIMARY KEY AUTO_INCREMENT,
+  tenant_id       INT NOT NULL,
+  event_id        VARCHAR(36) NOT NULL,        -- UUID único del evento
+  tipo_evento     VARCHAR(100) NOT NULL,       -- "orden.creada"
+  payload         JSON NOT NULL,
+  estado          ENUM('pendiente','enviado','descartado') DEFAULT 'pendiente',
+  intentos        INT DEFAULT 0,
+  ultimo_error    TEXT NULL,
+  enviado_at      TIMESTAMP NULL,
+  proximo_intento DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
-  UNIQUE KEY uk_event_id (event_id),
-  INDEX idx_iev_estado (estado, proximo_intento),
-  INDEX idx_iev_tenant (tenant_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  -- UNIQUE KEY sobre event_id (dedup) + índice sobre (estado, proximo_intento)
+);
 ```
+> No hay columnas `event_type`/`target_system`/`target_url`: el nombre real
+> del campo es `tipo_evento`, y el destino (`webhook_url`, `webhook_secret`)
+> se resuelve con un JOIN a `integraciones_turnos` al leer la cola
+> (`obtenerEventosPendientes`), no se duplica por evento. El estado terminal
+> tras agotar reintentos se llama `descartado`, no `fallido` (ese nombre sí
+> se usa del lado de App Turnos, en `integracion_config`/`integration_events_out`
+> — cada app nombra su propio enum de forma independiente).
 
 ---
 
@@ -131,35 +156,23 @@ CREATE TABLE integration_events_out (
 // logiq360/modules/alquileres/services/CotizacionAprobacionService.js
 // Al final de aprobarYCrearAlquiler(), agregar:
 
-await IntegracionTurnosService.emitirEvento(tenantId, {
-    event_type: 'orden.creada',
-    payload: {
-        event_id: crypto.randomUUID(),
-        version: '1.0',
-        tenant_slug: tenant.slug,
-        orden: {
-            external_ref: `logiq360:orden:${ordenMontaje.id}`,
-            tipo: 'montaje',                     // montaje | desmontaje
-            titulo: cotizacion.evento_nombre,
-            descripcion: null,                   // el jefe de turnos puede editar
-            fecha: ordenMontaje.fecha_programada,
-            hora_inicio: null,                   // DATO FALTANTE — agregar a ordenes_trabajo
-            hora_fin: null,                      // DATO FALTANTE
-            ubicacion: cotizacion.evento_direccion,
-            latitud: cotizacion.latitud,         // DATO FALTANTE — agregar a cotizaciones
-            longitud: cotizacion.longitud,       // DATO FALTANTE
-            cupos_sugeridos: null,               // logiq360 no sabe cuántos operarios
-            valor_dia_sugerido: null,            // logiq360 no define el pago gig
-            notas_para_operario: ordenMontaje.notas,
-            productos_resumen: [                 // referencia para el operario
-                { nombre: 'Carpa 10x10 Premium', cantidad: 3 },
-                { nombre: 'Sistema iluminación', cantidad: 1 }
-            ]
-        },
-        alquiler_ref: `logiq360:alquiler:${alquiler.id}`
-    }
-});
+// Firma real: IntegracionTurnosService.emitir(tenantId, tipoEvento, payload)
+// Solo inserta en integration_events_out — el envío HTTP lo hace el worker (Parte 8).
+await IntegracionTurnosService.emitir(
+    tenantId,
+    'orden.creada',
+    IntegracionTurnosService.payloadOrdenCreada(ordenMontaje, cotizacion, alquiler)
+);
 ```
+
+`payloadOrdenCreada()` ya resuelve `hora_inicio`/`hora_fin` (migraciones 56/61/63
+agregaron esas columnas a `ordenes_trabajo`) y `latitud`/`longitud` de la ubicación
+del evento — los "datos faltantes" de la versión 1.0 de este documento **ya se
+implementaron** (ver Parte 6, marcada como resuelta). También resuelve
+`cupos_gig`/`cupos_custodio` y sus tarifas: primero mira si la cotización trae un
+override propio, si no cae al default configurado en `integraciones_turnos`
+(`cupos_gig_default`, `valor_dia_gig_default`, etc.), y si tampoco hay eso, van en
+`null` (el `jefe_turnos` los completa a mano en Zaturno).
 
 **Payload completo:**
 ```json
@@ -325,30 +338,31 @@ loop: App Turnos sincroniza su propio `integracion_config.activo` al recibirlos.
 ### Tabla de eventos entrantes
 
 ```sql
--- En logiq360: registro de eventos recibidos de sistemas externos
+-- En logiq360: registro de eventos recibidos de App Turnos (schema real)
 CREATE TABLE integration_events_in (
   id            INT PRIMARY KEY AUTO_INCREMENT,
   tenant_id     INT NOT NULL,
   event_id      VARCHAR(36) NOT NULL,
-  event_type    VARCHAR(100) NOT NULL,
-  source_system VARCHAR(50) NOT NULL,          -- "app_turnos"
+  tipo_evento   VARCHAR(100) NOT NULL,
   payload       JSON NOT NULL,
-  procesado     BOOLEAN DEFAULT FALSE,
-  error         TEXT NULL,
+  estado        ENUM('recibido','procesado','error') DEFAULT 'recibido',
+  error_detalle TEXT NULL,
   procesado_at  TIMESTAMP NULL,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
-  UNIQUE KEY uk_event_in_id (event_id),        -- deduplicación
-  INDEX idx_iei_procesado (procesado)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  -- UNIQUE KEY sobre event_id (deduplicación)
+);
 ```
+> No hay `event_type`/`source_system`/`procesado BOOLEAN`: el origen es
+> implícito (solo App Turnos llama a este endpoint) y el progreso se modela
+> con el `estado` de tres valores, no un booleano.
 
 ---
 
 ### EVENTO: `trabajador.ingreso`
 
 **Cuándo llega:** Cuando un trabajador marca ingreso en la app  
-**Endpoint en logiq360:** `POST /api/v1/integrations/app-turnos/events`
+**Endpoint en logiq360:** `POST /api/integracion/eventos` (mismo endpoint recibe todos los tipos de evento; el body trae `tipo_evento` para distinguirlos, ver Parte 9)
 
 ```json
 {
@@ -571,10 +585,13 @@ Usadas cuando se necesita información inmediata (no por evento).
 
 ### App Turnos → logiq360
 
+> ⚠️ Ambos endpoints de esta subsección existen y responden en logiq360, pero
+> **App Turnos no los consume actualmente** (ver nota en "MAPA DE CONEXIONES").
+> Se documentan tal como están implementados por si se decide conectarlos.
+
 ```
-GET /api/v1/public/ordenes/{external_ref}
-Header: X-API-Key: ak_live_xxxxx
-Header: X-Integration-Source: app_turnos
+GET /api/integracion/public/ordenes/{id}
+Header: X-API-Key: <key de App Turnos>
 
 Response:
 {
@@ -597,14 +614,14 @@ Response:
 ```
 
 ```
-GET /api/v1/public/ordenes/{external_ref}/productos
+GET /api/integracion/public/ordenes/{id}/productos
 → Lista de elementos compuestos con componentes y fotos de referencia
    (para que el operario sepa qué armar y cómo)
 ```
 
 ```
-GET /api/v1/public/ping
-Header: X-API-Key: at_live_xxxxx
+GET /api/integracion/public/ping
+Header: X-API-Key: <key de App Turnos>
 
 Response 200: { "success": true, "data": { "activo": true } }
 Response 401/402: la api_key ya no autentica (activo=0 del lado de logiq360,
@@ -629,8 +646,8 @@ cliente por una caída transitoria de logiq360.
 ### logiq360 → App Turnos
 
 ```
-GET /api/v1/public/estado/{external_ref}
-Header: X-API-Key: at_live_xxxxx
+GET /api/integracion/public/estado/{external_ref}
+Header: X-API-Key: <key de logiq360, entregada por App Turnos al emparejar>
 
 Response (v1.1+):
 {
@@ -677,7 +694,7 @@ Response (v1.1+):
 > **Cambio v1.1 (no breaking)**: se agregó el array `puestos[]` y los campos `cupos_*` ahora son sumas sobre puestos. Las ofertas creadas antes del refactor se materializan como 1 puesto único de cargo `auxiliar` con los valores originales. Si logiq360 ignora `puestos[]`, el comportamiento previo se conserva (`cupos_requeridos` / `cupos_cubiertos` siguen reflejando el total).
 
 ```
-GET /api/v1/public/en-sitio/{external_ref}
+GET /api/integracion/public/en-sitio/{external_ref}
 → Quién está marcado como 'en_curso' en este momento
 
 Response:
@@ -704,36 +721,37 @@ Response:
 ## PARTE 4 — TABLA DE INTEGRACIÓN EN logiq360
 
 ```sql
--- Configura la conexión de logiq360 con una instancia de App Turnos
+-- Configura la conexión de logiq360 con una instancia de App Turnos (schema real)
 CREATE TABLE integraciones_turnos (
-  id              INT PRIMARY KEY AUTO_INCREMENT,
-  tenant_id       INT NOT NULL,
-  nombre          VARCHAR(100) DEFAULT 'App Turnos',
-  app_url         VARCHAR(500) NOT NULL,         -- "https://app-turnos.tudominio.com"
-  api_key_entrante VARCHAR(200) NOT NULL,         -- key que App Turnos usa para llamarnos
-  api_key_saliente VARCHAR(200) NOT NULL,         -- key que usamos para llamar a App Turnos
-  activo          BOOLEAN DEFAULT TRUE,
+  id                          INT PRIMARY KEY AUTO_INCREMENT,
+  tenant_id                   INT NOT NULL UNIQUE,
+  nombre                      VARCHAR(100) DEFAULT 'Zaturno',
+  webhook_url                 VARCHAR(500) NOT NULL,   -- URL COMPLETA de App Turnos (incluye /api/integracion/eventos)
+  webhook_secret              VARCHAR(255) NOT NULL,   -- S_A: con este firma logiq360 lo que envía
+  api_key_hash                VARCHAR(255) NOT NULL,   -- bcrypt de la key que App Turnos usa para llamarnos
+  api_key_prefix              VARCHAR(20)  NOT NULL,   -- primeros chars, para lookup rápido sin decriptar
+  activo                      TINYINT DEFAULT 1,
+  eventos_suscritos           JSON,                    -- tipos de evento habilitados a emitir
+  metadata                    JSON,                    -- app_turnos_base_url, app_turnos_api_key,
+                                                         -- incoming_secret (S_B), y `pairing` temporal
+  cupos_gig_default           INT NULL,
+  valor_dia_gig_default       DECIMAL(10,2) NULL,
+  cupos_custodio_default      INT NULL,
+  valor_dia_custodio_default  DECIMAL(10,2) NULL,
+  created_at                  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at                  TIMESTAMP NULL,
 
-  -- ¿Qué se sincroniza automáticamente?
-  sync_orden_creada     BOOLEAN DEFAULT TRUE,
-  sync_orden_cancelada  BOOLEAN DEFAULT TRUE,
-  sync_orden_fecha      BOOLEAN DEFAULT TRUE,
-  sync_empleados        BOOLEAN DEFAULT FALSE,   -- opt-in porque es más invasivo
-
-  -- ¿Se crea la oferta automáticamente o solo como borrador?
-  publicar_automatico   BOOLEAN DEFAULT FALSE,   -- false = jefe revisa antes de publicar
-  valor_dia_default     DECIMAL(10,2) NULL,      -- si publicar_automatico = true
-  cupos_default         INT DEFAULT 1,
-
-  -- Auditoría
-  ultimo_evento_enviado_at   TIMESTAMP NULL,
-  ultimo_evento_recibido_at  TIMESTAMP NULL,
-  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  UNIQUE KEY uk_it_tenant (tenant_id),
   FOREIGN KEY (tenant_id) REFERENCES tenants(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);
 ```
+> No existen `app_url`/`api_key_entrante`/`api_key_saliente`/`sync_orden_*`/
+> `publicar_automatico`/`valor_dia_default`/`cupos_default` como columnas —
+> el gating de qué se sincroniza vive en `eventos_suscritos` (JSON) y en el
+> feature del plan (`plan_features.integracion_turnos`), y los defaults de
+> cupos/tarifa por cargo son 4 columnas dedicadas (gig y custodio), no un par
+> genérico. "Publicar automático" no es un flag de esta tabla: la oferta
+> siempre nace en `'borrador'` en App Turnos salvo que llegue también el
+> evento `orden.publicada`.
 
 ---
 
@@ -765,9 +783,11 @@ odoo:hr.leave:999          → integración con Odoo
 
 ---
 
-## PARTE 6 — CAMPOS FALTANTES EN logiq360
+## PARTE 6 — CAMPOS FALTANTES EN logiq360 ✅ RESUELTO (verificado 2026-09-17)
 
-Para que la integración funcione correctamente, estos campos deben agregarse:
+Los 4 cambios de esta sección **ya están implementados** (migraciones `56_add_ordenes_trabajo_horas.sql`,
+`61_fix_missing_columns.sql`, `63_consolidated_54_62.sql`, y las columnas GPS confirmadas
+en `IntegracionTurnosService.js`). Se conserva el listado original como referencia histórica:
 
 ```sql
 -- 1. Coordenadas GPS en cotizaciones (para pasar a App Turnos)
@@ -894,18 +914,28 @@ class IntegracionTurnosService {
         const [rows] = await pool.query(
             'SELECT * FROM integration_events_out WHERE event_id = ?', [eventId]
         );
-        const evento = rows[0];
+        const evento = rows[0]; // trae webhook_url y webhook_secret por el JOIN de obtenerEventosPendientes
 
         try {
-            await fetch(evento.target_url + '/api/v1/integrations/events', {
+            // webhook_url YA es la URL completa registrada al emparejar
+            // (incluye /api/integracion/eventos) — no se le concatena ningún path.
+            const body = JSON.stringify({
+                event_id: evento.event_id,
+                tipo_evento: evento.tipo_evento,
+                tenant_id: evento.tenant_id,
+                timestamp: new Date().toISOString(),
+                data: JSON.parse(evento.payload),
+            });
+            const firma = 'sha256=' + crypto.createHmac('sha256', evento.webhook_secret).update(body).digest('hex');
+
+            await fetch(evento.webhook_url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-API-Key': evento.api_key_saliente,
-                    'X-Event-ID': evento.event_id,
-                    'X-Integration-Source': 'logiq360'
+                    'X-Logiq360-Signature': firma,   // NO se envía X-API-Key en esta llamada
+                    'X-Logiq360-Event': evento.tipo_evento
                 },
-                body: evento.payload,
+                body,
                 signal: AbortSignal.timeout(10000) // 10s timeout
             });
 
@@ -926,8 +956,8 @@ class IntegracionTurnosService {
             } else {
                 await pool.query(
                     'UPDATE integration_events_out SET estado=?, intentos=? WHERE event_id=?',
-                    ['fallido', intento, eventId]
-                );
+                    ['descartado', intento, eventId]   // 'descartado', no 'fallido' — reintentable vía
+                );                                       // POST /historial/reintentar-descartados
                 logger.error(`Evento ${eventId} falló tras ${MAX_INTENTOS} intentos`);
             }
         }
@@ -940,41 +970,48 @@ class IntegracionTurnosService {
 ## PARTE 9 — DEDUPLICACIÓN EN LA RECEPCIÓN
 
 ```javascript
-// logiq360/modules/integraciones/controllers/eventosTurnosController.js
+// backend/modules/integracion/controllers/webhookController.js (ruta real)
 
 exports.recibirEvento = async (req, res, next) => {
     try {
-        const { event_id, event_type, data } = req.body;
+        const { event_id, tipo_evento, data } = req.body;
 
         // 1. Verificar que la API key corresponde a una integración activa
-        const integracion = req.integracion; // inyectado por middleware
+        //    (verificarIntegracionKey ya corrió antes e inyectó req.integracion)
+        const integracion = req.integracion;
 
-        // 2. Deduplicación: si ya procesamos este event_id, responder 200 sin reprocesar
-        const [existente] = await pool.query(
-            'SELECT id FROM integration_events_in WHERE event_id = ?', [event_id]
-        );
-        if (existente.length > 0) {
-            return res.json({ success: true, message: 'Evento ya procesado' });
+        // 2. Registrar: INSERT con UNIQUE KEY sobre event_id — si ya existe,
+        //    MySQL lanza ER_DUP_ENTRY y se responde 200 idempotente sin reprocesar
+        //    (no hay un SELECT previo de "ya existe": el propio INSERT hace de gate)
+        let duplicado = false;
+        try {
+            await pool.query(
+                `INSERT INTO integration_events_in (tenant_id, event_id, tipo_evento, payload)
+                 VALUES (?, ?, ?, ?)`,
+                [integracion.tenant_id, event_id, tipo_evento, JSON.stringify(data)]
+            );
+        } catch (err) {
+            if (err.code === 'ER_DUP_ENTRY') duplicado = true; else throw err;
         }
 
-        // 3. Registrar recepción
-        await pool.query(`
-            INSERT INTO integration_events_in
-            (tenant_id, event_id, event_type, source_system, payload)
-            VALUES (?, ?, ?, 'app_turnos', ?)
-        `, [integracion.tenant_id, event_id, event_type, JSON.stringify(req.body)]);
+        // 3. Procesar (EventHandlerService) — si falla, se marca estado='error'
+        //    en integration_events_in pero igual se responde 200 (ver nota abajo)
+        if (!duplicado) {
+            await EventHandlerService.procesar(integracion.tenant_id, tipo_evento, data)
+                .catch(err => logger.error('[webhook logiq360]', err));
+        }
 
-        // 4. Responder inmediatamente (no bloquear esperando procesamiento)
-        res.json({ success: true, message: 'Evento recibido' });
-
-        // 5. Procesar asincrónicamente
-        setImmediate(() => procesarEvento(integracion.tenant_id, event_id, event_type, data));
-
+        res.json({ success: true, duplicado });
     } catch (error) {
         next(error);
     }
 };
 ```
+> **Nota de diseño real:** un fallo del *handler* (lógica de negocio) se
+> registra como `estado='error'` pero responde 200 — así App Turnos no
+> reintenta un error lógico que reintentar no arregla. Solo un fallo de
+> red/HTTP (que ni siquiera llega a esta función) dispara el reintento del
+> lado de App Turnos.
 
 ---
 
@@ -998,13 +1035,17 @@ App Turnos → logiq360   Webhook      contrato.completado                     �
 App Turnos → logiq360   Webhook      novedad.reportada                       ✅
 App Turnos → logiq360   Webhook      oferta.cubierta                         ✅
 
-App Turnos → logiq360   REST (GET)   /public/ordenes/{ref}                   ✅
-App Turnos → logiq360   REST (GET)   /public/ordenes/{ref}/productos         ✅
-logiq360   → App Turnos REST (GET)   /public/estado/{ref}                    ⬜
-logiq360   → App Turnos REST (GET)   /public/en-sitio/{ref}                  ⬜
+App Turnos → logiq360   REST (GET)   /public/ping                            ✅
+App Turnos → logiq360   REST (GET)   /public/empleados                       ✅
+App Turnos → logiq360   REST (GET)   /public/ordenes/{id}                    ⬜ (huérfano, ver nota)
+App Turnos → logiq360   REST (GET)   /public/ordenes/{id}/productos          ⬜ (huérfano, ver nota)
+logiq360   → App Turnos REST (GET)   /public/ping                            ✅
+logiq360   → App Turnos REST (GET)   /public/estado/{ref}                    ✅
+logiq360   → App Turnos REST (GET)   /public/en-sitio/{ref}                  ✅
+logiq360   → App Turnos REST (GET)   /public/trabajadores                    ✅
 
-✅ = MVP mínimo para que la integración tenga valor
-⬜ = Mejora futura o funcionalidad opcional
+✅ = implementado y en uso real (verificado en código, 2026-09-17)
+⬜ = expuesto pero sin consumidor confirmado, o mejora futura
 ```
 
 ---
@@ -1033,6 +1074,22 @@ App Turnos NUNCA envía a logiq360:
 ---
 
 ## CHANGELOG
+
+### 2026-09-17 — Auditoría de fidelidad doc↔código
+
+Este documento (v1.0-1.5) describía una implementación imaginaria que nunca
+coincidió del todo con el código: paths `/api/v1/...` en vez de los reales
+`/api/integracion/...`, columnas de tabla inventadas, headers de auth que
+nunca se implementaron (`X-Integration-Source`, `X-Event-ID`), y una sección
+de "campos faltantes" (Parte 6) que ya se había resuelto en las migraciones
+`56`/`61`/`63` sin actualizar el doc. Se corrigió línea por línea contra:
+`appturnos/backend/modules/integracion/*` y
+`aprendizaje-inventario-carpas/backend/modules/integracion/*`. También se
+identificaron dos endpoints huérfanos en logiq360 (`public/ordenes/:id` y
+`public/ordenes/:id/productos`): existen y funcionan, pero App Turnos no los
+llama — quedan documentados como tal hasta que el equipo decida conectarlos
+o retirarlos. Ver también los specs de App Turnos actualizados en el mismo
+barrido: `APP-TURNOS-SPEC/05-INTEGRACION.md` y `03-API-ENDPOINTS.md`.
 
 ### v1.5 — oferta.cubierta implementado
 

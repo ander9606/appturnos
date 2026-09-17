@@ -56,29 +56,58 @@ clientes
 
 ## Configuración
 
-### En logiq360 (admin panel)
+### Emparejamiento real (no es un simple POST de config)
+
+El flujo real es un handshake de 2 llamadas, no un único `POST /configuracion`:
+
 ```
-POST /api/integracion/configuracion
-Body: { webhook_url: "https://app-turnos.com/api/v1/webhooks/logiq360", sync_empleados: true }
-→ Retorna: { api_key: "at_live_xxx", incoming_secret: "hmac_secret" }
+1. En logiq360: POST /api/integracion/emparejar/iniciar (JWT admin logiq360)
+   → genera 3 secretos (S_A, S_B, K) y un código base64url {url, nonce, webhook_url}
+
+2. Un admin copia ese código y lo pega en Zaturno:
+   POST /api/integracion/emparejar (JWT admin_empresa, body: { codigo })
+   → Zaturno decodifica el código, genera su propia api_key,
+     y llama a logiq360: POST {url}/api/integracion/emparejar/confirmar
+     con { nonce, app_turnos_webhook_url, app_turnos_base_url, app_turnos_api_key }
+
+3. logiq360 activa la integración y responde el bundle:
+   { tenant_id, logiq360_base_url, webhook_url, incoming_secret (=S_A),
+     webhook_secret (=S_B), api_key (=K) }
+   → Zaturno persiste todo en integracion_config (ver integracion.model.js)
 ```
+
+Requiere `PUBLIC_API_URL` en el `.env` de logiq360 (base URL propia para
+generar el código); si falta, el paso 1 responde 500.
 
 ### Variables de entorno App Turnos
+
+**No existe un env var por tenant** — la URL de logiq360 y las 3 llaves
+quedan en la fila de `integracion_config` de cada empresa (ver arriba). Los
+únicos env vars reales son un *fallback global* usado si un tenant no tiene
+secreto propio configurado (`backend/.env.example:44-45`):
 ```env
-LOGIQ360_WEBHOOK_URL=https://logiq360.com/api/webhooks/app-turnos
-LOGIQ360_API_KEY=ak_live_<generada en logiq360>
-LOGIQ360_WEBHOOK_SECRET=<para verificar firma entrante>
-PORT=3001
+LOGIQ360_WEBHOOK_SECRET=   # fallback de incoming_secret si el tenant no tiene uno
+LOGIQ360_API_KEY=          # fallback, uso análogo
 ```
 
-### Autenticación entre sistemas
+### Autenticación entre sistemas (asimétrica — no es la misma en ambos sentidos)
+
 ```
-logiq360 llama App Turnos → Header: X-API-Key: at_live_xxx
-App Turnos llama logiq360 → Header: X-API-Key: ak_live_xxx
-Ambos incluyen:
-  X-Integration-Source: logiq360 | app-turnos
-  X-Event-ID: <uuid>  (para deduplicación)
+POST /api/integracion/eventos, logiq360 → App Turnos:
+  Header: X-Logiq360-Signature: sha256=<hmac con incoming_secret>
+  Header: X-Logiq360-Event: <tipo_evento>
+  (SIN X-API-Key — la firma HMAC es la única credencial en esta llamada)
+
+POST /api/integracion/eventos, App Turnos → logiq360:
+  Header: X-API-Key: <api_key entregada por logiq360>  (obligatoria)
+  Header: X-Turnos-Signature: sha256=<hmac con webhook_secret>  (si está configurado)
+
+GET /api/integracion/public/*, en cualquier dirección:
+  Header: X-API-Key: <key del que consulta>  (sin firma)
 ```
+
+No existen los headers `X-Integration-Source` ni `X-Event-ID`; el `event_id`
+va dentro del body JSON.
 
 ---
 
@@ -112,13 +141,18 @@ costo_labor.calculado ──────────────►  Actualizar 
 CONSULTAS SÍNCRONAS (pull cuando se necesita):
 
 App Turnos → logiq360:
-  GET /api/v1/public/ordenes/:external_ref       Detalles de la orden
-  GET /api/v1/public/ordenes/:ref/productos      Lista de productos a montar
+  GET /api/integracion/public/ping                    Reconciliación diaria (integracion.worker.js)
+  GET /api/integracion/public/empleados               Candidatos para conciliación de personal
+  GET /api/integracion/public/ordenes/:id             ⚠️ existe en logiq360, App Turnos no lo llama
+  GET /api/integracion/public/ordenes/:id/productos   ⚠️ existe en logiq360, App Turnos no lo llama
 
 logiq360 → App Turnos:
-  GET /api/v1/public/estado/:external_ref        Estado de oferta/contratos
-  GET /api/v1/public/en-sitio/:external_ref      Quién está en campo ahora
+  GET /api/integracion/public/ping                    Test de conectividad
+  GET /api/integracion/public/estado/:external_ref    Estado de oferta/contratos
+  GET /api/integracion/public/en-sitio/:external_ref  Quién está en campo ahora
+  GET /api/integracion/public/trabajadores            Sincronizar personal de turnos
 ```
+*(Todos los paths reales cuelgan de `/api/integracion/...`, no de `/api/v1/...` — corregido 2026-09-17 contra `integracion.routes.js` en ambos repos.)*
 
 ---
 
@@ -584,13 +618,16 @@ setInterval(() => {
 
 ## API de logiq360 que App Turnos puede consumir (pull)
 
-| Método | Endpoint logiq360 | Rol | Para qué |
-|--------|-------------------|-----|----------|
-| `GET` | `/api/v1/public/ordenes/:external_ref` | `api` | Detalles de la orden para mostrar al operario |
-| `GET` | `/api/v1/public/ordenes/:ref/productos` | `api` | Lista de productos a montar |
-| `GET` | `/api/v1/mis-ordenes` | JWT empleado | Sus órdenes asignadas |
+| Método | Endpoint logiq360 | Uso real | Para qué |
+|--------|-------------------|----------|----------|
+| `GET` | `/api/integracion/public/ping` | ✅ usado por `reconciliacion.service.js` | Detectar drift diario de `activo` |
+| `GET` | `/api/integracion/public/empleados` | ✅ usado por `conciliacion.service.js` | Candidatos para vincular personal |
+| `GET` | `/api/integracion/public/ordenes/:id` | ⬜ no consumido actualmente | Detalles de la orden (huérfano, ver `05-INTEGRACION.md` en el repo logiq360) |
+| `GET` | `/api/integracion/public/ordenes/:id/productos` | ⬜ no consumido actualmente | Lista de productos a montar (huérfano) |
 
-> Autenticación: header `X-API-Key: ak_live_xxx`
+> Autenticación: header `X-API-Key: <key entregada por logiq360 al emparejar>`.
+> `/api/v1/mis-ordenes` de la versión anterior de este doc no existe — no hay
+> ningún endpoint JWT-de-empleado consumido cruzando la integración.
 
 ---
 
@@ -637,13 +674,16 @@ CREATE TABLE integration_events_in (
 
 ---
 
-## Endpoints que App Turnos debe exponer para recibir eventos
+## Endpoints que App Turnos expone (verificado contra `integracion.routes.js`)
 
 ```
-POST /api/v1/webhooks/logiq360          Recibir eventos de logiq360
-GET  /api/v1/public/estado/:ext_ref     Estado de oferta/contratos (pull logiq360)
-GET  /api/v1/public/en-sitio/:ext_ref   Quién está en campo ahora (pull logiq360)
+POST /api/integracion/eventos                  Recibir eventos de logiq360 (auth: HMAC)
+GET  /api/integracion/public/ping               Test de conectividad (auth: X-API-Key)
+GET  /api/integracion/public/estado/:ext_ref    Estado de oferta/contratos (auth: X-API-Key)
+GET  /api/integracion/public/en-sitio/:ext_ref  Quién está en campo ahora (auth: X-API-Key)
+GET  /api/integracion/public/trabajadores       Sincronizar personal (auth: X-API-Key)
 ```
+Ver tabla completa de endpoints (incluidos los administrativos JWT) en `03-API-ENDPOINTS.md §Integración`.
 
 ---
 
@@ -668,3 +708,4 @@ Workaround actual: el `jefe_turnos` completa estos datos manualmente al recibir 
 | 2025-05 | Diseño inicial de integración logiq360 ↔ App Turnos |
 | 2026-05-21 | Análisis completo basado en código fuente real (ver `API-INTEGRACION-APP-TO-APP.md` y `INTEGRACION-LOGIQ360-APP-TURNOS.md` en repo logiq360) |
 | 2026-05-23 | **Actualización**: payloads completos de todos los eventos, mapa de conexiones, flujo end-to-end, datos faltantes documentados, `orden.publicada` y `costo_labor.calculado` agregados |
+| 2026-09-17 | **Corrección de fidelidad doc↔código**: todos los paths `/api/v1/...` → `/api/integracion/...` (nunca se implementaron con ese prefijo), auth real por dirección documentada (asimétrica: HMAC-solo de logiq360→App Turnos, X-API-Key+firma opcional de App Turnos→logiq360), reemplazado el `POST /configuracion` inventado por el handshake real de emparejamiento (`/emparejar` + `/emparejar/confirmar`), y marcados como huérfanos `public/ordenes/:id` y `public/ordenes/:id/productos` (existen en logiq360, nadie los llama). Ver también `docs/INTEGRACION-LOGIQ360-APP-TURNOS.md` para el detalle completo. |
