@@ -6,7 +6,7 @@
  *                        se muestra aparte; lo que varía período a período son
  *                        las horas con recargo)
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,9 +49,12 @@ function sumarPeriodo(turnos: Asignacion[], periodo: PeriodoNomina): TotalesPeri
 function HistorialTurnos() {
   const theme = useTheme();
   const { data: turnos, isLoading: loadingTurnos, isError, error, refetch, isRefetching } = useMisTurnos();
-  const { data: periodosResp, isLoading: loadingPeriodos } = usePeriodos();
+  const { data: periodosResp, isLoading: loadingPeriodos, refetch: refetchPeriodos } = usePeriodos();
   const periodos = periodosResp?.data ?? [];
   const isLoading = loadingTurnos || loadingPeriodos;
+  // Sin esto, pull-to-refresh nunca trae el período actualizado tras un
+  // cambio de tipo_liquidacion — solo refrescaba los turnos.
+  const onRefresh = useCallback(() => { refetch(); refetchPeriodos(); }, [refetch, refetchPeriodos]);
 
   const filas = useMemo(() => {
     const completados = (turnos ?? []).filter((a) => a.estado === 'completado');
@@ -100,7 +103,7 @@ function HistorialTurnos() {
         contentContainerClassName="gap-2 pb-8"
         contentContainerStyle={{ paddingHorizontal: 20 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} colors={[theme.primary]} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} tintColor={theme.primary} colors={[theme.primary]} />}
         ListHeaderComponent={
           <View className="pt-2 pb-4 gap-1">
             <Text className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total histórico</Text>

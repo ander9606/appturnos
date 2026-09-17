@@ -11,20 +11,20 @@ import { useTheme } from '@/lib/theme';
 import { formatCOP } from '@/lib/formatters';
 import { usePeriodos } from './useNomina';
 import { TipoPeriodoBadge } from './TipoPeriodoBadge';
+import { PeriodoSelector } from './PeriodoSelector';
 import { fmtPeriodo } from './trabajador/nominaTrabajadorUtils';
 import { LiquidacionTrabajadorCard } from './LiquidacionTrabajadorCard';
 
 export function NominaGestorTurnosView() {
   const theme = useTheme();
 
-  // periodos_nomina ya viene ordenado fecha_inicio DESC — [0] es el actual, [1] el anterior.
-  const { data: periodosResp } = usePeriodos();
+  // periodos_nomina ya viene ordenado fecha_inicio DESC — [0] es el actual.
+  const { data: periodosResp, refetch: refetchPeriodos } = usePeriodos();
   const periodos = periodosResp?.data ?? [];
 
-  const [showAnterior, setShowAnterior] = useState(false);
-  const periodoActual = periodos[0];
-  const periodoAnterior = periodos[1];
-  const periodo = showAnterior ? periodoAnterior : periodoActual;
+  const [periodoId, setPeriodoId] = useState<number | undefined>(undefined);
+  const activePeriodoId = periodoId ?? periodos[0]?.id;
+  const periodo = periodos.find((p) => p.id === activePeriodoId);
 
   const { data, isLoading, isError, refetch, isRefetching } = useLiquidacionTurnos({
     fecha_inicio: periodo?.fecha_inicio ?? '',
@@ -44,7 +44,9 @@ export function NominaGestorTurnosView() {
     { trabajadores: 0, turnos: 0, horas: 0, pago: 0, extra: 0 }
   ), [trabajadores]);
 
-  const onRefresh = useCallback(() => { refetch(); }, [refetch]);
+  // Sin refetchPeriodos, un cambio de tipo_liquidacion (mensual → quincenal)
+  // queda invisible en esta pantalla hasta reiniciar la app.
+  const onRefresh = useCallback(() => { refetch(); refetchPeriodos(); }, [refetch, refetchPeriodos]);
 
   if (isLoading) {
     return (
@@ -90,21 +92,9 @@ export function NominaGestorTurnosView() {
 
               {/* Selector de período */}
               <View className="flex-row items-center gap-2">
-                {[true, false].map((esAnterior) => {
-                  const p = esAnterior ? periodoAnterior : periodoActual;
-                  if (!p) return null;
-                  const activa = showAnterior === esAnterior;
-                  return (
-                    <TouchableOpacity
-                      key={String(esAnterior)}
-                      onPress={() => setShowAnterior(esAnterior)}
-                      className="px-3 py-1.5 rounded-full border border-white/30"
-                      style={activa ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
-                    >
-                      <Text className="text-white text-xs font-medium">{fmtPeriodo(p)}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                <View className="flex-1">
+                  <PeriodoSelector periodos={periodos} activeId={activePeriodoId} onSelect={setPeriodoId} variant="onColor" />
+                </View>
                 {periodo && <TipoPeriodoBadge tipo={periodo.tipo} />}
               </View>
 

@@ -65,7 +65,14 @@ function useActualizarEmpresa() {
   return useMutation({
     mutationFn: (datos: ActualizarMiEmpresaPayload) =>
       empresasApi.actualizarMiEmpresa(datos),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['mi-empresa'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mi-empresa'] });
+      // Cambiar tipo_liquidacion recalcula el período en el backend (cierra el
+      // abierto y abre uno nuevo con el ciclo correcto) — sin esto, todos los
+      // que ya tenían 'periodos' en caché siguen viendo el período/tipo viejo
+      // hasta que remonten la pantalla o pase el staleTime.
+      qc.invalidateQueries({ queryKey: ['periodos'] });
+    },
   });
 }
 

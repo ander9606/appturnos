@@ -24,6 +24,7 @@ import { NominaTurnosView }       from '@/features/nomina/NominaTurnosView';
 import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView';
 import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
 import { TipoPeriodoBadge }       from '@/features/nomina/TipoPeriodoBadge';
+import { PeriodoSelector }        from '@/features/nomina/PeriodoSelector';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
@@ -76,10 +77,10 @@ function NominaGestorView() {
 
   const activePeriodoId = periodoId ?? periodos[0]?.id;
   const activePeriodo   = periodos.find((p) => p.id === activePeriodoId) ?? periodos[0];
-  // Solo mostrar en el selector períodos del mismo tipo que el más reciente — evita mezclar
+  // PeriodoSelector ya filtra por el mismo tipo que el más reciente — evita mezclar
   // quincenales con mensuales cuando la empresa cambia su esquema de facturación.
-  const tipoActual        = periodos[0]?.tipo;
-  const periodosSelector  = periodos.filter((p) => p.tipo === tipoActual);
+  // periodosMes (calendario) necesita el mismo filtro por separado.
+  const tipoActual = periodos[0]?.tipo;
 
   // Vista mensual — bandas de color por período, alterna con la lista de liquidación.
   const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
@@ -312,29 +313,8 @@ function NominaGestorView() {
                     }}
                   />
                 </View>
-              ) : periodosSelector.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View className="flex-row gap-2 py-1">
-                    {periodosSelector.slice(0, 8).map((p) => (
-                      <TouchableOpacity
-                        key={p.id}
-                        onPress={() => setPeriodoId(p.id)}
-                        className={[
-                          'px-4 py-2 rounded-full border flex-row items-center gap-1.5',
-                          p.id === activePeriodoId
-                            ? 'bg-foreground border-foreground'
-                            : 'bg-card border-border',
-                        ].join(' ')}
-                      >
-                        <Text className={`text-xs font-medium ${
-                          p.id === activePeriodoId ? 'text-white' : 'text-foreground'
-                        }`}>
-                          {fmtPeriodo(p)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
+              ) : (
+                <PeriodoSelector periodos={periodos} activeId={activePeriodoId} onSelect={setPeriodoId} />
               )}
 
               {activePeriodo && (

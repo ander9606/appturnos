@@ -22,6 +22,7 @@ import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { Button } from '@/components/ui/Button';
 import { usePeriodos } from './useNomina';
 import { TipoPeriodoBadge } from './TipoPeriodoBadge';
+import { PeriodoSelector } from './PeriodoSelector';
 import { fmtPeriodo } from './trabajador/nominaTrabajadorUtils';
 import { cuentasCobroApi } from '@api-client';
 import type { Asignacion } from '@api-client';
@@ -60,7 +61,7 @@ export function NominaTurnosView() {
   const { data: turnos, isLoading, isError, error, refetch, isRefetching } = useMisTurnos();
 
   // periodos_nomina viene con empresa_id — uno por empresa. Agrupar por empresa para filtrar correctamente.
-  const { data: periodosResp } = usePeriodos();
+  const { data: periodosResp, refetch: refetchPeriodos } = usePeriodos();
   const periodos = periodosResp?.data ?? [];
 
   // Cuentas de cobro pendientes — se generan al cerrar un período con turnos
@@ -72,7 +73,7 @@ export function NominaTurnosView() {
     staleTime: 60_000,
   });
 
-  const [showAnterior, setShowAnterior] = useState(false);
+  const [periodoId, setPeriodoId] = useState<number | undefined>(undefined);
   const [filtroFechaInicio, setFiltroFechaInicio] = useState<string | null>(null);
   const [filtroFechaFin, setFiltroFechaFin] = useState<string | null>(null);
   const [mostrarFiltroFechas, setMostrarFiltroFechas] = useState(false);
@@ -90,22 +91,17 @@ export function NominaTurnosView() {
     return map;
   }, [periodos]);
 
-  // Para el UI, extrae el período actual/anterior (usa la primera empresa encontrada).
-  const periodoActual = useMemo(() => {
+  // El selector del header lista los períodos de la primera empresa encontrada.
+  const periodosEmpresaPrincipal = useMemo(() => {
     const empresaIds = Object.keys(periodosPorEmpresa);
-    if (empresaIds.length === 0) return null;
-    return periodosPorEmpresa[Number(empresaIds[0])]?.[0] || null;
+    return empresaIds.length > 0 ? periodosPorEmpresa[Number(empresaIds[0])] ?? [] : [];
   }, [periodosPorEmpresa]);
 
-  const periodoAnterior = useMemo(() => {
-    const empresaIds = Object.keys(periodosPorEmpresa);
-    if (empresaIds.length === 0) return null;
-    return periodosPorEmpresa[Number(empresaIds[0])]?.[1] || null;
-  }, [periodosPorEmpresa]);
-
-  const periodo = useMemo(() => {
-    return showAnterior ? periodoAnterior : periodoActual;
-  }, [showAnterior, periodoAnterior, periodoActual]);
+  const activePeriodoId = periodoId ?? periodosEmpresaPrincipal[0]?.id;
+  // Posición del período elegido (0 = actual, 1 = anterior, ...) — se aplica a
+  // cada empresa por igual, ya que cada una guarda su propia lista de períodos.
+  const periodoIndex = Math.max(0, periodosEmpresaPrincipal.findIndex((p) => p.id === activePeriodoId));
+  const periodo = periodosEmpresaPrincipal[periodoIndex] ?? null;
 
   // Filtrar turnos completados: por fechas personalizadas o por período de su empresa.
   const turnosPeriodo = useMemo(() => {
@@ -118,14 +114,13 @@ export function NominaTurnosView() {
         return a.oferta_fecha >= filtroFechaInicio && a.oferta_fecha <= filtroFechaFin;
       }
 
-      // Si no, usar el período de la empresa
+      // Si no, usar el período de la empresa en la misma posición elegida arriba.
       const periodosEmpresa = periodosPorEmpresa[a.empresa_id] ?? [];
-      if (periodosEmpresa.length === 0) return false;
-      const periodo = showAnterior && periodosEmpresa[1] ? periodosEmpresa[1] : periodosEmpresa[0];
+      const periodo = periodosEmpresa[periodoIndex] ?? periodosEmpresa[0];
       if (!periodo) return false;
       return a.oferta_fecha >= periodo.fecha_inicio && a.oferta_fecha <= periodo.fecha_fin;
     });
-  }, [turnos, periodosPorEmpresa, showAnterior, filtroFechaInicio, filtroFechaFin]);
+  }, [turnos, periodosPorEmpresa, periodoIndex, filtroFechaInicio, filtroFechaFin]);
 
   // Turnos completados sin firma no cuentan en el total a cobrar hasta que
   // el trabajador firme su contrato — mismo criterio que la liquidación del gestor.
@@ -192,7 +187,10 @@ export function NominaTurnosView() {
     setMostrarFiltroFechas(false);
   };
 
-  const onRefresh = useCallback(() => { refetch(); }, [refetch]);
+  // Sin refetchPeriodos acá, un cambio de tipo_liquidacion de la empresa
+  // (mensual → quincenal) queda invisible para el trabajador hasta que la
+  // app se reinicie — pull-to-refresh solo traía turnos, nunca el período.
+  const onRefresh = useCallback(() => { refetch(); refetchPeriodos(); }, [refetch, refetchPeriodos]);
 
   const renderItem = useCallback(({ item }: { item: Asignacion }) => {
     const { extendido, extraMin } = isExtendido(item);
@@ -366,32 +364,13 @@ export function NominaTurnosView() {
 
               {/* Selector de período */}
               <View className="flex-row items-center gap-2">
-                {periodoAnterior && (
-                  <TouchableOpacity
-                    onPress={() => setShowAnterior(true)}
-                    className="px-3 py-1.5 rounded-full border border-white/30"
-                    style={showAnterior ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
-                  >
-                    <Text className="text-white text-xs font-medium">
-                      {fmtPeriodo(periodoAnterior)}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-                {periodoActual && (
-                  <TouchableOpacity
-                    onPress={() => setShowAnterior(false)}
-                    className="px-3 py-1.5 rounded-full border border-white/30"
-                    style={!showAnterior ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
-                  >
-                    <Text className="text-white text-xs font-medium">
-                      {fmtPeriodo(periodoActual)}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                <View className="flex-1">
+                  <PeriodoSelector periodos={periodosEmpresaPrincipal} activeId={activePeriodoId} onSelect={setPeriodoId} variant="onColor" />
+                </View>
                 {periodo && <TipoPeriodoBadge tipo={periodo.tipo} />}
                 <TouchableOpacity
                   onPress={() => setMostrarFiltroFechas(true)}
-                  className="ml-auto px-3 py-1.5 rounded-full border border-white/30 flex-row items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-full border border-white/30 flex-row items-center gap-1.5"
                   style={filtroFechaInicio ? { backgroundColor: 'rgba(255,255,255,0.25)' } : {}}
                 >
                   <Ionicons name="calendar" size={12} color="white" />
@@ -482,10 +461,7 @@ export function NominaTurnosView() {
             </Text>
             <Text className="text-sm text-muted-foreground text-center">
               No tienes turnos completados en el período{' '}
-              {(() => {
-                const p = showAnterior ? periodoAnterior : periodoActual;
-                return p ? fmtPeriodo(p) : 'actual';
-              })()}.
+              {periodo ? fmtPeriodo(periodo) : 'actual'}.
             </Text>
           </View>
         }
