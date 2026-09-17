@@ -926,6 +926,7 @@ function CorregirIngresoEgresoModal({
   onClose: () => void;
 }) {
   const corregir = useCorregirAsignacion();
+  const insets = useSafeAreaInsets();
   const [ingreso, setIngreso] = useState<Date | null>(null);
   const [egreso, setEgreso] = useState<Date | null>(null);
   const [showIngreso, setShowIngreso] = useState(false);
@@ -1041,7 +1042,13 @@ function CorregirIngresoEgresoModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 bg-black/50 justify-end">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View className="w-full bg-background rounded-t-3xl px-6 pt-5 pb-8">
+          {/* maxHeight tope a la pantalla, igual que BonoModal — sin esto el
+              encabezado podía quedar empujado fuera del área visible en
+              pantallas chicas o con los pickers de hora abiertos. */}
+          <View
+            className="w-full bg-background rounded-t-3xl px-6 pt-5"
+            style={{ maxHeight: '85%', paddingBottom: insets.bottom + 20 }}
+          >
             <View className="flex-row items-center justify-between mb-5">
               <View>
                 <Text className="text-lg font-bold text-foreground">Corregir ingreso/egreso</Text>
