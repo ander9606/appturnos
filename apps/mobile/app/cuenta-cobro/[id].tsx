@@ -29,6 +29,19 @@ function fmtLegal(iso: string): string {
 
 function fmtH(t: string | null): string { return t?.slice(0, 5) ?? '—'; }
 
+function fmtCorta(iso: string): string {
+  const [, m, d] = iso.split('-');
+  return `${d}/${m}`;
+}
+
+function breakdown(item: { valor_base: number; pago_extra: number; bono_monto: number; bono_motivo: string | null }): string | null {
+  if (item.pago_extra <= 0 && item.bono_monto <= 0) return null;
+  const partes = [`Base ${formatCOP(item.valor_base)}`];
+  if (item.pago_extra > 0) partes.push(`recargo ${formatCOP(item.pago_extra)}`);
+  if (item.bono_monto > 0) partes.push(`bono ${formatCOP(item.bono_monto)}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
+  return partes.join(' + ');
+}
+
 const GESTORES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina'];
 
 // ── screen ────────────────────────────────────────────────────────────────
@@ -150,18 +163,46 @@ export default function CuentaCobroScreen() {
 
             <Divider />
 
+            <SectionHeader label="DATOS BANCARIOS PARA PAGO" />
+            {cuenta.trabajador_banco ? (
+              <>
+                <Text style={s.partyDetail}>Banco: {cuenta.trabajador_banco}</Text>
+                <Text style={s.partyDetail}>Tipo de cuenta: {cuenta.trabajador_tipo_cuenta ?? '—'}</Text>
+                <Text style={s.partyDetail}>N.º de cuenta: {cuenta.trabajador_numero_cuenta ?? '—'}</Text>
+              </>
+            ) : (
+              <Text style={s.partyDetail}>El trabajador no ha registrado datos bancarios.</Text>
+            )}
+
+            <Divider />
+
             <SectionHeader label="SERVICIOS PRESTADOS" />
-            {cuenta.items.map((item) => (
-              <View key={item.asignacion_id} style={s.itemRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.itemDesc}>{item.descripcion}</Text>
-                  <Text style={s.itemMeta}>
-                    {fmtLegal(item.fecha)} · {fmtH(item.hora_inicio)}–{fmtH(item.hora_fin)} · {Number(item.horas).toFixed(1)}h
-                  </Text>
+
+            <View style={s.tableHeaderRow}>
+              <Text style={[s.tableHeaderCell, s.colFecha]}>Fecha</Text>
+              <Text style={[s.tableHeaderCell, s.colTurno]}>Turno</Text>
+              <Text style={[s.tableHeaderCell, s.colHoras, s.alignRight]}>Horas</Text>
+              <Text style={[s.tableHeaderCell, s.colValor, s.alignRight]}>Valor</Text>
+            </View>
+            {cuenta.items.map((item) => {
+              const desglose = breakdown(item);
+              return (
+                <View key={item.asignacion_id} style={s.tableRow}>
+                  <Text style={[s.tableCell, s.colFecha]}>{fmtCorta(item.fecha)}</Text>
+                  <View style={s.colTurno}>
+                    <Text style={s.itemDesc}>{item.descripcion}</Text>
+                    <Text style={s.itemMeta}>
+                      {fmtH(item.hora_inicio)}–{fmtH(item.hora_fin)}
+                      {item.cargo ? ` · ${item.cargo}` : ''}
+                      {item.lugar ? ` · ${item.lugar}` : ''}
+                    </Text>
+                    {desglose ? <Text style={s.itemBreakdown}>{desglose}</Text> : null}
+                  </View>
+                  <Text style={[s.tableCell, s.colHoras, s.alignRight]}>{Number(item.horas).toFixed(1)}</Text>
+                  <Text style={[s.tableCell, s.colValor, s.alignRight, s.itemValor]}>{formatCOP(item.valor)}</Text>
                 </View>
-                <Text style={s.itemValor}>{formatCOP(item.valor)}</Text>
-              </View>
-            ))}
+              );
+            })}
 
             <View style={s.totalsRow}>
               <Text style={s.totalsLabel}>Total ({cuenta.total_turnos} turno{cuenta.total_turnos !== 1 ? 's' : ''}, {Number(cuenta.total_horas).toFixed(1)}h)</Text>
@@ -347,14 +388,42 @@ const s = StyleSheet.create({
     marginTop: 1,
   },
 
-  itemRow: {
+  tableHeaderRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 6,
+    marginBottom: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#CBD5E1',
+  },
+  tableHeaderCell: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+  },
+  tableRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
+  },
+  tableCell: {
+    fontSize: 12,
+    color: '#0F172A',
+  },
+  colFecha: { width: 38 },
+  colTurno: { flex: 1 },
+  colHoras: { width: 36 },
+  colValor: { width: 82 },
+  alignRight: { textAlign: 'right' },
+  itemBreakdown: {
+    fontSize: 10.5,
+    color: '#D97706',
+    marginTop: 2,
   },
   itemDesc: {
     fontSize: 12,

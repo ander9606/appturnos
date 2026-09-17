@@ -4,9 +4,15 @@ export interface CuentaCobroItem {
   asignacion_id: number;
   fecha: string;
   descripcion: string;
+  cargo: string | null;
+  lugar: string | null;
   hora_inicio: string | null;
   hora_fin: string | null;
   horas: number;
+  valor_base: number;
+  pago_extra: number;
+  bono_monto: number;
+  bono_motivo: string | null;
   valor: number;
 }
 
@@ -36,6 +42,9 @@ export interface CuentaCobro extends CuentaCobroResumen {
   empresa_nit: string | null;
   /** Última firma guardada del trabajador — atajo para firmar sin redibujar. */
   trabajador_firma_guardada: string | null;
+  trabajador_banco: string | null;
+  trabajador_tipo_cuenta: string | null;
+  trabajador_numero_cuenta: string | null;
 }
 
 export const cuentasCobroApi = {

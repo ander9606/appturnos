@@ -54,6 +54,8 @@ const CuentasCobroModel = {
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cedula AS trabajador_cedula, t.usuario_id AS trabajador_usuario_id,
               t.firma_guardada AS trabajador_firma_guardada,
+              t.banco AS trabajador_banco, t.tipo_cuenta AS trabajador_tipo_cuenta,
+              t.numero_cuenta AS trabajador_numero_cuenta,
               e.nombre AS empresa_nombre, e.nit AS empresa_nit
        FROM cuentas_cobro cc
        JOIN trabajadores t ON t.id = cc.trabajador_id

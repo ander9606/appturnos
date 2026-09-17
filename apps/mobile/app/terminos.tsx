@@ -95,6 +95,8 @@ El pago de cada turno se calcula según la tarifa pactada y los recargos de ley 
 • Se descuenta automáticamente 1 hora de almuerzo en jornadas mayores a 6 horas, salvo que el trabajador marque que tuvo una jornada continua sin ese descanso.
 • El gestor de la empresa puede asignar manualmente un bono extra a un turno puntual (por ejemplo, una propina), visible en el detalle del turno y en el contrato correspondiente.
 
+Zaturno no realiza pagos ni maneja dinero real en ningún momento. Es únicamente un puente de información entre trabajadores y empresas: calcula y registra los montos correspondientes a cada turno para que ambas partes lleven un control claro y verificable, pero el pago efectivo lo realiza la empresa directamente al trabajador por fuera de la aplicación.
+
 3. DATOS PERSONALES Y PRIVACIDAD
 Recopilamos los siguientes datos para prestar el servicio:
 • Nombre, correo electrónico y número de celular (identificación y comunicación).

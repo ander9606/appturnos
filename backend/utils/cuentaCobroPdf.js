@@ -32,6 +32,17 @@ function generarCuentaCobroPdf(cuenta, stream) {
   linea('Período', `${cuenta.fecha_inicio} a ${cuenta.fecha_fin}`);
   doc.moveDown(1);
 
+  doc.font('Helvetica-Bold').fontSize(10).text('Datos bancarios para pago:');
+  doc.fontSize(10);
+  if (cuenta.trabajador_banco) {
+    linea('Banco', cuenta.trabajador_banco);
+    linea('Tipo de cuenta', cuenta.trabajador_tipo_cuenta);
+    linea('N.º de cuenta', cuenta.trabajador_numero_cuenta);
+  } else {
+    doc.font('Helvetica-Oblique').text('El trabajador no ha registrado datos bancarios.');
+  }
+  doc.moveDown(1);
+
   doc
     .font('Helvetica-Bold')
     .fontSize(10)
@@ -65,7 +76,26 @@ function generarCuentaCobroPdf(cuenta, stream) {
     doc.text(item.descripcion || '—', col.desc, y, { width: 240 });
     doc.text(Number(item.horas).toFixed(1), col.horas, y, { width: 50, align: 'right' });
     doc.text(`$ ${Number(item.valor).toLocaleString('es-CO')}`, col.valor, y, { width: 100, align: 'right' });
-    doc.moveDown(0.5);
+    doc.moveDown(0.3);
+
+    const meta = [item.cargo, item.lugar].filter(Boolean).join(' · ');
+    if (meta) {
+      doc.font('Helvetica-Oblique').fontSize(8).fillColor('#475569')
+        .text(meta, col.desc, doc.y, { width: 240 });
+      doc.font('Helvetica').fontSize(9).fillColor('#000000');
+    }
+
+    const extra = Number(item.pago_extra || 0);
+    const bono = Number(item.bono_monto || 0);
+    if (extra > 0 || bono > 0) {
+      const partes = [`Base $ ${Number(item.valor_base).toLocaleString('es-CO')}`];
+      if (extra > 0) partes.push(`recargo $ ${extra.toLocaleString('es-CO')}`);
+      if (bono > 0) partes.push(`bono $ ${bono.toLocaleString('es-CO')}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
+      doc.font('Helvetica-Oblique').fontSize(8).fillColor('#B45309')
+        .text(partes.join(' + '), col.desc, doc.y, { width: 240 });
+      doc.font('Helvetica').fontSize(9).fillColor('#000000');
+    }
+    doc.moveDown(0.4);
   }
 
   doc.moveTo(56, doc.y).lineTo(540, doc.y).strokeColor('#94A3B8').stroke();
