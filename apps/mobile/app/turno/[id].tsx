@@ -25,7 +25,7 @@ import {
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
@@ -1143,6 +1143,7 @@ function BonoModal({
   onClose: () => void;
 }) {
   const agregarBono = useAgregarBono();
+  const insets = useSafeAreaInsets();
   const [monto, setMonto] = useState('');
   const [motivo, setMotivo] = useState('');
 
@@ -1175,7 +1176,14 @@ function BonoModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 bg-black/50 justify-end">
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View className="w-full bg-background rounded-t-3xl px-6 pt-5 pb-8">
+          {/* maxHeight tope a la pantalla — sin esto, con teclado abierto y el
+              aviso de refirma, el encabezado podía quedar empujado fuera del
+              área visible tanto en iOS como en Android. El ScrollView interno
+              deja el encabezado y los botones siempre fijos y visibles. */}
+          <View
+            className="w-full bg-background rounded-t-3xl px-6 pt-5"
+            style={{ maxHeight: '85%', paddingBottom: insets.bottom + 20 }}
+          >
             <View className="flex-row items-center justify-between mb-5">
               <View>
                 <Text className="text-lg font-bold text-foreground">Bono extra</Text>
@@ -1188,41 +1196,43 @@ function BonoModal({
               </Pressable>
             </View>
 
-            <View className="gap-4">
-              <View className="gap-1.5">
-                <Text className="text-sm font-semibold text-foreground">Monto (COP)</Text>
-                <TextInput
-                  value={monto}
-                  onChangeText={setMonto}
-                  keyboardType="numeric"
-                  placeholder="0"
-                  placeholderTextColor="#94A3B8"
-                  className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
-                />
-              </View>
-              <View className="gap-1.5">
-                <Text className="text-sm font-semibold text-foreground">Motivo</Text>
-                <TextInput
-                  value={motivo}
-                  onChangeText={setMotivo}
-                  placeholder="Ej. propina del cliente"
-                  placeholderTextColor="#94A3B8"
-                  maxLength={255}
-                  className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
-                />
-              </View>
-              <Text className="text-xs text-muted-foreground">
-                Se suma al pago del turno y queda registrado en el contrato. Deja el monto en 0 para quitarlo.
-              </Text>
-              {asignacion.contrato_firmado === 1 && (
-                <View className="flex-row items-start gap-2 bg-warning/10 border border-warning/30 rounded-xl px-3 py-2.5">
-                  <Ionicons name="alert-circle-outline" size={15} color="#F59E0B" style={{ marginTop: 1 }} />
-                  <Text className="flex-1 text-xs text-warning">
-                    El contrato de este turno ya fue firmado. Si cambias el bono, el trabajador deberá volver a firmarlo.
-                  </Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="gap-4">
+                <View className="gap-1.5">
+                  <Text className="text-sm font-semibold text-foreground">Monto (COP)</Text>
+                  <TextInput
+                    value={monto}
+                    onChangeText={setMonto}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    placeholderTextColor="#94A3B8"
+                    className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
+                  />
                 </View>
-              )}
-            </View>
+                <View className="gap-1.5">
+                  <Text className="text-sm font-semibold text-foreground">Motivo</Text>
+                  <TextInput
+                    value={motivo}
+                    onChangeText={setMotivo}
+                    placeholder="Ej. propina del cliente"
+                    placeholderTextColor="#94A3B8"
+                    maxLength={255}
+                    className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
+                  />
+                </View>
+                <Text className="text-xs text-muted-foreground">
+                  Se suma al pago del turno y queda registrado en el contrato. Deja el monto en 0 para quitarlo.
+                </Text>
+                {asignacion.contrato_firmado === 1 && (
+                  <View className="flex-row items-start gap-2 bg-warning/10 border border-warning/30 rounded-xl px-3 py-2.5">
+                    <Ionicons name="alert-circle-outline" size={15} color="#F59E0B" style={{ marginTop: 1 }} />
+                    <Text className="flex-1 text-xs text-warning">
+                      El contrato de este turno ya fue firmado. Si cambias el bono, el trabajador deberá volver a firmarlo.
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
 
             <View className="flex-row gap-3 mt-6">
               <Button
