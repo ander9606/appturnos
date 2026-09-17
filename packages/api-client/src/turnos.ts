@@ -395,7 +395,8 @@ export const turnosApi = {
     trabajador_id?: number;
     oferta_id?: number;
     fecha?: string;
-    estado?: EstadoAsignacion;
+    /** Uno o varios estados (ej. para "aceptados" = todo lo que alguna vez se confirmó). */
+    estado?: EstadoAsignacion | EstadoAsignacion[];
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Asignacion>> {
@@ -403,7 +404,7 @@ export const turnosApi = {
     if (params?.trabajador_id) qs.set('trabajador_id', String(params.trabajador_id));
     if (params?.oferta_id)     qs.set('oferta_id',     String(params.oferta_id));
     if (params?.fecha)          qs.set('fecha',          params.fecha);
-    if (params?.estado)         qs.set('estado',         params.estado);
+    if (params?.estado)         qs.set('estado',         Array.isArray(params.estado) ? params.estado.join(',') : params.estado);
     if (params?.page)           qs.set('page',           String(params.page));
     if (params?.limit)          qs.set('limit',          String(params.limit));
     const query = qs.toString() ? `?${qs}` : '';

@@ -87,9 +87,12 @@ function PostulanteItem({
   cancelarMutation:  ReturnType<typeof useCancelar>;
   noPresentadoMutation: ReturnType<typeof useNoPresentado>;
 }) {
-  const isPending   = asignacion.estado === 'pendiente';
-  const isConfirmed = asignacion.estado === 'confirmado';
-  const isRechazado = asignacion.estado === 'cancelado' && asignacion.rechazado_por != null;
+  const isPending     = asignacion.estado === 'pendiente';
+  const isConfirmed   = asignacion.estado === 'confirmado';
+  const isEnProgreso  = asignacion.estado === 'en_progreso';
+  const isCompletado  = asignacion.estado === 'completado';
+  const isNoPresentado = asignacion.estado === 'no_presentado';
+  const isRechazado   = asignacion.estado === 'cancelado' && asignacion.rechazado_por != null;
 
   const isConfirming =
     confirmarMutation.isPending &&
@@ -194,6 +197,28 @@ function PostulanteItem({
             <Button label={isMarkingNP ? '…' : 'No vino'} variant="secondary" size="sm"
               loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
           )}
+        </View>
+      )}
+
+      {/* En progreso → solo chip informativo, se resuelve solo al cerrar la jornada */}
+      {isEnProgreso && (
+        <View className="flex-row items-center gap-1 self-start bg-info/10 px-3 py-1.5 rounded-xl">
+          <Ionicons name="time-outline" size={14} color="#3B82F6" />
+          <Text className="text-xs font-semibold text-info">En curso</Text>
+        </View>
+      )}
+
+      {/* Completado / No presentado → historial de lo aceptado, sin acciones */}
+      {isCompletado && (
+        <View className="flex-row items-center gap-1 self-start bg-muted px-3 py-1.5 rounded-xl">
+          <Ionicons name="checkmark-done-circle" size={14} color="#64748B" />
+          <Text className="text-xs font-semibold text-muted-foreground">Completado</Text>
+        </View>
+      )}
+      {isNoPresentado && (
+        <View className="flex-row items-center gap-1 self-start bg-danger-light px-3 py-1.5 rounded-xl">
+          <Ionicons name="alert-circle" size={14} color="#EF4444" />
+          <Text className="text-xs font-semibold text-danger">No se presentó</Text>
         </View>
       )}
 

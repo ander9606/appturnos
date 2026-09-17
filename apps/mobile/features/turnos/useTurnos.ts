@@ -112,11 +112,19 @@ export function usePostulacionesPendientes(opts: { enabled?: boolean } = {}) {
   });
 }
 
-/** Asignaciones ya confirmadas de toda la empresa — pestaña "Aceptados" del inbox. */
+/**
+ * Todo lo que alguna vez se aceptó, de toda la empresa — pestaña "Aceptados" del
+ * inbox. No solo 'confirmado': una vez que el turno pasa (o el worker/gestor lo
+ * cierra), queda en 'en_progreso'/'completado'/'no_presentado' — si el filtro
+ * fuera solo 'confirmado' esos turnos desaparecerían de la lista en cuanto se
+ * resolvieran, en vez de quedar como historial de lo aceptado.
+ */
+const ESTADOS_ACEPTADOS = ['confirmado', 'en_progreso', 'completado', 'no_presentado'] as const;
+
 export function useAsignacionesConfirmadas(opts: { enabled?: boolean } = {}) {
   return useQuery({
-    queryKey: QUERY_KEYS.asignaciones({ estado: 'confirmado' }),
-    queryFn:  () => turnosApi.listarAsignaciones({ estado: 'confirmado', limit: 200 }),
+    queryKey: QUERY_KEYS.asignaciones({ estado: ESTADOS_ACEPTADOS.join(',') }),
+    queryFn:  () => turnosApi.listarAsignaciones({ estado: [...ESTADOS_ACEPTADOS], limit: 200 }),
     staleTime: 30_000,
     enabled:  opts.enabled ?? true,
   });

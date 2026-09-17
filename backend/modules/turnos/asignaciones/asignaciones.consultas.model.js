@@ -165,8 +165,14 @@ module.exports = {
       params.push(fecha);
     }
     if (estado) {
-      where.push('a.estado = ?');
-      params.push(estado);
+      const estados = estado.split(',');
+      if (estados.length > 1) {
+        where.push(`a.estado IN (${estados.map(() => '?').join(',')})`);
+        params.push(...estados);
+      } else {
+        where.push('a.estado = ?');
+        params.push(estado);
+      }
     }
     if (sospechoso != null) {
       where.push('a.sospechoso = ?');

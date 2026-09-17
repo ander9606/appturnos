@@ -6,7 +6,7 @@ const { body, param, query } = require('express-validator');
 const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
 const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
-const { ROLES } = require('../../../config/constants');
+const { ROLES, ESTADOS_ASIGNACION } = require('../../../config/constants');
 const ctrl = require('./asignaciones.controller');
 
 const router = express.Router();
@@ -50,7 +50,12 @@ router.get(
     query('fecha').optional().isISO8601().withMessage('fecha inválida'),
     query('oferta_id').optional().isInt({ min: 1 }).withMessage('oferta_id inválido'),
     query('trabajador_id').optional().isInt({ min: 1 }).withMessage('trabajador_id inválido'),
-    query('estado').optional().isIn(['pendiente','confirmado','en_progreso','completado','no_presentado','cancelado']).withMessage('estado inválido'),
+    // Acepta uno o varios separados por coma (ej. "confirmado,en_progreso,completado,no_presentado")
+    // — la pestaña "Aceptados" del inbox de postulaciones necesita ver todo lo que
+    // alguna vez se confirmó, sin importar en qué terminó.
+    query('estado').optional().custom((value) =>
+      String(value).split(',').every((v) => ESTADOS_ASIGNACION.includes(v))
+    ).withMessage('estado inválido'),
     query('sospechoso').optional().isIn(['0', '1']).withMessage('sospechoso inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
     query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('limit inválido'),
