@@ -65,8 +65,6 @@ CONSULTAS SÍNCRONAS (pull cuando se necesita):
 App Turnos → logiq360:
   GET /api/integracion/public/ping                   Health check (reconciliación diaria)
   GET /api/integracion/public/empleados               Candidatos para conciliación de personal
-  GET /api/integracion/public/ordenes/:id             ⚠️ expuesto, no consumido (ver nota)
-  GET /api/integracion/public/ordenes/:id/productos   ⚠️ expuesto, no consumido (ver nota)
 
 logiq360 → App Turnos:
   GET /api/integracion/public/ping                   Test de conectividad
@@ -75,14 +73,18 @@ logiq360 → App Turnos:
   GET /api/integracion/public/trabajadores           Sincronizar personal de turnos → empleados
 ```
 
-> ⚠️ **Endpoints huérfanos (verificado 2026-09-17):** `public/ordenes/:id` y
-> `public/ordenes/:id/productos` existen y funcionan en logiq360, pero
-> **App Turnos nunca los llama** (cero referencias en `appturnos/backend`).
-> Probablemente quedaron de un diseño anterior a que `productos_resumen`
-> se empezara a enviar embebido dentro del payload de `orden.creada` — ya
-> no hace falta una segunda consulta para eso. Decidir si se conectan a un
-> caso de uso real (ej. refrescar productos sin esperar un nuevo evento) o
-> se retiran.
+> **Retirados 2026-09-17:** `public/ordenes/:id` y `public/ordenes/:id/productos`
+> existían en logiq360 pero App Turnos nunca los llamó (cero referencias en
+> `appturnos/backend`). El caso de uso que resolvían — que el operario sepa qué
+> se va a montar — ya está cubierto sin ellos: `productos_resumen` viaja
+> embebido en el payload de `orden.creada`, y `entrantes.handlers.js` lo
+> convierte en texto que la pantalla de turno ya muestra
+> (`apps/mobile/app/turno/[id].tsx`). Se eliminaron el controlador, las rutas
+> y los métodos de `PublicModel` que solo ellos usaban (YAGNI — sin
+> consumidor real, eran superficie de riesgo sin beneficio). Si en el futuro
+> se necesita refrescar productos después de creada la orden, la vía
+> consistente con el resto del diseño es un evento nuevo
+> `orden.productos_actualizados`, no un pull.
 
 ---
 
@@ -585,39 +587,15 @@ Usadas cuando se necesita información inmediata (no por evento).
 
 ### App Turnos → logiq360
 
-> ⚠️ Ambos endpoints de esta subsección existen y responden en logiq360, pero
-> **App Turnos no los consume actualmente** (ver nota en "MAPA DE CONEXIONES").
-> Se documentan tal como están implementados por si se decide conectarlos.
-
-```
-GET /api/integracion/public/ordenes/{id}
-Header: X-API-Key: <key de App Turnos>
-
-Response:
-{
-  "success": true,
-  "data": {
-    "external_ref": "logiq360:orden:47",
-    "tipo": "montaje",
-    "evento_nombre": "Boda García-Pérez",
-    "fecha": "2026-05-25",
-    "ubicacion": "Finca El Refugio, Chía",
-    "estado": "en_preparacion",
-    "notas": "Llegada antes de 6AM. Patio trasero.",
-    "productos": [
-      { "nombre": "Carpa 10x10 Premium", "cantidad": 3, "instrucciones": null },
-      { "nombre": "Sistema iluminación", "cantidad": 1, "instrucciones": null }
-    ]
-    // NO incluye: totales económicos, datos fiscales del cliente
-  }
-}
-```
-
-```
-GET /api/integracion/public/ordenes/{id}/productos
-→ Lista de elementos compuestos con componentes y fotos de referencia
-   (para que el operario sepa qué armar y cómo)
-```
+`GET /public/ordenes/{id}` y `GET /public/ordenes/{id}/productos` **se
+eliminaron el 2026-09-17** (controlador, rutas y métodos de `PublicModel`
+que solo ellos usaban). Existían pero App Turnos nunca los llamó; el caso de
+uso que iban a resolver —fotos y componentes para que el operario sepa qué
+armar— nunca llegó a pedirse, y el caso más simple (nombre + cantidad de
+producto) ya viaja embebido en `orden.creada` → `productos_resumen`. `GET /public/ordenes` (listado, sin `:id`) sigue existiendo — tampoco lo
+consume App Turnos hoy, pero no se tocó por estar fuera del alcance de esta
+decisión puntual; queda pendiente de una revisión aparte si se quiere
+aplicar el mismo criterio.
 
 ```
 GET /api/integracion/public/ping
@@ -1037,8 +1015,8 @@ App Turnos → logiq360   Webhook      oferta.cubierta                         �
 
 App Turnos → logiq360   REST (GET)   /public/ping                            ✅
 App Turnos → logiq360   REST (GET)   /public/empleados                       ✅
-App Turnos → logiq360   REST (GET)   /public/ordenes/{id}                    ⬜ (huérfano, ver nota)
-App Turnos → logiq360   REST (GET)   /public/ordenes/{id}/productos          ⬜ (huérfano, ver nota)
+App Turnos → logiq360   REST (GET)   /public/ordenes                        ⬜ (sin consumidor, no tocado)
+                                      /public/ordenes/{id} y /{id}/productos ❌ eliminados (2026-09-17)
 logiq360   → App Turnos REST (GET)   /public/ping                            ✅
 logiq360   → App Turnos REST (GET)   /public/estado/{ref}                    ✅
 logiq360   → App Turnos REST (GET)   /public/en-sitio/{ref}                  ✅
@@ -1074,6 +1052,23 @@ App Turnos NUNCA envía a logiq360:
 ---
 
 ## CHANGELOG
+
+### 2026-09-17 (2) — Eliminados los endpoints huérfanos `public/ordenes/:id` y `.../productos`
+
+Tras la auditoría de abajo, se decidió retirarlos en vez de conectarlos:
+cero consumidores confirmados, y el caso de uso que resolvían (mostrar al
+operario qué se va a montar) ya está cubierto por el texto embebido en
+`orden.creada` → `productos_resumen` (ver `entrantes.handlers.js` en
+App Turnos y `apps/mobile/app/turno/[id].tsx`). Se borraron el controlador
+(`obtenerOrden`, `obtenerOrdenProductos`), las 2 rutas, y los métodos de
+`PublicModel` que solo ellos usaban (`obtenerOrdenConCotizacion`,
+`listarProductosCotizacion`, `listarComponentesDeCompuestos`,
+`listarElementosOrden`). `obtenerUbicacionOrden` se conservó — lo usa
+`IntegracionTurnosService.resolverOpcionesOrden()` para el payload real de
+`orden.creada`, no era código muerto. Los 38 tests del módulo `integracion`
+y los 1514 tests del resto del backend que ya pasaban antes del cambio
+siguen pasando igual (las 18 fallas preexistentes son de otros módulos —
+`inventario`, `alquileres`, `operaciones` — no tocados aquí).
 
 ### 2026-09-17 — Auditoría de fidelidad doc↔código
 

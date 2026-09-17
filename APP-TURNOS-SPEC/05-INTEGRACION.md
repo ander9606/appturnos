@@ -143,8 +143,6 @@ CONSULTAS SÍNCRONAS (pull cuando se necesita):
 App Turnos → logiq360:
   GET /api/integracion/public/ping                    Reconciliación diaria (integracion.worker.js)
   GET /api/integracion/public/empleados               Candidatos para conciliación de personal
-  GET /api/integracion/public/ordenes/:id             ⚠️ existe en logiq360, App Turnos no lo llama
-  GET /api/integracion/public/ordenes/:id/productos   ⚠️ existe en logiq360, App Turnos no lo llama
 
 logiq360 → App Turnos:
   GET /api/integracion/public/ping                    Test de conectividad
@@ -622,12 +620,14 @@ setInterval(() => {
 |--------|-------------------|----------|----------|
 | `GET` | `/api/integracion/public/ping` | ✅ usado por `reconciliacion.service.js` | Detectar drift diario de `activo` |
 | `GET` | `/api/integracion/public/empleados` | ✅ usado por `conciliacion.service.js` | Candidatos para vincular personal |
-| `GET` | `/api/integracion/public/ordenes/:id` | ⬜ no consumido actualmente | Detalles de la orden (huérfano, ver `05-INTEGRACION.md` en el repo logiq360) |
-| `GET` | `/api/integracion/public/ordenes/:id/productos` | ⬜ no consumido actualmente | Lista de productos a montar (huérfano) |
 
 > Autenticación: header `X-API-Key: <key entregada por logiq360 al emparejar>`.
 > `/api/v1/mis-ordenes` de la versión anterior de este doc no existe — no hay
 > ningún endpoint JWT-de-empleado consumido cruzando la integración.
+> `public/ordenes/:id` y `.../productos` existían en logiq360 sin consumidor;
+> se eliminaron del lado de logiq360 el 2026-09-17 (ver changelog de
+> `docs/INTEGRACION-LOGIQ360-APP-TURNOS.md`) en vez de conectarlos, porque el
+> caso de uso ya está cubierto por `productos_resumen` embebido en `orden.creada`.
 
 ---
 
@@ -708,4 +708,5 @@ Workaround actual: el `jefe_turnos` completa estos datos manualmente al recibir 
 | 2025-05 | Diseño inicial de integración logiq360 ↔ App Turnos |
 | 2026-05-21 | Análisis completo basado en código fuente real (ver `API-INTEGRACION-APP-TO-APP.md` y `INTEGRACION-LOGIQ360-APP-TURNOS.md` en repo logiq360) |
 | 2026-05-23 | **Actualización**: payloads completos de todos los eventos, mapa de conexiones, flujo end-to-end, datos faltantes documentados, `orden.publicada` y `costo_labor.calculado` agregados |
-| 2026-09-17 | **Corrección de fidelidad doc↔código**: todos los paths `/api/v1/...` → `/api/integracion/...` (nunca se implementaron con ese prefijo), auth real por dirección documentada (asimétrica: HMAC-solo de logiq360→App Turnos, X-API-Key+firma opcional de App Turnos→logiq360), reemplazado el `POST /configuracion` inventado por el handshake real de emparejamiento (`/emparejar` + `/emparejar/confirmar`), y marcados como huérfanos `public/ordenes/:id` y `public/ordenes/:id/productos` (existen en logiq360, nadie los llama). Ver también `docs/INTEGRACION-LOGIQ360-APP-TURNOS.md` para el detalle completo. |
+| 2026-09-17 | **Corrección de fidelidad doc↔código**: todos los paths `/api/v1/...` → `/api/integracion/...` (nunca se implementaron con ese prefijo), auth real por dirección documentada (asimétrica: HMAC-solo de logiq360→App Turnos, X-API-Key+firma opcional de App Turnos→logiq360), reemplazado el `POST /configuracion` inventado por el handshake real de emparejamiento (`/emparejar` + `/emparejar/confirmar`), y marcados como huérfanos `public/ordenes/:id` y `public/ordenes/:id/productos` (existían en logiq360, nadie los llamaba). Ver también `docs/INTEGRACION-LOGIQ360-APP-TURNOS.md` para el detalle completo. |
+| 2026-09-17 (2) | **Eliminados** (no conectados) `public/ordenes/:id` y `public/ordenes/:id/productos` del lado de logiq360 — cero consumidores y el caso de uso ya cubierto por `productos_resumen` embebido en `orden.creada`. Cambio de código solo en `aprendizaje-inventario-carpas`; App Turnos no requiere ningún ajuste. |
