@@ -28,6 +28,9 @@ export interface Vinculo {
   empresa_slug: string;
   empresa_logo: string | null;
   empresa_ciudad: string | null;
+  /** Contacto de la empresa — para casos de emergencia o especiales. */
+  empresa_telefono: string | null;
+  empresa_email: string | null;
   ranking: number | null;
   total_calificaciones: number;
 }

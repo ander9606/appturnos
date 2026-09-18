@@ -43,6 +43,7 @@ function reglasTrabajador({ parcial }) {
     body('cedula').optional({ values: 'falsy' }).isString().trim(),
     body('telefono').optional({ values: 'falsy' }).isString().trim(),
     body('cargo').optional({ values: 'falsy' }).isString().trim(),
+    body('descripcion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 500 }).withMessage('descripcion no puede superar 500 caracteres'),
     body('external_ref').optional({ values: 'falsy' }).isString().trim(),
     // Perfil extendido (todos opcionales)
     body('tipo_documento').optional().isIn(['CC', 'CE', 'PAS']).withMessage('tipo_documento inválido'),
@@ -87,6 +88,7 @@ router.patch(
     body('fecha_nacimiento').optional({ values: 'falsy' }).isISO8601().withMessage('fecha_nacimiento debe ser YYYY-MM-DD'),
     body('sexo').optional().isIn(['M', 'F', 'otro']).withMessage('sexo inválido'),
     body('telefono').optional({ values: 'falsy' }).isString().trim(),
+    body('descripcion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 500 }).withMessage('descripcion no puede superar 500 caracteres'),
     body('contacto_emergencia_nombre').optional({ values: 'falsy' }).isString().trim(),
     body('contacto_emergencia_tel').optional({ values: 'falsy' }).isString().trim(),
     body('eps').optional({ values: 'falsy' }).isString().trim(),

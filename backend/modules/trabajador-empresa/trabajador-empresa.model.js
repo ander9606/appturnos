@@ -12,7 +12,8 @@ const COLUMNAS = `te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
   te.estado, te.iniciado_por, te.tipo_ofrecido, te.activo_antes_de_oferta,
   te.fecha_solicitud, te.fecha_resuelto, te.motivo_rechazo,
   e.nombre AS empresa_nombre, e.slug AS empresa_slug, e.logo_url AS empresa_logo,
-  e.ciudad AS empresa_ciudad`;
+  e.ciudad AS empresa_ciudad,
+  e.telefono AS empresa_telefono, e.email_empresa AS empresa_email`;
 
 const TrabajadorEmpresaModel = {
   async obtenerPorId(id) {

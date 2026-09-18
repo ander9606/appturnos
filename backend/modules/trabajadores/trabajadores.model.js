@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
+const { CAMPOS_PERSONALES_TRABAJADOR } = require('../../config/constants');
 
 /**
  * Acceso a datos de trabajadores.
@@ -10,7 +11,7 @@ const { pool } = require('../../config/database');
 const COLUMNAS = `t.id, t.empresa_id, t.usuario_id, t.nombre, t.apellido, t.cedula,
   t.tipo_documento, t.fecha_nacimiento, t.sexo,
   t.contacto_emergencia_nombre, t.contacto_emergencia_tel,
-  t.telefono, t.email, t.tipo, t.cargo, t.tarifa_hora, t.salario_base, t.acepta_extras,
+  t.telefono, t.email, t.tipo, t.cargo, t.descripcion, t.tarifa_hora, t.salario_base, t.acepta_extras,
   t.eps, t.afp, t.banco, t.tipo_cuenta, t.numero_cuenta,
   t.ant_judiciales_fecha, t.ant_disciplinarios_fecha,
   t.tipo_marcacion, t.punto_marcaje_id, t.hora_entrada_esperada,
@@ -21,7 +22,7 @@ const COLUMNAS = `t.id, t.empresa_id, t.usuario_id, t.nombre, t.apellido, t.cedu
 const COLUMNAS_BARE = `id, empresa_id, usuario_id, nombre, apellido, cedula,
   tipo_documento, fecha_nacimiento, sexo,
   contacto_emergencia_nombre, contacto_emergencia_tel,
-  telefono, email, tipo, cargo, tarifa_hora, salario_base, acepta_extras,
+  telefono, email, tipo, cargo, descripcion, tarifa_hora, salario_base, acepta_extras,
   eps, afp, banco, tipo_cuenta, numero_cuenta,
   ant_judiciales_fecha, ant_disciplinarios_fecha,
   tipo_marcacion, punto_marcaje_id, hora_entrada_esperada,
@@ -31,7 +32,7 @@ const COLUMNAS_BARE = `id, empresa_id, usuario_id, nombre, apellido, cedula,
 // nunca construida a partir de input del cliente.
 const CAMPOS_EDITABLES = [
   'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
-  'telefono', 'email', 'tipo', 'cargo', 'tarifa_hora', 'salario_base',
+  'telefono', 'email', 'tipo', 'cargo', 'descripcion', 'tarifa_hora', 'salario_base',
   'contacto_emergencia_nombre', 'contacto_emergencia_tel',
   'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
   'ant_judiciales_fecha', 'ant_disciplinarios_fecha',
@@ -350,14 +351,37 @@ const TrabajadoresModel = {
     }
   },
 
+  /** Vincula una ficha recién creada a la cuenta del usuario. No pasar usuario_id
+   *  por req.body a crear() — abriría a que un gestor secuestre otra cuenta. */
+  async asignarUsuarioId(trabajadorId, usuarioId) {
+    await pool.query('UPDATE trabajadores SET usuario_id = ? WHERE id = ?', [usuarioId, trabajadorId]);
+  },
+
+  /** Ficha "personal" sin empresa (registro libre, aún sin vincularse). */
+  async obtenerPersonalPorUsuarioId(usuarioId) {
+    const [filas] = await pool.query(
+      `SELECT id FROM trabajadores WHERE usuario_id = ? AND empresa_id IS NULL AND activo = 1 LIMIT 1`,
+      [usuarioId]
+    );
+    return filas[0]?.id ?? null;
+  },
+
+  /** Reclama la ficha personal (empresa_id IS NULL) al vincularse a la primera empresa. */
+  async reclamarParaEmpresa(trabajadorId, empresaId) {
+    await pool.query('UPDATE trabajadores SET empresa_id = ? WHERE id = ?', [empresaId, trabajadorId]);
+  },
+
   async actualizar(empresaId, id, datos) {
     const sets = [];
     const params = [];
+    const personalesActualizados = {};
     for (const campo of CAMPOS_EDITABLES) {
       if (datos[campo] !== undefined) {
-        sets.push(`${campo} = ?`);
         // '' se guarda como NULL — cedula '' no debe chocar con el UNIQUE(empresa_id, cedula).
-        params.push(campo === 'cedula' && datos[campo] === '' ? null : datos[campo]);
+        const valor = campo === 'cedula' && datos[campo] === '' ? null : datos[campo];
+        sets.push(`${campo} = ?`);
+        params.push(valor);
+        if (CAMPOS_PERSONALES_TRABAJADOR.includes(campo)) personalesActualizados[campo] = valor;
       }
     }
     if (sets.length === 0) return 0;
@@ -367,6 +391,21 @@ const TrabajadoresModel = {
       `UPDATE trabajadores SET ${sets.join(', ')} WHERE id = ? AND empresa_id = ?`,
       params
     );
+
+    // Propagar los campos de la PERSONA (no del vínculo) a sus demás fichas
+    // activas — sin esto, un gestor corrigiendo la cédula/banco de un trabajador
+    // solo lo arreglaba en SU empresa, quedando desincronizado en las otras.
+    if (res.affectedRows && Object.keys(personalesActualizados).length > 0) {
+      const [[fila]] = await pool.query('SELECT usuario_id FROM trabajadores WHERE id = ?', [id]);
+      if (fila?.usuario_id) {
+        const propSets = Object.keys(personalesActualizados).map((c) => `${c} = ?`);
+        await pool.query(
+          `UPDATE trabajadores SET ${propSets.join(', ')} WHERE usuario_id = ? AND id != ? AND activo = 1`,
+          [...Object.values(personalesActualizados), fila.usuario_id, id]
+        );
+      }
+    }
+
     return res.affectedRows;
   },
 
@@ -483,7 +522,7 @@ const TrabajadoresModel = {
   // Campos que el propio trabajador puede editar sobre sí mismo.
   async actualizarPorUsuarioId(usuarioId, datos) {
     const CAMPOS_ME = [
-      'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo', 'telefono',
+      'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo', 'telefono', 'descripcion',
       'contacto_emergencia_nombre', 'contacto_emergencia_tel',
       'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
       'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'acepta_extras',

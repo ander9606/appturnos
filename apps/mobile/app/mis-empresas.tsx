@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -66,6 +67,7 @@ function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
   const tieneRanking = vinculo.ranking != null && vinculo.total_calificaciones > 0;
   const nivel = nivelRanking(vinculo.ranking, vinculo.total_calificaciones);
   const color = rankingColor(nivel);
+  const tieneContacto = Boolean(vinculo.empresa_telefono || vinculo.empresa_email);
   return (
     <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden">
       <View className="flex-row items-center gap-3 p-4">
@@ -102,6 +104,30 @@ function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
           <Text className="text-xs font-semibold text-success">Activo</Text>
         </View>
       </View>
+
+      {/* Contacto de emergencia — solo si la empresa cargó teléfono/correo */}
+      {tieneContacto && (
+        <View className="flex-row border-t border-border">
+          {vinculo.empresa_telefono && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`tel:${vinculo.empresa_telefono}`)}
+              className={`flex-1 flex-row items-center justify-center gap-1.5 py-3 active:opacity-70 ${vinculo.empresa_email ? 'border-r border-border' : ''}`}
+            >
+              <Ionicons name="call-outline" size={14} color="#3B82F6" />
+              <Text className="text-xs font-semibold text-info">Llamar</Text>
+            </TouchableOpacity>
+          )}
+          {vinculo.empresa_email && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`mailto:${vinculo.empresa_email}`)}
+              className="flex-1 flex-row items-center justify-center gap-1.5 py-3 active:opacity-70"
+            >
+              <Ionicons name="mail-outline" size={14} color="#3B82F6" />
+              <Text className="text-xs font-semibold text-info">Correo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 }

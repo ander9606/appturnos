@@ -445,6 +445,14 @@ export default function TrabajadorDetailScreen() {
           </View>
         </View>
 
+        {/* Sobre mí — descripción libre que el trabajador escribe sobre sí mismo */}
+        {t.descripcion && (
+          <View className="mx-4 mb-3 bg-card rounded-2xl border border-border px-4 py-3.5">
+            <Text className="text-xs text-muted-foreground mb-1">Sobre mí</Text>
+            <Text className="text-sm text-foreground leading-5">{t.descripcion}</Text>
+          </View>
+        )}
+
         {/* Pending activation banner — shown to admin when worker hasn't set up login yet */}
         {isAdmin && t.usuario_id === null && (
           <View className="mx-4 mb-3 bg-warning/10 border border-warning/30 rounded-2xl p-4 flex-row gap-3">

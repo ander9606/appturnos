@@ -5,7 +5,7 @@ const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const EmpresasModel = require('../empresas/empresas.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const AppError = require('../../utils/AppError');
-const { ROLES, ESTADOS_TRABAJADOR_EMPRESA } = require('../../config/constants');
+const { ROLES, ESTADOS_TRABAJADOR_EMPRESA, CAMPOS_PERSONALES_TRABAJADOR } = require('../../config/constants');
 
 const E = ESTADOS_TRABAJADOR_EMPRESA;
 
@@ -36,6 +36,15 @@ async function vincularTrabajador(usuarioId, empresaId) {
   );
   if (filas.length) return filas[0].id;
 
+  // Ficha personal del registro libre (empresa_id IS NULL, ver
+  // auth.service.js registrarLibre) — reclamarla en vez de crear una nueva
+  // conserva lo que ya escribió (cédula, banco, descripción...).
+  const personalId = await TrabajadoresModel.obtenerPersonalPorUsuarioId(usuarioId);
+  if (personalId) {
+    await TrabajadoresModel.reclamarParaEmpresa(personalId, empresaId);
+    return personalId;
+  }
+
   // Obtener datos básicos del usuario para crear la ficha.
   const [usuarioRows] = await pool.query(
     'SELECT nombre, apellido, email FROM usuarios WHERE id = ? LIMIT 1',
@@ -44,16 +53,28 @@ async function vincularTrabajador(usuarioId, empresaId) {
   if (!usuarioRows.length) return null;
   const u = usuarioRows[0];
 
+  // Ya trabaja en otra(s) empresa(s) — copiar sus datos personales (cédula,
+  // banco, descripción...) para que esta ficha nueva no arranque en blanco.
+  // Ver CAMPOS_PERSONALES_TRABAJADOR: son datos de la persona, no del vínculo.
+  const otraFicha = await TrabajadoresModel.obtenerPorUsuarioId(null, usuarioId);
+  const datosPersonales = {};
+  if (otraFicha) {
+    for (const campo of CAMPOS_PERSONALES_TRABAJADOR) {
+      if (otraFicha[campo] != null) datosPersonales[campo] = otraFicha[campo];
+    }
+  }
+
   // Crear ficha de trabajador tipo 'turnos' para esta empresa.
   const id = await TrabajadoresModel.crear(empresaId, {
     nombre: u.nombre,
     apellido: u.apellido || '',
     email: u.email || null,
     tipo: 'turnos',
+    ...datosPersonales,
   });
 
   // Vincular el usuario_id a la ficha recién creada.
-  await pool.query('UPDATE trabajadores SET usuario_id = ? WHERE id = ?', [usuarioId, id]);
+  await TrabajadoresModel.asignarUsuarioId(id, usuarioId);
 
   return id;
 }

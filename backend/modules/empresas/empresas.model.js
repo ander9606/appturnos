@@ -18,8 +18,11 @@ const EmpresasModel = {
       params.push(`%${busqueda}%`, `%${busqueda}%`);
     }
     if (ciudad) {
-      where.push('ciudad = ?');
-      params.push(ciudad);
+      // LIKE, no "=" — el campo ciudad es texto libre (mi-empresa.tsx), así que
+      // "Bogotá D.C." o "bogota" no calzaban con el chip fijo "Bogotá" y la
+      // empresa quedaba invisible en el directorio para ese filtro.
+      where.push('ciudad LIKE ?');
+      params.push(`%${ciudad}%`);
     }
     const whereSql = where.join(' AND ');
     const [filas] = await pool.query(

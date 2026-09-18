@@ -172,6 +172,18 @@ const SALARIO_MINIMO_DIARIO_COP = Math.ceil(SMMLV_COP / 30);
 const CONTRATOS_ACUMULATIVOS_LIMITE = 50;
 const CONTRATOS_ACUMULATIVOS_ALERTA = 40;
 
+// Datos de la PERSONA, no del vínculo laboral — deben ser iguales sin importar
+// con cuántas empresas trabaje. Cada vínculo (trabajador_empresa) tiene su
+// propia fila en `trabajadores` (una por empresa) para poder tener cargo/tarifa
+// distintos, pero estos campos puntuales se copian al crear una fila nueva y
+// se propagan a las demás filas activas del mismo usuario_id cuando cambian.
+const CAMPOS_PERSONALES_TRABAJADOR = [
+  'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
+  'contacto_emergencia_nombre', 'contacto_emergencia_tel',
+  'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
+  'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'descripcion',
+];
+
 module.exports = {
   ROLES,
   ROLES_VALIDOS,
@@ -206,4 +218,5 @@ module.exports = {
   SALARIO_MINIMO_DIARIO_COP,
   CONTRATOS_ACUMULATIVOS_LIMITE,
   CONTRATOS_ACUMULATIVOS_ALERTA,
+  CAMPOS_PERSONALES_TRABAJADOR,
 };

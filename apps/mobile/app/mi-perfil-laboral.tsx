@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import {
   usePerfilLaboral,
@@ -100,13 +100,32 @@ function DateField({
   const [show, setShow] = useState(false);
 
   function handleChange(_: DateTimePickerEvent, d?: Date) {
-    if (Platform.OS === 'android') setShow(false);
     if (d) onChange(toISODate(d));
+  }
+
+  // Android: el diálogo nativo se abre vía la API imperativa, no montado
+  // como hijo declarativo — igual que abrirHoraAndroid() en turno/[id].tsx.
+  // Renderizarlo con `{show && <DateTimePicker display="default" />}` (como
+  // estaba antes) hace que cualquier re-render mientras el diálogo está
+  // abierto lo remonte, y el widget nativo de Android puede reconstruirse
+  // con una fecha inconsistente (ej. saltar al 31 de diciembre del año
+  // recién elegido en vez del día que se tocó).
+  function abrirAndroid() {
+    DateTimePickerAndroid.open({
+      value: value ? new Date(`${value}T00:00:00`) : new Date(),
+      mode: 'date',
+      maximumDate,
+      minimumDate,
+      onChange: handleChange,
+    });
   }
 
   const trigger = (
     <View className="flex-row items-center gap-1.5">
-      <TouchableOpacity onPress={() => setShow(true)} className="flex-1 flex-row items-center gap-1.5 py-0.5">
+      <TouchableOpacity
+        onPress={() => (Platform.OS === 'android' ? abrirAndroid() : setShow(true))}
+        className="flex-1 flex-row items-center gap-1.5 py-0.5"
+      >
         <Ionicons name="calendar-outline" size={14} color="#94A3B8" />
         <Text className={`text-sm ${value ? 'text-foreground' : 'text-muted-foreground'}`}>
           {value ? fmtFecha(value) : (placeholder ?? 'Seleccionar fecha')}
@@ -120,25 +139,26 @@ function DateField({
     </View>
   );
 
-  const picker = (
+  // Solo iOS necesita el picker inline montado — Android lo abre imperativamente arriba.
+  const picker = Platform.OS === 'ios' ? (
     <>
       {show && (
         <DateTimePicker
           value={value ? new Date(`${value}T00:00:00`) : new Date()}
           mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          display="inline"
           maximumDate={maximumDate}
           minimumDate={minimumDate}
           onChange={handleChange}
         />
       )}
-      {show && Platform.OS === 'ios' && (
+      {show && (
         <TouchableOpacity onPress={() => setShow(false)} className="bg-primary/10 rounded-xl py-1.5 items-center mt-2">
           <Text className="text-xs font-semibold text-primary">Listo</Text>
         </TouchableOpacity>
       )}
     </>
-  );
+  ) : null;
 
   if (compact) {
     return (
@@ -213,6 +233,8 @@ function FieldInput({
   placeholder,
   keyboardType,
   last = false,
+  multiline = false,
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -220,12 +242,19 @@ function FieldInput({
   placeholder?: string;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
   last?: boolean;
+  multiline?: boolean;
+  maxLength?: number;
 }) {
   return (
     <View
       className={`px-5 py-3 bg-card ${!last ? 'border-b border-border' : ''}`}
     >
-      <Text className="text-xs text-muted-foreground mb-1">{label}</Text>
+      <View className="flex-row items-center justify-between mb-1">
+        <Text className="text-xs text-muted-foreground">{label}</Text>
+        {maxLength != null && (
+          <Text className="text-[10px] text-muted-foreground">{value.length}/{maxLength}</Text>
+        )}
+      </View>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -234,7 +263,11 @@ function FieldInput({
         keyboardType={keyboardType ?? 'default'}
         className="text-sm text-foreground"
         autoCorrect={false}
-        autoCapitalize="none"
+        autoCapitalize={multiline ? 'sentences' : 'none'}
+        multiline={multiline}
+        maxLength={maxLength}
+        textAlignVertical={multiline ? 'top' : 'center'}
+        style={multiline ? { minHeight: 80 } : undefined}
       />
     </View>
   );
@@ -248,6 +281,7 @@ interface FormState {
   fecha_nacimiento: string;
   sexo: SexoTrabajador | '';
   telefono: string;
+  descripcion: string;
   eps: string;
   afp: string;
   banco: string;
@@ -266,6 +300,7 @@ function buildForm(t: Trabajador | undefined): FormState {
     fecha_nacimiento:            t?.fecha_nacimiento?.slice(0, 10) ?? '',
     sexo:                        t?.sexo ?? '',
     telefono:                    t?.telefono ?? '',
+    descripcion:                 t?.descripcion ?? '',
     eps:                         t?.eps ?? '',
     afp:                         t?.afp ?? '',
     banco:                       t?.banco ?? '',
@@ -326,6 +361,7 @@ export default function MiPerfilLaboralScreen() {
         fecha_nacimiento:           form.fecha_nacimiento || undefined,
         sexo:                       (form.sexo as SexoTrabajador) || undefined,
         telefono:                   form.telefono || undefined,
+        descripcion:                form.descripcion || undefined,
         eps:                        form.eps || undefined,
         afp:                        form.afp || undefined,
         banco:                      form.banco || undefined,
@@ -513,6 +549,29 @@ export default function MiPerfilLaboralScreen() {
                 />
                 <InfoRow label="Teléfono" value={perfil.telefono} last />
               </>
+            )}
+          </View>
+
+          {/* ── Sobre mí ────────────────────────────────────────────── */}
+          <SectionHeader title="Sobre mí" />
+          <View className="mx-5 rounded-2xl border border-border overflow-hidden">
+            {editing ? (
+              <FieldInput
+                label="Descripción"
+                value={form.descripcion}
+                onChangeText={set('descripcion')}
+                placeholder="Cuéntale a las empresas qué sabes hacer, tu experiencia y tus fortalezas…"
+                multiline
+                maxLength={500}
+                last
+              />
+            ) : (
+              <View className="px-5 py-3.5 bg-card">
+                <Text className="text-xs text-muted-foreground mb-1">Descripción</Text>
+                <Text className="text-sm text-foreground leading-5">
+                  {perfil.descripcion || 'Aún no has escrito una descripción de tu perfil.'}
+                </Text>
+              </View>
             )}
           </View>
 

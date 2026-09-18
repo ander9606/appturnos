@@ -9,6 +9,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   Pressable,
   TextInput,
   TouchableOpacity,
@@ -105,29 +106,30 @@ const CIUDADES = ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', '
 
 function CityChips({ selected, onToggle }: { selected: string | null; onToggle: (c: string | null) => void }) {
   return (
-    <FlatList
+    <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      data={['Todas', ...CIUDADES]}
-      keyExtractor={(c) => c}
+      style={{ flexGrow: 0 }}
       contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 8 }}
-      renderItem={({ item }) => {
+    >
+      {['Todas', ...CIUDADES].map((item) => {
         const isAll = item === 'Todas';
         const active = isAll ? selected === null : selected === item;
         return (
           <Pressable
+            key={item}
             onPress={() => onToggle(isAll ? null : item)}
-            className={`rounded-full px-4 py-1.5 border ${
-              active ? 'bg-foreground border-foreground' : 'bg-card border-border'
+            className={`rounded-full px-4 h-8 items-center justify-center border ${
+              active ? 'bg-primary-500 border-primary-500' : 'bg-card border-border'
             } active:opacity-70`}
           >
-            <Text className={`text-sm font-medium ${active ? 'text-background' : 'text-foreground'}`}>
+            <Text className={`text-sm font-medium ${active ? 'text-white' : 'text-foreground'}`}>
               {item}
             </Text>
           </Pressable>
         );
-      }}
-    />
+      })}
+    </ScrollView>
   );
 }
 
@@ -245,6 +247,7 @@ export default function DirectorioEmpresasScreen() {
         <FlatList
           data={empresas}
           keyExtractor={(e) => String(e.id)}
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40, gap: 10 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
