@@ -167,7 +167,7 @@ const TrabajadorEmpresaModel = {
    */
   async archivarOtrasRelacionesDeUsuario(usuarioId, exceptoId) {
     const [filas] = await pool.query(
-      `SELECT id, empresa_id FROM trabajador_empresa
+      `SELECT id, empresa_id, trabajador_id FROM trabajador_empresa
        WHERE usuario_id = ? AND id != ?
          AND estado IN ('activo', 'solicitado_por_trabajador', 'solicitado_por_empresa')`,
       [usuarioId, exceptoId]

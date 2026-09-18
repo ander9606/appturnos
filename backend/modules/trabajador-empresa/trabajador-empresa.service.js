@@ -208,10 +208,13 @@ const TrabajadorEmpresaService = {
     // Ya tiene cuenta: crear relación.
     const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empresaId);
     if (existente) {
-      if (existente.estado === E.ACTIVO) {
+      // Ya activo y se le vuelve a ofrecer turnos: no hay nada que hacer.
+      // Ya activo pero se le ofrece nómina: SÍ hay que avanzar — es justo la
+      // conversión turnos → nómina, que requiere que el trabajador acepte.
+      if (existente.estado === E.ACTIVO && tipo !== 'nomina') {
         throw new AppError('Este trabajador ya es parte de tu empresa', 409);
       }
-      // Cualquier otro estado: actualizar a invitación.
+      // Cualquier otro estado (o activo con oferta de nómina): actualizar a invitación.
       await TrabajadorEmpresaModel.cambiarEstado(existente.id, E.SOLICITADO_POR_EMPRESA, {
         trabajadorId,
         tipoOfrecido: tipo,
@@ -310,6 +313,13 @@ const TrabajadorEmpresaService = {
 
       const archivadas = await TrabajadorEmpresaModel.archivarOtrasRelacionesDeUsuario(usuarioId, relacionId);
       for (const otra of archivadas) {
+        // Además de archivar la relación, se suspende la ficha en esa empresa
+        // para que su Equipo deje de mostrarlo como disponible (misma bandera
+        // "Inactivo" que usa desactivar() manual — no hay ficha si nunca llegó
+        // a crearse, ej. invitación aún pendiente sin aceptar).
+        if (otra.trabajador_id) {
+          await TrabajadoresModel.desactivar(otra.empresa_id, otra.trabajador_id);
+        }
         await notificarGestores(otra.empresa_id, {
           tipo: 'trabajador_empresa.archivado_por_conversion',
           titulo: 'Trabajador ya no disponible',
