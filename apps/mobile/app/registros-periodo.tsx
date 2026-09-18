@@ -123,7 +123,7 @@ function EditarRegistroModal({
   return (
     <Modal visible={!!registro} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="height"
         className="flex-1 justify-end bg-black/40"
       >
         <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
@@ -307,7 +307,7 @@ function ReasignarCompensatorioModal({
   return (
     <Modal visible={!!compensatorio} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="height"
         className="flex-1 justify-end bg-black/40"
       >
         <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
@@ -465,7 +465,7 @@ function CrearRegistroModal({
   return (
     <Modal visible={!!creando} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior="height"
         className="flex-1 justify-end bg-black/40"
       >
         <ScrollView

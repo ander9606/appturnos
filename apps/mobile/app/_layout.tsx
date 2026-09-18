@@ -198,7 +198,7 @@ function RootLayout() {
         <AuthGuard>
           {/* Default: header visible, slide from right.
               Only exceptions are registered explicitly. */}
-          <Stack screenOptions={{ headerShown: true, animation: 'slide_from_right' }}>
+          <Stack screenOptions={{ headerShown: true, animation: 'slide_from_right', headerBackButtonDisplayMode: 'minimal', headerBackTitle: '' }}>
             {/* Tab groups — sin header (cada tab lo gestiona) */}
             <Stack.Screen name="(auth)"  options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)"  options={{ headerShown: false }} />

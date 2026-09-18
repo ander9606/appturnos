@@ -124,19 +124,6 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
                 {data.hora_inicio ? formatTimeObj(data.hora_inicio) : '--:--'}
               </Text>
             </TouchableOpacity>
-            {showInicio && (
-              <DateTimePicker
-                value={data.hora_inicio ?? new Date()}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onChangeInicio}
-              />
-            )}
-            {showInicio && Platform.OS === 'ios' && (
-              <TouchableOpacity onPress={() => setShowInicio(false)} className="bg-primary/10 rounded-xl py-2 items-center">
-                <Text className="text-sm font-semibold text-primary">Listo</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           <View className="flex-1 gap-1.5">
@@ -149,21 +136,43 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
                 {data.hora_fin ? formatTimeObj(data.hora_fin) : '--:--'}
               </Text>
             </TouchableOpacity>
-            {showFin && (
-              <DateTimePicker
-                value={data.hora_fin ?? new Date()}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onChangeFin}
-              />
+          </View>
+        </View>
+
+        {/* ponytail: pickers renderizados fuera de las columnas flex-1 — el spinner de iOS ignora el ancho del padre y se salía de pantalla en una columna angosta */}
+        {showInicio && (
+          <View className="gap-1.5">
+            <DateTimePicker
+              value={data.hora_inicio ?? new Date()}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onChangeInicio}
+              style={{ width: '100%' }}
+            />
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowInicio(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
             )}
-            {showFin && Platform.OS === 'ios' && (
+          </View>
+        )}
+
+        {showFin && (
+          <View className="gap-1.5">
+            <DateTimePicker
+              value={data.hora_fin ?? new Date()}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onChangeFin}
+              style={{ width: '100%' }}
+            />
+            {Platform.OS === 'ios' && (
               <TouchableOpacity onPress={() => setShowFin(false)} className="bg-primary/10 rounded-xl py-2 items-center">
                 <Text className="text-sm font-semibold text-primary">Listo</Text>
               </TouchableOpacity>
             )}
           </View>
-        </View>
+        )}
       </View>
 
       <View className="flex-row items-center justify-between bg-muted rounded-2xl px-4 py-3">
