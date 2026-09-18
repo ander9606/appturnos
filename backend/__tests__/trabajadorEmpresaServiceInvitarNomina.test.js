@@ -56,6 +56,7 @@ describe('TrabajadorEmpresaService.invitar — conversión turnos → nómina', 
       trabajadorId: TRABAJADOR_ID,
       tipoOfrecido: 'nomina',
       motivo: null,
+      activoAntesDeOferta: true,
     });
     expect(NotificacionesService.notificar).toHaveBeenCalled();
   });

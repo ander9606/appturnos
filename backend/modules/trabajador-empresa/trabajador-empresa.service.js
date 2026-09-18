@@ -215,10 +215,13 @@ const TrabajadorEmpresaService = {
         throw new AppError('Este trabajador ya es parte de tu empresa', 409);
       }
       // Cualquier otro estado (o activo con oferta de nómina): actualizar a invitación.
+      // activoAntesDeOferta permite a rechazar() restaurar 'activo' en vez de
+      // cerrar el vínculo si esta oferta (ej. nómina) no se acepta.
       await TrabajadorEmpresaModel.cambiarEstado(existente.id, E.SOLICITADO_POR_EMPRESA, {
         trabajadorId,
         tipoOfrecido: tipo,
         motivo: null,
+        activoAntesDeOferta: existente.estado === E.ACTIVO,
       });
       await notificarInvitacion();
       return TrabajadorEmpresaModel.obtenerPorId(existente.id);
@@ -298,7 +301,10 @@ const TrabajadorEmpresaService = {
     const trabajadorId =
       relacion.trabajador_id ||
       (await vincularTrabajador(usuarioId, relacion.empresa_id));
-    await TrabajadorEmpresaModel.cambiarEstado(relacionId, E.ACTIVO, { trabajadorId });
+    await TrabajadorEmpresaModel.cambiarEstado(relacionId, E.ACTIVO, {
+      trabajadorId,
+      activoAntesDeOferta: false,
+    });
 
     if (esNomina) {
       // Conversión real: fija el track de la ficha, cambia el rol global del
@@ -361,13 +367,24 @@ const TrabajadorEmpresaService = {
     if (!relacion) throw new AppError('Solicitud no encontrada', 404);
 
     const esTrabajador = relacion.usuario_id === actorId;
-    const esJefe = actorRol === ROLES.JEFE_TURNOS && relacion.empresa_id === actorEmpresaId;
+    const esJefe = [ROLES.JEFE_TURNOS, ROLES.ADMIN_EMPRESA].includes(actorRol) && relacion.empresa_id === actorEmpresaId;
 
     if (!esTrabajador && !esJefe) {
       throw new AppError('Sin permisos para esta acción', 403);
     }
     if ([E.RECHAZADO, E.ARCHIVADO].includes(relacion.estado)) {
       throw new AppError('La solicitud ya está cerrada', 409);
+    }
+
+    // Esta "solicitud" en realidad es una oferta (ej. nómina) sobre un vínculo
+    // que ya estaba activo — rechazarla no debe cerrar la relación, solo
+    // cancelar la oferta y dejarlo como estaba.
+    if (relacion.activo_antes_de_oferta) {
+      await TrabajadorEmpresaModel.cambiarEstado(relacionId, E.ACTIVO, {
+        tipoOfrecido: 'turnos',
+        activoAntesDeOferta: false,
+      });
+      return TrabajadorEmpresaModel.obtenerPorId(relacionId);
     }
 
     await TrabajadorEmpresaModel.cambiarEstado(relacionId, E.RECHAZADO, { motivo: motivo || null });
@@ -382,7 +399,7 @@ const TrabajadorEmpresaService = {
     if (!relacion) throw new AppError('Solicitud no encontrada', 404);
 
     const esTrabajador = relacion.usuario_id === actorId;
-    const esJefe = actorRol === ROLES.JEFE_TURNOS && relacion.empresa_id === actorEmpresaId;
+    const esJefe = [ROLES.JEFE_TURNOS, ROLES.ADMIN_EMPRESA].includes(actorRol) && relacion.empresa_id === actorEmpresaId;
 
     if (!esTrabajador && !esJefe) {
       throw new AppError('Sin permisos para esta acción', 403);

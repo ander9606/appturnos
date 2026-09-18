@@ -9,8 +9,8 @@ const { pool } = require('../../config/database');
  */
 
 const COLUMNAS = `te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
-  te.estado, te.iniciado_por, te.tipo_ofrecido, te.fecha_solicitud, te.fecha_resuelto,
-  te.motivo_rechazo,
+  te.estado, te.iniciado_por, te.tipo_ofrecido, te.activo_antes_de_oferta,
+  te.fecha_solicitud, te.fecha_resuelto, te.motivo_rechazo,
   e.nombre AS empresa_nombre, e.slug AS empresa_slug, e.logo_url AS empresa_logo,
   e.ciudad AS empresa_ciudad`;
 
@@ -131,7 +131,7 @@ const TrabajadorEmpresaModel = {
     return res.insertId;
   },
 
-  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto } = {}) {
+  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto, activoAntesDeOferta } = {}) {
     const sets = ['estado = ?'];
     const params = [estado];
 
@@ -146,6 +146,10 @@ const TrabajadorEmpresaModel = {
     if (tipoOfrecido !== undefined) {
       sets.push('tipo_ofrecido = ?');
       params.push(tipoOfrecido);
+    }
+    if (activoAntesDeOferta !== undefined) {
+      sets.push('activo_antes_de_oferta = ?');
+      params.push(activoAntesDeOferta ? 1 : 0);
     }
     if (estado !== 'solicitado_por_trabajador' && estado !== 'solicitado_por_empresa') {
       sets.push('fecha_resuelto = ?');

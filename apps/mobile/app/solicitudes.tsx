@@ -108,7 +108,9 @@ function SolicitudCard({
   onRechazar: (id: number) => void;
   loadingId: number | null;
 }) {
-  const isPending = solicitud.estado === 'solicitado_por_trabajador' || solicitud.estado === 'solicitado_por_empresa';
+  const esSolicitadaPorTrabajador = solicitud.estado === 'solicitado_por_trabajador';
+  const esInvitadaPorEmpresa      = solicitud.estado === 'solicitado_por_empresa';
+  const isPending = esSolicitadaPorTrabajador || esInvitadaPorEmpresa;
   const isActivo  = solicitud.estado === 'activo';
   const loading   = loadingId === solicitud.id;
 
@@ -185,7 +187,11 @@ function SolicitudCard({
         </View>
       )}
 
-      {/* Acciones — solo para pendientes */}
+      {/* Acciones — solo para pendientes. "Aprobar" solo aplica cuando el
+          trabajador solicitó unirse: si la invitación la mandó la empresa
+          (incluida una oferta de nómina), lo único que le corresponde al
+          gestor es cancelarla — quien "aprueba" ahí es el trabajador,
+          aceptándola desde su cuenta. */}
       {isPending && (
         <View className="flex-row gap-2 px-4 pb-4">
           <TouchableOpacity
@@ -193,19 +199,23 @@ function SolicitudCard({
             disabled={loading}
             className="flex-1 h-10 rounded-xl border border-border items-center justify-center active:opacity-70"
           >
-            <Text className="text-sm font-semibold text-muted-foreground">Rechazar</Text>
+            <Text className="text-sm font-semibold text-muted-foreground">
+              {esInvitadaPorEmpresa ? 'Cancelar invitación' : 'Rechazar'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => onAprobar(solicitud.id)}
-            disabled={loading}
-            className="flex-1 h-10 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text className="text-sm font-semibold text-white">Aprobar</Text>
-            )}
-          </TouchableOpacity>
+          {esSolicitadaPorTrabajador && (
+            <TouchableOpacity
+              onPress={() => onAprobar(solicitud.id)}
+              disabled={loading}
+              className="flex-1 h-10 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text className="text-sm font-semibold text-white">Aprobar</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
