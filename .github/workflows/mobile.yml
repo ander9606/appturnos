@@ -151,15 +151,9 @@ jobs:
 
 # ──────────────────────────────────────────────────────────────────
 # NOTA: Build nativo (cuando cambias dependencias o app.json)
-# No corre automáticamente — lanzar manualmente:
+# El build corre automático — ver mobile-build.yml (tag v* o manual).
+# `eas submit` sigue siendo manual a propósito:
 #
-#   eas build --platform android --profile production
-#   eas build --platform ios     --profile production
-#   eas submit --platform android
-#   eas submit --platform ios
-#
-# O agregar un workflow separado disparado por tags:
-#   on:
-#     push:
-#       tags: ['v*']
+#   eas submit --platform android --latest
+#   eas submit --platform ios     --latest
 # ──────────────────────────────────────────────────────────────────

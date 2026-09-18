@@ -1,0 +1,61 @@
+name: Mobile Native Build
+
+# Build nativo (production) — no incluye `eas submit`, eso se sigue
+# corriendo a mano (eas submit --platform <ios|android> --latest) para
+# que un humano confirme antes de que algo llegue a revisión de la tienda.
+#
+# Dispara con un tag de versión (ej. `git tag v1.2.0 && git push --tags`)
+# o manualmente desde la pestaña Actions → "Run workflow".
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Plataforma a compilar'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - ios
+          - android
+          - all
+
+jobs:
+  build:
+    name: EAS Build (production)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Compilar (production)
+        run: |
+          eas build \
+            --platform "$PLATFORM" \
+            --profile production \
+            --non-interactive
+        env:
+          PLATFORM: ${{ github.event.inputs.platform || 'all' }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          # Evita el bug de sincronización de capabilities con la API de
+          # Apple (ver eas.json) — las capabilities ya están configuradas
+          # a mano en el Bundle ID, no hace falta que EAS las vuelva a tocar.
+          EXPO_NO_CAPABILITY_SYNC: "1"
