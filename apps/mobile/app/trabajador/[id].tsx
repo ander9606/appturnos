@@ -262,7 +262,6 @@ export default function TrabajadorDetailScreen() {
           ? String((err as { message: string }).message)
           : 'Ocurrió un error al guardar.';
       Alert.alert('Error', msg);
-      throw err;
     }
   }
 
