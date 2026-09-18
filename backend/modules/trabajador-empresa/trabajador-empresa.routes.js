@@ -20,7 +20,11 @@ router.post(
   '/solicitar',
   verificarToken,
   verificarRol(SOLO_TURNOS),
-  [body('empresa_id').isInt({ min: 1 }).withMessage('empresa_id inválido')],
+  [
+    body('empresa_id').isInt({ min: 1 }).withMessage('empresa_id inválido'),
+    body('cargo_ids').optional().isArray().withMessage('cargo_ids debe ser un arreglo'),
+    body('cargo_ids.*').isInt({ min: 1 }).withMessage('cargo_ids inválido'),
+  ],
   validar,
   ctrl.solicitar
 );

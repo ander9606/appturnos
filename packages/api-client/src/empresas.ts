@@ -10,6 +10,8 @@ export interface EmpresaDirectorio {
   logo_url: string | null;
   descripcion: string | null;
   acepta_postulaciones: boolean;
+  /** Cargos activos en la empresa — informativo, la empresa decide cuál asignar al aprobar. */
+  cargos: { id: number; nombre: string }[];
 }
 
 export type TipoLiquidacion = 'mensual' | 'quincenal' | 'semanal';

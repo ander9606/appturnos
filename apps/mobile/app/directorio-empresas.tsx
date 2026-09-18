@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -82,6 +83,12 @@ function EmpresaCard({
             <Text className="text-xs text-muted-foreground">{emp.ciudad}</Text>
           </View>
         ) : null}
+        {emp.cargos?.length > 0 && (
+          <Text className="text-xs text-muted-foreground mt-0.5" numberOfLines={1}>
+            {emp.cargos.slice(0, 3).map((c) => c.nombre).join(' · ')}
+            {emp.cargos.length > 3 ? ` +${emp.cargos.length - 3}` : ''}
+          </Text>
+        )}
       </View>
 
       {/* State pill */}
@@ -141,6 +148,8 @@ export default function DirectorioEmpresasScreen() {
   const [busqueda, setBusqueda] = useState('');
   const [ciudad, setCiudad] = useState<string | null>(null);
   const [requestedIds, setRequestedIds] = useState<Set<number>>(new Set());
+  const [cargoModalEmp, setCargoModalEmp] = useState<EmpresaDirectorio | null>(null);
+  const [selectedCargoIds, setSelectedCargoIds] = useState<number[]>([]);
 
   const { data: dirData, isLoading } = useQuery({
     queryKey: ['empresas-directorio', busqueda, ciudad],
@@ -165,7 +174,7 @@ export default function DirectorioEmpresasScreen() {
     (misData?.archivadas ?? []).map((v) => v.empresa_id),
   );
 
-  const handleSolicitar = useCallback(async (emp: EmpresaDirectorio) => {
+  const handleSolicitar = useCallback(async (emp: EmpresaDirectorio, cargoIds: number[]) => {
     const ok = await confirm({
       title: 'Solicitar vínculo',
       message: `¿Deseas enviar una solicitud a ${emp.nombre}? La empresa deberá aprobarla antes de que puedas tomar turnos.`,
@@ -173,7 +182,7 @@ export default function DirectorioEmpresasScreen() {
     });
     if (!ok) return;
     try {
-      await solicitar.mutateAsync(emp.id);
+      await solicitar.mutateAsync({ empresaId: emp.id, cargoIds: cargoIds.length ? cargoIds : undefined });
       setRequestedIds((prev) => new Set(prev).add(emp.id));
       qc.invalidateQueries({ queryKey: ['trabajador-empresa'] });
     } catch (err: unknown) {
@@ -184,11 +193,35 @@ export default function DirectorioEmpresasScreen() {
     }
   }, [solicitar, qc]);
 
+  // Si la empresa tiene cargos publicados, el trabajador marca cuáles le
+  // interesan antes de solicitar (solo una sugerencia — la empresa sigue
+  // eligiendo qué certificar al aprobar). Sin cargos, se salta el modal.
+  const openSolicitar = useCallback((emp: EmpresaDirectorio) => {
+    if (emp.cargos.length > 0) {
+      setSelectedCargoIds([]);
+      setCargoModalEmp(emp);
+    } else {
+      handleSolicitar(emp, []);
+    }
+  }, [handleSolicitar]);
+
+  const toggleCargoSeleccionado = (id: number) =>
+    setSelectedCargoIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+
+  const confirmarDesdeModal = () => {
+    if (!cargoModalEmp) return;
+    const emp = cargoModalEmp;
+    const cargoIds = selectedCargoIds;
+    setCargoModalEmp(null);
+    handleSolicitar(emp, cargoIds);
+  };
+
   const disponibles = empresas.filter((e) =>
     e.acepta_postulaciones && !vinculadasIds.has(e.id) && !solicitadasIds.has(e.id) && !archivadasIds.has(e.id)
   ).length;
 
   return (
+    <>
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
       <Stack.Screen options={{ title: 'Buscar empresa' }} />
 
@@ -256,7 +289,7 @@ export default function DirectorioEmpresasScreen() {
               <EmpresaCard
                 emp={item}
                 estado={estado}
-                onPress={() => handleSolicitar(item)}
+                onPress={() => openSolicitar(item)}
               />
             );
           }}
@@ -273,5 +306,61 @@ export default function DirectorioEmpresasScreen() {
         />
       )}
     </SafeAreaView>
+
+    {/* ── Modal: marcar cargos de interés antes de solicitar ────────── */}
+    <Modal
+      visible={cargoModalEmp !== null}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setCargoModalEmp(null)}
+    >
+      <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+        <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
+          <View className="flex-1">
+            <Text className="text-base font-bold text-foreground">¿Qué cargos te interesan?</Text>
+            {cargoModalEmp && (
+              <Text className="text-xs text-muted-foreground mt-0.5">
+                {cargoModalEmp.nombre} decide igual cuáles certificarte al aprobar tu solicitud.
+              </Text>
+            )}
+          </View>
+          <Pressable onPress={() => setCargoModalEmp(null)} hitSlop={8}>
+            <Ionicons name="close" size={24} color="#64748B" />
+          </Pressable>
+        </View>
+
+        <FlatList
+          data={cargoModalEmp?.cargos ?? []}
+          keyExtractor={(c) => String(c.id)}
+          contentContainerStyle={{ padding: 20, paddingBottom: 8 }}
+          renderItem={({ item }) => {
+            const selected = selectedCargoIds.includes(item.id);
+            return (
+              <Pressable
+                onPress={() => toggleCargoSeleccionado(item.id)}
+                className={`flex-row items-center gap-3 rounded-2xl border px-4 py-3 mb-2 active:opacity-70 ${
+                  selected ? 'border-primary-500 bg-primary-50' : 'bg-card border-border'
+                }`}
+              >
+                <Text className="flex-1 text-sm font-semibold text-foreground">{item.nombre}</Text>
+                {selected && <Ionicons name="checkmark-circle" size={20} color="#6366F1" />}
+              </Pressable>
+            );
+          }}
+        />
+
+        <View className="px-5 pb-4 pt-2">
+          <TouchableOpacity
+            onPress={confirmarDesdeModal}
+            className="h-14 rounded-2xl items-center justify-center bg-primary-500 active:opacity-80"
+          >
+            <Text className="text-base font-semibold text-white">
+              {selectedCargoIds.length > 0 ? `Solicitar (${selectedCargoIds.length})` : 'Solicitar sin marcar cargos'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </Modal>
+    </>
   );
 }

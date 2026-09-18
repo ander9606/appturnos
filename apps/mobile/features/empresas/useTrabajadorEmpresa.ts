@@ -22,7 +22,8 @@ export function useMisEmpresas({ enabled = true }: { enabled?: boolean } = {}) {
 export function useSolicitar() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (empresa_id: number) => trabajadorEmpresaApi.solicitar(empresa_id),
+    mutationFn: ({ empresaId, cargoIds }: { empresaId: number; cargoIds?: number[] }) =>
+      trabajadorEmpresaApi.solicitar(empresaId, cargoIds),
     onSuccess: () => qc.invalidateQueries({ queryKey: TE_KEYS.misEmpresas }),
   });
 }

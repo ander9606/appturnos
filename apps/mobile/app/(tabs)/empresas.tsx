@@ -185,8 +185,8 @@ function DirectorioView() {
             <EmpresaCard
               empresa={item}
               estadoVinculo={vinculoMap.get(item.id) ?? null}
-              onSolicitar={() => solicitar(item.id)}
-              solicitando={solicitando && solicitandoId === item.id}
+              onSolicitar={() => solicitar({ empresaId: item.id })}
+              solicitando={solicitando && solicitandoId?.empresaId === item.id}
             />
           )}
         />

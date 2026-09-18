@@ -320,11 +320,11 @@ export default function MisEmpresasScreen() {
   };
 
   const handleReactivar = (empresaId: number) => {
-    solicitar.mutate(empresaId, {
+    solicitar.mutate({ empresaId }, {
       onError: () => Alert.alert('Error', 'No se pudo enviar la solicitud.'),
     });
   };
-  const reactivandoEmpresaId = solicitar.isPending ? solicitar.variables : null;
+  const reactivandoEmpresaId = solicitar.isPending ? solicitar.variables?.empresaId : null;
 
   const total = activas.length + pendientes.length + invitaciones.length;
 

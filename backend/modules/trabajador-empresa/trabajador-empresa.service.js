@@ -3,6 +3,7 @@
 const TrabajadorEmpresaModel = require('./trabajador-empresa.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const EmpresasModel = require('../empresas/empresas.model');
+const CargosModel = require('../cargos/cargos.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const AppError = require('../../utils/AppError');
 const { ROLES, ESTADOS_TRABAJADOR_EMPRESA, CAMPOS_PERSONALES_TRABAJADOR } = require('../../config/constants');
@@ -81,12 +82,20 @@ async function vincularTrabajador(usuarioId, empresaId) {
 
 const TrabajadorEmpresaService = {
   /**
-   * El trabajador solicita unirse a una empresa.
-   * Crea relación en estado 'solicitado_por_trabajador'.
+   * El trabajador solicita unirse a una empresa, opcionalmente marcando los
+   * cargos del catálogo de esa empresa que le interesan (solo informativo:
+   * el gestor decide igual cuáles certificar al aprobar). Se filtran contra
+   * el catálogo real de la empresa para que no llegue un id ajeno.
    */
-  async solicitar(usuarioId, empresaId) {
+  async solicitar(usuarioId, empresaId, cargoIds) {
     const empresa = await EmpresasModel.obtenerDetalle(empresaId);
     if (!empresa) throw new AppError('Empresa no encontrada', 404);
+
+    let cargosInteres;
+    if (cargoIds?.length) {
+      const catalogo = new Set((await CargosModel.listarParaEmpresa(empresaId)).map((c) => c.id));
+      cargosInteres = cargoIds.filter((id) => catalogo.has(id));
+    }
 
     const existente = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(usuarioId, empresaId);
     if (existente) {
@@ -100,9 +109,12 @@ const TrabajadorEmpresaService = {
       if (existente.estado === E.SOLICITADO_POR_EMPRESA) {
         return TrabajadorEmpresaService.aceptar(usuarioId, existente.id);
       }
-      // Si fue rechazado/archivado, reactivar la solicitud.
+      // Si fue rechazado/archivado, reactivar la solicitud. Se sobreescribe
+      // cargos_interes siempre (con [] si no marcó ninguno esta vez) para no
+      // dejar colgado el interés de la solicitud vieja ya rechazada.
       await TrabajadorEmpresaModel.cambiarEstado(existente.id, E.SOLICITADO_POR_TRABAJADOR, {
         motivo: null,
+        cargosInteres: cargosInteres ?? [],
       });
       await notificarGestores(empresaId, {
         tipo: 'trabajador_empresa.solicitud',
@@ -118,6 +130,7 @@ const TrabajadorEmpresaService = {
       empresaId,
       estado: E.SOLICITADO_POR_TRABAJADOR,
       iniciadoPor: 'trabajador',
+      cargosInteres,
     });
     await notificarGestores(empresaId, {
       tipo: 'trabajador_empresa.solicitud',
@@ -463,10 +476,14 @@ const TrabajadorEmpresaService = {
     ]);
 
     return filas.map((fila) => {
+      const cargos_interes = fila.cargos_interes == null ? [] : (
+        Array.isArray(fila.cargos_interes) ? fila.cargos_interes : JSON.parse(fila.cargos_interes)
+      );
       const trabajador = trabajadoresPorUsuario.get(fila.usuario_id);
-      if (!trabajador) return { ...fila, perfil_previo: null };
+      if (!trabajador) return { ...fila, cargos_interes, perfil_previo: null };
       return {
         ...fila,
+        cargos_interes,
         perfil_previo: {
           cedula: trabajador.cedula,
           tipo_documento: trabajador.tipo_documento,

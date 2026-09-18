@@ -266,9 +266,17 @@ export default function SolicitudesScreen() {
   const aprobadosCount  = tab === 'aprobadas'  ? solicitudes.length : 0;
 
   const handleAprobar = (id: number) => {
+    const solicitud = solicitudes.find((s) => s.id === id);
     setCargoModalId(id);
     setVinculoAprobadoId(null);
-    setSelectedCargoIds([]);
+    // Premarca los cargos que el trabajador dijo que le interesaban al
+    // solicitar — solo una sugerencia, el gestor puede destildarlos o
+    // marcar otros antes de confirmar. Se filtra contra cargosActivos: un
+    // cargo que el trabajador marcó pero que luego se desactivó no debe
+    // quedar seleccionado (no aparece en la lista para destildarlo, y el
+    // backend rechazaría asignar un cargo inactivo).
+    const cargosActivosIds = new Set(cargosActivos.map((c) => c.id));
+    setSelectedCargoIds((solicitud?.cargos_interes ?? []).filter((cid) => cargosActivosIds.has(cid)));
     setCargosAsignados([]);
     setCargoError(null);
   };
@@ -456,6 +464,11 @@ export default function SolicitudesScreen() {
                   {!!item.descripcion && (
                     <Text className="text-xs text-muted-foreground" numberOfLines={1}>
                       {item.descripcion}
+                    </Text>
+                  )}
+                  {solicitudEnModal?.cargos_interes?.includes(item.id) && (
+                    <Text className="text-[11px] text-primary-500 font-medium mt-0.5">
+                      El trabajador lo marcó de interés
                     </Text>
                   )}
                 </View>

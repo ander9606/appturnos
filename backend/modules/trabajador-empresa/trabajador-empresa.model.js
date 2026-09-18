@@ -10,6 +10,7 @@ const { pool } = require('../../config/database');
 
 const COLUMNAS = `te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
   te.estado, te.iniciado_por, te.tipo_ofrecido, te.activo_antes_de_oferta,
+  te.cargos_interes,
   te.fecha_solicitud, te.fecha_resuelto, te.motivo_rechazo,
   e.nombre AS empresa_nombre, e.slug AS empresa_slug, e.logo_url AS empresa_logo,
   e.ciudad AS empresa_ciudad,
@@ -84,7 +85,7 @@ const TrabajadorEmpresaModel = {
     }
     const [filas] = await pool.query(
       `SELECT te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
-              te.estado, te.iniciado_por, te.fecha_solicitud,
+              te.estado, te.iniciado_por, te.fecha_solicitud, te.cargos_interes,
               u.nombre AS usuario_nombre, u.apellido AS usuario_apellido,
               u.email AS usuario_email, u.telefono AS usuario_telefono,
               u.foto_perfil AS usuario_foto_perfil
@@ -122,23 +123,27 @@ const TrabajadorEmpresaModel = {
     return filas.map((f) => f.empresa_id);
   },
 
-  async crear({ usuarioId, empresaId, estado, iniciadoPor, tipoOfrecido = 'turnos' }) {
+  async crear({ usuarioId, empresaId, estado, iniciadoPor, tipoOfrecido = 'turnos', cargosInteres }) {
     const [res] = await pool.query(
       `INSERT INTO trabajador_empresa
-         (usuario_id, empresa_id, estado, iniciado_por, tipo_ofrecido)
-       VALUES (?, ?, ?, ?, ?)`,
-      [usuarioId, empresaId, estado, iniciadoPor, tipoOfrecido]
+         (usuario_id, empresa_id, estado, iniciado_por, tipo_ofrecido, cargos_interes)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [usuarioId, empresaId, estado, iniciadoPor, tipoOfrecido, cargosInteres?.length ? JSON.stringify(cargosInteres) : null]
     );
     return res.insertId;
   },
 
-  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto, activoAntesDeOferta } = {}) {
+  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto, activoAntesDeOferta, cargosInteres } = {}) {
     const sets = ['estado = ?'];
     const params = [estado];
 
     if (motivo !== undefined) {
       sets.push('motivo_rechazo = ?');
       params.push(motivo);
+    }
+    if (cargosInteres !== undefined) {
+      sets.push('cargos_interes = ?');
+      params.push(cargosInteres?.length ? JSON.stringify(cargosInteres) : null);
     }
     if (trabajadorId !== undefined) {
       sets.push('trabajador_id = ?');

@@ -64,6 +64,8 @@ export interface SolicitudAdmin {
   usuario_foto_perfil: string | null;
   /** Cédula/experiencia/diplomas si ya tiene ficha activa en otra empresa; null si es su primera. */
   perfil_previo: PerfilPrevio | null;
+  /** IDs de cargos que el trabajador marcó como interés al solicitar — solo una sugerencia. */
+  cargos_interes: number[];
 }
 
 // ── API ───────────────────────────────────────────────────────────────────
@@ -74,9 +76,9 @@ export const trabajadorEmpresaApi = {
     return api.get<MisEmpresasResponse>('/api/trabajador-empresa/mis-empresas');
   },
 
-  /** Trabajador: solicitar unirse a una empresa */
-  solicitar(empresa_id: number): Promise<Vinculo> {
-    return api.post<Vinculo>('/api/trabajador-empresa/solicitar', { empresa_id });
+  /** Trabajador: solicitar unirse a una empresa, opcionalmente marcando cargos de interés */
+  solicitar(empresa_id: number, cargoIds?: number[]): Promise<Vinculo> {
+    return api.post<Vinculo>('/api/trabajador-empresa/solicitar', { empresa_id, cargo_ids: cargoIds });
   },
 
   /** Trabajador: aceptar una invitación de empresa */
