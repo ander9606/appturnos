@@ -17,7 +17,7 @@ const CREAR  = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA, ROLES.TRAB
 const CORREGIR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA];
 const MARCAR = [ROLES.TRABAJADOR_NOMINA];
 
-const TIPOS_DIA = ['ordinario', 'descanso', 'compensatorio', 'incapacidad', 'vacacion', 'licencia'];
+const TIPOS_DIA = ['ordinario', 'descanso', 'compensatorio', 'incapacidad', 'vacacion', 'licencia', 'ausencia'];
 const RE_HORA   = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const idParam   = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
@@ -53,7 +53,11 @@ router.post(
   [
     body('periodo_id').isInt({ min: 1 }).withMessage('periodo_id es obligatorio'),
     body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)'),
-    body('hora_entrada').matches(RE_HORA).withMessage('hora_entrada inválida (HH:MM)'),
+    body('tipo_dia').optional().isIn(TIPOS_DIA).withMessage('tipo_dia inválido'),
+    // 'ausencia' (no se presentó) no tiene hora de entrada — el resto de tipos sí la requieren.
+    body('hora_entrada')
+      .if((_, { req }) => req.body.tipo_dia !== 'ausencia')
+      .matches(RE_HORA).withMessage('hora_entrada inválida (HH:MM)'),
     body('hora_salida')
       .optional({ values: 'falsy' })
       .matches(RE_HORA)

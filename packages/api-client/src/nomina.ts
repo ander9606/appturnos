@@ -188,7 +188,7 @@ export interface ResumenHoras {
 }
 
 export type TipoMarcacion = 'libre' | 'fijo' | 'zonal';
-export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia';
+export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia' | 'ausencia';
 
 export interface TrabajadorNominaPerfil {
   id: number;
@@ -275,11 +275,13 @@ export const nominaApi = {
   crearRegistro(datos: {
     periodo_id: number;
     fecha: string;
-    hora_entrada: string;
+    /** Requerida salvo cuando tipo_dia es 'ausencia' (no se presentó). */
+    hora_entrada?: string;
     hora_salida?: string;
     trabajador_id?: number;
     novedad?: string;
     jornada_continua?: boolean;
+    tipo_dia?: TipoDia;
   }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros', datos);
   },

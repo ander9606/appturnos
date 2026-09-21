@@ -85,10 +85,11 @@ export function useCrearRegistro() {
     mutationFn: (datos: {
       periodo_id: number;
       fecha: string;
-      hora_entrada: string;
+      hora_entrada?: string;
       hora_salida?: string;
       trabajador_id?: number;
       novedad?: string;
+      tipo_dia?: TipoDia;
     }) => nominaApi.crearRegistro(datos),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
   });

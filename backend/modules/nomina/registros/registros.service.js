@@ -235,7 +235,7 @@ const RegistrosService = {
       horas_festivo: horas.horas_festivo,
       es_festivo: horas.es_festivo,
       novedad: datos.novedad || null,
-      tipo_dia: 'ordinario',
+      tipo_dia: datos.tipo_dia || 'ordinario',
       jornada_continua: jornadaContinua,
       horas_acumuladas_semana: ordinariasAcumCrear,
     });
