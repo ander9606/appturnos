@@ -239,7 +239,11 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
             return (
               <TouchableOpacity
                 key={opt.value}
-                onPress={() => onChange({ para_quien: opt.value })}
+                onPress={() => onChange({
+                  para_quien: opt.value,
+                  // cambiar el destinatario invalida personas ya elegidas que no calificaban con el nuevo tipo
+                  destinatarios: data.para_quien === opt.value ? data.destinatarios : [],
+                })}
                 className={`flex-1 rounded-2xl border py-3 px-2 items-center ${
                   active ? 'border-primary bg-primary/10' : 'border-border bg-card'
                 }`}
@@ -300,6 +304,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         seleccionados={data.destinatarios}
         onConfirm={(destinatarios) => onChange({ destinatarios })}
         onClose={() => setPickerVisible(false)}
+        paraQuien={data.para_quien}
       />
     </ScrollView>
   );

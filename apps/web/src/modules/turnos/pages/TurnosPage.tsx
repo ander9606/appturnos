@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes, useLiquidacionTurnos } from '../hooks/useTurnos';
-import type { EstadoOferta, Oferta, VisibilidadOferta, LiquidacionTurnosTrabajador } from '../types';
+import type { EstadoOferta, Oferta, VisibilidadOferta, ParaQuienOferta, LiquidacionTurnosTrabajador } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { Modal } from '@/shared/components/Modal';
@@ -234,6 +234,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   });
   const [latitud, setLatitud] = useState<number | null>(null);
   const [longitud, setLongitud] = useState<number | null>(null);
+  const [paraQuien, setParaQuien] = useState<ParaQuienOferta>('turnos');
   const [visibilidad, setVisibilidad] = useState<VisibilidadOferta>('abierta');
   const [destinatarios, setDestinatarios] = useState<DestinatarioSeleccionado[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -260,6 +261,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
       lugar: form.lugar || undefined,
       latitud: latitud ?? undefined,
       longitud: longitud ?? undefined,
+      para_quien: paraQuien,
       visibilidad,
       trabajador_ids: visibilidad === 'dirigida' ? destinatarios.map(d => d.id) : undefined,
       puestos: [],
@@ -314,6 +316,33 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           <textarea rows={2} {...field('descripcion')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
         </div>
         <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Destinatarios</label>
+          <p className="text-xs text-muted-foreground mb-1">¿A quién va dirigido este turno?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { value: 'turnos' as const, label: 'Trabajadores turnos' },
+              { value: 'nomina' as const, label: 'Personal nómina' },
+              { value: 'ambos' as const, label: 'Ambos' },
+            ]).map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  if (paraQuien !== opt.value) setDestinatarios([]);
+                  setParaQuien(opt.value);
+                }}
+                className={`text-xs font-medium py-2 rounded-lg border transition-colors ${
+                  paraQuien === opt.value
+                    ? 'border-primary bg-primary-50 text-primary-600'
+                    : 'border-border text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
           <label className="block text-sm font-medium text-foreground mb-1">¿Quién puede ver esta oferta?</label>
           <div className="grid grid-cols-2 gap-2">
             {([
@@ -365,6 +394,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           seleccionados={destinatarios}
           onConfirm={setDestinatarios}
           onClose={() => setPickerOpen(false)}
+          paraQuien={paraQuien}
         />
       )}
     </Modal>

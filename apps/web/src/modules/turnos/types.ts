@@ -19,6 +19,7 @@ export interface Puesto {
 }
 
 export type VisibilidadOferta = 'abierta' | 'dirigida';
+export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
 
 export interface OfertaDestinatario {
   trabajador_id: number;
@@ -39,6 +40,7 @@ export interface Oferta {
   encargado_nombre: string | null;
   encargado_telefono: string | null;
   estado: EstadoOferta;
+  para_quien: ParaQuienOferta;
   // 'dirigida': solo `destinatarios` la ven/reciben notificación, sin filtro de cargo ni ranking.
   visibilidad: VisibilidadOferta;
   destinatarios: OfertaDestinatario[];

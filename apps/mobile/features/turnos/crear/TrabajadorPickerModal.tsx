@@ -18,9 +18,11 @@ type Props = {
   seleccionados: DestinatarioInput[];
   onConfirm: (destinatarios: DestinatarioInput[]) => void;
   onClose: () => void;
+  /** Tipo de destinatario del turno (Step1Basicos) — filtra la lista a trabajadores compatibles. */
+  paraQuien?: 'turnos' | 'nomina' | 'ambos';
 };
 
-export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClose }: Props) {
+export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClose, paraQuien }: Props) {
   const [search, setSearch] = useState('');
   const [elegidos, setElegidos] = useState<DestinatarioInput[]>(seleccionados);
 
@@ -36,15 +38,18 @@ export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClo
   const elegidoIds = useMemo(() => new Set(elegidos.map((d) => d.id)), [elegidos]);
 
   const filtrados = useMemo(() => {
-    const trabajadores = data?.data ?? [];
+    // 'ambos' de un trabajador califica tanto para turnos como para nómina.
+    const compatibles = (data?.data ?? []).filter(
+      (t) => !paraQuien || paraQuien === 'ambos' || t.tipo === paraQuien || t.tipo === 'ambos',
+    );
     const q = search.trim().toLowerCase();
-    if (!q) return trabajadores;
-    return trabajadores.filter(
+    if (!q) return compatibles;
+    return compatibles.filter(
       (t) =>
         `${t.nombre} ${t.apellido}`.toLowerCase().includes(q) ||
         (t.cedula ?? '').includes(q),
     );
-  }, [data, search]);
+  }, [data, search, paraQuien]);
 
   function toggle(id: number, nombre: string, apellido: string) {
     setElegidos((prev) =>
