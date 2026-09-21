@@ -234,6 +234,18 @@ export function IngresoHoyTab({
             Tu responsable debe abrir un período para que puedas registrar horas.
           </Text>
         </View>
+      ) : estadoHoy === 'compensatorio' ? (
+        <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: '#8B5CF618' }}>
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="bed-outline" size={20} color="#8B5CF6" />
+            <Text className="text-sm font-semibold text-center" style={{ color: '#8B5CF6' }}>
+              Hoy es tu descanso compensatorio
+            </Text>
+          </View>
+          <Text className="text-xs text-muted-foreground text-center">
+            No tienes que marcar entrada.
+          </Text>
+        </View>
       ) : (
         <TouchableOpacity
           onPress={() => router.push('/nomina-ingreso')}

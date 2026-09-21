@@ -70,6 +70,7 @@ export function getJornadaLegalSemanal(year: number): number {
 
 export type EstadoHoy =
   | 'sin_periodo'
+  | 'compensatorio'         // hoy es su descanso compensatorio — no debe marcar entrada
   | 'sin_registro'
   | 'en_jornada'
   | 'jornada_completa'
@@ -260,8 +261,9 @@ export function getEstadoHoy(
   registroHoy: RegistroDiario | null,
   hayPeriodoAbierto: boolean,
 ): EstadoHoy {
-  if (!hayPeriodoAbierto)         return 'sin_periodo';
-  if (!registroHoy?.hora_entrada) return 'sin_registro';
+  if (!hayPeriodoAbierto)                          return 'sin_periodo';
+  if (registroHoy?.tipo_dia === 'compensatorio')   return 'compensatorio';
+  if (!registroHoy?.hora_entrada)                  return 'sin_registro';
   if (!registroHoy.hora_salida)   return 'en_jornada';
   if (registroHoy.reingreso_estado === 'aprobado')  return 'reingreso_aprobado';
   if (registroHoy.reingreso_estado === 'pendiente') return 'reingreso_pendiente';

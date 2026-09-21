@@ -32,6 +32,7 @@ import {
 import { useTheme } from '@/lib/theme';
 import { toISODate, bogotaToday } from '@/lib/formatters';
 import { isChronological } from '@/lib/dateValidation';
+import { confirm } from '@/lib/confirmDialog';
 import type { RegistroDiario, TipoDia, DescansoCompensatorio } from '@api-client';
 
 // ── Constantes ────────────────────────────────────────────────────────────
@@ -586,6 +587,15 @@ function RegistroRow({
   const d         = new Date(`${registro.fecha}T00:00:00`);
   const tipoDef   = TIPOS_DIA.find((t) => t.v === registro.tipo_dia);
   const esFestivo = Boolean(registro.es_festivo);
+  const corregir  = useCorregirRegistro();
+
+  async function marcarCompensatorio() {
+    const ok = await confirm({
+      title: 'Marcar como compensatorio',
+      message: `¿Marcar el ${fmtFechaCorta(registro.fecha)} de ${registro.trabajador_nombre} ${registro.trabajador_apellido} como su día de descanso compensatorio?`,
+    });
+    if (ok) corregir.mutate({ id: registro.id, tipo_dia: 'compensatorio' });
+  }
 
   const totalHoras = [
     registro.horas_ordinarias,
@@ -628,6 +638,17 @@ function RegistroRow({
           {canEdit && compensatorio && (
             <TouchableOpacity onPress={() => onReasignar?.(compensatorio)} hitSlop={8}>
               <Ionicons name="calendar-outline" size={16} color={tipoDef?.color ?? '#8B5CF6'} />
+            </TouchableOpacity>
+          )}
+          {canEdit && registro.tipo_dia !== 'compensatorio' && (
+            <TouchableOpacity
+              onPress={marcarCompensatorio}
+              disabled={corregir.isPending}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Marcar como compensatorio"
+            >
+              <Ionicons name="bed-outline" size={16} color="#8B5CF6" />
             </TouchableOpacity>
           )}
           {canEdit && (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Download, Plus, Pencil, CalendarClock, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap, Utensils, Info } from 'lucide-react';
+import { ArrowLeft, Download, Plus, Pencil, CalendarClock, BedDouble, ChevronDown, X, Trash2, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap, Utensils, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
@@ -116,6 +116,14 @@ export function PeriodoDetailPage() {
   const { data: registrosData, isLoading: loadingReg, isError: errorReg, error: errReg, refetch: refetchReg } = useRegistros({ periodo_id: periodoId });
   const registros: Registro[] = registrosData?.data?.data ?? [];
   const descartarSospechoso = useDescartarSospechoso();
+  const corregirTipoDia = useCorregirRegistro();
+
+  function marcarCompensatorio(r: Registro) {
+    const ok = window.confirm(
+      `¿Marcar el ${fmtDiaSemana(r.fecha)} de ${r.trabajador_nombre} ${r.trabajador_apellido} como su día de descanso compensatorio?`
+    );
+    if (ok) corregirTipoDia.mutate({ id: r.id, tipo_dia: 'compensatorio' });
+  }
 
   const { data: compensatoriosData } = useCompensatorios();
   const compensatorios: DescansoCompensatorio[] = compensatoriosData?.data ?? [];
@@ -415,6 +423,16 @@ export function PeriodoDetailPage() {
                                       <CalendarClock size={14} />
                                     </button>
                                   )}
+                                  {r.tipo_dia !== 'compensatorio' && (
+                                    <button
+                                      onClick={() => marcarCompensatorio(r)}
+                                      disabled={corregirTipoDia.isPending}
+                                      className="text-muted-foreground/60 hover:text-info transition-colors disabled:opacity-50"
+                                      title="Marcar como compensatorio"
+                                    >
+                                      <BedDouble size={14} />
+                                    </button>
+                                  )}
                                   {r.sospechoso === 1 && (
                                     <button
                                       onClick={() => descartarSospechoso.mutate(r.id)}
@@ -677,6 +695,17 @@ export function PeriodoDetailPage() {
                                       title="Reasignar descanso compensatorio"
                                     >
                                       <CalendarClock size={14} />
+                                    </button>
+                                  )}
+                                  {r.tipo_dia !== 'compensatorio' && (
+                                    <button
+                                      onClick={() => marcarCompensatorio(r)}
+                                      disabled={corregirTipoDia.isPending}
+                                      className="text-muted-foreground/60 hover:text-info transition-colors disabled:opacity-50"
+                                      aria-label="Marcar como compensatorio"
+                                      title="Marcar como compensatorio"
+                                    >
+                                      <BedDouble size={14} />
                                     </button>
                                   )}
                                 </div>

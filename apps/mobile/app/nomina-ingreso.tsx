@@ -203,6 +203,14 @@ export default function NominaIngresoScreen() {
                 <Ionicons name="enter-outline" size={48} color="#16a34a" />
                 <Text className="text-sm font-bold text-success mt-1">Reingreso ok</Text>
               </View>
+            ) : estadoHoy === 'compensatorio' ? (
+              <View
+                className="w-44 h-44 rounded-full items-center justify-center"
+                style={{ backgroundColor: '#8B5CF618', borderWidth: 3, borderColor: '#8B5CF644' }}
+              >
+                <Ionicons name="bed-outline" size={48} color="#8B5CF6" />
+                <Text className="text-sm font-bold mt-1" style={{ color: '#8B5CF6' }}>Compensatorio</Text>
+              </View>
             ) : (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
@@ -250,6 +258,18 @@ export default function NominaIngresoScreen() {
             permissionDenied={geo.permissionDenied}
             locationUnavailable={geo.locationUnavailable}
           />
+        )}
+
+        {/* ── Día de descanso compensatorio — no debe marcar entrada ──── */}
+        {estadoHoy === 'compensatorio' && (
+          <View className="rounded-2xl py-4 px-4 items-center gap-1" style={{ backgroundColor: '#8B5CF618' }}>
+            <Text className="font-semibold text-center" style={{ color: '#8B5CF6' }}>
+              Hoy es tu descanso compensatorio
+            </Text>
+            <Text className="text-sm text-muted-foreground text-center">
+              No tienes que marcar entrada — disfruta tu día libre.
+            </Text>
+          </View>
         )}
 
         {/* ── Botón de marcaje ──────────────────────────────── */}
