@@ -46,6 +46,7 @@ export function CompensatorioBanner({ compensatorios }: Props) {
               {pendientes.map((c) => (
                 <Text key={c.id} className="text-xs text-amber-600">
                   • Por trabajo el {fmtFechaCorta(c.origen_fecha)}
+                  {c.clasificacion === 'habitual' ? ' · con recargo en tu pago' : ''}
                 </Text>
               ))}
             </View>
@@ -69,6 +70,11 @@ export function CompensatorioBanner({ compensatorios }: Props) {
             <Text className="text-xs text-green-600 mt-0.5">
               Corresponde a tu trabajo el {fmtFechaCorta(c.origen_fecha)}.
             </Text>
+            {c.clasificacion === 'habitual' && (
+              <Text className="text-xs text-green-700 font-medium mt-0.5">
+                Ese día trabajado también tiene recargo en tu pago.
+              </Text>
+            )}
           </View>
         </View>
       ))}

@@ -4,7 +4,7 @@
  * qué ofertas ve el trabajador (ofertas.model.js → listarMultiEmpresa).
  */
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Pressable, ActivityIndicator, Modal, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, ActivityIndicator, Modal, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   useCargosTrabajador,
@@ -95,36 +95,38 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
       {/* Picker de cargos disponibles */}
       <Modal visible={pickerVisible} transparent animationType="slide" onRequestClose={() => setPickerVisible(false)}>
         <Pressable className="flex-1 bg-black/40" onPress={() => setPickerVisible(false)} />
-        <View className="bg-background rounded-t-3xl px-5 pb-10 pt-4 gap-3" style={{ maxHeight: '70%' }}>
+        <View className="bg-background rounded-t-3xl pt-4" style={{ maxHeight: '70%' }}>
           <View className="w-10 h-1 bg-border rounded-full self-center mb-1" />
-          <Text className="text-base font-bold text-foreground">Certificar cargo</Text>
-          {disponibles.length === 0 ? (
-            <View className="py-8 items-center gap-2">
-              <Ionicons name="briefcase-outline" size={32} color="#94A3B8" />
-              <Text className="text-sm text-muted-foreground text-center">
-                {catalogo.length === 0
-                  ? 'Tu empresa no tiene cargos creados todavía.'
-                  : 'Ya está certificado para todos los cargos del catálogo.'}
-              </Text>
-            </View>
-          ) : (
-            disponibles.map((c) => (
-              <TouchableOpacity
-                key={c.id}
-                onPress={() => handleAgregar(c.id)}
-                disabled={asignar.isPending}
-                className="flex-row items-center gap-3 px-4 py-3 rounded-2xl border bg-card border-border active:opacity-70"
-              >
-                <Ionicons name="briefcase-outline" size={18} color="#64748B" />
-                <View className="flex-1">
-                  <Text className="text-sm font-semibold text-foreground">{c.nombre}</Text>
-                  {!!c.descripcion && (
-                    <Text className="text-xs text-muted-foreground" numberOfLines={1}>{c.descripcion}</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
+          <Text className="text-base font-bold text-foreground px-5 mb-2">Certificar cargo</Text>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}>
+            {disponibles.length === 0 ? (
+              <View className="py-8 items-center gap-2">
+                <Ionicons name="briefcase-outline" size={32} color="#94A3B8" />
+                <Text className="text-sm text-muted-foreground text-center">
+                  {catalogo.length === 0
+                    ? 'Tu empresa no tiene cargos creados todavía.'
+                    : 'Ya está certificado para todos los cargos del catálogo.'}
+                </Text>
+              </View>
+            ) : (
+              disponibles.map((c) => (
+                <TouchableOpacity
+                  key={c.id}
+                  onPress={() => handleAgregar(c.id)}
+                  disabled={asignar.isPending}
+                  className="flex-row items-center gap-3 px-4 py-3 rounded-2xl border bg-card border-border active:opacity-70"
+                >
+                  <Ionicons name="briefcase-outline" size={18} color="#64748B" />
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-foreground">{c.nombre}</Text>
+                    {!!c.descripcion && (
+                      <Text className="text-xs text-muted-foreground" numberOfLines={1}>{c.descripcion}</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
         </View>
       </Modal>
     </View>

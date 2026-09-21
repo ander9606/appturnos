@@ -28,3 +28,10 @@ exports.reasignar = async (req, res, next) => {
     res.json({ success: true, data });
   } catch (e) { next(e); }
 };
+
+exports.rango = async (req, res, next) => {
+  try {
+    const data = await CompensatoriosService.rango(req.empresa_id, Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (e) { next(e); }
+};

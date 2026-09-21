@@ -45,6 +45,8 @@ export type {
   TrabajadorNominaPerfil,
   DescansoCompensatorio,
   EstadoCompensatorio,
+  ClasificacionCompensatorio,
+  RangoDiaCompensatorio,
   SolicitudReingreso,
   EstadoSolicitudReingreso,
   DescuentoNomina,

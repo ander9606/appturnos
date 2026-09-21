@@ -140,6 +140,60 @@ describe('RegistrosService.crear', () => {
       })
     ).rejects.toMatchObject({ statusCode: 422 });
   });
+
+  // Clasificación ocasional/habitual (Art. 180/181 CST) — 2026-06-07 es domingo.
+  describe('domingo trabajado — clasificación ocasional/habitual', () => {
+    beforeEach(() => {
+      PeriodosModel.obtenerPorId.mockResolvedValue({
+        id: 1, estado: 'abierto', fecha_inicio: '2026-06-01', fecha_fin: '2026-06-30',
+      });
+      RegistrosModel.crear.mockResolvedValue(200);
+      RegistrosModel.obtenerPorId.mockResolvedValue({ id: 200 });
+      RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+    });
+
+    test('1º domingo del mes (ocasional) → horas van a ordinarias, sin recargo', async () => {
+      RegistrosModel.contarDomingosTrabajadosEnMes.mockResolvedValue(0); // ningún domingo previo este mes
+
+      await RegistrosService.crear(1, GESTOR, {
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-06-07',
+        hora_entrada: '08:00', hora_salida: '16:00',
+      });
+
+      expect(RegistrosModel.contarDomingosTrabajadosEnMes).toHaveBeenCalledWith(1, 5, '2026-06-07');
+      expect(RegistrosModel.crear).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ horas_ordinarias: 7, horas_festivo: 0, es_festivo: 1 })
+      );
+    });
+
+    test('3er domingo del mes (habitual) → horas van a horas_festivo, con recargo', async () => {
+      RegistrosModel.contarDomingosTrabajadosEnMes.mockResolvedValue(2); // ya trabajó 2 domingos antes este mes
+
+      await RegistrosService.crear(1, GESTOR, {
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-06-07',
+        hora_entrada: '08:00', hora_salida: '16:00',
+      });
+
+      expect(RegistrosModel.crear).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ horas_ordinarias: 0, horas_festivo: 7, es_festivo: 1 })
+      );
+    });
+
+    test('martes normal → nunca cuenta domingos ni toca la clasificación', async () => {
+      await RegistrosService.crear(1, GESTOR, {
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-06-09', // martes
+        hora_entrada: '08:00', hora_salida: '16:00',
+      });
+
+      expect(RegistrosModel.contarDomingosTrabajadosEnMes).not.toHaveBeenCalled();
+      expect(RegistrosModel.crear).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ horas_ordinarias: 7, horas_festivo: 0, es_festivo: 0 })
+      );
+    });
+  });
 });
 
 // ── corregir ──────────────────────────────────────────────────────────────────

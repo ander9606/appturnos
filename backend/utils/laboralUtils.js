@@ -124,6 +124,18 @@ function festivosDeAnio(anio) {
 const _cacheFestivos = new Map();
 
 /**
+ * Indica si una fecha cae en domingo — se usa para la clasificación
+ * ocasional/habitual (Art. 180/181 CST), que solo aplica a domingos, no a
+ * festivos entre semana.
+ * @param {string|Date} fecha  'YYYY-MM-DD' o Date.
+ * @returns {boolean}
+ */
+function esDomingo(fecha) {
+  const iso = typeof fecha === 'string' ? fecha.slice(0, 10) : aISODate(fecha);
+  return new Date(`${iso}T00:00:00Z`).getUTCDay() === 0;
+}
+
+/**
  * Indica si una fecha es festivo o domingo (ambos llevan recargo dominical/festivo).
  * @param {string|Date} fecha  'YYYY-MM-DD' o Date.
  * @returns {boolean}
@@ -222,9 +234,18 @@ function calcularMinutosAlmuerzo(inicio, fin, jornadaContinua) {
  *   que el trabajador tomó su hora de almuerzo (Art. 167 CST) y se descuentan
  *   DURACION_ALMUERZO_MIN minutos de la jornada. Marcar `jornadaContinua: true`
  *   (el trabajador indica que NO tomó almuerzo al cerrar) omite ese descuento.
+ * @param {boolean} [params.recargoFestivo=true]
+ *   Si el día es domingo/festivo, controla si sus horas llevan el recargo
+ *   festivo (Art. 179 CST) o se pagan como ordinarias/nocturnas normales.
+ *   En falso para un domingo "ocasional" (≤2 domingos trabajados en el mes
+ *   calendario, Art. 180 CST): el trabajador recibe el descanso compensatorio
+ *   pero no el recargo en dinero para esas horas. `es_festivo` en el
+ *   resultado no cambia — sigue marcando que el día fue domingo/festivo
+ *   (dispara el compensatorio) independientemente de este parámetro.
  */
 function calcularHoras({
   horaEntrada, horaSalida, fecha, esFestivo, horasOrdinariasAcumuladas = 0, jornadaContinua = false,
+  recargoFestivo = true,
 } = {}) {
   const vacio = {
     horas_ordinarias: 0,
@@ -265,7 +286,7 @@ function calcularHoras({
     const esOrdinario = minutosContados < minOrdinarioRestante;
     const nocturno = esMinutoNocturno(m);
 
-    if (festivo) {
+    if (festivo && recargoFestivo) {
       festivoMin++;
     } else if (esOrdinario) {
       if (nocturno) ordinariasNocturnas++;
@@ -422,6 +443,7 @@ module.exports = {
   calcularPascua,
   festivosDeAnio,
   esDiaFestivo,
+  esDomingo,
   calcularHoras,
   calcularMinutosAlmuerzo,
   horaAMinutos,

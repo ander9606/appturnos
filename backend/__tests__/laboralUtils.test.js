@@ -212,6 +212,26 @@ describe('calcularHoras — jornada en festivo', () => {
     expect(r.es_festivo).toBe(0);
     expect(r.horas_ordinarias).toBeCloseTo(8, 1);
   });
+
+  test('recargoFestivo: false (domingo ocasional, Art. 180 CST) → horas van a ordinarias, sin recargo, pero es_festivo sigue en 1', () => {
+    const r = calcularHoras({
+      horaEntrada: '08:00', horaSalida: '16:00', esFestivo: true, jornadaContinua: true, recargoFestivo: false,
+    });
+    expect(r.horas_festivo).toBe(0);
+    expect(r.horas_ordinarias).toBe(8);
+    expect(r.es_festivo).toBe(1); // sigue marcando que fue domingo/festivo — dispara el compensatorio
+  });
+
+  test('recargoFestivo: false respeta el tope semanal — el resto pasa a extra, no a ordinarias', () => {
+    // 38h ya acumuladas esta semana → quedan 4h de cupo ordinario antes de pasar a extra.
+    const r = calcularHoras({
+      horaEntrada: '08:00', horaSalida: '16:00', esFestivo: true, jornadaContinua: true,
+      recargoFestivo: false, horasOrdinariasAcumuladas: 38,
+    });
+    expect(r.horas_festivo).toBe(0);
+    expect(r.horas_ordinarias).toBe(4);
+    expect(r.horas_extra_diurnas).toBe(4);
+  });
 });
 
 // ── calcularMinutosAlmuerzo ──────────────────────────────────────────────────

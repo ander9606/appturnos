@@ -711,7 +711,11 @@ function DuplicarOfertaModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 justify-end bg-black/40">
-        <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          className="bg-background rounded-t-3xl"
+          contentContainerClassName="px-6 pt-5 pb-10 gap-5"
+        >
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-bold text-foreground">Duplicar oferta</Text>
             <Pressable onPress={onClose} hitSlop={10}>
@@ -775,7 +779,7 @@ function DuplicarOfertaModal({
             loading={duplicarM.isPending}
             onPress={handleDuplicar}
           />
-        </View>
+        </ScrollView>
       </View>
     </Modal>
   );

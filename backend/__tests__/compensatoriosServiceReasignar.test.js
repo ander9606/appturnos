@@ -124,4 +124,17 @@ describe('CompensatoriosService.reasignar', () => {
     ).rejects.toMatchObject({ statusCode: 409 });
     expect(CompensatoriosModel.reasignar).not.toHaveBeenCalled();
   });
+
+  test('carrera: dos reasignaciones casi simultáneas para el mismo trabajador/fecha → 409 legible (índice único de la BD)', async () => {
+    CompensatoriosModel.obtenerPorId.mockResolvedValue(compBase());
+    RegistrosModel.obtenerPorFecha.mockResolvedValue(null);
+    CompensatoriosModel.existeFechaAsignada.mockResolvedValue(false);
+    const err = new Error("Duplicate entry '1-3-2026-08-15' for key 'uq_compensatorio_trabajador_fecha'");
+    err.code = 'ER_DUP_ENTRY';
+    CompensatoriosModel.reasignar.mockRejectedValue(err);
+
+    await expect(
+      CompensatoriosService.reasignar(EMPRESA_ID, USUARIO_ID, COMP_ID, { fechaAsignada: '2026-08-15' })
+    ).rejects.toMatchObject({ statusCode: 409, message: 'El trabajador ya tiene otro descanso asignado ese día' });
+  });
 });

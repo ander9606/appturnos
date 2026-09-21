@@ -79,6 +79,7 @@ export interface SolicitudReingreso {
 }
 
 export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
+export type ClasificacionCompensatorio = 'ocasional' | 'habitual';
 
 export interface DescansoCompensatorio {
   id: number;
@@ -88,6 +89,8 @@ export interface DescansoCompensatorio {
   origen_fecha: string;       // YYYY-MM-DD — el domingo/festivo trabajado
   origen_registro_id: number | null;
   estado: EstadoCompensatorio;
+  /** Art. 180/181 CST — ocasional: sin recargo, solo compensatorio; habitual: recargo + compensatorio. */
+  clasificacion: ClasificacionCompensatorio;
   fecha_asignada: string | null; // YYYY-MM-DD — asignada por el empleador
   asignado_por: number | null;
   asignado_en: string | null;
@@ -95,6 +98,12 @@ export interface DescansoCompensatorio {
   // Joined
   trabajador_nombre: string;
   trabajador_apellido: string;
+}
+
+export interface RangoDiaCompensatorio {
+  fecha: string;       // YYYY-MM-DD
+  disponible: boolean; // false si ya está ocupado por otro registro/compensatorio, o es domingo/festivo
+  zona: 'verde' | 'ambar' | 'rojo'; // cercanía al día trabajado dentro del plazo legal de 28 días
 }
 
 export interface LiquidacionLinea {
@@ -339,6 +348,11 @@ export const nominaApi = {
       `/api/nomina/compensatorios/${id}/reasignar`,
       { fechaAsignada }
     );
+  },
+
+  /** Solo jefe_nomina / admin_empresa. Los 28 días candidatos con su zona de color y disponibilidad. */
+  rangoCompensatorio(id: number): Promise<RangoDiaCompensatorio[]> {
+    return api.get<RangoDiaCompensatorio[]>(`/api/nomina/compensatorios/${id}/rango`);
   },
 
   // ── Descuentos manuales ────────────────────────────────────────────────

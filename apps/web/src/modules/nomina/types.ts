@@ -95,6 +95,7 @@ export interface LiquidacionLinea {
 }
 
 export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
+export type ClasificacionCompensatorio = 'ocasional' | 'habitual';
 
 export interface DescansoCompensatorio {
   id: number;
@@ -102,9 +103,17 @@ export interface DescansoCompensatorio {
   periodo_id: number;
   origen_fecha: string;
   estado: EstadoCompensatorio;
+  /** Art. 180/181 CST — ocasional: sin recargo, solo compensatorio; habitual: recargo + compensatorio. */
+  clasificacion: ClasificacionCompensatorio;
   fecha_asignada: string | null;
   trabajador_nombre: string;
   trabajador_apellido: string;
+}
+
+export interface RangoDiaCompensatorio {
+  fecha: string;
+  disponible: boolean;
+  zona: 'verde' | 'ambar' | 'rojo';
 }
 
 export type TipoContrato = 'laboral' | 'prestacion_servicios';

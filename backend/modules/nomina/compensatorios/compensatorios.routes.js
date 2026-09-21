@@ -22,6 +22,15 @@ router.get(
   ctrl.listar
 );
 
+// GET /api/nomina/compensatorios/:id/rango — 28 días candidatos con zona de color
+router.get(
+  '/:id/rango',
+  verificarRol(ROLES_GESTOR),
+  param('id').isInt({ min: 1 }),
+  validarCampos,
+  ctrl.rango
+);
+
 // PUT /api/nomina/compensatorios/:id/asignar
 router.put(
   '/:id/asignar',

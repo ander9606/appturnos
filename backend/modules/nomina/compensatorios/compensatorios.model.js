@@ -1,15 +1,23 @@
 'use strict';
 
 const { pool } = require('../../../config/database');
+const { esDiaFestivo } = require('../../../utils/laboralUtils');
+const { COMPENSATORIO_PLAZO_DIAS } = require('../../../config/constants');
+
+function sumarDiasISO(fechaISO, dias) {
+  const d = new Date(`${fechaISO}T12:00:00`);
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
 
 const CompensatoriosModel = {
   /** Crea un descanso compensatorio pendiente. Ignora duplicados (misma empresa + registro). */
-  async crear(empresaId, { trabajadorId, periodoId, origenFecha, origenRegistroId }) {
+  async crear(empresaId, { trabajadorId, periodoId, origenFecha, origenRegistroId, clasificacion }) {
     const [res] = await pool.query(
       `INSERT IGNORE INTO descansos_compensatorios
-         (empresa_id, trabajador_id, periodo_id, origen_fecha, origen_registro_id)
-       VALUES (?, ?, ?, ?, ?)`,
-      [empresaId, trabajadorId, periodoId, origenFecha, origenRegistroId]
+         (empresa_id, trabajador_id, periodo_id, origen_fecha, origen_registro_id, clasificacion)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [empresaId, trabajadorId, periodoId, origenFecha, origenRegistroId, clasificacion || 'habitual']
     );
     return res.insertId || null;
   },
@@ -43,6 +51,43 @@ const CompensatoriosModel = {
       [empresaId, trabajadorId, fecha]
     );
     return filas.length > 0;
+  },
+
+  /**
+   * Los COMPENSATORIO_PLAZO_DIAS días candidatos para asignar el descanso,
+   * con su zona de color (verde = cercano al día trabajado, ámbar =
+   * intermedio, rojo = cerca del límite legal) y si están libres (ni
+   * domingo/festivo, ni ya ocupados por otro registro o compensatorio).
+   */
+  async rangoDisponible(empresaId, trabajadorId, origenFecha) {
+    const fechaInicio = sumarDiasISO(origenFecha, 1);
+    const fechaFin = sumarDiasISO(origenFecha, COMPENSATORIO_PLAZO_DIAS);
+
+    const [[registros], [asignados]] = await Promise.all([
+      pool.query(
+        `SELECT fecha FROM registros_diarios
+         WHERE empresa_id = ? AND trabajador_id = ? AND fecha BETWEEN ? AND ?`,
+        [empresaId, trabajadorId, fechaInicio, fechaFin]
+      ),
+      pool.query(
+        `SELECT fecha_asignada AS fecha FROM descansos_compensatorios
+         WHERE empresa_id = ? AND trabajador_id = ? AND estado IN ('asignado', 'tomado')
+           AND fecha_asignada BETWEEN ? AND ?`,
+        [empresaId, trabajadorId, fechaInicio, fechaFin]
+      ),
+    ]);
+    const ocupadas = new Set([...registros, ...asignados].map((r) => r.fecha));
+
+    const dias = [];
+    for (let i = 1; i <= COMPENSATORIO_PLAZO_DIAS; i++) {
+      const fecha = sumarDiasISO(origenFecha, i);
+      dias.push({
+        fecha,
+        disponible: !esDiaFestivo(fecha) && !ocupadas.has(fecha),
+        zona: i <= 9 ? 'verde' : i <= 19 ? 'ambar' : 'rojo',
+      });
+    }
+    return dias;
   },
 
   async obtenerPorId(empresaId, id) {

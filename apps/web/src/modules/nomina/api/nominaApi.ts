@@ -47,8 +47,14 @@ export const nominaApi = {
   listarCompensatorios: (params?: { estado?: EstadoCompensatorio }) =>
     api.get('/nomina/compensatorios', { params }).then(r => r.data),
 
+  asignarCompensatorio: (id: number, fechaAsignada: string) =>
+    api.put(`/nomina/compensatorios/${id}/asignar`, { fechaAsignada }).then(r => r.data),
+
   reasignarCompensatorio: (id: number, fechaAsignada: string) =>
     api.put(`/nomina/compensatorios/${id}/reasignar`, { fechaAsignada }).then(r => r.data),
+
+  rangoCompensatorio: (id: number) =>
+    api.get(`/nomina/compensatorios/${id}/rango`).then(r => r.data),
 
   // Turnos eventuales (extra) del segmento 'nomina' — trabajadores de nómina que
   // además toman turnos ocasionales, pagados como bono trimestral (no contrato).

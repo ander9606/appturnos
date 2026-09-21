@@ -15,6 +15,7 @@ import {
   Alert,
   Modal,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -362,8 +363,12 @@ export default function RegistroDetalleScreen() {
 
       {/* Modal de corrección */}
       <Modal visible={showModal} animationType="slide" transparent onRequestClose={() => setShowModal(false)}>
-        <View className="bg-black/40 flex-1 justify-end">
-          <View className="bg-background rounded-t-3xl p-5 gap-4">
+        <KeyboardAvoidingView behavior="height" className="flex-1 justify-end bg-black/40">
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            className="bg-background rounded-t-3xl"
+            contentContainerStyle={{ padding: 20, gap: 16 }}
+          >
             <Text className="text-lg font-bold text-foreground">Corregir Tiempos</Text>
 
             <View className="flex-row gap-4">
@@ -446,8 +451,8 @@ export default function RegistroDetalleScreen() {
                 onPress={handleCorregir}
               />
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </>
   );

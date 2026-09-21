@@ -1,32 +1,32 @@
 /**
  * GestorCompensatoriosPanel — para jefe_nomina / admin_empresa.
  * Lista los descansos compensatorios pendientes y permite asignar la fecha
- * con el selector de fecha nativo del sistema (Android / iOS).
+ * dentro del rango de 28 días que calcula el backend (RangoFechasCompensatorio).
  */
 
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Platform } from 'react-native';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';
 import { useAsignarCompensatorio, useReasignarCompensatorio } from './useCompensatorios';
-import { toISODate } from '@/lib/formatters';
+import { RangoFechasCompensatorio } from './RangoFechasCompensatorio';
 import { confirm } from '@/lib/confirmDialog';
-
-// Plazo legal (Art. 179 CST) para tomar el descanso — debe calzar con
-// COMPENSATORIO_PLAZO_DIAS en backend/config/constants.js.
-// ponytail: valor duplicado, no se espera que cambie — upgrade path: exponerlo en /api/nomina/me o config pública
-const PLAZO_DIAS = 28;
-
-function addDias(fechaISO: string, dias: number): Date {
-  const d = new Date(`${fechaISO}T12:00:00`);
-  d.setDate(d.getDate() + dias);
-  return d;
-}
 
 interface Props {
   compensatorios: DescansoCompensatorio[];
+}
+
+/** Art. 180/181 CST — ocasional: sin recargo, solo compensatorio; habitual: recargo + compensatorio. */
+export function ClasificacionBadge({ clasificacion }: { clasificacion: DescansoCompensatorio['clasificacion'] }) {
+  const esHabitual = clasificacion === 'habitual';
+  return (
+    <View className={`px-2 py-0.5 rounded-full ${esHabitual ? 'bg-slate-100' : 'bg-blue-50'}`}>
+      <Text className={`text-[10px] font-semibold ${esHabitual ? 'text-slate-700' : 'text-blue-700'}`}>
+        {esHabitual ? 'Habitual · recargo' : 'Ocasional'}
+      </Text>
+    </View>
+  );
 }
 
 export function GestorCompensatoriosPanel({ compensatorios }: Props) {
@@ -67,32 +67,21 @@ export function GestorCompensatoriosPanel({ compensatorios }: Props) {
   );
 }
 
-// ── Fila pendiente con DateTimePicker nativo ──────────────────────────────────
+// ── Fila pendiente — elige fecha con el rango de colores ────────────────────
 
 function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompensatorio }) {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const [fecha, setFecha]         = useState(tomorrow);
   const [showPicker, setShowPicker] = useState(false);
-  const { mutate, isPending }     = useAsignarCompensatorio();
-
-  function onDateChange(_: DateTimePickerEvent, selected?: Date) {
-    // En Android el picker se cierra solo; en iOS permanece visible
-    if (Platform.OS === 'android') setShowPicker(false);
-    if (selected) setFecha(selected);
-  }
+  const [fecha, setFecha]           = useState<string | null>(null);
+  const { mutate, isPending }       = useAsignarCompensatorio();
 
   async function confirmar() {
-    const iso = toISODate(fecha);
+    if (!fecha) return;
     const ok = await confirm({
       title: 'Confirmar descanso',
-      message: `¿Asignar el ${fmtFechaCorta(iso)} como descanso compensatorio para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
+      message: `¿Asignar el ${fmtFechaCorta(fecha)} como descanso compensatorio para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
     });
-    if (ok) mutate({ id: c.id, fecha: iso });
+    if (ok) mutate({ id: c.id, fecha }, { onSuccess: () => setShowPicker(false) });
   }
-
-  const iso = toISODate(fecha);
 
   return (
     <View className="px-4 py-3 gap-2">
@@ -105,50 +94,45 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
             Trabajó el {fmtFechaCorta(c.origen_fecha)}
           </Text>
         </View>
-        <View className="bg-warning-light px-2 py-0.5 rounded-full">
-          <Text className="text-[10px] font-semibold text-amber-700">Pendiente</Text>
+        <View className="items-end gap-1">
+          <ClasificacionBadge clasificacion={c.clasificacion} />
+          <View className="bg-warning-light px-2 py-0.5 rounded-full">
+            <Text className="text-[10px] font-semibold text-amber-700">Pendiente</Text>
+          </View>
         </View>
       </View>
 
-      <View className="flex-row gap-2 items-center">
-        {/* Botón que abre el picker nativo */}
+      {!showPicker ? (
         <TouchableOpacity
           onPress={() => setShowPicker(true)}
-          className="flex-1 bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
+          className="self-start bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
         >
           <Ionicons name="calendar-outline" size={14} color="#64748B" />
-          <Text className="text-sm text-foreground">{fmtFechaCorta(iso)}</Text>
+          <Text className="text-sm text-foreground">Elegir fecha</Text>
         </TouchableOpacity>
+      ) : (
+        <View className="gap-2">
+          <RangoFechasCompensatorio compensatorioId={c.id} seleccionada={fecha ?? ''} onSeleccionar={setFecha} />
 
-        <TouchableOpacity
-          onPress={confirmar}
-          disabled={isPending}
-          className={`px-4 py-2 rounded-xl ${isPending ? 'bg-muted' : 'bg-primary'}`}
-        >
-          <Text className={`text-sm font-semibold ${isPending ? 'text-muted-foreground' : 'text-white'}`}>
-            {isPending ? 'Guardando…' : 'Asignar'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <View className="flex-row gap-2 items-center">
+            <TouchableOpacity
+              onPress={() => { setShowPicker(false); setFecha(null); }}
+              className="px-3 py-2 rounded-xl bg-muted"
+            >
+              <Text className="text-sm font-semibold text-muted-foreground">Cancelar</Text>
+            </TouchableOpacity>
 
-      {showPicker && (
-        <DateTimePicker
-          value={fecha}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          minimumDate={tomorrow}
-          onChange={onDateChange}
-        />
-      )}
-
-      {/* En iOS el picker inline ocupa espacio; botón para confirmar selección */}
-      {showPicker && Platform.OS === 'ios' && (
-        <TouchableOpacity
-          onPress={() => setShowPicker(false)}
-          className="bg-primary/10 rounded-xl py-2 items-center"
-        >
-          <Text className="text-sm font-semibold text-primary">Listo</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              onPress={confirmar}
+              disabled={isPending || !fecha}
+              className={`flex-1 items-center px-4 py-2 rounded-xl ${isPending || !fecha ? 'bg-muted' : 'bg-primary'}`}
+            >
+              <Text className={`text-sm font-semibold ${isPending || !fecha ? 'text-muted-foreground' : 'text-white'}`}>
+                {isPending ? 'Guardando…' : fecha ? `Asignar ${fmtFechaCorta(fecha)}` : 'Elige una fecha'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -158,26 +142,17 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
 // Exportada porque gestor-compensatorios.tsx (pantalla completa) la reusa.
 
 export function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompensatorio }) {
-  const [editando, setEditando]     = useState(false);
-  const [showPicker, setShowPicker] = useState(false);
-  const [fecha, setFecha]           = useState(() => new Date(`${c.fecha_asignada}T12:00:00`));
-  const { mutate, isPending }       = useReasignarCompensatorio();
-
-  const minDate = addDias(c.origen_fecha, 1);
-  const maxDate = addDias(c.origen_fecha, PLAZO_DIAS);
-
-  function onDateChange(_: DateTimePickerEvent, selected?: Date) {
-    if (Platform.OS === 'android') setShowPicker(false);
-    if (selected) setFecha(selected);
-  }
+  const [editando, setEditando] = useState(false);
+  const [fecha, setFecha]       = useState<string | null>(null);
+  const { mutate, isPending }   = useReasignarCompensatorio();
 
   async function confirmar() {
-    const iso = toISODate(fecha);
+    if (!fecha) return;
     const ok = await confirm({
       title: 'Cambiar fecha del descanso',
-      message: `¿Mover el descanso de ${c.trabajador_nombre} ${c.trabajador_apellido} del ${fmtFechaCorta(c.fecha_asignada!)} al ${fmtFechaCorta(iso)}?`,
+      message: `¿Mover el descanso de ${c.trabajador_nombre} ${c.trabajador_apellido} del ${fmtFechaCorta(c.fecha_asignada!)} al ${fmtFechaCorta(fecha)}?`,
     });
-    if (ok) mutate({ id: c.id, fecha: iso }, { onSuccess: () => setEditando(false) });
+    if (ok) mutate({ id: c.id, fecha }, { onSuccess: () => setEditando(false) });
   }
 
   if (!editando) {
@@ -191,24 +166,25 @@ export function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompe
             Por trabajo el {fmtFechaCorta(c.origen_fecha)}
           </Text>
         </View>
-        <TouchableOpacity
-          onPress={() => setEditando(true)}
-          className="items-end gap-1"
-          accessibilityRole="button"
-          accessibilityLabel="Cambiar fecha del descanso"
-        >
-          <View className="bg-green-50 px-2 py-0.5 rounded-full">
-            <Text className="text-[10px] font-semibold text-green-700">Asignado</Text>
-          </View>
-          <Text className="text-xs text-primary underline">
-            {fmtFechaCorta(c.fecha_asignada!)}
-          </Text>
-        </TouchableOpacity>
+        <View className="items-end gap-1">
+          <ClasificacionBadge clasificacion={c.clasificacion} />
+          <TouchableOpacity
+            onPress={() => setEditando(true)}
+            className="items-end gap-1"
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar fecha del descanso"
+          >
+            <View className="bg-green-50 px-2 py-0.5 rounded-full">
+              <Text className="text-[10px] font-semibold text-green-700">Asignado</Text>
+            </View>
+            <Text className="text-xs text-primary underline">
+              {fmtFechaCorta(c.fecha_asignada!)}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
-
-  const iso = toISODate(fecha);
 
   return (
     <View className="px-4 py-3 gap-2">
@@ -223,17 +199,11 @@ export function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompe
         </View>
       </View>
 
+      <RangoFechasCompensatorio compensatorioId={c.id} seleccionada={fecha ?? ''} onSeleccionar={setFecha} />
+
       <View className="flex-row gap-2 items-center">
         <TouchableOpacity
-          onPress={() => setShowPicker(true)}
-          className="flex-1 bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
-        >
-          <Ionicons name="calendar-outline" size={14} color="#64748B" />
-          <Text className="text-sm text-foreground">{fmtFechaCorta(iso)}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => setEditando(false)}
+          onPress={() => { setEditando(false); setFecha(null); }}
           className="px-3 py-2 rounded-xl bg-muted"
         >
           <Text className="text-sm font-semibold text-muted-foreground">Cancelar</Text>
@@ -241,34 +211,14 @@ export function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompe
 
         <TouchableOpacity
           onPress={confirmar}
-          disabled={isPending}
-          className={`px-4 py-2 rounded-xl ${isPending ? 'bg-muted' : 'bg-primary'}`}
+          disabled={isPending || !fecha}
+          className={`flex-1 items-center px-4 py-2 rounded-xl ${isPending || !fecha ? 'bg-muted' : 'bg-primary'}`}
         >
-          <Text className={`text-sm font-semibold ${isPending ? 'text-muted-foreground' : 'text-white'}`}>
-            {isPending ? 'Guardando…' : 'Mover'}
+          <Text className={`text-sm font-semibold ${isPending || !fecha ? 'text-muted-foreground' : 'text-white'}`}>
+            {isPending ? 'Guardando…' : fecha ? `Mover a ${fmtFechaCorta(fecha)}` : 'Elige una fecha'}
           </Text>
         </TouchableOpacity>
       </View>
-
-      {showPicker && (
-        <DateTimePicker
-          value={fecha}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          minimumDate={minDate}
-          maximumDate={maxDate}
-          onChange={onDateChange}
-        />
-      )}
-
-      {showPicker && Platform.OS === 'ios' && (
-        <TouchableOpacity
-          onPress={() => setShowPicker(false)}
-          className="bg-primary/10 rounded-xl py-2 items-center"
-        >
-          <Text className="text-sm font-semibold text-primary">Listo</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }

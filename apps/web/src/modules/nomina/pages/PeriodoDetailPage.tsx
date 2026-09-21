@@ -6,9 +6,9 @@ import {
   usePeriodos, useRegistros, useLiquidacion, useTrabajadoresNomina,
   useCorregirRegistro, useCrearRegistro, useDescartarSospechoso,
   useDescuentosPeriodo, useCrearDescuento, useEliminarDescuento,
-  useCompensatorios, useReasignarCompensatorio,
+  useCompensatorios, useAsignarCompensatorio, useReasignarCompensatorio, useRangoCompensatorio,
 } from '../hooks/useNomina';
-import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, TipoDescuento, DescuentoNomina, DescansoCompensatorio } from '../types';
+import type { EstadoPeriodo, TipoDia, Registro, Trabajador, LiquidacionLinea, TipoDescuento, DescuentoNomina, DescansoCompensatorio, RangoDiaCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
@@ -45,6 +45,16 @@ const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
   cerrado: 'bg-warning-light text-warning',
   liquidado: 'bg-muted text-muted-foreground',
+};
+
+/** Art. 180/181 CST — ocasional: sin recargo, solo compensatorio; habitual: recargo + compensatorio. */
+const CLASIFICACION_BADGE: Record<string, string> = {
+  ocasional: 'bg-info-light text-info',
+  habitual: 'bg-muted text-foreground',
+};
+const CLASIFICACION_LABEL: Record<string, string> = {
+  ocasional: 'Ocasional',
+  habitual: 'Habitual · recargo',
 };
 
 const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario','descanso','compensatorio','incapacidad','vacacion','licencia'];
@@ -95,6 +105,7 @@ export function PeriodoDetailPage() {
   const [expandidosLiq, setExpandidosLiq] = useState<Set<number>>(new Set());
   const [descuentoTrabajador, setDescuentoTrabajador] = useState<{ id: number; nombre: string } | null>(null);
   const [reasignando, setReasignando] = useState<DescansoCompensatorio | null>(null);
+  const [asignando, setAsignando] = useState<DescansoCompensatorio | null>(null);
 
   const { data: periodosData, isLoading: loadingPeriodos, isError: errorPeriodos, error: errPeriodos, refetch: refetchPeriodos } = usePeriodos();
   const periodo = (periodosData?.data?.data ?? []).find((p: { id: number }) => p.id === periodoId);
@@ -107,10 +118,14 @@ export function PeriodoDetailPage() {
   const descartarSospechoso = useDescartarSospechoso();
 
   const { data: compensatoriosData } = useCompensatorios();
+  const compensatorios: DescansoCompensatorio[] = compensatoriosData?.data ?? [];
   const compensatorioPorDia = new Map<string, DescansoCompensatorio>();
-  for (const c of (compensatoriosData?.data ?? []) as DescansoCompensatorio[]) {
+  for (const c of compensatorios) {
     if (c.fecha_asignada) compensatorioPorDia.set(`${c.trabajador_id}|${c.fecha_asignada}`, c);
   }
+  // Solo los de este período — un compensatorio pendiente de un período anterior
+  // se asigna desde la página de ese período, no desde aquí.
+  const pendientesEnPeriodo = compensatorios.filter(c => c.estado === 'pendiente' && c.periodo_id === periodoId);
   /** El registro del día 'compensatorio' no guarda el id del descanso — se cruza por trabajador_id + fecha, mismo criterio que usa el backend en compensatorios.service.js. */
   function compensatorioDe(r: Registro): DescansoCompensatorio | undefined {
     return r.tipo_dia === 'compensatorio' ? compensatorioPorDia.get(`${r.trabajador_id}|${r.fecha}`) : undefined;
@@ -212,6 +227,42 @@ export function PeriodoDetailPage() {
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_BADGE[periodo.estado as EstadoPeriodo]}`}>
             {periodo.estado.charAt(0).toUpperCase() + periodo.estado.slice(1)}
           </span>
+        </div>
+      )}
+
+      {pendientesEnPeriodo.length > 0 && (
+        <div className="bg-warning-light border border-warning/30 rounded-xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarClock size={16} className="text-warning" />
+            <p className="text-sm font-semibold text-foreground">
+              {pendientesEnPeriodo.length === 1
+                ? '1 descanso compensatorio pendiente de asignar'
+                : `${pendientesEnPeriodo.length} descansos compensatorios pendientes de asignar`}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            {pendientesEnPeriodo.map(c => (
+              <div key={c.id} className="flex items-center justify-between gap-3 bg-card rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm text-foreground truncate">
+                    {c.trabajador_nombre} {c.trabajador_apellido}
+                  </span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    · trabajó el {fmtDiaSemana(c.origen_fecha)}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${CLASIFICACION_BADGE[c.clasificacion]}`}>
+                    {CLASIFICACION_LABEL[c.clasificacion]}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setAsignando(c)}
+                  className="shrink-0 bg-success hover:bg-success-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Asignar fecha
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -650,6 +701,13 @@ export function PeriodoDetailPage() {
         />
       )}
 
+      {asignando && (
+        <AsignarCompensatorioModal
+          compensatorio={asignando}
+          onClose={() => setAsignando(null)}
+        />
+      )}
+
       {reasignando && (
         <ReasignarCompensatorioModal
           compensatorio={reasignando}
@@ -780,25 +838,120 @@ function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () 
   );
 }
 
-// Plazo legal (Art. 179 CST) para tomar el descanso — debe calzar con
-// COMPENSATORIO_PLAZO_DIAS en backend/config/constants.js.
-// ponytail: valor duplicado, no se espera que cambie — upgrade path: exponerlo en /api/nomina/me o config pública
-const COMPENSATORIO_PLAZO_DIAS = 28;
+/** "22 sep" — compacto para una pastilla de 28 candidatos. */
+function fmtDiaCorto(iso: string): string {
+  return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' }).format(new Date(`${iso}T00:00:00`));
+}
 
-function sumarDiasISO(fechaISO: string, dias: number): string {
-  const d = new Date(`${fechaISO}T12:00:00`);
-  d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
+const ZONA_CLASE: Record<RangoDiaCompensatorio['zona'], string> = {
+  verde: 'bg-success-light text-success border-success/30',
+  ambar: 'bg-warning-light text-warning border-warning/30',
+  rojo:  'bg-danger-light text-danger border-danger/30',
+};
+
+/** Los 28 días candidatos (plazo legal, Art. 179 CST) coloreados por cercanía al día
+ *  trabajado. El backend calcula el rango completo — el cliente nunca puede elegir
+ *  una fecha fuera de ley ni un día ya ocupado. */
+function RangoCompensatorioPicker({
+  compensatorioId, seleccionada, onSeleccionar,
+}: { compensatorioId: number; seleccionada: string; onSeleccionar: (fecha: string) => void }) {
+  const { data: rangoData, isLoading, isError, refetch } = useRangoCompensatorio(compensatorioId, true);
+  const dias: RangoDiaCompensatorio[] = rangoData?.data ?? [];
+  const disponibles = dias.filter(d => d.disponible);
+
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground py-4 text-center">Cargando fechas disponibles...</p>;
+  }
+  if (isError) {
+    return (
+      <div className="py-2 flex flex-col gap-1.5">
+        <p className="text-xs text-danger">No se pudieron cargar las fechas disponibles.</p>
+        <button type="button" onClick={() => refetch()} className="self-start text-xs font-semibold text-success hover:underline">
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+  if (dias.length > 0 && disponibles.length === 0) {
+    return (
+      <p className="text-xs text-danger py-2">
+        No quedan fechas disponibles dentro del plazo legal de 28 días — revisa los registros del trabajador.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto p-0.5">
+        {dias.map(d => {
+          const activa = d.fecha === seleccionada;
+          return (
+            <button
+              key={d.fecha}
+              type="button"
+              disabled={!d.disponible}
+              onClick={() => onSeleccionar(d.fecha)}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+                !d.disponible
+                  ? 'bg-muted text-muted-foreground border-border opacity-50 cursor-not-allowed'
+                  : activa
+                  ? 'bg-success text-white border-success'
+                  : ZONA_CLASE[d.zona]
+              }`}
+            >
+              {fmtDiaCorto(d.fecha)}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex gap-3 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-success" />Pronto</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-warning" />Intermedio</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-danger" />Cerca del límite</span>
+      </div>
+    </div>
+  );
+}
+
+function AsignarCompensatorioModal({ compensatorio, onClose }: { compensatorio: DescansoCompensatorio; onClose: () => void }) {
+  const asignar = useAsignarCompensatorio();
+  const [fecha, setFecha] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fecha) return;
+    await asignar.mutateAsync({ id: compensatorio.id, fecha });
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Asignar descanso compensatorio</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {compensatorio.trabajador_nombre} {compensatorio.trabajador_apellido} · por trabajo el {fmtDiaSemana(compensatorio.origen_fecha)}
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <RangoCompensatorioPicker compensatorioId={compensatorio.id} seleccionada={fecha ?? ''} onSeleccionar={setFecha} />
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={asignar.isPending || !fecha} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {asignar.isPending ? 'Guardando...' : fecha ? `Asignar ${fmtDiaCorto(fecha)}` : 'Elige una fecha'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
 
 function ReasignarCompensatorioModal({ compensatorio, onClose }: { compensatorio: DescansoCompensatorio; onClose: () => void }) {
   const reasignar = useReasignarCompensatorio();
-  const min = sumarDiasISO(compensatorio.origen_fecha, 1);
-  const max = sumarDiasISO(compensatorio.origen_fecha, COMPENSATORIO_PLAZO_DIAS);
-  const [fecha, setFecha] = useState(compensatorio.fecha_asignada ?? min);
+  const [fecha, setFecha] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!fecha) return;
     if (fecha === compensatorio.fecha_asignada) {
       toast.error('Esa ya es la fecha asignada actual');
       return;
@@ -811,30 +964,16 @@ function ReasignarCompensatorioModal({ compensatorio, onClose }: { compensatorio
     <Modal onClose={onClose} size="sm">
       <h2 className="text-lg font-semibold text-foreground mb-1">Reasignar descanso compensatorio</h2>
       <p className="text-sm text-muted-foreground mb-4">
-        {compensatorio.trabajador_nombre} {compensatorio.trabajador_apellido} · por trabajo el {fmtDiaSemana(compensatorio.origen_fecha)}
+        {compensatorio.trabajador_nombre} {compensatorio.trabajador_apellido} · actualmente el {fmtDiaSemana(compensatorio.fecha_asignada!)} · por trabajo el {fmtDiaSemana(compensatorio.origen_fecha)}
       </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Nueva fecha *</label>
-          <input
-            required
-            type="date"
-            min={min}
-            max={max}
-            value={fecha}
-            onChange={e => setFecha(e.target.value)}
-            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-          />
-          <p className="text-xs text-muted-foreground mt-1.5">
-            Plazo legal: hasta el {fmtDiaSemana(max)}
-          </p>
-        </div>
+        <RangoCompensatorioPicker compensatorioId={compensatorio.id} seleccionada={fecha ?? ''} onSeleccionar={setFecha} />
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
             Cancelar
           </button>
-          <button type="submit" disabled={reasignar.isPending} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-            {reasignar.isPending ? 'Guardando...' : 'Reasignar'}
+          <button type="submit" disabled={reasignar.isPending || !fecha} className="flex-1 bg-success hover:bg-success-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {reasignar.isPending ? 'Guardando...' : fecha ? `Mover a ${fmtDiaCorto(fecha)}` : 'Elige una fecha'}
           </button>
         </div>
       </form>

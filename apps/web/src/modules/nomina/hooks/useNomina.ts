@@ -12,6 +12,7 @@ const KEYS = {
   trabajadores: () => ['trabajadores', 'nomina'] as const,
   descuentos: (periodoId: number) => ['nomina', 'descuentos', periodoId] as const,
   compensatorios: () => ['nomina', 'compensatorios'] as const,
+  rangoCompensatorio: (id: number) => ['nomina', 'compensatorios', id, 'rango'] as const,
   periodoActivoEventual: () => ['nomina', 'eventual', 'periodo-activo'] as const,
   liquidacionEventual: (id: number) => ['nomina', 'eventual', 'liquidacion', id] as const,
 };
@@ -185,6 +186,32 @@ export function useCompensatorios() {
   return useQuery({
     queryKey: KEYS.compensatorios(),
     queryFn: () => nominaApi.listarCompensatorios(),
+    staleTime: 30_000,
+  });
+}
+
+/** Asigna por primera vez la fecha de un descanso compensatorio pendiente. */
+export function useAsignarCompensatorio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, fecha }: { id: number; fecha: string }) =>
+      nominaApi.asignarCompensatorio(id, fecha),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.compensatorios() });
+      qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      qc.invalidateQueries({ queryKey: ['nomina', 'liquidacion'] });
+      toast.success('Descanso asignado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+/** Los 28 días candidatos para asignar/reasignar un descanso, con su zona de color y disponibilidad. */
+export function useRangoCompensatorio(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: KEYS.rangoCompensatorio(id),
+    queryFn: () => nominaApi.rangoCompensatorio(id),
+    enabled,
     staleTime: 30_000,
   });
 }

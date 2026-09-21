@@ -23,6 +23,7 @@ import {
 import {
   useCompensatoriosTodos, useReasignarCompensatorio,
 } from '@/features/nomina/compensatorios/useCompensatorios';
+import { RangoFechasCompensatorio } from '@/features/nomina/compensatorios/RangoFechasCompensatorio';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useRoleGuard } from '@/components/RoleGuard';
 import {
@@ -126,7 +127,11 @@ function EditarRegistroModal({
         behavior="height"
         className="flex-1 justify-end bg-black/40"
       >
-        <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          className="bg-background rounded-t-3xl"
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40, gap: 20 }}
+        >
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-lg font-bold text-foreground">Editar registro</Text>
@@ -242,24 +247,13 @@ function EditarRegistroModal({
               onPress={handleGuardar}
             />
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 // ── Modal: reasignar descanso compensatorio ──────────────────────────────
-
-// Plazo legal (Art. 179 CST) — debe calzar con COMPENSATORIO_PLAZO_DIAS en
-// backend/config/constants.js.
-// ponytail: valor duplicado, no se espera que cambie — upgrade path: exponerlo en /api/nomina/me o config pública
-const COMPENSATORIO_PLAZO_DIAS = 28;
-
-function addDiasISO(fechaISO: string, dias: number): string {
-  const d = new Date(`${fechaISO}T12:00:00`);
-  d.setDate(d.getDate() + dias);
-  return toISODate(d);
-}
 
 function ReasignarCompensatorioModal({
   compensatorio,
@@ -269,39 +263,21 @@ function ReasignarCompensatorioModal({
   onClose: () => void;
 }) {
   const reasignar = useReasignarCompensatorio();
-  const [fecha, setFecha] = useState<Date | null>(null);
-  const [showPicker, setShowPicker] = useState(false);
+  const [fecha, setFecha] = useState<string | null>(null);
 
   React.useEffect(() => {
-    if (compensatorio) {
-      setFecha(new Date(`${compensatorio.fecha_asignada ?? compensatorio.origen_fecha}T12:00:00`));
-      setShowPicker(false);
-    }
+    if (compensatorio) setFecha(null);
   }, [compensatorio?.id]);
 
   if (!compensatorio) return null;
 
-  const minDate = new Date(`${addDiasISO(compensatorio.origen_fecha, 1)}T12:00:00`);
-  const maxDate = new Date(`${addDiasISO(compensatorio.origen_fecha, COMPENSATORIO_PLAZO_DIAS)}T12:00:00`);
-
-  function onChangeFecha(_: DateTimePickerEvent, d?: Date) {
-    if (Platform.OS === 'android') setShowPicker(false);
-    if (d) setFecha(d);
-  }
-
-  async function handleGuardar() {
-    if (!fecha) return;
-    const iso = toISODate(fecha);
-    if (iso === compensatorio!.fecha_asignada) {
+  function confirmar() {
+    if (!fecha || !compensatorio) return;
+    if (fecha === compensatorio.fecha_asignada) {
       Alert.alert('Esa ya es la fecha asignada actual.');
       return;
     }
-    try {
-      await reasignar.mutateAsync({ id: compensatorio!.id, fecha: iso });
-      onClose();
-    } catch (e: unknown) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'No se pudo reasignar el descanso.');
-    }
+    reasignar.mutate({ id: compensatorio.id, fecha }, { onSuccess: onClose });
   }
 
   return (
@@ -310,7 +286,11 @@ function ReasignarCompensatorioModal({
         behavior="height"
         className="flex-1 justify-end bg-black/40"
       >
-        <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          className="bg-background rounded-t-3xl"
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40, gap: 20 }}
+        >
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-lg font-bold text-foreground">Reasignar descanso</Text>
@@ -325,44 +305,22 @@ function ReasignarCompensatorioModal({
 
           <View className="gap-1.5">
             <Text className="text-sm font-semibold text-foreground">Nueva fecha</Text>
-            <TouchableOpacity
-              onPress={() => setShowPicker(true)}
-              className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
-            >
-              <Ionicons name="calendar-outline" size={16} color="#64748B" />
-              <Text className="text-sm text-foreground">{fecha ? fmtFechaCorta(toISODate(fecha)) : '—'}</Text>
-            </TouchableOpacity>
-            {showPicker && (
-              <DateTimePicker
-                value={fecha ?? minDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                minimumDate={minDate}
-                maximumDate={maxDate}
-                onChange={onChangeFecha}
-              />
-            )}
-            {showPicker && Platform.OS === 'ios' && (
-              <TouchableOpacity onPress={() => setShowPicker(false)} className="bg-primary/10 rounded-xl py-2 items-center">
-                <Text className="text-sm font-semibold text-primary">Listo</Text>
-              </TouchableOpacity>
-            )}
-            <Text className="text-xs text-muted-foreground">
-              Plazo legal: hasta el {fmtFechaCorta(toISODate(maxDate))}
-            </Text>
+            <RangoFechasCompensatorio compensatorioId={compensatorio.id} seleccionada={fecha ?? ''} onSeleccionar={setFecha} />
           </View>
 
           <TouchableOpacity
-            onPress={handleGuardar}
-            disabled={reasignar.isPending}
+            onPress={confirmar}
+            disabled={reasignar.isPending || !fecha}
             className="h-14 bg-foreground rounded-2xl items-center justify-center active:opacity-80 disabled:opacity-40"
           >
             {reasignar.isPending
               ? <ActivityIndicator color="#fff" />
-              : <Text className="text-base font-semibold text-white">Guardar cambios</Text>
+              : <Text className="text-base font-semibold text-white">
+                  {fecha ? `Mover a ${fmtFechaCorta(fecha)}` : 'Elige una fecha'}
+                </Text>
             }
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );

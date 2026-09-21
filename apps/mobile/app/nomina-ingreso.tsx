@@ -356,7 +356,11 @@ export default function NominaIngresoScreen() {
           className="flex-1 justify-end"
         >
           <View className="bg-black/40 flex-1 justify-end">
-            <View className="bg-background rounded-t-3xl p-5 gap-4">
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              className="bg-background rounded-t-3xl"
+              contentContainerStyle={{ padding: 20, gap: 16 }}
+            >
               <Text className="text-base font-bold text-foreground">Solicitar reingreso</Text>
               <Text className="text-sm text-muted-foreground">
                 Úsalo si ya marcaste salida pero necesitas volver a tu punto de trabajo hoy mismo
@@ -393,7 +397,7 @@ export default function NominaIngresoScreen() {
                   <Text className="text-sm font-semibold text-white">Enviar solicitud</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>
