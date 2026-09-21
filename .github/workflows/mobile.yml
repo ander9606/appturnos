@@ -84,22 +84,15 @@ jobs:
           # Hardcodeado en vez de secret: no requiere configurar nada en GitHub.
           EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com"
 
-      # `eas update` sube el bundle directo a EAS, sin dejar sourcemaps locales ni
-      # subirlos a Sentry — la integración nativa (Gradle/Xcode, ver eas.json) solo
-      # aplica a `eas build`. Por eso se exporta el mismo bundle por separado (mismas
-      # variables EXPO_PUBLIC_* que arriba, si difieren el Debug ID no calza con el
-      # bundle que en verdad se publicó) y se sube con el script oficial del SDK.
-      - name: Exportar bundle + sourcemaps para Sentry
-        # --platform android: por defecto (--platform all) expo export también
-        # arma el bundle de web, y esta app no es compatible con web
-        # (react-native-maps importa módulos nativos). Agregar "ios" acá cuando
-        # la app se distribuya también en esa plataforma.
-        run: npx expo export --source-maps --output-dir dist --platform android
-        env:
-          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
-          EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-          EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com"
-
+      # `eas update` corre `expo export` internamente y deja ese mismo dist/ en
+      # el runner (se confirmó en los logs: "[expo-cli] Exported: dist" sale
+      # DURANTE este paso, antes de que existiera ningún otro export). Acá
+      # antes se volvía a correr `expo export` por separado "para generar los
+      # sourcemaps" — pero cada export genera un debug id nuevo, así que ese
+      # segundo export SOBRESCRIBÍA el dist/ real y lo que se subía a Sentry
+      # era el sourcemap de un bundle que nunca se publicó (por eso los stack
+      # traces en producción salían symbolicados con archivos/líneas sin
+      # sentido). El fix es no reexportar: subir el dist/ que ya dejó `eas update`.
       - name: Subir sourcemaps a Sentry
         run: node node_modules/@sentry/react-native/scripts/expo-upload-sourcemaps.js dist
         env:
