@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { trabajadorSchema, TIPO_OPTIONS, TIPO_HINTS, type TrabajadorFormValues } from './schemas';
 import { Input } from '@/components/ui/Input';
+import { formatDate, toISODate } from '@/lib/formatters';
 import { useCargos } from '@/features/turnos/useTurnos';
 import { DeduccionesChecklist } from './DeduccionesChecklist';
 
@@ -66,6 +67,58 @@ function PillSelector<T extends string>({
           );
         })}
       </View>
+    </View>
+  );
+}
+
+// ── Date field — picker nativo, mismo patrón que "Hora habitual de entrada" ─
+
+function DateField({
+  label, value, onChange, maximumDate, error,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (v: string) => void;
+  maximumDate?: Date;
+  error?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View className="mb-4">
+      <Text className="text-sm font-semibold text-foreground mb-1">{label}</Text>
+      <View className="flex-row items-center gap-2">
+        <Pressable
+          onPress={() => setVisible(true)}
+          className="flex-1 bg-card border border-border rounded-2xl px-4 h-14 flex-row items-center justify-between active:opacity-70"
+        >
+          <Text className={`text-base flex-1 ${value ? 'text-foreground' : 'text-muted-foreground'}`}>
+            {value ? formatDate(value) : 'Sin definir'}
+          </Text>
+          <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+        </Pressable>
+        {!!value && (
+          <Pressable
+            onPress={() => onChange('')}
+            hitSlop={8}
+            className="w-11 h-11 rounded-xl bg-muted items-center justify-center active:opacity-70"
+          >
+            <Ionicons name="close" size={18} color="#64748B" />
+          </Pressable>
+        )}
+      </View>
+      {error && <Text className="text-xs text-danger mt-1">{error}</Text>}
+      {visible && (
+        <DateTimePicker
+          mode="date"
+          display="default"
+          value={value ? new Date(`${value}T00:00:00`) : new Date()}
+          maximumDate={maximumDate}
+          onChange={(_, date) => {
+            setVisible(false);
+            if (date) onChange(toISODate(date));
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -286,22 +339,19 @@ export function TrabajadorForm({
           )}
         />
 
-        <View className="mb-4">
-          <Controller
-            control={control}
-            name="fecha_nacimiento"
-            render={({ field }) => (
-              <Input
-                label="Fecha de nacimiento (AAAA-MM-DD)"
-                error={errors.fecha_nacimiento?.message}
-                value={field.value ?? ''}
-                onChangeText={field.onChange}
-                onBlur={field.onBlur}
-                placeholder="1990-01-15"
-              />
-            )}
-          />
-        </View>
+        <Controller
+          control={control}
+          name="fecha_nacimiento"
+          render={({ field }) => (
+            <DateField
+              label="Fecha de nacimiento"
+              value={field.value}
+              onChange={field.onChange}
+              maximumDate={new Date()}
+              error={errors.fecha_nacimiento?.message}
+            />
+          )}
+        />
 
         <Controller
           control={control}
@@ -657,39 +707,33 @@ export function TrabajadorForm({
               </View>
             </View>
 
-            <View className="mb-4">
-              <Controller
-                control={control}
-                name="ant_judiciales_fecha"
-                render={({ field }) => (
-                  <Input
-                    label="Antecedentes judiciales — fecha (AAAA-MM-DD)"
-                    error={errors.ant_judiciales_fecha?.message}
-                    value={field.value ?? ''}
-                    onChangeText={field.onChange}
-                    onBlur={field.onBlur}
-                    placeholder="2025-01-15"
-                  />
-                )}
-              />
-            </View>
+            <Controller
+              control={control}
+              name="ant_judiciales_fecha"
+              render={({ field }) => (
+                <DateField
+                  label="Antecedentes judiciales — fecha"
+                  value={field.value}
+                  onChange={field.onChange}
+                  maximumDate={new Date()}
+                  error={errors.ant_judiciales_fecha?.message}
+                />
+              )}
+            />
 
-            <View className="mb-4">
-              <Controller
-                control={control}
-                name="ant_disciplinarios_fecha"
-                render={({ field }) => (
-                  <Input
-                    label="Antecedentes disciplinarios — fecha (AAAA-MM-DD)"
-                    error={errors.ant_disciplinarios_fecha?.message}
-                    value={field.value ?? ''}
-                    onChangeText={field.onChange}
-                    onBlur={field.onBlur}
-                    placeholder="2025-01-15"
-                  />
-                )}
-              />
-            </View>
+            <Controller
+              control={control}
+              name="ant_disciplinarios_fecha"
+              render={({ field }) => (
+                <DateField
+                  label="Antecedentes disciplinarios — fecha"
+                  value={field.value}
+                  onChange={field.onChange}
+                  maximumDate={new Date()}
+                  error={errors.ant_disciplinarios_fecha?.message}
+                />
+              )}
+            />
           </>
         )}
 

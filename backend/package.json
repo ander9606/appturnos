@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@sentry/node": "^10.63.0",
+    "apple-signin-auth": "^1.7.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",

@@ -13,7 +13,7 @@
 
 const providers = {
   google: require('./google.provider'),
-  // apple: require('./apple.provider'),
+  apple: require('./apple.provider'),
   // facebook: require('./facebook.provider'),
 };
 

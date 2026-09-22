@@ -66,7 +66,8 @@ router.patch(
     body('ciudad').optional({ values: 'falsy' }).isString().trim(),
     body('descripcion').optional({ values: 'falsy' }).isString().trim(),
     body('actividad').optional({ values: 'falsy' }).isString().trim(),
-    body('logo_url').optional({ values: 'falsy' }).isURL().withMessage('logo_url debe ser una URL válida'),
+    // Acepta tanto una URL externa como un data URI subido desde la app (cámara/galería).
+    body('logo_url').optional({ values: 'falsy' }).isString().withMessage('logo_url inválido'),
     body('telefono').optional({ values: 'falsy' }).isString().trim().isLength({ max: 30 }),
     body('email_empresa').optional({ values: 'falsy' }).isEmail().withMessage('email_empresa debe ser un email válido')
       .customSanitizer(v => v.trim().toLowerCase()),

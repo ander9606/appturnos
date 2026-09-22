@@ -32,7 +32,7 @@ GoogleSignin.configure({
 });
 
 export function useGoogleAuth(onError?: (msg: string) => void) {
-  const loginConGoogle = useAuthStore((s) => s.loginConGoogle);
+  const loginConProvider = useAuthStore((s) => s.loginConProvider);
   const [loading, setLoading] = React.useState(false);
 
   const signIn = React.useCallback(async () => {
@@ -48,14 +48,14 @@ export function useGoogleAuth(onError?: (msg: string) => void) {
         return;
       }
 
-      await loginConGoogle(idToken);
+      await loginConProvider('google', idToken);
     } catch (err) {
       if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) return;
       onError?.(err instanceof Error ? err.message : 'Error al autenticar con Google.');
     } finally {
       setLoading(false);
     }
-  }, [loginConGoogle, onError]);
+  }, [loginConProvider, onError]);
 
   return { signIn, loading };
 }

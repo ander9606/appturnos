@@ -17,6 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.zaturno.mobile",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Zaturno necesita tu ubicación para verificar que estás en el punto de trabajo al marcar entrada/salida.",
         "NSFaceIDUsageDescription": "Usa Face ID para acceder rápidamente a Zaturno.",

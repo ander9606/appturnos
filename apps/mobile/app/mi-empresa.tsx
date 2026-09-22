@@ -3,9 +3,9 @@
  * Campos: logo, razón social, NIT, ciudad, actividad, descripción,
  *         acepta_postulaciones (visible en directorio marketplace).
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, Switch, Alert,
+  View, Text, ScrollView, Switch, Alert, Pressable,
   KeyboardAvoidingView, Platform, Image, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,7 +42,8 @@ const schema = z.object({
   ciudad:               z.string().trim().optional(),
   actividad:            z.string().trim().optional(),
   descripcion:          z.string().trim().optional(),
-  logo_url:             z.string().trim().url('Debe ser una URL válida').optional().or(z.literal('')),
+  // Ya no se tipea a mano — se sube por cámara/galería (data URI) o queda como URL externa preexistente.
+  logo_url:             z.string().optional().or(z.literal('')),
   acepta_postulaciones: z.boolean(),
   tipo_liquidacion:     z.enum(['mensual', 'quincenal', 'semanal']),
   tipo_contrato:        z.enum(['laboral', 'prestacion_servicios']),
@@ -105,6 +106,48 @@ export default function MiEmpresaScreen() {
   });
 
   const logoUrl = watch('logo_url');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // ── Logo — mismo flujo de cámara/galería que la foto de perfil de usuario ──
+
+  const handleCambiarLogo = () => {
+    Alert.alert('Logo de la empresa', undefined, [
+      {
+        text: 'Tomar foto',
+        onPress: async () => {
+          const ImagePicker = await import('expo-image-picker');
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la cámara.'); return; }
+          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
+          if (!result.canceled && result.assets[0]?.base64) _subirLogo(result.assets[0].base64);
+        },
+      },
+      {
+        text: 'Galería',
+        onPress: async () => {
+          const ImagePicker = await import('expo-image-picker');
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la galería.'); return; }
+          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
+          if (!result.canceled && result.assets[0]?.base64) _subirLogo(result.assets[0].base64);
+        },
+      },
+      logoUrl ? { text: 'Quitar logo', style: 'destructive' as const, onPress: () => _subirLogo(null) } : null,
+      { text: 'Cancelar', style: 'cancel' as const },
+    ].filter(Boolean) as any[]);
+  };
+
+  const _subirLogo = async (b64: string | null) => {
+    setUploadingLogo(true);
+    try {
+      await actualizar.mutateAsync({ logo_url: b64 ? `data:image/jpeg;base64,${b64}` : '' });
+      showToast(b64 ? 'Logo actualizado.' : 'Logo eliminado.');
+    } catch {
+      Alert.alert('Error', 'No se pudo actualizar el logo. Intenta de nuevo.');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   useEffect(() => {
     if (empresa) {
@@ -162,42 +205,36 @@ export default function MiEmpresaScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Logo ─────────────────────────────────────────────── */}
+          {/* ── Logo — toca para cambiarlo (cámara/galería), igual que la foto de perfil ── */}
           <View className="items-center gap-3">
-            <View className="w-24 h-24 rounded-2xl bg-muted items-center justify-center overflow-hidden">
-              {logoUrl ? (
-                <Image
-                  source={{ uri: logoUrl }}
-                  className="w-24 h-24"
-                  resizeMode="contain"
-                  onError={() => {}}
-                />
-              ) : (
-                <Ionicons name="business-outline" size={40} color="#94A3B8" />
-              )}
-            </View>
+            <Pressable onPress={handleCambiarLogo} disabled={uploadingLogo} className="relative active:opacity-70">
+              <View className="w-24 h-24 rounded-2xl bg-muted items-center justify-center overflow-hidden">
+                {logoUrl ? (
+                  <Image
+                    source={{ uri: logoUrl }}
+                    className="w-24 h-24"
+                    resizeMode="contain"
+                    onError={() => {}}
+                  />
+                ) : (
+                  <Ionicons name="business-outline" size={40} color="#94A3B8" />
+                )}
+              </View>
+              <View className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary items-center justify-center border-2 border-background">
+                {uploadingLogo ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="camera" size={14} color="#fff" />
+                )}
+              </View>
+            </Pressable>
             <Text className="text-xs text-muted-foreground text-center">
-              Pega la URL pública del logo en el campo de abajo
+              Toca el logo para cambiarlo
             </Text>
-          </View>
-
-          <Controller
-            control={control}
-            name="logo_url"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="URL del logo"
-                placeholder="https://mi-empresa.com/logo.png"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.logo_url?.message}
-              />
+            {errors.logo_url && (
+              <Text className="text-xs text-danger text-center">{errors.logo_url.message}</Text>
             )}
-          />
+          </View>
 
           {/* ── Datos legales ─────────────────────────────────────── */}
           <View className="gap-1">
