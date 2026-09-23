@@ -6,6 +6,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    mem_limit: 64m
     ports:
       - "80:80"
       - "443:443"
@@ -23,6 +24,8 @@ services:
   api:
     build: ./backend
     restart: unless-stopped
+    # ponytail: 300M evita que un export de nómina se coma toda la RAM del host — sube si el healthcheck empieza a matar el contenedor bajo uso real
+    mem_limit: 300m
     env_file: ./backend/.env
     environment:
       DB_HOST: db
@@ -38,6 +41,7 @@ services:
     restart: unless-stopped
     # ponytail: --performance-schema=OFF ahorra ~200MB RAM; buffer pool explícito para 1GB droplet
     command: --innodb-buffer-pool-size=128M --performance-schema=OFF
+    mem_limit: 400m
     env_file: ./backend/.env
     environment:
       MYSQL_DATABASE: ${DB_NAME:-app_turnos}
