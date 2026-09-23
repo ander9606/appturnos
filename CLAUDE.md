@@ -169,7 +169,7 @@ Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src
 ### Subscriptions & Billing
 Companies with an active logiq360 integration (`integracion_config.activo = 1` + `api_key`) don't pay. The rest pay per plan via Wompi payment links (`webhooks/wompi.service.js`).
 
-Prices and limits live in the **`planes` table** (migration 100, platform-level — no `empresa_id`), editable by super_admin at web `/admin/planes` (`GET/PUT /api/admin/planes[/:codigo]`). Seed values:
+Prices and limits live in the **`planes` table** (migration 100, platform-level — no `empresa_id`), editable by super_admin at web `/admin/planes` and mobile `app/(admin)/planes.tsx` (`GET/PUT /api/admin/planes[/:codigo]`; the mobile preview uses `precioPlanCop` from `@api-client`). Seed values:
 
 | Plan | Active workers | COP/month |
 |---|---|---|

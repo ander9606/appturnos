@@ -20,6 +20,19 @@ export interface PlanConfig {
 
 export type ActualizarPlanPayload = Pick<PlanConfig, 'precio_cop' | 'max_trabajadores' | 'incluidos' | 'precio_adicional_cop'>;
 
+/**
+ * Precio mensual de un plan para `activos` trabajadores activos — espejo de
+ * precioPlanCop (backend/modules/suscripciones/planes.model.js). Solo para
+ * vistas previas: el monto que se cobra lo calcula siempre el backend.
+ */
+export function precioPlanCop(
+  plan: Pick<PlanConfig, 'precio_cop' | 'incluidos' | 'precio_adicional_cop'>,
+  activos: number,
+): number {
+  const extra = plan.incluidos != null ? Math.max(0, activos - plan.incluidos) : 0;
+  return plan.precio_cop + extra * (plan.precio_adicional_cop ?? 0);
+}
+
 export type SuscripcionOrigen = 'manual' | 'wompi' | 'logiq360';
 
 export interface EmpresaAdmin {

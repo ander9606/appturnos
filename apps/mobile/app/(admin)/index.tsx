@@ -274,6 +274,21 @@ export default function AdminDashboard() {
               Ver pagos Wompi
             </Text>
           </Pressable>
+
+          <Pressable
+            onPress={() => router.push('/(admin)/planes' as any)}
+            className="bg-card border border-border rounded-2xl p-4 items-center gap-2 active:opacity-70"
+            style={{ width: '47%' }}
+            accessibilityRole="button"
+          >
+            <View className="w-10 h-10 rounded-xl items-center justify-center"
+              style={{ backgroundColor: '#6366F110' }}>
+              <Text className="text-xl">🏷️</Text>
+            </View>
+            <Text className="text-xs font-semibold text-foreground text-center">
+              Planes y precios
+            </Text>
+          </Pressable>
         </View>
 
         {/* ── Cerrar sesión ──────────────────────────────────────────── */}

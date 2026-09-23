@@ -9,6 +9,7 @@ import {
   type ActualizarEmpresaPayload,
   type WompiEventosParams,
   type PlanEmpresa,
+  type ActualizarPlanPayload,
 } from '@api-client';
 
 // ── Query keys ────────────────────────────────────────────────────────────
@@ -18,7 +19,31 @@ export const ADMIN_KEYS = {
   empresas: (params?: EmpresasListParams) => ['admin', 'empresas', params] as const,
   empresa: (id: number) => ['admin', 'empresa', id] as const,
   wompiEventos: (params?: WompiEventosParams) => ['admin', 'wompi-eventos', params] as const,
+  planes: ['admin', 'planes'] as const,
 };
+
+// ── Planes y precios ──────────────────────────────────────────────────────
+
+export function usePlanes(enabled = true) {
+  return useQuery({
+    queryKey: ADMIN_KEYS.planes,
+    queryFn: () => adminApi.listarPlanes(),
+    staleTime: 60_000,
+    enabled,
+  });
+}
+
+export function useActualizarPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ codigo, datos }: { codigo: PlanEmpresa; datos: ActualizarPlanPayload }) =>
+      adminApi.actualizarPlan(codigo, datos),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ADMIN_KEYS.planes });
+      qc.invalidateQueries({ queryKey: ADMIN_KEYS.reportes });
+    },
+  });
+}
 
 // ── Reportes globales ──────────────────────────────────────────────────────
 
