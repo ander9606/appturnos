@@ -4,14 +4,13 @@
  * geofence y mutaciones de marcaje.
  */
 
-import { useState, useMemo, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Alert, AppState } from 'react-native';
 import { ApiError } from '@api-client';
 import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina, LineaLiquidacionEventual, PeriodoTurnoEventual } from '@api-client';
 import { bogotaToday } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import { actionToast } from '@/lib/actionToast';
-import { obtenerUbicacionActual } from '@/lib/currentLocation';
 import { useGeofence } from '@/features/turnos/useGeofence';
 import { usePeriodosEventual, useLiquidacionEventual } from '@/features/turnos/useTurnosEventual';
 import {
@@ -32,6 +31,53 @@ import {
   type EstadoHoy,
   type ResumenPeriodoNomina,
 } from './nominaTrabajadorUtils';
+
+export type EstadoUbicacionLibre = 'obteniendo' | 'lista' | 'denegada' | 'no_disponible';
+
+/**
+ * Para trabajadores tipo_marcacion 'libre' no hay geofence que validar, pero
+ * igual se exige un fix de GPS antes de dejar marcar — sin esto, un trabajador
+ * 'libre' podía marcar entrada/salida sin dejar ningún rastro de dónde lo hizo
+ * (el fix anterior era best-effort y nunca bloqueaba). Un solo intento por
+ * activación alcanza — no hace falta vigilar la posición en el tiempo como sí
+ * hace useGeofence para fijo/zonal.
+ */
+function useUbicacionParaLibre(activo: boolean) {
+  const [estado, setEstado] = useState<EstadoUbicacionLibre>('obteniendo');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  const intentar = useCallback(async () => {
+    setEstado('obteniendo');
+    try {
+      const Location = await import('expo-location');
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setEstado('denegada');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      setEstado('lista');
+    } catch {
+      setEstado('no_disponible');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activo) return;
+    intentar();
+    // Si el trabajador salió a Ajustes a conceder el permiso y vuelve, se
+    // reintenta solo — sin esto quedaba trabado en 'denegada' hasta salir y
+    // reentrar a la pantalla. Mismo patrón que useGeofence.
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') intentar();
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activo]);
+
+  return { estado, coords, reintentar: intentar };
+}
 
 export interface NominaTrabajadorState {
   // Perfil
@@ -67,6 +113,8 @@ export interface NominaTrabajadorState {
   // Geofence
   geo: ReturnType<typeof useGeofence>;
   marcajeBloqueado: boolean;
+  // Ubicación para tipo_marcacion 'libre' — ver useUbicacionParaLibre.
+  ubicacionLibre: { estado: EstadoUbicacionLibre; reintentar: () => void };
 
   // Marcaje
   isMutating:       boolean;
@@ -161,7 +209,11 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     : null;
 
   const geo = useGeofence({ targets: geofenceTargets, enabled: requiereGeofence });
-  const marcajeBloqueado = requiereGeofence && !geo.canMark;
+  const tipoLibre = tipoMarcacion === 'libre';
+  const ubicacionLibreState = useUbicacionParaLibre(tipoLibre);
+  const marcajeBloqueado = requiereGeofence
+    ? !geo.canMark
+    : tipoLibre && ubicacionLibreState.estado !== 'lista';
 
   // ── Mutaciones ─────────────────────────────────────────────────────────
   const entradaMutation   = useMarcarEntrada();
@@ -170,18 +222,19 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const isMutating        = entradaMutation.isPending || salidaMutation.isPending || reingresoMutation.isPending;
 
   // Con geofence (fijo/zonal) el fix ya lo trae useGeofence (vigilancia continua
-  // para validar cercanía). Sin geofence (libre) no hay nada vigilando — se pide
-  // un fix puntual solo para registrar desde dónde marcó; nunca bloquea el marcaje
-  // si falla o el permiso está denegado (backend ya trata lat/lng como opcionales).
+  // para validar cercanía). Sin geofence (libre) el marcaje queda bloqueado
+  // (marcajeBloqueado arriba) hasta tener el fix de useUbicacionParaLibre — así
+  // que para cuando esta función corre, ya debería haber coordenadas.
   const obtenerCoordsParaMarcaje = useCallback(async () => {
     if (requiereGeofence) {
       return geo.currentLocation
         ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
         : undefined;
     }
-    const { latitud, longitud } = await obtenerUbicacionActual();
-    return latitud != null ? { latitud, longitud } : undefined;
-  }, [requiereGeofence, geo.currentLocation]);
+    return ubicacionLibreState.coords
+      ? { latitud: ubicacionLibreState.coords.lat, longitud: ubicacionLibreState.coords.lng }
+      : undefined;
+  }, [requiereGeofence, geo.currentLocation, ubicacionLibreState.coords]);
 
   const handleEntrada = useCallback(async () => {
     try {
@@ -265,6 +318,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     miLineaEventual,
     geo,
     marcajeBloqueado,
+    ubicacionLibre: { estado: ubicacionLibreState.estado, reintentar: ubicacionLibreState.reintentar },
     isMutating,
     handleEntrada,
     handleSalida,

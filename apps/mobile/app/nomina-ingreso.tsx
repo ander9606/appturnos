@@ -20,6 +20,7 @@ import {
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { fmtHora } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
+import { UbicacionLibreIndicator } from '@/features/nomina/trabajador/UbicacionLibreIndicator';
 import { useTheme } from '@/lib/theme';
 import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -56,6 +57,7 @@ export default function NominaIngresoScreen() {
     tipoMarcacion,
     geo,
     marcajeBloqueado,
+    ubicacionLibre,
     valorHora,
   } = useNominaTrabajador();
 
@@ -258,6 +260,13 @@ export default function NominaIngresoScreen() {
             permissionDenied={geo.permissionDenied}
             locationUnavailable={geo.locationUnavailable}
           />
+        )}
+
+        {/* ── Ubicación (tipo_marcacion 'libre') — sin geofence que validar,
+            pero igual se exige un fix de GPS antes de dejar marcar. ─────── */}
+        {tipoMarcacion === 'libre' &&
+          (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado' || estadoHoy === 'en_jornada') && (
+          <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
         )}
 
         {/* ── Día de descanso compensatorio — no debe marcar entrada ──── */}
