@@ -61,10 +61,14 @@ const ESTADOS_PERIODO = ['abierto', 'cerrado', 'liquidado'];
 
 // Recargos de ley laboral colombiana. El dominical/festivo cambia por fecha
 // (ver RECARGO_FESTIVO_VIGENCIAS) — no está aquí.
+// NOCTURNO_ADICIONAL es solo el recargo (35 %) sobre la hora ordinaria: a un
+// asalariado la hora base ya se la cubre el sueldo, así que su hora nocturna
+// ordinaria paga ×0.35; al de tarifa_hora se le paga base + recargo (×1.35)
+// porque sus horas nocturnas no entran en horas_ordinarias.
 const RECARGOS = {
   EXTRA_DIURNA: 1.25,
   EXTRA_NOCTURNA: 1.75,
-  NOCTURNA: 1.35,
+  NOCTURNO_ADICIONAL: 0.35,
 };
 
 // Ley 2466 de 2025 (reforma laboral, sancionada 25-jun-2025). Tablas por

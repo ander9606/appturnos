@@ -99,16 +99,18 @@ const LiquidacionService = {
       const vh = f.valor_hora_snapshot != null
         ? Number(f.valor_hora_snapshot)
         : valorHora(f);
-      const desglosePago = desglosarPagoNomina(desglose, vh, periodo.fecha_fin);
-
-      // Asalariado (salario_base): el sueldo fijo se paga íntegro, prorrateado
-      // por días del período — no depende de horas_ordinarias registradas.
-      // Por tarifa_hora: sigue siendo horas_ordinarias × valor_hora.
       // Si el período ya cerró, usa el salario congelado (igual que vh arriba)
       // — un cambio de sueldo posterior no debe recalcular períodos pasados.
       const salarioBase = f.salario_base_snapshot != null
         ? Number(f.salario_base_snapshot)
         : f.salario_base;
+      const desglosePago = desglosarPagoNomina(desglose, vh, periodo.fecha_fin, {
+        salarioFijo: salarioBase != null,
+      });
+
+      // Asalariado (salario_base): el sueldo fijo se paga íntegro, prorrateado
+      // por días del período — no depende de horas_ordinarias registradas.
+      // Por tarifa_hora: sigue siendo horas_ordinarias × valor_hora.
       const pagoOrdinario = redondear(calcularSalarioBasePeriodo({
         tarifaHora: f.tarifa_hora,
         salarioBase,
@@ -158,6 +160,7 @@ const LiquidacionService = {
         pago_extra_nocturno: pagoExtraNocturno,
         pago_festivo: pagoFestivo,
         recargo_festivo: desglosePago.recargo_festivo,
+        recargo_nocturno: desglosePago.recargo_nocturno,
         total,
         descuento_salud: redondear(deducciones.salud),
         descuento_pension: redondear(deducciones.pension),

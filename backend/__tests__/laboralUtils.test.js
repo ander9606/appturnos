@@ -376,7 +376,7 @@ describe('calcularPagoNomina', () => {
     expect(calcularPagoNomina(desglose, VH)).toBe(17_500);
   });
 
-  test('hora nocturna ordinaria → ×1.35', () => {
+  test('hora nocturna ordinaria por tarifa_hora → ×1.35 (base + 35 %)', () => {
     const desglose = {
       horas_ordinarias: 0,
       horas_nocturnas: 1,
@@ -548,5 +548,26 @@ describe('Ley 2466 de 2025 — reglas por fecha', () => {
     const d = desglosarPagoNomina({ horas_festivo: 1 }, 10_000, '2026-09-30');
     expect(d.recargo_festivo).toBe(1.90);
     expect(d.pago_festivo).toBeCloseTo(19_000, 5);
+  });
+});
+
+describe('recargo nocturno según tipo de pago', () => {
+  const VH = 10_000;
+
+  test('asalariado: la hora nocturna ordinaria paga solo el 35 % adicional (el sueldo ya paga la base)', () => {
+    const d = desglosarPagoNomina({ horas_nocturnas: 1 }, VH, undefined, { salarioFijo: true });
+    expect(d.recargo_nocturno).toBeCloseTo(0.35, 10);
+    expect(d.pago_nocturno).toBeCloseTo(3_500, 5);
+  });
+
+  test('por tarifa_hora: base + 35 % porque sus horas nocturnas no están en horas_ordinarias', () => {
+    const d = desglosarPagoNomina({ horas_nocturnas: 1 }, VH);
+    expect(d.recargo_nocturno).toBeCloseTo(1.35, 10);
+    expect(d.pago_nocturno).toBeCloseTo(13_500, 5);
+  });
+
+  test('las extra nocturnas no cambian: ×1.75 también para el asalariado', () => {
+    const d = desglosarPagoNomina({ horas_extra_nocturnas: 1 }, VH, undefined, { salarioFijo: true });
+    expect(d.pago_extra_nocturno).toBeCloseTo(17_500, 5);
   });
 });

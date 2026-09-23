@@ -304,7 +304,7 @@ export function ResumenCards({
                       ⚡ Horas extra y recargos
                     </Text>
                     {Number(miLiquidacion.horas_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas × ${formatCOP(miLiquidacion.valor_hora)} × 1.35`} valor={Number(miLiquidacion.pago_nocturno)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_nocturno}`} valor={Number(miLiquidacion.pago_nocturno)} />
                     )}
                     {Number(miLiquidacion.horas_extra_diurnas) > 0 && (
                       <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna × ${formatCOP(miLiquidacion.valor_hora)} × 1.25`} valor={Number(miLiquidacion.pago_extra_diurno)} />

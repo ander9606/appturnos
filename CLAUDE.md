@@ -156,7 +156,7 @@ When a payroll period is closed, `cerrarConSnapshot()` in `periodos.model.js` at
 | `JORNADA_SEMANAL_HORAS` | 42 | Weekly ordinary cap (Ley 2101); beyond it → extra |
 | `HORA_INICIO_NOCTURNO_VIGENCIAS` | 19 from 2025-12-25, 21 before | Night start by date (Ley 2466 art. 10) |
 | `HORA_FIN_NOCTURNO` | 6 | Night surcharge ends 06:00 |
-| `RECARGOS.*` | 1.25 / 1.75 / 1.35 | Extra diurna / extra nocturna / nocturna |
+| `RECARGOS.*` | 1.25 / 1.75 / 0.35 | Extra diurna / extra nocturna / night surcharge only. Ordinary night hours pay ×0.35 for salaried workers (salary already covers the base hour) and ×1.35 for `tarifa_hora` workers (their night hours aren't in `horas_ordinarias`) — `desglosarPagoNomina(..., { salarioFijo })`, returned as `recargo_nocturno` |
 | `RECARGO_FESTIVO_VIGENCIAS` | 1.75 → 1.80 (2025-07-01) → 1.90 (2026-07-01) → 2.00 (2027-07-01) | Sunday/holiday multiplier by date (Ley 2466 art. 14) |
 | `SMMLV_COP` / `SUBSIDIO_TRANSPORTE_COP` | 1.750.905 / 249.095 | 2026 values — update every January |
 

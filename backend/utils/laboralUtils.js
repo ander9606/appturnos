@@ -13,7 +13,7 @@
  *   Horario nocturno         19:00 – 06:00 (21:00 antes del 25-dic-2025)
  *   Extra diurna             ×1.25
  *   Extra nocturna           ×1.75
- *   Recargo nocturno         ×1.35
+ *   Recargo nocturno         +35 % (×0.35 asalariado, ×1.35 por tarifa_hora)
  *   Dominical/festivo        ×1.80 / ×1.90 / ×2.00 según fecha (Ley 2466 de 2025)
  */
 
@@ -326,7 +326,7 @@ function calcularHoras({
 
   return {
     // Las ordinarias nocturnas siguen siendo ordinarias para el conteo de jornada,
-    // pero se reportan aparte porque devengan el recargo nocturno (×1.35).
+    // pero se reportan aparte porque devengan el recargo nocturno (+35 %).
     horas_ordinarias: redondear(ordinariasDiurnas / 60),
     horas_extra_diurnas: redondear(extraDiurnas / 60),
     horas_extra_nocturnas: redondear(extraNocturnas / 60),
@@ -404,23 +404,29 @@ function calcularPagoNomina(desglose, valorHoraTrabajador, fecha) {
  * @param {number} valorHoraTrabajador
  * @param {string|Date} [fecha]  Fecha que fija el recargo dominical/festivo
  *   (normalmente el fin del período); sin fecha, el vigente hoy.
+ * @param {object} [opciones]
+ * @param {boolean} [opciones.salarioFijo=false]  true si el trabajador cobra
+ *   salario_base: su sueldo ya paga la hora nocturna ordinaria, así que solo
+ *   se suma el recargo (×0.35). Por tarifa_hora se paga base + recargo (×1.35).
  *   ponytail: las horas festivas llegan sumadas por período, así que un período
  *   que cruce un 1-jul usa una sola tasa — upgrade path: sumar horas_festivo
  *   × recargoFestivo(fecha) por registro en el SQL de liquidación.
  */
-function desglosarPagoNomina(desglose, valorHoraTrabajador, fecha) {
+function desglosarPagoNomina(desglose, valorHoraTrabajador, fecha, { salarioFijo = false } = {}) {
   const n = (v) => Number(v) || 0;
   const vh = Number(valorHoraTrabajador) || 0;
   const recargo_festivo = recargoFestivo(fecha);
+  const recargo_nocturno = (salarioFijo ? 0 : 1) + RECARGOS.NOCTURNO_ADICIONAL;
 
   const pago_ordinario      = vh * n(desglose.horas_ordinarias);
-  const pago_nocturno       = vh * RECARGOS.NOCTURNA * n(desglose.horas_nocturnas);
+  const pago_nocturno       = vh * recargo_nocturno * n(desglose.horas_nocturnas);
   const pago_extra_diurno   = vh * RECARGOS.EXTRA_DIURNA * n(desglose.horas_extra_diurnas);
   const pago_extra_nocturno = vh * RECARGOS.EXTRA_NOCTURNA * n(desglose.horas_extra_nocturnas);
   const pago_festivo        = vh * recargo_festivo * n(desglose.horas_festivo);
 
   return {
     recargo_festivo,
+    recargo_nocturno,
     pago_ordinario,
     pago_nocturno,
     pago_extra_diurno,

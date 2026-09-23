@@ -82,6 +82,8 @@ export interface LiquidacionLinea {
   pago_festivo: number;
   /** Multiplicador dominical/festivo aplicado (Ley 2466: 1.80 → 1.90 → 2.00 según fecha). */
   recargo_festivo: number;
+  /** Multiplicador de la hora nocturna ordinaria: 0.35 asalariado (el sueldo ya paga la base), 1.35 por tarifa_hora. */
+  recargo_nocturno: number;
   total: number;
   /** Descuento de salud (4% del total). 0 si la empresa es prestación de servicios. */
   descuento_salud: number;

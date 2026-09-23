@@ -152,7 +152,7 @@ export function LiquidacionTab({
                               <Zap size={12} /> Horas extra y recargos
                             </p>
                             {Number(l.horas_nocturnas) > 0 && (
-                              <Renglon label={`${fmtHrs(l.horas_nocturnas)} h nocturnas × ${fmtCOP(l.valor_hora)} × 1.35`} valor={fmtCOP(l.pago_nocturno)} />
+                              <Renglon label={`${fmtHrs(l.horas_nocturnas)} h nocturnas × ${fmtCOP(l.valor_hora)} × ${l.recargo_nocturno}`} valor={fmtCOP(l.pago_nocturno)} />
                             )}
                             {Number(l.horas_extra_diurnas) > 0 && (
                               <Renglon label={`${fmtHrs(l.horas_extra_diurnas)} h extra diurna × ${fmtCOP(l.valor_hora)} × 1.25`} valor={fmtCOP(l.pago_extra_diurno)} />

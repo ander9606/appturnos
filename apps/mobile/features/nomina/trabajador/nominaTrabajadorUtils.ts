@@ -4,8 +4,9 @@
  * Reglas de negocio (modelo salario fijo + extras semanales):
  * - El salario base SIEMPRE se paga íntegro — no hay descuentos por jornadas cortas.
  * - Horas nocturnas, extra y festivo se pagan encima del salario base con el
- *   multiplicador COMPLETO de ley (×1.35 / ×1.25 / ×1.75 / festivo según fecha,
- *   ver recargoFestivo en @api-client — Ley 2466 de 2025) — el mismo
+ *   multiplicador de ley (nocturna ordinaria solo el recargo ×0.35 porque el
+ *   sueldo ya paga la hora base; ×1.25 / ×1.75 / festivo según fecha, ver
+ *   recargoFestivo en @api-client — Ley 2466 de 2025) — el mismo
  *   que usa la liquidación real (desglosarPagoNomina en el backend), para que
  *   el estimado que ve el trabajador coincida con lo que efectivamente se le paga.
  * - Horas extra se determinan semanalmente (Lun–Dom) contra el límite legal del año
@@ -38,14 +39,13 @@ export const JORNADA_CONTINUA_UMBRAL_HORAS = 6;
 // es el número que realmente decidió el desglose ordinarias/extra de cada día.
 const JORNADA_SEMANAL_HORAS = 42;
 
-// Espejo de RECARGOS en backend/config/constants.js — mismo multiplicador
-// completo que usa la liquidación real (desglosarPagoNomina), sumado encima
+// Espejo de desglosarPagoNomina (backend) para un asalariado — se suma encima
 // del salario base (que se paga siempre íntegro, ver calcularSalarioBasePeriodo).
-// Antes este estimado usaba "solo el adicional" (+35 %/+75 %) para nocturna y
-// festivo, asumiendo que el salario ya cubría su base — eso hacía que el
-// trabajador viera un número distinto al de la Liquidación oficial.
+// Nocturna ordinaria: solo el recargo (+35 %), la hora base ya la paga el
+// sueldo. Extras y festivo: multiplicador completo, son horas fuera de la
+// jornada que el sueldo no cubre (festivo según fecha, recargoFestivo()).
 const RECARGO_EXTRA = {
-  NOCTURNA:        1.35,
+  NOCTURNA:        0.35, // solo el recargo: el salario base ya paga la hora (asalariado)
   EXTRA_DIURNA:    1.25,
   EXTRA_NOCTURNA:  1.75,
 } as const;

@@ -49,7 +49,7 @@ export interface FilaDashboard {
   horasSemana:     number;
   limiteSemana:    number;
   horasExtra:      number;
-  horasNocturnas:  number; // always carry recargo ×1.35, shown separately
+  horasNocturnas:  number; // always carry the +35 % night surcharge, shown separately
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────

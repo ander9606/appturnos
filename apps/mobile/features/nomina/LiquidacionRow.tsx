@@ -179,7 +179,7 @@ export function LiquidacionRow({
                 ⚡ Horas extra y recargos
               </Text>
               {linea.horas_nocturnas > 0 && (
-                <FilaConcepto label={`${linea.horas_nocturnas.toFixed(1)}h nocturnas × $${linea.valor_hora.toLocaleString('es-CO')} × 1.35`} valor={linea.pago_nocturno} />
+                <FilaConcepto label={`${linea.horas_nocturnas.toFixed(1)}h nocturnas × $${linea.valor_hora.toLocaleString('es-CO')} × ${linea.recargo_nocturno}`} valor={linea.pago_nocturno} />
               )}
               {linea.horas_extra_diurnas > 0 && (
                 <FilaConcepto label={`${linea.horas_extra_diurnas.toFixed(1)}h extra diurna × $${linea.valor_hora.toLocaleString('es-CO')} × 1.25`} valor={linea.pago_extra_diurno} />

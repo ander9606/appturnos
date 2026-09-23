@@ -219,7 +219,9 @@ Horario nocturno (Ley 2466 de 2025, art. 10):
 Recargos (fuente de verdad: backend/config/constants.js):
   Horas extra diurnas     = valor_hora × 1.25
   Horas extra nocturnas   = valor_hora × 1.75
-  Horas nocturnas         = valor_hora × 1.35
+  Horas nocturnas (ordinarias):
+    asalariado    = valor_hora × 0.35  (solo el recargo: el sueldo ya paga la hora)
+    por tarifa    = valor_hora × 1.35  (hora base + recargo)
   Dominical/festivo (Ley 2466, art. 14 — gradual, según la fecha):
     antes de 1-jul-2025 ×1.75 · desde 1-jul-2025 ×1.80
     desde 1-jul-2026 ×1.90 · desde 1-jul-2027 ×2.00
