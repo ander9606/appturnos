@@ -22,6 +22,7 @@ import { IntegracionPage } from '@/modules/integracion/pages/IntegracionPage';
 import { SuperAdminPage } from '@/modules/admin/pages/SuperAdminPage';
 import { EmpresaDetailPage } from '@/modules/admin/pages/EmpresaDetailPage';
 import { WompiEventosPage } from '@/modules/admin/pages/WompiEventosPage';
+import { PlanesPage } from '@/modules/admin/pages/PlanesPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 /** La raíz es pública (landing de marketing) para visitantes anónimos; un usuario
@@ -69,6 +70,7 @@ export default function App() {
               <Route path="admin/empresas" element={<SuperAdminPage />} />
               <Route path="admin/empresas/:id" element={<EmpresaDetailPage />} />
               <Route path="admin/wompi-eventos" element={<WompiEventosPage />} />
+              <Route path="admin/planes" element={<PlanesPage />} />
             </Route>
           </Route>
         </Route>

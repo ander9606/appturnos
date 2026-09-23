@@ -4,7 +4,9 @@
  * Reglas de negocio (modelo salario fijo + extras semanales):
  * - El salario base SIEMPRE se paga íntegro — no hay descuentos por jornadas cortas.
  * - Horas nocturnas, extra y festivo se pagan encima del salario base con el
- *   multiplicador COMPLETO de ley (×1.35 / ×1.25 / ×1.75 / ×1.75) — el mismo
+ *   multiplicador de ley (nocturna ordinaria solo el recargo ×0.35 porque el
+ *   sueldo ya paga la hora base; ×1.25 / ×1.75 / festivo según fecha, ver
+ *   recargoFestivo en @api-client — Ley 2466 de 2025) — el mismo
  *   que usa la liquidación real (desglosarPagoNomina en el backend), para que
  *   el estimado que ve el trabajador coincida con lo que efectivamente se le paga.
  * - Horas extra se determinan semanalmente (Lun–Dom) contra el límite legal del año
@@ -13,16 +15,17 @@
  *   La ley se detiene en 42h — no baja más. Mismo valor que JORNADA_SEMANAL_HORAS
  *   en el backend (constants.js), que ya usa 42 sin escalonar por año.
  * - Domingo o festivo trabajado genera automáticamente 1 día de descanso compensatorio
- *   (Art. 179 CST) — la hora festiva trabajada igual lleva su recargo (×1.75); lo que
+ *   (Art. 179 CST) — la hora festiva trabajada igual lleva su recargo; lo que
  *   el compensatorio no lleva es un pago adicional POR EL DÍA DE DESCANSO en sí.
  */
 
 import type { RegistroDiario, PeriodoNomina, TipoDia, TipoPeriodo } from '@api-client';
+import { recargoFestivo } from '@api-client';
 import { toISODate, BOGOTA_OFFSET_MS } from '@/lib/formatters';
 
 // ── Constantes ─────────────────────────────────────────────────────────────
 
-const HORAS_MES_NOMINA = 240; // 30 d × 8 h
+const HORAS_MES_NOMINA = 210; // 42 h/semana ÷ 6 × 30 (espejo de backend/config/constants.js)
 
 // Umbral de jornada continua (Art. 167 CST): por debajo de esto no aplica
 // descanso obligatorio, así que no tiene sentido preguntar por almuerzo.
@@ -36,17 +39,15 @@ export const JORNADA_CONTINUA_UMBRAL_HORAS = 6;
 // es el número que realmente decidió el desglose ordinarias/extra de cada día.
 const JORNADA_SEMANAL_HORAS = 42;
 
-// Espejo de RECARGOS en backend/config/constants.js — mismo multiplicador
-// completo que usa la liquidación real (desglosarPagoNomina), sumado encima
+// Espejo de desglosarPagoNomina (backend) para un asalariado — se suma encima
 // del salario base (que se paga siempre íntegro, ver calcularSalarioBasePeriodo).
-// Antes este estimado usaba "solo el adicional" (+35 %/+75 %) para nocturna y
-// festivo, asumiendo que el salario ya cubría su base — eso hacía que el
-// trabajador viera un número distinto al de la Liquidación oficial.
+// Nocturna ordinaria: solo el recargo (+35 %), la hora base ya la paga el
+// sueldo. Extras y festivo: multiplicador completo, son horas fuera de la
+// jornada que el sueldo no cubre (festivo según fecha, recargoFestivo()).
 const RECARGO_EXTRA = {
-  NOCTURNA:        1.35,
+  NOCTURNA:        0.35, // solo el recargo: el salario base ya paga la hora (asalariado)
   EXTRA_DIURNA:    1.25,
   EXTRA_NOCTURNA:  1.75,
-  FESTIVO:         1.75,
 } as const;
 
 // Límites semanales según Ley 2101 de 2021 (reducción progresiva, corte cada
@@ -164,7 +165,7 @@ export function calcularValorExtraDia(r: RegistroDiario, valorHora: number): num
       RECARGO_EXTRA.NOCTURNA       * Number(r.horas_nocturnas)      +
       RECARGO_EXTRA.EXTRA_DIURNA   * Number(r.horas_extra_diurnas)  +
       RECARGO_EXTRA.EXTRA_NOCTURNA * Number(r.horas_extra_nocturnas) +
-      RECARGO_EXTRA.FESTIVO        * Number(r.horas_festivo)
+      recargoFestivo(r.fecha)      * Number(r.horas_festivo)
     )
   );
 }

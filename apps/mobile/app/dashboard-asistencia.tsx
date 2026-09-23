@@ -102,7 +102,7 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
           <Text className="text-xs text-muted-foreground">{horario}</Text>
         ) : null}
 
-        {/* Barra semanal: azul = diurnas ordinarias, violeta = nocturnas (recargo ×1.35), naranja = extras */}
+        {/* Barra semanal: azul = diurnas ordinarias, violeta = nocturnas (recargo +35 %), naranja = extras */}
         {(() => {
           const L      = fila.limiteSemana;
           const noc    = Math.min(fila.horasNocturnas, Math.max(0, fila.horasSemana - fila.horasExtra));

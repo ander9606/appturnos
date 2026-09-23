@@ -10,7 +10,7 @@ const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const { ROLES, HORAS_MES_NOMINA } = require('../../../config/constants');
-const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, calcularDeducciones, calcularSubsidioTransporte } = require('../../../utils/laboralUtils');
+const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, calcularDeducciones, calcularSubsidioTransporte, diasPagoPeriodo } = require('../../../utils/laboralUtils');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 
 function redondear(n) {
@@ -81,10 +81,8 @@ const LiquidacionService = {
       descuentosPorTrabajador.set(d.trabajador_id, lista);
     }
 
-    // Días del período — usado para prorratear el salario mensual (salario_base / 30 días conv.)
-    const diasPeriodo = Math.round(
-      (new Date(periodo.fecha_fin + 'T12:00:00Z') - new Date(periodo.fecha_inicio + 'T12:00:00Z')) / 86_400_000
-    ) + 1;
+    // Días a pagar en mes comercial (quincena = 15, mes = 30, semana = 7) — prorratea salario y auxilio.
+    const diasPeriodo = diasPagoPeriodo(periodo);
 
     let totalGeneral = 0;
     let totalNetoGeneral = 0;
@@ -99,16 +97,18 @@ const LiquidacionService = {
       const vh = f.valor_hora_snapshot != null
         ? Number(f.valor_hora_snapshot)
         : valorHora(f);
-      const desglosePago = desglosarPagoNomina(desglose, vh);
-
-      // Asalariado (salario_base): el sueldo fijo se paga íntegro, prorrateado
-      // por días del período — no depende de horas_ordinarias registradas.
-      // Por tarifa_hora: sigue siendo horas_ordinarias × valor_hora.
       // Si el período ya cerró, usa el salario congelado (igual que vh arriba)
       // — un cambio de sueldo posterior no debe recalcular períodos pasados.
       const salarioBase = f.salario_base_snapshot != null
         ? Number(f.salario_base_snapshot)
         : f.salario_base;
+      const desglosePago = desglosarPagoNomina(desglose, vh, periodo.fecha_fin, {
+        salarioFijo: salarioBase != null,
+      });
+
+      // Asalariado (salario_base): el sueldo fijo se paga íntegro, prorrateado
+      // por días del período — no depende de horas_ordinarias registradas.
+      // Por tarifa_hora: sigue siendo horas_ordinarias × valor_hora.
       const pagoOrdinario = redondear(calcularSalarioBasePeriodo({
         tarifaHora: f.tarifa_hora,
         salarioBase,
@@ -157,6 +157,8 @@ const LiquidacionService = {
         pago_extra_diurno: pagoExtraDiurno,
         pago_extra_nocturno: pagoExtraNocturno,
         pago_festivo: pagoFestivo,
+        recargo_festivo: desglosePago.recargo_festivo,
+        recargo_nocturno: desglosePago.recargo_nocturno,
         total,
         descuento_salud: redondear(deducciones.salud),
         descuento_pension: redondear(deducciones.pension),

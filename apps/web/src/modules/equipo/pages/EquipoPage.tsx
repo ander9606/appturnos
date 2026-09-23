@@ -8,6 +8,7 @@ import { EmptyState } from '@/shared/components/EmptyState';
 import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { HORAS_MES_NOMINA } from '@/shared/laboral';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP as fmtCOPBase } from '@/shared/lib/format';
 import type { TipoTrabajador, Trabajador } from '../types';
@@ -38,8 +39,7 @@ function fmtCOP(n: number | null) {
 }
 
 /** Misma prioridad que `valorHora()` en backend/utils/laboralUtils.js: salario_base
- *  manda si está definido; si no, se deriva del mensual equivalente a tarifa_hora × 240. */
-const HORAS_MES_NOMINA = 240;
+ *  manda si está definido; si no, se deriva del mensual equivalente a tarifa_hora × HORAS_MES_NOMINA (210). */
 function salarioMensual(t: Trabajador): number | null {
   if (t.salario_base != null) return t.salario_base;
   if (t.tarifa_hora != null) return t.tarifa_hora * HORAS_MES_NOMINA;

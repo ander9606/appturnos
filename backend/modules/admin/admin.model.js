@@ -1,7 +1,12 @@
 'use strict';
 
 const { pool } = require('../../config/database');
-const { SUSCRIPCION_ESTANDAR_COP } = require('../../config/constants');
+const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
+
+// Monto real cobrado (COP) de un evento Wompi — cada plan tiene su precio, así
+// que los ingresos se suman desde el pago y no como meses × tarifa fija.
+const MONTO_COP_SQL =
+  "CAST(JSON_EXTRACT(payload, '$.data.transaction.amount_in_cents') AS UNSIGNED) / 100";
 
 /**
  * Acceso a datos del módulo admin (super_admin).
@@ -41,13 +46,13 @@ const AdminModel = {
          COUNT(DISTINCT CASE WHEN t.tipo = 'nomina' THEN t.id END) AS trabajadores_nomina,
          COUNT(DISTINCT CASE WHEN t.tipo = 'ambos'  THEN t.id END) AS trabajadores_ambos,
          (MAX(ic.activo) = 1 AND MAX(ic.api_key) IS NOT NULL) AS logiq360_conectado,
-         COALESCE(MAX(wp.meses_pagados), 0) AS ingresos_meses_pagados
+         COALESCE(MAX(wp.ingresos_cop), 0) AS ingresos_totales_cop
        FROM empresas e
        LEFT JOIN trabajadores t ON t.empresa_id = e.id
        LEFT JOIN usuarios u     ON u.empresa_id = e.id
        LEFT JOIN integracion_config ic ON ic.empresa_id = e.id
        LEFT JOIN (
-         SELECT empresa_id, SUM(meses) AS meses_pagados
+         SELECT empresa_id, SUM(${MONTO_COP_SQL}) AS ingresos_cop
          FROM wompi_eventos
          WHERE estado = 'procesado'
          GROUP BY empresa_id
@@ -60,8 +65,7 @@ const AdminModel = {
     );
     filas.forEach((f) => {
       f.logiq360_conectado = Boolean(f.logiq360_conectado);
-      f.ingresos_totales_cop = Number(f.ingresos_meses_pagados) * SUSCRIPCION_ESTANDAR_COP;
-      delete f.ingresos_meses_pagados;
+      f.ingresos_totales_cop = Number(f.ingresos_totales_cop);
     });
 
     const [[{ total }]] = await pool.query(
@@ -224,17 +228,23 @@ const AdminModel = {
     );
 
     // Proyección: empresas que pagan directo (wompi) con suscripción vigente hoy.
-    const [[proyeccion]] = await pool.query(
-      `SELECT COUNT(*) AS empresas_pagando
-       FROM empresas
-       WHERE activo = 1
-         AND suscripcion_origen = 'wompi'
-         AND (suscripcion_vigente_hasta IS NULL OR suscripcion_vigente_hasta >= CURDATE())`
+    const [pagando] = await pool.query(
+      `SELECT e.plan,
+              (SELECT COUNT(*) FROM trabajadores t WHERE t.empresa_id = e.id AND t.activo = 1) AS activos
+       FROM empresas e
+       WHERE e.activo = 1
+         AND e.suscripcion_origen = 'wompi'
+         AND (e.suscripcion_vigente_hasta IS NULL OR e.suscripcion_vigente_hasta >= CURDATE())`
     );
+    // empresas.plan admite NULL (DEFAULT 'basico' sin NOT NULL).
+    const planes = await PlanesModel.listar();
+    const planPorCodigo = new Map(planes.map((p) => [p.codigo, p]));
+    const proyeccionCop = pagando.reduce(
+      (s, e) => s + precioPlanCop(planPorCodigo.get(e.plan ?? 'basico'), Number(e.activos)), 0);
 
     // Ganado el mes pasado: pagos Wompi procesados en el mes calendario anterior.
     const [[mesPasado]] = await pool.query(
-      `SELECT COALESCE(SUM(meses), 0) AS meses_pagados
+      `SELECT COALESCE(SUM(${MONTO_COP_SQL}), 0) AS ingresos_cop
        FROM wompi_eventos
        WHERE estado = 'procesado'
          AND procesado_at >= DATE_FORMAT(CURDATE() - INTERVAL 1 MONTH, '%Y-%m-01')
@@ -243,7 +253,7 @@ const AdminModel = {
 
     // Generado en lo que va del mes actual: pagos Wompi ya procesados (no proyección).
     const [[mesActual]] = await pool.query(
-      `SELECT COALESCE(SUM(meses), 0) AS meses_pagados
+      `SELECT COALESCE(SUM(${MONTO_COP_SQL}), 0) AS ingresos_cop
        FROM wompi_eventos
        WHERE estado = 'procesado'
          AND procesado_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`
@@ -253,13 +263,13 @@ const AdminModel = {
     // la tendencia de MRR. Se rellenan en JS los meses sin pagos procesados
     // para que el arreglo siempre tenga 6 puntos consecutivos.
     const [historicoRows] = await pool.query(
-      `SELECT DATE_FORMAT(procesado_at, '%Y-%m') AS mes, COALESCE(SUM(meses), 0) AS meses_pagados
+      `SELECT DATE_FORMAT(procesado_at, '%Y-%m') AS mes, COALESCE(SUM(${MONTO_COP_SQL}), 0) AS ingresos_cop
        FROM wompi_eventos
        WHERE estado = 'procesado'
          AND procesado_at >= DATE_FORMAT(CURDATE() - INTERVAL 5 MONTH, '%Y-%m-01')
        GROUP BY mes`
     );
-    const mesesPagadosPorMes = new Map(historicoRows.map((r) => [r.mes, Number(r.meses_pagados)]));
+    const ingresosPorMes = new Map(historicoRows.map((r) => [r.mes, Number(r.ingresos_cop)]));
     const hoy = new Date();
     const mrrHistorico = [];
     for (let i = 5; i >= 0; i--) {
@@ -267,7 +277,7 @@ const AdminModel = {
       const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       mrrHistorico.push({
         mes,
-        ingresos_cop: (mesesPagadosPorMes.get(mes) ?? 0) * SUSCRIPCION_ESTANDAR_COP,
+        ingresos_cop: ingresosPorMes.get(mes) ?? 0,
       });
     }
 
@@ -311,10 +321,10 @@ const AdminModel = {
         pago_directo: Number(integraciones.empresas_pago_directo) || 0,
       },
       ingresos: {
-        mes_actual: Number(mesActual.meses_pagados) * SUSCRIPCION_ESTANDAR_COP,
-        proyeccion_mes_actual: Number(proyeccion.empresas_pagando) * SUSCRIPCION_ESTANDAR_COP,
-        ganado_mes_pasado: Number(mesPasado.meses_pagados) * SUSCRIPCION_ESTANDAR_COP,
-        tarifa_cop: SUSCRIPCION_ESTANDAR_COP,
+        mes_actual: Number(mesActual.ingresos_cop),
+        proyeccion_mes_actual: proyeccionCop,
+        ganado_mes_pasado: Number(mesPasado.ingresos_cop),
+        planes,
         mrr_historico: mrrHistorico,
       },
       renovaciones_riesgo: renovacionesRows.map((r) => ({
@@ -333,7 +343,8 @@ const AdminModel = {
     const params = estado ? [estado, limit, offset] : [limit, offset];
     const [rows] = await pool.query(
       `SELECT we.id, we.transaction_id, we.referencia, we.empresa_id, e.nombre AS empresa_nombre,
-              we.plan, we.meses, we.estado, we.intentos, we.error_detalle, we.created_at, we.procesado_at
+              we.plan, we.meses, we.estado, we.intentos, we.error_detalle, we.created_at, we.procesado_at,
+              CAST(JSON_EXTRACT(we.payload, '$.data.transaction.amount_in_cents') AS UNSIGNED) / 100 AS monto_cop
          FROM wompi_eventos we
          LEFT JOIN empresas e ON e.id = we.empresa_id
          ${where}
@@ -345,7 +356,9 @@ const AdminModel = {
       `SELECT COUNT(*) AS total FROM wompi_eventos ${where.replace('we.estado', 'estado')}`,
       estado ? [estado] : []
     );
-    return { data: rows, total: Number(total) };
+    // DECIMAL llega como string desde mysql2.
+    const data = rows.map((r) => ({ ...r, monto_cop: r.monto_cop == null ? null : Number(r.monto_cop) }));
+    return { data, total: Number(total) };
   },
 };
 

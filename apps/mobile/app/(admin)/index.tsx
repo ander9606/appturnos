@@ -189,7 +189,7 @@ export default function AdminDashboard() {
                 icon="💳"
                 value={data.integraciones.pago_directo}
                 label="Pagan directo a Zaturno"
-                sub={`Tarifa: ${formatCOP(data.ingresos?.tarifa_cop)}/mes`}
+                sub={`Planes desde ${formatCOP(data.ingresos?.planes?.[0]?.precio_cop)}/mes`}
               />
             </View>
 
@@ -272,6 +272,21 @@ export default function AdminDashboard() {
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">
               Ver pagos Wompi
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push('/(admin)/planes' as any)}
+            className="bg-card border border-border rounded-2xl p-4 items-center gap-2 active:opacity-70"
+            style={{ width: '47%' }}
+            accessibilityRole="button"
+          >
+            <View className="w-10 h-10 rounded-xl items-center justify-center"
+              style={{ backgroundColor: '#6366F110' }}>
+              <Text className="text-xl">🏷️</Text>
+            </View>
+            <Text className="text-xs font-semibold text-foreground text-center">
+              Planes y precios
             </Text>
           </Pressable>
         </View>

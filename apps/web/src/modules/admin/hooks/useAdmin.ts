@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { adminApi } from '../api/adminApi';
-import type { Plan } from '../types';
+import type { Plan, ActualizarPlanPayload } from '../types';
 
 function getErrMsg(err: unknown) {
   return axios.isAxiosError(err)
@@ -77,6 +77,27 @@ export function useGestionarSuscripcion(id: number) {
 export function useGenerarLinkPago(id: number) {
   return useMutation({
     mutationFn: (data: { plan: Plan; meses: number }) => adminApi.generarLinkPago(id, data),
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function usePlanes() {
+  return useQuery({
+    queryKey: ['admin', 'planes'],
+    queryFn: adminApi.listarPlanes,
+    staleTime: 60_000,
+  });
+}
+
+export function useActualizarPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ codigo, data }: { codigo: Plan; data: ActualizarPlanPayload }) => adminApi.actualizarPlan(codigo, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'planes'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'reportes'] });
+      toast.success('Plan actualizado — aplica a los próximos links de pago');
+    },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }

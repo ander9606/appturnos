@@ -1,6 +1,9 @@
 'use strict';
 
+const path = require('path');
 const EmpresasService = require('./empresas.service');
+
+const REGLAS_PAGO_PDF = path.join(__dirname, '..', '..', 'documentos', 'reglas-calculo-pagos.pdf');
 
 async function directorio(req, res) {
   const { busqueda, ciudad, page = 1, limit = 20 } = req.query;
@@ -47,8 +50,8 @@ async function actualizarMiEmpresa(req, res) {
 }
 
 async function generarLinkPago(req, res) {
-  const { meses } = req.body;
-  const data = await EmpresasService.generarLinkPago(req.empresa_id, { meses });
+  const { meses, plan } = req.body;
+  const data = await EmpresasService.generarLinkPago(req.empresa_id, { meses, plan });
   res.json({ success: true, data, message: 'Link de pago generado' });
 }
 
@@ -57,4 +60,18 @@ async function obtenerSuscripcion(req, res) {
   res.json({ success: true, data });
 }
 
-module.exports = { directorio, detalle, miEmpresa, actualizarMiEmpresa, generarLinkPago, obtenerSuscripcion };
+/**
+ * Descarga el PDF de reglas de cálculo de pagos — solo admin_empresa (ver
+ * routes). Documento estático generado con
+ * backend/scripts/generar-pdf-reglas.js a partir de
+ * docs/REGLAS-CALCULO-PAGOS.md; no depende de la empresa que lo pide.
+ */
+function reglasPago(req, res) {
+  res.sendFile(REGLAS_PAGO_PDF, {
+    headers: { 'Content-Disposition': 'inline; filename="Zaturno-reglas-calculo-pagos.pdf"' },
+  });
+}
+
+module.exports = {
+  directorio, detalle, miEmpresa, actualizarMiEmpresa, generarLinkPago, obtenerSuscripcion, reglasPago,
+};

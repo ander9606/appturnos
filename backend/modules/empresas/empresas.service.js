@@ -4,6 +4,7 @@ const EmpresasModel = require('./empresas.model');
 const IntegracionModel = require('../integracion/integracion.model');
 const PeriodosService = require('../nomina/periodos/periodos.service');
 const AppError = require('../../utils/AppError');
+const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
 const logger = require('../../utils/logger');
 
 /** Fuente de verdad de "es logiq360": conexión activa con api_key, no una etiqueta manual. */
@@ -58,14 +59,33 @@ const EmpresasService = {
     return empresa;
   },
 
-  async generarLinkPago(empresaId, { meses = 1 }) {
+  /**
+   * `plan` opcional: el admin_empresa lo elige para ampliar (o reducir) su
+   * plan. Sin plan, WompiService renueva el actual. Un plan cuyo tope no
+   * admite los trabajadores activos se rechaza — pagaría por un plan que
+   * lo bloquea al día siguiente.
+   */
+  async generarLinkPago(empresaId, { meses = 1, plan }) {
     const empresa = await EmpresasModel.obtenerParaPago(empresaId);
     if (!empresa) throw new AppError('Empresa no encontrada', 404);
     if (await tieneIntegracionLogiq360Activa(empresaId)) {
       throw new AppError('Esta empresa gestiona su suscripción a través de logiq360', 409);
     }
+    if (plan) {
+      const [planes, activos] = await Promise.all([
+        PlanesModel.listar(), EmpresasModel.contarTrabajadoresActivos(empresaId),
+      ]);
+      const elegido = planes.find((p) => p.codigo === plan);
+      if (!elegido) throw new AppError('Plan no encontrado', 404);
+      if (elegido.max_trabajadores != null && activos > elegido.max_trabajadores) {
+        throw new AppError(
+          `El plan ${elegido.nombre} admite hasta ${elegido.max_trabajadores} trabajadores y tienes ${activos} activos`,
+          422
+        );
+      }
+    }
     const WompiService = require('../webhooks/wompi.service');
-    return WompiService.generarLinkPago({ empresaId, nombreEmpresa: empresa.nombre, meses });
+    return WompiService.generarLinkPago({ empresaId, nombreEmpresa: empresa.nombre, meses, plan });
   },
 
   async estadoSuscripcion(empresaId) {
@@ -78,6 +98,10 @@ const EmpresasService = {
     if (limite) limite.setDate(limite.getDate() + 3);
     const activa = esLogiq360 || !vence || limite >= hoy;
     const diasRestantes = vence ? Math.ceil((vence - hoy) / 86400000) : null;
+    const [planes, activos] = await Promise.all([
+      PlanesModel.listar(), EmpresasModel.contarTrabajadoresActivos(empresaId),
+    ]);
+    const actual = planes.find((p) => p.codigo === e.plan);
     return {
       activa,
       plan: e.plan,
@@ -85,6 +109,19 @@ const EmpresasService = {
       dias_restantes: diasRestantes,
       origen: esLogiq360 ? 'logiq360' : 'directo',
       logiq360_conectado: esLogiq360,
+      trabajadores_activos: activos,
+      max_trabajadores: actual?.max_trabajadores ?? null,
+      // Para la sección "Ampliar plan": precio que pagaría hoy con sus activos
+      // y si el plan admite a todos sus trabajadores.
+      planes: planes.map((p) => ({
+        codigo: p.codigo,
+        nombre: p.nombre,
+        max_trabajadores: p.max_trabajadores,
+        incluidos: p.incluidos,
+        precio_adicional_cop: p.precio_adicional_cop,
+        precio_mensual_cop: precioPlanCop(p, activos),
+        disponible: p.max_trabajadores == null || activos <= p.max_trabajadores,
+      })),
     };
   },
 };

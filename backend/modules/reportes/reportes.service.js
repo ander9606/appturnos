@@ -3,7 +3,7 @@
 const ReportesModel = require('./reportes.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
-const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo } = require('../../utils/laboralUtils');
+const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, diasComerciales } = require('../../utils/laboralUtils');
 
 function redondear(n) {
   return Math.round(n * 100) / 100;
@@ -37,14 +37,12 @@ const ReportesService = {
     // sueldo prorrateado al rango completo, no lo que sumen sus horas_ordinarias
     // — si no, este reporte subestima el costo real de un asalariado con pocas
     // horas registradas en el rango.
-    const diasRango = Math.round(
-      (new Date(hasta + 'T12:00:00Z') - new Date(desde + 'T12:00:00Z')) / 86_400_000
-    ) + 1;
+    const diasRango = diasComerciales(desde, hasta);
 
     let costoNomina = 0;
     const detalleNomina = filasNomina.map((f) => {
       const vh = valorHora(f);
-      const desglosePago = desglosarPagoNomina(f, vh);
+      const desglosePago = desglosarPagoNomina(f, vh, hasta, { salarioFijo: f.salario_base != null });
       const pagoOrdinario = calcularSalarioBasePeriodo({
         tarifaHora: f.tarifa_hora,
         salarioBase: f.salario_base,

@@ -22,6 +22,8 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { showToast } from '@/lib/toast';
+import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
+import * as WebBrowser from 'expo-web-browser';
 
 // ── Schema ────────────────────────────────────────────────────────────────
 
@@ -433,6 +435,25 @@ export default function MiEmpresaScreen() {
               )}
             />
           </View>
+
+          {/* Cómo calculamos los pagos */}
+          <Pressable
+            onPress={async () => {
+              const token = await SecureStore.getItemAsync('appturnos.access_token');
+              const base  = process.env.EXPO_PUBLIC_API_URL;
+              await WebBrowser.openBrowserAsync(`${base}/api/empresas/reglas-pago?token=${token}`);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Descargar PDF: cómo calculamos los pagos"
+            className="flex-row items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 active:opacity-70"
+          >
+            <Ionicons name="document-text-outline" size={22} color={theme.primary} />
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-foreground">Cómo calculamos los pagos</Text>
+              <Text className="text-xs text-muted-foreground">Horas, recargos, descuentos y turnos · PDF</Text>
+            </View>
+            <Ionicons name="download-outline" size={18} color="#94A3B8" />
+          </Pressable>
 
           {/* Guardar */}
           <Button
