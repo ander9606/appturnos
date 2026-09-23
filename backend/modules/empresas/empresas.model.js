@@ -111,6 +111,14 @@ const EmpresasModel = {
     return filas[0] || null;
   },
 
+  async contarTrabajadoresActivos(empresaId) {
+    const [[{ total }]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM trabajadores WHERE empresa_id = ? AND activo = 1',
+      [empresaId]
+    );
+    return Number(total);
+  },
+
   async obtenerEstadoSuscripcion(empresaId) {
     const [filas] = await pool.query(
       'SELECT plan, suscripcion_vigente_hasta FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',

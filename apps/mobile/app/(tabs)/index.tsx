@@ -514,7 +514,8 @@ export default function DashboardScreen() {
         {/* ── Estado de suscripción (discreto, solo caso normal activa) ── */}
         {isManager && !logiq360Conectado && !suscVencida && !suscPorVencer && suscData?.activa && (
           <Pressable
-            onPress={iniciarRenovacion}
+            // admin_empresa va a Mi plan (uso + ampliar); el resto sigue avisando a soporte.
+            onPress={isAdmin ? () => router.push('/mi-plan') : iniciarRenovacion}
             disabled={pagarMutation.isPending}
             className="flex-row items-center justify-center gap-1.5 mx-4 mt-4 py-2 rounded-full bg-card border border-border active:opacity-60"
             accessibilityRole="button"

@@ -14,7 +14,7 @@ Se integra en tiempo real con [logiq360](https://github.com/ander9606/aprendizaj
 - **Contratos y pagos**: contratos diarios con firma digital y cuentas de cobro para prestación de servicios.
 - **Equipo**: gestión de trabajadores, cargos, ausencias, novedades y contratos, con una matriz de 7 roles (desde super-admin multi-tenant hasta trabajador de solo consulta).
 - **Notificaciones push** y **reportes** exportables.
-- **Suscripción** por plan con pago en Wompi: Básico $79.000 (hasta 10 trabajadores), Profesional $169.000 (hasta 30), Empresarial $299.000 (80 incluidos + $3.500 por trabajador adicional), en COP/mes; 30 días de prueba. Gratis para empresas conectadas a logiq360.
+- **Suscripción** por plan con pago en Wompi: Básico $79.000 (hasta 10 trabajadores), Profesional $169.000 (hasta 30), Empresarial $299.000 (80 incluidos + $3.500 por trabajador adicional), en COP/mes; 30 días de prueba. Precios editables por el super admin; el admin de cada empresa ve su uso y amplía su plan desde "Mi plan". Gratis para empresas conectadas a logiq360.
 - **Integración con logiq360**: worker que sincroniza eventos entre ambos sistemas vía webhooks, con reintentos exponenciales.
 
 ## Stack

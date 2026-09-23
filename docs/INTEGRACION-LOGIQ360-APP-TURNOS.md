@@ -1091,7 +1091,7 @@ desplegado; no requiere ningún cambio adicional de logiq360 más allá de eso.
 
 Zaturno pasó de un flag manual de "empresa logiq360" a derivar la gratuidad en vivo
 de `integracion_config.activo` + `api_key`. Las empresas conectadas no pagan; las
-demás pagan según su plan (`PLANES` en `backend/config/constants.js`): Básico
+demás pagan según su plan (tabla `planes`, editable por super_admin en `/admin/planes`). Precios iniciales: Básico
 $79.000 (hasta 10 trabajadores), Profesional $169.000 (hasta 30) y Empresarial
 $299.000 (80 incluidos + $3.500 por trabajador activo adicional), en COP/mes.
 

@@ -47,8 +47,8 @@ async function actualizarMiEmpresa(req, res) {
 }
 
 async function generarLinkPago(req, res) {
-  const { meses } = req.body;
-  const data = await EmpresasService.generarLinkPago(req.empresa_id, { meses });
+  const { meses, plan } = req.body;
+  const data = await EmpresasService.generarLinkPago(req.empresa_id, { meses, plan });
   res.json({ success: true, data, message: 'Link de pago generado' });
 }
 

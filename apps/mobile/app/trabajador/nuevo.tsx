@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 
+import { ApiError } from '@api-client';
 import { useCrearTrabajador } from '@/features/equipo/useEquipo';
 import { StepIndicator } from '@/features/equipo/perfil/StepIndicator';
 import { Step1DatosPersonales } from '@/features/equipo/perfil/Step1DatosPersonales';
@@ -75,6 +76,14 @@ export default function NuevoTrabajadorScreen() {
         err && typeof err === 'object' && 'message' in err
           ? String((err as { message: string }).message)
           : 'Ocurrió un error. Intenta de nuevo.';
+      // 402 = tope de trabajadores del plan (trabajadores.service.js) — ofrecer ampliarlo.
+      if (err instanceof ApiError && err.status === 402) {
+        Alert.alert('Llegaste al tope de tu plan', msg, [
+          { text: 'Cerrar', style: 'cancel' },
+          { text: 'Ampliar plan', onPress: () => router.push('/mi-plan') },
+        ]);
+        return;
+      }
       Alert.alert('Error al crear', msg);
     }
   };

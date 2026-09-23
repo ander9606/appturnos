@@ -152,7 +152,7 @@ When a payroll period is closed, `cerrarConSnapshot()` in `periodos.model.js` at
 ### Labor Law Constants (`backend/config/constants.js`)
 | Constant | Value | Meaning |
 |---|---|---|
-| `HORAS_MES_NOMINA` | 240 | 30 days × 8 h — divisor for monthly → hourly rate |
+| `HORAS_MES_NOMINA` | 210 | 42 h/week ÷ 6 × 30 — divisor for monthly → hourly rate (also used in the period-close snapshot SQL) |
 | `JORNADA_SEMANAL_HORAS` | 42 | Weekly ordinary cap (Ley 2101); beyond it → extra |
 | `HORA_INICIO_NOCTURNO_VIGENCIAS` | 19 from 2025-12-25, 21 before | Night start by date (Ley 2466 art. 10) |
 | `HORA_FIN_NOCTURNO` | 6 | Night surcharge ends 06:00 |
@@ -167,7 +167,9 @@ Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src
 `laboralUtils.js` exports `calcularHoras()` (minute-by-minute breakdown), `esDiaFestivo()` (Colombian public holidays including Ley Emiliani + Easter-relative), `horaInicioNocturno()`, `recargoFestivo()`, `valorHora()`, `calcularPagoNomina()`, `desglosarPagoNomina()`, `calcularDeducciones()`, `calcularSubsidioTransporte()`.
 
 ### Subscriptions & Billing
-Companies with an active logiq360 integration (`integracion_config.activo = 1` + `api_key`) don't pay. The rest pay per plan via Wompi payment links (`webhooks/wompi.service.js`):
+Companies with an active logiq360 integration (`integracion_config.activo = 1` + `api_key`) don't pay. The rest pay per plan via Wompi payment links (`webhooks/wompi.service.js`).
+
+Prices and limits live in the **`planes` table** (migration 100, platform-level — no `empresa_id`), editable by super_admin at web `/admin/planes` (`GET/PUT /api/admin/planes[/:codigo]`). Seed values:
 
 | Plan | Active workers | COP/month |
 |---|---|---|
@@ -175,7 +177,7 @@ Companies with an active logiq360 integration (`integracion_config.activo = 1` +
 | `profesional` | up to 30 | 169.000 |
 | `empresarial` | unlimited | 299.000 incl. 80 + 3.500 per extra worker |
 
-`PLANES`, `precioPlanCop()` and `planParaTrabajadores()` in `constants.js` are the source of truth. `trabajadores.service.js` enforces `max_trabajadores` (402). `generarLinkPago()` without `plan` renews the company's current plan, upgrading only if its active workers no longer fit — it never downgrades. The Wompi reference is `AT-{empresaId}-{plan}-{meses}`; the webhook writes that plan back to `empresas.plan`. Revenue in the super_admin panel is summed from the real `amount_in_cents` in each `wompi_eventos.payload`. New companies get `TRIAL_DIAS_GRATIS` (30) days free — enough to close one quincena.
+`modules/suscripciones/planes.model.js` exports `PlanesModel` plus the pure helpers `precioPlanCop(planRow, activos)` and `planParaTrabajadores(planes, activos)` — never hard-code a price in a frontend. A price change only affects links generated afterwards. `trabajadores.service.js` enforces `max_trabajadores` (402 → web toast / mobile alert offers "Ampliar plan"). `GET /api/empresas/suscripcion` returns usage (`trabajadores_activos`, `max_trabajadores`) and every plan with `precio_mensual_cop` for the company's current headcount; admin_empresa upgrades from web Configuración → Mi plan or mobile `app/mi-plan.tsx` by calling `POST /api/empresas/suscripcion/pagar { plan, meses }` (422 if the plan can't fit its active workers). `generarLinkPago()` without `plan` renews the company's current plan, upgrading only if its active workers no longer fit — it never downgrades. The Wompi reference is `AT-{empresaId}-{plan}-{meses}`; the webhook writes that plan back to `empresas.plan`. Revenue in the super_admin panel is summed from the real `amount_in_cents` in each `wompi_eventos.payload`. New companies get `TRIAL_DIAS_GRATIS` (30) days free — enough to close one quincena.
 
 ### Background Workers
 `*.worker.js` files started from `server.js`: `integracion` (logiq360 queue), `suscripcion` (renewal emails at 7/3/0 days), `wompi` (retry failed payment events), `turnos` (close postulaciones stuck on offers expired 2+ days), `registros` (notify once when an active shift enters overtime), `recordatorioIngreso` (remind fixed-schedule workers who haven't clocked in), `compensatorios` (tell managers who is on compensatory rest today).

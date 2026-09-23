@@ -45,6 +45,7 @@ router.post(
   verificarRol(SOLO_ADMIN),
   [
     body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
+    body('plan').optional().isIn(['basico', 'profesional', 'empresarial']),
   ],
   validar,
   ctrl.generarLinkPago

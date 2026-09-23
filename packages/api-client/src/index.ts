@@ -13,7 +13,7 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export type { CrearGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato, Suscripcion, PlanOpcion } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
@@ -153,6 +153,8 @@ export type {
   ActualizarEmpresaPayload,
   ReportesGlobales,
   PlanEmpresa,
+  PlanConfig,
+  ActualizarPlanPayload,
   SuscripcionOrigen,
   LinkPagoResponse,
   WompiEstado,

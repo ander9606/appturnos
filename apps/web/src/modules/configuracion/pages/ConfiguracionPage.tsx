@@ -14,7 +14,7 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP } from '@/shared/lib/format';
-import type { PuntoMarcaje, AlcancePunto, Cargo, Gestor, LinkPago } from '../types';
+import type { PuntoMarcaje, AlcancePunto, Cargo, Gestor, LinkPago, PlanCodigo, PlanOpcion } from '../types';
 
 type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores' | 'plan';
 
@@ -527,10 +527,17 @@ function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(s));
 }
 
+/** "Hasta 10 trabajadores" / "80 incluidos + $3.500 por adicional" / "Sin tope de trabajadores". */
+function describirPlan(p: PlanOpcion): string {
+  if (p.incluidos != null) return `${p.incluidos} trabajadores incluidos + ${fmtCOP(p.precio_adicional_cop ?? 0)} por adicional`;
+  return p.max_trabajadores != null ? `Hasta ${p.max_trabajadores} trabajadores` : 'Sin tope de trabajadores';
+}
+
 function PlanTab() {
   const { data, isLoading, isError, error, refetch } = useSuscripcion();
   const pagar = usePagarSuscripcion();
   const [meses, setMeses] = useState(1);
+  const [planElegido, setPlanElegido] = useState<PlanCodigo | null>(null);
   const [link, setLink] = useState<LinkPago | null>(null);
   const s = data?.data;
 
@@ -538,8 +545,14 @@ function PlanTab() {
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!s) return null;
 
+  const elegido = planElegido ?? s.plan;
+  const opcion = s.planes.find(p => p.codigo === elegido);
+  const esCambio = elegido !== s.plan;
+  const uso = s.max_trabajadores ? Math.min(100, Math.round((s.trabajadores_activos / s.max_trabajadores) * 100)) : null;
+  const enTope = s.max_trabajadores != null && s.trabajadores_activos >= s.max_trabajadores;
+
   const handleGenerar = async () => {
-    const res = await pagar.mutateAsync(meses);
+    const res = await pagar.mutateAsync({ meses, plan: elegido });
     setLink(res.data);
   };
 
@@ -577,6 +590,37 @@ function PlanTab() {
             </>
           )}
         </div>
+
+        {/* Uso del plan: trabajadores activos frente al tope. */}
+        <div className="mt-5">
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-muted-foreground uppercase">Trabajadores activos</span>
+            <span className={`font-medium ${enTope ? 'text-danger' : 'text-foreground'}`}>
+              {s.trabajadores_activos}{s.max_trabajadores != null ? ` de ${s.max_trabajadores}` : ' · sin tope'}
+            </span>
+          </div>
+          {uso !== null && (
+            <div
+              role="progressbar"
+              aria-label="Trabajadores activos frente al tope del plan"
+              aria-valuenow={s.trabajadores_activos}
+              aria-valuemin={0}
+              aria-valuemax={s.max_trabajadores ?? undefined}
+              className="h-2 bg-muted rounded-full overflow-hidden"
+            >
+              <div
+                className={`h-full rounded-full ${enTope ? 'bg-danger' : uso >= 80 ? 'bg-warning' : 'bg-primary-600'}`}
+                style={{ width: `${uso}%` }}
+              />
+            </div>
+          )}
+          {enTope && s.origen !== 'logiq360' && (
+            <p className="text-xs text-danger mt-2">
+              Llegaste al tope de tu plan. Para agregar más trabajadores, amplía tu plan abajo.
+            </p>
+          )}
+        </div>
+
         {s.origen === 'logiq360' && (
           <p className="text-xs text-muted-foreground mt-4">
             Tu suscripción se gestiona a través de tu integración con logiq360 — no necesitas pagarla aquí.
@@ -586,7 +630,10 @@ function PlanTab() {
 
       {s.origen !== 'logiq360' && (
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h2 className="text-sm font-semibold text-foreground mb-4">Renovar suscripción</h2>
+          <h2 className="text-sm font-semibold text-foreground mb-1">Renovar o ampliar plan</h2>
+          <p className="text-xs text-muted-foreground mb-4">
+            Al pagar, el plan elegido se activa de inmediato y tu suscripción se extiende por los meses que pagues.
+          </p>
           {link ? (
             <div className="flex flex-col gap-2">
               <a
@@ -598,7 +645,7 @@ function PlanTab() {
                 {link.url}
               </a>
               <p className="text-xs text-muted-foreground">
-                Válido hasta {fmtDate(link.expira_at)} · {fmtCOP(link.monto_cop)}
+                Plan {PLAN_LABEL[link.plan] ?? link.plan} · Válido hasta {fmtDate(link.expira_at)} · {fmtCOP(link.monto_cop)}
               </p>
               <button
                 onClick={() => setLink(null)}
@@ -608,24 +655,63 @@ function PlanTab() {
               </button>
             </div>
           ) : (
-            <div className="flex gap-3 items-end">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground uppercase mb-1">Meses</label>
-                <select
-                  value={meses}
-                  onChange={e => setMeses(Number(e.target.value))}
-                  className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            <div className="flex flex-col gap-4">
+              <fieldset className="flex flex-col gap-2">
+                <legend className="sr-only">Plan</legend>
+                {s.planes.map(p => (
+                  <label
+                    key={p.codigo}
+                    className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm transition-colors ${
+                      !p.disponible ? 'opacity-50 cursor-not-allowed border-border'
+                      : elegido === p.codigo ? 'border-primary-600 bg-primary-50 cursor-pointer'
+                      : 'border-border hover:bg-muted/40 cursor-pointer'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="plan"
+                      value={p.codigo}
+                      checked={elegido === p.codigo}
+                      disabled={!p.disponible}
+                      onChange={() => setPlanElegido(p.codigo)}
+                      className="accent-primary-600"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">
+                        {p.nombre}{p.codigo === s.plan && <span className="text-xs text-muted-foreground font-normal"> · tu plan actual</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {p.disponible ? describirPlan(p) : `No admite tus ${s.trabajadores_activos} trabajadores activos`}
+                      </p>
+                    </div>
+                    <span className="font-semibold text-foreground">{fmtCOP(p.precio_mensual_cop)}<span className="text-xs font-normal text-muted-foreground">/mes</span></span>
+                  </label>
+                ))}
+              </fieldset>
+
+              <div className="flex gap-3 items-end">
+                <div>
+                  <label htmlFor="plan-meses" className="block text-xs font-medium text-muted-foreground uppercase mb-1">Meses</label>
+                  <select
+                    id="plan-meses"
+                    value={meses}
+                    onChange={e => setMeses(Number(e.target.value))}
+                    className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="flex-1 text-sm">
+                  <p className="text-xs text-muted-foreground uppercase mb-1">Total</p>
+                  <p className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_mensual_cop * meses) : '—'}</p>
+                </div>
+                <button
+                  onClick={handleGenerar}
+                  disabled={pagar.isPending || !opcion?.disponible}
+                  className="text-sm font-medium px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
                 >
-                  {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
+                  {pagar.isPending ? 'Generando...' : esCambio ? `Pagar y cambiar a ${opcion?.nombre ?? ''}` : 'Generar link de pago'}
+                </button>
               </div>
-              <button
-                onClick={handleGenerar}
-                disabled={pagar.isPending}
-                className="text-sm font-medium px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
-              >
-                {pagar.isPending ? 'Generando...' : 'Generar link de pago'}
-              </button>
             </div>
           )}
         </div>
