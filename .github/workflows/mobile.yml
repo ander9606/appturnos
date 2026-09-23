@@ -80,9 +80,13 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-          # Client ID público de Google OAuth (no sensible — mismo valor que en eas.json).
-          # Hardcodeado en vez de secret: no requiere configurar nada en GitHub.
+          # Client IDs públicos de Google OAuth (no sensibles — mismos valores que en eas.json).
+          # Hardcodeados en vez de secrets: no requieren configurar nada en GitHub.
+          # `eas update` NO lee el env de los perfiles de eas.json: cada EXPO_PUBLIC_*
+          # que falte aquí queda undefined dentro del bundle OTA. Sin el de iOS,
+          # GoogleSignin.configure() revienta en iOS ("failed to determine clientID").
           EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com"
+          EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS: "983031197089-o3vfhunbs1edjuuf1hjlaq2tgrbugknu.apps.googleusercontent.com"
 
       # `eas update` corre `expo export` internamente y deja ese mismo dist/ en
       # el runner (se confirmó en los logs: "[expo-cli] Exported: dist" sale
