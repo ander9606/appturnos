@@ -101,6 +101,11 @@ app.get('/api/health', async (_req, res) => {
   });
 });
 
+// ─── Archivos públicos (sin auth) ─────────────────────────────
+// Documentos descargables desde Términos y condiciones, p. ej.
+// /api/publico/reglas-calculo-pagos.pdf (generado con scripts/generar-pdf-reglas.js).
+app.use('/api/publico', express.static(require('path').join(__dirname, 'public'), { maxAge: '1d' }));
+
 // ─── Rutas de módulos ─────────────────────────────────────────
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/trabajadores', require('./modules/trabajadores/trabajadores.routes'));

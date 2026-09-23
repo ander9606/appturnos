@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Alert, ActivityIndicator, Pressable, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
@@ -7,6 +7,10 @@ import { authApi } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+
+// PDF servido por el backend (backend/public, generado con scripts/generar-pdf-reglas.js).
+const REGLAS_PDF_URL = `${process.env.EXPO_PUBLIC_API_URL}/api/publico/reglas-calculo-pagos.pdf`;
 
 export default function TerminosScreen() {
   const router  = useRouter();
@@ -47,6 +51,20 @@ export default function TerminosScreen() {
           <Text className="text-sm text-foreground leading-6">
             {TERMINOS_TEXT}
           </Text>
+
+          <Pressable
+            onPress={() => Linking.openURL(REGLAS_PDF_URL)}
+            accessibilityRole="link"
+            accessibilityLabel="Descargar PDF: cómo calculamos los pagos"
+            className="mt-6 flex-row items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 active:opacity-70"
+          >
+            <Ionicons name="document-text-outline" size={22} color={theme.primary} />
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-foreground">Cómo calculamos los pagos</Text>
+              <Text className="text-xs text-muted-foreground">Horas, recargos, descuentos y turnos · PDF</Text>
+            </View>
+            <Ionicons name="download-outline" size={18} color="#94A3B8" />
+          </Pressable>
           <View className="h-8" />
         </ScrollView>
 

@@ -51,4 +51,6 @@ npm run dev
 
 ## Documentación
 
+Las reglas de cálculo de pagos (horas, recargos, descuentos, turnos) están en [`docs/REGLAS-CALCULO-PAGOS.md`](./docs/REGLAS-CALCULO-PAGOS.md); su versión pública en PDF se descarga desde Términos y condiciones.
+
 Documentación técnica adicional en [`docs/`](./docs) y [`APP-TURNOS-SPEC/`](./APP-TURNOS-SPEC): arquitectura, esquema de base de datos, endpoints, autenticación y el contrato de integración con logiq360.

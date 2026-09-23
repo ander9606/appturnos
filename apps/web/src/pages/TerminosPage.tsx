@@ -1,9 +1,28 @@
+// PDF servido por el backend (backend/public, generado con scripts/generar-pdf-reglas.js).
+const REGLAS_PDF_URL = `${import.meta.env.VITE_API_URL}/publico/reglas-calculo-pagos.pdf`;
+
 export function TerminosPage() {
   return (
     <div className="min-h-screen bg-background px-6 py-10">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-foreground mb-6">Términos y condiciones</h1>
         <p className="text-sm text-foreground leading-6 whitespace-pre-line">{TERMINOS_TEXT}</p>
+
+        <div className="mt-8 bg-card border border-border rounded-2xl p-5">
+          <h2 className="text-base font-semibold text-foreground">Cómo calculamos los pagos</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Reglas completas de horas, recargos de ley, descuentos, auxilio de transporte y turnos, con un ejemplo numérico.
+          </p>
+          <a
+            href={REGLAS_PDF_URL}
+            target="_blank"
+            rel="noreferrer"
+            download="Zaturno-reglas-calculo-pagos.pdf"
+            className="inline-flex items-center mt-3 text-sm font-medium px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+          >
+            Descargar PDF
+          </a>
+        </div>
       </div>
     </div>
   );

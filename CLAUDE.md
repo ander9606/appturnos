@@ -164,6 +164,8 @@ Salary and transport allowance are prorated by **commercial 30-day months**: `di
 
 Date-dependent rules live in `*_VIGENCIAS` tables (newest first) so re-liquidating an old period keeps its original rules. `calcularHoras()` uses the record's `fecha` for the night start; `desglosarPagoNomina(desglose, vh, fecha)` uses the period's `fecha_fin` for the holiday rate and returns it as `recargo_festivo` (the UI labels read it — never hard-code a multiplier in the frontend).
 
+**Payment rules doc:** `docs/REGLAS-CALCULO-PAGOS.md` explains every pay rule in Spanish (sections 1–9 public, 10–11 internal). When you change a rule or constant, update it and regenerate the public PDF served at `/api/publico/reglas-calculo-pagos.pdf` (linked from web and mobile Términos) with `node backend/scripts/generar-pdf-reglas.js` (needs Chrome; set `CHROME_PATH`).
+
 Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src/shared/laboral.ts` (identical copy) and `apps/mobile/features/nomina/trabajador/nominaTrabajadorUtils.ts` — update all of them together.
 
 `laboralUtils.js` exports `calcularHoras()` (minute-by-minute breakdown), `esDiaFestivo()` (Colombian public holidays including Ley Emiliani + Easter-relative), `horaInicioNocturno()`, `recargoFestivo()`, `valorHora()`, `calcularPagoNomina()`, `desglosarPagoNomina()`, `calcularDeducciones()`, `calcularSubsidioTransporte()`.
