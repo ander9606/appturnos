@@ -98,7 +98,7 @@ export function useCrearRegistro() {
 export function useCorregirRegistro() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...datos }: { id: number; tipo_dia?: TipoDia; novedad?: string; hora_entrada?: string; hora_salida?: string }) =>
+    mutationFn: ({ id, ...datos }: { id: number; tipo_dia?: TipoDia; novedad?: string; hora_entrada?: string | null; hora_salida?: string | null }) =>
       nominaApi.corregirRegistro(id, datos),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
   });

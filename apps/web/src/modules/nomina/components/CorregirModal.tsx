@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Info } from 'lucide-react';
 import { useCorregirRegistro } from '../hooks/useNomina';
 import type { Registro, TipoDia } from '../types';
 import { Modal } from '@/shared/components/Modal';
@@ -15,16 +16,26 @@ export function CorregirModal({ registro, onClose }: { registro: Registro; onClo
     novedad: registro.novedad ?? '',
   });
 
+  const esAusencia = form.tipo_dia === 'ausencia';
+  const sinHorario = esAusencia || form.tipo_dia === 'compensatorio';
+
+  function onChangeTipoDia(tipo_dia: TipoDia) {
+    const sinHorarioNuevo = tipo_dia === 'ausencia' || tipo_dia === 'compensatorio';
+    setForm(f => ({ ...f, tipo_dia, ...(sinHorarioNuevo ? { hora_entrada: '', hora_salida: '' } : {}) }));
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.hora_entrada && form.hora_salida && form.hora_entrada === form.hora_salida) {
+    if (!sinHorario && form.hora_entrada && form.hora_salida && form.hora_entrada === form.hora_salida) {
       toast.error('La hora de salida no puede ser igual a la de entrada');
       return;
     }
     await corregir.mutateAsync({
       id: registro.id,
-      hora_entrada: form.hora_entrada || undefined,
-      hora_salida: form.hora_salida || undefined,
+      // null (no undefined) para limpiar un horario que haya quedado guardado
+      // de antes de reclasificar el día a compensatorio/ausencia.
+      hora_entrada: sinHorario ? null : form.hora_entrada || undefined,
+      hora_salida: sinHorario ? null : form.hora_salida || undefined,
       tipo_dia: form.tipo_dia,
       novedad: form.novedad || undefined,
     });
@@ -36,31 +47,11 @@ export function CorregirModal({ registro, onClose }: { registro: Registro; onClo
       <h2 className="text-lg font-semibold text-foreground mb-1">Corregir registro</h2>
       <p className="text-sm text-muted-foreground mb-4">{fmtDiaSemana(registro.fecha)}</p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Hora entrada</label>
-            <input
-              type="time"
-              value={form.hora_entrada}
-              onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Hora salida</label>
-            <input
-              type="time"
-              value={form.hora_salida}
-              onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
-            />
-          </div>
-        </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Tipo día</label>
           <select
             value={form.tipo_dia}
-            onChange={e => setForm(f => ({ ...f, tipo_dia: e.target.value as TipoDia }))}
+            onChange={e => onChangeTipoDia(e.target.value as TipoDia)}
             className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
           >
             {TIPO_DIA_OPTIONS.map(o => (
@@ -68,6 +59,35 @@ export function CorregirModal({ registro, onClose }: { registro: Registro; onClo
             ))}
           </select>
         </div>
+        {sinHorario ? (
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs ${esAusencia ? 'bg-danger-light text-danger' : 'bg-info-light text-info'}`}>
+            <Info size={14} className="flex-shrink-0" />
+            {esAusencia
+              ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
+              : 'Los descansos compensatorios no requieren horario de entrada ni salida.'}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora entrada</label>
+              <input
+                type="time"
+                value={form.hora_entrada}
+                onChange={e => setForm(f => ({ ...f, hora_entrada: e.target.value }))}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora salida</label>
+              <input
+                type="time"
+                value={form.hora_salida}
+                onChange={e => setForm(f => ({ ...f, hora_salida: e.target.value }))}
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
+              />
+            </div>
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Novedad</label>
           <input

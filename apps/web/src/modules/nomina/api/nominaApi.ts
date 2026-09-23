@@ -20,7 +20,7 @@ export const nominaApi = {
   crearRegistro: (data: { periodo_id: number; fecha: string; hora_entrada: string; hora_salida?: string; trabajador_id: number; novedad?: string }) =>
     api.post('/nomina/registros', data).then(r => r.data),
 
-  corregirRegistro: (id: number, data: { hora_entrada?: string; hora_salida?: string; novedad?: string; tipo_dia?: TipoDia }) =>
+  corregirRegistro: (id: number, data: { hora_entrada?: string | null; hora_salida?: string | null; novedad?: string; tipo_dia?: TipoDia }) =>
     api.put(`/nomina/registros/${id}`, data).then(r => r.data),
 
   descartarSospechoso: (id: number) =>

@@ -1,6 +1,6 @@
 export type EstadoPeriodo = 'abierto' | 'cerrado' | 'liquidado';
 export type TipoPeriodo = 'semanal' | 'quincenal' | 'mensual';
-export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia';
+export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia' | 'ausencia';
 
 export interface Periodo {
   id: number;

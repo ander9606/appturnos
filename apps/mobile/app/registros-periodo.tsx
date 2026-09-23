@@ -99,6 +99,9 @@ function EditarRegistroModal({
   const [showEntrada, setShowEntrada] = useState(false);
   const [showSalida, setShowSalida] = useState(false);
 
+  const esAusencia = tipoDia === 'ausencia';
+  const sinHorario = esAusencia || tipoDia === 'compensatorio';
+
   React.useEffect(() => {
     if (registro) {
       setTipoDia(registro.tipo_dia);
@@ -122,7 +125,7 @@ function EditarRegistroModal({
   }
 
   const handleGuardar = async () => {
-    if (horaEntrada && horaSalida && fmtTime(horaSalida) === fmtTime(horaEntrada)) {
+    if (!sinHorario && horaEntrada && horaSalida && fmtTime(horaSalida) === fmtTime(horaEntrada)) {
       Alert.alert('La hora de salida no puede ser igual a la de entrada.');
       return;
     }
@@ -131,8 +134,10 @@ function EditarRegistroModal({
         id: registro.id,
         tipo_dia: tipoDia,
         novedad: novedad.trim() || undefined,
-        hora_entrada: horaEntrada ? fmtTime(horaEntrada) : undefined,
-        hora_salida: horaSalida ? fmtTime(horaSalida) : undefined,
+        // null (no undefined) para que se limpie un horario que haya quedado
+        // guardado de antes de reclasificar el día a compensatorio/ausencia.
+        hora_entrada: sinHorario ? null : horaEntrada ? fmtTime(horaEntrada) : undefined,
+        hora_salida: sinHorario ? null : horaSalida ? fmtTime(horaSalida) : undefined,
       });
       onClose();
     } catch {
@@ -165,74 +170,84 @@ function EditarRegistroModal({
             </Pressable>
           </View>
 
-          <View className="flex-row gap-3">
-            <View className="flex-1 gap-1.5">
-              <Text className="text-sm font-semibold text-foreground">Entrada</Text>
-              <TouchableOpacity
-                onPress={() => setShowEntrada(true)}
-                className="bg-card border border-border rounded-xl px-3 py-3 items-center"
-              >
-                <Text className={`text-sm ${!horaEntrada ? 'text-muted-foreground' : 'text-foreground font-semibold'}`}>
-                  {fmtTime(horaEntrada)}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View className="flex-1 gap-1.5">
-              <Text className="text-sm font-semibold text-foreground">Salida</Text>
-              <TouchableOpacity
-                onPress={() => setShowSalida(true)}
-                className={`bg-card border rounded-xl px-3 py-3 items-center ${!horaSalida ? 'border-amber-300' : 'border-border'}`}
-              >
-                <Text className={`text-sm ${!horaSalida ? 'text-muted-foreground' : 'text-foreground font-semibold'}`}>
-                  {fmtTime(horaSalida)}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* ponytail: pickers fuera de las columnas flex-1 — el spinner de iOS ignora el ancho del padre y se salía de pantalla */}
-          {showEntrada && (
-            <View className="gap-1.5">
-              <DateTimePicker
-                value={horaEntrada ?? new Date()}
-                mode="time"
-                display="spinner"
-                onChange={onChangeEntrada}
-                style={{ width: '100%' }}
-              />
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity onPress={() => setShowEntrada(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
-                  <Text className="text-xs font-semibold text-primary">Listo</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {showSalida && (
-            <View className="gap-1.5">
-              <DateTimePicker
-                value={horaSalida ?? new Date()}
-                mode="time"
-                display="spinner"
-                onChange={onChangeSalida}
-                style={{ width: '100%' }}
-              />
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity onPress={() => setShowSalida(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
-                  <Text className="text-xs font-semibold text-primary">Listo</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-foreground">Tipo de día</Text>
+          <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
+            <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Tipo de día</Text>
             <TipoDiaChips value={tipoDia} onChange={setTipoDia} />
           </View>
 
-          <View className="gap-1.5">
-            <Text className="text-sm font-semibold text-foreground">Novedad (opcional)</Text>
+          {sinHorario ? (
+            <View className={`rounded-xl px-4 py-3 flex-row items-center gap-2 ${esAusencia ? 'bg-danger-light' : 'bg-info-light'}`}>
+              <Ionicons name="information-circle-outline" size={16} color={esAusencia ? '#EF4444' : '#3B82F6'} />
+              <Text className={`text-xs flex-1 leading-relaxed ${esAusencia ? 'text-danger' : 'text-info'}`}>
+                {esAusencia
+                  ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
+                  : 'Los descansos compensatorios no requieren horario de entrada ni salida.'}
+              </Text>
+            </View>
+          ) : (
+            <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
+              <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Tiempos registrados</Text>
+              <View className="flex-row items-center gap-3">
+                <TouchableOpacity
+                  onPress={() => setShowEntrada(true)}
+                  className="flex-1 bg-muted rounded-xl px-4 py-3"
+                >
+                  <Text className="text-xs text-muted-foreground mb-1">Entrada</Text>
+                  <Text className={`text-2xl font-bold ${!horaEntrada ? 'text-muted-foreground' : 'text-foreground'}`}>
+                    {fmtTime(horaEntrada)}
+                  </Text>
+                </TouchableOpacity>
+                <Ionicons name="arrow-forward" size={16} color="#94A3B8" />
+                <TouchableOpacity
+                  onPress={() => setShowSalida(true)}
+                  className="flex-1 bg-muted rounded-xl px-4 py-3"
+                >
+                  <Text className="text-xs text-muted-foreground mb-1">Salida</Text>
+                  <Text className={`text-2xl font-bold ${!horaSalida ? 'text-muted-foreground' : 'text-foreground'}`}>
+                    {fmtTime(horaSalida)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* ponytail: pickers fuera de las columnas flex-1 — el spinner de iOS ignora el ancho del padre y se salía de pantalla */}
+              {showEntrada && (
+                <View className="gap-1.5">
+                  <DateTimePicker
+                    value={horaEntrada ?? new Date()}
+                    mode="time"
+                    display="spinner"
+                    onChange={onChangeEntrada}
+                    style={{ width: '100%' }}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity onPress={() => setShowEntrada(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                      <Text className="text-xs font-semibold text-primary">Listo</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {showSalida && (
+                <View className="gap-1.5">
+                  <DateTimePicker
+                    value={horaSalida ?? new Date()}
+                    mode="time"
+                    display="spinner"
+                    onChange={onChangeSalida}
+                    style={{ width: '100%' }}
+                  />
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity onPress={() => setShowSalida(false)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                      <Text className="text-xs font-semibold text-primary">Listo</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
+          <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-2">
+            <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Novedad (opcional)</Text>
             <TextInput
               value={novedad}
               onChangeText={setNovedad}
@@ -240,8 +255,8 @@ function EditarRegistroModal({
               placeholderTextColor="#94A3B8"
               multiline
               numberOfLines={3}
-              className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
-              style={{ textAlignVertical: 'top', minHeight: 72 }}
+              className="text-sm text-foreground"
+              style={{ textAlignVertical: 'top', minHeight: 60 }}
             />
           </View>
 
@@ -368,6 +383,7 @@ function CrearRegistroModal({
   const [showSalida,  setShowSalida]  = useState(false);
 
   const esAusencia = tipoDia === 'ausencia';
+  const sinHorario = esAusencia || tipoDia === 'compensatorio';
 
   // Reset al abrir para un trabajador distinto
   React.useEffect(() => {
@@ -399,11 +415,11 @@ function CrearRegistroModal({
   }
 
   async function handleGuardar() {
-    if (!esAusencia && !horaEntrada) {
+    if (!sinHorario && !horaEntrada) {
       Alert.alert('Falta la hora de entrada');
       return;
     }
-    if (horaEntrada && horaSalida && isChronological(fmtTime(horaSalida), fmtTime(horaEntrada))) {
+    if (!sinHorario && horaEntrada && horaSalida && isChronological(fmtTime(horaSalida), fmtTime(horaEntrada))) {
       Alert.alert('La hora de salida debe ser después de la de entrada.');
       return;
     }
@@ -422,8 +438,8 @@ function CrearRegistroModal({
         trabajador_id: creando!.trabajadorId,
         fecha:         toISODate(fecha),
         tipo_dia:      tipoDia,
-        hora_entrada:  esAusencia ? undefined : fmtTime(horaEntrada!),
-        hora_salida:   !esAusencia && horaSalida ? fmtTime(horaSalida) : undefined,
+        hora_entrada:  sinHorario ? undefined : fmtTime(horaEntrada!),
+        hora_salida:   !sinHorario && horaSalida ? fmtTime(horaSalida) : undefined,
         novedad:       novedad.trim() || undefined,
       });
       onClose();
@@ -484,17 +500,19 @@ function CrearRegistroModal({
             )}
           </View>
 
-          {/* Tipo de día — 'Ausencia' oculta entrada/salida, no requiere hora. */}
+          {/* Tipo de día — 'Ausencia' y 'Compensatorio' ocultan entrada/salida, no requieren hora. */}
           <View className="gap-2">
             <Text className="text-sm font-semibold text-foreground">Tipo de día</Text>
             <TipoDiaChips value={tipoDia} onChange={setTipoDia} />
           </View>
 
-          {esAusencia ? (
-            <View className="bg-danger-light rounded-xl px-4 py-3 flex-row items-center gap-2">
-              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
-              <Text className="text-xs text-danger flex-1">
-                Se registrará como falta sin horas trabajadas ni pago para este día.
+          {sinHorario ? (
+            <View className={`rounded-xl px-4 py-3 flex-row items-center gap-2 ${esAusencia ? 'bg-danger-light' : 'bg-info-light'}`}>
+              <Ionicons name="information-circle-outline" size={16} color={esAusencia ? '#EF4444' : '#3B82F6'} />
+              <Text className={`text-xs flex-1 ${esAusencia ? 'text-danger' : 'text-info'}`}>
+                {esAusencia
+                  ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
+                  : 'Los descansos compensatorios no requieren horario de entrada ni salida.'}
               </Text>
             </View>
           ) : (

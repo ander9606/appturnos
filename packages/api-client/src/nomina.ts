@@ -289,8 +289,9 @@ export const nominaApi = {
   corregirRegistro(id: number, datos: {
     tipo_dia?: TipoDia;
     novedad?: string;
-    hora_entrada?: string;
-    hora_salida?: string;
+    /** null limpia el valor guardado — ej. al reclasificar a compensatorio/ausencia. */
+    hora_entrada?: string | null;
+    hora_salida?: string | null;
     jornada_continua?: boolean;
   }): Promise<RegistroDiario> {
     return api.put<RegistroDiario>(`/api/nomina/registros/${id}`, datos);

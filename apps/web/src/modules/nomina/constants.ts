@@ -7,9 +7,10 @@ export const TIPO_DIA_LABELS: Record<TipoDia, string> = {
   incapacidad: 'Incapacidad',
   vacacion: 'Vacación',
   licencia: 'Licencia',
+  ausencia: 'Ausencia (no vino)',
 };
 
-export const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario', 'descanso', 'compensatorio', 'incapacidad', 'vacacion', 'licencia'];
+export const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario', 'descanso', 'compensatorio', 'incapacidad', 'vacacion', 'licencia', 'ausencia'];
 
 export const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
