@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Plus, Pencil, CalendarClock, BedDouble, ChevronDown, X, AlertTriangle } from 'lucide-react';
-import { useCorregirRegistro, useDescartarSospechoso } from '../hooks/useNomina';
+import { Plus, Pencil, CalendarClock, MapPin, ChevronDown, X, AlertTriangle } from 'lucide-react';
+import { useDescartarSospechoso } from '../hooks/useNomina';
 import type { Registro, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { fmtDiaSemana, fmtHora, fmtHrs } from '@/shared/lib/format';
 import { TIPO_DIA_LABELS } from '../constants';
 import { AlmuerzoIndicator, ExtraIndicator } from './DiaIndicators';
+import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
 
 export function RegistrosTab({
   registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear,
@@ -22,15 +23,8 @@ export function RegistrosTab({
   const [filtroTrabajador, setFiltroTrabajador] = useState<number | undefined>(undefined);
   const [soloSospechosos, setSoloSospechosos] = useState(false);
   const [expandidos, setExpandidos] = useState<Set<number>>(new Set());
+  const [verUbicacion, setVerUbicacion] = useState<Registro | null>(null);
   const descartarSospechoso = useDescartarSospechoso();
-  const corregirTipoDia = useCorregirRegistro();
-
-  function marcarCompensatorio(r: Registro) {
-    const ok = window.confirm(
-      `¿Marcar el ${fmtDiaSemana(r.fecha)} de ${r.trabajador_nombre} ${r.trabajador_apellido} como su día de descanso compensatorio?`
-    );
-    if (ok) corregirTipoDia.mutate({ id: r.id, tipo_dia: 'compensatorio' });
-  }
 
   function toggleExpandido(trabajadorId: number) {
     setExpandidos(prev => {
@@ -197,14 +191,13 @@ export function RegistrosTab({
                                   <CalendarClock size={14} />
                                 </button>
                               )}
-                              {r.tipo_dia !== 'compensatorio' && (
+                              {(r.latitud_entrada != null || r.latitud_salida != null) && (
                                 <button
-                                  onClick={() => marcarCompensatorio(r)}
-                                  disabled={corregirTipoDia.isPending}
-                                  className="text-muted-foreground/60 hover:text-info transition-colors disabled:opacity-50"
-                                  title="Marcar como compensatorio"
+                                  onClick={() => setVerUbicacion(r)}
+                                  className="text-muted-foreground/60 hover:text-info transition-colors"
+                                  title="Ver ubicación de marcaje"
                                 >
-                                  <BedDouble size={14} />
+                                  <MapPin size={14} />
                                 </button>
                               )}
                               {r.sospechoso === 1 && (
@@ -229,6 +222,10 @@ export function RegistrosTab({
             );
           })}
         </div>
+      )}
+
+      {verUbicacion && (
+        <UbicacionMarcajeModal registro={verUbicacion} onClose={() => setVerUbicacion(null)} />
       )}
     </div>
   );

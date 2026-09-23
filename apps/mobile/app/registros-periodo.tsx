@@ -11,11 +11,12 @@ import {
   Modal, Pressable, TextInput, Alert, KeyboardAvoidingView, Platform,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
+import { UbicacionLink } from '@/components/ui/UbicacionLink';
 
 import {
   useRegistros, useCorregirRegistro, useCrearRegistro,
@@ -32,7 +33,6 @@ import {
 import { useTheme } from '@/lib/theme';
 import { toISODate, bogotaToday } from '@/lib/formatters';
 import { isChronological } from '@/lib/dateValidation';
-import { confirm } from '@/lib/confirmDialog';
 import type { RegistroDiario, TipoDia, DescansoCompensatorio } from '@api-client';
 
 // ── Constantes ────────────────────────────────────────────────────────────
@@ -598,6 +598,50 @@ function CrearRegistroModal({
   );
 }
 
+// ── Modal: ubicación de marcaje ──────────────────────────────────────────
+
+function UbicacionMarcajeModal({
+  registro,
+  onClose,
+}: {
+  registro: RegistroDiario | null;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  if (!registro) return null;
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View className="flex-1 bg-black/50 justify-end">
+        <View
+          className="w-full bg-background rounded-t-3xl px-6 pt-5"
+          style={{ paddingBottom: insets.bottom + 20 }}
+        >
+          <View className="flex-row items-center justify-between mb-5">
+            <View>
+              <Text className="text-lg font-bold text-foreground">Ubicación de marcaje</Text>
+              <Text className="text-sm text-muted-foreground">
+                {registro.trabajador_nombre} {registro.trabajador_apellido} · {fmtFechaCorta(registro.fecha)}
+              </Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color="#64748B" />
+            </Pressable>
+          </View>
+          <View className="gap-3">
+            {registro.latitud_entrada != null && (
+              <UbicacionLink lat={registro.latitud_entrada} lng={registro.longitud_entrada!} label="Entrada" />
+            )}
+            {registro.latitud_salida != null && (
+              <UbicacionLink lat={registro.latitud_salida} lng={registro.longitud_salida!} label="Salida" />
+            )}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ── Fila de registro ──────────────────────────────────────────────────────
 
 function RegistroRow({
@@ -606,25 +650,19 @@ function RegistroRow({
   canEdit = true,
   compensatorio,
   onReasignar,
+  onVerUbicacion,
 }: {
   registro: RegistroDiario;
   onEdit: (r: RegistroDiario) => void;
   canEdit?: boolean;
   compensatorio?: DescansoCompensatorio;
   onReasignar?: (c: DescansoCompensatorio) => void;
+  onVerUbicacion?: (r: RegistroDiario) => void;
 }) {
   const d         = new Date(`${registro.fecha}T00:00:00`);
   const tipoDef   = TIPOS_DIA.find((t) => t.v === registro.tipo_dia);
   const esFestivo = Boolean(registro.es_festivo);
-  const corregir  = useCorregirRegistro();
-
-  async function marcarCompensatorio() {
-    const ok = await confirm({
-      title: 'Marcar como compensatorio',
-      message: `¿Marcar el ${fmtFechaCorta(registro.fecha)} de ${registro.trabajador_nombre} ${registro.trabajador_apellido} como su día de descanso compensatorio?`,
-    });
-    if (ok) corregir.mutate({ id: registro.id, tipo_dia: 'compensatorio' });
-  }
+  const tieneUbicacion = registro.latitud_entrada != null || registro.latitud_salida != null;
 
   const totalHoras = [
     registro.horas_ordinarias,
@@ -669,15 +707,14 @@ function RegistroRow({
               <Ionicons name="calendar-outline" size={16} color={tipoDef?.color ?? '#8B5CF6'} />
             </TouchableOpacity>
           )}
-          {canEdit && registro.tipo_dia !== 'compensatorio' && (
+          {canEdit && tieneUbicacion && (
             <TouchableOpacity
-              onPress={marcarCompensatorio}
-              disabled={corregir.isPending}
+              onPress={() => onVerUbicacion?.(registro)}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Marcar como compensatorio"
+              accessibilityLabel="Ver ubicación de marcaje"
             >
-              <Ionicons name="bed-outline" size={16} color="#8B5CF6" />
+              <Ionicons name="location-outline" size={16} color="#3B82F6" />
             </TouchableOpacity>
           )}
           {canEdit && (
@@ -717,6 +754,7 @@ export default function RegistrosPeriodoScreen() {
   const [editando, setEditando] = useState<RegistroDiario | null>(null);
   const [creando,  setCreando]  = useState<CreandoState>(null);
   const [reasignando, setReasignando] = useState<DescansoCompensatorio | null>(null);
+  const [viendoUbicacion, setViendoUbicacion] = useState<RegistroDiario | null>(null);
 
   const registros = data?.data ?? [];
 
@@ -787,6 +825,7 @@ export default function RegistrosPeriodoScreen() {
         onClose={() => setCreando(null)}
       />
       <ReasignarCompensatorioModal compensatorio={reasignando} onClose={() => setReasignando(null)} />
+      <UbicacionMarcajeModal registro={viendoUbicacion} onClose={() => setViendoUbicacion(null)} />
 
       {sections.length === 0 ? (
         <View className="flex-1 items-center justify-center gap-3 px-8">
@@ -809,6 +848,7 @@ export default function RegistrosPeriodoScreen() {
               canEdit={canEdit}
               compensatorio={compensatorioDe(item)}
               onReasignar={setReasignando}
+              onVerUbicacion={setViendoUbicacion}
             />
           )}
           renderSectionHeader={({ section }) => (
