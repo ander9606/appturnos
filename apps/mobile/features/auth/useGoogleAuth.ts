@@ -10,9 +10,10 @@
  * En iOS no existe ese mecanismo de validación por firma — el SDK necesita
  * el iosClientId explícito para completar el flujo. Sin él, `signIn()` falla
  * en cuanto se ejecuta en un dispositivo/simulador iOS.
- * ponytail: iosClientId queda undefined hasta crear el OAuth client iOS en
- * Google Cloud Console (mismo proyecto que el webClientId) — la app sigue
- * funcionando en Android sin ese valor. Upgrade path: ver apps/mobile/.env.example.
+ * ponytail: el OAuth client iOS ya existe en Google Cloud Console y el valor
+ * vive en apps/mobile/.env — pero EAS build no lee .env, así que cada build
+ * profile en eas.json necesita su propio "env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS"
+ * (y _WEB) o el binario sale sin clientID y este error revienta en runtime.
  *
  * Uso:
  *   const { signIn, loading } = useGoogleAuth();

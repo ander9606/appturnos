@@ -11,7 +11,10 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:3001"
+        "EXPO_PUBLIC_API_URL": "http://localhost:3001",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "983031197089-o3vfhunbs1edjuuf1hjlaq2tgrbugknu.apps.googleusercontent.com",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "preview": {
