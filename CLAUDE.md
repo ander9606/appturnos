@@ -51,6 +51,8 @@ npm start            # production start
 npm run migrate      # apply pending SQL migrations (idempotent)
 npm run seed         # insert demo data (empresa + usuarios + turnos en todos los estados)
 npm run generar-vapid # generate VAPID keys for push notifications
+npm test             # jest — backend/__tests__/*.test.js
+node utils/laboralUtils.check.js  # plain-assert check (no framework)
 ```
 
 ### Mobile (`apps/mobile/`)
@@ -61,6 +63,7 @@ npx expo start --android
 npx expo start --ios
 npm run lint         # ESLint over .ts/.tsx
 npm run type-check   # tsc --noEmit (no build output)
+npm test             # jest — lib/__tests__, features/**/__tests__
 ```
 
 ### api-client (`packages/api-client/`)
@@ -69,7 +72,7 @@ cd packages/api-client
 npm run type-check
 ```
 
-There are no automated tests yet. Type-check and lint are the only CI gates.
+CI gates (`.github/workflows/`): backend `npm test` + `npm audit`; mobile and api-client `npm run type-check`; web `npm run build`. Run the matching command locally before pushing.
 
 ## Environment Setup
 
@@ -88,9 +91,10 @@ appturnos/
 ├── backend/                    # Node.js / Express API (CommonJS, port 3001)
 │   ├── config/                 # database pool, constants (ROLES, RECARGOS, etc.)
 │   ├── middleware/             # authMiddleware, validator, errorHandler
-│   ├── migrations/             # migrate.js runner + sql/001–010_*.sql files
-│   ├── modules/                # feature modules (see below)
-│   └── utils/                  # AppError, logger, laboralUtils.js
+│   ├── migrations/             # migrate.js runner + sql/001–099_*.sql files
+│   ├── modules/                # feature modules (see below) + *.worker.js background jobs
+│   ├── utils/                  # AppError, logger, laboralUtils.js
+│   └── __tests__/              # jest suites
 │
 ├── packages/api-client/        # Shared TypeScript client (no bundling — imported as TS source)
 │   └── src/                    # auth, turnos, nomina, trabajadores, client, types, index
@@ -98,11 +102,12 @@ appturnos/
 ├── apps/web/                   # Vite / React admin & gestor SPA
 │   └── src/                    # modules/, pages/, shared/
 │
-└── apps/mobile/                # Expo / React Native (SDK ~53, Expo Router ~4)
+└── apps/mobile/                # Expo / React Native (SDK ~54, Expo Router ~6)
     ├── app/                    # File-based routes (Expo Router)
     │   ├── _layout.tsx         # Root stack: QueryClient, AuthGuard, Stack screens
-    │   ├── (auth)/             # login, activar — unauthenticated group
-    │   ├── (tabs)/             # index, turnos, nomina, equipo — tab group
+    │   ├── (auth)/             # login, registro, registro-empresa, activar, recuperar — unauthenticated
+    │   ├── (tabs)/             # index, turnos, nomina, equipo, empresas, perfil — tab group
+    │   ├── (admin)/            # super_admin panel: empresas, pagos, reportes
     │   ├── turno/[id].tsx      # Full-screen detail (push over tabs)
     │   └── trabajador/[id].tsx # Worker detail / edit
     ├── features/               # Domain logic co-located with UI
@@ -120,7 +125,7 @@ appturnos/
 ## Backend Architecture
 
 ### Module Pattern
-Every domain module (`auth`, `turnos`, `nomina`, `trabajadores`, `integracion`, …) follows the same layered structure:
+Every domain module (`auth`, `turnos`, `turnos-eventual`, `nomina`, `trabajadores`, `trabajador-empresa`, `contratos`, `cuentas-cobro`, `novedades`, `ausencias`, `puntos-marcaje`, `reportes`, `empresas`, `admin`, `webhooks`, `integracion`, …) follows the same layered structure:
 ```
 module/
   *.routes.js      → express-validator rules + verificarToken/verificarRol + controller call
@@ -148,12 +153,32 @@ When a payroll period is closed, `cerrarConSnapshot()` in `periodos.model.js` at
 | Constant | Value | Meaning |
 |---|---|---|
 | `HORAS_MES_NOMINA` | 240 | 30 days × 8 h — divisor for monthly → hourly rate |
-| `JORNADA_ORDINARIA_HORAS` | 8 | Ordinary shift hours/day |
-| `HORA_INICIO_NOCTURNO` | 21 | Night surcharge starts 21:00 |
+| `JORNADA_SEMANAL_HORAS` | 42 | Weekly ordinary cap (Ley 2101); beyond it → extra |
+| `HORA_INICIO_NOCTURNO_VIGENCIAS` | 19 from 2025-12-25, 21 before | Night start by date (Ley 2466 art. 10) |
 | `HORA_FIN_NOCTURNO` | 6 | Night surcharge ends 06:00 |
-| `RECARGOS.*` | 1.25 / 1.75 / 1.35 / 1.75 | Surcharge multipliers per hour type |
+| `RECARGOS.*` | 1.25 / 1.75 / 1.35 | Extra diurna / extra nocturna / nocturna |
+| `RECARGO_FESTIVO_VIGENCIAS` | 1.75 → 1.80 (2025-07-01) → 1.90 (2026-07-01) → 2.00 (2027-07-01) | Sunday/holiday multiplier by date (Ley 2466 art. 14) |
+| `SMMLV_COP` / `SUBSIDIO_TRANSPORTE_COP` | 1.750.905 / 249.095 | 2026 values — update every January |
 
-`laboralUtils.js` exports `calcularHoras()` (minute-by-minute breakdown), `esDiaFestivo()` (Colombian public holidays including Ley Emiliani + Easter-relative), `valorHora()`, `calcularPagoNomina()`.
+Date-dependent rules live in `*_VIGENCIAS` tables (newest first) so re-liquidating an old period keeps its original rules. `calcularHoras()` uses the record's `fecha` for the night start; `desglosarPagoNomina(desglose, vh, fecha)` uses the period's `fecha_fin` for the holiday rate and returns it as `recargo_festivo` (the UI labels read it — never hard-code a multiplier in the frontend).
+
+Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src/shared/laboral.ts` (identical copy) and `apps/mobile/features/nomina/trabajador/nominaTrabajadorUtils.ts` — update all of them together.
+
+`laboralUtils.js` exports `calcularHoras()` (minute-by-minute breakdown), `esDiaFestivo()` (Colombian public holidays including Ley Emiliani + Easter-relative), `horaInicioNocturno()`, `recargoFestivo()`, `valorHora()`, `calcularPagoNomina()`, `desglosarPagoNomina()`, `calcularDeducciones()`, `calcularSubsidioTransporte()`.
+
+### Subscriptions & Billing
+Companies with an active logiq360 integration (`integracion_config.activo = 1` + `api_key`) don't pay. The rest pay per plan via Wompi payment links (`webhooks/wompi.service.js`):
+
+| Plan | Active workers | COP/month |
+|---|---|---|
+| `basico` | up to 10 | 79.000 |
+| `profesional` | up to 30 | 169.000 |
+| `empresarial` | unlimited | 299.000 incl. 80 + 3.500 per extra worker |
+
+`PLANES`, `precioPlanCop()` and `planParaTrabajadores()` in `constants.js` are the source of truth. `trabajadores.service.js` enforces `max_trabajadores` (402). `generarLinkPago()` without `plan` renews the company's current plan, upgrading only if its active workers no longer fit — it never downgrades. The Wompi reference is `AT-{empresaId}-{plan}-{meses}`; the webhook writes that plan back to `empresas.plan`. Revenue in the super_admin panel is summed from the real `amount_in_cents` in each `wompi_eventos.payload`. New companies get `TRIAL_DIAS_GRATIS` (30) days free — enough to close one quincena.
+
+### Background Workers
+`*.worker.js` files started from `server.js`: `integracion` (logiq360 queue), `suscripcion` (renewal emails at 7/3/0 days), `wompi` (retry failed payment events), `turnos` (close postulaciones stuck on offers expired 2+ days), `registros` (notify once when an active shift enters overtime), `recordatorioIngreso` (remind fixed-schedule workers who haven't clocked in), `compensatorios` (tell managers who is on compensatory rest today).
 
 ## Frontend Architecture
 

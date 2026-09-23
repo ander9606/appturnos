@@ -10,9 +10,11 @@ Se integra en tiempo real con [logiq360](https://github.com/ander9606/aprendizaj
 
 - **Turnos**: creación y asignación de turnos con ubicación geolocalizada, ofertas a trabajadores.
 - **Marcaje**: entrada/salida con geocerca (radio configurable, 100 m por defecto) — el cliente bloquea el botón fuera de rango, el backend revalida lat/lng por seguridad.
-- **Nómina**: liquidación con los recargos de la ley laboral colombiana (nocturno, dominical/festivo, horas extra), snapshot de salario al cerrar un período para no alterar liquidaciones ya cerradas.
+- **Nómina**: liquidación con los recargos de la ley laboral colombiana ya ajustados a la reforma laboral (Ley 2466 de 2025: nocturno desde las 19:00, dominical/festivo gradual 80 % → 90 % → 100 %), horas extra sobre la jornada de 42 h, descuentos de salud/pensión y auxilio de transporte, y snapshot de salario al cerrar un período para no alterar liquidaciones ya cerradas.
+- **Contratos y pagos**: contratos diarios con firma digital y cuentas de cobro para prestación de servicios.
 - **Equipo**: gestión de trabajadores, cargos, ausencias, novedades y contratos, con una matriz de 7 roles (desde super-admin multi-tenant hasta trabajador de solo consulta).
 - **Notificaciones push** y **reportes** exportables.
+- **Suscripción** por plan con pago en Wompi: Básico $79.000 (hasta 10 trabajadores), Profesional $169.000 (hasta 30), Empresarial $299.000 (80 incluidos + $3.500 por trabajador adicional), en COP/mes; 30 días de prueba. Gratis para empresas conectadas a logiq360.
 - **Integración con logiq360**: worker que sincroniza eventos entre ambos sistemas vía webhooks, con reintentos exponenciales.
 
 ## Stack
@@ -35,6 +37,7 @@ cp .env.example .env   # completar credenciales de MySQL y JWT_SECRET
 npm run migrate          # aplica migraciones SQL (idempotente)
 npm run seed              # datos de demo
 npm run dev                # puerto 3001
+npm test                   # pruebas (jest)
 
 # App móvil (Expo)
 cd apps/mobile

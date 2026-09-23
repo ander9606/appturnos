@@ -210,15 +210,24 @@ Idénticas en estructura a las de logiq360 (ver migración 57). Permite audit tr
 ## Cálculo de horas extra (ley laboral colombiana)
 
 ```
-Jornada ordinaria: 8 horas diarias (máximo 47 semanales, reduciendo a 42 en 2026)
-Horario nocturno: 21:00 – 06:00
+Jornada ordinaria: 42 horas semanales (Ley 2101, tope final desde 15-jul-2026).
+  Lo que supere el acumulado semanal pasa a extra (calcularHoras en laboralUtils.js).
+Horario nocturno (Ley 2466 de 2025, art. 10):
+  19:00 – 06:00 desde el 25-dic-2025 · 21:00 – 06:00 antes.
 
-Recargos:
+Recargos (fuente de verdad: backend/config/constants.js):
   Horas extra diurnas     = valor_hora × 1.25
   Horas extra nocturnas   = valor_hora × 1.75
   Horas nocturnas         = valor_hora × 1.35
-  Dominical/festivo diurno = valor_hora × 1.75
-  Dominical/festivo nocturno = valor_hora × 2.10
+  Dominical/festivo (Ley 2466, art. 14 — gradual, según la fecha):
+    antes de 1-jul-2025 ×1.75 · desde 1-jul-2025 ×1.80
+    desde 1-jul-2026 ×1.90 · desde 1-jul-2027 ×2.00
+  Limitación actual: las horas dominicales/festivas se pagan todas con el
+  recargo festivo; no se suma el 35 % nocturno a las festivas nocturnas ni
+  se separan las extra festivas.
+
+La hora de inicio nocturno se aplica por la fecha de cada registro; el
+recargo festivo, por la fecha de fin del período liquidado.
 
 Festivos Colombia 2025:
   Enero 1, Enero 6, Marzo 24, Abril 17, Abril 18, Mayo 1,
