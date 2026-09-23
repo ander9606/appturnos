@@ -8,18 +8,19 @@
  *  2. Desglose de horas trabajadas en ordinarias / extra / nocturnas / festivo
  *     a partir de la hora de entrada y salida.
  *
- * Referencia de recargos (ver 02-BASE-DATOS.md):
- *   Jornada ordinaria        8 h/día
- *   Horario nocturno         21:00 – 06:00
+ * Referencia de recargos (ver APP-TURNOS-SPEC/02-BASE-DATOS.md):
+ *   Jornada ordinaria        42 h/semana
+ *   Horario nocturno         19:00 – 06:00 (21:00 antes del 25-dic-2025)
  *   Extra diurna             ×1.25
  *   Extra nocturna           ×1.75
  *   Recargo nocturno         ×1.35
- *   Dominical/festivo        ×1.75 (diurno) / ×2.10 (nocturno)
+ *   Dominical/festivo        ×1.80 / ×1.90 / ×2.00 según fecha (Ley 2466 de 2025)
  */
 
 const {
   JORNADA_SEMANAL_HORAS,
-  HORA_INICIO_NOCTURNO,
+  HORA_INICIO_NOCTURNO_VIGENCIAS,
+  RECARGO_FESTIVO_VIGENCIAS,
   HORA_FIN_NOCTURNO,
   JORNADA_CONTINUA_UMBRAL_HORAS,
   DURACION_ALMUERZO_MIN,
@@ -164,10 +165,31 @@ function horaAMinutos(hora) {
   return h * 60 + (m || 0);
 }
 
-/** True si el minuto del día (0-1439) cae en horario nocturno (21:00–06:00). */
-function esMinutoNocturno(minutoDelDia) {
+/**
+ * Fila de una tabla de vigencias (constants.js) que aplica en `fecha`
+ * ('YYYY-MM-DD' o Date; sin fecha = hoy en Colombia).
+ */
+function vigenteEn(tabla, fecha) {
+  const iso = fecha instanceof Date
+    ? aISODate(fecha)
+    : fecha ? String(fecha).slice(0, 10) : new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Bogota' });
+  return tabla.find((v) => v.desde <= iso);
+}
+
+/** Hora (0-23) en que empieza el trabajo nocturno en `fecha` (Ley 2466: 19 desde 25-dic-2025). */
+function horaInicioNocturno(fecha) {
+  return vigenteEn(HORA_INICIO_NOCTURNO_VIGENCIAS, fecha).hora;
+}
+
+/** Multiplicador de la hora dominical/festiva en `fecha` (Ley 2466: 1.80 → 1.90 → 2.00). */
+function recargoFestivo(fecha) {
+  return vigenteEn(RECARGO_FESTIVO_VIGENCIAS, fecha).factor;
+}
+
+/** True si el minuto del día (0-1439) cae en horario nocturno (horaInicio:00–06:00). */
+function esMinutoNocturno(minutoDelDia, horaInicio = horaInicioNocturno()) {
   const h = Math.floor((minutoDelDia % MIN_POR_DIA) / 60);
-  return h >= HORA_INICIO_NOCTURNO || h < HORA_FIN_NOCTURNO;
+  return h >= horaInicio || h < HORA_FIN_NOCTURNO;
 }
 
 function redondear(horas) {
@@ -188,16 +210,17 @@ function redondear(horas) {
  * @param {number} inicio  Minuto de inicio del turno (ver horaAMinutos).
  * @param {number} fin     Minuto de fin (> inicio; ya ajustado si cruza medianoche).
  * @param {boolean} jornadaContinua
+ * @param {number} [horaInicioNoct]  Ver horaInicioNocturno(); por defecto la regla de hoy.
  * @returns {Set<number>}
  */
-function calcularMinutosAlmuerzo(inicio, fin, jornadaContinua) {
+function calcularMinutosAlmuerzo(inicio, fin, jornadaContinua, horaInicioNoct = horaInicioNocturno()) {
   const totalMin = fin - inicio;
   let pendiente =
     !jornadaContinua && totalMin > JORNADA_CONTINUA_UMBRAL_HORAS * 60 ? DURACION_ALMUERZO_MIN : 0;
 
   const minutos = new Set();
   for (let m = fin - 1; m >= inicio && pendiente > 0; m--) {
-    if (!esMinutoNocturno(m)) {
+    if (!esMinutoNocturno(m, horaInicioNoct)) {
       minutos.add(m);
       pendiente--;
     }
@@ -269,7 +292,9 @@ function calcularHoras({
   const festivo =
     typeof esFestivo === 'boolean' ? esFestivo : fecha ? esDiaFestivo(fecha) : false;
 
-  const esAlmuerzo = calcularMinutosAlmuerzo(inicio, fin, jornadaContinua);
+  // El inicio del nocturno depende de la fecha trabajada (Ley 2466); sin fecha, regla de hoy.
+  const horaInicioNoct = horaInicioNocturno(fecha);
+  const esAlmuerzo = calcularMinutosAlmuerzo(inicio, fin, jornadaContinua, horaInicioNoct);
 
   let ordinariasDiurnas = 0;
   let ordinariasNocturnas = 0;
@@ -284,7 +309,7 @@ function calcularHoras({
   for (let m = inicio; m < fin; m++) {
     if (esAlmuerzo.has(m)) continue;
     const esOrdinario = minutosContados < minOrdinarioRestante;
-    const nocturno = esMinutoNocturno(m);
+    const nocturno = esMinutoNocturno(m, horaInicioNoct);
 
     if (festivo && recargoFestivo) {
       festivoMin++;
@@ -366,8 +391,8 @@ function calcularSalarioBasePeriodo({ salarioBase, horasOrdinarias, valorHoraTra
  *                           horas_extra_nocturnas, horas_nocturnas, horas_festivo.
  * @param {number} valorHoraTrabajador
  */
-function calcularPagoNomina(desglose, valorHoraTrabajador) {
-  return desglosarPagoNomina(desglose, valorHoraTrabajador).total;
+function calcularPagoNomina(desglose, valorHoraTrabajador, fecha) {
+  return desglosarPagoNomina(desglose, valorHoraTrabajador, fecha).total;
 }
 
 /**
@@ -377,18 +402,25 @@ function calcularPagoNomina(desglose, valorHoraTrabajador) {
  * @param {object} desglose  Campos horas_ordinarias, horas_extra_diurnas,
  *                           horas_extra_nocturnas, horas_nocturnas, horas_festivo.
  * @param {number} valorHoraTrabajador
+ * @param {string|Date} [fecha]  Fecha que fija el recargo dominical/festivo
+ *   (normalmente el fin del período); sin fecha, el vigente hoy.
+ *   ponytail: las horas festivas llegan sumadas por período, así que un período
+ *   que cruce un 1-jul usa una sola tasa — upgrade path: sumar horas_festivo
+ *   × recargoFestivo(fecha) por registro en el SQL de liquidación.
  */
-function desglosarPagoNomina(desglose, valorHoraTrabajador) {
+function desglosarPagoNomina(desglose, valorHoraTrabajador, fecha) {
   const n = (v) => Number(v) || 0;
   const vh = Number(valorHoraTrabajador) || 0;
+  const recargo_festivo = recargoFestivo(fecha);
 
   const pago_ordinario      = vh * n(desglose.horas_ordinarias);
   const pago_nocturno       = vh * RECARGOS.NOCTURNA * n(desglose.horas_nocturnas);
   const pago_extra_diurno   = vh * RECARGOS.EXTRA_DIURNA * n(desglose.horas_extra_diurnas);
   const pago_extra_nocturno = vh * RECARGOS.EXTRA_NOCTURNA * n(desglose.horas_extra_nocturnas);
-  const pago_festivo        = vh * RECARGOS.FESTIVO_DIURNO * n(desglose.horas_festivo);
+  const pago_festivo        = vh * recargo_festivo * n(desglose.horas_festivo);
 
   return {
+    recargo_festivo,
     pago_ordinario,
     pago_nocturno,
     pago_extra_diurno,
@@ -436,7 +468,8 @@ function calcularDeducciones(ibc) {
 function calcularSubsidioTransporte(salarioMensualEquivalente, diasPeriodo) {
   const salario = Number(salarioMensualEquivalente) || 0;
   if (salario <= 0 || salario > SMMLV_COP * SUBSIDIO_TRANSPORTE_TOPE_SMMLV) return 0;
-  return (SUBSIDIO_TRANSPORTE_COP / 30) * diasPeriodo;
+  // Multiplicar antes de dividir: 249095 / 30 * 30 da 249094.9999… en punto flotante.
+  return (SUBSIDIO_TRANSPORTE_COP * diasPeriodo) / 30;
 }
 
 module.exports = {
@@ -447,6 +480,8 @@ module.exports = {
   calcularHoras,
   calcularMinutosAlmuerzo,
   horaAMinutos,
+  horaInicioNocturno,
+  recargoFestivo,
   valorHora,
   calcularPagoNomina,
   desglosarPagoNomina,

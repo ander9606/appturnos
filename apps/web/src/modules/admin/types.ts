@@ -36,6 +36,7 @@ export interface WompiEvento {
   empresa_nombre: string | null;
   plan: Plan | null;
   meses: number | null;
+  monto_cop: number | null;
   estado: EstadoWompiEvento;
   intentos: number;
   error_detalle: string | null;
@@ -68,7 +69,7 @@ export interface ReportesGlobales {
     mes_actual: number;
     ganado_mes_pasado: number;
     proyeccion_mes_actual: number;
-    tarifa_cop: number;
+    planes: Record<Plan, { max_trabajadores: number | null; precio_cop: number; incluidos?: number; precio_adicional_cop?: number }>;
     mrr_historico: MrrMes[];
   };
   renovaciones_riesgo: RenovacionRiesgo[];

@@ -188,7 +188,7 @@ export function LiquidacionRow({
                 <FilaConcepto label={`${linea.horas_extra_nocturnas.toFixed(1)}h extra nocturna × $${linea.valor_hora.toLocaleString('es-CO')} × 1.75`} valor={linea.pago_extra_nocturno} />
               )}
               {linea.horas_festivo > 0 && (
-                <FilaConcepto label={`${linea.horas_festivo.toFixed(1)}h festivo/dominical × $${linea.valor_hora.toLocaleString('es-CO')} × 1.75`} valor={linea.pago_festivo} />
+                <FilaConcepto label={`${linea.horas_festivo.toFixed(1)}h festivo/dominical × $${linea.valor_hora.toLocaleString('es-CO')} × ${linea.recargo_festivo}`} valor={linea.pago_festivo} />
               )}
               <View className="border-t border-warning/30 my-0.5" />
               <View className="flex-row items-center justify-between">

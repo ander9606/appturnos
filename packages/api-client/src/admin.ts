@@ -104,7 +104,7 @@ export interface ReportesGlobales {
     mes_actual: number;
     proyeccion_mes_actual: number;
     ganado_mes_pasado: number;
-    tarifa_cop: number;
+    planes: Record<PlanEmpresa, { max_trabajadores: number | null; precio_cop: number; incluidos?: number; precio_adicional_cop?: number }>;
     mrr_historico: { mes: string; ingresos_cop: number }[];
   };
   renovaciones_riesgo: {
@@ -118,6 +118,7 @@ export interface ReportesGlobales {
 export interface LinkPagoResponse {
   url: string;
   referencia: string;
+  plan: PlanEmpresa;
   monto_cop: number;
   expira_at: string;
 }
@@ -132,6 +133,8 @@ export interface WompiEvento {
   empresa_nombre: string | null;
   plan: PlanEmpresa | null;
   meses: number | null;
+  /** Monto real cobrado por Wompi (COP). */
+  monto_cop: number | null;
   estado: WompiEstado;
   intentos: number;
   error_detalle: string | null;

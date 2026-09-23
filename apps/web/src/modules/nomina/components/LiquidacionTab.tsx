@@ -161,7 +161,7 @@ export function LiquidacionTab({
                               <Renglon label={`${fmtHrs(l.horas_extra_nocturnas)} h extra nocturna × ${fmtCOP(l.valor_hora)} × 1.75`} valor={fmtCOP(l.pago_extra_nocturno)} />
                             )}
                             {Number(l.horas_festivo) > 0 && (
-                              <Renglon label={`${fmtHrs(l.horas_festivo)} h festivo/dominical × ${fmtCOP(l.valor_hora)} × 1.75`} valor={fmtCOP(l.pago_festivo)} />
+                              <Renglon label={`${fmtHrs(l.horas_festivo)} h festivo/dominical × ${fmtCOP(l.valor_hora)} × ${l.recargo_festivo}`} valor={fmtCOP(l.pago_festivo)} />
                             )}
                             <div className="border-t border-warning/30 my-0.5" />
                             <Renglon label="Subtotal extra" valor={fmtCOP(pagoExtra)} fuerte tono="warning" />

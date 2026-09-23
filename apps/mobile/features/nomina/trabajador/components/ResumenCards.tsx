@@ -313,7 +313,7 @@ export function ResumenCards({
                       <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna × ${formatCOP(miLiquidacion.valor_hora)} × 1.75`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
                     )}
                     {Number(miLiquidacion.horas_festivo) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical × ${formatCOP(miLiquidacion.valor_hora)} × 1.75`} valor={Number(miLiquidacion.pago_festivo)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_festivo}`} valor={Number(miLiquidacion.pago_festivo)} />
                     )}
                     <View className="border-t border-warning/30 my-0.5" />
                     <View className="flex-row items-center justify-between">

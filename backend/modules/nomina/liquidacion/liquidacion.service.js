@@ -99,7 +99,7 @@ const LiquidacionService = {
       const vh = f.valor_hora_snapshot != null
         ? Number(f.valor_hora_snapshot)
         : valorHora(f);
-      const desglosePago = desglosarPagoNomina(desglose, vh);
+      const desglosePago = desglosarPagoNomina(desglose, vh, periodo.fecha_fin);
 
       // Asalariado (salario_base): el sueldo fijo se paga íntegro, prorrateado
       // por días del período — no depende de horas_ordinarias registradas.
@@ -157,6 +157,7 @@ const LiquidacionService = {
         pago_extra_diurno: pagoExtraDiurno,
         pago_extra_nocturno: pagoExtraNocturno,
         pago_festivo: pagoFestivo,
+        recargo_festivo: desglosePago.recargo_festivo,
         total,
         descuento_salud: redondear(deducciones.salud),
         descuento_pension: redondear(deducciones.pension),

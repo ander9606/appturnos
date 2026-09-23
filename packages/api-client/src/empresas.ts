@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { PlanEmpresa } from './admin';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ export const empresasApi = {
   },
 
   /** Autoservicio: admin_empresa genera su propio link de pago Wompi (precio único). */
-  generarLinkPago(payload: { meses?: number } = {}): Promise<{ url: string; referencia: string; monto_cop: number; expira_at: string }> {
+  generarLinkPago(payload: { meses?: number } = {}): Promise<{ url: string; referencia: string; plan: PlanEmpresa; monto_cop: number; expira_at: string }> {
     return api.post('/api/empresas/suscripcion/pagar', payload);
   },
 };

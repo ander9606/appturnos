@@ -133,6 +133,8 @@ export interface LiquidacionLinea {
   pago_extra_diurno: number;
   pago_extra_nocturno: number;
   pago_festivo: number;
+  /** Multiplicador dominical/festivo aplicado (Ley 2466: 1.80 → 1.90 → 2.00 según fecha). */
+  recargo_festivo: number;
   total: number;
   /** Descuento de salud (4% del total). 0 si la empresa es prestación de servicios. */
   descuento_salud: number;

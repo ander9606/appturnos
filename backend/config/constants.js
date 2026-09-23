@@ -59,21 +59,39 @@ const ESTADOS_ASIGNACION = [
 
 const ESTADOS_PERIODO = ['abierto', 'cerrado', 'liquidado'];
 
-// Recargos de ley laboral colombiana
+// Recargos de ley laboral colombiana. El dominical/festivo cambia por fecha
+// (ver RECARGO_FESTIVO_VIGENCIAS) — no está aquí.
 const RECARGOS = {
   EXTRA_DIURNA: 1.25,
   EXTRA_NOCTURNA: 1.75,
   NOCTURNA: 1.35,
-  FESTIVO_DIURNO: 1.75,
-  FESTIVO_NOCTURNO: 2.10,
 };
+
+// Ley 2466 de 2025 (reforma laboral, sancionada 25-jun-2025). Tablas por
+// vigencia, de la más reciente a la más antigua: aplica la primera cuya
+// `desde` sea ≤ la fecha trabajada, así un período viejo se sigue liquidando
+// con la regla de su época (ver vigenteEn() en laboralUtils.js).
+//
+// Art. 10 (modifica art. 160 CST): trabajo nocturno desde las 19:00, vigente
+// 6 meses después de la sanción → 25-dic-2025. Antes: 21:00.
+const HORA_INICIO_NOCTURNO_VIGENCIAS = [
+  { desde: '2025-12-25', hora: 19 },
+  { desde: '0000-01-01', hora: 21 },
+];
+// Art. 14 (modifica art. 179 CST): recargo dominical/festivo gradual —
+// 80 % desde 1-jul-2025, 90 % desde 1-jul-2026, 100 % desde 1-jul-2027.
+const RECARGO_FESTIVO_VIGENCIAS = [
+  { desde: '2027-07-01', factor: 2.00 },
+  { desde: '2026-07-01', factor: 1.90 },
+  { desde: '2025-07-01', factor: 1.80 },
+  { desde: '0000-01-01', factor: 1.75 },
+];
 
 // Jornada y horario nocturno
 const JORNADA_ORDINARIA_HORAS = 8;        // referencia diaria (no usada para extras)
 const JORNADA_SEMANAL_HORAS   = 42;       // umbral semanal ordinario → extra
 const HORAS_EXTRA_MAX_SEMANA  = 12;       // límite legal de horas extra por semana
-const HORA_INICIO_NOCTURNO = 21; // 21:00
-const HORA_FIN_NOCTURNO = 6; // 06:00
+const HORA_FIN_NOCTURNO = 6; // 06:00 (inicio: HORA_INICIO_NOCTURNO_VIGENCIAS)
 
 // Almuerzo: Art. 167 CST solo obliga descanso si la jornada continua supera
 // 6h. Por defecto se asume que el trabajador lo tomó y se descuenta del
@@ -96,9 +114,11 @@ const COMPENSATORIO_PLAZO_DIAS = 28;
 // ── Descuentos de ley (solo aplican a empresas.tipo_contrato = 'laboral') ──
 
 // Salario mínimo mensual legal vigente. Cambia cada 1-ene por decreto del
-// Gobierno — actualizar aquí. Valor 2025; verificar el vigente antes de usar
-// en producción para 2026.
-const SMMLV_COP = 1423500;
+// Gobierno — actualizar aquí. Valor 2026 (Decreto 1469 de 2025).
+// ponytail: un solo valor vigente, no tabla por año — re-liquidar un período
+// de un año anterior usa el SMMLV actual para descuentos y auxilio de
+// transporte — upgrade path: tabla por vigencia como RECARGO_FESTIVO_VIGENCIAS.
+const SMMLV_COP = 1750905;
 
 // A cargo del trabajador (se descuentan de su pago). ARL y caja de
 // compensación NO se incluyen: en Colombia corren 100% por cuenta del
@@ -122,8 +142,8 @@ const FONDO_SOLIDARIDAD_TRAMOS = [
 // SMMLV). Aplica solo a contrato laboral, a trabajadores que devengan hasta
 // SUBSIDIO_TRANSPORTE_TOPE_SMMLV salarios mínimos. No es salario para efectos
 // de IBC — no se le calculan descuentos de salud/pensión.
-// Valor 2025; verificar el vigente antes de usar en producción para 2026.
-const SUBSIDIO_TRANSPORTE_COP = 200000;
+// Valor 2026 (Decreto 1470 de 2025).
+const SUBSIDIO_TRANSPORTE_COP = 249095;
 const SUBSIDIO_TRANSPORTE_TOPE_SMMLV = 2;
 
 // Seguridad de login
@@ -132,22 +152,42 @@ const LOGIN = {
   LOCKOUT_MINUTOS: 15,
 };
 
-/** Límites de trabajadores por plan (feature-gating). max_trabajadores null = ilimitado. */
+/**
+ * Planes de suscripción (COP/mes) para empresas sin integración activa con
+ * logiq360 — las que tienen integracion_config.activo=1 y api_key no pagan
+ * (ver middleware/verificarSuscripcion.js).
+ * max_trabajadores: tope de trabajadores activos (null = sin tope).
+ * Empresarial incluye `incluidos` trabajadores y cobra `precio_adicional_cop`
+ * por cada trabajador activo por encima de ese número.
+ */
 const PLANES = {
-  basico:      { max_trabajadores: 10 },
-  profesional: { max_trabajadores: 30 },
-  empresarial: { max_trabajadores: null },
+  basico:      { max_trabajadores: 10,   precio_cop: 79000 },
+  profesional: { max_trabajadores: 30,   precio_cop: 169000 },
+  empresarial: { max_trabajadores: null, precio_cop: 299000, incluidos: 80, precio_adicional_cop: 3500 },
 };
 
-/**
- * Precio mensual fijo para empresas sin integración activa con logiq360.
- * Empresas con integracion_config.activo=1 y api_key configurada no pagan
- * (ver middleware/verificarSuscripcion.js) — ya no hay precios escalonados por plan.
- */
-const SUSCRIPCION_ESTANDAR_COP = 129000;
+/** Precio mensual de un plan para una empresa con `trabajadoresActivos`. */
+function precioPlanCop(plan, trabajadoresActivos = 0) {
+  const p = PLANES[plan];
+  if (!p) throw new Error(`Plan desconocido: ${plan}`);
+  const extra = p.incluidos != null ? Math.max(0, trabajadoresActivos - p.incluidos) : 0;
+  return p.precio_cop + extra * (p.precio_adicional_cop ?? 0);
+}
 
-/** Días de acceso gratuito al registrarse antes de exigir el pago (empresas no-logiq360). */
-const TRIAL_DIAS_GRATIS = 14;
+/** Plan más barato cuyo tope admite `trabajadoresActivos`. */
+function planParaTrabajadores(trabajadoresActivos) {
+  return Object.keys(PLANES).find((k) => {
+    const max = PLANES[k].max_trabajadores;
+    return max === null || trabajadoresActivos <= max;
+  });
+}
+
+/**
+ * Días de acceso gratuito al registrarse antes de exigir el pago (empresas no-logiq360).
+ * 30 y no 14: la prueba debe alcanzar a cerrar al menos una quincena para
+ * que la empresa vea su primera liquidación antes de pagar.
+ */
+const TRIAL_DIAS_GRATIS = 30;
 
 /** Estados del vínculo trabajador ↔ empresa (tabla trabajador_empresa). */
 const ESTADOS_TRABAJADOR_EMPRESA = {
@@ -197,7 +237,8 @@ module.exports = {
   JORNADA_ORDINARIA_HORAS,
   JORNADA_SEMANAL_HORAS,
   HORAS_EXTRA_MAX_SEMANA,
-  HORA_INICIO_NOCTURNO,
+  HORA_INICIO_NOCTURNO_VIGENCIAS,
+  RECARGO_FESTIVO_VIGENCIAS,
   HORA_FIN_NOCTURNO,
   JORNADA_CONTINUA_UMBRAL_HORAS,
   DURACION_ALMUERZO_MIN,
@@ -212,7 +253,8 @@ module.exports = {
   LOGIN,
   ESTADOS_TRABAJADOR_EMPRESA,
   PLANES,
-  SUSCRIPCION_ESTANDAR_COP,
+  precioPlanCop,
+  planParaTrabajadores,
   TRIAL_DIAS_GRATIS,
   TIPOS_CONTRATO,
   SALARIO_MINIMO_DIARIO_COP,

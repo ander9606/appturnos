@@ -44,7 +44,7 @@ const ReportesService = {
     let costoNomina = 0;
     const detalleNomina = filasNomina.map((f) => {
       const vh = valorHora(f);
-      const desglosePago = desglosarPagoNomina(f, vh);
+      const desglosePago = desglosarPagoNomina(f, vh, hasta);
       const pagoOrdinario = calcularSalarioBasePeriodo({
         tarifaHora: f.tarifa_hora,
         salarioBase: f.salario_base,

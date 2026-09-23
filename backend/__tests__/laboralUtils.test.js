@@ -11,6 +11,8 @@ const {
   calcularPagoNomina,
   desglosarPagoNomina,
   calcularSalarioBasePeriodo,
+  horaInicioNocturno,
+  recargoFestivo,
 } = require('../utils/laboralUtils');
 
 // ── calcularPascua ────────────────────────────────────────────────────────────
@@ -123,6 +125,9 @@ describe('horaAMinutos', () => {
   });
 });
 
+// Martes laboral, antes de la Ley 2466 (nocturno 21:00, dominical ×1.75).
+const ANTES_REFORMA = '2025-06-10';
+
 // ── calcularHoras ──────────────────────────────────────────────────────────────
 
 describe('calcularHoras — jornada normal (no festivo)', () => {
@@ -142,7 +147,7 @@ describe('calcularHoras — jornada normal (no festivo)', () => {
 
   test('8 horas con tramo nocturno → ordinarias + nocturnas', () => {
     // 20:00 – 04:00 (8 h) → 1 h ordinaria diurna (20–21) + 7 h nocturnas (21–04)
-    const r = calcularHoras({ horaEntrada: '20:00', horaSalida: '04:00', esFestivo: false, jornadaContinua: true });
+    const r = calcularHoras({ horaEntrada: '20:00', horaSalida: '04:00', fecha: ANTES_REFORMA, esFestivo: false, jornadaContinua: true });
     expect(r.horas_ordinarias).toBeCloseTo(1, 1);
     expect(r.horas_nocturnas).toBeCloseTo(7, 1);
     expect(r.total_horas).toBeCloseTo(8, 1);
@@ -168,7 +173,7 @@ describe('calcularHoras — jornada normal (no festivo)', () => {
     // ordinarias nocturnas: 21–22 = 1 h
     // extra nocturnas: 22–02 = 4 h
     const r = calcularHoras({
-      horaEntrada: '14:00', horaSalida: '02:00', esFestivo: false, horasOrdinariasAcumuladas: 34, jornadaContinua: true,
+      horaEntrada: '14:00', horaSalida: '02:00', fecha: ANTES_REFORMA, esFestivo: false, horasOrdinariasAcumuladas: 34, jornadaContinua: true,
     });
     expect(r.total_horas).toBeCloseTo(12, 1);
     expect(r.horas_ordinarias).toBeCloseTo(7, 1);
@@ -260,7 +265,7 @@ describe('calcularMinutosAlmuerzo', () => {
     // 20:00–04:00: solo 20:00–21:00 es diurno (60 min) — se consume entero.
     const inicio = horaAMinutos('20:00');
     const fin = horaAMinutos('04:00') + 24 * 60;
-    const minutos = calcularMinutosAlmuerzo(inicio, fin, false);
+    const minutos = calcularMinutosAlmuerzo(inicio, fin, false, 21); // regla previa a la Ley 2466
     expect(minutos.size).toBe(60);
     for (const m of minutos) {
       expect(m).toBeGreaterThanOrEqual(inicio);
@@ -299,7 +304,7 @@ describe('calcularHoras — descuento de almuerzo', () => {
   test('turno que cruza a nocturno: el almuerzo se descuenta del bloque diurno, no del nocturno', () => {
     // 20:00–04:00 (8h): solo 1h es diurna (20–21), el resto (21–04) es nocturna.
     // El almuerzo (1h) se toma de esa única hora diurna; las 7h nocturnas quedan intactas.
-    const r = calcularHoras({ horaEntrada: '20:00', horaSalida: '04:00' });
+    const r = calcularHoras({ horaEntrada: '20:00', horaSalida: '04:00', fecha: ANTES_REFORMA });
     expect(r.horas_ordinarias).toBe(0);
     expect(r.horas_nocturnas).toBeCloseTo(7, 1);
     expect(r.total_horas).toBeCloseTo(7, 1);
@@ -382,7 +387,7 @@ describe('calcularPagoNomina', () => {
     expect(calcularPagoNomina(desglose, VH)).toBe(13_500);
   });
 
-  test('hora festiva diurna → ×1.75', () => {
+  test('hora festiva antes del 1-jul-2025 → ×1.75', () => {
     const desglose = {
       horas_ordinarias: 0,
       horas_nocturnas: 0,
@@ -390,7 +395,7 @@ describe('calcularPagoNomina', () => {
       horas_extra_nocturnas: 0,
       horas_festivo: 1,
     };
-    expect(calcularPagoNomina(desglose, VH)).toBe(17_500);
+    expect(calcularPagoNomina(desglose, VH, ANTES_REFORMA)).toBe(17_500);
   });
 
   test('jornada mixta completa', () => {
@@ -453,7 +458,7 @@ describe('desglosarPagoNomina', () => {
 
   test('tolera valores undefined/null en el desglose', () => {
     const d = desglosarPagoNomina({}, VH);
-    expect(d).toEqual({
+    expect(d).toMatchObject({
       pago_ordinario: 0, pago_nocturno: 0, pago_extra_diurno: 0, pago_extra_nocturno: 0, pago_festivo: 0, total: 0,
     });
   });
@@ -497,5 +502,51 @@ describe('calcularSalarioBasePeriodo', () => {
       tarifaHora: null, salarioBase: null, horasOrdinarias: 10, valorHoraTrabajador: 0, diasPeriodo: 15,
     });
     expect(pago).toBe(0);
+  });
+});
+
+// ── Reforma laboral (Ley 2466 de 2025) ─────────────────────────────────────────
+
+describe('Ley 2466 de 2025 — reglas por fecha', () => {
+  test('nocturno empieza a las 21:00 hasta el 24-dic-2025 y a las 19:00 desde el 25-dic-2025', () => {
+    expect(horaInicioNocturno('2025-12-24')).toBe(21);
+    expect(horaInicioNocturno('2025-12-25')).toBe(19);
+    expect(horaInicioNocturno(new Date(Date.UTC(2026, 8, 23)))).toBe(19);
+  });
+
+  test('recargo dominical/festivo gradual: 75 % → 80 % → 90 % → 100 %', () => {
+    expect(recargoFestivo('2025-06-30')).toBe(1.75);
+    expect(recargoFestivo('2025-07-01')).toBe(1.80);
+    expect(recargoFestivo('2026-06-30')).toBe(1.80);
+    expect(recargoFestivo('2026-07-01')).toBe(1.90);
+    expect(recargoFestivo('2027-07-01')).toBe(2.00);
+  });
+
+  test('turno 17:00–01:00 después de la reforma: 2 h diurnas + 6 h nocturnas (19–01)', () => {
+    const r = calcularHoras({
+      horaEntrada: '17:00', horaSalida: '01:00', fecha: '2026-09-22', esFestivo: false, jornadaContinua: true,
+    });
+    expect(r.horas_ordinarias).toBeCloseTo(2, 2);
+    expect(r.horas_nocturnas).toBeCloseTo(6, 2);
+  });
+
+  test('el mismo turno antes de la reforma: 4 h diurnas + 4 h nocturnas (21–01)', () => {
+    const r = calcularHoras({
+      horaEntrada: '17:00', horaSalida: '01:00', fecha: ANTES_REFORMA, esFestivo: false, jornadaContinua: true,
+    });
+    expect(r.horas_ordinarias).toBeCloseTo(4, 2);
+    expect(r.horas_nocturnas).toBeCloseTo(4, 2);
+  });
+
+  test('20:00–04:00 después de la reforma: todo nocturno, sin bloque diurno del que descontar almuerzo', () => {
+    const r = calcularHoras({ horaEntrada: '20:00', horaSalida: '04:00', fecha: '2026-09-22', esFestivo: false });
+    expect(r.horas_ordinarias).toBe(0);
+    expect(r.horas_nocturnas).toBeCloseTo(8, 2);
+  });
+
+  test('hora festiva en sep-2026 → ×1.90 y el desglose informa el recargo aplicado', () => {
+    const d = desglosarPagoNomina({ horas_festivo: 1 }, 10_000, '2026-09-30');
+    expect(d.recargo_festivo).toBe(1.90);
+    expect(d.pago_festivo).toBeCloseTo(19_000, 5);
   });
 });

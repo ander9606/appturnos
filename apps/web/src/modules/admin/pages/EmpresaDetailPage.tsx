@@ -26,10 +26,19 @@ const ORIGEN_BADGE: Record<OrigenSuscripcion, string> = {
   logiq360: 'bg-success-light text-success',
 };
 
-// Precio único mensual (COP) para empresas sin integración logiq360 activa —
-// ver backend/config/constants.js PRECIO_MENSUAL_COP. El plan ya no afecta el precio,
-// solo límites de features (max_trabajadores).
-const PRECIO_MENSUAL_COP = 129000;
+// Espejo de PLANES en backend/config/constants.js (COP/mes). Solo para el
+// estimado previo — el monto cobrado de verdad lo devuelve el backend al
+// generar el link (monto_cop).
+const PLANES: Record<Plan, { precio: number; incluidos?: number; adicional?: number; tope: string }> = {
+  basico:      { precio: 79000,  tope: 'hasta 10 trabajadores' },
+  profesional: { precio: 169000, tope: 'hasta 30 trabajadores' },
+  empresarial: { precio: 299000, incluidos: 80, adicional: 3500, tope: '80 incluidos + $3.500 c/u adicional' },
+};
+
+function precioPlan(plan: Plan, trabajadores: number): number {
+  const p = PLANES[plan];
+  return p.precio + Math.max(0, trabajadores - (p.incluidos ?? Infinity)) * (p.adicional ?? 0);
+}
 
 // ponytail: created_at es TIMESTAMP (llega "YYYY-MM-DD HH:MM:SS", dateStrings:true en el pool) —
 // el fmtDate compartido asume fechas puras y le agrega T00:00:00, rompería este formato.
@@ -59,6 +68,7 @@ export function EmpresaDetailPage() {
   const [linkPlan, setLinkPlan]   = useState<Plan>('basico');
   const [linkMeses, setLinkMeses] = useState(1);
   const [linkUrl, setLinkUrl]     = useState('');
+  const [linkMonto, setLinkMonto] = useState<number | null>(null);
   const [copied, setCopied]       = useState(false);
 
   // Activación manual
@@ -75,6 +85,7 @@ export function EmpresaDetailPage() {
   async function handleGenerarLink() {
     const res = await generarLink.mutateAsync({ plan: linkPlan, meses: linkMeses });
     setLinkUrl(res.data?.url ?? '');
+    setLinkMonto(res.data?.monto_cop ?? null);
   }
 
   function handleCopiar() {
@@ -216,9 +227,9 @@ export function EmpresaDetailPage() {
                 onChange={e => { setLinkPlan(e.target.value as Plan); setLinkUrl(''); }}
                 className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background text-foreground"
               >
-                <option value="basico">Básico — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
-                <option value="profesional">Profesional — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
-                <option value="empresarial">Empresarial — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
+                <option value="basico">Básico — {fmtCOP(PLANES.basico.precio)}/mes ({PLANES.basico.tope})</option>
+                <option value="profesional">Profesional — {fmtCOP(PLANES.profesional.precio)}/mes ({PLANES.profesional.tope})</option>
+                <option value="empresarial">Empresarial — {fmtCOP(PLANES.empresarial.precio)}/mes ({PLANES.empresarial.tope})</option>
               </select>
             </div>
             <div className="w-24">
@@ -234,7 +245,10 @@ export function EmpresaDetailPage() {
           </div>
 
           <p className="text-xs text-muted-foreground mb-3">
-            Total: <span className="font-semibold text-foreground">{fmtCOP(PRECIO_MENSUAL_COP * linkMeses)}</span>
+            {linkUrl && linkMonto != null ? 'Total cobrado' : 'Total estimado'}:{' '}
+            <span className="font-semibold text-foreground">
+              {fmtCOP(linkUrl && linkMonto != null ? linkMonto : precioPlan(linkPlan, empresa.total_trabajadores ?? 0) * linkMeses)}
+            </span>
           </p>
 
           {linkUrl ? (

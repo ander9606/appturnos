@@ -57,7 +57,7 @@ const PRODUCT_SIDES: Record<ProductKey, ProductSide> = {
     border: 'border-success',
     screen: <NominaGestorScreen />,
     items: [
-      { icon: Wallet, title: 'Recargos automáticos', body: 'Horas nocturnas (21:00–06:00), dominicales y festivos colombianos calculados al centavo. Incluye Ley Emiliani y los festivos móviles de Semana Santa.' },
+      { icon: Wallet, title: 'Recargos automáticos', body: 'Horas nocturnas (19:00–06:00), dominicales y festivos colombianos calculados al centavo con la reforma laboral (Ley 2466 de 2025). Incluye Ley Emiliani y los festivos móviles de Semana Santa.' },
       { icon: Calendar, title: 'Períodos flexibles', body: 'Semanal, quincenal o mensual — configura el esquema que tu empresa usa. Cambiar el período no afecta el histórico de nóminas anteriores.' },
       { icon: ShieldCheck, title: 'Snapshot al cerrar el período', body: 'Al cerrar un período la tarifa de cada hora queda congelada. Si luego cambias el salario de alguien, lo ya liquidado no se recalcula.' },
     ],
