@@ -1,20 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert, ActivityIndicator, Pressable, Linking } from 'react-native';
+import { View, Text, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { Button } from '@/components/ui/Button';
-import { useTheme } from '@/lib/theme';
-import { Ionicons } from '@expo/vector-icons';
-
-// PDF servido por el backend (backend/public, generado con scripts/generar-pdf-reglas.js).
-const REGLAS_PDF_URL = `${process.env.EXPO_PUBLIC_API_URL}/api/publico/reglas-calculo-pagos.pdf`;
 
 export default function TerminosScreen() {
   const router  = useRouter();
-  const theme   = useTheme();
   const usuario = useAuthStore((s) => s.usuario);
   const rehydrate = useAuthStore((s) => s.rehydrate);
   const [scrolled, setScrolled] = useState(false);
@@ -52,19 +46,6 @@ export default function TerminosScreen() {
             {TERMINOS_TEXT}
           </Text>
 
-          <Pressable
-            onPress={() => Linking.openURL(REGLAS_PDF_URL)}
-            accessibilityRole="link"
-            accessibilityLabel="Descargar PDF: cómo calculamos los pagos"
-            className="mt-6 flex-row items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 active:opacity-70"
-          >
-            <Ionicons name="document-text-outline" size={22} color={theme.primary} />
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-foreground">Cómo calculamos los pagos</Text>
-              <Text className="text-xs text-muted-foreground">Horas, recargos, descuentos y turnos · PDF</Text>
-            </View>
-            <Ionicons name="download-outline" size={18} color="#94A3B8" />
-          </Pressable>
           <View className="h-8" />
         </ScrollView>
 
@@ -113,7 +94,7 @@ Zaturno calcula el pago de dos formas, según el tipo de vínculo del trabajador
 • Nómina: se liquidan las horas trabajadas con los recargos de ley vigentes (nocturno, dominical/festivo, horas extra) sobre el período de pago (mensual, quincenal o semanal). En jornadas mayores a 6 horas se descuenta automáticamente 1 hora de almuerzo, salvo que el trabajador marque que tuvo una jornada continua sin ese descanso.
 • Turnos: se paga una tarifa fija por cada turno completado, pactada al publicar la oferta, sin recargos de ley adicionales. El gestor de la empresa puede asignar manualmente un bono extra a un turno puntual (por ejemplo, una propina), visible en el detalle del turno y en el contrato correspondiente.
 
-El detalle completo de estas reglas, con ejemplos, está disponible para consulta y descarga desde esta misma pantalla.
+El administrador de tu empresa puede consultar el detalle completo de estas reglas, con ejemplos, desde Mi empresa.
 
 Zaturno no realiza pagos ni maneja dinero real en ningún momento. Es únicamente un puente de información entre trabajadores y empresas: calcula y registra los montos correspondientes a cada turno o período de nómina para que ambas partes lleven un control claro y verificable, pero el pago efectivo lo realiza la empresa directamente al trabajador por fuera de la aplicación.
 

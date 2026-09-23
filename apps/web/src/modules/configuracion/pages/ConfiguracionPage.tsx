@@ -539,7 +539,23 @@ function PlanTab() {
   const [meses, setMeses] = useState(1);
   const [planElegido, setPlanElegido] = useState<PlanCodigo | null>(null);
   const [link, setLink] = useState<LinkPago | null>(null);
+  const [descargandoReglas, setDescargandoReglas] = useState(false);
   const s = data?.data;
+
+  const handleDescargarReglas = async () => {
+    setDescargandoReglas(true);
+    try {
+      const res = await import('../api/configuracionApi').then(m => m.configuracionApi.getReglasPago());
+      const url = URL.createObjectURL(res.data as Blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'Zaturno-reglas-calculo-pagos.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDescargandoReglas(false);
+    }
+  };
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
@@ -626,6 +642,20 @@ function PlanTab() {
             Tu suscripción se gestiona a través de tu integración con logiq360 — no necesitas pagarla aquí.
           </p>
         )}
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-6">
+        <h2 className="text-base font-semibold text-foreground">Cómo calculamos los pagos</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Reglas completas de horas, recargos de ley, descuentos, auxilio de transporte y turnos, con un ejemplo numérico.
+        </p>
+        <button
+          onClick={handleDescargarReglas}
+          disabled={descargandoReglas}
+          className="inline-flex items-center mt-3 text-sm font-medium px-4 py-2 rounded-xl bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
+        >
+          {descargandoReglas ? 'Descargando…' : 'Descargar PDF'}
+        </button>
       </div>
 
       {s.origen !== 'logiq360' && (

@@ -1,8 +1,11 @@
 'use strict';
 
 /**
- * Genera backend/public/reglas-calculo-pagos.pdf (descargable desde Términos
- * y condiciones) a partir de docs/REGLAS-CALCULO-PAGOS.md.
+ * Genera backend/documentos/reglas-calculo-pagos.pdf a partir de
+ * docs/REGLAS-CALCULO-PAGOS.md. Se descarga desde GET /api/empresas/reglas-pago
+ * — solo admin_empresa (empresas.routes.js), enlazado desde Configuración ›
+ * Mi plan (web) y Mi empresa (móvil), no desde Términos y condiciones: es un
+ * documento para quien administra la empresa, no para todo el equipo.
  *
  * Publica solo las secciones 1 a 9: la 10 (constantes y archivos) y la 11
  * (limitaciones internas) son para el equipo. Quita la nota interna del
@@ -21,7 +24,7 @@ const { execFileSync } = require('child_process');
 
 const RAIZ = path.join(__dirname, '..', '..');
 const ORIGEN = path.join(RAIZ, 'docs', 'REGLAS-CALCULO-PAGOS.md');
-const DESTINO = path.join(__dirname, '..', 'public', 'reglas-calculo-pagos.pdf');
+const DESTINO = path.join(__dirname, '..', 'documentos', 'reglas-calculo-pagos.pdf');
 const CHROME = process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 const AVISO = `> Este documento explica cómo Zaturno calcula los montos de nómina y de turnos.

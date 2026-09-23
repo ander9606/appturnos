@@ -2,7 +2,7 @@
 
 Actualizado: 23 de septiembre de 2026
 
-> Fuente de verdad del código: `backend/config/constants.js` y `backend/utils/laboralUtils.js`. Si cambias una regla, actualiza este documento y regenera el PDF público con `node backend/scripts/generar-pdf-reglas.js` (las secciones 1 a 9 se publican; 10 y 11 son internas).
+> Fuente de verdad del código: `backend/config/constants.js` y `backend/utils/laboralUtils.js`. Si cambias una regla, actualiza este documento y regenera `backend/documentos/reglas-calculo-pagos.pdf` con `node backend/scripts/generar-pdf-reglas.js` (las secciones 1 a 9 se publican; 10 y 11 son internas). El PDF es para quien administra la empresa, no para todo el equipo: se descarga autenticado desde `GET /api/empresas/reglas-pago` (solo `admin_empresa`), enlazado en Configuración → Mi plan (web) y Mi empresa (móvil).
 
 ## 1. Resumen: quién cobra y cómo
 

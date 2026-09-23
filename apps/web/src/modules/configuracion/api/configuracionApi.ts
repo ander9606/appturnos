@@ -8,6 +8,8 @@ export const configuracionApi = {
 
   // Suscripción
   getSuscripcion: () => api.get<{ data: Suscripcion }>('/empresas/suscripcion').then(r => r.data),
+  /** PDF de reglas de cálculo de pagos — solo admin_empresa (backend lo exige también). */
+  getReglasPago: () => api.get('/empresas/reglas-pago', { responseType: 'blob' }),
   pagarSuscripcion: (data: { meses: number; plan?: PlanCodigo }) =>
     api.post<{ data: LinkPago }>('/empresas/suscripcion/pagar', data).then(r => r.data),
 
