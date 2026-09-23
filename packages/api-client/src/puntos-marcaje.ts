@@ -47,6 +47,12 @@ export const puntosMarcajeApi = {
     return api.get<PuntoParaTurno[]>('/api/puntos-marcaje/para-turnos');
   },
 
+  /** Puntos zonales válidos para el geofence de un turno — acotados si el gestor los eligió, si no, todos los de la empresa. */
+  listarZonales(ofertaId?: number): Promise<PuntoParaTurno[]> {
+    const query = ofertaId ? `?oferta_id=${ofertaId}` : '';
+    return api.get<PuntoParaTurno[]>(`/api/puntos-marcaje/zonales${query}`);
+  },
+
   crear(payload: CrearPuntoMarcajePayload): Promise<PuntoMarcaje> {
     return api.post<PuntoMarcaje>('/api/puntos-marcaje', payload);
   },

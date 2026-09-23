@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
@@ -33,6 +33,16 @@ router.get('/', verificarRol(VER), ctrl.listar);
 
 // GET /api/puntos-marcaje/para-turnos — biblioteca de ubicaciones (alcance='todos') para crear turnos
 router.get('/para-turnos', verificarRol(VER), ctrl.listarParaTurnos);
+
+// GET /api/puntos-marcaje/zonales?oferta_id= — para el geofence del trabajador al marcar
+// (cualquier rol autenticado de la empresa, no solo gestores — el trabajador que marca
+// necesita esta lista para su propio turno).
+router.get(
+  '/zonales',
+  [query('oferta_id').optional().isInt({ min: 1 })],
+  validar,
+  ctrl.listarZonales
+);
 
 // POST /api/puntos-marcaje
 router.post('/', verificarRol(GESTIONAR), verificarSuscripcion, reglasBase, validar, ctrl.crear);

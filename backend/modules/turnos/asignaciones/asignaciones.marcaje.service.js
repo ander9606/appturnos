@@ -89,7 +89,7 @@ module.exports = {
         );
       }
     } else if (gf.tipo === 'zonal') {
-      const puntos = await PuntosMarcajeModel.listarZonales(empresaId);
+      const puntos = await PuntosMarcajeModel.listarZonalesEfectivos(empresaId, asignacion.oferta_id);
       if (puntos.length > 0) {
         const { ok } = estaEnAlgunPunto(latitud, longitud, puntos);
         if (!ok) {
@@ -183,7 +183,7 @@ module.exports = {
         throw new AppError(`Debes estar en "${gf.nombre}" para registrar la salida`, 422);
       }
     } else if (gf.tipo === 'zonal') {
-      const puntos = await PuntosMarcajeModel.listarZonales(dbEmpresaId);
+      const puntos = await PuntosMarcajeModel.listarZonalesEfectivos(dbEmpresaId, asignacion.oferta_id);
       if (puntos.length > 0) {
         const { ok } = estaEnAlgunPunto(latitud, longitud, puntos);
         if (!ok) {

@@ -13,6 +13,7 @@ export interface Empresa {
 }
 
 export type AlcancePunto = 'todos' | 'nomina';
+export type TipoPunto = 'fijo' | 'zonal';
 
 export interface PuntoMarcaje {
   id: number;
@@ -21,6 +22,8 @@ export interface PuntoMarcaje {
   longitud: number;
   radio_metros: number;
   alcance: AlcancePunto;
+  /** 'zonal' = cualquier punto de ese tipo es válido para el geofence (ver ZonasMarcajeInput). Default 'fijo'. */
+  tipo?: TipoPunto;
   activo: number;
 }
 

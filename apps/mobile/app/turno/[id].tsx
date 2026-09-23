@@ -34,7 +34,7 @@ import { SignaturePad }        from '@/features/turnos/SignaturePad';
 import { TurnoTimeline }       from '@/features/turnos/TurnoTimeline';
 import { Button }              from '@/components/ui/Button';
 import { getEstadoConfig } from '@/features/turnos/turnosUtils';
-import { ApiError, puntosMarcajeApi, type PuntoMarcaje } from '@api-client';
+import { ApiError, puntosMarcajeApi, type PuntoParaTurno } from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
 import { obtenerUbicacionActual } from '@/lib/currentLocation';
@@ -92,10 +92,13 @@ export default function TurnoDetailScreen() {
   const isLibre = asignacion?.geofence_info?.tipo === 'libre';
   const isZonal = asignacion?.geofence_info?.tipo === 'zonal';
 
-  const { data: zonalPuntos } = useQuery<PuntoMarcaje[]>({
-    queryKey: ['puntos-marcaje'],
-    queryFn:  () => puntosMarcajeApi.listar(),
-    enabled:  isZonal && activoParaGeofence,
+  // El servidor ya resuelve el set correcto (acotado al turno si el gestor
+  // eligió zonas específicas, o todos los puntos zonales de la empresa si
+  // no) — ver PuntosMarcajeModel.listarZonalesEfectivos.
+  const { data: zonalPuntos } = useQuery<PuntoParaTurno[]>({
+    queryKey: ['puntos-marcaje', 'zonales', asignacion?.oferta_id],
+    queryFn:  () => puntosMarcajeApi.listarZonales(asignacion?.oferta_id),
+    enabled:  isZonal && activoParaGeofence && asignacion?.oferta_id != null,
     staleTime: 5 * 60_000,
   });
 
@@ -113,9 +116,7 @@ export default function TurnoDetailScreen() {
         return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
       case 'zonal':
         if (!zonalPuntos?.length) return null;
-        return zonalPuntos
-          .filter((p) => p.tipo === 'zonal' && Boolean(p.activo))
-          .map((p) => ({ lat: Number(p.latitud), lng: Number(p.longitud), radiusM: p.radio_metros }));
+        return zonalPuntos.map((p) => ({ lat: p.latitud, lng: p.longitud, radiusM: p.radio_metros }));
       default:
         return null;
     }

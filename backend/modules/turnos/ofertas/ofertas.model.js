@@ -65,6 +65,27 @@ const DESTINATARIOS_JSON_ALIAS = DESTINATARIOS_JSON.replace(
   'od.oferta_id = o.id'
 );
 
+// Puntos de marcaje zonal acotados a este turno (migración 099). Vacío/null =
+// sin acotar, el geofence 'zonal' sigue validando contra todos los puntos
+// zonales de la empresa (ver listarZonalesEfectivos). Mismo criterio anti-N+1.
+const PUNTOS_JSON = `(
+  SELECT JSON_ARRAYAGG(JSON_OBJECT(
+    'id', pm.id,
+    'nombre', pm.nombre,
+    'latitud', pm.latitud,
+    'longitud', pm.longitud,
+    'radio_metros', pm.radio_metros
+  ))
+  FROM oferta_puntos_marcaje opm
+  INNER JOIN puntos_marcaje pm ON pm.id = opm.punto_marcaje_id
+  WHERE opm.oferta_id = ofertas_turno.id
+) AS puntos_marcaje_json`;
+
+const PUNTOS_JSON_ALIAS = PUNTOS_JSON.replace(
+  'opm.oferta_id = ofertas_turno.id',
+  'opm.oferta_id = o.id'
+);
+
 // Allowlist de columnas modificables vía PUT (lista fija de código).
 const CAMPOS_EDITABLES = [
   'titulo',
@@ -81,10 +102,10 @@ const CAMPOS_EDITABLES = [
   'para_quien',
 ];
 
-/** Convierte las columnas `puestos_json`/`destinatarios_json` (string) en arrays de objetos. */
+/** Convierte las columnas `puestos_json`/`destinatarios_json`/`puntos_marcaje_json` (string) en arrays de objetos. */
 function parsearPuestos(fila) {
   if (!fila) return fila;
-  const { puestos_json, destinatarios_json, ...resto } = fila;
+  const { puestos_json, destinatarios_json, puntos_marcaje_json, ...resto } = fila;
   let puestos = [];
   if (puestos_json) {
     puestos = typeof puestos_json === 'string' ? JSON.parse(puestos_json) : puestos_json;
@@ -93,7 +114,11 @@ function parsearPuestos(fila) {
   if (destinatarios_json) {
     destinatarios = typeof destinatarios_json === 'string' ? JSON.parse(destinatarios_json) : destinatarios_json;
   }
-  return { ...resto, puestos, destinatarios };
+  let puntosMarcaje = [];
+  if (puntos_marcaje_json) {
+    puntosMarcaje = typeof puntos_marcaje_json === 'string' ? JSON.parse(puntos_marcaje_json) : puntos_marcaje_json;
+  }
+  return { ...resto, puestos, destinatarios, puntos_marcaje: puntosMarcaje };
 }
 
 const OfertasModel = {
@@ -122,7 +147,7 @@ const OfertasModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}
        FROM ofertas_turno
        WHERE ${whereSql}
        ORDER BY fecha DESC, hora_inicio
@@ -219,7 +244,7 @@ const OfertasModel = {
     // gestor ya sabe en qué empresa está), acá el nombre es indispensable para distinguir
     // de un vistazo de qué empresa es cada oferta.
     const [filas] = await pool.query(
-      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}
+      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}, ${PUNTOS_JSON_ALIAS}
        FROM ofertas_turno o
        ${joinSql}
        WHERE ${whereSql}
@@ -257,7 +282,7 @@ const OfertasModel = {
       params.push(antiguedadMinMin);
     }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}
        FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
       params
     );
@@ -266,7 +291,7 @@ const OfertasModel = {
 
   async obtenerPorExternalRef(empresaId, externalRef) {
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}
        FROM ofertas_turno WHERE external_ref = ? AND empresa_id = ? LIMIT 1`,
       [externalRef, empresaId]
     );
@@ -406,6 +431,16 @@ const OfertasModel = {
         }
       }
 
+      // Puntos de marcaje zonal acotados a este turno (migración 099) — opcional.
+      if (Array.isArray(datos.punto_marcaje_ids)) {
+        for (const puntoId of datos.punto_marcaje_ids) {
+          await conn.query(
+            'INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)',
+            [ofertaId, puntoId]
+          );
+        }
+      }
+
       await conn.commit();
       return ofertaId;
     } catch (err) {
@@ -425,14 +460,49 @@ const OfertasModel = {
         params.push(datos[campo]);
       }
     }
-    if (sets.length === 0) return 0;
+    const tocaPuntos = Array.isArray(datos.punto_marcaje_ids);
+    if (sets.length === 0 && !tocaPuntos) return 0;
 
-    params.push(id, empresaId);
-    const [res] = await pool.query(
-      `UPDATE ofertas_turno SET ${sets.join(', ')} WHERE id = ? AND empresa_id = ?`,
-      params
-    );
-    return res.affectedRows;
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      let affectedRows = 0;
+      if (sets.length > 0) {
+        params.push(id, empresaId);
+        const [res] = await conn.query(
+          `UPDATE ofertas_turno SET ${sets.join(', ')} WHERE id = ? AND empresa_id = ?`,
+          params
+        );
+        affectedRows = res.affectedRows;
+      }
+
+      // Reemplazo completo del set de puntos zonales acotados (migración 099)
+      // — más simple y menos propenso a errores que diffear altas/bajas.
+      if (tocaPuntos) {
+        await conn.query(
+          `DELETE opm FROM oferta_puntos_marcaje opm
+           JOIN ofertas_turno o ON o.id = opm.oferta_id
+           WHERE opm.oferta_id = ? AND o.empresa_id = ?`,
+          [id, empresaId]
+        );
+        for (const puntoId of datos.punto_marcaje_ids) {
+          await conn.query(
+            'INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)',
+            [id, puntoId]
+          );
+        }
+        affectedRows = affectedRows || 1;
+      }
+
+      await conn.commit();
+      return affectedRows;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 
   /**

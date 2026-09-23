@@ -62,6 +62,11 @@ function reglasOferta({ parcial }) {
     // Turno sin restricción geográfica al marcar ingreso/egreso (ej. rutas,
     // entregas, mandados) — gana sobre el tipo_geofence del cargo asignado.
     body('ubicacion_libre').optional().isBoolean().withMessage('ubicacion_libre inválido'),
+    // Puntos zonales acotados para este turno (migración 099) — a diferencia de
+    // puestos/destinatarios, sí se acepta en el PUT de actualizar: el gestor
+    // puede ajustar las zonas válidas de un turno ya creado.
+    body('punto_marcaje_ids').optional().isArray().withMessage('punto_marcaje_ids debe ser un array'),
+    body('punto_marcaje_ids.*').isInt({ min: 1 }).withMessage('punto_marcaje_ids inválido'),
     // Puestos y destinatarios solo se aceptan en crear (no en PUT de actualizar
     // — todavía no se soporta editar destinatarios de una oferta ya creada).
     ...(parcial

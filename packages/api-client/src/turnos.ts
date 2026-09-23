@@ -145,6 +145,15 @@ export interface OfertaDestinatario {
   apellido: string;
 }
 
+/** Punto zonal acotado para este turno (migración 099) — ver PuntosMarcajeModel.listarZonalesEfectivos. */
+export interface OfertaPuntoMarcaje {
+  id: number;
+  nombre: string;
+  latitud: number;
+  longitud: number;
+  radio_metros: number;
+}
+
 export interface Oferta {
   id: number;
   empresa_id: number;
@@ -168,6 +177,8 @@ export interface Oferta {
   visibilidad: VisibilidadOferta;
   /** Presente cuando visibilidad = 'dirigida'. */
   destinatarios: OfertaDestinatario[];
+  /** Puntos zonales que acotan el geofence de este turno — vacío = sin acotar (cualquier punto zonal de la empresa). */
+  puntos_marcaje: OfertaPuntoMarcaje[];
   creado_por: number;
   created_at: string;
   puestos: OfertaPuesto[];
@@ -193,6 +204,8 @@ export interface CrearOfertaPayload {
   /** 'dirigida' requiere trabajador_ids con al menos una persona. */
   visibilidad?: VisibilidadOferta;
   trabajador_ids?: number[];
+  /** IDs de puntos_marcaje que acotan el geofence 'zonal' de este turno. Omitido = sin acotar. */
+  punto_marcaje_ids?: number[];
   puestos: Array<{
     cargo_id: number;
     plazas: number;
@@ -204,7 +217,9 @@ export interface CrearOfertaPayload {
 /**
  * Edición parcial de una oferta ya creada (PUT). Solo aplica mientras está en
  * 'abierta' o 'borrador' — el backend rechaza el resto de estados. Refleja
- * CAMPOS_EDITABLES en ofertas.model.js; puestos/destinatarios no son editables acá.
+ * CAMPOS_EDITABLES en ofertas.model.js; puestos/destinatarios no son editables
+ * acá. `punto_marcaje_ids` sí es editable — reemplaza por completo el set
+ * acotado de este turno (enviar `[]` lo vuelve a dejar sin acotar).
  */
 export interface ActualizarOfertaPayload {
   titulo?: string;
@@ -219,6 +234,7 @@ export interface ActualizarOfertaPayload {
   encargado_nombre?: string;
   encargado_telefono?: string;
   para_quien?: ParaQuienOferta;
+  punto_marcaje_ids?: number[];
 }
 
 export interface OfertaDetalle extends Oferta {

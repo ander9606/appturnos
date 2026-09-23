@@ -138,7 +138,7 @@ describe('AsignacionesService.marcarEgreso — geofence (mismo criterio que marc
 
   test('tipo zonal: rechaza si no está dentro de ningún punto zonal', async () => {
     AsignacionesModel.obtenerConDetalles.mockResolvedValue({ ...base, geofence_info: { tipo: 'zonal' } });
-    PuntosMarcajeModel.listarZonales.mockResolvedValue([PUNTO]);
+    PuntosMarcajeModel.listarZonalesEfectivos.mockResolvedValue([PUNTO]);
     await expect(
       AsignacionesService.marcarEgreso(7, 500, 42, { latitud: LEJOS.lat, longitud: LEJOS.lng, firma_b64: 'data:...' })
     ).rejects.toMatchObject({ statusCode: 422 });
@@ -147,7 +147,7 @@ describe('AsignacionesService.marcarEgreso — geofence (mismo criterio que marc
 
   test('tipo zonal: permite la salida dentro de un punto zonal', async () => {
     AsignacionesModel.obtenerConDetalles.mockResolvedValue({ ...base, geofence_info: { tipo: 'zonal' } });
-    PuntosMarcajeModel.listarZonales.mockResolvedValue([PUNTO]);
+    PuntosMarcajeModel.listarZonalesEfectivos.mockResolvedValue([PUNTO]);
     await AsignacionesService.marcarEgreso(7, 500, 42, { latitud: PUNTO.latitud, longitud: PUNTO.longitud, firma_b64: 'data:...' });
     expect(AsignacionesModel.registrarEgreso).toHaveBeenCalled();
   });

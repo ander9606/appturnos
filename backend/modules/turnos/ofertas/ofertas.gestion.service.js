@@ -4,6 +4,7 @@ const { pool } = require('../../../config/database');
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const CargosModel = require('../../cargos/cargos.model');
+const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
@@ -73,6 +74,20 @@ async function validarDestinatarios(empresaId, visibilidad, trabajadorIds) {
   );
   if (filas.length !== ids.length) {
     throw new AppError('Alguno de los trabajadores seleccionados no pertenece a esta empresa', 400);
+  }
+}
+
+/**
+ * Valida que los puntos de marcaje elegidos para acotar el geofence zonal de
+ * este turno pertenezcan a la empresa — sin esto un cliente podría vincular
+ * el punto de otra empresa a su oferta (ver listarZonalesEfectivos).
+ */
+async function validarPuntosMarcaje(empresaId, puntoMarcajeIds) {
+  if (!Array.isArray(puntoMarcajeIds) || puntoMarcajeIds.length === 0) return;
+  const ids = [...new Set(puntoMarcajeIds.map(Number))];
+  for (const id of ids) {
+    const punto = await PuntosMarcajeModel.obtenerPorId(empresaId, id);
+    if (!punto) throw new AppError(`Punto de marcaje ${id} no encontrado`, 404);
   }
 }
 
@@ -193,6 +208,7 @@ module.exports = {
     }
     await validarPuestosParaEmpresa(empresaId, datos.puestos);
     await validarDestinatarios(empresaId, datos.visibilidad, datos.trabajador_ids);
+    await validarPuntosMarcaje(empresaId, datos.punto_marcaje_ids);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
 
@@ -222,6 +238,7 @@ module.exports = {
       (k) => datos[k] !== undefined && String(datos[k] ?? '') !== String(oferta[k] ?? '')
     );
 
+    await validarPuntosMarcaje(empresaId, datos.punto_marcaje_ids);
     await OfertasModel.actualizar(empresaId, id, datos);
 
     if (hayCambioRelevante) {

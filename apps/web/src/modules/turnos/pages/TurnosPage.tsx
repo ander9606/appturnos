@@ -12,6 +12,7 @@ import { StatCard } from '@/shared/components/StatCard';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
+import { ZonasMarcajeInput, type ZonaMarcaje } from '../components/ZonasMarcajeInput';
 import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
 import { fmtDate, fmtCOP, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 
@@ -238,6 +239,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   const [visibilidad, setVisibilidad] = useState<VisibilidadOferta>('abierta');
   const [destinatarios, setDestinatarios] = useState<DestinatarioSeleccionado[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [zonas, setZonas] = useState<ZonaMarcaje[]>([]);
 
   const dirigidaSinPersonas = visibilidad === 'dirigida' && destinatarios.length === 0;
 
@@ -264,6 +266,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
       para_quien: paraQuien,
       visibilidad,
       trabajador_ids: visibilidad === 'dirigida' ? destinatarios.map(d => d.id) : undefined,
+      punto_marcaje_ids: zonas.length > 0 ? zonas.map(z => z.id) : undefined,
       puestos: [],
     });
     onClose();
@@ -310,6 +313,13 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
               setLongitud(lng);
             }}
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Zonas de marcaje válidas (opcional)</label>
+          <p className="text-xs text-muted-foreground mb-1.5">
+            Solo aplica si el cargo asignado tiene marcaje zonal. Sin elegir ninguna, se acepta cualquier punto zonal de la empresa.
+          </p>
+          <ZonasMarcajeInput zonas={zonas} onChange={setZonas} />
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>

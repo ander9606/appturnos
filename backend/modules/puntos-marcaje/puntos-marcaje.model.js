@@ -46,6 +46,28 @@ const PuntosMarcajeModel = {
     return filas.map(castCoords);
   },
 
+  /**
+   * Puntos zonales válidos para un turno puntual: si el gestor acotó el set
+   * en `oferta_puntos_marcaje`, usa solo esos (sin exigir tipo='zonal' — el
+   * gestor eligió a mano, igual que ubicacion_libre gana sin mirar el cargo);
+   * si no acotó nada, cae al comportamiento de siempre (cualquier punto zonal
+   * de la empresa). Retrocompatible: ofertas sin fila en la tabla puente no
+   * cambian de comportamiento.
+   */
+  async listarZonalesEfectivos(empresaId, ofertaId) {
+    if (ofertaId) {
+      const [seleccionados] = await pool.query(
+        `SELECT pm.id, pm.nombre, pm.latitud, pm.longitud, pm.radio_metros
+         FROM puntos_marcaje pm
+         JOIN oferta_puntos_marcaje opm ON opm.punto_marcaje_id = pm.id
+         WHERE opm.oferta_id = ? AND pm.empresa_id = ? AND pm.activo = 1`,
+        [ofertaId, empresaId]
+      );
+      if (seleccionados.length > 0) return seleccionados.map(castCoords);
+    }
+    return this.listarZonales(empresaId);
+  },
+
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT id, empresa_id, nombre, descripcion, latitud, longitud,

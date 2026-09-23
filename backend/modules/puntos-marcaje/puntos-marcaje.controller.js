@@ -12,6 +12,12 @@ async function listarParaTurnos(req, res) {
   res.json({ success: true, data, message: 'Ubicaciones disponibles para turnos' });
 }
 
+async function listarZonales(req, res) {
+  const ofertaId = req.query.oferta_id ? Number(req.query.oferta_id) : undefined;
+  const data = await PuntosMarcajeService.listarZonales(req.empresa_id, ofertaId);
+  res.json({ success: true, data, message: 'Puntos zonales válidos' });
+}
+
 async function crear(req, res) {
   const { nombre, descripcion, latitud, longitud, radio_metros, tipo, alcance } = req.body;
   const data = await PuntosMarcajeService.crear(req.empresa_id, {
@@ -30,4 +36,4 @@ async function eliminar(req, res) {
   res.json({ success: true, data: null, message: 'Punto eliminado' });
 }
 
-module.exports = { listar, listarParaTurnos, crear, actualizar, eliminar };
+module.exports = { listar, listarParaTurnos, listarZonales, crear, actualizar, eliminar };
