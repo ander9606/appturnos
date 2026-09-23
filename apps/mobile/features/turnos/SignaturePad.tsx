@@ -40,11 +40,20 @@ interface SignaturePadProps {
 
 function strokeToPathD(stroke: Stroke): string {
   if (stroke.length < 2) return '';
-  const [first, ...rest] = stroke;
-  let d = `M ${first.x.toFixed(1)} ${first.y.toFixed(1)}`;
-  for (const p of rest) {
-    d += ` L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  if (stroke.length === 2) {
+    return `M ${stroke[0].x.toFixed(1)} ${stroke[0].y.toFixed(1)} L ${stroke[1].x.toFixed(1)} ${stroke[1].y.toFixed(1)}`;
   }
+  // Smooth freehand strokes: quadratic curve through the midpoint of each
+  // point pair, using the raw point as control — avoids the jagged polyline
+  // look of straight M/L segments.
+  let d = `M ${stroke[0].x.toFixed(1)} ${stroke[0].y.toFixed(1)}`;
+  for (let i = 1; i < stroke.length - 1; i++) {
+    const midX = (stroke[i].x + stroke[i + 1].x) / 2;
+    const midY = (stroke[i].y + stroke[i + 1].y) / 2;
+    d += ` Q ${stroke[i].x.toFixed(1)} ${stroke[i].y.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)}`;
+  }
+  const last = stroke[stroke.length - 1];
+  d += ` L ${last.x.toFixed(1)} ${last.y.toFixed(1)}`;
   return d;
 }
 
@@ -154,7 +163,7 @@ export function SignaturePad({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="formSheet"
+      presentationStyle="fullScreen"
       onRequestClose={handleClose}
     >
       <View className="flex-1 bg-background">
