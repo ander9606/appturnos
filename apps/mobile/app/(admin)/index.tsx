@@ -189,7 +189,7 @@ export default function AdminDashboard() {
                 icon="💳"
                 value={data.integraciones.pago_directo}
                 label="Pagan directo a Zaturno"
-                sub={`Planes desde ${formatCOP(data.ingresos?.planes?.basico.precio_cop)}/mes`}
+                sub={`Planes desde ${formatCOP(data.ingresos?.planes?.[0]?.precio_cop)}/mes`}
               />
             </View>
 

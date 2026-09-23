@@ -4,6 +4,22 @@ import { api } from './client';
 
 export type PlanEmpresa = 'basico' | 'profesional' | 'empresarial';
 
+/** Fila de la tabla `planes` — precios editables por super_admin (COP/mes). */
+export interface PlanConfig {
+  codigo: PlanEmpresa;
+  nombre: string;
+  orden: number;
+  /** null = sin tope de trabajadores activos. */
+  max_trabajadores: number | null;
+  precio_cop: number;
+  /** Trabajadores cubiertos por precio_cop; null = no cobra adicionales. */
+  incluidos: number | null;
+  precio_adicional_cop: number | null;
+  updated_at: string;
+}
+
+export type ActualizarPlanPayload = Pick<PlanConfig, 'precio_cop' | 'max_trabajadores' | 'incluidos' | 'precio_adicional_cop'>;
+
 export type SuscripcionOrigen = 'manual' | 'wompi' | 'logiq360';
 
 export interface EmpresaAdmin {
@@ -104,7 +120,7 @@ export interface ReportesGlobales {
     mes_actual: number;
     proyeccion_mes_actual: number;
     ganado_mes_pasado: number;
-    planes: Record<PlanEmpresa, { max_trabajadores: number | null; precio_cop: number; incluidos?: number; precio_adicional_cop?: number }>;
+    planes: PlanConfig[];
     mrr_historico: { mes: string; ingresos_cop: number }[];
   };
   renovaciones_riesgo: {
@@ -191,6 +207,17 @@ export const adminApi = {
 
   async generarLinkPago(id: number, datos: { plan: PlanEmpresa; meses?: number }): Promise<LinkPagoResponse> {
     return api.post<LinkPagoResponse>(`/api/admin/empresas/${id}/link-pago`, datos);
+  },
+
+  // ── Planes y precios ─────────────────────────────────────────────────────
+
+  async listarPlanes(): Promise<PlanConfig[]> {
+    return api.get<PlanConfig[]>('/api/admin/planes');
+  },
+
+  /** Devuelve la lista completa actualizada. Aplica a los próximos links de pago. */
+  async actualizarPlan(codigo: PlanEmpresa, datos: ActualizarPlanPayload): Promise<PlanConfig[]> {
+    return api.put<PlanConfig[]>(`/api/admin/planes/${codigo}`, datos);
   },
 
   // ── Wompi eventos ────────────────────────────────────────────────────────

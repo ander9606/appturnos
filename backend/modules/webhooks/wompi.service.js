@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/database');
 const logger   = require('../../utils/logger');
-const { PLANES, precioPlanCop, planParaTrabajadores } = require('../../config/constants');
+const { PlanesModel, precioPlanCop, planParaTrabajadores } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 
 const ESTADOS_RECHAZO = ['DECLINED', 'VOIDED', 'ERROR'];
@@ -191,7 +191,7 @@ const WompiService = {
 
   /**
    * Genera un link de pago de Wompi. Referencia AT-{empresaId}-{plan}-{meses}.
-   * El monto sale de PLANES (constants.js) según el plan y los trabajadores
+   * El monto sale de la tabla `planes` (editable por super_admin) según el plan y los trabajadores
    * activos (el Empresarial cobra por trabajador sobre los incluidos).
    * Sin `plan` se renueva el plan actual de la empresa, o el más barato que
    * admita sus trabajadores activos si el actual ya no alcanza — nunca baja
@@ -210,11 +210,14 @@ const WompiService = {
       [empresaId]
     );
     const n = Number(activos);
-    const orden = Object.keys(PLANES);
-    const minimo = planParaTrabajadores(n);
-    const planCobro = plan
-      ?? (orden.indexOf(plan_actual) >= orden.indexOf(minimo) ? plan_actual : minimo);
-    const montoCop    = precioPlanCop(planCobro, n) * meses;
+    const planes = await PlanesModel.listar();
+    const minimo = planParaTrabajadores(planes, n);
+    const actual = planes.find((p) => p.codigo === plan_actual);
+    const elegido = plan
+      ? planes.find((p) => p.codigo === plan)
+      : (actual && actual.orden >= minimo.orden ? actual : minimo);
+    const planCobro   = elegido.codigo;
+    const montoCop    = precioPlanCop(elegido, n) * meses;
     const amountCents = montoCop * 100;
     const reference   = `AT-${empresaId}-${planCobro}-${meses}`;
     const expiresAt   = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19) + '.000Z';

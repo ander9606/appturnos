@@ -3,7 +3,8 @@
 const TrabajadoresModel = require('./trabajadores.model');
 const AppError = require('../../utils/AppError');
 const { pool } = require('../../config/database');
-const { PLANES, ROLES, ROL_POR_TIPO } = require('../../config/constants');
+const { ROLES, ROL_POR_TIPO } = require('../../config/constants');
+const { PlanesModel } = require('../suscripciones/planes.model');
 
 /**
  * Lógica de negocio de trabajadores. Recibe siempre el empresaId del
@@ -45,7 +46,8 @@ const TrabajadoresService = {
     );
     if (!empresa) throw new AppError('Empresa no encontrada', 404);
 
-    const limite = PLANES[empresa.plan]?.max_trabajadores ?? null;
+    const planes = await PlanesModel.listar();
+    const limite = planes.find((p) => p.codigo === empresa.plan)?.max_trabajadores ?? null;
     if (limite !== null) {
       const [[{ total }]] = await pool.query(
         'SELECT COUNT(*) AS total FROM trabajadores WHERE empresa_id = ? AND activo = 1',
@@ -53,7 +55,7 @@ const TrabajadoresService = {
       );
       if (total >= limite) {
         throw new AppError(
-          `Tu plan ${empresa.plan} permite máximo ${limite} trabajadores activos. Actualiza tu plan para agregar más.`,
+          `Tu plan ${empresa.plan} permite máximo ${limite} trabajadores activos. Amplía tu plan en Mi plan para agregar más.`,
           402
         );
       }

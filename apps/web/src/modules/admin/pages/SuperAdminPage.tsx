@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Building2, Users, Briefcase, Calendar, DollarSign, TrendingUp,
-  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook, Link2,
+  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook, Link2, Tag,
 } from 'lucide-react';
 import { useReportesGlobales, useEmpresas, useCrearEmpresa, useCambiarEstadoEmpresa } from '../hooks/useAdmin';
 import type { EmpresaAdmin, MrrMes, RenovacionRiesgo } from '../types';
@@ -49,6 +49,13 @@ export function SuperAdminPage() {
           >
             <Webhook size={13} />
             Eventos Wompi
+          </button>
+          <button
+            onClick={() => navigate('/admin/planes')}
+            className="mt-1 ml-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Tag size={13} />
+            Planes y precios
           </button>
         </div>
 

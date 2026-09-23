@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Building2, Users, Briefcase, Calendar, DollarSign, ToggleLeft, ToggleRight, Copy, Check, CreditCard, Zap } from 'lucide-react';
-import { useEmpresa, useCambiarEstadoEmpresa, useGestionarSuscripcion, useGenerarLinkPago } from '../hooks/useAdmin';
+import { useEmpresa, useCambiarEstadoEmpresa, useGestionarSuscripcion, useGenerarLinkPago, usePlanes } from '../hooks/useAdmin';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP } from '@/shared/lib/format';
-import type { Plan, OrigenSuscripcion } from '../types';
+import { precioPlan, type Plan, type OrigenSuscripcion, type PlanConfig } from '../types';
 
 const PLAN_BADGE: Record<Plan, string> = {
   basico: 'bg-muted text-muted-foreground',
@@ -26,18 +26,10 @@ const ORIGEN_BADGE: Record<OrigenSuscripcion, string> = {
   logiq360: 'bg-success-light text-success',
 };
 
-// Espejo de PLANES en backend/config/constants.js (COP/mes). Solo para el
-// estimado previo — el monto cobrado de verdad lo devuelve el backend al
-// generar el link (monto_cop).
-const PLANES: Record<Plan, { precio: number; incluidos?: number; adicional?: number; tope: string }> = {
-  basico:      { precio: 79000,  tope: 'hasta 10 trabajadores' },
-  profesional: { precio: 169000, tope: 'hasta 30 trabajadores' },
-  empresarial: { precio: 299000, incluidos: 80, adicional: 3500, tope: '80 incluidos + $3.500 c/u adicional' },
-};
-
-function precioPlan(plan: Plan, trabajadores: number): number {
-  const p = PLANES[plan];
-  return p.precio + Math.max(0, trabajadores - (p.incluidos ?? Infinity)) * (p.adicional ?? 0);
+/** "hasta 10 trabajadores" / "80 incluidos + $3.500 c/u adicional" / "sin tope". */
+function describirTope(p: PlanConfig): string {
+  if (p.incluidos != null) return `${p.incluidos} incluidos + ${fmtCOP(p.precio_adicional_cop ?? 0)} c/u adicional`;
+  return p.max_trabajadores != null ? `hasta ${p.max_trabajadores} trabajadores` : 'sin tope';
 }
 
 // ponytail: created_at es TIMESTAMP (llega "YYYY-MM-DD HH:MM:SS", dateStrings:true en el pool) —
@@ -57,6 +49,8 @@ export function EmpresaDetailPage() {
   const empresaId = Number(id);
 
   const { data, isLoading, isError, error, refetch } = useEmpresa(empresaId);
+  const { data: planesData } = usePlanes();
+  const planes = planesData?.data ?? [];
   const empresa = data?.data;
 
   const cambiarEstado      = useCambiarEstadoEmpresa();
@@ -69,6 +63,7 @@ export function EmpresaDetailPage() {
   const [linkMeses, setLinkMeses] = useState(1);
   const [linkUrl, setLinkUrl]     = useState('');
   const [linkMonto, setLinkMonto] = useState<number | null>(null);
+  const planLink = planes.find(p => p.codigo === linkPlan);
   const [copied, setCopied]       = useState(false);
 
   // Activación manual
@@ -227,9 +222,11 @@ export function EmpresaDetailPage() {
                 onChange={e => { setLinkPlan(e.target.value as Plan); setLinkUrl(''); }}
                 className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background text-foreground"
               >
-                <option value="basico">Básico — {fmtCOP(PLANES.basico.precio)}/mes ({PLANES.basico.tope})</option>
-                <option value="profesional">Profesional — {fmtCOP(PLANES.profesional.precio)}/mes ({PLANES.profesional.tope})</option>
-                <option value="empresarial">Empresarial — {fmtCOP(PLANES.empresarial.precio)}/mes ({PLANES.empresarial.tope})</option>
+                {planes.map(p => (
+                  <option key={p.codigo} value={p.codigo}>
+                    {p.nombre} — {fmtCOP(p.precio_cop)}/mes ({describirTope(p)})
+                  </option>
+                ))}
               </select>
             </div>
             <div className="w-24">
@@ -247,7 +244,9 @@ export function EmpresaDetailPage() {
           <p className="text-xs text-muted-foreground mb-3">
             {linkUrl && linkMonto != null ? 'Total cobrado' : 'Total estimado'}:{' '}
             <span className="font-semibold text-foreground">
-              {fmtCOP(linkUrl && linkMonto != null ? linkMonto : precioPlan(linkPlan, empresa.total_trabajadores ?? 0) * linkMeses)}
+              {fmtCOP(linkUrl && linkMonto != null
+                ? linkMonto
+                : planLink ? precioPlan(planLink, empresa.total_trabajadores ?? 0) * linkMeses : 0)}
             </span>
           </p>
 

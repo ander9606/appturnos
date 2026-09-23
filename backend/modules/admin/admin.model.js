@@ -1,7 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
-const { PLANES, precioPlanCop } = require('../../config/constants');
+const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
 
 // Monto real cobrado (COP) de un evento Wompi — cada plan tiene su precio, así
 // que los ingresos se suman desde el pago y no como meses × tarifa fija.
@@ -237,7 +237,10 @@ const AdminModel = {
          AND (e.suscripcion_vigente_hasta IS NULL OR e.suscripcion_vigente_hasta >= CURDATE())`
     );
     // empresas.plan admite NULL (DEFAULT 'basico' sin NOT NULL).
-    const proyeccionCop = pagando.reduce((s, e) => s + precioPlanCop(e.plan ?? 'basico', Number(e.activos)), 0);
+    const planes = await PlanesModel.listar();
+    const planPorCodigo = new Map(planes.map((p) => [p.codigo, p]));
+    const proyeccionCop = pagando.reduce(
+      (s, e) => s + precioPlanCop(planPorCodigo.get(e.plan ?? 'basico'), Number(e.activos)), 0);
 
     // Ganado el mes pasado: pagos Wompi procesados en el mes calendario anterior.
     const [[mesPasado]] = await pool.query(
@@ -321,7 +324,7 @@ const AdminModel = {
         mes_actual: Number(mesActual.ingresos_cop),
         proyeccion_mes_actual: proyeccionCop,
         ganado_mes_pasado: Number(mesPasado.ingresos_cop),
-        planes: PLANES,
+        planes,
         mrr_historico: mrrHistorico,
       },
       renovaciones_riesgo: renovacionesRows.map((r) => ({

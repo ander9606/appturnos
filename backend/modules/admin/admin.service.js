@@ -9,6 +9,7 @@ const AppError = require('../../utils/AppError');
 const logger = require('../../utils/logger');
 const { enviarEmail } = require('../../utils/mailer');
 const { ROLES } = require('../../config/constants');
+const { PlanesModel } = require('../suscripciones/planes.model');
 
 const DEFAULT_PAGE_SIZE = 20;
 const BCRYPT_ROUNDS = 11;
@@ -140,6 +141,25 @@ const AdminService = {
     await AdminService.obtenerEmpresa(id); // throws 404 if not found
     await AdminModel.cambiarEstado(id, activo);
     return AdminModel.obtenerEmpresa(id);
+  },
+
+  listarPlanes() {
+    return PlanesModel.listar();
+  },
+
+  async actualizarPlan(codigo, datos, usuarioId) {
+    // Los adicionales van en pareja: "80 incluidos" sin precio por adicional
+    // (o al revés) no define ningún cobro.
+    if ((datos.incluidos == null) !== (datos.precio_adicional_cop == null)) {
+      throw new AppError('incluidos y precio_adicional_cop se configuran juntos (ambos o ninguno)', 400);
+    }
+    if (datos.incluidos != null && datos.max_trabajadores != null && datos.incluidos > datos.max_trabajadores) {
+      throw new AppError('incluidos no puede superar max_trabajadores', 400);
+    }
+    const ok = await PlanesModel.actualizar(codigo, datos, usuarioId);
+    if (!ok) throw new AppError('Plan no encontrado', 404);
+    logger.info(`[planes] super_admin ${usuarioId} actualizó ${codigo}: ${JSON.stringify(datos)}`);
+    return PlanesModel.listar();
   },
 
   async generarLinkPago(id, { plan, meses = 1 }) {

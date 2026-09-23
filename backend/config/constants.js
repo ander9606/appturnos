@@ -155,36 +155,6 @@ const LOGIN = {
 };
 
 /**
- * Planes de suscripción (COP/mes) para empresas sin integración activa con
- * logiq360 — las que tienen integracion_config.activo=1 y api_key no pagan
- * (ver middleware/verificarSuscripcion.js).
- * max_trabajadores: tope de trabajadores activos (null = sin tope).
- * Empresarial incluye `incluidos` trabajadores y cobra `precio_adicional_cop`
- * por cada trabajador activo por encima de ese número.
- */
-const PLANES = {
-  basico:      { max_trabajadores: 10,   precio_cop: 79000 },
-  profesional: { max_trabajadores: 30,   precio_cop: 169000 },
-  empresarial: { max_trabajadores: null, precio_cop: 299000, incluidos: 80, precio_adicional_cop: 3500 },
-};
-
-/** Precio mensual de un plan para una empresa con `trabajadoresActivos`. */
-function precioPlanCop(plan, trabajadoresActivos = 0) {
-  const p = PLANES[plan];
-  if (!p) throw new Error(`Plan desconocido: ${plan}`);
-  const extra = p.incluidos != null ? Math.max(0, trabajadoresActivos - p.incluidos) : 0;
-  return p.precio_cop + extra * (p.precio_adicional_cop ?? 0);
-}
-
-/** Plan más barato cuyo tope admite `trabajadoresActivos`. */
-function planParaTrabajadores(trabajadoresActivos) {
-  return Object.keys(PLANES).find((k) => {
-    const max = PLANES[k].max_trabajadores;
-    return max === null || trabajadoresActivos <= max;
-  });
-}
-
-/**
  * Días de acceso gratuito al registrarse antes de exigir el pago (empresas no-logiq360).
  * 30 y no 14: la prueba debe alcanzar a cerrar al menos una quincena para
  * que la empresa vea su primera liquidación antes de pagar.
@@ -254,9 +224,6 @@ module.exports = {
   SUBSIDIO_TRANSPORTE_TOPE_SMMLV,
   LOGIN,
   ESTADOS_TRABAJADOR_EMPRESA,
-  PLANES,
-  precioPlanCop,
-  planParaTrabajadores,
   TRIAL_DIAS_GRATIS,
   TIPOS_CONTRATO,
   SALARIO_MINIMO_DIARIO_COP,
