@@ -318,14 +318,14 @@ describe('valorHora', () => {
     expect(valorHora({ tarifa_hora: 25000 })).toBe(25000);
   });
 
-  test('calcula hora desde salario_base (÷240)', () => {
-    // 2_400_000 / 240 = 10_000
-    expect(valorHora({ salario_base: 2_400_000 })).toBe(10_000);
+  test('calcula hora desde salario_base (÷210, jornada de 42 h)', () => {
+    // 2_100_000 / 210 = 10_000
+    expect(valorHora({ salario_base: 2_100_000 })).toBe(10_000);
   });
 
   test('salario_base tiene prioridad sobre tarifa_hora', () => {
-    // 2_400_000 / 240 = 10_000, no los 15_000 de tarifa_hora
-    expect(valorHora({ tarifa_hora: 15000, salario_base: 2_400_000 })).toBe(10_000);
+    // 2_100_000 / 210 = 10_000, no los 15_000 de tarifa_hora
+    expect(valorHora({ tarifa_hora: 15000, salario_base: 2_100_000 })).toBe(10_000);
   });
 
   test('sin salario → 0', () => {

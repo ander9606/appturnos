@@ -537,7 +537,7 @@ export function TrabajadorForm({
                   <Input
                     label="Salario base mensual (COP)"
                     error={errors.salario_base?.message}
-                    hint="Se divide entre 240 para obtener el valor/hora."
+                    hint="Se divide entre 210 (jornada de 42 h) para obtener el valor/hora."
                     value={field.value != null ? String(field.value) : ''}
                     onChangeText={field.onChange}
                     onBlur={field.onBlur}

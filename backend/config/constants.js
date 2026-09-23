@@ -100,9 +100,11 @@ const HORA_FIN_NOCTURNO = 6; // 06:00 (inicio: HORA_INICIO_NOCTURNO_VIGENCIAS)
 const JORNADA_CONTINUA_UMBRAL_HORAS = 6;
 const DURACION_ALMUERZO_MIN = 60;
 
-// Divisor para convertir el salario mensual en valor de la hora ordinaria
-// (convención laboral colombiana: 30 días × 8 h).
-const HORAS_MES_NOMINA = 240;
+// Divisor para convertir el salario mensual en valor de la hora ordinaria:
+// jornada de 42 h/semana (Ley 2101, desde 15-jul-2026) → 42 ÷ 6 días × 30 = 210.
+// ponytail: valor único, no por fecha — no hay clientes con períodos
+// anteriores (antes 240 = 30 × 8) — upgrade path: tabla *_VIGENCIAS.
+const HORAS_MES_NOMINA = 210;
 
 // Plazo (días corridos tras el domingo/festivo trabajado) dentro del cual el
 // sistema debe ubicar automáticamente el descanso compensatorio (Art. 179

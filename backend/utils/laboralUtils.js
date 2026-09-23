@@ -343,7 +343,7 @@ function calcularHoras({
 
 /**
  * Valor de la hora ordinaria de un trabajador.
- * Usa `salario_base` (÷240) si está definido; si no, cae a `tarifa_hora`.
+ * Usa `salario_base` (÷HORAS_MES_NOMINA = 210) si está definido; si no, cae a `tarifa_hora`.
  * Un trabajador solo debería tener uno de los dos, pero si por error quedan
  * ambos cargados, el salario mensual manda — es el dato "de contrato".
  */

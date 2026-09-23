@@ -136,7 +136,7 @@ export function Step2SeguridadSocial({ data, onChange, onBack, onNext }: Props) 
         <Input
           label="Salario base mensual (COP)"
           placeholder="Ej. 1300000"
-          hint="Se divide entre 240 para obtener el valor/hora."
+          hint="Se divide entre 210 (jornada de 42 h) para obtener el valor/hora."
           value={data.salario_base}
           onChangeText={(t) => onChange({ salario_base: t })}
           keyboardType="numeric"

@@ -8,8 +8,8 @@
 // Gobierno — actualizar aquí. Valor 2026 (Decreto 1469 de 2025).
 export const SMMLV_COP = 1_750_905;
 
-// Convención laboral colombiana: 30 días × 8 h.
-export const HORAS_MES_NOMINA = 240;
+// Jornada de 42 h/semana (Ley 2101): 42 ÷ 6 días × 30 = 210. Espejo de backend/config/constants.js.
+export const HORAS_MES_NOMINA = 210;
 
 // A cargo del trabajador. ARL y caja de compensación no se incluyen: en
 // Colombia corren 100% por cuenta del empleador, nunca se descuentan del trabajador.

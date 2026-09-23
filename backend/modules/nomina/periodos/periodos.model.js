@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../../config/database');
+const { HORAS_MES_NOMINA } = require('../../../config/constants');
 
 /** Acceso a datos de períodos de nómina (tabla periodos_nomina). */
 
@@ -130,9 +131,9 @@ const PeriodosModel = {
    * en todos sus registros_diarios del período, en una sola transacción.
    *
    * Prioridad del sueldo (igual que laboralUtils.valorHora):
-   *   1. tarifa_hora      — tarifa directa por hora
-   *   2. salario_base/240 — derivada del mensual (30 días × 8 h)
-   *   3. 0               — trabajador sin sueldo configurado
+   *   1. salario_base / HORAS_MES_NOMINA — el mensual manda si está cargado
+   *   2. tarifa_hora                     — tarifa directa por hora
+   *   3. 0                               — trabajador sin sueldo configurado
    *
    * Usar este método en lugar de `cerrar` garantiza que cualquier
    * modificación de sueldo posterior no afecte períodos ya cerrados.
@@ -151,7 +152,6 @@ const PeriodosModel = {
       );
 
       // 2. Congelar valor_hora y salario_base en todos los registros del período.
-      //    240 = HORAS_MES_NOMINA (30 días × 8 h, ley laboral colombiana).
       //    salario_base_snapshot: si el jefe sube/baja el sueldo después de
       //    cerrar, la liquidación de este período no debe recalcularse con el
       //    valor nuevo — solo el próximo período abierto lo usa.
@@ -159,13 +159,13 @@ const PeriodosModel = {
         `UPDATE registros_diarios r
          JOIN  trabajadores t ON t.id = r.trabajador_id
          SET   r.valor_hora_snapshot = CASE
+                 WHEN t.salario_base IS NOT NULL THEN t.salario_base / ?
                  WHEN t.tarifa_hora  IS NOT NULL THEN t.tarifa_hora
-                 WHEN t.salario_base IS NOT NULL THEN t.salario_base / 240
                  ELSE 0
                END,
                r.salario_base_snapshot = t.salario_base
          WHERE r.periodo_id = ? AND r.empresa_id = ?`,
-        [periodoId, empresaId],
+        [HORAS_MES_NOMINA, periodoId, empresaId],
       );
 
       await conn.commit();

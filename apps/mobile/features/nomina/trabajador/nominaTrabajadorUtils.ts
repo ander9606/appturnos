@@ -24,7 +24,7 @@ import { toISODate, BOGOTA_OFFSET_MS } from '@/lib/formatters';
 
 // ── Constantes ─────────────────────────────────────────────────────────────
 
-const HORAS_MES_NOMINA = 240; // 30 d × 8 h
+const HORAS_MES_NOMINA = 210; // 42 h/semana ÷ 6 × 30 (espejo de backend/config/constants.js)
 
 // Umbral de jornada continua (Art. 167 CST): por debajo de esto no aplica
 // descanso obligatorio, así que no tiene sentido preguntar por almuerzo.
