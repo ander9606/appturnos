@@ -5,7 +5,7 @@ const { precioPlanCop, planParaTrabajadores } = require('../modules/suscripcione
 
 // Mismos valores que la semilla de migrations/sql/100_planes.sql.
 const PLANES = [
-  { codigo: 'basico',      orden: 1, max_trabajadores: 10,   precio_cop: 79_000,  incluidos: null, precio_adicional_cop: null },
+  { codigo: 'basico',      orden: 1, max_trabajadores: 10,   precio_cop: 129_000, incluidos: null, precio_adicional_cop: null },
   { codigo: 'profesional', orden: 2, max_trabajadores: 30,   precio_cop: 169_000, incluidos: null, precio_adicional_cop: null },
   { codigo: 'empresarial', orden: 3, max_trabajadores: null, precio_cop: 299_000, incluidos: 80,   precio_adicional_cop: 3_500 },
 ];
@@ -13,7 +13,7 @@ const [basico, profesional, empresarial] = PLANES;
 
 describe('precios de suscripción por plan', () => {
   test('precio fijo para básico y profesional', () => {
-    expect(precioPlanCop(basico, 7)).toBe(79_000);
+    expect(precioPlanCop(basico, 7)).toBe(129_000);
     expect(precioPlanCop(profesional, 30)).toBe(169_000);
   });
 

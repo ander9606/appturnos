@@ -22,6 +22,6 @@ CREATE TABLE IF NOT EXISTS planes (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO planes (codigo, nombre, orden, max_trabajadores, precio_cop, incluidos, precio_adicional_cop) VALUES
-  ('basico',      'Básico',      1, 10,   79000,  NULL, NULL),
+  ('basico',      'Básico',      1, 10,   129000, NULL, NULL),
   ('profesional', 'Profesional', 2, 30,   169000, NULL, NULL),
   ('empresarial', 'Empresarial', 3, NULL, 299000, 80,   3500);

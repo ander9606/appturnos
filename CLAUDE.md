@@ -177,7 +177,7 @@ Prices and limits live in the **`planes` table** (migration 100, platform-level 
 
 | Plan | Active workers | COP/month |
 |---|---|---|
-| `basico` | up to 10 | 79.000 |
+| `basico` | up to 10 | 129.000 |
 | `profesional` | up to 30 | 169.000 |
 | `empresarial` | unlimited | 299.000 incl. 80 + 3.500 per extra worker |
 
