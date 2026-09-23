@@ -213,6 +213,8 @@ Idénticas en estructura a las de logiq360 (ver migración 57). Permite audit tr
 Jornada ordinaria: 42 horas semanales (Ley 2101, tope final desde 15-jul-2026).
   Lo que supere el acumulado semanal pasa a extra (calcularHoras en laboralUtils.js).
 Valor hora = salario mensual ÷ 210 (42 ÷ 6 días × 30) — HORAS_MES_NOMINA.
+Salario del período = salario ÷ 30 × días comerciales: quincena = 15, mes = 30
+(sin importar si el mes trae 28, 29 o 31 días), semana = 7.
 Horario nocturno (Ley 2466 de 2025, art. 10):
   19:00 – 06:00 desde el 25-dic-2025 · 21:00 – 06:00 antes.
 

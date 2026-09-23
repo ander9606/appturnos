@@ -10,7 +10,7 @@ const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const { ROLES, HORAS_MES_NOMINA } = require('../../../config/constants');
-const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, calcularDeducciones, calcularSubsidioTransporte } = require('../../../utils/laboralUtils');
+const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, calcularDeducciones, calcularSubsidioTransporte, diasPagoPeriodo } = require('../../../utils/laboralUtils');
 const { estaEnAlgunPunto } = require('../../../utils/geoUtils');
 
 function redondear(n) {
@@ -81,10 +81,8 @@ const LiquidacionService = {
       descuentosPorTrabajador.set(d.trabajador_id, lista);
     }
 
-    // Días del período — usado para prorratear el salario mensual (salario_base / 30 días conv.)
-    const diasPeriodo = Math.round(
-      (new Date(periodo.fecha_fin + 'T12:00:00Z') - new Date(periodo.fecha_inicio + 'T12:00:00Z')) / 86_400_000
-    ) + 1;
+    // Días a pagar en mes comercial (quincena = 15, mes = 30, semana = 7) — prorratea salario y auxilio.
+    const diasPeriodo = diasPagoPeriodo(periodo);
 
     let totalGeneral = 0;
     let totalNetoGeneral = 0;

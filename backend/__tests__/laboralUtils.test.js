@@ -11,6 +11,8 @@ const {
   calcularPagoNomina,
   desglosarPagoNomina,
   calcularSalarioBasePeriodo,
+  diasComerciales,
+  diasPagoPeriodo,
   horaInicioNocturno,
   recargoFestivo,
 } = require('../utils/laboralUtils');
@@ -569,5 +571,40 @@ describe('recargo nocturno según tipo de pago', () => {
   test('las extra nocturnas no cambian: ×1.75 también para el asalariado', () => {
     const d = desglosarPagoNomina({ horas_extra_nocturnas: 1 }, VH, undefined, { salarioFijo: true });
     expect(d.pago_extra_nocturno).toBeCloseTo(17_500, 5);
+  });
+});
+
+describe('mes comercial de 30 días', () => {
+  test('toda quincena vale 15 días, traiga el mes 28, 30 o 31', () => {
+    expect(diasComerciales('2026-02-01', '2026-02-15')).toBe(15);
+    expect(diasComerciales('2026-02-16', '2026-02-28')).toBe(15); // febrero: 13 días calendario
+    expect(diasComerciales('2028-02-16', '2028-02-29')).toBe(15); // bisiesto
+    expect(diasComerciales('2026-01-16', '2026-01-31')).toBe(15); // mes de 31: 16 días calendario
+    expect(diasComerciales('2026-09-16', '2026-09-30')).toBe(15);
+  });
+
+  test('todo mes vale 30 días', () => {
+    expect(diasComerciales('2026-01-01', '2026-01-31')).toBe(30);
+    expect(diasComerciales('2026-02-01', '2026-02-28')).toBe(30);
+    expect(diasComerciales('2026-04-01', '2026-04-30')).toBe(30);
+  });
+
+  test('un rango de varios meses suma 30 por mes', () => {
+    expect(diasComerciales('2026-01-01', '2026-03-31')).toBe(90);
+  });
+
+  test('período semanal siempre paga 7 días, aunque cruce fin de mes', () => {
+    expect(diasPagoPeriodo({ tipo: 'semanal', fecha_inicio: '2026-02-23', fecha_fin: '2026-03-01' })).toBe(7);
+  });
+
+  test('período quincenal y mensual usan días comerciales', () => {
+    expect(diasPagoPeriodo({ tipo: 'quincenal', fecha_inicio: '2026-01-16', fecha_fin: '2026-01-31' })).toBe(15);
+    expect(diasPagoPeriodo({ tipo: 'mensual', fecha_inicio: '2026-02-01', fecha_fin: '2026-02-28' })).toBe(30);
+  });
+
+  test('el salario de una quincena es siempre la mitad del mensual', () => {
+    const quincena = (desde, hasta) => calcularSalarioBasePeriodo({ salarioBase: 1_750_905, diasPeriodo: diasComerciales(desde, hasta) });
+    expect(quincena('2026-02-16', '2026-02-28')).toBeCloseTo(875_452.5, 2);
+    expect(quincena('2026-01-16', '2026-01-31')).toBeCloseTo(875_452.5, 2);
   });
 });

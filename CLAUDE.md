@@ -160,6 +160,8 @@ When a payroll period is closed, `cerrarConSnapshot()` in `periodos.model.js` at
 | `RECARGO_FESTIVO_VIGENCIAS` | 1.75 → 1.80 (2025-07-01) → 1.90 (2026-07-01) → 2.00 (2027-07-01) | Sunday/holiday multiplier by date (Ley 2466 art. 14) |
 | `SMMLV_COP` / `SUBSIDIO_TRANSPORTE_COP` | 1.750.905 / 249.095 | 2026 values — update every January |
 
+Salary and transport allowance are prorated by **commercial 30-day months**: `diasPagoPeriodo(periodo)` returns 15 for any quincena, 30 for any month (28/29/31-day months included) and 7 for a weekly period; `diasComerciales(desde, hasta)` (days360-style) is used for arbitrary report ranges. Never prorate by calendar days.
+
 Date-dependent rules live in `*_VIGENCIAS` tables (newest first) so re-liquidating an old period keeps its original rules. `calcularHoras()` uses the record's `fecha` for the night start; `desglosarPagoNomina(desglose, vh, fecha)` uses the period's `fecha_fin` for the holiday rate and returns it as `recargo_festivo` (the UI labels read it — never hard-code a multiplier in the frontend).
 
 Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src/shared/laboral.ts` (identical copy) and `apps/mobile/features/nomina/trabajador/nominaTrabajadorUtils.ts` — update all of them together.

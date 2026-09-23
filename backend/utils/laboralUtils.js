@@ -375,8 +375,32 @@ function valorHora(trabajador) {
  * @param {number|null} params.salarioBase       trabajador.salario_base (mensual)
  * @param {number} params.horasOrdinarias        Solo se usa si es por tarifa_hora.
  * @param {number} params.valorHoraTrabajador    Solo se usa si es por tarifa_hora.
- * @param {number} params.diasPeriodo            Días calendario del período.
+ * @param {number} params.diasPeriodo            Días comerciales del período (ver diasComerciales).
  */
+/**
+ * Días de un rango en mes comercial de 30 días (convención de nómina en
+ * Colombia): cada mes cuenta 30, el 31 no suma y el último día de febrero
+ * cuenta hasta el 30. Así una quincena siempre es 15 y un mes siempre 30,
+ * sin importar si el mes trae 28, 29 o 31 días.
+ * @param {string} desde 'YYYY-MM-DD'
+ * @param {string} hasta 'YYYY-MM-DD' (incluido)
+ */
+function diasComerciales(desde, hasta) {
+  const [y1, m1, d1] = String(desde).slice(0, 10).split('-').map(Number);
+  const [y2, m2, d2] = String(hasta).slice(0, 10).split('-').map(Number);
+  const ultimoDiaMes = new Date(Date.UTC(y2, m2, 0)).getUTCDate();
+  const fin = d2 === ultimoDiaMes ? 30 : Math.min(d2, 30);
+  return (y2 - y1) * 360 + (m2 - m1) * 30 + fin - Math.min(d1, 30) + 1;
+}
+
+/**
+ * Días a pagar de un período de nómina: semanal = 7 siempre (sueldo semanal
+ * = mensual ÷ 30 × 7); mensual y quincenal = días comerciales.
+ */
+function diasPagoPeriodo({ tipo, fecha_inicio, fecha_fin }) {
+  return tipo === 'semanal' ? 7 : diasComerciales(fecha_inicio, fecha_fin);
+}
+
 function calcularSalarioBasePeriodo({ salarioBase, horasOrdinarias, valorHoraTrabajador, diasPeriodo }) {
   if (salarioBase != null) {
     return (Number(salarioBase) || 0) / 30 * Number(diasPeriodo);
@@ -469,7 +493,7 @@ function calcularDeducciones(ibc) {
  * SUBSIDIO_TRANSPORTE_TOPE_SMMLV salarios mínimos. No es IBC — no lleva
  * descuento de salud/pensión.
  * @param {number} salarioMensualEquivalente  valorHora(trabajador) * HORAS_MES_NOMINA.
- * @param {number} diasPeriodo  días calendario del período de nómina.
+ * @param {number} diasPeriodo  días comerciales del período (ver diasPagoPeriodo).
  */
 function calcularSubsidioTransporte(salarioMensualEquivalente, diasPeriodo) {
   const salario = Number(salarioMensualEquivalente) || 0;
@@ -492,6 +516,8 @@ module.exports = {
   calcularPagoNomina,
   desglosarPagoNomina,
   calcularSalarioBasePeriodo,
+  diasComerciales,
+  diasPagoPeriodo,
   calcularDeducciones,
   calcularSubsidioTransporte,
 };
