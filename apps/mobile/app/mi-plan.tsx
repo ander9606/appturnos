@@ -3,9 +3,14 @@
  * Solo admin_empresa. El admin elige plan + meses y paga con un link de
  * Wompi; al aprobarse el pago el webhook cambia el plan y extiende la
  * vigencia (wompi.service.js → activarSuscripcion).
+ *
+ * Apple guideline 3.1.1: el selector de plan + botón "Pagar" (link externo
+ * a Wompi) es un mecanismo de pago externo para una suscripción que se usa
+ * dentro de la app — en iOS solo se muestra el uso del plan, sin precios
+ * ni botón de pago. Sigue disponible tal cual en Android y en la web.
  */
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Linking, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Linking, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -114,7 +119,9 @@ export default function MiPlanScreen() {
             )}
             {enTope && s.origen !== 'logiq360' && (
               <Text className="text-xs text-danger">
-                Llegaste al tope de tu plan. Para agregar más trabajadores, amplíalo abajo.
+                {Platform.OS === 'ios'
+                  ? 'Llegaste al tope de tu plan. Para agregar más trabajadores, ingresa a Zaturno desde la web.'
+                  : 'Llegaste al tope de tu plan. Para agregar más trabajadores, amplíalo abajo.'}
               </Text>
             )}
           </View>
@@ -125,6 +132,13 @@ export default function MiPlanScreen() {
             <Ionicons name="link" size={18} color="#16a34a" />
             <Text className="text-success text-sm flex-1">
               Tu suscripción se gestiona con tu integración logiq360 — no necesitas pagarla aquí.
+            </Text>
+          </View>
+        ) : Platform.OS === 'ios' ? (
+          <View className="bg-muted/40 border border-border rounded-2xl px-4 py-3 flex-row gap-3 items-center">
+            <Ionicons name="information-circle-outline" size={18} color="#64748B" />
+            <Text className="text-muted-foreground text-sm flex-1">
+              Para renovar o ampliar tu plan, ingresa a Zaturno desde un navegador web.
             </Text>
           </View>
         ) : (
