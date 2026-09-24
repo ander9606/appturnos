@@ -23,7 +23,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAsignacion, useMarcarIngreso } from '@/features/turnos/useTurnos';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
-import { obtenerUbicacionActual } from '@/lib/currentLocation';
+import { useUbicacionLibre }               from '@/features/turnos/useUbicacionLibre';
+import { UbicacionLibreIndicator }         from '@/features/turnos/UbicacionLibreIndicator';
 import { GeoFenceIndicator }               from '@/features/turnos/GeoFenceIndicator';
 import { Button }                          from '@/components/ui/Button';
 import { fmtRange, getEstadoConfig }       from '@/features/turnos/turnosUtils';
@@ -89,24 +90,28 @@ export default function IngresoScreen() {
     }
   }, [asignacion?.geofence_info, zonalPuntos]);
 
-  const { distanceM, status: geoStatus, canMark, permissionDenied, currentLocation } = useGeofence({
+  const { distanceM, status: geoStatus, canMark: geoCanMark, permissionDenied, currentLocation } = useGeofence({
     targets: geofenceTargets,
     enabled: asignacion?.estado === 'confirmado',
   });
 
+  // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling —
+  // igual se exige un fix de GPS puntual antes de dejar marcar, para no perder
+  // el rastro de ubicación (antes era best-effort y el ingreso quedaba con
+  // lat/lng en 0,0 si el permiso estaba negado o el fix fallaba).
+  const isLibre = asignacion?.geofence_info?.tipo === 'libre';
+  const ubicacionLibre = useUbicacionLibre(isLibre && asignacion?.estado === 'confirmado');
+  const canMark = isLibre ? ubicacionLibre.estado === 'lista' : geoCanMark;
+
   const handleIngreso = async () => {
     if (!asignacion || !canMark) return;
+    const coords = isLibre ? ubicacionLibre.coords : currentLocation;
+    if (!coords) return;
     try {
-      // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling
-      // y currentLocation queda en null — sin este intento puntual, el ingreso se
-      // registraba con lat/lng en 0,0. Best-effort: nunca bloquea si falla o el
-      // permiso está negado (ver obtenerUbicacionActual).
-      const sinGeofence = geofenceTargets === null;
-      const ubicacion = sinGeofence && !currentLocation ? await obtenerUbicacionActual() : null;
       await ingresoMutation.mutateAsync({
         id: asignacion.id,
-        lat: currentLocation?.lat ?? ubicacion?.latitud ?? 0,
-        lng: currentLocation?.lng ?? ubicacion?.longitud ?? 0,
+        lat: coords.lat,
+        lng: coords.lng,
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast(t('ingreso.success'));
@@ -152,7 +157,6 @@ export default function IngresoScreen() {
     );
   }
 
-  const isLibre  = asignacion.geofence_info?.tipo === 'libre';
   const hasCoords = geofenceTargets !== null && geofenceTargets.length > 0;
 
   // Location label shown in the geofence card
@@ -231,12 +235,7 @@ export default function IngresoScreen() {
 
           {/* ── GPS / Geofence ──────────────────────────────────── */}
           {isLibre ? (
-            <View className="bg-success/10 rounded-2xl border border-success/20 px-5 py-4">
-              <Text className="text-sm font-semibold text-success">Sin restricción de ubicación</Text>
-              <Text className="text-xs text-success/70 mt-0.5">
-                Este cargo permite marcar desde cualquier lugar.
-              </Text>
-            </View>
+            <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
           ) : (
             <View
               className="bg-card rounded-2xl border border-border px-5 py-5 gap-4"

@@ -30,6 +30,7 @@ import { useNovedades }        from '@/features/novedades/useNovedades';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
 import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar } from '@/features/turnos/useTurnos';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
+import { useUbicacionLibre }   from '@/features/turnos/useUbicacionLibre';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
 import { TurnoTimeline }       from '@/features/turnos/TurnoTimeline';
 import { Button }              from '@/components/ui/Button';
@@ -37,7 +38,6 @@ import { getEstadoConfig } from '@/features/turnos/turnosUtils';
 import { ApiError, puntosMarcajeApi, type PuntoParaTurno } from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
-import { obtenerUbicacionActual } from '@/lib/currentLocation';
 
 import { TurnoHeroCard }        from '@/features/turnos/detalle/TurnoHeroCard';
 import { TurnoDescripcionCard } from '@/features/turnos/detalle/TurnoDescripcionCard';
@@ -122,10 +122,17 @@ export default function TurnoDetailScreen() {
     }
   }, [asignacion?.geofence_info, zonalPuntos]);
 
-  const { distanceM, status: geoStatus, canMark, permissionDenied, locationUnavailable, currentLocation } = useGeofence({
+  const { distanceM, status: geoStatus, canMark: geoCanMark, permissionDenied, locationUnavailable, currentLocation } = useGeofence({
     targets: geofenceTargets,
     enabled: activoParaGeofence,
   });
+
+  // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling —
+  // igual se exige un fix de GPS puntual antes de dejar marcar, para no perder
+  // el rastro de ubicación (antes era best-effort y el marcaje quedaba con
+  // lat/lng indefinidos si el permiso estaba negado o el fix fallaba).
+  const ubicacionLibre = useUbicacionLibre(isLibre && activoParaGeofence);
+  const canMark = isLibre ? ubicacionLibre.estado === 'lista' : geoCanMark;
 
   // ── Ventana de ingreso: habilitado 30 min antes del hora_inicio ──────
   const WINDOW_MIN = 30;
@@ -175,19 +182,12 @@ export default function TurnoDetailScreen() {
     );
   }, [minutosParaIngreso]);
 
-  // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling
-  // y currentLocation queda en null — best-effort, nunca bloquea si falla o el
-  // permiso está negado (ver obtenerUbicacionActual).
-  async function ubicacionParaMarcaje() {
-    if (currentLocation) return currentLocation;
-    if (geofenceTargets !== null) return null; // hay geofence real: solo vale el fix vigilado por useGeofence
-    const u = await obtenerUbicacionActual();
-    return u.latitud != null && u.longitud != null ? { lat: u.latitud, lng: u.longitud } : null;
-  }
+  const ubicacionParaMarcaje = () => (isLibre ? ubicacionLibre.coords : currentLocation);
 
   const handleIngreso = async () => {
     if (!asignacion || !canMark) return;
-    const ubicacion = await ubicacionParaMarcaje();
+    const ubicacion = ubicacionParaMarcaje();
+    if (isLibre && !ubicacion) return;
 
     try {
       await ingresoMutation.mutateAsync({ id: asignacion.id, lat: ubicacion?.lat, lng: ubicacion?.lng });
@@ -201,7 +201,8 @@ export default function TurnoDetailScreen() {
 
   const handleEgreso = async (firmaBase64: string) => {
     if (!asignacion || !canMark) return;
-    const ubicacion = await ubicacionParaMarcaje();
+    const ubicacion = ubicacionParaMarcaje();
+    if (isLibre && !ubicacion) return;
 
     try {
       await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64, lat: ubicacion?.lat, lng: ubicacion?.lng });
@@ -371,6 +372,7 @@ export default function TurnoDetailScreen() {
               canMark={canMark}
               permissionDenied={permissionDenied}
               locationUnavailable={locationUnavailable}
+              ubicacionLibre={ubicacionLibre}
               ingresando={ingresoMutation.isPending}
               onIngreso={handleIngreso}
               onIngresoPronto={handleIngresoPronto}
@@ -388,6 +390,7 @@ export default function TurnoDetailScreen() {
               canMark={canMark}
               permissionDenied={permissionDenied}
               locationUnavailable={locationUnavailable}
+              ubicacionLibre={ubicacionLibre}
               onMarcarSalida={() => setSignatureVisible(true)}
               isGestor={isGestor}
               onCorregir={() => setCorrigiendoIngreso(true)}
