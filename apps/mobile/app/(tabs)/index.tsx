@@ -16,6 +16,7 @@ import {
   RefreshControl,
   Linking,
   Alert,
+  Platform,
 } from 'react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { empresasApi, ApiError } from '@api-client';
@@ -139,7 +140,9 @@ export default function DashboardScreen() {
   const suscVencida       = isManager && suscData?.activa === false;
   const logiq360Conectado = isManager && suscData?.logiq360_conectado === true;
   // Solo admin_empresa puede pagar, y solo si la empresa no la factura logiq360.
-  const puedeAutopagar    = isAdmin && !logiq360Conectado;
+  // En iOS no se abre el link de pago externo desde acá (guideline 3.1.1) —
+  // el admin va a Mi plan, que en iOS solo muestra uso, no pago.
+  const puedeAutopagar    = isAdmin && !logiq360Conectado && Platform.OS !== 'ios';
   // Aviso suave de renovación próxima — no aplica si logiq360 cubre la cuenta.
   const suscPorVencer =
     isManager && !logiq360Conectado && suscData?.activa === true &&
@@ -154,6 +157,12 @@ export default function DashboardScreen() {
   });
 
   function iniciarRenovacion() {
+    if (isAdmin && Platform.OS === 'ios') {
+      // Apple guideline 3.1.1: no iniciar el pago externo (Wompi) desde acá
+      // en iOS — Mi plan explica cómo renovar desde la web.
+      router.push('/mi-plan');
+      return;
+    }
     if (!isAdmin) {
       // Solo el admin_empresa puede pagar — el resto solo puede avisarle.
       Linking.openURL('mailto:soporte@zaturno.app');
