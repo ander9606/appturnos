@@ -58,7 +58,6 @@ export default function RegistroEmpresaScreen() {
   React.useEffect(() => {
     if (Platform.OS === 'ios') router.replace('/(auth)/login');
   }, [router]);
-  if (Platform.OS === 'ios') return null;
 
   // step: 'datos' | 'otp' — el backend exige email_token, obtenido al verificar el OTP
   const [step, setStep] = React.useState<'datos' | 'otp'>('datos');
@@ -83,6 +82,10 @@ export default function RegistroEmpresaScreen() {
       nombre: '', apellido: '', email: '', password: '', confirmar: '',
     },
   });
+
+  // Los Hooks de arriba deben ejecutarse siempre en el mismo orden — el
+  // return condicional va después de todos ellos (react-hooks/rules-of-hooks).
+  if (Platform.OS === 'ios') return null;
 
   const onSubmitDatos = async (data: Form) => {
     setServerError(null);
