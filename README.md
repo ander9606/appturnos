@@ -6,6 +6,10 @@ Antes de Zaturno, cuadrar turnos y calcular nómina con recargos (nocturno, domi
 
 Se integra en tiempo real con [logiq360](https://github.com/ander9606/aprendizaje-inventario-carpas) — el sistema de inventario y alquileres de eventos que construí en paralelo — sincronizando el costo de personal de cada operación.
 
+## Cómo se construye este proyecto
+
+Este proyecto lo diseño y dirijo yo: arquitectura, reglas de negocio, modelo de datos y qué construir en cada momento. Uso Claude Code como el colaborador que implementa bajo mi dirección — reviso cada cambio antes de aceptarlo, y entiendo cada parte del sistema lo suficiente para explicarla sin mirar el código. Los commits llevan mi autoría con `Co-Authored-By: Claude` cuando aplica, en vez de ocultar esa colaboración.
+
 ## Qué hace
 
 - **Turnos**: creación y asignación de turnos con ubicación geolocalizada, ofertas a trabajadores.

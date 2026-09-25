@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Identidad de autor en commits
+
+Antes de hacer el primer commit de la sesión, verificar `git config user.name`
+y `user.email`. Si aparece `Claude <noreply@anthropic.com>` (el default de
+algunos entornos), cambiarlo a la identidad real del autor del repo:
+
+```bash
+git config user.name "ander9606"
+git config user.email "90811268+ander9606@users.noreply.github.com"
+```
+
+Los commits deben quedar a nombre del humano, con Claude como colaborador
+declarado vía trailer `Co-Authored-By:` (no como autor principal) — así el
+historial refleja correctamente quién dirige el trabajo, y `git shortlog -sn`
+no da una imagen engañosa a quien revise el repo (reclutadores, colaboradores
+invitados bajo NDA, etc.).
+
 ## Coding Philosophy (Ponytail — Lazy Senior Dev Mode)
 
 Before writing any code, work through this hierarchy in order:
