@@ -4,13 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';
 import { GeoFenceIndicator } from '../GeoFenceIndicator';
+import { UbicacionLibreIndicator } from '../UbicacionLibreIndicator';
+import type { EstadoUbicacionLibre } from '../useUbicacionLibre';
 import { fmtTime } from '../turnosUtils';
 import type { GeofenceStatus } from '@/lib/geo';
 
 export function CTAEnProgresoCard({
   elapsedLabel, horaIngresoReal, isLibre,
   distanceM, geoStatus, canMark, permissionDenied, locationUnavailable,
-  onMarcarSalida, isGestor, onCorregir,
+  ubicacionLibre, onMarcarSalida, isGestor, onCorregir,
 }: {
   elapsedLabel: string | null;
   horaIngresoReal: string | null;
@@ -20,6 +22,7 @@ export function CTAEnProgresoCard({
   canMark: boolean;
   permissionDenied: boolean;
   locationUnavailable: boolean;
+  ubicacionLibre: { estado: EstadoUbicacionLibre; reintentar: () => void };
   onMarcarSalida: () => void;
   isGestor: boolean;
   onCorregir: () => void;
@@ -49,7 +52,9 @@ export function CTAEnProgresoCard({
         )}
       </View>
 
-      {!isLibre && (
+      {isLibre ? (
+        <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
+      ) : (
         <>
           <GeoFenceIndicator
             distanceM={distanceM}

@@ -22,6 +22,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAsignacion, useMarcarEgreso } from '@/features/turnos/useTurnos';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
+import { useUbicacionLibre } from '@/features/turnos/useUbicacionLibre';
+import { UbicacionLibreIndicator } from '@/features/turnos/UbicacionLibreIndicator';
 import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
 import { SignaturePad }  from '@/features/turnos/SignaturePad';
 import { Button }        from '@/components/ui/Button';
@@ -30,7 +32,6 @@ import { ApiError, puntosMarcajeApi } from '@api-client';
 import type { PuntoMarcaje } from '@api-client';
 import { t }             from '@/lib/i18n';
 import { showAnuncioTurno } from '@/lib/anuncioTurno';
-import { obtenerUbicacionActual } from '@/lib/currentLocation';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -99,12 +100,18 @@ export default function EgresoScreen() {
     }
   }, [asignacion?.geofence_info, zonalPuntos]);
 
-  const { distanceM, status: geoStatus, canMark, permissionDenied, locationUnavailable, currentLocation } = useGeofence({
+  const { distanceM, status: geoStatus, canMark: geoCanMark, permissionDenied, locationUnavailable, currentLocation } = useGeofence({
     targets: geofenceTargets,
     enabled: asignacion?.estado === 'en_progreso',
   });
 
+  // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling —
+  // igual se exige un fix de GPS puntual antes de dejar marcar, para no perder
+  // el rastro de ubicación (antes era best-effort y el egreso quedaba con
+  // lat/lng en 0,0 si el permiso estaba negado o el fix fallaba).
   const isLibre = asignacion?.geofence_info?.tipo === 'libre';
+  const ubicacionLibre = useUbicacionLibre(isLibre && asignacion?.estado === 'en_progreso');
+  const canMark = isLibre ? ubicacionLibre.estado === 'lista' : geoCanMark;
 
   const elapsedLabel = useMemo(() => {
     if (!asignacion?.hora_ingreso_real) return null;
@@ -113,17 +120,14 @@ export default function EgresoScreen() {
 
   const handleEgreso = async (firmaBase64: string) => {
     if (!asignacion || !canMark) return;
-    // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling
-    // y currentLocation queda en null — best-effort, nunca bloquea si falla o el
-    // permiso está negado (ver obtenerUbicacionActual).
-    const sinGeofence = geofenceTargets === null;
-    const ubicacion = sinGeofence && !currentLocation ? await obtenerUbicacionActual() : null;
+    const coords = isLibre ? ubicacionLibre.coords : currentLocation;
+    if (!coords) return;
     try {
       await egresoMutation.mutateAsync({
         id: asignacion.id,
         firma: firmaBase64,
-        lat: currentLocation?.lat ?? ubicacion?.latitud ?? 0,
-        lng: currentLocation?.lng ?? ubicacion?.longitud ?? 0,
+        lat: coords.lat,
+        lng: coords.lng,
       });
       setSignatureVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -262,12 +266,7 @@ export default function EgresoScreen() {
 
           {/* ── GPS / Geofence ──────────────────────────────────── */}
           {isLibre ? (
-            <View className="bg-success/10 rounded-2xl border border-success/20 px-5 py-4">
-              <Text className="text-sm font-semibold text-success">Sin restricción de ubicación</Text>
-              <Text className="text-xs text-success/70 mt-0.5">
-                Este cargo permite marcar desde cualquier lugar.
-              </Text>
-            </View>
+            <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
           ) : (
             <View
               className="bg-card rounded-2xl border border-border px-5 py-5 gap-4"

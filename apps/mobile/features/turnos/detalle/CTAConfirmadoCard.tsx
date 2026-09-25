@@ -4,13 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';
 import { GeoFenceIndicator } from '../GeoFenceIndicator';
+import { UbicacionLibreIndicator } from '../UbicacionLibreIndicator';
+import type { EstadoUbicacionLibre } from '../useUbicacionLibre';
 import { fmtFaltan } from '../turnosUtils';
 import type { GeofenceStatus } from '@/lib/geo';
 
 export function CTAConfirmadoCard({
   dentroVentana, minutosParaIngreso, windowMin, isLibre,
   distanceM, geoStatus, canMark, permissionDenied, locationUnavailable,
-  ingresando, onIngreso, onIngresoPronto,
+  ubicacionLibre, ingresando, onIngreso, onIngresoPronto,
 }: {
   dentroVentana: boolean;
   minutosParaIngreso: number | null;
@@ -21,6 +23,7 @@ export function CTAConfirmadoCard({
   canMark: boolean;
   permissionDenied: boolean;
   locationUnavailable: boolean;
+  ubicacionLibre: { estado: EstadoUbicacionLibre; reintentar: () => void };
   ingresando: boolean;
   onIngreso: () => void;
   onIngresoPronto: () => void;
@@ -45,7 +48,9 @@ export function CTAConfirmadoCard({
         </View>
       )}
 
-      {!isLibre && (
+      {isLibre ? (
+        <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
+      ) : (
         <>
           <GeoFenceIndicator
             distanceM={distanceM}
