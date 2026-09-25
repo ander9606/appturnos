@@ -5,8 +5,20 @@ const PeriodosModel = require('./periodos.model');
 const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const LiquidacionService = require('../liquidacion/liquidacion.service');
+const CuentasCobroService = require('../../cuentas-cobro/cuentas-cobro.service');
 const AppError = require('../../../utils/AppError');
+const logger = require('../../../utils/logger');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { toISODate, calcularPeriodoActual, calcularSiguientePeriodo } = require('../../../utils/periodoCiclo');
+
+/** Best-effort: un fallo generando cuentas de cobro nunca debe tumbar el cierre del período. */
+async function generarCuentasDeCobroSiAplica(empresaId, periodoId) {
+  try {
+    await CuentasCobroService.generarParaPeriodo(empresaId, periodoId);
+  } catch (err) {
+    logger.error(`[periodos] no se pudieron generar cuentas de cobro (período ${periodoId}):`, err.message);
+  }
+}
 
 /** Obtiene usuario_id de todos los trabajador_nomina activos de la empresa. */
 async function listarUsuariosNomina(empresaId) {
@@ -36,15 +48,24 @@ async function listarInvolucradosNomina(empresaId) {
  *   abierto → cerrado → liquidado
  */
 const PeriodosService = {
-  async listar(empresaId, { estado, page, limit, conTotales }) {
-    // Antes el período "de hoy" solo se auto-creaba/cerraba cuando un
-    // trabajador marcaba entrada (registros.service.js). Si nadie marcó
-    // desde que venció el período anterior, el admin seguía viendo ese
-    // período como "Abierto" indefinidamente. Al listar también se
-    // dispara el mismo chequeo (best-effort, no debe romper el listado).
-    await this.autoCrear(empresaId).catch(() => {});
+  async listar(empresaId, { estado, fechaDesde, fechaHasta, page, limit, conTotales }, usuario) {
     const offset = (page - 1) * limit;
-    const { data, total } = await PeriodosModel.listar(empresaId, { estado, limit, offset });
+    let data, total;
+
+    if (empresaId != null) {
+      // Antes el período "de hoy" solo se auto-creaba/cerraba cuando un
+      // trabajador marcaba entrada (registros.service.js). Si nadie marcó
+      // desde que venció el período anterior, el admin seguía viendo ese
+      // período como "Abierto" indefinidamente. Al listar también se
+      // dispara el mismo chequeo (best-effort, no debe romper el listado).
+      await this.autoCrear(empresaId).catch(() => {});
+      ({ data, total } = await PeriodosModel.listar(empresaId, { estado, fechaDesde, fechaHasta, limit, offset }));
+    } else {
+      // trabajador_turnos multi-empresa (empresa_id null en el JWT) — agrega
+      // los períodos de todas sus empresas activas. Sin empresa concreta no
+      // hay autoCrear posible; se listan los que ya existan.
+      ({ data, total } = await PeriodosModel.listarPorUsuario(usuario.sub, { estado, fechaDesde, fechaHasta, limit, offset }));
+    }
 
     if (conTotales) {
       // Reutiliza el mismo cálculo que la pestaña Liquidación (recargos,
@@ -72,23 +93,25 @@ const PeriodosService = {
     if (datos.fecha_fin < datos.fecha_inicio) {
       throw new AppError('fecha_fin no puede ser anterior a fecha_inicio', 422);
     }
-    const id = await PeriodosModel.crear(empresaId, datos);
+    const { id, esNuevo } = await PeriodosModel.crear(empresaId, datos);
     const periodo = await PeriodosModel.obtenerPorId(empresaId, id);
 
-    // Notificar a todos los trabajadores de nómina de la empresa (best-effort).
-    const destinatarios = await listarUsuariosNomina(empresaId);
-    if (destinatarios.length > 0) {
-      const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
-        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
-      const fin = new Date(periodo.fecha_fin + 'T00:00:00')
-        .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
-      await NotificacionesService.notificarVarios(destinatarios, {
-        empresaId,
-        tipo: 'nomina.periodo_abierto',
-        titulo: 'Nuevo período de nómina abierto',
-        mensaje: `Período ${inicio} – ${fin} disponible. Ya puedes registrar tu jornada.`,
-        data: { periodo_id: id },
-      });
+    // Solo notificar si el período es VERDADERAMENTE NUEVO (no una race condition devolviendo uno existente).
+    if (esNuevo) {
+      const destinatarios = await listarUsuariosNomina(empresaId);
+      if (destinatarios.length > 0) {
+        const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
+          .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+        const fin = new Date(periodo.fecha_fin + 'T00:00:00')
+          .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+        await NotificacionesService.notificarVarios(destinatarios, {
+          empresaId,
+          tipo: 'nomina.periodo_abierto',
+          titulo: 'Nuevo período de nómina abierto',
+          mensaje: `Período ${inicio} – ${fin} disponible. Ya puedes registrar tu jornada.`,
+          data: { periodo_id: id },
+        });
+      }
     }
 
     return periodo;
@@ -102,12 +125,18 @@ const PeriodosService = {
     const empresa = await EmpresasModel.obtenerParaAdmin(empresaId);
     if (!empresa) return null;
     const tipo = empresa.tipo_liquidacion || 'mensual';
-    const hoy  = toISODate(new Date());
+    // IMPORTANTE: Usar hora de Colombia, no UTC, para calcular "hoy"
+    const hoy  = ahoraColombiaSQL().slice(0, 10);
 
     // Cerrar automáticamente cualquier período abierto que ya venció.
     const vencidos = await PeriodosModel.listarAbiertosVencidos(empresaId, hoy);
     for (const v of vencidos) {
-      await PeriodosModel.cerrarConSnapshot(empresaId, v.id, null).catch(() => {});
+      try {
+        await PeriodosModel.cerrarConSnapshot(empresaId, v.id, null);
+        await generarCuentasDeCobroSiAplica(empresaId, v.id);
+      } catch (err) {
+        logger.error(`[periodos] fallo al auto-cerrar período ${v.id}:`, err.message);
+      }
     }
 
     // Ya hay uno abierto que cubre hoy → no crear.
@@ -125,10 +154,12 @@ const PeriodosService = {
    * con el ciclo nuevo. Notifica a trabajadores de nómina y gestores.
    */
   async recalcularPorCambioDeCiclo(empresaId, usuarioId) {
-    const hoy = toISODate(new Date());
+    // IMPORTANTE: Usar hora de Colombia, no UTC, para calcular "hoy"
+    const hoy = ahoraColombiaSQL().slice(0, 10);
     const abierto = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
     if (abierto) {
       await PeriodosModel.cerrarConSnapshot(empresaId, abierto.id, usuarioId ?? null);
+      await generarCuentasDeCobroSiAplica(empresaId, abierto.id);
     }
     // autoCrear() ya notifica "nuevo período abierto" a trabajador_nomina vía crear().
     const nuevo = await this.autoCrear(empresaId);
@@ -163,6 +194,7 @@ const PeriodosService = {
     // en un solo commit, evitando que modificaciones de sueldo posteriores
     // afecten la liquidación de este período.
     await PeriodosModel.cerrarConSnapshot(empresaId, id, usuarioId);
+    await generarCuentasDeCobroSiAplica(empresaId, id);
     // Auto-crear el período siguiente para que los trabajadores no queden
     // sin período abierto al día siguiente.
     const empresa = await EmpresasModel.obtenerParaAdmin(empresaId);
@@ -170,7 +202,6 @@ const PeriodosService = {
       const tipo = empresa.tipo_liquidacion;
       const siguiente = calcularSiguientePeriodo(tipo, periodo.fecha_fin);
       // Solo crear si no existe ya uno abierto en ese rango.
-      const hoyStr = toISODate(new Date());
       const existente = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, siguiente.fecha_inicio);
       if (!existente) {
         await this.crear(empresaId, siguiente).catch(() => {}); // best-effort

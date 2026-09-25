@@ -87,14 +87,46 @@ describe('RegistrosService.crear', () => {
       hora_salida: '16:00',
     });
 
+    // 8h > umbral de jornada continua (6h) → se descuenta 1h de almuerzo por defecto.
+    expect(RegistrosModel.crear).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({
+        horas_ordinarias: 7,
+        horas_extra_diurnas: 0,
+        jornada_continua: false,
+        horas_acumuladas_semana: 0,
+      })
+    );
+    expect(result.id).toBe(77);
+  });
+
+  test('jornada_continua: true → no descuenta almuerzo', async () => {
+    PeriodosModel.obtenerPorId.mockResolvedValue({
+      id: 1,
+      estado: 'abierto',
+      fecha_inicio: '2026-06-01',
+      fecha_fin: '2026-06-30',
+    });
+    RegistrosModel.crear.mockResolvedValue(78);
+    RegistrosModel.obtenerPorId.mockResolvedValue({ id: 78, horas_ordinarias: 8 });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+
+    await RegistrosService.crear(1, GESTOR, {
+      trabajador_id: 5,
+      periodo_id: 1,
+      fecha: '2026-06-10',
+      hora_entrada: '08:00',
+      hora_salida: '16:00',
+      jornada_continua: true,
+    });
+
     expect(RegistrosModel.crear).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
         horas_ordinarias: 8,
-        horas_extra_diurnas: 0,
+        jornada_continua: true,
       })
     );
-    expect(result.id).toBe(77);
   });
 
   test('sin trabajador_id en rol gestor → AppError 422', async () => {
@@ -107,6 +139,60 @@ describe('RegistrosService.crear', () => {
         // trabajador_id omitido
       })
     ).rejects.toMatchObject({ statusCode: 422 });
+  });
+
+  // Clasificación ocasional/habitual (Art. 180/181 CST) — 2026-06-07 es domingo.
+  describe('domingo trabajado — clasificación ocasional/habitual', () => {
+    beforeEach(() => {
+      PeriodosModel.obtenerPorId.mockResolvedValue({
+        id: 1, estado: 'abierto', fecha_inicio: '2026-06-01', fecha_fin: '2026-06-30',
+      });
+      RegistrosModel.crear.mockResolvedValue(200);
+      RegistrosModel.obtenerPorId.mockResolvedValue({ id: 200 });
+      RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+    });
+
+    test('1º domingo del mes (ocasional) → horas van a ordinarias, sin recargo', async () => {
+      RegistrosModel.contarDomingosTrabajadosEnMes.mockResolvedValue(0); // ningún domingo previo este mes
+
+      await RegistrosService.crear(1, GESTOR, {
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-06-07',
+        hora_entrada: '08:00', hora_salida: '16:00',
+      });
+
+      expect(RegistrosModel.contarDomingosTrabajadosEnMes).toHaveBeenCalledWith(1, 5, '2026-06-07');
+      expect(RegistrosModel.crear).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ horas_ordinarias: 7, horas_festivo: 0, es_festivo: 1 })
+      );
+    });
+
+    test('3er domingo del mes (habitual) → horas van a horas_festivo, con recargo', async () => {
+      RegistrosModel.contarDomingosTrabajadosEnMes.mockResolvedValue(2); // ya trabajó 2 domingos antes este mes
+
+      await RegistrosService.crear(1, GESTOR, {
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-06-07',
+        hora_entrada: '08:00', hora_salida: '16:00',
+      });
+
+      expect(RegistrosModel.crear).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ horas_ordinarias: 0, horas_festivo: 7, es_festivo: 1 })
+      );
+    });
+
+    test('martes normal → nunca cuenta domingos ni toca la clasificación', async () => {
+      await RegistrosService.crear(1, GESTOR, {
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-06-09', // martes
+        hora_entrada: '08:00', hora_salida: '16:00',
+      });
+
+      expect(RegistrosModel.contarDomingosTrabajadosEnMes).not.toHaveBeenCalled();
+      expect(RegistrosModel.crear).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ horas_ordinarias: 7, horas_festivo: 0, es_festivo: 0 })
+      );
+    });
   });
 });
 
@@ -130,12 +216,43 @@ describe('RegistrosService.corregir', () => {
 
     await RegistrosService.corregir(1, GESTOR, 99, {});
 
+    // 10h > umbral de jornada continua (6h) → 1h de almuerzo se descuenta antes
+    // de repartir ordinarias/extra, dejando 9h efectivas (8 ordinarias + 1 extra).
     expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
       1,
       99,
       expect.objectContaining({
         horas_ordinarias: 8,
-        horas_extra_diurnas: 2,
+        horas_extra_diurnas: 1,
+        jornada_continua: false,
+        horas_acumuladas_semana: 34,
+      })
+    );
+  });
+
+  test('preserva jornada_continua ya persistida si la corrección no la envía', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue({
+      id: 99,
+      trabajador_id: 5,
+      periodo_id: 1,
+      fecha: '2026-06-12',
+      hora_entrada: '07:00',
+      hora_salida: '17:00',
+      sesiones: 1,
+      jornada_continua: 1,
+    });
+    PeriodosModel.obtenerPorId.mockResolvedValue({ id: 1, estado: 'abierto' });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+    RegistrosModel.actualizar.mockResolvedValue(1);
+
+    await RegistrosService.corregir(1, GESTOR, 99, {});
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      1,
+      99,
+      expect.objectContaining({
+        horas_ordinarias: 10, // sin descuento: jornada_continua persistida = true
+        jornada_continua: true,
       })
     );
   });
@@ -147,8 +264,8 @@ describe('RegistrosService.marcarSalida', () => {
   const TRABAJADOR_USUARIO = { sub: 20, rol: ROLES.TRABAJADOR_NOMINA };
 
   beforeEach(() => {
-    TrabajadoresModel.obtenerPorUsuarioId.mockResolvedValue({ id: 5 });
-    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, tipo_marcacion: 'libre' });
+    TrabajadoresModel.obtenerPorUsuarioId.mockResolvedValue({ id: 5, usuario_id: 20 });
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, usuario_id: 20, tipo_marcacion: 'libre' });
     RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
   });
 
@@ -167,6 +284,8 @@ describe('RegistrosService.marcarSalida', () => {
       hora_entrada: '08:00',
       hora_salida: null,
     });
+    // El trabajador al que pertenece este registro (id 99) es de OTRO usuario.
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 99, usuario_id: 999 });
 
     await expect(
       RegistrosService.marcarSalida(1, TRABAJADOR_USUARIO, 1)
@@ -233,7 +352,7 @@ describe('RegistrosService.marcarSalida', () => {
 
     expect(RegistrosModel.actualizarSalida).toHaveBeenCalledWith(
       1, 1,
-      expect.objectContaining({ horas_ordinarias: expect.any(Number) })
+      expect.objectContaining({ horas_ordinarias: expect.any(Number), horas_acumuladas_semana: 0 })
     );
     expect(result.id).toBe(1);
     expect(result).toHaveProperty('advertencia'); // null o string

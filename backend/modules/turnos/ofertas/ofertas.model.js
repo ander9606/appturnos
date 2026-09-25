@@ -2,6 +2,14 @@
 
 const { pool } = require('../../../config/database');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+const { horaAMinutos } = require('../../../utils/laboralUtils');
+
+const MIN_POR_DIA = 24 * 60;
+
+function minutosAHora(minutos) {
+  const m = ((minutos % MIN_POR_DIA) + MIN_POR_DIA) % MIN_POR_DIA;
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
+}
 
 /**
  * Acceso a datos de ofertas de turno (tabla ofertas_turno).
@@ -10,7 +18,7 @@ const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-  lugar, latitud, longitud, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
+  lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
@@ -57,6 +65,27 @@ const DESTINATARIOS_JSON_ALIAS = DESTINATARIOS_JSON.replace(
   'od.oferta_id = o.id'
 );
 
+// Puntos de marcaje zonal acotados a este turno (migración 099). Vacío/null =
+// sin acotar, el geofence 'zonal' sigue validando contra todos los puntos
+// zonales de la empresa (ver listarZonalesEfectivos). Mismo criterio anti-N+1.
+const PUNTOS_JSON = `(
+  SELECT JSON_ARRAYAGG(JSON_OBJECT(
+    'id', pm.id,
+    'nombre', pm.nombre,
+    'latitud', pm.latitud,
+    'longitud', pm.longitud,
+    'radio_metros', pm.radio_metros
+  ))
+  FROM oferta_puntos_marcaje opm
+  INNER JOIN puntos_marcaje pm ON pm.id = opm.punto_marcaje_id
+  WHERE opm.oferta_id = ofertas_turno.id
+) AS puntos_marcaje_json`;
+
+const PUNTOS_JSON_ALIAS = PUNTOS_JSON.replace(
+  'opm.oferta_id = ofertas_turno.id',
+  'opm.oferta_id = o.id'
+);
+
 // Allowlist de columnas modificables vía PUT (lista fija de código).
 const CAMPOS_EDITABLES = [
   'titulo',
@@ -67,15 +96,16 @@ const CAMPOS_EDITABLES = [
   'lugar',
   'latitud',
   'longitud',
+  'ubicacion_libre',
   'encargado_nombre',
   'encargado_telefono',
   'para_quien',
 ];
 
-/** Convierte las columnas `puestos_json`/`destinatarios_json` (string) en arrays de objetos. */
+/** Convierte las columnas `puestos_json`/`destinatarios_json`/`puntos_marcaje_json` (string) en arrays de objetos. */
 function parsearPuestos(fila) {
   if (!fila) return fila;
-  const { puestos_json, destinatarios_json, ...resto } = fila;
+  const { puestos_json, destinatarios_json, puntos_marcaje_json, ...resto } = fila;
   let puestos = [];
   if (puestos_json) {
     puestos = typeof puestos_json === 'string' ? JSON.parse(puestos_json) : puestos_json;
@@ -84,14 +114,20 @@ function parsearPuestos(fila) {
   if (destinatarios_json) {
     destinatarios = typeof destinatarios_json === 'string' ? JSON.parse(destinatarios_json) : destinatarios_json;
   }
-  return { ...resto, puestos, destinatarios };
+  let puntosMarcaje = [];
+  if (puntos_marcaje_json) {
+    puntosMarcaje = typeof puntos_marcaje_json === 'string' ? JSON.parse(puntos_marcaje_json) : puntos_marcaje_json;
+  }
+  return { ...resto, puestos, destinatarios, puntos_marcaje: puntosMarcaje };
 }
 
 const OfertasModel = {
-  async listar(empresaId, { fecha, estado, disponibles, antiguedadMinMin, paraQuien, limit, offset }) {
+  async listar(empresaId, { fecha, fechaDesde, fechaHasta, estado, disponibles, antiguedadMinMin, paraQuien, limit, offset }) {
     const where = ['empresa_id = ?'];
     const params = [empresaId];
     if (fecha) { where.push('fecha = ?'); params.push(fecha); }
+    if (fechaDesde) { where.push('fecha >= ?'); params.push(fechaDesde); }
+    if (fechaHasta) { where.push('fecha <= ?'); params.push(fechaHasta); }
     if (estado) { where.push('estado = ?'); params.push(estado); }
     if (paraQuien === 'nomina') {
       where.push("para_quien IN ('nomina','ambos')");
@@ -111,7 +147,7 @@ const OfertasModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}
        FROM ofertas_turno
        WHERE ${whereSql}
        ORDER BY fecha DESC, hora_inicio
@@ -135,7 +171,7 @@ const OfertasModel = {
    *     `oferta_destinatarios` — sin delay ni filtro de cargo (el gestor ya
    *     lo eligió a mano).
    */
-  async listarMultiEmpresa(usuarioId, empresaIds, { fecha, estado, disponibles, paraQuien, limit, offset }) {
+  async listarMultiEmpresa(usuarioId, empresaIds, { fecha, fechaDesde, fechaHasta, estado, disponibles, paraQuien, limit, offset }) {
     if (!empresaIds || empresaIds.length === 0) {
       return { data: [], total: 0 };
     }
@@ -144,6 +180,8 @@ const OfertasModel = {
     const params = [empresaIds];
 
     if (fecha) { where.push('o.fecha = ?'); params.push(fecha); }
+    if (fechaDesde) { where.push('o.fecha >= ?'); params.push(fechaDesde); }
+    if (fechaHasta) { where.push('o.fecha <= ?'); params.push(fechaHasta); }
     if (estado) { where.push('o.estado = ?'); params.push(estado); }
     if (paraQuien === 'nomina') {
       where.push("o.para_quien IN ('nomina','ambos')");
@@ -206,7 +244,7 @@ const OfertasModel = {
     // gestor ya sabe en qué empresa está), acá el nombre es indispensable para distinguir
     // de un vistazo de qué empresa es cada oferta.
     const [filas] = await pool.query(
-      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}
+      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}, ${PUNTOS_JSON_ALIAS}
        FROM ofertas_turno o
        ${joinSql}
        WHERE ${whereSql}
@@ -244,7 +282,7 @@ const OfertasModel = {
       params.push(antiguedadMinMin);
     }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}
        FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
       params
     );
@@ -253,7 +291,7 @@ const OfertasModel = {
 
   async obtenerPorExternalRef(empresaId, externalRef) {
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}
        FROM ofertas_turno WHERE external_ref = ? AND empresa_id = ? LIMIT 1`,
       [externalRef, empresaId]
     );
@@ -288,6 +326,46 @@ const OfertasModel = {
   },
 
   /**
+   * Cierra (estado 'cerrada') ofertas cuya fecha ya pasó y nadie resolvió a mano.
+   * Excluye ofertas con asignaciones 'confirmado'/'en_progreso' — un turno nocturno
+   * que cruza medianoche sigue en curso aunque `fecha` ya sea "ayer"; cerrarlo de
+   * golpe le quitaría la visibilidad al jefe y bloquearía nuevas postulaciones si
+   * necesita reemplazar a alguien a mitad de turno.
+   */
+  async cerrarVencidas(hoy) {
+    const [res] = await pool.query(
+      `UPDATE ofertas_turno o SET o.estado = 'cerrada'
+       WHERE o.estado IN ('abierta', 'publicada', 'en_proceso') AND o.fecha < ?
+         AND NOT EXISTS (
+           SELECT 1 FROM asignaciones_turno a
+           WHERE a.oferta_id = o.id AND a.estado IN ('confirmado', 'en_progreso')
+         )`,
+      [hoy]
+    );
+    return res.affectedRows;
+  },
+
+  /**
+   * Ofertas que cerrarVencidas() salta a propósito (todavía tienen 'confirmado'/
+   * 'en_progreso' colgados) pero ya llevan al menos 2 días vencidas — margen
+   * de sobra para no tocar un turno nocturno legítimo que cruza medianoche
+   * (cerrarVencidas ya las protege con `fecha < hoy`; acá se espera 2 días más
+   * antes de asumir que nadie las va a resolver a mano).
+   */
+  async listarVencidasConPendientes(hoy) {
+    const [filas] = await pool.query(
+      `SELECT DISTINCT o.id, o.empresa_id
+       FROM ofertas_turno o
+       JOIN asignaciones_turno a ON a.oferta_id = o.id
+       WHERE o.estado IN ('abierta', 'publicada', 'en_proceso')
+         AND o.fecha <= DATE_SUB(?, INTERVAL 2 DAY)
+         AND a.estado IN ('confirmado', 'en_progreso')`,
+      [hoy]
+    );
+    return filas;
+  },
+
+  /**
    * Crea oferta + puestos en una transacción.
    * @param datos.puestos — array `[{ cargo_id, plazas, tarifa_dia, notas? }]`.
    *                       Si viene vacío, la oferta queda sin puestos (el jefe
@@ -305,9 +383,9 @@ const OfertasModel = {
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
            (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-            lugar, latitud, longitud, encargado_nombre, encargado_telefono,
+            lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono,
             estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresaId,
           datos.titulo,
@@ -318,6 +396,7 @@ const OfertasModel = {
           datos.lugar ?? null,
           datos.latitud ?? null,
           datos.longitud ?? null,
+          datos.ubicacion_libre ? 1 : 0,
           datos.encargado_nombre ?? null,
           datos.encargado_telefono ?? null,
           datos.estado ?? 'abierta',
@@ -352,6 +431,16 @@ const OfertasModel = {
         }
       }
 
+      // Puntos de marcaje zonal acotados a este turno (migración 099) — opcional.
+      if (Array.isArray(datos.punto_marcaje_ids)) {
+        for (const puntoId of datos.punto_marcaje_ids) {
+          await conn.query(
+            'INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)',
+            [ofertaId, puntoId]
+          );
+        }
+      }
+
       await conn.commit();
       return ofertaId;
     } catch (err) {
@@ -371,14 +460,49 @@ const OfertasModel = {
         params.push(datos[campo]);
       }
     }
-    if (sets.length === 0) return 0;
+    const tocaPuntos = Array.isArray(datos.punto_marcaje_ids);
+    if (sets.length === 0 && !tocaPuntos) return 0;
 
-    params.push(id, empresaId);
-    const [res] = await pool.query(
-      `UPDATE ofertas_turno SET ${sets.join(', ')} WHERE id = ? AND empresa_id = ?`,
-      params
-    );
-    return res.affectedRows;
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      let affectedRows = 0;
+      if (sets.length > 0) {
+        params.push(id, empresaId);
+        const [res] = await conn.query(
+          `UPDATE ofertas_turno SET ${sets.join(', ')} WHERE id = ? AND empresa_id = ?`,
+          params
+        );
+        affectedRows = res.affectedRows;
+      }
+
+      // Reemplazo completo del set de puntos zonales acotados (migración 099)
+      // — más simple y menos propenso a errores que diffear altas/bajas.
+      if (tocaPuntos) {
+        await conn.query(
+          `DELETE opm FROM oferta_puntos_marcaje opm
+           JOIN ofertas_turno o ON o.id = opm.oferta_id
+           WHERE opm.oferta_id = ? AND o.empresa_id = ?`,
+          [id, empresaId]
+        );
+        for (const puntoId of datos.punto_marcaje_ids) {
+          await conn.query(
+            'INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)',
+            [id, puntoId]
+          );
+        }
+        affectedRows = affectedRows || 1;
+      }
+
+      await conn.commit();
+      return affectedRows;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 
   /**
@@ -431,8 +555,10 @@ const OfertasModel = {
 
   /**
    * Copia una oferta a una nueva fecha, con plazas_cubiertas = 0 en todos los puestos.
+   * Si se pasa `nuevaHoraInicio`, la hora de fin se desplaza el mismo delta para
+   * conservar la duración original del turno.
    */
-  async duplicar(empresaId, id, nuevaFecha, creadoPor) {
+  async duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio) {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -443,15 +569,25 @@ const OfertasModel = {
       );
       if (!original) { await conn.rollback(); return null; }
 
+      let horaInicio = original.hora_inicio;
+      let horaFinEstimada = original.hora_fin_estimada;
+      if (nuevaHoraInicio) {
+        if (horaFinEstimada) {
+          const delta = horaAMinutos(nuevaHoraInicio) - horaAMinutos(original.hora_inicio);
+          horaFinEstimada = minutosAHora(horaAMinutos(horaFinEstimada) + delta);
+        }
+        horaInicio = nuevaHoraInicio;
+      }
+
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
            (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
-            lugar, latitud, longitud, estado, para_quien, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+            lugar, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
           empresaId, original.titulo, original.descripcion, nuevaFecha,
-          original.hora_inicio, original.hora_fin_estimada,
-          original.lugar, original.latitud, original.longitud,
+          horaInicio, horaFinEstimada,
+          original.lugar, original.latitud, original.longitud, original.ubicacion_libre,
           original.para_quien, creadoPor,
         ]
       );

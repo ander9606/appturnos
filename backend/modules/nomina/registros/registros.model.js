@@ -4,7 +4,7 @@ const { pool } = require('../../../config/database');
 
 /** Acceso a datos de registros diarios de nómina (tabla registros_diarios). */
 const RegistrosModel = {
-  async listar(empresaId, { periodoId, trabajadorId, fecha, fechaDesde, fechaHasta, limit, offset }) {
+  async listar(empresaId, { periodoId, trabajadorId, fecha, fechaDesde, fechaHasta, sospechoso, limit, offset }) {
     const where = ['r.empresa_id = ?'];
     const params = [empresaId];
     if (periodoId)   { where.push('r.periodo_id = ?');    params.push(periodoId); }
@@ -12,10 +12,12 @@ const RegistrosModel = {
     if (fecha)       { where.push('r.fecha = ?');         params.push(fecha); }
     if (fechaDesde)  { where.push('r.fecha >= ?');        params.push(fechaDesde); }
     if (fechaHasta)  { where.push('r.fecha <= ?');        params.push(fechaHasta); }
+    if (sospechoso != null) { where.push('r.sospechoso = ?'); params.push(sospechoso ? 1 : 0); }
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT r.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+      `SELECT r.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido, t.cedula,
+              t.tipo_marcacion, t.punto_marcaje_id,
               sr.estado AS reingreso_estado
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
@@ -39,10 +41,17 @@ const RegistrosModel = {
 
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
-      'SELECT * FROM registros_diarios WHERE id = ? AND empresa_id = ? LIMIT 1',
+      `SELECT r.*, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido
+       FROM registros_diarios r
+       JOIN trabajadores t ON t.id = r.trabajador_id
+       WHERE r.id = ? AND r.empresa_id = ? LIMIT 1`,
       [id, empresaId]
     );
-    return filas[0] || null;
+    const row = filas[0];
+    if (row && typeof row.sesiones_detalle === 'string') {
+      row.sesiones_detalle = JSON.parse(row.sesiones_detalle);
+    }
+    return row || null;
   },
 
   async obtenerPorFecha(empresaId, trabajadorId, fecha) {
@@ -67,8 +76,8 @@ const RegistrosModel = {
       `INSERT INTO registros_diarios
          (empresa_id, trabajador_id, periodo_id, fecha, hora_entrada, hora_salida,
           horas_ordinarias, horas_extra_diurnas, horas_extra_nocturnas, horas_nocturnas,
-          horas_festivo, es_festivo, novedad, tipo_dia)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          horas_festivo, es_festivo, novedad, tipo_dia, jornada_continua, horas_acumuladas_semana)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         empresaId,
         d.trabajador_id,
@@ -84,6 +93,8 @@ const RegistrosModel = {
         d.es_festivo,
         d.novedad,
         d.tipo_dia || 'ordinario',
+        d.jornada_continua ? 1 : 0,
+        d.horas_acumuladas_semana || 0,
       ]
     );
     return res.insertId;
@@ -94,35 +105,50 @@ const RegistrosModel = {
     const [res] = await pool.query(
       `INSERT INTO registros_diarios
          (empresa_id, trabajador_id, periodo_id, fecha, hora_entrada, hora_entrada_inicial,
+          latitud_entrada, longitud_entrada, device_entrada,
           horas_ordinarias, horas_extra_diurnas, horas_extra_nocturnas,
           horas_nocturnas, horas_festivo, es_festivo)
-       VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0)`,
-      [empresaId, d.trabajador_id, d.periodo_id, d.fecha, d.hora_entrada, d.hora_entrada]
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0)`,
+      [
+        empresaId, d.trabajador_id, d.periodo_id, d.fecha, d.hora_entrada, d.hora_entrada,
+        d.latitud ?? null, d.longitud ?? null, d.deviceId ?? null,
+      ]
     );
     return res.insertId;
   },
 
   /**
    * Inicia una nueva sesión del día tras un reingreso aprobado.
+   * Antes de resetear, la sesión que se cierra (hora_entrada/hora_salida vigentes)
+   * se archiva en sesiones_detalle — si no, su hora_salida se perdería para siempre
+   * al limpiarla más abajo, y el detalle del día no podría mostrar esa fracción.
    * Los horas_* acumuladas de la sesión anterior se preservan;
    * hora_entrada se resetea a la nueva entrada y hora_salida se limpia.
+   * latitud_salida/longitud_salida/device_salida también se limpian — pertenecían a la sesión cerrada.
    */
-  async iniciarReingreso(empresaId, id, horaEntrada) {
+  async iniciarReingreso(empresaId, id, horaEntrada, latitud, longitud, deviceId) {
     const [res] = await pool.query(
       `UPDATE registros_diarios
-       SET hora_entrada = ?, hora_salida = NULL, sesiones = sesiones + 1, alerta_extra_enviada = 0
+       SET sesiones_detalle = JSON_ARRAY_APPEND(
+             COALESCE(sesiones_detalle, JSON_ARRAY()), '$',
+             JSON_OBJECT('hora_entrada', TIME_FORMAT(hora_entrada, '%H:%i:%s'),
+                         'hora_salida', TIME_FORMAT(hora_salida, '%H:%i:%s'))
+           ),
+           hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?, device_entrada = ?,
+           hora_salida = NULL, latitud_salida = NULL, longitud_salida = NULL, device_salida = NULL,
+           sesiones = sesiones + 1, alerta_extra_enviada = 0
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NOT NULL`,
-      [horaEntrada, id, empresaId]
+      [horaEntrada, latitud ?? null, longitud ?? null, deviceId ?? null, id, empresaId]
     );
     return res.affectedRows;
   },
 
   /** Set hora_entrada on an existing registro that has none yet (race-condition safe). */
-  async actualizarEntrada(empresaId, id, horaEntrada) {
+  async actualizarEntrada(empresaId, id, horaEntrada, latitud, longitud, deviceId) {
     const [res] = await pool.query(
-      `UPDATE registros_diarios SET hora_entrada = ?
+      `UPDATE registros_diarios SET hora_entrada = ?, latitud_entrada = ?, longitud_entrada = ?, device_entrada = ?
        WHERE id = ? AND empresa_id = ? AND hora_entrada IS NULL`,
-      [horaEntrada, id, empresaId]
+      [horaEntrada, latitud ?? null, longitud ?? null, deviceId ?? null, id, empresaId]
     );
     return res.affectedRows;
   },
@@ -131,17 +157,24 @@ const RegistrosModel = {
   async actualizarSalida(empresaId, id, d) {
     const [res] = await pool.query(
       `UPDATE registros_diarios SET
-         hora_salida = ?, horas_ordinarias = ?, horas_extra_diurnas = ?,
-         horas_extra_nocturnas = ?, horas_nocturnas = ?, horas_festivo = ?, es_festivo = ?
+         hora_salida = ?, latitud_salida = ?, longitud_salida = ?, device_salida = ?,
+         horas_ordinarias = ?, horas_extra_diurnas = ?,
+         horas_extra_nocturnas = ?, horas_nocturnas = ?, horas_festivo = ?, es_festivo = ?,
+         jornada_continua = ?, horas_acumuladas_semana = ?
        WHERE id = ? AND empresa_id = ? AND hora_salida IS NULL`,
       [
         d.hora_salida,
+        d.latitud ?? null,
+        d.longitud ?? null,
+        d.deviceId ?? null,
         d.horas_ordinarias,
         d.horas_extra_diurnas,
         d.horas_extra_nocturnas,
         d.horas_nocturnas,
         d.horas_festivo,
         d.es_festivo,
+        d.jornada_continua ? 1 : 0,
+        d.horas_acumuladas_semana || 0,
         id,
         empresaId,
       ]
@@ -180,12 +213,34 @@ const RegistrosModel = {
     };
   },
 
+  /**
+   * Cuenta domingos ya trabajados por el trabajador en el mes calendario de
+   * `fecha` (excluyéndola), para clasificar ocasional/habitual (Art. 180/181
+   * CST). Por DAYOFWEEK, no por es_festivo — un domingo "ocasional" no lleva
+   * es_festivo/horas_festivo (ver calcularHoras `recargoFestivo`), pero sigue
+   * siendo domingo trabajado para efectos del conteo.
+   */
+  async contarDomingosTrabajadosEnMes(empresaId, trabajadorId, fecha) {
+    const [[row]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM registros_diarios
+       WHERE empresa_id = ? AND trabajador_id = ?
+         AND fecha != ?
+         AND fecha >= DATE_FORMAT(?, '%Y-%m-01')
+         AND fecha <  DATE_FORMAT(DATE_ADD(?, INTERVAL 1 MONTH), '%Y-%m-01')
+         AND DAYOFWEEK(fecha) = 1
+         AND hora_salida IS NOT NULL
+         AND (horas_ordinarias + horas_extra_diurnas + horas_extra_nocturnas + horas_nocturnas + horas_festivo) > 0`,
+      [empresaId, trabajadorId, fecha, fecha, fecha]
+    );
+    return row.total;
+  },
+
   /** Jornadas activas (con entrada, sin salida) que aún no dispararon la alerta de horas extra. Cross-tenant — usado por el worker. */
   async listarActivosSinAlertaExtra() {
     const [filas] = await pool.query(
       `SELECT r.id, r.empresa_id, r.trabajador_id, r.fecha, r.hora_entrada,
               r.horas_ordinarias, r.horas_nocturnas, r.sesiones,
-              t.nombre, t.apellido
+              t.nombre, t.apellido, t.usuario_id
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
        WHERE r.hora_entrada IS NOT NULL AND r.hora_salida IS NULL AND r.alerta_extra_enviada = 0`
@@ -203,7 +258,7 @@ const RegistrosModel = {
       `UPDATE registros_diarios SET
          hora_entrada = ?, hora_salida = ?, horas_ordinarias = ?, horas_extra_diurnas = ?,
          horas_extra_nocturnas = ?, horas_nocturnas = ?, horas_festivo = ?, es_festivo = ?,
-         novedad = ?, tipo_dia = ?, aprobado_por = ?
+         novedad = ?, tipo_dia = ?, aprobado_por = ?, jornada_continua = ?, horas_acumuladas_semana = ?
        WHERE id = ? AND empresa_id = ?`,
       [
         d.hora_entrada,
@@ -217,9 +272,58 @@ const RegistrosModel = {
         d.novedad,
         d.tipo_dia,
         d.aprobado_por,
+        d.jornada_continua ? 1 : 0,
+        d.horas_acumuladas_semana || 0,
         id,
         empresaId,
       ]
+    );
+    return res.affectedRows;
+  },
+
+  /**
+   * Registros de OTROS trabajadores de la empresa, mismo día y mismo tipo de marcaje
+   * (entrada u salida), dentro de una ventana de tiempo — candidatos a comparar por
+   * distancia GPS para detectar marcaje sospechoso (dos personas, un solo lugar).
+   */
+  async listarMarcajesCercanos(empresaId, fecha, trabajadorId, tipo, hora, ventanaSeg) {
+    const [col, latCol, lngCol, deviceCol] = tipo === 'entrada'
+      ? ['hora_entrada', 'latitud_entrada', 'longitud_entrada', 'device_entrada']
+      : ['hora_salida', 'latitud_salida', 'longitud_salida', 'device_salida'];
+    const [filas] = await pool.query(
+      `SELECT id AS registro_id, trabajador_id, ${latCol} AS lat, ${lngCol} AS lng, ${deviceCol} AS device
+       FROM registros_diarios
+       WHERE empresa_id = ? AND fecha = ? AND trabajador_id != ?
+         AND ${latCol} IS NOT NULL AND ${deviceCol} IS NOT NULL
+         AND ABS(TIME_TO_SEC(TIMEDIFF(${col}, ?))) <= ?`,
+      [empresaId, fecha, trabajadorId, hora, ventanaSeg]
+    );
+    return filas;
+  },
+
+  /** Marca uno o más registros como sospechosos (no bloquea, solo audita). */
+  async marcarSospechoso(empresaId, ids) {
+    if (ids.length === 0) return;
+    await pool.query(
+      `UPDATE registros_diarios SET sospechoso = 1 WHERE empresa_id = ? AND id IN (?)`,
+      [empresaId, ids]
+    );
+  },
+
+  /** Descarta el flag de sospechoso tras revisión del gestor (no vuelve a evaluarse). */
+  async descartarSospechoso(empresaId, id) {
+    const [res] = await pool.query(
+      `UPDATE registros_diarios SET sospechoso = 0 WHERE id = ? AND empresa_id = ?`,
+      [id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
+  /** Borra un registro (usado al mover un compensatorio a otra fecha). */
+  async eliminar(empresaId, id) {
+    const [res] = await pool.query(
+      'DELETE FROM registros_diarios WHERE id = ? AND empresa_id = ?',
+      [id, empresaId]
     );
     return res.affectedRows;
   },

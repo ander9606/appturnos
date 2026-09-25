@@ -20,6 +20,7 @@ import {
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { fmtHora } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
+import { UbicacionLibreIndicator } from '@/features/nomina/trabajador/UbicacionLibreIndicator';
 import { useTheme } from '@/lib/theme';
 import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -56,6 +57,7 @@ export default function NominaIngresoScreen() {
     tipoMarcacion,
     geo,
     marcajeBloqueado,
+    ubicacionLibre,
     valorHora,
   } = useNominaTrabajador();
 
@@ -203,6 +205,14 @@ export default function NominaIngresoScreen() {
                 <Ionicons name="enter-outline" size={48} color="#16a34a" />
                 <Text className="text-sm font-bold text-success mt-1">Reingreso ok</Text>
               </View>
+            ) : estadoHoy === 'compensatorio' ? (
+              <View
+                className="w-44 h-44 rounded-full items-center justify-center"
+                style={{ backgroundColor: '#8B5CF618', borderWidth: 3, borderColor: '#8B5CF644' }}
+              >
+                <Ionicons name="bed-outline" size={48} color="#8B5CF6" />
+                <Text className="text-sm font-bold mt-1" style={{ color: '#8B5CF6' }}>Compensatorio</Text>
+              </View>
             ) : (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
@@ -239,13 +249,36 @@ export default function NominaIngresoScreen() {
         )}
 
         {/* ── Geofence (tipo_marcacion 'fijo' o 'zonal') ───────── */}
-        {(tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal') && (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado') && (
+        {/* También en 'en_jornada': el backend valida geofence en marcarSalida
+            igual que en marcarEntrada — sin esto, el trabajador solo se enteraba
+            de que estaba fuera de zona con el Alert de error, sin aviso previo. */}
+        {(tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal') &&
+          (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado' || estadoHoy === 'en_jornada') && (
           <GeoFenceIndicator
             distanceM={geo.distanceM}
             status={geo.status}
             permissionDenied={geo.permissionDenied}
             locationUnavailable={geo.locationUnavailable}
           />
+        )}
+
+        {/* ── Ubicación (tipo_marcacion 'libre') — sin geofence que validar,
+            pero igual se exige un fix de GPS antes de dejar marcar. ─────── */}
+        {tipoMarcacion === 'libre' &&
+          (estadoHoy === 'sin_registro' || estadoHoy === 'reingreso_aprobado' || estadoHoy === 'en_jornada') && (
+          <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
+        )}
+
+        {/* ── Día de descanso compensatorio — no debe marcar entrada ──── */}
+        {estadoHoy === 'compensatorio' && (
+          <View className="rounded-2xl py-4 px-4 items-center gap-1" style={{ backgroundColor: '#8B5CF618' }}>
+            <Text className="font-semibold text-center" style={{ color: '#8B5CF6' }}>
+              Hoy es tu descanso compensatorio
+            </Text>
+            <Text className="text-sm text-muted-foreground text-center">
+              No tienes que marcar entrada — disfruta tu día libre.
+            </Text>
+          </View>
         )}
 
         {/* ── Botón de marcaje ──────────────────────────────── */}
@@ -267,7 +300,7 @@ export default function NominaIngresoScreen() {
         {estadoHoy === 'en_jornada' && periodoAbierto && (
           <TouchableOpacity
             onPress={handleSalida}
-            disabled={isMutating}
+            disabled={isMutating || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#dc2626', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
@@ -352,7 +385,11 @@ export default function NominaIngresoScreen() {
           className="flex-1 justify-end"
         >
           <View className="bg-black/40 flex-1 justify-end">
-            <View className="bg-background rounded-t-3xl p-5 gap-4">
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              className="bg-background rounded-t-3xl"
+              contentContainerStyle={{ padding: 20, gap: 16 }}
+            >
               <Text className="text-base font-bold text-foreground">Solicitar reingreso</Text>
               <Text className="text-sm text-muted-foreground">
                 Úsalo si ya marcaste salida pero necesitas volver a tu punto de trabajo hoy mismo
@@ -389,7 +426,7 @@ export default function NominaIngresoScreen() {
                   <Text className="text-sm font-semibold text-white">Enviar solicitud</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>

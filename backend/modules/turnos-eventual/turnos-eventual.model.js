@@ -40,8 +40,20 @@ const TurnosEventualModel = {
     return res.affectedRows;
   },
 
-  /** paraQuien: valores de ofertas_turno.para_quien que cuentan para el segmento del período. */
-  async liquidacion(empresaId, periodoId, paraQuien) {
+  /**
+   * tiposTrabajador: valores de trabajadores.tipo que cuentan para el segmento del período
+   * — el tipo del trabajador, no ofertas_turno.para_quien: una oferta 'ambos' la puede
+   * completar cualquiera, y quién la ofrece no dice quién es el trabajador.
+   * trabajadorId (opcional): filtra a un solo trabajador — usado cuando quien consulta es el
+   * propio trabajador_nomina, para que nunca vea la línea de un compañero.
+   */
+  async liquidacion(empresaId, periodoId, tiposTrabajador, trabajadorId) {
+    const params = [periodoId, empresaId, tiposTrabajador];
+    let filtroTrabajador = '';
+    if (trabajadorId != null) {
+      filtroTrabajador = 'AND t.id = ?';
+      params.push(trabajadorId);
+    }
     const [filas] = await pool.query(
       `SELECT
          t.id AS trabajador_id,
@@ -55,11 +67,12 @@ const TurnosEventualModel = {
        JOIN periodos_turno_eventual p ON p.id = ?
        WHERE a.empresa_id = ?
          AND a.estado = 'completado'
-         AND o.para_quien IN (?)
+         AND t.tipo IN (?)
          AND o.fecha BETWEEN p.fecha_inicio AND p.fecha_fin
+         ${filtroTrabajador}
        GROUP BY t.id, t.nombre, t.apellido
        ORDER BY total DESC`,
-      [periodoId, empresaId, paraQuien]
+      params
     );
     return filas;
   },

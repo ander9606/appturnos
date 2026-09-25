@@ -22,6 +22,15 @@ router.get(
   ctrl.listar
 );
 
+// GET /api/nomina/compensatorios/:id/rango — 28 días candidatos con zona de color
+router.get(
+  '/:id/rango',
+  verificarRol(ROLES_GESTOR),
+  param('id').isInt({ min: 1 }),
+  validarCampos,
+  ctrl.rango
+);
+
 // PUT /api/nomina/compensatorios/:id/asignar
 router.put(
   '/:id/asignar',
@@ -31,6 +40,17 @@ router.put(
   body('fechaAsignada').isDate().withMessage('fechaAsignada debe ser YYYY-MM-DD'),
   validarCampos,
   ctrl.asignar
+);
+
+// PUT /api/nomina/compensatorios/:id/reasignar — cambia la fecha ya asignada
+router.put(
+  '/:id/reasignar',
+  verificarRol(ROLES_GESTOR),
+  verificarSuscripcion,
+  param('id').isInt({ min: 1 }),
+  body('fechaAsignada').isDate().withMessage('fechaAsignada debe ser YYYY-MM-DD'),
+  validarCampos,
+  ctrl.reasignar
 );
 
 module.exports = router;

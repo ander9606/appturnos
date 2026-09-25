@@ -53,6 +53,12 @@ export default function RegistroEmpresaScreen() {
   const registrarEmpresa = useAuthStore((s) => s.registrarEmpresa);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
+  // Apple guideline 3.1.1: esta pantalla no se ofrece en iOS (ver login.tsx).
+  // Guard defensivo por si alguien llega por deep link.
+  React.useEffect(() => {
+    if (Platform.OS === 'ios') router.replace('/(auth)/login');
+  }, [router]);
+
   // step: 'datos' | 'otp' — el backend exige email_token, obtenido al verificar el OTP
   const [step, setStep] = React.useState<'datos' | 'otp'>('datos');
   const [otp, setOtp] = React.useState('');
@@ -76,6 +82,10 @@ export default function RegistroEmpresaScreen() {
       nombre: '', apellido: '', email: '', password: '', confirmar: '',
     },
   });
+
+  // Los Hooks de arriba deben ejecutarse siempre en el mismo orden — el
+  // return condicional va después de todos ellos (react-hooks/rules-of-hooks).
+  if (Platform.OS === 'ios') return null;
 
   const onSubmitDatos = async (data: Form) => {
     setServerError(null);
@@ -142,7 +152,7 @@ export default function RegistroEmpresaScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior="height"
     >
       <StatusBar style="light" />
       <ScrollView

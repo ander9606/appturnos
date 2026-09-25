@@ -10,9 +10,10 @@ const EmpresasModel             = require('../../empresas/empresas.model');
 const CompensatoriosService     = require('../compensatorios/compensatorios.service');
 const NotificacionesService     = require('../../notificaciones/notificaciones.service');
 const { pool }                  = require('../../../config/database');
-const { calcularHoras }         = require('../../../utils/laboralUtils');
+const { calcularHoras, esDomingo } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
 const { haversineMetros }       = require('../../../utils/geoUtils');
+const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
 const AppError                  = require('../../../utils/AppError');
 const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
 
@@ -20,6 +21,21 @@ const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
  * El trabajador_nomina solo opera sobre sus propios registros: se resuelve
  * su trabajador y se ignora cualquier trabajador_id que venga en la petición.
  */
+/**
+ * Clasifica un domingo trabajado como ocasional (≤2 en el mes calendario,
+ * Art. 180 CST — solo compensatorio, sin recargo) o habitual (3+, Art. 181 —
+ * recargo + compensatorio). Festivos entre semana siempre son 'habitual':
+ * siempre llevan recargo, la distinción del CST no aplica a ellos.
+ */
+async function clasificarDiaFestivo(empresaId, trabajadorId, fecha) {
+  const domingo = esDomingo(fecha);
+  if (!domingo) return { domingo, clasificacion: 'habitual', recargoFestivo: true, numeroDomingo: null };
+  const previos = await RegistrosModel.contarDomingosTrabajadosEnMes(empresaId, trabajadorId, fecha);
+  const numeroDomingo = previos + 1;
+  const clasificacion = numeroDomingo >= 3 ? 'habitual' : 'ocasional';
+  return { domingo, clasificacion, recargoFestivo: clasificacion === 'habitual', numeroDomingo };
+}
+
 async function resolverTrabajadorPropio(empresaId, usuarioId) {
   const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuarioId);
   if (!trabajador) {
@@ -64,6 +80,41 @@ async function validarGeofence(empresaId, trabajador, latitud, longitud) {
   }
 }
 
+/**
+ * Flags this registro (and any match found) as sospechoso — best-effort, never throws.
+ * Solo dispara si se cumplen las DOS condiciones a la vez: mismo device_id Y
+ * proximidad GPS. Si falta cualquiera de las dos, no hay suficiente señal.
+ */
+async function revisarMarcajeSospechoso(empresaId, registroId, trabajador, fecha, tipo, hora, latitud, longitud, deviceId) {
+  if (latitud == null || longitud == null || deviceId == null) return;
+  try {
+    const cercanos = await RegistrosModel.listarMarcajesCercanos(
+      empresaId, fecha, trabajador.id, tipo, hora, SOSPECHA_VENTANA_SEG
+    );
+    const match = buscarMatch(cercanos, { latitud, longitud, deviceId });
+    if (!match) return;
+
+    await RegistrosModel.marcarSospechoso(empresaId, [registroId, match.registro_id]);
+
+    const otro = await TrabajadoresModel.obtenerPorId(empresaId, match.trabajador_id);
+    const [gestores] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
+      [empresaId]
+    );
+    if (gestores.length > 0) {
+      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+        empresaId,
+        tipo: 'nomina.sospechoso',
+        titulo: 'Posible marcaje fraudulento',
+        mensaje: `${trabajador.nombre} ${trabajador.apellido} y ${otro?.nombre ?? 'otro trabajador'} ${otro?.apellido ?? ''} marcaron desde el mismo dispositivo — revisa sus registros.`,
+        data: { registro_id: registroId, otro_registro_id: match.registro_id, trabajador_id: trabajador.id, otro_trabajador_id: match.trabajador_id },
+      }).catch(() => {});
+    }
+  } catch {
+    // best-effort: un fallo acá no debe impedir que el trabajador marque su entrada/salida.
+  }
+}
+
 /** ISO date of the Monday of the week containing isoDate. */
 function getLunesDeSemana(isoDate) {
   const d = new Date(isoDate + 'T12:00:00Z');
@@ -96,7 +147,13 @@ async function _notificarDecisionReingreso(empresaId, solicitudId, tipo, titulo,
 }
 
 const RegistrosService = {
-  async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, fecha_desde, fecha_hasta, page, limit }) {
+  async obtener(empresaId, registroId) {
+    const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
+    if (!registro) throw new AppError('Registro no encontrado', 404);
+    return registro;
+  },
+
+  async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, fecha_desde, fecha_hasta, sospechoso, page, limit }) {
     let trabajadorId = trabajador_id;
     if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
       trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
@@ -108,10 +165,17 @@ const RegistrosService = {
       fecha,
       fechaDesde: fecha_desde,
       fechaHasta: fecha_hasta,
+      sospechoso,
       limit,
       offset,
     });
     return { data, pagination: { page, limit, total } };
+  },
+
+  /** Descarta un flag de sospechoso tras revisión del gestor. */
+  async descartarSospechoso(empresaId, id) {
+    const affected = await RegistrosModel.descartarSospechoso(empresaId, id);
+    if (!affected) throw new AppError('Registro no encontrado', 404);
   },
 
   async crear(empresaId, usuario, datos) {
@@ -146,11 +210,16 @@ const RegistrosService = {
     const { ordinarias: ordinariasAcumCrear } =
       await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunesCrear, datos.fecha);
 
+    const jornadaContinua = Boolean(datos.jornada_continua);
+    const { clasificacion, recargoFestivo, numeroDomingo } =
+      await clasificarDiaFestivo(empresaId, trabajadorId, datos.fecha);
     const horas = calcularHoras({
       horaEntrada: datos.hora_entrada,
       horaSalida: datos.hora_salida,
       fecha: datos.fecha,
       horasOrdinariasAcumuladas: ordinariasAcumCrear,
+      jornadaContinua,
+      recargoFestivo,
     });
 
     const id = await RegistrosModel.crear(empresaId, {
@@ -166,7 +235,9 @@ const RegistrosService = {
       horas_festivo: horas.horas_festivo,
       es_festivo: horas.es_festivo,
       novedad: datos.novedad || null,
-      tipo_dia: 'ordinario',
+      tipo_dia: datos.tipo_dia || 'ordinario',
+      jornada_continua: jornadaContinua,
+      horas_acumuladas_semana: ordinariasAcumCrear,
     });
 
     // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que marcarSalida.
@@ -177,6 +248,8 @@ const RegistrosService = {
       fecha: datos.fecha,
       esFestivo: Boolean(horas.es_festivo),
       registroId: id,
+      clasificacion,
+      numeroDomingo,
     });
 
     return RegistrosModel.obtenerPorId(empresaId, id);
@@ -212,8 +285,18 @@ const RegistrosService = {
     const { ordinarias: ordinariasAcumCorregir } =
       await RegistrosModel.sumarOrdinariasEnSemana(empresaId, registro.trabajador_id, lunesCorregir, registro.fecha);
 
+    // Si no viene en la corrección, se preserva el flag ya persistido — de lo
+    // contrario cada corregir() reintroduciría el descuento de almuerzo en un
+    // día que el trabajador ya había marcado como jornada continua.
+    const jornadaContinua = datos.jornada_continua !== undefined
+      ? Boolean(datos.jornada_continua)
+      : Boolean(registro.jornada_continua);
+
+    const { clasificacion, recargoFestivo, numeroDomingo } =
+      await clasificarDiaFestivo(empresaId, registro.trabajador_id, registro.fecha);
     const horas = calcularHoras({
       horaEntrada, horaSalida, fecha: registro.fecha, horasOrdinariasAcumuladas: ordinariasAcumCorregir,
+      jornadaContinua, recargoFestivo,
     });
 
     await RegistrosModel.actualizar(empresaId, id, {
@@ -228,7 +311,36 @@ const RegistrosService = {
       novedad: datos.novedad !== undefined ? datos.novedad : registro.novedad,
       tipo_dia: datos.tipo_dia !== undefined ? datos.tipo_dia : registro.tipo_dia,
       aprobado_por: usuario.sub,
+      jornada_continua: jornadaContinua,
+      horas_acumuladas_semana: ordinariasAcumCorregir,
     });
+
+    // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que crear()/
+    // marcarSalida(). Cubre el caso de completar acá (corrección manual) una salida que
+    // el trabajador olvidó marcar: crearSiCorresponde() es idempotente (INSERT IGNORE
+    // sobre origen_registro_id), así que no duplica el compensatorio si ya existía.
+    await CompensatoriosService.crearSiCorresponde(empresaId, {
+      trabajadorId: registro.trabajador_id,
+      periodoId: registro.periodo_id,
+      fecha: registro.fecha,
+      esFestivo: Boolean(horas.es_festivo),
+      registroId: id,
+      clasificacion,
+      numeroDomingo,
+    });
+
+    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(registro.trabajador_id);
+    if (trabajadorUsuarioId) {
+      await NotificacionesService.notificar({
+        empresaId,
+        usuarioId: trabajadorUsuarioId,
+        tipo: 'nomina.correccion',
+        titulo: 'Tu horario fue modificado',
+        mensaje: `Tu horario del ${registro.fecha} fue modificado por ${usuario.nombre || 'tu gestor'}.`,
+        data: { registro_id: id },
+      }).catch(() => {});
+    }
+
     return RegistrosModel.obtenerPorId(empresaId, id);
   },
 
@@ -268,13 +380,14 @@ const RegistrosService = {
   },
 
   /** Clock-in: creates or updates today's registro with hora_entrada = NOW(). */
-  async marcarEntrada(empresaId, usuario, { latitud, longitud } = {}) {
+  async marcarEntrada(empresaId, usuario, { latitud, longitud, device_id: deviceId } = {}) {
     const trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
     const trabajador   = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
 
     await validarGeofence(empresaId, trabajador, latitud, longitud);
 
     const hoy = hoyISO();
+    const horaEntrada = ahoraHHMMSS();
     let periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
     // Si no hay período abierto, auto-crear según tipo_liquidacion de la empresa.
     if (!periodo) periodo = await PeriodosService.autoCrear(empresaId);
@@ -292,14 +405,16 @@ const RegistrosService = {
         if (!solicitud || solicitud.estado !== 'aprobado') {
           throw new AppError('El reingreso debe ser autorizado por el gestor', 403);
         }
-        const reiniciado = await RegistrosModel.iniciarReingreso(empresaId, existing.id, ahoraHHMMSS());
+        const reiniciado = await RegistrosModel.iniciarReingreso(empresaId, existing.id, horaEntrada, latitud, longitud, deviceId);
         if (reiniciado === 0) throw new AppError('No se pudo iniciar el reingreso', 409);
         await SolicitudesReingresoModel.marcarUsada(solicitud.id);
+        await revisarMarcajeSospechoso(empresaId, existing.id, trabajador, hoy, 'entrada', horaEntrada, latitud, longitud, deviceId);
         return RegistrosModel.obtenerPorId(empresaId, existing.id);
       }
       // Registro sin hora_entrada (edge case).
-      const updated = await RegistrosModel.actualizarEntrada(empresaId, existing.id, ahoraHHMMSS());
+      const updated = await RegistrosModel.actualizarEntrada(empresaId, existing.id, horaEntrada, latitud, longitud, deviceId);
       if (updated === 0) throw new AppError('Ya marcaste tu entrada hoy', 409);
+      await revisarMarcajeSospechoso(empresaId, existing.id, trabajador, hoy, 'entrada', horaEntrada, latitud, longitud, deviceId);
       return RegistrosModel.obtenerPorId(empresaId, existing.id);
     }
 
@@ -307,8 +422,12 @@ const RegistrosService = {
       trabajador_id: trabajadorId,
       periodo_id: periodo.id,
       fecha: hoy,
-      hora_entrada: ahoraHHMMSS(),
+      hora_entrada: horaEntrada,
+      latitud,
+      longitud,
+      deviceId,
     });
+    await revisarMarcajeSospechoso(empresaId, id, trabajador, hoy, 'entrada', horaEntrada, latitud, longitud, deviceId);
 
     // Notifica a gestores de nómina que el trabajador marcó entrada (best-effort).
     const [gestoresEntrada] = await pool.query(
@@ -329,16 +448,23 @@ const RegistrosService = {
   },
 
   /** Clock-out: sets hora_salida = NOW() and recalculates hours. */
-  async marcarSalida(empresaId, usuario, registroId, { latitud, longitud } = {}) {
-    const trabajadorId = await resolverTrabajadorPropio(empresaId, usuario.sub);
-
+  async marcarSalida(empresaId, usuario, registroId, { latitud, longitud, device_id: deviceId, jornada_continua: jornadaContinua } = {}) {
     const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
     if (!registro) throw new AppError('Registro no encontrado', 404);
-    if (registro.trabajador_id !== trabajadorId) throw new AppError('No autorizado', 403);
+
+    // Resuelve el trabajador DESDE el registro (registro.trabajador_id) y
+    // compara usuario_id — no busca "cuál es mi trabajador en esta empresa"
+    // por separado (resolverTrabajadorPropio), porque esa búsqueda puede
+    // devolver una fila distinta si el usuario tiene más de una fila en
+    // `trabajadores` para la misma empresa (la tabla no lo impide).
+    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, registro.trabajador_id);
+    if (!trabajador || trabajador.usuario_id !== usuario.sub) {
+      throw new AppError('No autorizado', 403);
+    }
+    const trabajadorId = trabajador.id;
     if (!registro.hora_entrada) throw new AppError('No hay entrada registrada para hoy', 409);
     if (registro.hora_salida)   throw new AppError('Ya marcaste tu salida para hoy', 409);
 
-    const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
     await validarGeofence(empresaId, trabajador, latitud, longitud);
 
     const periodo = await PeriodosModel.obtenerPorId(empresaId, registro.periodo_id);
@@ -361,11 +487,15 @@ const RegistrosService = {
         ? Number(registro.horas_ordinarias) + Number(registro.horas_nocturnas)
         : 0);
 
+    const { clasificacion, recargoFestivo, numeroDomingo } =
+      await clasificarDiaFestivo(empresaId, trabajadorId, registro.fecha);
     const horasSesion = calcularHoras({
       horaEntrada: registro.hora_entrada,
       horaSalida,
       fecha: registro.fecha,
       horasOrdinariasAcumuladas: ordinariasBase,
+      jornadaContinua: Boolean(jornadaContinua),
+      recargoFestivo,
     });
 
     // Totales del día = sesiones previas + esta sesión.
@@ -382,9 +512,16 @@ const RegistrosService = {
 
     const updated = await RegistrosModel.actualizarSalida(empresaId, registroId, {
       hora_salida: horaSalida,
+      latitud,
+      longitud,
+      deviceId,
       ...horas,
+      jornada_continua: Boolean(jornadaContinua),
+      horas_acumuladas_semana: ordinariasAcum,
     });
     if (updated === 0) throw new AppError('Ya marcaste tu salida para hoy', 409);
+
+    await revisarMarcajeSospechoso(empresaId, registroId, trabajador, registro.fecha, 'salida', horaSalida, latitud, longitud, deviceId);
 
     // Notifica a gestores de nómina que el trabajador marcó salida (best-effort).
     const [gestoresSalida] = await pool.query(
@@ -408,6 +545,8 @@ const RegistrosService = {
       fecha: registro.fecha,
       esFestivo: Boolean(horas.es_festivo),
       registroId,
+      clasificacion,
+      numeroDomingo,
     });
 
     const registroFinal = await RegistrosModel.obtenerPorId(empresaId, registroId);

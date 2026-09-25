@@ -4,7 +4,7 @@ const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { body, param, query } = require('express-validator');
 
-const { validar } = require('../../../middleware/validator');
+const { validar, rangoFechasMax } = require('../../../middleware/validator');
 const { verificarToken, verificarRol, resolverEmpresasActivas } = require('../../../middleware/authMiddleware');
 const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES, ESTADOS_OFERTA } = require('../../../config/constants');
@@ -59,6 +59,14 @@ function reglasOferta({ parcial }) {
       .optional({ values: 'falsy' })
       .isFloat({ min: -180, max: 180 })
       .withMessage('longitud inválida'),
+    // Turno sin restricción geográfica al marcar ingreso/egreso (ej. rutas,
+    // entregas, mandados) — gana sobre el tipo_geofence del cargo asignado.
+    body('ubicacion_libre').optional().isBoolean().withMessage('ubicacion_libre inválido'),
+    // Puntos zonales acotados para este turno (migración 099) — a diferencia de
+    // puestos/destinatarios, sí se acepta en el PUT de actualizar: el gestor
+    // puede ajustar las zonas válidas de un turno ya creado.
+    body('punto_marcaje_ids').optional().isArray().withMessage('punto_marcaje_ids debe ser un array'),
+    body('punto_marcaje_ids.*').isInt({ min: 1 }).withMessage('punto_marcaje_ids inválido'),
     // Puestos y destinatarios solo se aceptan en crear (no en PUT de actualizar
     // — todavía no se soporta editar destinatarios de una oferta ya creada).
     ...(parcial
@@ -89,9 +97,12 @@ router.get(
   [
     query('estado').optional().isIn(ESTADOS_OFERTA).withMessage('estado inválido'),
     query('fecha').optional().isISO8601().withMessage('fecha inválida'),
+    query('fecha_desde').optional().isISO8601().withMessage('fecha_desde inválida'),
+    query('fecha_hasta').optional().isISO8601().withMessage('fecha_hasta inválida'),
+    rangoFechasMax(60, 'fecha_desde', 'fecha_hasta'),
     query('para_quien').optional().isIn(['turnos','nomina','ambos']).withMessage('para_quien inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
+    query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('limit inválido'),
   ],
   validar,
   ctrl.listar
@@ -123,6 +134,9 @@ router.put(
 
 // POST /api/turnos/ofertas/:id/publicar  — pasa una oferta de 'borrador' a 'publicada'
 router.post('/:id/publicar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.publicar);
+
+// POST /api/turnos/ofertas/:id/completar  — jefe/admin marca la oferta como completada a mano
+router.post('/:id/completar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.completar);
 
 // DELETE /api/turnos/ofertas/:id  (cancelar)
 router.delete('/:id', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.cancelar);
@@ -176,13 +190,17 @@ router.post(
   ctrl.cerrar
 );
 
-// POST /api/turnos/ofertas/:id/duplicar  — copia la oferta a una nueva fecha
+// POST /api/turnos/ofertas/:id/duplicar  — copia la oferta a una nueva fecha/hora
 router.post(
   '/:id/duplicar',
   crearOfertaLimiter,
   verificarRol(GESTIONAR),
   verificarSuscripcion,
-  [idParam, body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)')],
+  [
+    idParam,
+    body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)'),
+    body('hora_inicio').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_inicio inválida (HH:MM)'),
+  ],
   validar,
   ctrl.duplicar
 );

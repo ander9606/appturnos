@@ -1,6 +1,33 @@
 import { api } from './client';
+import type { PlanEmpresa } from './admin';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────
+
+/** Un plan tal como lo ve el admin_empresa: con el precio que pagaría hoy. */
+export interface PlanOpcion {
+  codigo: PlanEmpresa;
+  nombre: string;
+  max_trabajadores: number | null;
+  incluidos: number | null;
+  precio_adicional_cop: number | null;
+  /** Precio mensual con sus trabajadores activos actuales (incluye adicionales). */
+  precio_mensual_cop: number;
+  /** false si el tope del plan es menor que sus trabajadores activos. */
+  disponible: boolean;
+}
+
+export interface Suscripcion {
+  activa: boolean;
+  plan: PlanEmpresa;
+  vigente_hasta: string | null;
+  dias_restantes: number | null;
+  origen: 'logiq360' | 'directo';
+  logiq360_conectado: boolean;
+  trabajadores_activos: number;
+  /** Tope del plan actual; null = sin tope. */
+  max_trabajadores: number | null;
+  planes: PlanOpcion[];
+}
 
 export interface EmpresaDirectorio {
   id: number;
@@ -10,6 +37,8 @@ export interface EmpresaDirectorio {
   logo_url: string | null;
   descripcion: string | null;
   acepta_postulaciones: boolean;
+  /** Cargos activos en la empresa — informativo, la empresa decide cuál asignar al aprobar. */
+  cargos: { id: number; nombre: string }[];
 }
 
 export type TipoLiquidacion = 'mensual' | 'quincenal' | 'semanal';
@@ -65,19 +94,16 @@ export const empresasApi = {
     return api.patch<Empresa>('/api/empresas/me', datos);
   },
 
-  obtenerSuscripcion(): Promise<{
-    activa: boolean;
-    plan: string;
-    vigente_hasta: string | null;
-    dias_restantes: number | null;
-    origen: 'logiq360' | 'directo';
-    logiq360_conectado: boolean;
-  }> {
+  obtenerSuscripcion(): Promise<Suscripcion> {
     return api.get('/api/empresas/suscripcion');
   },
 
-  /** Autoservicio: admin_empresa genera su propio link de pago Wompi (precio único). */
-  generarLinkPago(payload: { meses?: number } = {}): Promise<{ url: string; referencia: string; monto_cop: number; expira_at: string }> {
+  /**
+   * Autoservicio: admin_empresa genera su propio link de pago Wompi.
+   * Sin `plan` renueva el actual; con `plan` amplía (o reduce) — el backend
+   * rechaza (422) un plan cuyo tope no admite sus trabajadores activos.
+   */
+  generarLinkPago(payload: { meses?: number; plan?: PlanEmpresa } = {}): Promise<{ url: string; referencia: string; plan: PlanEmpresa; monto_cop: number; expira_at: string }> {
     return api.post('/api/empresas/suscripcion/pagar', payload);
   },
 };

@@ -1,6 +1,6 @@
 /**
  * Lista de todas las empresas — panel super_admin.
- * Permite buscar, filtrar por plan/estado y navegar al detalle.
+ * Permite buscar, filtrar por estado y navegar al detalle.
  */
 import React, { useState, useCallback } from 'react';
 import {
@@ -17,21 +17,7 @@ import { useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useAdminEmpresas } from '@/features/admin/useAdmin';
-import type { PlanEmpresa } from '@api-client';
-
-// ── Constants ─────────────────────────────────────────────────────────────
-
-const PLAN_LABELS: Record<PlanEmpresa, string> = {
-  basico: 'Básico',
-  profesional: 'Pro',
-  empresarial: 'Emp.',
-};
-
-const PLAN_COLORS: Record<PlanEmpresa, string> = {
-  basico: '#94A3B8',
-  profesional: '#3B82F6',
-  empresarial: '#8B5CF6',
-};
+import { formatCOP } from '@/lib/formatters';
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -184,7 +170,6 @@ export default function EmpresasScreen() {
         )}
 
         {empresas.map((empresa) => {
-          const planColor = PLAN_COLORS[empresa.plan] ?? '#94A3B8';
           const isActiva = empresa.activo === 1;
 
           return (
@@ -223,14 +208,18 @@ export default function EmpresasScreen() {
                   </Text>
                 </View>
 
-                {/* Plan badge */}
-                <View
-                  className="rounded-lg px-2.5 py-1"
-                  style={{ backgroundColor: planColor + '20' }}
-                >
-                  <Text className="text-xs font-bold" style={{ color: planColor }}>
-                    {PLAN_LABELS[empresa.plan]}
+                {/* Ingresos */}
+                <View className="items-end gap-1">
+                  <Text className="text-sm font-bold text-foreground">
+                    {formatCOP(empresa.ingresos_totales_cop ?? 0)}
                   </Text>
+                  {empresa.logiq360_conectado && (
+                    <View className="rounded-lg px-2 py-0.5" style={{ backgroundColor: '#22C55E20' }}>
+                      <Text className="text-[10px] font-bold" style={{ color: '#16A34A' }}>
+                        🔗 logiq360
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
 

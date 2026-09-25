@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -9,13 +9,24 @@ import {
   useActualizarPuesto,
   useEliminarPuesto,
   usePublicarOferta,
+  useCompletarOferta,
   useConfirmarAsignacion,
   useRechazarAsignacion,
   useCancelarAsignacion,
   useNoPresentado,
+  useCorregirAsignacion,
+  useAgregarBono,
   useCalificar,
+  useDescartarSospechosoAsignacion,
 } from '../hooks/useTurnos';
 import { useCargos } from '@/modules/configuracion/hooks/useConfiguracion';
+import { turnosApi } from '../api/turnosApi';
+import { descargarBlob } from '@/shared/lib/download';
+import { toast } from 'sonner';
+import { ErrorState } from '@/shared/components/ErrorState';
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto } from '../types';
 import { fmtDate, fmtCOP } from '@/shared/lib/format';
 
@@ -62,28 +73,52 @@ export function OfertaDetailPage() {
   const navigate = useNavigate();
 
   const [filtroAsig, setFiltroAsig] = useState<EstadoAsignacion | undefined>(undefined);
+  const [soloSospechosos, setSoloSospechosos] = useState(false);
   const [puestoEditando, setPuestoEditando] = useState<Puesto | null>(null);
   const [showPuestoForm, setShowPuestoForm] = useState(false);
   const [calificandoId, setCalificandoId] = useState<number | null>(null);
+  const [corrigiendoAsig, setCorrigiendoAsig] = useState<Asignacion | null>(null);
+  const [bonoAsig, setBonoAsig] = useState<Asignacion | null>(null);
+  const [descargandoContratoId, setDescargandoContratoId] = useState<number | null>(null);
 
-  const { data: ofertaData, isLoading } = useOferta(ofertaId);
+  async function handleDescargarContrato(asignacionId: number) {
+    setDescargandoContratoId(asignacionId);
+    try {
+      const blob = await turnosApi.descargarContratoPorAsignacion(asignacionId);
+      descargarBlob(blob, `contrato-turno-${asignacionId}.pdf`);
+    } catch {
+      toast.error('No se pudo descargar el contrato.');
+    } finally {
+      setDescargandoContratoId(null);
+    }
+  }
+
+  const { data: ofertaData, isLoading, isError, error, refetch } = useOferta(ofertaId);
   const oferta = ofertaData?.data;
+  const { confirmState, confirm, close } = useConfirm();
 
   const { data: puestosData } = usePuestos(ofertaId);
   const puestos: Puesto[] = puestosData?.data ?? oferta?.puestos ?? [];
 
   const { data: asigData, isLoading: loadingAsig } = useAsignaciones({
     oferta_id: ofertaId,
-    estado: filtroAsig,
+    estado: soloSospechosos ? undefined : filtroAsig,
+    sospechoso: soloSospechosos || undefined,
   });
   const asignaciones: Asignacion[] = asigData?.data?.data ?? [];
 
+  // Conteo de sospechosos independiente del filtro de estado — para mostrar el badge del toggle.
+  const { data: sospechososData } = useAsignaciones({ oferta_id: ofertaId, sospechoso: true, limit: 1 });
+  const totalSospechosos = sospechososData?.data?.pagination?.total ?? 0;
+
   const eliminarPuesto = useEliminarPuesto();
   const publicar = usePublicarOferta();
+  const completar = useCompletarOferta();
   const confirmar = useConfirmarAsignacion();
   const rechazar = useRechazarAsignacion();
   const cancelarAsig = useCancelarAsignacion();
   const noPresentado = useNoPresentado();
+  const descartarSospechoso = useDescartarSospechosoAsignacion();
 
   const calificandoAsig = calificandoId !== null
     ? asignaciones.find(a => a.id === calificandoId) ?? null
@@ -92,6 +127,7 @@ export function OfertaDetailPage() {
   const canEditPuestos = oferta?.estado === 'borrador' || oferta?.estado === 'abierta';
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-12 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!oferta) return <p className="text-muted-foreground text-sm py-12 text-center">Oferta no encontrada</p>;
 
   return (
@@ -160,17 +196,34 @@ export function OfertaDetailPage() {
               <button
                 onClick={() => {
                   if (puestos.length === 0) {
-                    window.alert('Agrega al menos un puesto antes de publicar.');
+                    toast.error('Agrega al menos un puesto antes de publicar.');
                     return;
                   }
-                  if (window.confirm('¿Publicar esta oferta? Será visible para el pool de trabajadores.')) {
-                    publicar.mutate(ofertaId);
-                  }
+                  confirm({
+                    title: 'Publicar oferta',
+                    detail: 'Será visible para el pool de trabajadores que califican para sus puestos.',
+                    confirmLabel: 'Publicar',
+                    onConfirm: () => { publicar.mutate(ofertaId); close(); },
+                  });
                 }}
                 disabled={publicar.isPending}
                 className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
               >
                 <Send size={14} /> {publicar.isPending ? 'Publicando...' : 'Publicar oferta'}
+              </button>
+            )}
+            {!['borrador', 'completada', 'cancelada'].includes(oferta.estado) && (
+              <button
+                onClick={() => confirm({
+                  title: 'Marcar como completada',
+                  detail: 'Úsalo cuando el turno ya terminó en la realidad, sin importar si todas las asignaciones están cerradas en el sistema.',
+                  confirmLabel: 'Marcar completada',
+                  onConfirm: () => { completar.mutate(ofertaId); close(); },
+                })}
+                disabled={completar.isPending}
+                className="flex items-center gap-1.5 bg-success hover:bg-success/90 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <CheckCircle2 size={14} /> {completar.isPending ? 'Marcando...' : 'Marcar completada'}
               </button>
             )}
           </div>
@@ -221,10 +274,12 @@ export function OfertaDetailPage() {
                           <Pencil size={13} />
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`¿Eliminar puesto "${p.cargo_nombre}"?`))
-                              eliminarPuesto.mutate({ ofertaId, puestoId: p.id });
-                          }}
+                          onClick={() => confirm({
+                            title: 'Eliminar puesto',
+                            detail: `¿Eliminar el puesto "${p.cargo_nombre}"? Esta acción no se puede deshacer.`,
+                            confirmLabel: 'Eliminar',
+                            onConfirm: () => { eliminarPuesto.mutate({ ofertaId, puestoId: p.id }); close(); },
+                          })}
                           className="text-muted-foreground/50 hover:text-danger transition-colors"
                         >
                           <Trash2 size={13} />
@@ -256,12 +311,26 @@ export function OfertaDetailPage() {
 
         {/* RIGHT — Asignaciones */}
         <div className="flex-1 min-w-0 flex flex-col">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 gap-2">
             <h2 className="text-sm font-semibold text-foreground">Asignaciones</h2>
-            <span className="text-xs text-muted-foreground">{asignaciones.length} resultado{asignaciones.length !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-2">
+              {(totalSospechosos > 0 || soloSospechosos) && (
+                <button
+                  onClick={() => setSoloSospechosos(v => !v)}
+                  className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border transition-colors ${
+                    soloSospechosos
+                      ? 'bg-warning-light text-warning border-warning/40'
+                      : 'border-border text-muted-foreground hover:text-warning hover:border-warning/40'
+                  }`}
+                >
+                  <AlertTriangle size={12} /> Sospechosos ({totalSospechosos})
+                </button>
+              )}
+              <span className="text-xs text-muted-foreground">{asignaciones.length} resultado{asignaciones.length !== 1 ? 's' : ''}</span>
+            </div>
           </div>
 
-          <div className="flex gap-1 mb-3 border-b border-border overflow-x-auto">
+          <div className={`flex gap-1 mb-3 border-b border-border overflow-x-auto ${soloSospechosos ? 'opacity-40 pointer-events-none' : ''}`}>
             {FILTROS_ASIG.map(f => (
               <button
                 key={String(f.value)}
@@ -307,7 +376,16 @@ export function OfertaDetailPage() {
                           {ESTADO_ASIG_LABEL[a.estado]}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">{a.hora_ingreso_real ?? '—'}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          {a.hora_ingreso_real ?? '—'}
+                          {a.sospechoso === 1 && (
+                            <AlertTriangle size={13} className="text-warning shrink-0">
+                              <title>Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador</title>
+                            </AlertTriangle>
+                          )}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">{a.hora_egreso_real ?? '—'}</td>
                       <td className="px-4 py-3 text-center text-muted-foreground">
                         {a.calificacion != null ? (
@@ -325,7 +403,12 @@ export function OfertaDetailPage() {
                                 Confirmar
                               </button>
                               <button
-                                onClick={() => { if (window.confirm('¿Rechazar esta postulación?')) rechazar.mutate(a.id); }}
+                                onClick={() => confirm({
+                                  title: 'Rechazar postulación',
+                                  detail: `¿Rechazar la postulación de ${a.trabajador_nombre} ${a.trabajador_apellido}?`,
+                                  confirmLabel: 'Rechazar',
+                                  onConfirm: () => { rechazar.mutate(a.id); close(); },
+                                })}
                                 className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
                               >
                                 Rechazar
@@ -334,7 +417,12 @@ export function OfertaDetailPage() {
                           )}
                           {a.estado === 'confirmado' && (
                             <button
-                              onClick={() => { if (window.confirm('¿Cancelar esta asignación confirmada?')) cancelarAsig.mutate(a.id); }}
+                              onClick={() => confirm({
+                                title: 'Cancelar asignación',
+                                detail: `¿Cancelar la asignación confirmada de ${a.trabajador_nombre} ${a.trabajador_apellido}?`,
+                                confirmLabel: 'Cancelar asignación',
+                                onConfirm: () => { cancelarAsig.mutate(a.id); close(); },
+                              })}
                               className="text-xs text-muted-foreground hover:bg-muted px-2 py-1 rounded transition-colors"
                             >
                               Cancelar
@@ -342,7 +430,12 @@ export function OfertaDetailPage() {
                           )}
                           {(a.estado === 'confirmado' || a.estado === 'en_progreso') && (
                             <button
-                              onClick={() => { if (window.confirm('¿Marcar como no presentado?')) noPresentado.mutate(a.id); }}
+                              onClick={() => confirm({
+                                title: 'Marcar como no presentado',
+                                detail: `¿Marcar a ${a.trabajador_nombre} ${a.trabajador_apellido} como no presentado? Esto puede afectar su ranking.`,
+                                confirmLabel: 'Marcar no presentado',
+                                onConfirm: () => { noPresentado.mutate(a.id); close(); },
+                              })}
                               className="text-xs text-danger hover:bg-danger-light px-2 py-1 rounded transition-colors"
                             >
                               NP
@@ -354,6 +447,50 @@ export function OfertaDetailPage() {
                               className="flex items-center gap-1 text-xs text-warning hover:bg-warning-light px-2 py-1 rounded transition-colors"
                             >
                               <Star size={11} /> Calificar
+                            </button>
+                          )}
+                          {a.estado === 'completado' && (
+                            <button
+                              onClick={() => handleDescargarContrato(a.id)}
+                              disabled={descargandoContratoId === a.id}
+                              className="text-muted-foreground/60 hover:text-info transition-colors p-1 disabled:opacity-50"
+                              title="Descargar contrato"
+                              aria-label="Descargar contrato"
+                            >
+                              {descargandoContratoId === a.id
+                                ? <Loader2 size={13} className="animate-spin" />
+                                : <Download size={13} />}
+                            </button>
+                          )}
+                          {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
+                            <button
+                              onClick={() => setCorrigiendoAsig(a)}
+                              className="text-muted-foreground/60 hover:text-info transition-colors p-1"
+                              title="Corregir ingreso/egreso"
+                              aria-label="Corregir ingreso/egreso"
+                            >
+                              <Clock size={13} />
+                            </button>
+                          )}
+                          {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
+                            <button
+                              onClick={() => setBonoAsig(a)}
+                              className={`transition-colors p-1 ${(a.bono_monto ?? 0) > 0 ? 'text-warning' : 'text-muted-foreground/60 hover:text-warning'}`}
+                              title={(a.bono_monto ?? 0) > 0 ? `Bono: ${fmtCOP(a.bono_monto ?? 0)}` : 'Agregar bono extra'}
+                              aria-label="Agregar o editar bono extra"
+                            >
+                              <Gift size={13} />
+                            </button>
+                          )}
+                          {a.sospechoso === 1 && (
+                            <button
+                              onClick={() => descartarSospechoso.mutate(a.id)}
+                              disabled={descartarSospechoso.isPending}
+                              className="text-warning/70 hover:text-warning transition-colors p-1 disabled:opacity-50"
+                              title="Descartar: ya lo revisé, no es fraude"
+                              aria-label="Descartar marcaje sospechoso"
+                            >
+                              <X size={13} />
                             </button>
                           )}
                         </div>
@@ -379,6 +516,30 @@ export function OfertaDetailPage() {
         <CalificarModal
           asignacion={calificandoAsig}
           onClose={() => setCalificandoId(null)}
+        />
+      )}
+
+      {corrigiendoAsig && (
+        <CorregirAsignacionModal
+          asignacion={corrigiendoAsig}
+          onClose={() => setCorrigiendoAsig(null)}
+        />
+      )}
+
+      {bonoAsig && (
+        <BonoAsignacionModal
+          asignacion={bonoAsig}
+          onClose={() => setBonoAsig(null)}
+        />
+      )}
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
         />
       )}
     </div>
@@ -426,73 +587,215 @@ function PuestoFormModal({
   const isPending = crear.isPending || actualizar.isPending;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          {puesto ? 'Editar puesto' : 'Nuevo puesto'}
-        </h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-4">
+        {puesto ? 'Editar puesto' : 'Nuevo puesto'}
+      </h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Cargo *</label>
+          <select
+            required
+            disabled={!!puesto}
+            value={form.cargo_id}
+            onChange={e => setForm(f => ({ ...f, cargo_id: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground"
+          >
+            <option value="">Seleccionar cargo...</option>
+            {cargos.filter(c => c.activo).map(c => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Cargo *</label>
-            <select
-              required
-              disabled={!!puesto}
-              value={form.cargo_id}
-              onChange={e => setForm(f => ({ ...f, cargo_id: e.target.value }))}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground"
-            >
-              <option value="">Seleccionar cargo...</option>
-              {cargos.filter(c => c.activo).map(c => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Plazas *</label>
-              <input
-                required
-                type="number"
-                min="1"
-                value={form.plazas}
-                onChange={e => setForm(f => ({ ...f, plazas: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Tarifa/día (COP) *</label>
-              <input
-                required
-                type="number"
-                min="0"
-                step="any"
-                value={form.tarifa_dia}
-                onChange={e => setForm(f => ({ ...f, tarifa_dia: e.target.value }))}
-                className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Notas</label>
+            <label className="block text-sm font-medium text-foreground mb-1">Plazas *</label>
             <input
-              type="text"
-              maxLength={255}
-              value={form.notas}
-              onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
+              required
+              type="number"
+              min="1"
+              value={form.plazas}
+              onChange={e => setForm(f => ({ ...f, plazas: e.target.value }))}
               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
-              Cancelar
-            </button>
-            <button type="submit" disabled={isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {isPending ? 'Guardando...' : puesto ? 'Guardar' : 'Agregar'}
-            </button>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Tarifa/día (COP) *</label>
+            <input
+              required
+              type="number"
+              min="0"
+              step="any"
+              value={form.tarifa_dia}
+              onChange={e => setForm(f => ({ ...f, tarifa_dia: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Notas</label>
+          <input
+            type="text"
+            maxLength={255}
+            value={form.notas}
+            onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {isPending ? 'Guardando...' : puesto ? 'Guardar' : 'Agregar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ── Corregir ingreso/egreso ── */
+// Sin conversión vía Date/toISOString a propósito — el valor de datetime-local
+// ya es hora local sin timezone, y el backend guarda el string tal cual llega
+// (mismo criterio que ahoraColombiaSQL() en el backend: evita desfases de zona horaria).
+function toDatetimeLocal(s: string | null): string {
+  return s ? s.replace(' ', 'T').slice(0, 16) : '';
+}
+
+function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; onClose: () => void }) {
+  const corregir = useCorregirAsignacion();
+  const [ingreso, setIngreso] = useState(toDatetimeLocal(asignacion.hora_ingreso_real));
+  const [egreso, setEgreso] = useState(toDatetimeLocal(asignacion.hora_egreso_real));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (ingreso && egreso && egreso <= ingreso) {
+      toast.error('La hora de egreso debe ser posterior al ingreso');
+      return;
+    }
+
+    // Asegura que la fecha sea siempre la del turno, solo cambia la hora
+    const fechaTurno = asignacion.oferta_fecha;
+    const ensureDate = (datetime: string): string | undefined => {
+      if (!datetime) return undefined;
+      const hora = datetime.slice(11, 16); // Extrae "HH:MM"
+      return `${fechaTurno}T${hora}:00`;
+    };
+
+    await corregir.mutateAsync({
+      id: asignacion.id,
+      hora_ingreso_real: ensureDate(ingreso),
+      hora_egreso_real: ensureDate(egreso),
+    });
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Corregir ingreso/egreso</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {asignacion.trabajador_nombre} {asignacion.trabajador_apellido} · {asignacion.cargo_nombre}
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Ingreso</label>
+          <input
+            type="datetime-local"
+            value={ingreso}
+            onChange={e => setIngreso(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Egreso</label>
+          <input
+            type="datetime-local"
+            value={egreso}
+            onChange={e => setEgreso(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Solo se modifica la hora (la fecha siempre será {asignacion.oferta_fecha}). Dejar un campo vacío no lo modifica. Con ambos definidos, el turno se marca completado y recalcula el pago.
+        </p>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={corregir.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {corregir.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ── Bono extra ── */
+function BonoAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; onClose: () => void }) {
+  const agregarBono = useAgregarBono();
+  const [monto, setMonto] = useState(String(asignacion.bono_monto ?? ''));
+  const [motivo, setMotivo] = useState(asignacion.bono_motivo ?? '');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const montoNum = Number(monto) || 0;
+    if (montoNum > 0 && !motivo.trim()) {
+      toast.error('Escribe el motivo del bono.');
+      return;
+    }
+    await agregarBono.mutateAsync({ id: asignacion.id, monto: montoNum, motivo: motivo.trim() || undefined });
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Bono extra</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {asignacion.trabajador_nombre} {asignacion.trabajador_apellido} · {asignacion.cargo_nombre}
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Monto (COP)</label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            value={monto}
+            onChange={e => setMonto(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Motivo</label>
+          <input
+            type="text"
+            maxLength={255}
+            value={motivo}
+            onChange={e => setMotivo(e.target.value)}
+            placeholder="Ej. propina del cliente"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Se suma al pago del turno y queda registrado en el contrato. Deja el monto en 0 para quitarlo.
+        </p>
+        {asignacion.contrato_firmado === 1 && (
+          <p className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-lg px-3 py-2">
+            El contrato de este turno ya fue firmado. Si cambias el bono, el trabajador deberá volver a firmarlo.
+          </p>
+        )}
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={agregarBono.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {agregarBono.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -509,46 +812,44 @@ function CalificarModal({ asignacion, onClose }: { asignacion: Asignacion; onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-lg font-semibold text-foreground mb-1">Calificar trabajador</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
-        </p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">Calificación</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map(n => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setCalificacion(n)}
-                  className={`w-10 h-10 rounded-lg text-lg transition-colors ${n <= calificacion ? 'bg-warning text-white' : 'bg-muted text-muted-foreground/60'}`}
-                >
-                  ★
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Comentario</label>
-            <textarea
-              rows={2}
-              value={comentario}
-              onChange={e => setComentario(e.target.value)}
-              maxLength={500}
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
-            />
-          </div>
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Calificar trabajador</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {asignacion.trabajador_nombre} {asignacion.trabajador_apellido}
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-2">Calificación</label>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" disabled={calificar.isPending} className="flex-1 bg-warning hover:bg-warning/80 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {calificar.isPending ? 'Guardando...' : 'Guardar'}
-            </button>
+            {[1, 2, 3, 4, 5].map(n => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setCalificacion(n)}
+                className={`w-10 h-10 rounded-lg text-lg transition-colors ${n <= calificacion ? 'bg-warning text-white' : 'bg-muted text-muted-foreground/60'}`}
+              >
+                ★
+              </button>
+            ))}
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Comentario</label>
+          <textarea
+            rows={2}
+            value={comentario}
+            onChange={e => setComentario(e.target.value)}
+            maxLength={500}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+          <button type="submit" disabled={calificar.isPending} className="flex-1 bg-warning hover:bg-warning/80 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {calificar.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

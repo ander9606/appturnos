@@ -108,7 +108,9 @@ function SolicitudCard({
   onRechazar: (id: number) => void;
   loadingId: number | null;
 }) {
-  const isPending = solicitud.estado === 'solicitado_por_trabajador' || solicitud.estado === 'solicitado_por_empresa';
+  const esSolicitadaPorTrabajador = solicitud.estado === 'solicitado_por_trabajador';
+  const esInvitadaPorEmpresa      = solicitud.estado === 'solicitado_por_empresa';
+  const isPending = esSolicitadaPorTrabajador || esInvitadaPorEmpresa;
   const isActivo  = solicitud.estado === 'activo';
   const loading   = loadingId === solicitud.id;
 
@@ -185,7 +187,11 @@ function SolicitudCard({
         </View>
       )}
 
-      {/* Acciones — solo para pendientes */}
+      {/* Acciones — solo para pendientes. "Aprobar" solo aplica cuando el
+          trabajador solicitó unirse: si la invitación la mandó la empresa
+          (incluida una oferta de nómina), lo único que le corresponde al
+          gestor es cancelarla — quien "aprueba" ahí es el trabajador,
+          aceptándola desde su cuenta. */}
       {isPending && (
         <View className="flex-row gap-2 px-4 pb-4">
           <TouchableOpacity
@@ -193,19 +199,23 @@ function SolicitudCard({
             disabled={loading}
             className="flex-1 h-10 rounded-xl border border-border items-center justify-center active:opacity-70"
           >
-            <Text className="text-sm font-semibold text-muted-foreground">Rechazar</Text>
+            <Text className="text-sm font-semibold text-muted-foreground">
+              {esInvitadaPorEmpresa ? 'Cancelar invitación' : 'Rechazar'}
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => onAprobar(solicitud.id)}
-            disabled={loading}
-            className="flex-1 h-10 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text className="text-sm font-semibold text-white">Aprobar</Text>
-            )}
-          </TouchableOpacity>
+          {esSolicitadaPorTrabajador && (
+            <TouchableOpacity
+              onPress={() => onAprobar(solicitud.id)}
+              disabled={loading}
+              className="flex-1 h-10 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text className="text-sm font-semibold text-white">Aprobar</Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -256,9 +266,17 @@ export default function SolicitudesScreen() {
   const aprobadosCount  = tab === 'aprobadas'  ? solicitudes.length : 0;
 
   const handleAprobar = (id: number) => {
+    const solicitud = solicitudes.find((s) => s.id === id);
     setCargoModalId(id);
     setVinculoAprobadoId(null);
-    setSelectedCargoIds([]);
+    // Premarca los cargos que el trabajador dijo que le interesaban al
+    // solicitar — solo una sugerencia, el gestor puede destildarlos o
+    // marcar otros antes de confirmar. Se filtra contra cargosActivos: un
+    // cargo que el trabajador marcó pero que luego se desactivó no debe
+    // quedar seleccionado (no aparece en la lista para destildarlo, y el
+    // backend rechazaría asignar un cargo inactivo).
+    const cargosActivosIds = new Set(cargosActivos.map((c) => c.id));
+    setSelectedCargoIds((solicitud?.cargos_interes ?? []).filter((cid) => cargosActivosIds.has(cid)));
     setCargosAsignados([]);
     setCargoError(null);
   };
@@ -446,6 +464,11 @@ export default function SolicitudesScreen() {
                   {!!item.descripcion && (
                     <Text className="text-xs text-muted-foreground" numberOfLines={1}>
                       {item.descripcion}
+                    </Text>
+                  )}
+                  {solicitudEnModal?.cargos_interes?.includes(item.id) && (
+                    <Text className="text-[11px] text-primary-500 font-medium mt-0.5">
+                      El trabajador lo marcó de interés
                     </Text>
                   )}
                 </View>

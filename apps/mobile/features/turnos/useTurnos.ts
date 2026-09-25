@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi, cargosApi } from '@api-client';
-import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
+import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, ActualizarOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
 import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/lib/formatters';
+import { getDeviceId } from '@/lib/deviceId';
 
 // ── Query keys ────────────────────────────────────────────────────────────
 
@@ -111,11 +112,33 @@ export function usePostulacionesPendientes(opts: { enabled?: boolean } = {}) {
   });
 }
 
-/** Asignaciones ya confirmadas de toda la empresa — pestaña "Confirmados" del inbox. */
+/**
+ * Todo lo que alguna vez se aceptó, de toda la empresa — pestaña "Aceptados" del
+ * inbox. No solo 'confirmado': una vez que el turno pasa (o el worker/gestor lo
+ * cierra), queda en 'en_progreso'/'completado'/'no_presentado' — si el filtro
+ * fuera solo 'confirmado' esos turnos desaparecerían de la lista en cuanto se
+ * resolvieran, en vez de quedar como historial de lo aceptado.
+ */
+const ESTADOS_ACEPTADOS = ['confirmado', 'en_progreso', 'completado', 'no_presentado'] as const;
+
 export function useAsignacionesConfirmadas(opts: { enabled?: boolean } = {}) {
   return useQuery({
-    queryKey: QUERY_KEYS.asignaciones({ estado: 'confirmado' }),
-    queryFn:  () => turnosApi.listarAsignaciones({ estado: 'confirmado', limit: 200 }),
+    queryKey: QUERY_KEYS.asignaciones({ estado: ESTADOS_ACEPTADOS.join(',') }),
+    queryFn:  () => turnosApi.listarAsignaciones({ estado: [...ESTADOS_ACEPTADOS], limit: 200 }),
+    staleTime: 30_000,
+    enabled:  opts.enabled ?? true,
+  });
+}
+
+/**
+ * Postulaciones rechazadas de toda la empresa — pestaña "Rechazados" del inbox.
+ * Rechazar deja estado='cancelado' (mismo estado que cancelar un confirmado);
+ * se distingue por rechazado_por, filtrado client-side en el consumidor.
+ */
+export function useAsignacionesRechazadas(opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: QUERY_KEYS.asignaciones({ estado: 'cancelado', origen: 'rechazo' }),
+    queryFn:  () => turnosApi.listarAsignaciones({ estado: 'cancelado', limit: 200 }),
     staleTime: 30_000,
     enabled:  opts.enabled ?? true,
   });
@@ -170,13 +193,13 @@ export function useConfirmar() {
   });
 }
 
-/** Postular a una oferta. Invalida misTurnos y la oferta en cuestión. */
+/** Postular a una oferta. Devuelve warnings si el turno ya comenzó. Invalida misTurnos y la oferta en cuestión. */
 export function useAplicar() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ ofertaId, puestoId }: { ofertaId: number; puestoId: number }) =>
       turnosApi.aplicar(ofertaId, puestoId),
-    onSuccess: (_, { ofertaId }) => {
+    onSuccess: (data, { ofertaId }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
       qc.invalidateQueries({ queryKey: ['ofertas'] });
@@ -222,8 +245,8 @@ export function useRechazar() {
 export function useMarcarIngreso() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, lat, lng }: { id: number; lat: number; lng: number }) =>
-      turnosApi.marcarIngreso(id, lat, lng),
+    mutationFn: async ({ id, lat, lng }: { id: number; lat?: number; lng?: number }) =>
+      turnosApi.marcarIngreso(id, lat, lng, await getDeviceId()),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
@@ -231,12 +254,12 @@ export function useMarcarIngreso() {
   });
 }
 
-/** Marcar egreso con firma. */
+/** Marcar egreso con firma + ubicación (el backend valida geofence según el cargo). */
 export function useMarcarEgreso() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, firma }: { id: number; firma: string }) =>
-      turnosApi.marcarEgreso(id, firma),
+    mutationFn: ({ id, firma, lat, lng }: { id: number; firma: string; lat?: number; lng?: number }) =>
+      turnosApi.marcarEgreso(id, firma, lat, lng),
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
@@ -292,13 +315,60 @@ export function useNoPresentado() {
   });
 }
 
-/** Duplicar una oferta existente a una nueva fecha (gestores). */
+/**
+ * Corrección manual de ingreso/egreso (gestores) — para cuando el trabajador
+ * olvidó marcar. Un campo omitido (no enviado) deja ese valor sin cambios;
+ * el backend rechaza `null` porque falla la validación isISO8601().
+ */
+export function useCorregirAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId, ofertaId: _ofertaId, ...datos }: {
+      asignacionId: number; ofertaId: number;
+      hora_ingreso_real?: string; hora_egreso_real?: string;
+    }) => turnosApi.corregirAsignacion(asignacionId, datos),
+    onSuccess: (data, { ofertaId, asignacionId }) => {
+      aplicarEstadoEnCache(qc, data, ofertaId);
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
+    },
+  });
+}
+
+/** Agrega o edita el bono extra (ej. propina) de un turno puntual (jefe/admin). */
+export function useAgregarBono() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId, monto, motivo }: {
+      asignacionId: number; monto: number; motivo?: string;
+    }) => turnosApi.agregarBono(asignacionId, { monto, motivo }),
+    onSuccess: (_data, { asignacionId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: ['liquidacion-turnos'] });
+    },
+  });
+}
+
+/** Duplicar una oferta existente a una nueva fecha/hora (gestores). */
 export function useDuplicarOferta() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ ofertaId, fecha }: { ofertaId: number; fecha: string }) =>
-      turnosApi.duplicarOferta(ofertaId, fecha),
+    mutationFn: ({ ofertaId, fecha, hora_inicio }: { ofertaId: number; fecha: string; hora_inicio?: string }) =>
+      turnosApi.duplicarOferta(ofertaId, fecha, hora_inicio),
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() }),
+  });
+}
+
+/** Marcar una oferta como completada a mano — el jefe/admin decide, sin depender de la fecha ni del estado de las asignaciones. */
+export function useCompletarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ofertaId: number) => turnosApi.completarOferta(ofertaId),
+    onSuccess: (_data, ofertaId) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+    },
   });
 }
 
@@ -397,6 +467,19 @@ export function useCrearOferta() {
     mutationFn: (payload: CrearOfertaPayload) => turnosApi.crearOferta(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+    },
+  });
+}
+
+/** Edita una oferta existente (solo mientras está 'abierta' o 'borrador'). */
+export function useActualizarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...payload }: { id: number } & ActualizarOfertaPayload) =>
+      turnosApi.actualizarOferta(id, payload),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(id) });
     },
   });
 }

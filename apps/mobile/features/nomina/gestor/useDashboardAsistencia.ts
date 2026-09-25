@@ -49,7 +49,7 @@ export interface FilaDashboard {
   horasSemana:     number;
   limiteSemana:    number;
   horasExtra:      number;
-  horasNocturnas:  number; // always carry recargo ×1.35, shown separately
+  horasNocturnas:  number; // always carry the +35 % night surcharge, shown separately
 }
 
 // ── Hook ───────────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ export function useDashboardAsistencia() {
         trabajador:    t,
         registroHoy:   reg,
         estado,
-        horaEntrada:   reg?.hora_entrada?.slice(0, 5) ?? null,
+        horaEntrada:   (reg?.hora_entrada_inicial ?? reg?.hora_entrada)?.slice(0, 5) ?? null,
         horaSalida:    reg?.hora_salida?.slice(0, 5)  ?? null,
         horasSemana,
         limiteSemana:  limite,

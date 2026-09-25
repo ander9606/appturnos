@@ -17,6 +17,7 @@ import * as Location from 'expo-location';
 import {
   haversineMeters,
   getGeofenceStatus,
+  radioEscaladoPorEspera,
   DEFAULT_GEOFENCE_RADIUS,
   type GeofenceStatus,
 } from '@/lib/geo';
@@ -56,11 +57,34 @@ export function useGeofence({
   const [permissionDenied, setPermission] = useState(false);
   const [locationUnavailable, setUnavailable] = useState(false);
   const [currentLocation, setLocation]    = useState<{ lat: number; lng: number } | null>(null);
+  // Fuerza un re-render cada poll aunque distanceM no cambie, para que el radio
+  // escalado por tiempo (ver ESCALADA_RADIO abajo) se recalcule con el reloj real.
+  const [, setTick] = useState(0);
 
   // ponytail: polling instead of watchPositionAsync — avoids expo-keep-awake crash on some devices
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+
+  // getLastKnownPositionAsync sin maxAge puede devolver un fix de horas de
+  // antigüedad (ej. de la casa del trabajador) bajo techo/estructura metálica
+  // donde el fix fresco nunca llega — y se usaba con la misma confianza que
+  // uno actual, mostrando "Fuera del área" en vez de avisar que no hay
+  // ubicación confiable. 2 min alcanza para una acción de marcaje que el
+  // trabajador hace de pie, en el momento.
+  const MAX_EDAD_UBICACION_MS = 2 * 60_000;
 
   const hasTargets = targets !== null && targets.length > 0;
+
+  // getLastKnownPositionAsync también puede quedar colgado sin resolver nunca
+  // (visto en Android cuando el dispositivo todavía no tiene ninguna posición
+  // cacheada) — sin este timeout, ese await nunca termina, enCurso queda en
+  // true para siempre y ningún poll posterior vuelve a intentar: la pantalla
+  // se congela en "Calculando distancia…".
+  const conTimeout = <T,>(promesa: Promise<T>, ms: number): Promise<T> =>
+    Promise.race([
+      promesa,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+    ]);
 
   useEffect(() => {
     if (!enabled || !hasTargets) {
@@ -69,6 +93,17 @@ export function useGeofence({
     }
 
     let cancelled = false;
+    // getCurrentPositionAsync no tiene opción de timeout — si el proveedor de
+    // ubicación nunca resuelve (GPS frío, señal débil), el await queda colgado
+    // sin límite. Este "carrera contra un timeout" le pone techo a la espera.
+    const FIX_TIMEOUT_MS = 8_000;
+    // getLastKnownPositionAsync lee de un caché del SO — debería resolver casi
+    // al instante. Un techo corto alcanza y evita sumarle demora al timeout de
+    // arriba en el caso normal.
+    const LAST_KNOWN_TIMEOUT_MS = 3_000;
+    // Momento en que arrancó a intentar obtener ubicación en esta sesión de
+    // pantalla — referencia para la escalada de radio por tiempo (más abajo).
+    startedAtRef.current = Date.now();
 
     const aplicarFix = (lat: number, lng: number) => {
       setLocation({ lat, lng });
@@ -81,23 +116,43 @@ export function useGeofence({
       setUnavailable(false);
     };
 
+    // Evita fixes solapados: si un poll() tarda más que el intervalo de 5 s,
+    // el setInterval de abajo dispararía otro por encima sin esperar a que
+    // termine el anterior, y ambos compiten por el mismo proveedor de ubicación
+    // — eso alarga la espera real en vez de acortarla.
+    let enCurso = false;
+
     const poll = async () => {
-      if (cancelled) return;
+      if (cancelled || enCurso) return;
+      enCurso = true;
+      setTick((t) => t + 1); // recalcula la escalada de radio aunque el fix no cambie
       try {
-        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const loc = await conTimeout(
+          // mayShowUserSettingsDialog (default true en Android) puede abrir un diálogo
+          // del sistema pidiendo "ubicación mejorada" — no tiene sentido en un poll de
+          // fondo que nadie está mirando, y puede sumar una espera extra si aparece.
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High, mayShowUserSettingsDialog: false }),
+          FIX_TIMEOUT_MS
+        );
         if (cancelled) return;
         aplicarFix(loc.coords.latitude, loc.coords.longitude);
       } catch {
-        // Google Play Services a veces no entrega un fix "fresco" (GPS débil, emulador, etc.)
-        // — se usa el último conocido por el SO como respaldo antes de declarar indisponible.
+        // Fix fresco no llegó a tiempo (señal débil, emulador, o superó el timeout)
+        // — se usa el último conocido por el SO como respaldo antes de declarar indisponible,
+        // pero solo si no es demasiado viejo (ver MAX_EDAD_UBICACION_MS arriba).
         try {
-          const last = await Location.getLastKnownPositionAsync({});
+          const last = await conTimeout(
+            Location.getLastKnownPositionAsync({ maxAge: MAX_EDAD_UBICACION_MS }),
+            LAST_KNOWN_TIMEOUT_MS
+          );
           if (cancelled) return;
           if (last) aplicarFix(last.coords.latitude, last.coords.longitude);
           else setUnavailable(true);
         } catch {
           if (!cancelled) setUnavailable(true);
         }
+      } finally {
+        enCurso = false;
       }
     };
 
@@ -110,8 +165,12 @@ export function useGeofence({
       if (intervalRef.current) return; // already polling
       // ponytail: muestra la última ubicación conocida (casi instantánea) mientras se
       // resuelve el fix fresco, para no dejar "Calculando distancia…" varios segundos.
+      // maxAge evita mostrar un fix viejo como si fuera la posición actual.
       try {
-        const last = await Location.getLastKnownPositionAsync({});
+        const last = await conTimeout(
+          Location.getLastKnownPositionAsync({ maxAge: MAX_EDAD_UBICACION_MS }),
+          LAST_KNOWN_TIMEOUT_MS
+        );
         if (!cancelled && last) aplicarFix(last.coords.latitude, last.coords.longitude);
       } catch {
         // sin respaldo — poll() de abajo sigue intentando el fix fresco
@@ -138,10 +197,19 @@ export function useGeofence({
     return () => {
       cancelled = true;
       sub.remove();
+      startedAtRef.current = null;
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, hasTargets]);
+
+  // El backend vuelve a validar con el radio real configurado al marcar — esto
+  // solo relaja qué tan pronto se habilita el botón cuando el GPS tarda en dar
+  // un fix confiable, sin inflar la etiqueta "cerca/dentro" que se le muestra
+  // al trabajador (esa sigue reflejando la distancia real).
+  const radioEscalado = startedAtRef.current === null
+    ? 0
+    : radioEscaladoPorEspera(Date.now() - startedAtRef.current);
 
   // Determine status against the nearest target's radius
   const nearestRadius = (() => {
@@ -162,8 +230,13 @@ export function useGeofence({
     ? getGeofenceStatus(distanceM, nearestRadius)
     : 'unknown';
 
-  // canMark: inside/near geofence of any target, OR no geofence required
-  const canMark = !hasTargets || status === 'inside' || status === 'near';
+  // canMark: inside/near geofence de verdad, O fuera de rango pero dentro del
+  // radio escalado por espera, O sin geofence requerido.
+  const canMark =
+    !hasTargets ||
+    status === 'inside' ||
+    status === 'near' ||
+    (distanceM !== null && radioEscalado > 0 && distanceM <= radioEscalado);
 
   return { distanceM, status, canMark, permissionDenied, locationUnavailable, currentLocation };
 }

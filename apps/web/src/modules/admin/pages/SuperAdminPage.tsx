@@ -1,24 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Building2, Users, Briefcase, Calendar, DollarSign,
-  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook, Link2,
+  Building2, Users, Briefcase, Calendar, DollarSign, TrendingUp,
+  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook, Link2, Tag,
 } from 'lucide-react';
 import { useReportesGlobales, useEmpresas, useCrearEmpresa, useCambiarEstadoEmpresa } from '../hooks/useAdmin';
-import type { EmpresaAdmin, Plan } from '../types';
+import type { EmpresaAdmin, MrrMes, RenovacionRiesgo } from '../types';
+import { fmtCOP } from '@/shared/lib/format';
 import { ErrorState } from '@/shared/components/ErrorState';
-
-const PLAN_BADGE: Record<Plan, string> = {
-  basico: 'bg-muted text-muted-foreground',
-  profesional: 'bg-primary-100 text-primary-600',
-  empresarial: 'bg-warning-light text-warning',
-};
-
-const PLAN_LABEL: Record<Plan, string> = {
-  basico: 'Básico',
-  profesional: 'Profesional',
-  empresarial: 'Empresarial',
-};
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
 
 function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'short' }).format(new Date(s));
@@ -27,7 +19,6 @@ function fmtDate(s: string) {
 export function SuperAdminPage() {
   const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState('');
-  const [planFiltro, setPlanFiltro] = useState<Plan | undefined>(undefined);
   const [activoFiltro, setActivoFiltro] = useState<boolean | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
 
@@ -36,13 +27,13 @@ export function SuperAdminPage() {
 
   const { data: empresasData, isLoading, isError, error, refetch } = useEmpresas({
     busqueda: busqueda || undefined,
-    plan: planFiltro,
     activo: activoFiltro,
   });
   const empresas: EmpresaAdmin[] = empresasData?.data?.data ?? [];
   const total: number = empresasData?.data?.pagination?.total ?? 0;
 
   const cambiarEstado = useCambiarEstadoEmpresa();
+  const { confirmState, confirm, close } = useConfirm();
 
   return (
     <div className="flex gap-6 h-full">
@@ -58,6 +49,13 @@ export function SuperAdminPage() {
           >
             <Webhook size={13} />
             Eventos Wompi
+          </button>
+          <button
+            onClick={() => navigate('/admin/planes')}
+            className="mt-1 ml-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Tag size={13} />
+            Planes y precios
           </button>
         </div>
 
@@ -96,29 +94,18 @@ export function SuperAdminPage() {
               color={reportes.nomina.periodos_abiertos > 0 ? 'warning' : 'default'}
             />
 
-            {/* Plan distribution */}
+            {/* Ingresos */}
             <div className="bg-card border border-border rounded-xl p-4">
-              <p className="text-xs text-muted-foreground uppercase font-medium mb-3">Distribución de planes</p>
-              {(['basico', 'profesional', 'empresarial'] as Plan[]).map(plan => {
-                const count = reportes.distribucion_planes[plan] ?? 0;
-                const pct = reportes.empresas.total > 0
-                  ? Math.round((count / reportes.empresas.total) * 100)
-                  : 0;
-                return (
-                  <div key={plan} className="mb-2.5">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-muted-foreground">{PLAN_LABEL[plan]}</span>
-                      <span className="font-medium text-foreground">{count}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="flex items-start justify-between mb-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-success-light text-success">
+                  <TrendingUp size={16} />
+                </div>
+                <span className="text-2xl font-bold text-foreground">{fmtCOP(reportes.ingresos.mes_actual)}</span>
+              </div>
+              <p className="text-xs font-medium text-foreground">Ingresos este mes</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {fmtCOP(reportes.ingresos.ganado_mes_pasado)} el mes pasado · {reportes.integraciones.pago_directo} empresa{reportes.integraciones.pago_directo !== 1 ? 's' : ''} pagando
+              </p>
             </div>
           </>
         )}
@@ -126,6 +113,19 @@ export function SuperAdminPage() {
 
       {/* RIGHT: Companies list */}
       <div className="flex-1 min-w-0 flex flex-col gap-4">
+        {reportes && (reportes.ingresos.mrr_historico.length > 0 || reportes.renovaciones_riesgo.length > 0) && (
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[280px]">
+              <MrrTrendCard historico={reportes.ingresos.mrr_historico} />
+            </div>
+            {reportes.renovaciones_riesgo.length > 0 && (
+              <div className="flex-1 min-w-[280px]">
+                <RenovacionesRiesgoCard items={reportes.renovaciones_riesgo} />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Toolbar */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 min-w-48">
@@ -138,16 +138,6 @@ export function SuperAdminPage() {
               className="w-full pl-9 pr-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
-          <select
-            value={planFiltro ?? ''}
-            onChange={e => setPlanFiltro((e.target.value as Plan) || undefined)}
-            className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-          >
-            <option value="">Todos los planes</option>
-            <option value="basico">Básico</option>
-            <option value="profesional">Profesional</option>
-            <option value="empresarial">Empresarial</option>
-          </select>
           <select
             value={activoFiltro === undefined ? '' : String(activoFiltro)}
             onChange={e => setActivoFiltro(e.target.value === '' ? undefined : e.target.value === 'true')}
@@ -179,7 +169,7 @@ export function SuperAdminPage() {
               <thead>
                 <tr className="bg-muted text-muted-foreground text-xs uppercase">
                   <th className="text-left px-4 py-3 font-medium">Empresa</th>
-                  <th className="text-left px-4 py-3 font-medium">Plan</th>
+                  <th className="text-right px-4 py-3 font-medium">Ingresos</th>
                   <th className="text-right px-4 py-3 font-medium">Trabajadores</th>
                   <th className="text-right px-4 py-3 font-medium">Usuarios</th>
                   <th className="text-left px-4 py-3 font-medium">Alta</th>
@@ -194,18 +184,18 @@ export function SuperAdminPage() {
                       <p className="font-medium text-foreground">{e.nombre}</p>
                       <p className="text-xs text-muted-foreground">{e.slug}{e.nit ? ` · ${e.nit}` : ''}</p>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${PLAN_BADGE[e.plan]}`}>
-                        {PLAN_LABEL[e.plan]}
-                      </span>
-                      {e.logiq360_conectado && (
-                        <span
-                          className="inline-block ml-1.5 align-text-bottom"
-                          title="Conectada a logiq360 — no paga suscripción"
-                        >
-                          <Link2 size={13} className="text-success" />
-                        </span>
-                      )}
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="font-medium text-foreground">{fmtCOP(e.ingresos_totales_cop ?? 0)}</span>
+                        {e.logiq360_conectado && (
+                          <span
+                            className="inline-flex items-center gap-1 text-xs text-success"
+                            title="Conectada a logiq360 — no paga suscripción"
+                          >
+                            <Link2 size={12} /> logiq360
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{e.total_trabajadores}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{e.total_usuarios}</td>
@@ -220,12 +210,14 @@ export function SuperAdminPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
                         <button
-                          onClick={() => {
-                            const msg = e.activo
+                          onClick={() => confirm({
+                            title: e.activo ? 'Desactivar empresa' : 'Activar empresa',
+                            detail: e.activo
                               ? `¿Desactivar ${e.nombre}? Todos sus usuarios y trabajadores perderán acceso.`
-                              : `¿Activar ${e.nombre}?`;
-                            if (window.confirm(msg)) cambiarEstado.mutate({ id: e.id, activo: !e.activo });
-                          }}
+                              : `¿Activar ${e.nombre}?`,
+                            confirmLabel: e.activo ? 'Desactivar' : 'Activar',
+                            onConfirm: () => { cambiarEstado.mutate({ id: e.id, activo: !e.activo }); close(); },
+                          })}
                           disabled={cambiarEstado.isPending}
                           className="text-muted-foreground/50 hover:text-primary transition-colors disabled:opacity-50"
                           title={e.activo ? 'Desactivar' : 'Activar'}
@@ -252,6 +244,77 @@ export function SuperAdminPage() {
       </div>
 
       {showCrear && <CrearEmpresaModal onClose={() => setShowCrear(false)} />}
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Tendencia de ingresos (MRR, últimos 6 meses) ── */
+function mesLabel(mes: string) {
+  const [y, m] = mes.split('-').map(Number);
+  return new Intl.DateTimeFormat('es-CO', { month: 'short' }).format(new Date(y, m - 1, 1));
+}
+
+const MRR_BAR_MAX_PX = 64;
+
+function MrrTrendCard({ historico }: { historico: MrrMes[] }) {
+  const max = Math.max(...historico.map(m => m.ingresos_cop), 1);
+  return (
+    <div className="bg-card border border-border rounded-xl p-4 h-full">
+      <p className="text-xs text-muted-foreground uppercase font-medium mb-3">Tendencia de ingresos · 6 meses</p>
+      <div className="flex items-end gap-2" style={{ height: MRR_BAR_MAX_PX }}>
+        {historico.map(m => (
+          <div
+            key={m.mes}
+            title={`${mesLabel(m.mes)}: ${fmtCOP(m.ingresos_cop)}`}
+            className="flex-1 rounded-t bg-primary/70 hover:bg-primary transition-colors cursor-default"
+            style={{ height: Math.max(Math.round((m.ingresos_cop / max) * MRR_BAR_MAX_PX), 3) }}
+          />
+        ))}
+      </div>
+      <div className="flex gap-2 mt-1.5">
+        {historico.map(m => (
+          <span key={m.mes} className="flex-1 text-center text-[10px] text-muted-foreground capitalize">
+            {mesLabel(m.mes)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Renovaciones en riesgo ── */
+function RenovacionesRiesgoCard({ items }: { items: RenovacionRiesgo[] }) {
+  return (
+    <div className="bg-card border border-border rounded-xl p-4 h-full">
+      <p className="text-xs text-muted-foreground uppercase font-medium mb-3">Renovaciones en riesgo</p>
+      <div className="flex flex-col gap-2">
+        {items.map(r => {
+          const vencida = r.dias_restantes < 0;
+          const urgente = r.dias_restantes <= 3;
+          return (
+            <div key={r.id} className="flex items-center justify-between gap-2 text-sm">
+              <span className="text-foreground truncate">{r.nombre}</span>
+              <span className={`text-xs font-medium whitespace-nowrap ${
+                vencida ? 'text-danger' : urgente ? 'text-warning' : 'text-muted-foreground'
+              }`}>
+                {vencida ? `Vencida hace ${-r.dias_restantes}d`
+                  : r.dias_restantes === 0 ? 'Vence hoy'
+                  : `Vence en ${r.dias_restantes}d`}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -287,7 +350,7 @@ function CrearEmpresaModal({ onClose }: { onClose: () => void }) {
   const crear = useCrearEmpresa();
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    nombre: '', slug: '', nit: '', ciudad: '', plan: 'basico' as Plan, descripcion: '',
+    nombre: '', slug: '', nit: '', ciudad: '', descripcion: '',
   });
 
   const slugify = (s: string) =>
@@ -300,7 +363,6 @@ function CrearEmpresaModal({ onClose }: { onClose: () => void }) {
       slug: form.slug,
       nit: form.nit || undefined,
       ciudad: form.ciudad || undefined,
-      plan: form.plan,
       descripcion: form.descripcion || undefined,
     });
     onClose();
@@ -320,48 +382,38 @@ function CrearEmpresaModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Nueva empresa</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal onClose={onClose}>
+      <h2 className="text-lg font-semibold text-foreground mb-4">Nueva empresa</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+          <input required type="text" {...f('nombre')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Slug * <span className="text-muted-foreground font-normal">(solo a-z, 0-9, guiones)</span></label>
+          <input required type="text" pattern="[a-z0-9-]+" {...f('slug')} className="w-full border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
-            <input required type="text" {...f('nombre')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Slug * <span className="text-muted-foreground font-normal">(solo a-z, 0-9, guiones)</span></label>
-            <input required type="text" pattern="[a-z0-9-]+" {...f('slug')} className="w-full border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">NIT</label>
-              <input type="text" {...f('nit')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Ciudad</label>
-              <input type="text" {...f('ciudad')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
+            <label className="block text-sm font-medium text-foreground mb-1">NIT</label>
+            <input type="text" {...f('nit')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Plan</label>
-            <select {...f('plan')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
-              <option value="basico">Básico</option>
-              <option value="profesional">Profesional</option>
-              <option value="empresarial">Empresarial</option>
-            </select>
+            <label className="block text-sm font-medium text-foreground mb-1">Ciudad</label>
+            <input type="text" {...f('ciudad')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
-            <textarea rows={2} {...f('descripcion')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
-          </div>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {crear.isPending ? 'Creando...' : 'Crear empresa'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
+          <textarea rows={2} {...f('descripcion')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+          <button type="submit" disabled={crear.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {crear.isPending ? 'Creando...' : 'Crear empresa'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }

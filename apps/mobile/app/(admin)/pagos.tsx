@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { useWompiEventos, useReintentarWompiEvento, useReportesGlobales } from '@/features/admin/useAdmin';
+import { useWompiEventos, useReintentarWompiEvento } from '@/features/admin/useAdmin';
 import { formatCOP } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import type { WompiEstado, WompiEvento } from '@api-client';
@@ -62,14 +62,13 @@ function FilterChip({ label, active, onPress, color }: { label: string; active: 
   );
 }
 
-function EventoCard({ evento, tarifa, onReintentar, reintentando }: {
+function EventoCard({ evento, onReintentar, reintentando }: {
   evento: WompiEvento;
-  tarifa: number;
   onReintentar: (id: number) => void;
   reintentando: boolean;
 }) {
   const color = ESTADO_COLOR[evento.estado];
-  const monto = evento.meses ? evento.meses * tarifa : null;
+  const monto = evento.monto_cop;
 
   return (
     <View className="mx-4 mb-3 bg-card border border-border rounded-2xl p-4 gap-2">
@@ -131,8 +130,6 @@ export default function PagosScreen() {
   const [reintentandoId, setReintentandoId] = useState<number | null>(null);
 
   const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
-  const { data: reportes } = useReportesGlobales(isSuperAdmin);
-  const tarifa = reportes?.ingresos.tarifa_cop ?? 0;
 
   const { data, isLoading, isError, refetch } = useWompiEventos({
     estado: filtro !== 'todos' ? filtro : undefined,
@@ -234,7 +231,6 @@ export default function PagosScreen() {
           <EventoCard
             key={evento.id}
             evento={evento}
-            tarifa={tarifa}
             onReintentar={handleReintentar}
             reintentando={reintentandoId === evento.id}
           />

@@ -18,11 +18,15 @@ function getErrMsg(err: unknown) {
     : 'Error inesperado';
 }
 
-export function useOfertas(params?: { estado?: EstadoOferta; fecha?: string; limit?: number }) {
+export function useOfertas(
+  params?: { estado?: EstadoOferta; fecha?: string; fecha_desde?: string; fecha_hasta?: string; limit?: number },
+  opts: { enabled?: boolean } = {},
+) {
   return useQuery({
     queryKey: KEYS.ofertas(params),
     queryFn: () => turnosApi.listarOfertas({ ...params, limit: params?.limit ?? 50 }),
     staleTime: 30_000,
+    enabled: opts.enabled ?? true,
   });
 }
 
@@ -39,6 +43,15 @@ export function useLiquidacionTurnos(params: { fecha_inicio: string; fecha_fin: 
   return useQuery({
     queryKey: KEYS.liquidacion(params),
     queryFn: () => turnosApi.liquidacion(params),
+    staleTime: 30_000,
+  });
+}
+
+/** Período activo (segmentos nómina/turnos) según el ciclo de liquidación de la empresa. */
+export function usePeriodoActivoTurnos() {
+  return useQuery({
+    queryKey: ['turnos', 'periodo-activo'],
+    queryFn: () => turnosApi.periodoActivoEventual(),
     staleTime: 30_000,
   });
 }
@@ -93,7 +106,7 @@ export function useEliminarPuesto() {
   });
 }
 
-export function useAsignaciones(params: { oferta_id?: number; estado?: EstadoAsignacion; limit?: number }) {
+export function useAsignaciones(params: { oferta_id?: number; estado?: EstadoAsignacion; sospechoso?: boolean; limit?: number }) {
   return useQuery({
     queryKey: KEYS.asignaciones(params),
     queryFn: () => turnosApi.listarAsignaciones({ ...params, limit: params.limit ?? 200 }),
@@ -131,6 +144,19 @@ export function usePublicarOferta() {
       qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
       qc.invalidateQueries({ queryKey: KEYS.oferta(id) });
       toast.success('Oferta publicada');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useCompletarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => turnosApi.completarOferta(id),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
+      qc.invalidateQueries({ queryKey: KEYS.oferta(id) });
+      toast.success('Oferta marcada como completada');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
@@ -191,6 +217,49 @@ export function useNoPresentado() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
       toast.success('Marcado como no presentado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+/** Corrección manual de ingreso/egreso por el gestor — para cuando el trabajador olvidó marcar. */
+export function useCorregirAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; hora_ingreso_real?: string; hora_egreso_real?: string }) =>
+      turnosApi.corregirAsignacion(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
+      qc.invalidateQueries({ queryKey: ['turnos', 'oferta'] });
+      toast.success('Asignación corregida');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+/** Agrega o edita el bono extra (ej. propina) de un turno puntual — solo gestor/admin. */
+export function useAgregarBono() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; monto: number; motivo?: string }) =>
+      turnosApi.agregarBono(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
+      qc.invalidateQueries({ queryKey: ['turnos', 'oferta'] });
+      qc.invalidateQueries({ queryKey: ['turnos', 'liquidacion'] });
+      toast.success('Bono actualizado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useDescartarSospechosoAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => turnosApi.descartarSospechoso(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
+      toast.success('Marcaje ya no está marcado como sospechoso');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });

@@ -12,7 +12,7 @@ const ctrl = {
 
   async liquidacion(req, res, next) {
     try {
-      const data = await svc.liquidacion(req.empresa_id, Number(req.params.id));
+      const data = await svc.liquidacion(req.empresa_id, Number(req.params.id), req.usuario);
       res.json({ success: true, data });
     } catch (err) { next(err); }
   },

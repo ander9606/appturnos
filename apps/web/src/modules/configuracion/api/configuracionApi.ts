@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/axios';
-import type { Empresa, PuntoMarcaje, Cargo, Gestor, Suscripcion, LinkPago } from '../types';
+import type { Empresa, PuntoMarcaje, PuntoParaTurno, Cargo, Gestor, Suscripcion, LinkPago, PlanCodigo } from '../types';
 
 export const configuracionApi = {
   // Empresa
@@ -8,11 +8,14 @@ export const configuracionApi = {
 
   // Suscripción
   getSuscripcion: () => api.get<{ data: Suscripcion }>('/empresas/suscripcion').then(r => r.data),
-  pagarSuscripcion: (meses?: number) =>
-    api.post<{ data: LinkPago }>('/empresas/suscripcion/pagar', meses ? { meses } : {}).then(r => r.data),
+  /** PDF de reglas de cálculo de pagos — solo admin_empresa (backend lo exige también). */
+  getReglasPago: () => api.get('/empresas/reglas-pago', { responseType: 'blob' }),
+  pagarSuscripcion: (data: { meses: number; plan?: PlanCodigo }) =>
+    api.post<{ data: LinkPago }>('/empresas/suscripcion/pagar', data).then(r => r.data),
 
   // Puntos de marcaje
   getPuntos: () => api.get<{ data: PuntoMarcaje[] }>('/puntos-marcaje').then(r => r.data),
+  getPuntosParaTurnos: () => api.get<{ data: PuntoParaTurno[] }>('/puntos-marcaje/para-turnos').then(r => r.data),
   createPunto: (data: Omit<PuntoMarcaje, 'id' | 'activo'>) =>
     api.post<{ data: PuntoMarcaje }>('/puntos-marcaje', data).then(r => r.data),
   updatePunto: (id: number, data: Partial<PuntoMarcaje>) =>

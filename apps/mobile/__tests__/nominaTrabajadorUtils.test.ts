@@ -1,4 +1,17 @@
-import { calcularElapsedLabel, calcularElapsedMinutes } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { calcularElapsedLabel, calcularElapsedMinutes, getJornadaLegalSemanal } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+
+describe('getJornadaLegalSemanal', () => {
+  it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
+    expect(getJornadaLegalSemanal(2026)).toBe(42);
+    expect(getJornadaLegalSemanal(2030)).toBe(42);
+  });
+
+  it('años de la reducción progresiva', () => {
+    expect(getJornadaLegalSemanal(2023)).toBe(47);
+    expect(getJornadaLegalSemanal(2024)).toBe(46);
+    expect(getJornadaLegalSemanal(2025)).toBe(44);
+  });
+});
 
 // Regresión: el cálculo debe anclarse a hora Bogotá vía Date.now(), no al
 // timezone del runtime/dispositivo (new Date(y,m,d,hh,mm) usa el local del

@@ -13,9 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
-import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes } from '@/features/turnos/useTurnos';
+import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes, useLiquidacionTurnos } from '@/features/turnos/useTurnos';
 import { usePeriodosEventual } from '@/features/turnos/useTurnosEventual';
-import { useNominaPerfil } from '@/features/nomina/useNomina';
+import { useNominaPerfil, usePeriodos } from '@/features/nomina/useNomina';
+import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
@@ -23,6 +24,8 @@ import { getDateRange, toISODate, bogotaToday } from '@/features/turnos/turnosUt
 import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
+import { MonthCalendar } from '@/components/ui/MonthCalendar';
+import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 
@@ -48,6 +51,33 @@ export default function TurnosScreen() {
   const [activeTab,    setActiveTab]    = useState<ActiveTab>(() => isWorker ? 'mis_turnos' : 'disponibles');
   const [searchOfertas, setSearchOfertas] = useState('');
 
+  // Vista mensual (solo gestores) — alterna con la lista/WeekStrip por día.
+  const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
+  const [mesCursor, setMesCursor] = useState(() => {
+    const [y, m] = today.split('-').map(Number);
+    return { year: y, month: m };
+  });
+  const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  const { data: ofertasMesResp, isLoading: loadingOfertasMes, isError: errorOfertasMes, error: errOfertasMes, refetch: refetchOfertasMes } = useOfertas(
+    {
+      fecha_desde: mesWeeks[0][0].date,
+      fecha_hasta: mesWeeks[mesWeeks.length - 1][6].date,
+      limit: 200, // tope del backend (ofertas.routes.js) — pedir más hace que la validación rechace TODA la respuesta
+      para_quien: isJefeNomina ? 'nomina' : undefined,
+      disponibles: isWorker ? true : undefined,
+    },
+    { enabled: (isGestor || isWorker) && viewMode === 'mes' },
+  );
+  const ofertasPorDiaMes = useMemo(() => {
+    const map = new Map<string, Oferta[]>();
+    for (const o of ofertasMesResp?.data ?? []) {
+      const lista = map.get(o.fecha) ?? [];
+      lista.push(o);
+      map.set(o.fecha, lista);
+    }
+    return map;
+  }, [ofertasMesResp]);
+
   // ponytail: static range, no pagination state needed
   const allDays = useMemo(() => getDateRange(7, 42), []);
 
@@ -66,6 +96,26 @@ export default function TurnosScreen() {
   const { data: periodosEventual } = usePeriodosEventual(isNomina);
   const periodoEventual = periodosEventual?.nomina;
   const pendientesCount = pendientesResp?.data?.length ?? 0;
+
+  /** Postulantes pendientes por oferta — para resaltar en el calendario del gestor. */
+  const pendientesPorOferta = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const a of pendientesResp?.data ?? []) {
+      map.set(a.oferta_id, (map.get(a.oferta_id) ?? 0) + 1);
+    }
+    return map;
+  }, [pendientesResp]);
+
+  // Saldo a pagar del período abierto — solo para quien gestiona pagos de turnos.
+  // Antes usaba un mes calendario fijo (día 1 → hoy), lo que mostraba "mensual"
+  // aunque la empresa facture quincenal — el período real sale de periodos_nomina.
+  const { data: periodoAbiertoResp } = usePeriodos('abierto', isGestor && !isJefeNomina);
+  const periodoAbierto = periodoAbiertoResp?.data?.[0];
+  const { data: liquidacionPeriodo } = useLiquidacionTurnos(
+    { fecha_inicio: periodoAbierto?.fecha_inicio ?? today, fecha_fin: today },
+    { enabled: isGestor && !isJefeNomina && periodoAbierto !== undefined },
+  );
+  const totalAPagarPeriodo = (liquidacionPeriodo ?? []).reduce((s, w) => s + w.pago_total, 0);
 
   // Backend excluye 'nomina' de GET /ofertas.
   const {
@@ -89,6 +139,17 @@ export default function TurnosScreen() {
     ofertasResp?.data?.forEach((o) => set.add(o.fecha));
     return set;
   }, [misTurnos, ofertasResp]);
+
+  /** Mis turnos del mes visible, agrupados por fecha — para los puntos del calendario mensual. */
+  const misTurnosPorDiaMes = useMemo(() => {
+    const map = new Map<string, Asignacion[]>();
+    (misTurnos ?? []).forEach((a) => {
+      const lista = map.get(a.oferta_fecha) ?? [];
+      lista.push(a);
+      map.set(a.oferta_fecha, lista);
+    });
+    return map;
+  }, [misTurnos]);
 
   /** Asignaciones del día seleccionado */
   const turnosDelDia = useMemo(() => {
@@ -309,71 +370,139 @@ export default function TurnosScreen() {
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <View className="bg-card px-6 pt-4 pb-0 border-b border-border flex-row items-center justify-between">
-        <Text className="text-xl font-bold text-foreground">
-          {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
-        </Text>
-        {isGestor && (
-          <View className="flex-row items-center gap-1 pb-2">
-            {!isJefeNomina && (
-              <TouchableOpacity
-                onPress={() => router.push('/liquidacion-turnos')}
-                accessibilityLabel="Liquidación de turnos"
-                className="p-3 active:opacity-60"
+      <View className="bg-card px-6 pt-3 pb-2 border-b border-border">
+        <View className="flex-row items-center justify-between">
+          <Text className="text-xl font-bold text-foreground">
+            {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
+          </Text>
+          {(isGestor || isWorker) && (
+            <TouchableOpacity
+              onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
+              accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+              className="p-2 -mr-2 active:opacity-60"
+            >
+              <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={22} color={theme.primary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Saldo a pagar del mes + postulantes pendientes — igual patrón que Nómina */}
+        {isGestor && !isJefeNomina && (
+          <View className="flex-row gap-2 mt-2.5">
+            <TouchableOpacity
+              onPress={() => router.push('/liquidacion-turnos')}
+              activeOpacity={0.8}
+              className="flex-1 flex-row items-center justify-between rounded-2xl px-4 py-2.5"
+              style={{ backgroundColor: theme.primary + '15' }}
+            >
+              <View>
+                <Text className="text-[11px] font-medium" style={{ color: theme.primary }}>
+                  Total a pagar
+                </Text>
+                <Text className="text-base font-extrabold" style={{ color: theme.primary }}>
+                  ${totalAPagarPeriodo.toLocaleString('es-CO')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/postulaciones')}
+              activeOpacity={0.8}
+              accessibilityLabel="Ver postulaciones"
+              className="items-center justify-center rounded-2xl"
+              style={{ backgroundColor: pendientesCount > 0 ? '#FEF3C7' : '#F1F5F9', minWidth: 68, paddingHorizontal: 12 }}
+            >
+              <Ionicons name="people" size={18} color={pendientesCount > 0 ? '#D97706' : '#64748B'} />
+              <Text
+                className="text-[10px] font-bold mt-0.5"
+                style={{ color: pendientesCount > 0 ? '#D97706' : '#64748B' }}
               >
-                <Ionicons name="cash-outline" size={26} color={theme.primary} />
-              </TouchableOpacity>
-            )}
-            {!isJefeNomina && (
-              <TouchableOpacity
-                onPress={() => router.push('/postulaciones')}
-                accessibilityLabel="Ver postulaciones"
-                className="p-3 active:opacity-60"
-                style={{ position: 'relative' }}
-              >
-                <Ionicons name="people" size={26} color={theme.primary} />
-                {pendientesCount > 0 && (
-                  <View style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    minWidth: 16,
-                    height: 16,
-                    borderRadius: 8,
-                    backgroundColor: '#EF4444',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingHorizontal: 3,
-                    borderWidth: 1.5,
-                    borderColor: '#fff',
-                  }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700', lineHeight: 12 }}>
-                      {pendientesCount > 99 ? '99+' : pendientesCount}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
+                {pendientesCount > 0 ? `${pendientesCount} pend.` : 'Al día'}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
-      <WeekStrip
-        days={allDays}
-        selectedDate={selectedDate}
-        datesWithShifts={datesWithShifts}
-        onSelectDate={setSelectedDate}
-        primaryColor={theme.primary}
-      />
+      {viewMode === 'lista' && (
+        <WeekStrip
+          days={allDays}
+          selectedDate={selectedDate}
+          datesWithShifts={datesWithShifts}
+          onSelectDate={setSelectedDate}
+          primaryColor={theme.primary}
+        />
+      )}
 
       {/* ── Gestor view ────────────────────────────────────────────── */}
       {isGestor ? (
         <View className="flex-1">
-          <GestorTurnosView
-            selectedDate={selectedDate}
-            filtroParaQuien={isJefeNomina ? 'nomina' : undefined}
-          />
+          {viewMode === 'mes' ? (
+            <View className="flex-1 px-5 pt-3">
+              <View className="flex-row items-center gap-3 mb-3">
+                <TouchableOpacity
+                  onPress={() => setMesCursor(c => shiftMonth(c, -1))}
+                  className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                >
+                  <Ionicons name="chevron-back" size={16} color={theme.primary} />
+                </TouchableOpacity>
+                <Text className="text-sm font-semibold text-foreground flex-1 text-center">
+                  {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setMesCursor(c => shiftMonth(c, 1))}
+                  className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                >
+                  <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+                </TouchableOpacity>
+              </View>
+
+              {loadingOfertasMes ? (
+                <ActivityIndicator size="large" color={theme.primary} />
+              ) : errorOfertasMes ? (
+                <View className="items-center justify-center gap-2 py-10">
+                  <Ionicons name="warning-outline" size={32} color="#94A3B8" />
+                  <Text className="text-sm text-muted-foreground">No se pudieron cargar los turnos del mes</Text>
+                  <Button label="Reintentar" onPress={() => refetchOfertasMes()} variant="secondary" size="sm" />
+                </View>
+              ) : (
+                <MonthCalendar
+                  weeks={mesWeeks}
+                  onDayPress={(day: CalendarDay) => { setSelectedDate(day.date); setViewMode('lista'); }}
+                  renderDay={(day: CalendarDay) => {
+                    const delDia = ofertasPorDiaMes.get(day.date) ?? [];
+                    if (delDia.length === 0) return null;
+                    return (
+                      <View className="flex-row flex-wrap gap-0.5">
+                        {delDia.slice(0, 5).map(o => (
+                          <View
+                            key={o.id}
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: colorOferta(o, pendientesPorOferta, today, theme.primary) }}
+                          />
+                        ))}
+                      </View>
+                    );
+                  }}
+                />
+              )}
+
+              <View className="flex-row items-center gap-x-3 gap-y-1.5 justify-center mt-3 flex-wrap">
+                <LeyendaPunto color={CAL_COLOR.borrador} label="Borrador" />
+                <LeyendaPunto color={theme.primary} label="Publicada" />
+                <LeyendaPunto color={CAL_COLOR.urgente} label="Necesita atención" />
+                <LeyendaPunto color={CAL_COLOR.completada} label="Completada" />
+                <LeyendaPunto color={CAL_COLOR.cancelada} label="Cancelada" />
+              </View>
+            </View>
+          ) : (
+            <GestorTurnosView
+              selectedDate={selectedDate}
+              filtroParaQuien={isJefeNomina ? 'nomina' : undefined}
+            />
+          )}
 
           {/* FAB — crear turno (única acción flotante; liquidación y postulaciones viven en el header) */}
           <TouchableOpacity
@@ -401,6 +530,87 @@ export default function TurnosScreen() {
           </TouchableOpacity>
         </View>
       ) : (
+        <>
+        {viewMode === 'mes' ? (
+          <View className="flex-1 px-5 pt-3">
+            <View className="flex-row items-center gap-3 mb-3">
+              <TouchableOpacity
+                onPress={() => setMesCursor(c => shiftMonth(c, -1))}
+                className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+              >
+                <Ionicons name="chevron-back" size={16} color={theme.primary} />
+              </TouchableOpacity>
+              <Text className="text-sm font-semibold text-foreground flex-1 text-center">
+                {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setMesCursor(c => shiftMonth(c, 1))}
+                className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+              >
+                <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {loadingOfertasMes || loadingMios ? (
+              <ActivityIndicator size="large" color={theme.primary} />
+            ) : isNomina && esErrorTurnosExtraApagadas(errOfertasMes) ? (
+              <TurnosExtraOptIn />
+            ) : errorOfertasMes || errorMios ? (
+              <View className="items-center justify-center gap-2 py-10">
+                <Ionicons name="warning-outline" size={32} color="#94A3B8" />
+                <Text className="text-sm text-muted-foreground">No se pudieron cargar los turnos del mes</Text>
+                <Button
+                  label="Reintentar"
+                  onPress={() => { refetchOfertasMes(); refetchMios(); }}
+                  variant="secondary"
+                  size="sm"
+                />
+              </View>
+            ) : (
+              <MonthCalendar
+                weeks={mesWeeks}
+                onDayPress={(day: CalendarDay) => { setSelectedDate(day.date); setViewMode('lista'); }}
+                renderDay={(day: CalendarDay) => {
+                  const mios = misTurnosPorDiaMes.get(day.date) ?? [];
+                  // Naranja sólido solo si ya está aceptado (confirmado/en curso/completado) —
+                  // una postulación pendiente todavía no es un turno asegurado.
+                  const aceptados  = mios.filter(a => a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado');
+                  const pendientes = mios.filter(a => a.estado === 'pendiente');
+                  const disponibles = (ofertasPorDiaMes.get(day.date) ?? []).filter(o => !aplicadosIds.has(o.id));
+                  if (aceptados.length === 0 && pendientes.length === 0 && disponibles.length === 0) return null;
+                  return (
+                    <View className="flex-row flex-wrap gap-0.5">
+                      {aceptados.slice(0, 3).map(a => (
+                        <View key={`a${a.id}`} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: theme.primary }} />
+                      ))}
+                      {pendientes.slice(0, 2).map(a => (
+                        <View key={`p${a.id}`} className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: theme.primary }} />
+                      ))}
+                      {disponibles.slice(0, 3).map(o => (
+                        <View key={`d${o.id}`} className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: '#3B82F6' }} />
+                      ))}
+                    </View>
+                  );
+                }}
+              />
+            )}
+
+            <View className="flex-row items-center gap-4 justify-center mt-4 flex-wrap">
+              <View className="flex-row items-center gap-1.5">
+                <View className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primary }} />
+                <Text className="text-xs text-muted-foreground">Aceptado</Text>
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <View className="w-2 h-2 rounded-full border" style={{ borderColor: theme.primary }} />
+                <Text className="text-xs text-muted-foreground">Postulación pendiente</Text>
+              </View>
+              <View className="flex-row items-center gap-1.5">
+                <View className="w-2 h-2 rounded-full border" style={{ borderColor: '#3B82F6' }} />
+                <Text className="text-xs text-muted-foreground">Disponibles</Text>
+              </View>
+            </View>
+          </View>
+        ) : (
         <>
           {/* ── Banner turnos eventuales (trabajador_nomina) ─────── */}
           {isNomina && (
@@ -484,6 +694,8 @@ export default function TurnosScreen() {
               <View className="flex-1 items-center justify-center">
                 <ActivityIndicator size="large" color={theme.primary} />
               </View>
+            ) : isNomina && esErrorTurnosExtraApagadas(errOfertas) ? (
+              <TurnosExtraOptIn />
             ) : errorOfertas ? (
               <View className="flex-1 items-center justify-center gap-3 px-6">
                 <Ionicons name="warning-outline" size={48} color="#94A3B8" />
@@ -555,6 +767,8 @@ export default function TurnosScreen() {
             )
           )}
         </>
+        )}
+        </>
       )}
     </SafeAreaView>
   );
@@ -564,7 +778,6 @@ export default function TurnosScreen() {
 
 const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
 function formatShortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
@@ -584,4 +797,42 @@ function turnosSolapan(oferta: Oferta, confirmados: Asignacion[]): boolean {
     const aFin = a.hora_fin_estimada ?? '23:59:59';
     return a.hora_inicio < ofFin && aFin > oferta.hora_inicio;
   });
+}
+
+const CAL_COLOR = {
+  borrador:   '#94A3B8', // gris — no publicada, no requiere acción
+  urgente:    '#F59E0B', // ámbar — puestos sin cubrir cerca de la fecha, o postulantes sin revisar
+  completada: '#059669', // verde
+  cancelada:  '#EF4444', // rojo
+  // Naranja (activa, sin urgencia) usa `primary` del theme — es el acento del módulo Turnos.
+};
+
+/**
+ * Color del punto de calendario del gestor para una oferta.
+ * "Completada con incidencia" (no_presentado/sospechoso) queda fuera a propósito:
+ * requeriría traer las asignaciones de cada oferta del mes (N+1), no solo el listado —
+ * upgrade path: que el backend agregue un flag `tiene_incidencias` a GET /ofertas.
+ */
+function colorOferta(o: Oferta, pendientesPorOferta: Map<number, number>, today: string, primary: string): string {
+  if (o.estado === 'cancelada')  return CAL_COLOR.cancelada;
+  if (o.estado === 'completada') return CAL_COLOR.completada;
+  if (o.estado === 'borrador')   return CAL_COLOR.borrador;
+
+  const totalPlazas = o.puestos?.reduce((s, p) => s + p.plazas, 0) ?? 0;
+  const cubiertas   = o.puestos?.reduce((s, p) => s + p.plazas_cubiertas, 0) ?? 0;
+  const incompleta  = cubiertas < totalPlazas;
+  const pendientes  = pendientesPorOferta.get(o.id) ?? 0;
+  const diasHasta   = (new Date(`${o.fecha}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86_400_000;
+  const urgente = pendientes > 0 || (incompleta && diasHasta <= 3);
+
+  return urgente ? CAL_COLOR.urgente : primary;
+}
+
+function LeyendaPunto({ color, label }: { color: string; label: string }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <View className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+      <Text className="text-xs text-muted-foreground">{label}</Text>
+    </View>
+  );
 }

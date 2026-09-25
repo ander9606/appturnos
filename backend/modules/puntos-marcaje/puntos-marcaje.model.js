@@ -2,18 +2,37 @@
 
 const { pool } = require('../../config/database');
 
+// latitud/longitud son DECIMAL — mysql2 los devuelve como string sin decimalNumbers.
+// El cliente (LugarInput, MapaSelector, geofence) espera number y llama .toFixed()
+// directo, así que sin este cast truena con "undefined is not a function".
+function castCoords(row) {
+  return { ...row, latitud: Number(row.latitud), longitud: Number(row.longitud) };
+}
+
 const PuntosMarcajeModel = {
   async listar(empresaId, { soloActivos = true } = {}) {
     const filtro = soloActivos ? 'AND activo = 1' : '';
     const [filas] = await pool.query(
       `SELECT id, empresa_id, nombre, descripcion, latitud, longitud,
-              radio_metros, tipo, activo, created_at
+              radio_metros, tipo, alcance, activo, created_at
        FROM puntos_marcaje
        WHERE empresa_id = ? ${filtro}
        ORDER BY tipo, nombre`,
       [empresaId]
     );
-    return filas;
+    return filas.map(castCoords);
+  },
+
+  /** Puntos disponibles como biblioteca de ubicaciones al crear un turno (alcance='todos'). */
+  async listarParaTurnos(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id, nombre, latitud, longitud, radio_metros
+       FROM puntos_marcaje
+       WHERE empresa_id = ? AND alcance = 'todos' AND activo = 1
+       ORDER BY nombre`,
+      [empresaId]
+    );
+    return filas.map(castCoords);
   },
 
   async listarZonales(empresaId) {
@@ -24,26 +43,48 @@ const PuntosMarcajeModel = {
        ORDER BY nombre`,
       [empresaId]
     );
-    return filas;
+    return filas.map(castCoords);
+  },
+
+  /**
+   * Puntos zonales válidos para un turno puntual: si el gestor acotó el set
+   * en `oferta_puntos_marcaje`, usa solo esos (sin exigir tipo='zonal' — el
+   * gestor eligió a mano, igual que ubicacion_libre gana sin mirar el cargo);
+   * si no acotó nada, cae al comportamiento de siempre (cualquier punto zonal
+   * de la empresa). Retrocompatible: ofertas sin fila en la tabla puente no
+   * cambian de comportamiento.
+   */
+  async listarZonalesEfectivos(empresaId, ofertaId) {
+    if (ofertaId) {
+      const [seleccionados] = await pool.query(
+        `SELECT pm.id, pm.nombre, pm.latitud, pm.longitud, pm.radio_metros
+         FROM puntos_marcaje pm
+         JOIN oferta_puntos_marcaje opm ON opm.punto_marcaje_id = pm.id
+         WHERE opm.oferta_id = ? AND pm.empresa_id = ? AND pm.activo = 1`,
+        [ofertaId, empresaId]
+      );
+      if (seleccionados.length > 0) return seleccionados.map(castCoords);
+    }
+    return this.listarZonales(empresaId);
   },
 
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT id, empresa_id, nombre, descripcion, latitud, longitud,
-              radio_metros, tipo, activo, created_at
+              radio_metros, tipo, alcance, activo, created_at
        FROM puntos_marcaje
        WHERE id = ? AND empresa_id = ? LIMIT 1`,
       [id, empresaId]
     );
-    return filas[0] || null;
+    return filas[0] ? castCoords(filas[0]) : null;
   },
 
-  async crear({ empresaId, nombre, descripcion, latitud, longitud, radio_metros, tipo }) {
+  async crear({ empresaId, nombre, descripcion, latitud, longitud, radio_metros, tipo, alcance }) {
     const [res] = await pool.query(
       `INSERT INTO puntos_marcaje
-         (empresa_id, nombre, descripcion, latitud, longitud, radio_metros, tipo)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [empresaId, nombre, descripcion || null, latitud, longitud, radio_metros ?? 100, tipo ?? 'fijo']
+         (empresa_id, nombre, descripcion, latitud, longitud, radio_metros, tipo, alcance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [empresaId, nombre, descripcion || null, latitud, longitud, radio_metros ?? 100, tipo ?? 'fijo', alcance ?? 'todos']
     );
     return res.insertId;
   },
@@ -51,7 +92,7 @@ const PuntosMarcajeModel = {
   async actualizar(empresaId, id, cambios) {
     const sets = [];
     const params = [];
-    const campos = ['nombre', 'descripcion', 'latitud', 'longitud', 'radio_metros', 'tipo', 'activo'];
+    const campos = ['nombre', 'descripcion', 'latitud', 'longitud', 'radio_metros', 'tipo', 'alcance', 'activo'];
     for (const c of campos) {
       if (cambios[c] !== undefined) {
         sets.push(`${c} = ?`);

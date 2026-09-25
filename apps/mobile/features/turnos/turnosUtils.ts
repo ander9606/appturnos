@@ -85,7 +85,7 @@ export function turnoYaInicio(fecha: string, horaInicio: string): boolean {
 
 export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'default' | 'primary';
 
-interface EstadoConfig {
+export interface EstadoConfig {
   label: string;
   badgeVariant: BadgeVariant;
   accentColor: string; // hex, for the left accent bar
@@ -114,4 +114,20 @@ export function fmtTime(t: string): string {
 /** "08:00:00", "14:00:00" → "8:00 – 14:00" */
 export function fmtRange(start: string, end: string | null): string {
   return end ? `${fmtTime(start)} – ${fmtTime(end)}` : fmtTime(start);
+}
+
+/** "2026-09-21" → "Lun, 21 de Sep" */
+export function fmtDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${SHORT_DAYS[d.getDay()]}, ${d.getDate()} de ${SHORT_MONTHS[d.getMonth()]}`;
+}
+
+/** Minutos restantes → etiqueta legible: "1h 23m", "45 min". */
+export function fmtFaltan(min: number): string {
+  const m = Math.max(1, Math.ceil(min));
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  if (h > 0 && rem > 0) return `${h}h ${rem}m`;
+  if (h > 0) return `${h}h`;
+  return `${rem} min`;
 }

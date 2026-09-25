@@ -18,18 +18,54 @@ import { Button } from '@/components/ui/Button';
 import { RegistroCard } from '../RegistroCard';
 import { PeriodoHeaderCard } from './components/PeriodoHeaderCard';
 import { ResumenCards } from './components/ResumenCards';
+import { TurnosEventualCard } from './components/TurnosEventualCard';
 import { IngresoHoyTab } from './components/IngresoHoyTab';
 import { useNominaTrabajador } from './useNominaTrabajador';
 import { calcularResumenPeriodo, analizarDia } from './nominaTrabajadorUtils';
 import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
+import { useRegistrosHistorial } from '../useNomina';
+import { MonthCalendar } from '@/components/ui/MonthCalendar';
+import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
+import { bogotaToday } from '@/lib/formatters';
+import type { TipoDia } from '@api-client';
 
 type ActiveTab = 'hoy' | 'nomina';
+
+/** Días que cuentan como "libre" vs una ausencia distinta — no distinguimos más que esto
+ *  porque lo único que se pidió fue "saber cuándo estará de descanso". */
+const DIA_LIBRE: Partial<Record<TipoDia, boolean>> = { descanso: true, compensatorio: true, vacacion: true };
+const DIA_AUSENCIA: Partial<Record<TipoDia, boolean>> = { incapacidad: true, licencia: true };
 
 export function NominaTrabajadorView() {
   const theme = useTheme();
   const router = useRouter();
   const { data: compensatorios = [] } = useMisCompensatorios();
   const [activeTab, setActiveTab] = useState<ActiveTab>('hoy');
+
+  // Vista mensual — "¿cuándo estaré de descanso?" — alterna con la lista de registros.
+  const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
+  const [mesCursor, setMesCursor] = useState(() => {
+    const [y, m] = bogotaToday().split('-').map(Number);
+    return { year: y, month: m };
+  });
+  const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  const { data: historialResp } = useRegistrosHistorial({
+    enabled: activeTab === 'nomina' && viewMode === 'mes',
+    fechaDesde: mesWeeks[0][0].date,
+    fechaHasta: mesWeeks[mesWeeks.length - 1][6].date,
+  });
+  const tipoDiaPorFecha = useMemo(() => {
+    const map = new Map<string, TipoDia>();
+    for (const r of historialResp?.data ?? []) map.set(r.fecha, r.tipo_dia);
+    return map;
+  }, [historialResp]);
+  const compensatoriosAsignadosPorFecha = useMemo(() => {
+    const map = new Map<string, true>();
+    for (const c of compensatorios) {
+      if (c.estado === 'asignado' && c.fecha_asignada) map.set(c.fecha_asignada, true);
+    }
+    return map;
+  }, [compensatorios]);
 
   const {
     valorHora,
@@ -49,6 +85,9 @@ export function NominaTrabajadorView() {
     miLiquidacion,
     tipoContrato,
     misDescuentos,
+    aceptaExtras,
+    periodoEventual,
+    miLineaEventual,
     loading,
     loadingRegistros,
     isRefetching,
@@ -152,7 +191,7 @@ export function NominaTrabajadorView() {
       ) : (
         /* ── Tab: Mi Nómina ──────────────────────────────── */
         <FlatList
-          data={registros}
+          data={viewMode === 'mes' ? [] : registros}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <RegistroCard registro={item} valorHora={valorHora} />
@@ -184,6 +223,11 @@ export function NominaTrabajadorView() {
               />
               {/* onVerDetalles omitted — ResumenCards is immediately below */}
               <View className="px-5 gap-3">
+                <TurnosEventualCard
+                  aceptaExtras={aceptaExtras}
+                  periodo={periodoEventual}
+                  linea={miLineaEventual}
+                />
                 <ResumenCards
                   resumen={resumen}
                   periodos={periodos}
@@ -196,22 +240,79 @@ export function NominaTrabajadorView() {
                 />
                 <View className="flex-row items-center justify-between mt-1">
                   <Text className="text-sm font-semibold text-foreground">
-                    Registros del período
+                    {viewMode === 'mes' ? 'Mi mes' : 'Registros del período'}
                   </Text>
-                  <TouchableOpacity
-                    onPress={() => router.push('/historial-ganancias')}
-                    className="flex-row items-center gap-1"
-                    hitSlop={8}
-                  >
-                    <Text className="text-xs font-semibold" style={{ color: theme.primary }}>Historial</Text>
-                    <Ionicons name="chevron-forward" size={12} color={theme.primary} />
-                  </TouchableOpacity>
+                  <View className="flex-row items-center gap-3">
+                    <TouchableOpacity
+                      onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
+                      accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+                      hitSlop={8}
+                    >
+                      <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={18} color={theme.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => router.push('/historial-ganancias')}
+                      className="flex-row items-center gap-1"
+                      hitSlop={8}
+                    >
+                      <Text className="text-xs font-semibold" style={{ color: theme.primary }}>Historial</Text>
+                      <Ionicons name="chevron-forward" size={12} color={theme.primary} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
+
+                {viewMode === 'mes' && (
+                  <View className="gap-2">
+                    <View className="flex-row items-center gap-3">
+                      <TouchableOpacity
+                        onPress={() => setMesCursor(c => shiftMonth(c, -1))}
+                        className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                      >
+                        <Ionicons name="chevron-back" size={16} color={theme.primary} />
+                      </TouchableOpacity>
+                      <Text className="text-sm font-semibold text-foreground flex-1 text-center">
+                        {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => setMesCursor(c => shiftMonth(c, 1))}
+                        className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                      >
+                        <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+                      </TouchableOpacity>
+                    </View>
+                    <MonthCalendar
+                      weeks={mesWeeks}
+                      renderDay={(day: CalendarDay) => {
+                        const tipoDia = tipoDiaPorFecha.get(day.date);
+                        const esLibre = (tipoDia && DIA_LIBRE[tipoDia]) || compensatoriosAsignadosPorFecha.has(day.date);
+                        const esAusencia = tipoDia && DIA_AUSENCIA[tipoDia];
+                        if (!esLibre && !esAusencia) return null;
+                        return (
+                          <View className={`flex-1 -m-1 mt-0 rounded-b-md items-center justify-end py-0.5 ${esLibre ? 'bg-success-light' : 'bg-warning-light'}`}>
+                            <Text className="text-foreground" style={{ fontSize: 8, fontWeight: '700' }}>
+                              {esLibre ? 'Libre' : 'Ausencia'}
+                            </Text>
+                          </View>
+                        );
+                      }}
+                    />
+                    <View className="flex-row items-center gap-4 justify-center mt-1">
+                      <View className="flex-row items-center gap-1.5">
+                        <View className="w-2.5 h-2.5 rounded bg-success-light" />
+                        <Text className="text-xs text-muted-foreground">Descanso / vacaciones</Text>
+                      </View>
+                      <View className="flex-row items-center gap-1.5">
+                        <View className="w-2.5 h-2.5 rounded bg-warning-light" />
+                        <Text className="text-xs text-muted-foreground">Incapacidad / licencia</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
           }
           ListEmptyComponent={
-            loadingRegistros ? (
+            viewMode === 'mes' ? null : loadingRegistros ? (
               <View className="py-12 items-center">
                 <ActivityIndicator color={theme.primary} />
               </View>

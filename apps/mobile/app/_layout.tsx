@@ -10,7 +10,7 @@ import '../global.css';
 
 import React, { useEffect } from 'react';
 import { LogBox } from 'react-native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
@@ -24,8 +24,36 @@ import { queryClient } from '@/lib/queryClient';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
+import { ActionToast } from '@/components/ui/ActionToast';
+import { AnuncioTurno } from '@/components/ui/AnuncioTurno';
+import { InvitacionFlotanteCard } from '@/components/ui/InvitacionFlotanteCard';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { AlertDialog } from '@/components/ui/AlertDialog';
+import { showInvitacionFlotante } from '@/lib/invitacionFlotante';
+import { trabajadorEmpresaApi } from '@api-client';
 import { destino as destinoNotificacion } from './notificaciones';
+
+const TIPOS_INVITACION_EMPRESA = new Set(['invitacion_empresa_nomina', 'invitacion_empresa']);
+
+/**
+ * Busca una invitación pendiente y, si la encuentra, la muestra en la tarjeta
+ * flotante (InvitacionFlotanteCard) — el push solo trae empresa_id/tipo, no
+ * los datos completos (empresa_nombre, tipo_ofrecido) que la tarjeta necesita.
+ * `empresaId` filtra a la invitación de un push puntual; sin él, se usa para
+ * el chequeo al iniciar sesión (por si llegó una invitación con la app cerrada).
+ */
+async function buscarYMostrarInvitacionPendiente(empresaId?: number) {
+  try {
+    const { invitaciones } = await trabajadorEmpresaApi.misEmpresas();
+    const vinculo = empresaId
+      ? invitaciones.find((v) => v.empresa_id === empresaId)
+      : invitaciones.find((v) => v.tipo_ofrecido === 'nomina') ?? invitaciones[0];
+    if (vinculo) showInvitacionFlotante(vinculo);
+  } catch {
+    // Best-effort: si falla, el trabajador igual la ve en la campana de
+    // notificaciones o en "Mis empresas" — no es una falla crítica de flujo.
+  }
+}
 
 // ponytail: expo-router activa keep-awake internamente en dev; falla en Android emulator — ruido inofensivo
 LogBox.ignoreLogs(['Unable to activate keep awake']);
@@ -42,6 +70,7 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const segments = useSegments();
+  const rootNavigationState = useRootNavigationState();
   const status      = useAuthStore((s) => s.status);
   const usuario     = useAuthStore((s) => s.usuario);
   const rol         = usuario?.rol;
@@ -62,9 +91,22 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [status]);
 
+  // Si ya había una invitación esperando desde antes de abrir la app (llegó
+  // con la app cerrada, o el permiso de push estaba denegado), la mostramos
+  // igual al iniciar sesión — una sola vez por sesión autenticada.
+  useEffect(() => {
+    if (status === 'authenticated') {
+      buscarYMostrarInvitacionPendiente();
+    }
+  }, [status]);
+
   // Navigate to the relevant screen when the user taps a push notification
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    // rootNavigationState.key solo existe una vez que el Stack raíz terminó de montar;
+    // sin este guard, un cold-start vía tap en la notificación (que expo-notifications
+    // entrega apenas se registra el listener) puede navegar antes de que exista el
+    // navigator y tirar "Attempted to navigate before mounting the Root Layout component".
+    if (status !== 'authenticated' || !rootNavigationState?.key) return;
     const sub = Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data = (response.notification.request.content.data ?? {}) as Record<string, unknown>;
       const tipo = typeof data.tipo === 'string' ? data.tipo : '';
@@ -72,10 +114,25 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       router.push((ruta ?? '/notificaciones') as Parameters<typeof router.push>[0]);
     });
     return () => sub.remove();
+  }, [status, rootNavigationState?.key]);
+
+  // Tarjeta flotante invasiva cuando llega una invitación de empresa con la
+  // app abierta (setNotificationHandler ya muestra el banner nativo, pero
+  // ese solo abre la bandeja del sistema — no deja aceptar/rechazar ahí mismo).
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    const sub = Notifications.addNotificationReceivedListener((notification: any) => {
+      const data = (notification.request.content.data ?? {}) as Record<string, unknown>;
+      const tipo = typeof data.tipo === 'string' ? data.tipo : '';
+      if (!TIPOS_INVITACION_EMPRESA.has(tipo)) return;
+      const empresaId = typeof data.empresa_id === 'number' ? data.empresa_id : undefined;
+      buscarYMostrarInvitacionPendiente(empresaId);
+    });
+    return () => sub.remove();
   }, [status]);
 
   useEffect(() => {
-    if (status === 'unknown') return; // still loading
+    if (status === 'unknown' || !rootNavigationState?.key) return; // still loading / router not ready
 
     const inAuthGroup     = segments[0] === '(auth)';
     // "empresa" vive fuera de (admin) a propósito (ver Stack.Screen abajo) pero
@@ -112,7 +169,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     } else if (status === 'unauthenticated' && !inAuthGroup) {
       router.replace(welcomeRoute);
     }
-  }, [status, segments, rol, hasLaunched, usuario]);
+  }, [status, segments, rol, hasLaunched, usuario, rootNavigationState?.key]);
 
   return (
     <>
@@ -133,11 +190,15 @@ function RootLayout() {
       <ErrorBoundary>
         <StatusBanner />
         <Toast />
+        <ActionToast />
+        <AnuncioTurno />
+        <InvitacionFlotanteCard />
         <ConfirmDialog />
+        <AlertDialog />
         <AuthGuard>
           {/* Default: header visible, slide from right.
               Only exceptions are registered explicitly. */}
-          <Stack screenOptions={{ headerShown: true, animation: 'slide_from_right' }}>
+          <Stack screenOptions={{ headerShown: true, animation: 'slide_from_right', headerBackButtonDisplayMode: 'minimal', headerBackTitle: '' }}>
             {/* Tab groups — sin header (cada tab lo gestiona) */}
             <Stack.Screen name="(auth)"  options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)"  options={{ headerShown: false }} />
@@ -145,9 +206,10 @@ function RootLayout() {
             {/* postulaciones usa su propio header personalizado */}
             <Stack.Screen name="postulaciones" options={{ headerShown: false }} />
             {/* Detail screens — slide from right */}
-            <Stack.Screen name="turno/[id]"      options={{ headerShown: true }} />
-            <Stack.Screen name="oferta/[id]"     options={{ headerShown: true }} />
-            <Stack.Screen name="trabajador/[id]" options={{ headerShown: true }} />
+            <Stack.Screen name="turno/[id]"           options={{ headerShown: true }} />
+            <Stack.Screen name="oferta/[id]"          options={{ headerShown: true }} />
+            <Stack.Screen name="trabajador/[id]"      options={{ headerShown: true }} />
+            <Stack.Screen name="registro-detalle/[id]" options={{ headerShown: true }} />
             {/* Empresa (super_admin) — fuera de (admin) para no colar tabs fantasma */}
             <Stack.Screen name="empresa/[id]"    options={{ headerShown: false }} />
             <Stack.Screen name="empresa/nueva"   options={{ headerShown: false }} />
@@ -156,6 +218,7 @@ function RootLayout() {
             <Stack.Screen name="trabajador/nuevo"     options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
             <Stack.Screen name="invitar-trabajador"   options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
             {/* Integración logiq360 — solo admin_empresa */}
+            <Stack.Screen name="mi-plan" options={{ headerShown: true, title: 'Mi plan' }} />
             <Stack.Screen name="integracion/config" options={{ title: 'Integración logiq360' }} />
             <Stack.Screen name="integracion/estado" options={{ title: 'Estado de la cola' }} />
             <Stack.Screen name="integracion/conciliacion" options={{ title: 'Conciliación de personal' }} />
@@ -188,6 +251,9 @@ function RootLayout() {
             {/* Contratos diarios — trabajador_turnos */}
             <Stack.Screen name="mis-contratos" options={{ title: 'Mis contratos' }} />
             <Stack.Screen name="contrato/[id]" options={{ title: 'Contrato' }} />
+            {/* Cuentas de cobro — trabajador_turnos, generadas al cerrar un período */}
+            <Stack.Screen name="mis-cuentas-cobro" options={{ title: 'Mis cuentas de cobro' }} />
+            <Stack.Screen name="cuenta-cobro/[id]" options={{ title: 'Cuenta de cobro' }} />
             {/* Legal */}
             <Stack.Screen name="terminos" options={{ headerShown: false }} />
             <Stack.Screen name="privacidad" options={{ title: 'Política de privacidad' }} />

@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -32,6 +33,7 @@ import type { Vinculo } from '@api-client';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { confirm } from '@/lib/confirmDialog';
 import { nivelRanking, rankingLabel, rankingColor, rankingDescription } from '@/features/turnos/rankingUtils';
+import { CambioRow, CAMBIOS_NOMINA, formatCambiosNomina } from '@/features/empresas/CambiosNomina';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -65,6 +67,7 @@ function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
   const tieneRanking = vinculo.ranking != null && vinculo.total_calificaciones > 0;
   const nivel = nivelRanking(vinculo.ranking, vinculo.total_calificaciones);
   const color = rankingColor(nivel);
+  const tieneContacto = Boolean(vinculo.empresa_telefono || vinculo.empresa_email);
   return (
     <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden">
       <View className="flex-row items-center gap-3 p-4">
@@ -101,6 +104,30 @@ function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
           <Text className="text-xs font-semibold text-success">Activo</Text>
         </View>
       </View>
+
+      {/* Contacto de emergencia — solo si la empresa cargó teléfono/correo */}
+      {tieneContacto && (
+        <View className="flex-row border-t border-border">
+          {vinculo.empresa_telefono && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`tel:${vinculo.empresa_telefono}`)}
+              className={`flex-1 flex-row items-center justify-center gap-1.5 py-3 active:opacity-70 ${vinculo.empresa_email ? 'border-r border-border' : ''}`}
+            >
+              <Ionicons name="call-outline" size={14} color="#3B82F6" />
+              <Text className="text-xs font-semibold text-info">Llamar</Text>
+            </TouchableOpacity>
+          )}
+          {vinculo.empresa_email && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL(`mailto:${vinculo.empresa_email}`)}
+              className="flex-1 flex-row items-center justify-center gap-1.5 py-3 active:opacity-70"
+            >
+              <Ionicons name="mail-outline" size={14} color="#3B82F6" />
+              <Text className="text-xs font-semibold text-info">Correo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -143,19 +170,28 @@ function InvitacionCard({
   onRechazar: (id: number) => void;
   loading: boolean;
 }) {
+  const esNomina = vinculo.tipo_ofrecido === 'nomina';
   return (
-    <View className="mx-5 mb-3 bg-card rounded-2xl border border-primary-200 overflow-hidden">
+    <View className={`mx-5 mb-3 bg-card rounded-2xl border overflow-hidden ${esNomina ? 'border-warning/50' : 'border-primary-200'}`}>
       <View className="flex-row items-center gap-3 px-4 pt-4 pb-3">
-        <View className="w-11 h-11 rounded-xl bg-primary-50 items-center justify-center">
-          <Ionicons name="mail-outline" size={20} color="#FF5A3C" />
+        <View className={`w-11 h-11 rounded-xl items-center justify-center ${esNomina ? 'bg-warning/10' : 'bg-primary-50'}`}>
+          <Ionicons name={esNomina ? 'briefcase-outline' : 'mail-outline'} size={20} color={esNomina ? '#D97706' : '#FF5A3C'} />
         </View>
         <View className="flex-1">
           <Text className="text-base font-semibold text-foreground">{vinculo.empresa_nombre}</Text>
           <Text className="text-xs text-muted-foreground mt-0.5">
-            Te invitó el {fmtFecha(vinculo.fecha_solicitud)}
+            {esNomina ? 'Invitación a nómina · ' : ''}Te invitó el {fmtFecha(vinculo.fecha_solicitud)}
           </Text>
         </View>
       </View>
+      {esNomina && (
+        <View className="mx-4 mb-3 bg-warning/10 rounded-xl p-3 gap-2">
+          <Text className="text-[11px] font-semibold text-warning uppercase tracking-wide">Qué cambia si aceptas</Text>
+          {CAMBIOS_NOMINA.map((c) => (
+            <CambioRow key={c.texto} tipo={c.tipo} texto={c.texto} />
+          ))}
+        </View>
+      )}
       <View className="flex-row gap-2 px-4 pb-4">
         <TouchableOpacity
           onPress={() => onRechazar(vinculo.id)}
@@ -241,6 +277,16 @@ export default function MisEmpresasScreen() {
   const invitaciones = data?.invitaciones ?? [];
 
   const handleAceptar = async (id: number) => {
+    const vinculo = invitaciones.find((v) => v.id === id);
+    if (vinculo?.tipo_ofrecido === 'nomina') {
+      const ok = await confirm({
+        title: `Pasar a nómina de ${vinculo.empresa_nombre}`,
+        message: `${formatCambiosNomina()}\n\nTu pestaña principal pasa a ser "Nómina". ¿Confirmas?`,
+        confirmLabel: 'Sí, aceptar',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
     setActionLoadingId(id);
     try {
       await aceptar.mutateAsync(id);
@@ -274,11 +320,11 @@ export default function MisEmpresasScreen() {
   };
 
   const handleReactivar = (empresaId: number) => {
-    solicitar.mutate(empresaId, {
+    solicitar.mutate({ empresaId }, {
       onError: () => Alert.alert('Error', 'No se pudo enviar la solicitud.'),
     });
   };
-  const reactivandoEmpresaId = solicitar.isPending ? solicitar.variables : null;
+  const reactivandoEmpresaId = solicitar.isPending ? solicitar.variables?.empresaId : null;
 
   const total = activas.length + pendientes.length + invitaciones.length;
 

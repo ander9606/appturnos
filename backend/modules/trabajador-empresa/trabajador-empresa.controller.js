@@ -5,14 +5,15 @@ const TrabajadorEmpresaService = require('./trabajador-empresa.service');
 async function solicitar(req, res) {
   const usuarioId = req.usuario.sub;
   const empresaId = Number(req.body.empresa_id);
-  const data = await TrabajadorEmpresaService.solicitar(usuarioId, empresaId);
+  const cargoIds = req.body.cargo_ids?.map(Number);
+  const data = await TrabajadorEmpresaService.solicitar(usuarioId, empresaId, cargoIds);
   res.status(201).json({ success: true, data, message: 'Solicitud enviada' });
 }
 
 async function invitar(req, res) {
   const empresaId = req.empresa_id;
-  const { cedula } = req.body;
-  const data = await TrabajadorEmpresaService.invitar(empresaId, cedula);
+  const { cedula, tipo } = req.body;
+  const data = await TrabajadorEmpresaService.invitar(empresaId, cedula, tipo || 'turnos');
   res.status(201).json({ success: true, data, message: 'Invitación enviada' });
 }
 

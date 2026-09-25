@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Check, X } from 'lucide-react';
 import { equipoApi } from '@/modules/equipo/api/equipoApi';
+import { Modal } from '@/shared/components/Modal';
 import type { Trabajador } from '@/modules/equipo/types';
+import type { ParaQuienOferta } from '../types';
 
 export interface DestinatarioSeleccionado {
   id: number;
@@ -14,11 +16,13 @@ interface Props {
   seleccionados: DestinatarioSeleccionado[];
   onConfirm: (destinatarios: DestinatarioSeleccionado[]) => void;
   onClose: () => void;
+  /** Tipo de destinatario del turno — filtra la lista a trabajadores compatibles. */
+  paraQuien?: ParaQuienOferta;
 }
 
 /** Selector de personas para un turno dirigido — reutiliza el mismo filtro
  *  client-side que EquipoPage.tsx (el backend no expone búsqueda por texto todavía). */
-export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose }: Props) {
+export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose, paraQuien }: Props) {
   const [search, setSearch] = useState('');
   const [elegidos, setElegidos] = useState<DestinatarioSeleccionado[]>(seleccionados);
 
@@ -31,20 +35,16 @@ export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose }: Pro
   const elegidoIds = useMemo(() => new Set(elegidos.map(d => d.id)), [elegidos]);
 
   const filtrados = useMemo(() => {
+    // 'ambos' de un trabajador califica tanto para turnos como para nómina.
+    const compatibles = trabajadores.filter(
+      t => !paraQuien || paraQuien === 'ambos' || t.tipo === paraQuien || t.tipo === 'ambos',
+    );
     const q = search.trim().toLowerCase();
-    if (!q) return trabajadores;
-    return trabajadores.filter(
+    if (!q) return compatibles;
+    return compatibles.filter(
       t => `${t.nombre} ${t.apellido}`.toLowerCase().includes(q) || (t.cedula ?? '').includes(q),
     );
-  }, [trabajadores, search]);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [trabajadores, search, paraQuien]);
 
   function toggle(t: Trabajador) {
     setElegidos(prev =>
@@ -55,9 +55,8 @@ export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose }: Pro
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl w-full max-w-md flex flex-col" style={{ maxHeight: '80vh' }}>
-        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+    <Modal onClose={onClose} padded={false} className="flex flex-col max-h-[80vh]">
+      <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <h3 className="text-base font-semibold text-foreground">Elegir personas</h3>
           <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X size={18} />
@@ -117,7 +116,6 @@ export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose }: Pro
             Listo{elegidos.length > 0 ? ` (${elegidos.length})` : ''}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

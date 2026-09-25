@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { RefreshCw, AlertCircle, CheckCircle2, Clock, MinusCircle, XCircle } from 'lucide-react';
 import { useWompiEventos, useReintentarWompiEvento } from '../hooks/useAdmin';
+import { ErrorState } from '@/shared/components/ErrorState';
 import type { EstadoWompiEvento, WompiEvento } from '../types';
 
 const ESTADO_CONFIG: Record<EstadoWompiEvento, { label: string; icon: React.ReactNode; cls: string }> = {
@@ -89,7 +90,7 @@ export function WompiEventosPage() {
   const [estado, setEstado] = useState<EstadoWompiEvento | ''>('');
   const [page, setPage] = useState(1);
 
-  const { data, isLoading } = useWompiEventos({ estado: estado || undefined, page });
+  const { data, isLoading, isError, error, refetch } = useWompiEventos({ estado: estado || undefined, page });
   const reintentar = useReintentarWompiEvento();
 
   const eventos: WompiEvento[] = data?.data?.data ?? [];
@@ -138,6 +139,8 @@ export function WompiEventosPage() {
           <tbody>
             {isLoading ? (
               <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Cargando...</td></tr>
+            ) : isError ? (
+              <tr><td colSpan={9}><ErrorState error={error} onRetry={refetch} /></td></tr>
             ) : eventos.length === 0 ? (
               <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Sin eventos</td></tr>
             ) : (

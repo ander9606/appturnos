@@ -218,7 +218,7 @@ function WorkerView() {
           {perfil?.ranking != null && (
             <View className="flex-row items-center gap-1 bg-white/15 px-3 py-1.5 rounded-full">
               <Ionicons name="star" size={14} color="#FCD34D" />
-              <Text className="text-sm font-bold text-white">{perfil.ranking.toFixed(1)}</Text>
+              <Text className="text-sm font-bold text-white">{Number(perfil.ranking).toFixed(1)}</Text>
               <Text className="text-xs text-white/70">· {perfil.total_calificaciones} calif.</Text>
             </View>
           )}

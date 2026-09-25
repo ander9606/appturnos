@@ -27,15 +27,26 @@ export interface RegistroDiario {
   fecha: string;           // YYYY-MM-DD
   hora_entrada: string | null; // HH:MM:SS — entrada de la sesión activa
   hora_salida: string | null;
+  /** Ubicación donde se marcó — null si el dispositivo no dio GPS o negó el permiso. */
+  latitud_entrada: number | null;
+  longitud_entrada: number | null;
+  latitud_salida: number | null;
+  longitud_salida: number | null;
   sesiones: number;            // cantidad de sesiones del día (1 = normal, 2+ = con reingreso)
   hora_entrada_inicial: string | null; // HH:MM:SS — primer ingreso del día (no cambia en reingresos)
+  sesiones_detalle: { hora_entrada: string; hora_salida: string }[] | null; // sesiones ya cerradas (sin la vigente) — ver hora_entrada/hora_salida para la última
   horas_ordinarias: number;    // totales acumulados de todas las sesiones
   horas_extra_diurnas: number;
   horas_extra_nocturnas: number;
   horas_nocturnas: number;
+  /** Horas ordinarias+nocturnas ya acumuladas esta semana (lunes–ayer) antes de este día — explica por qué el resto pasó a extra. */
+  horas_acumuladas_semana: number;
   horas_festivo: number;
   es_festivo: 0 | 1;
+  /** Trabajador marcó que no tomó almuerzo — omite el descuento automático de 1h en jornadas > 6h. */
+  jornada_continua: 0 | 1;
   novedad: string | null;
+  sospechoso: 0 | 1; // otro trabajador marcó muy cerca en tiempo/espacio — posible buddy punching, solo auditoría
   tipo_dia: TipoDia;
   aprobado_por: number | null;
   valor_hora_snapshot: number | null; // frozen at period close (migration 010b); null for open periods
@@ -68,6 +79,7 @@ export interface SolicitudReingreso {
 }
 
 export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
+export type ClasificacionCompensatorio = 'ocasional' | 'habitual';
 
 export interface DescansoCompensatorio {
   id: number;
@@ -77,6 +89,8 @@ export interface DescansoCompensatorio {
   origen_fecha: string;       // YYYY-MM-DD — el domingo/festivo trabajado
   origen_registro_id: number | null;
   estado: EstadoCompensatorio;
+  /** Art. 180/181 CST — ocasional: sin recargo, solo compensatorio; habitual: recargo + compensatorio. */
+  clasificacion: ClasificacionCompensatorio;
   fecha_asignada: string | null; // YYYY-MM-DD — asignada por el empleador
   asignado_por: number | null;
   asignado_en: string | null;
@@ -84,6 +98,12 @@ export interface DescansoCompensatorio {
   // Joined
   trabajador_nombre: string;
   trabajador_apellido: string;
+}
+
+export interface RangoDiaCompensatorio {
+  fecha: string;       // YYYY-MM-DD
+  disponible: boolean; // false si ya está ocupado por otro registro/compensatorio, o es domingo/festivo
+  zona: 'verde' | 'ambar' | 'rojo'; // cercanía al día trabajado dentro del plazo legal de 28 días
 }
 
 export interface LiquidacionLinea {
@@ -102,9 +122,21 @@ export interface LiquidacionLinea {
   horas_nocturnas: number;
   horas_festivo: number;
   valor_hora: number;
-  pago_por_horas: number;
-  salario_minimo_periodo: number;
-  ajuste_minimo: number;
+  /**
+   * Pesos por concepto, ya con el recargo de ley aplicado, suman `total`.
+   * `pago_ordinario` es el salario mensual prorrateado al período si el
+   * trabajador tiene `salario_base` (siempre completo, no depende de
+   * horas_ordinarias); si es por `tarifa_hora`, es horas_ordinarias × tarifa.
+   */
+  pago_ordinario: number;
+  pago_nocturno: number;
+  pago_extra_diurno: number;
+  pago_extra_nocturno: number;
+  pago_festivo: number;
+  /** Multiplicador dominical/festivo aplicado (Ley 2466: 1.80 → 1.90 → 2.00 según fecha). */
+  recargo_festivo: number;
+  /** Multiplicador de la hora nocturna ordinaria: 0.35 asalariado (el sueldo ya paga la base), 1.35 por tarifa_hora. */
+  recargo_nocturno: number;
   total: number;
   /** Descuento de salud (4% del total). 0 si la empresa es prestación de servicios. */
   descuento_salud: number;
@@ -113,7 +145,9 @@ export interface LiquidacionLinea {
   /** Descuentos manuales ya aceptados por el trabajador (préstamos, inasistencias, etc.). */
   otros_descuentos: Array<{ id: number; tipo: TipoDescuento; motivo: string; monto: number }>;
   otros_descuentos_total: number;
-  /** total - descuento_salud - descuento_pension - otros_descuentos_total. */
+  /** Auxilio de transporte proporcional al período. No es IBC — se suma después de las deducciones. 0 si prestación de servicios o si el salario supera el tope legal. */
+  subsidio_transporte: number;
+  /** total - descuento_salud - descuento_pension - otros_descuentos_total + subsidio_transporte. */
   neto: number;
 }
 
@@ -158,7 +192,7 @@ export interface ResumenHoras {
 }
 
 export type TipoMarcacion = 'libre' | 'fijo' | 'zonal';
-export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia';
+export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia' | 'ausencia';
 
 export interface TrabajadorNominaPerfil {
   id: number;
@@ -179,9 +213,11 @@ export interface TrabajadorNominaPerfil {
 export const nominaApi = {
   // ── Períodos ──────────────────────────────────────────────────────────
 
-  listarPeriodos(params?: { estado?: EstadoPeriodo; page?: number; limit?: number }) {
+  listarPeriodos(params?: { estado?: EstadoPeriodo; fecha_desde?: string; fecha_hasta?: string; page?: number; limit?: number }) {
     const qs = new URLSearchParams();
     if (params?.estado) qs.set('estado', params.estado);
+    if (params?.fecha_desde) qs.set('fecha_desde', params.fecha_desde);
+    if (params?.fecha_hasta) qs.set('fecha_hasta', params.fecha_hasta);
     if (params?.page)   qs.set('page',   String(params.page));
     if (params?.limit)  qs.set('limit',  String(params.limit));
     const q = qs.toString() ? `?${qs}` : '';
@@ -211,6 +247,7 @@ export const nominaApi = {
     fecha?: string;
     fecha_desde?: string;
     fecha_hasta?: string;
+    sospechoso?: boolean;
     page?: number;
     limit?: number;
   }) {
@@ -220,6 +257,7 @@ export const nominaApi = {
     if (params.fecha)         qs.set('fecha',         params.fecha);
     if (params.fecha_desde)   qs.set('fecha_desde',   params.fecha_desde);
     if (params.fecha_hasta)   qs.set('fecha_hasta',   params.fecha_hasta);
+    if (params.sospechoso !== undefined) qs.set('sospechoso', params.sospechoso ? '1' : '0');
     if (params.page)          qs.set('page',          String(params.page));
     if (params.limit)         qs.set('limit',         String(params.limit));
     const q = qs.toString() ? `?${qs}` : '';
@@ -228,13 +266,26 @@ export const nominaApi = {
     );
   },
 
+  /** Obtiene un registro específico por ID (para gestores que corrijen). */
+  obtenerRegistro(registroId: number): Promise<RegistroDiario> {
+    return api.get<RegistroDiario>(`/api/nomina/registros/${registroId}`);
+  },
+
+  /** Descarta el flag de sospechoso de un registro tras revisión del gestor. */
+  descartarSospechoso(registroId: number): Promise<null> {
+    return api.put<null>(`/api/nomina/registros/${registroId}/sospechoso/descartar`);
+  },
+
   crearRegistro(datos: {
     periodo_id: number;
     fecha: string;
-    hora_entrada: string;
+    /** Requerida salvo cuando tipo_dia es 'ausencia' (no se presentó). */
+    hora_entrada?: string;
     hora_salida?: string;
     trabajador_id?: number;
     novedad?: string;
+    jornada_continua?: boolean;
+    tipo_dia?: TipoDia;
   }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros', datos);
   },
@@ -242,8 +293,10 @@ export const nominaApi = {
   corregirRegistro(id: number, datos: {
     tipo_dia?: TipoDia;
     novedad?: string;
-    hora_entrada?: string;
-    hora_salida?: string;
+    /** null limpia el valor guardado — ej. al reclasificar a compensatorio/ausencia. */
+    hora_entrada?: string | null;
+    hora_salida?: string | null;
+    jornada_continua?: boolean;
   }): Promise<RegistroDiario> {
     return api.put<RegistroDiario>(`/api/nomina/registros/${id}`, datos);
   },
@@ -254,11 +307,11 @@ export const nominaApi = {
     return api.get<TrabajadorNominaPerfil>('/api/nomina/me');
   },
 
-  marcarEntrada(datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
+  marcarEntrada(datos?: { latitud?: number; longitud?: number; device_id?: string }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>('/api/nomina/registros/marcar-entrada', datos ?? {});
   },
 
-  marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number }): Promise<RegistroDiario> {
+  marcarSalida(registroId: number, datos?: { latitud?: number; longitud?: number; device_id?: string; jornada_continua?: boolean }): Promise<RegistroDiario> {
     return api.post<RegistroDiario>(`/api/nomina/registros/${registroId}/marcar-salida`, datos ?? {});
   },
 
@@ -294,6 +347,19 @@ export const nominaApi = {
       `/api/nomina/compensatorios/${id}/asignar`,
       { fechaAsignada }
     );
+  },
+
+  /** Solo jefe_nomina / admin_empresa. Mueve un descanso ya asignado/tomado a otra fecha dentro del plazo legal. */
+  reasignarCompensatorio(id: number, fechaAsignada: string): Promise<DescansoCompensatorio> {
+    return api.put<DescansoCompensatorio>(
+      `/api/nomina/compensatorios/${id}/reasignar`,
+      { fechaAsignada }
+    );
+  },
+
+  /** Solo jefe_nomina / admin_empresa. Los 28 días candidatos con su zona de color y disponibilidad. */
+  rangoCompensatorio(id: number): Promise<RangoDiaCompensatorio[]> {
+    return api.get<RangoDiaCompensatorio[]>(`/api/nomina/compensatorios/${id}/rango`);
   },
 
   // ── Descuentos manuales ────────────────────────────────────────────────

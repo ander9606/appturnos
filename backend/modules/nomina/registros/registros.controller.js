@@ -12,10 +12,16 @@ async function listar(req, res) {
     fecha:         req.query.fecha         || undefined,
     fecha_desde:   req.query.fecha_desde   || undefined,
     fecha_hasta:   req.query.fecha_hasta   || undefined,
+    sospechoso:    req.query.sospechoso !== undefined ? req.query.sospechoso === '1' : undefined,
     page,
     limit,
   });
   res.json({ success: true, data: { data, pagination } });
+}
+
+async function obtener(req, res) {
+  const data = await RegistrosService.obtener(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data });
 }
 
 async function crear(req, res) {
@@ -31,6 +37,11 @@ async function corregir(req, res) {
     req.body
   );
   res.json({ success: true, data, message: 'Registro corregido' });
+}
+
+async function descartarSospechoso(req, res) {
+  await RegistrosService.descartarSospechoso(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data: null, message: 'Marcaje ya no está marcado como sospechoso' });
 }
 
 async function obtenerMiPerfil(req, res) {
@@ -74,6 +85,6 @@ async function rechazarReingreso(req, res) {
 }
 
 module.exports = {
-  listar, crear, corregir, obtenerMiPerfil, marcarEntrada, marcarSalida,
+  listar, obtener, crear, corregir, descartarSospechoso, obtenerMiPerfil, marcarEntrada, marcarSalida,
   solicitarReingreso, listarReingresosPendientes, aprobarReingreso, rechazarReingreso,
 };

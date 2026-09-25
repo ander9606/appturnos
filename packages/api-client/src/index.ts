@@ -2,7 +2,7 @@
 export * from './types';
 
 // Descuentos de ley (contrato laboral) — cálculo compartido para previews en UI
-export { calcularDeducciones, SMMLV_COP, HORAS_MES_NOMINA, DEDUCCION_SALUD, DEDUCCION_PENSION } from './laboral';
+export { calcularDeducciones, recargoFestivo, SMMLV_COP, HORAS_MES_NOMINA, DEDUCCION_SALUD, DEDUCCION_PENSION } from './laboral';
 export type { Deducciones } from './laboral';
 
 // Client initializer + TokenStore interface
@@ -13,7 +13,7 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export type { CrearGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato, Suscripcion, PlanOpcion } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
@@ -45,6 +45,8 @@ export type {
   TrabajadorNominaPerfil,
   DescansoCompensatorio,
   EstadoCompensatorio,
+  ClasificacionCompensatorio,
+  RangoDiaCompensatorio,
   SolicitudReingreso,
   EstadoSolicitudReingreso,
   DescuentoNomina,
@@ -56,6 +58,7 @@ export type {
   Asignacion,
   CalificacionResponse,
   CrearOfertaPayload,
+  ActualizarOfertaPayload,
   Oferta,
   OfertaDetalle,
   OfertaPuesto,
@@ -79,12 +82,16 @@ export type {
 } from './turnosEventual';
 export { cargosApi } from './cargos';
 export type { Cargo, CrearCargoPayload, ActualizarCargoPayload, EliminarCargoResult, CargoCertificado, CargoFuncion } from './cargos';
+export { geocodingApi } from './geocoding';
+export type { SugerenciaLugar, DireccionInversa } from './geocoding';
 export { puntosMarcajeApi } from './puntos-marcaje';
 export type {
   PuntoMarcaje,
   TipoPunto,
+  AlcancePunto,
   CrearPuntoMarcajePayload,
   ActualizarPuntoMarcajePayload,
+  PuntoParaTurno,
 } from './puntos-marcaje';
 export { trabajadoresApi } from './trabajadores';
 export type {
@@ -108,11 +115,13 @@ export { ausenciasApi } from './ausencias';
 export type { Ausencia, TipoAusencia, EstadoAusencia, CrearAusenciaPayload } from './ausencias';
 export { contratosApi } from './contratos';
 export type { Contrato, ContratoResumen } from './contratos';
+export { cuentasCobroApi } from './cuentas-cobro';
+export type { CuentaCobro, CuentaCobroResumen, CuentaCobroItem } from './cuentas-cobro';
 export { notificacionesApi } from './notificaciones';
 export type { Notificacion, ListarNotificacionesResponse } from './notificaciones';
 export { novedadesApi } from './novedades';
 export type { Novedad, TipoNovedad, CrearNovedadPayload } from './novedades';
-export { adminApi } from './admin';
+export { adminApi, precioPlanCop } from './admin';
 export { reportesApi } from './reportes';
 export { integracionApi } from './integracion';
 export type {
@@ -144,6 +153,8 @@ export type {
   ActualizarEmpresaPayload,
   ReportesGlobales,
   PlanEmpresa,
+  PlanConfig,
+  ActualizarPlanPayload,
   SuscripcionOrigen,
   LinkPagoResponse,
   WompiEstado,

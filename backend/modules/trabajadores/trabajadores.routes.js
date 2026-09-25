@@ -43,6 +43,7 @@ function reglasTrabajador({ parcial }) {
     body('cedula').optional({ values: 'falsy' }).isString().trim(),
     body('telefono').optional({ values: 'falsy' }).isString().trim(),
     body('cargo').optional({ values: 'falsy' }).isString().trim(),
+    body('descripcion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 500 }).withMessage('descripcion no puede superar 500 caracteres'),
     body('external_ref').optional({ values: 'falsy' }).isString().trim(),
     // Perfil extendido (todos opcionales)
     body('tipo_documento').optional().isIn(['CC', 'CE', 'PAS']).withMessage('tipo_documento inválido'),
@@ -60,6 +61,11 @@ function reglasTrabajador({ parcial }) {
     body('experiencias').optional().isArray(),
     body('diplomas').optional().isArray(),
     body('cargo_ids').optional().isArray(),
+    // Solo aplica a nómina/ambos — recordatorioIngreso.worker.js. NULL/'' = sin recordatorio.
+    body('hora_entrada_esperada')
+      .optional({ values: 'falsy' })
+      .matches(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/)
+      .withMessage('hora_entrada_esperada inválida (HH:MM)'),
   ];
 }
 
@@ -82,6 +88,7 @@ router.patch(
     body('fecha_nacimiento').optional({ values: 'falsy' }).isISO8601().withMessage('fecha_nacimiento debe ser YYYY-MM-DD'),
     body('sexo').optional().isIn(['M', 'F', 'otro']).withMessage('sexo inválido'),
     body('telefono').optional({ values: 'falsy' }).isString().trim(),
+    body('descripcion').optional({ values: 'falsy' }).isString().trim().isLength({ max: 500 }).withMessage('descripcion no puede superar 500 caracteres'),
     body('contacto_emergencia_nombre').optional({ values: 'falsy' }).isString().trim(),
     body('contacto_emergencia_tel').optional({ values: 'falsy' }).isString().trim(),
     body('eps').optional({ values: 'falsy' }).isString().trim(),
@@ -167,7 +174,7 @@ router.get(
   [
     query('tipo').optional().isIn(TIPOS).withMessage('Tipo inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
+    query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('limit inválido'),
   ],
   validar,
   ctrl.listar

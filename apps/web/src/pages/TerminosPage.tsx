@@ -11,7 +11,7 @@ export function TerminosPage() {
 
 const TERMINOS_TEXT = `TÉRMINOS Y CONDICIONES DE USO — ZATURNO
 
-Fecha de vigencia: 1 de julio de 2026
+Fecha de vigencia: 23 de septiembre de 2026
 
 1. ACEPTACIÓN
 Al usar la aplicación Zaturno aceptas estos términos en su totalidad. Si no estás de acuerdo, no uses la aplicación.
@@ -19,10 +19,19 @@ Al usar la aplicación Zaturno aceptas estos términos en su totalidad. Si no es
 2. DESCRIPCIÓN DEL SERVICIO
 Zaturno es una plataforma de gestión de turnos y nómina para empresas colombianas. Permite administrar trabajadores, asignaciones de turnos, marcaciones de ingreso/egreso y liquidaciones de nómina.
 
+Zaturno calcula el pago de dos formas, según el tipo de vínculo del trabajador con la empresa:
+• Nómina: se liquidan las horas trabajadas con los recargos de ley vigentes (nocturno, dominical/festivo, horas extra) sobre el período de pago (mensual, quincenal o semanal). En jornadas mayores a 6 horas se descuenta automáticamente 1 hora de almuerzo, salvo que el trabajador marque que tuvo una jornada continua sin ese descanso.
+• Turnos: se paga una tarifa fija por cada turno completado, pactada al publicar la oferta, sin recargos de ley adicionales. El gestor de la empresa puede asignar manualmente un bono extra a un turno puntual (por ejemplo, una propina), visible en el detalle del turno y en el contrato correspondiente.
+
+El administrador de tu empresa puede consultar el detalle completo de estas reglas, con ejemplos, desde el panel de administración.
+
+Zaturno no realiza pagos ni maneja dinero real en ningún momento. Es únicamente un puente de información entre trabajadores y empresas: calcula y registra los montos correspondientes a cada turno o período de nómina para que ambas partes lleven un control claro y verificable, pero el pago efectivo lo realiza la empresa directamente al trabajador por fuera de la aplicación.
+
 3. DATOS PERSONALES Y PRIVACIDAD
 Recopilamos los siguientes datos para prestar el servicio:
 • Nombre, correo electrónico y número de celular (identificación y comunicación).
-• Ubicación geográfica durante el marcaje de ingreso/egreso (validación de geofence).
+• Ubicación geográfica durante el marcaje de ingreso/egreso, incluido el marcaje libre sin punto fijo asignado.
+• Identificador del dispositivo usado para marcar, para detectar posible fraude (ej. dos personas marcando desde el mismo teléfono).
 • Firma electrónica en contratos diarios (almacenada como imagen codificada).
 • Datos laborales y salariales proporcionados por la empresa empleadora.
 

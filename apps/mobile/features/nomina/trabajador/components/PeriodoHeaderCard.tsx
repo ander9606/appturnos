@@ -19,6 +19,8 @@ import {
   fmtHora,
   calcularElapsedLabel,
   analizarDia,
+  horaEntradaMostrada,
+  TIPO_PERIODO_LABEL_SALARIO,
   type EstadoHoy,
   type ResumenPeriodoNomina,
 } from '../nominaTrabajadorUtils';
@@ -57,6 +59,15 @@ export function PeriodoHeaderCard({
   const [visible, setVisible] = useState(false);
   const analisisHoy = registroHoy ? analizarDia(registroHoy, valorHora) : null;
   const mask = (v: string) => (visible ? v : '••••••');
+
+  // La liquidación real (misma que ve el gestor) es la fuente de verdad para el
+  // extra del PERÍODO — el estimado del cliente (resumen.valorExtraCOP) usa una
+  // fórmula distinta y puede no coincidir. Solo se usa como respaldo si todavía
+  // no llega la liquidación.
+  const pagoExtraPeriodo = miLiquidacion
+    ? Number(miLiquidacion.pago_nocturno) + Number(miLiquidacion.pago_extra_diurno) +
+      Number(miLiquidacion.pago_extra_nocturno) + Number(miLiquidacion.pago_festivo)
+    : resumen.valorExtraCOP;
 
   return (
     <View
@@ -98,15 +109,15 @@ export function PeriodoHeaderCard({
               <Text className="text-white text-lg font-extrabold">
                 {salarioBase != null ? mask(formatCOP(salarioBase)) : '—'}
               </Text>
-              <Text className="text-white/70 text-[10px]">Salario mensual</Text>
+              <Text className="text-white/70 text-[10px]">{periodo ? TIPO_PERIODO_LABEL_SALARIO[periodo.tipo] : 'Salario (fijo)'}</Text>
             </>
           )}
         </View>
 
-        {resumen.valorExtraCOP > 0 && (
+        {pagoExtraPeriodo > 0 && (
           <View className="bg-white/25 rounded-xl px-2.5 py-1.5 gap-0.5 items-center">
             <Text className="text-white text-sm font-extrabold">
-              +{mask(formatCOP(resumen.valorExtraCOP))}
+              +{mask(formatCOP(pagoExtraPeriodo))}
             </Text>
             <Text className="text-white/70 text-[9px]">Extra período</Text>
           </View>
@@ -127,7 +138,7 @@ export function PeriodoHeaderCard({
         <View className="flex-row items-center gap-4">
           <View className="gap-0.5">
             <Text className="text-white text-sm font-bold">
-              {fmtHora(registroHoy?.hora_entrada)}
+              {fmtHora(horaEntradaMostrada(registroHoy))}
             </Text>
             <Text className="text-white/60 text-[10px]">Entrada</Text>
           </View>

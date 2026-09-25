@@ -4,21 +4,14 @@ const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 
 const AuthModel = require('./auth.model');
+const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const { generarAccessToken, generarRefreshToken, fechaExpiracionRefresh } = require('../../utils/TokenService');
 const AppError = require('../../utils/AppError');
-const { ROLES, LOGIN } = require('../../config/constants');
+const { ROLES, ROL_POR_TIPO, LOGIN } = require('../../config/constants');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const logger = require('../../utils/logger');
 
 const BCRYPT_ROUNDS = 11;
-
-// Mapea el tipo de trabajador al rol con el que se crea su cuenta.
-// 'ambos' usa el rol de Turnos por defecto (track principal en campo).
-const ROL_POR_TIPO = {
-  nomina: ROLES.TRABAJADOR_NOMINA,
-  turnos: ROLES.TRABAJADOR_TURNOS,
-  ambos: ROLES.TRABAJADOR_TURNOS,
-};
 
 /** Construye el par de tokens y persiste el refresh token. */
 async function emitirTokens(usuario) {
@@ -399,6 +392,19 @@ const AuthService = {
       telefono: telefono || null,
       password_hash: passwordHash,
     });
+
+    // Ficha personal sin empresa (empresa_id NULL) — permite editar su perfil
+    // (cédula, banco, descripción...) desde ya, sin esperar a que una empresa
+    // lo vincule. Al aceptar su primera empresa, vincularTrabajador() la
+    // reclama (le asigna empresa_id) en vez de crear una ficha duplicada.
+    const trabajadorId = await TrabajadoresModel.crear(null, {
+      nombre,
+      apellido: apellido || '',
+      email,
+      telefono: telefono || null,
+      tipo: 'turnos',
+    });
+    await TrabajadoresModel.asignarUsuarioId(trabajadorId, usuarioId);
 
     // Construir el objeto mínimo necesario para emitir tokens.
     const usuario = {

@@ -1,11 +1,11 @@
 import { api } from '@/shared/api/axios';
-import type { EmpresaAdmin, Plan } from '../types';
+import type { EmpresaAdmin, Plan, PlanConfig, ActualizarPlanPayload } from '../types';
 
 export const adminApi = {
   getReportes: () =>
     api.get('/admin/reportes/global').then(r => r.data),
 
-  listarEmpresas: (params?: { busqueda?: string; plan?: Plan; activo?: boolean; page?: number; limit?: number }) =>
+  listarEmpresas: (params?: { busqueda?: string; activo?: boolean; page?: number; limit?: number }) =>
     api.get('/admin/empresas', { params }).then(r => r.data),
 
   obtenerEmpresa: (id: number) =>
@@ -25,6 +25,12 @@ export const adminApi = {
 
   generarLinkPago: (id: number, data: { plan: Plan; meses: number }) =>
     api.post(`/admin/empresas/${id}/link-pago`, data).then(r => r.data),
+
+  listarPlanes: () =>
+    api.get<{ data: PlanConfig[] }>('/admin/planes').then(r => r.data),
+
+  actualizarPlan: (codigo: Plan, data: ActualizarPlanPayload) =>
+    api.put<{ data: PlanConfig[] }>(`/admin/planes/${codigo}`, data).then(r => r.data),
 
   listarWompiEventos: (params?: { estado?: string; page?: number; limit?: number }) =>
     api.get('/admin/wompi-eventos', { params }).then((r: any) => r.data),

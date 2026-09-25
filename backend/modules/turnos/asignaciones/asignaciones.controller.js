@@ -16,6 +16,7 @@ async function listar(req, res) {
     oferta_id: req.query.oferta_id ? Number(req.query.oferta_id) : undefined,
     trabajador_id: req.query.trabajador_id ? Number(req.query.trabajador_id) : undefined,
     estado: req.query.estado || undefined,
+    sospechoso: req.query.sospechoso !== undefined ? req.query.sospechoso === '1' : undefined,
     page,
     limit,
   });
@@ -67,9 +68,20 @@ async function corregir(req, res) {
     req.empresa_id,
     Number(req.params.id),
     req.usuario.sub,
-    req.body
+    req.body,
+    req.usuario.nombre
   );
   res.json({ success: true, data, message: 'Asignación corregida' });
+}
+
+async function agregarBono(req, res) {
+  const data = await AsignacionesService.agregarBono(
+    req.empresa_id,
+    Number(req.params.id),
+    req.usuario,
+    { monto: Number(req.body.monto), motivo: req.body.motivo || null }
+  );
+  res.json({ success: true, data, message: 'Bono actualizado' });
 }
 
 async function noPresentado(req, res) {
@@ -98,4 +110,12 @@ async function liquidacion(req, res) {
   res.json({ success: true, data });
 }
 
-module.exports = { listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, corregir, noPresentado, calificar, liquidacion };
+async function descartarSospechoso(req, res) {
+  await AsignacionesService.descartarSospechoso(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data: null, message: 'Marcaje ya no está marcado como sospechoso' });
+}
+
+module.exports = {
+  listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, corregir,
+  noPresentado, calificar, liquidacion, descartarSospechoso, agregarBono,
+};

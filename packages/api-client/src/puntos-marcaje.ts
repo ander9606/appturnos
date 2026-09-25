@@ -1,6 +1,7 @@
 import { api } from './client';
 
 export type TipoPunto = 'fijo' | 'zonal';
+export type AlcancePunto = 'todos' | 'nomina';
 
 export interface PuntoMarcaje {
   id: number;
@@ -11,6 +12,7 @@ export interface PuntoMarcaje {
   longitud: number;
   radio_metros: number;
   tipo: TipoPunto;
+  alcance: AlcancePunto;
   activo: number;
   created_at: string;
 }
@@ -22,13 +24,33 @@ export interface CrearPuntoMarcajePayload {
   longitud: number;
   radio_metros?: number;
   tipo?: TipoPunto;
+  alcance?: AlcancePunto;
 }
 
 export type ActualizarPuntoMarcajePayload = Partial<CrearPuntoMarcajePayload> & { activo?: boolean };
 
+/** Ubicación de la biblioteca disponible para prellenar un turno (alcance='todos'). */
+export interface PuntoParaTurno {
+  id: number;
+  nombre: string;
+  latitud: number;
+  longitud: number;
+  radio_metros: number;
+}
+
 export const puntosMarcajeApi = {
   listar(): Promise<PuntoMarcaje[]> {
     return api.get<PuntoMarcaje[]>('/api/puntos-marcaje');
+  },
+
+  paraTurnos(): Promise<PuntoParaTurno[]> {
+    return api.get<PuntoParaTurno[]>('/api/puntos-marcaje/para-turnos');
+  },
+
+  /** Puntos zonales válidos para el geofence de un turno — acotados si el gestor los eligió, si no, todos los de la empresa. */
+  listarZonales(ofertaId?: number): Promise<PuntoParaTurno[]> {
+    const query = ofertaId ? `?oferta_id=${ofertaId}` : '';
+    return api.get<PuntoParaTurno[]>(`/api/puntos-marcaje/zonales${query}`);
   },
 
   crear(payload: CrearPuntoMarcajePayload): Promise<PuntoMarcaje> {

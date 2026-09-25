@@ -1,6 +1,6 @@
 export type EstadoPeriodo = 'abierto' | 'cerrado' | 'liquidado';
 export type TipoPeriodo = 'semanal' | 'quincenal' | 'mensual';
-export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia';
+export type TipoDia = 'ordinario' | 'descanso' | 'compensatorio' | 'incapacidad' | 'vacacion' | 'licencia' | 'ausencia';
 
 export interface Periodo {
   id: number;
@@ -23,15 +23,32 @@ export interface Registro {
   periodo_id: number;
   fecha: string;
   hora_entrada: string | null;
+  /** Primer ingreso del día — no cambia si hubo un reingreso (hora_entrada sí cambia). */
+  hora_entrada_inicial: string | null;
   hora_salida: string | null;
+  /** Cantidad de sesiones del día (1 = normal, 2+ = con reingreso). */
+  sesiones: number;
+  /** Sesiones ya cerradas (sin la vigente) — ver hora_entrada/hora_salida para la última. */
+  sesiones_detalle: { hora_entrada: string; hora_salida: string }[] | null;
+  /** Trabajador marcó que no tomó almuerzo — omite el descuento automático de 1h en jornadas > 6h. */
+  jornada_continua: 0 | 1;
+  /** Ubicación donde se marcó — null si el dispositivo no dio GPS o negó el permiso. */
+  latitud_entrada: number | null;
+  longitud_entrada: number | null;
+  latitud_salida: number | null;
+  longitud_salida: number | null;
   horas_ordinarias: number;
   horas_extra_diurnas: number;
   horas_extra_nocturnas: number;
   horas_nocturnas: number;
   horas_festivo: number;
+  /** Horas ordinarias+nocturnas ya acumuladas esta semana (lunes–ayer) antes de este día — explica por qué el resto pasó a extra. */
+  horas_acumuladas_semana: number;
   es_festivo: number;
   tipo_dia: TipoDia;
   novedad: string | null;
+  /** Otro trabajador marcó a pocos metros/minutos de este registro — posible buddy punching. Solo auditoría, no bloquea. */
+  sospechoso: 0 | 1;
   trabajador_nombre: string;
   trabajador_apellido: string;
 }
@@ -52,9 +69,21 @@ export interface LiquidacionLinea {
   horas_nocturnas: number;
   horas_festivo: number;
   valor_hora: number;
-  pago_por_horas: number;
-  salario_minimo_periodo: number;
-  ajuste_minimo: number;
+  /**
+   * Pesos por concepto, ya con el recargo de ley aplicado, suman `total`.
+   * `pago_ordinario` es el salario mensual prorrateado al período si el
+   * trabajador tiene `salario_base` (siempre completo, no depende de
+   * horas_ordinarias); si es por `tarifa_hora`, es horas_ordinarias × tarifa.
+   */
+  pago_ordinario: number;
+  pago_nocturno: number;
+  pago_extra_diurno: number;
+  pago_extra_nocturno: number;
+  pago_festivo: number;
+  /** Multiplicador dominical/festivo aplicado (Ley 2466: 1.80 → 1.90 → 2.00 según fecha). */
+  recargo_festivo: number;
+  /** Multiplicador de la hora nocturna ordinaria: 0.35 asalariado (el sueldo ya paga la base), 1.35 por tarifa_hora. */
+  recargo_nocturno: number;
   total: number;
   /** Descuento de salud (4% del total). 0 si la empresa es prestación de servicios. */
   descuento_salud: number;
@@ -63,8 +92,32 @@ export interface LiquidacionLinea {
   /** Descuentos manuales ya aceptados por el trabajador (préstamos, inasistencias, etc.). */
   otros_descuentos: Array<{ id: number; tipo: TipoDescuento; motivo: string; monto: number }>;
   otros_descuentos_total: number;
-  /** total - descuento_salud - descuento_pension - otros_descuentos_total. */
+  /** Auxilio de transporte proporcional al período. No es IBC — se suma después de las deducciones. 0 si prestación de servicios o si el salario supera el tope legal. */
+  subsidio_transporte: number;
+  /** total - descuento_salud - descuento_pension - otros_descuentos_total + subsidio_transporte. */
   neto: number;
+}
+
+export type EstadoCompensatorio = 'pendiente' | 'asignado' | 'tomado';
+export type ClasificacionCompensatorio = 'ocasional' | 'habitual';
+
+export interface DescansoCompensatorio {
+  id: number;
+  trabajador_id: number;
+  periodo_id: number;
+  origen_fecha: string;
+  estado: EstadoCompensatorio;
+  /** Art. 180/181 CST — ocasional: sin recargo, solo compensatorio; habitual: recargo + compensatorio. */
+  clasificacion: ClasificacionCompensatorio;
+  fecha_asignada: string | null;
+  trabajador_nombre: string;
+  trabajador_apellido: string;
+}
+
+export interface RangoDiaCompensatorio {
+  fecha: string;
+  disponible: boolean;
+  zona: 'verde' | 'ambar' | 'rojo';
 }
 
 export type TipoContrato = 'laboral' | 'prestacion_servicios';

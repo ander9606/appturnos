@@ -14,7 +14,7 @@ import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
 import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
 import { useRoleGuard } from '@/components/RoleGuard';
-import { showToast } from '@/lib/toast';
+import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import type { WizardData } from '@/features/turnos/crear/types';
 
 const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar'];
@@ -27,7 +27,9 @@ export default function NuevoTurnoScreen() {
 
   const crearMutation = useCrearOferta();
 
-  useConfirmDiscard(!crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL));
+  const allowNextLeave = useConfirmDiscard(
+    !crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL)
+  );
 
   const patch = useCallback((p: Partial<WizardData>) => {
     setData((prev) => ({ ...prev, ...p }));
@@ -46,6 +48,7 @@ export default function NuevoTurnoScreen() {
       lugar:             data.lugar.trim() || undefined,
       latitud:           data.latitud ?? undefined,
       longitud:          data.longitud ?? undefined,
+      ubicacion_libre:   data.ubicacion_libre,
       encargado_nombre:   data.encargado_nombre.trim() || undefined,
       encargado_telefono: data.encargado_telefono.trim() || undefined,
       para_quien:        data.para_quien,
@@ -63,15 +66,21 @@ export default function NuevoTurnoScreen() {
       const aviso = data.visibilidad === 'dirigida'
         ? `Se notificó a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''}.`
         : 'Los trabajadores con los cargos seleccionados recibirán una notificación.';
-      showToast(`¡"${payload.titulo}" publicado! ${aviso}`);
+      showAnuncioTurno(`¡"${payload.titulo}" publicado! ${aviso}`, 'publicado');
       if (oferta.advertencias && oferta.advertencias.length > 0) {
         Alert.alert('Puede que falte personal', oferta.advertencias.join('\n\n'));
       }
-      router.back();
+      // No navega sola: el botón pasa a "Cerrar" para que quede claro que
+      // ya se publicó, en vez de cerrar la pantalla de golpe tras la espera.
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo publicar el turno.';
       Alert.alert('Error', msg);
     }
+  };
+
+  const handleClose = () => {
+    allowNextLeave();
+    router.back();
   };
 
   return (
@@ -81,7 +90,6 @@ export default function NuevoTurnoScreen() {
           headerShown: true,
           headerTitle: TITLES[step - 1],
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Salir',
           headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,
@@ -108,6 +116,8 @@ export default function NuevoTurnoScreen() {
               onBack={() => setStep(2)}
               onPublish={handlePublish}
               isPublishing={crearMutation.isPending}
+              isPublished={crearMutation.isSuccess}
+              onClose={handleClose}
             />
           )}
         </KeyboardAvoidingView>

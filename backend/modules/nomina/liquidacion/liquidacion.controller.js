@@ -10,8 +10,11 @@ async function obtener(req, res) {
 
 async function exportar(req, res) {
   const periodoId = Number(req.params.periodo_id);
-  const liquidacion = await LiquidacionService.generar(req.empresa_id, periodoId);
-  const buffer = await generarLiquidacionExcel(liquidacion);
+  const [liquidacion, marcajes] = await Promise.all([
+    LiquidacionService.generar(req.empresa_id, periodoId),
+    LiquidacionService.marcajesConUbicacion(req.empresa_id, periodoId),
+  ]);
+  const buffer = await generarLiquidacionExcel(liquidacion, marcajes);
 
   res.setHeader(
     'Content-Type',

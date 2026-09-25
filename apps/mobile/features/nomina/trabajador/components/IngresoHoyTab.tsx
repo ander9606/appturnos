@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import type { PuntoMarcaje, DescansoCompensatorio } from '@api-client';
 import type { RegistroDiario } from '@api-client';
 import { CompensatorioBanner } from '../../compensatorios/CompensatorioBanner';
-import { fmtHora, calcularElapsedLabel, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
+import { fmtHora, calcularElapsedLabel, horaEntradaMostrada, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
 
 interface Props {
   cargo:          string | null;
@@ -132,7 +132,7 @@ export function IngresoHoyTab({
             <View className="gap-0.5">
               <Text className="text-xs text-muted-foreground">Entrada</Text>
               <Text className="text-base font-bold text-foreground">
-                {fmtHora(registroHoy.hora_entrada)}
+                {fmtHora(horaEntradaMostrada(registroHoy))}
               </Text>
             </View>
             {registroHoy.hora_salida ? (
@@ -232,6 +232,18 @@ export function IngresoHoyTab({
           <Text className="text-sm font-semibold text-muted-foreground text-center">Sin período de nómina activo</Text>
           <Text className="text-xs text-muted-foreground text-center">
             Tu responsable debe abrir un período para que puedas registrar horas.
+          </Text>
+        </View>
+      ) : estadoHoy === 'compensatorio' ? (
+        <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: '#8B5CF618' }}>
+          <View className="flex-row items-center gap-2">
+            <Ionicons name="bed-outline" size={20} color="#8B5CF6" />
+            <Text className="text-sm font-semibold text-center" style={{ color: '#8B5CF6' }}>
+              Hoy es tu descanso compensatorio
+            </Text>
+          </View>
+          <Text className="text-xs text-muted-foreground text-center">
+            No tienes que marcar entrada.
           </Text>
         </View>
       ) : (

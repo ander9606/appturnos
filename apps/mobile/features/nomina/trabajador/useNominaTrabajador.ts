@@ -4,13 +4,15 @@
  * geofence y mutaciones de marcaje.
  */
 
-import { useState, useMemo, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Alert, AppState } from 'react-native';
 import { ApiError } from '@api-client';
-import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina } from '@api-client';
+import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina, LineaLiquidacionEventual, PeriodoTurnoEventual } from '@api-client';
 import { bogotaToday } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
+import { actionToast } from '@/lib/actionToast';
 import { useGeofence } from '@/features/turnos/useGeofence';
+import { usePeriodosEventual, useLiquidacionEventual } from '@/features/turnos/useTurnosEventual';
 import {
   usePeriodos,
   useRegistros,
@@ -25,9 +27,57 @@ import {
   getValorHora,
   calcularResumenPeriodo,
   getEstadoHoy,
+  debePreguntarJornadaContinua,
   type EstadoHoy,
   type ResumenPeriodoNomina,
 } from './nominaTrabajadorUtils';
+
+export type EstadoUbicacionLibre = 'obteniendo' | 'lista' | 'denegada' | 'no_disponible';
+
+/**
+ * Para trabajadores tipo_marcacion 'libre' no hay geofence que validar, pero
+ * igual se exige un fix de GPS antes de dejar marcar — sin esto, un trabajador
+ * 'libre' podía marcar entrada/salida sin dejar ningún rastro de dónde lo hizo
+ * (el fix anterior era best-effort y nunca bloqueaba). Un solo intento por
+ * activación alcanza — no hace falta vigilar la posición en el tiempo como sí
+ * hace useGeofence para fijo/zonal.
+ */
+function useUbicacionParaLibre(activo: boolean) {
+  const [estado, setEstado] = useState<EstadoUbicacionLibre>('obteniendo');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  const intentar = useCallback(async () => {
+    setEstado('obteniendo');
+    try {
+      const Location = await import('expo-location');
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setEstado('denegada');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      setEstado('lista');
+    } catch {
+      setEstado('no_disponible');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!activo) return;
+    intentar();
+    // Si el trabajador salió a Ajustes a conceder el permiso y vuelve, se
+    // reintenta solo — sin esto quedaba trabado en 'denegada' hasta salir y
+    // reentrar a la pantalla. Mismo patrón que useGeofence.
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') intentar();
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activo]);
+
+  return { estado, coords, reintentar: intentar };
+}
 
 export interface NominaTrabajadorState {
   // Perfil
@@ -55,9 +105,16 @@ export interface NominaTrabajadorState {
   tipoContrato:  TipoContrato | undefined;
   misDescuentos: DescuentoNomina[];
 
+  // Turnos eventuales (extra, trimestral) — solo si activó acepta_extras.
+  aceptaExtras:     boolean;
+  periodoEventual:  PeriodoTurnoEventual | undefined;
+  miLineaEventual:  LineaLiquidacionEventual | undefined;
+
   // Geofence
   geo: ReturnType<typeof useGeofence>;
   marcajeBloqueado: boolean;
+  // Ubicación para tipo_marcacion 'libre' — ver useUbicacionParaLibre.
+  ubicacionLibre: { estado: EstadoUbicacionLibre; reintentar: () => void };
 
   // Marcaje
   isMutating:       boolean;
@@ -133,6 +190,16 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   // ── Descuentos manuales propios (préstamos, inasistencias, etc.) ─────────
   const { data: misDescuentos = [] } = useMisDescuentos(periodoActivo?.id);
 
+  // ── Turnos eventuales (extra, trimestral) — solo si activó acepta_extras ──
+  // Bloque secundario: no se suma a `loading`, no debe bloquear el spinner principal.
+  const aceptaExtras = Boolean(perfil?.acepta_extras);
+  const { data: periodosEventual } = usePeriodosEventual(aceptaExtras);
+  const periodoEventual = periodosEventual?.nomina;
+  const { data: liquidacionEventual } = useLiquidacionEventual(
+    aceptaExtras ? periodoEventual?.id ?? null : null
+  );
+  const miLineaEventual = liquidacionEventual?.lineas[0];
+
   // ── Geofence ───────────────────────────────────────────────────────────
   const requiereGeofence = tipoMarcacion === 'fijo' || tipoMarcacion === 'zonal';
   const geofenceTargets = tipoMarcacion === 'fijo' && puntoMarcaje
@@ -142,7 +209,11 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     : null;
 
   const geo = useGeofence({ targets: geofenceTargets, enabled: requiereGeofence });
-  const marcajeBloqueado = requiereGeofence && !geo.canMark;
+  const tipoLibre = tipoMarcacion === 'libre';
+  const ubicacionLibreState = useUbicacionParaLibre(tipoLibre);
+  const marcajeBloqueado = requiereGeofence
+    ? !geo.canMark
+    : tipoLibre && ubicacionLibreState.estado !== 'lista';
 
   // ── Mutaciones ─────────────────────────────────────────────────────────
   const entradaMutation   = useMarcarEntrada();
@@ -150,37 +221,61 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const reingresoMutation = useSolicitarReingreso();
   const isMutating        = entradaMutation.isPending || salidaMutation.isPending || reingresoMutation.isPending;
 
-  const handleEntrada = useCallback(async () => {
-    try {
-      const coords = requiereGeofence && geo.currentLocation
+  // Con geofence (fijo/zonal) el fix ya lo trae useGeofence (vigilancia continua
+  // para validar cercanía). Sin geofence (libre) el marcaje queda bloqueado
+  // (marcajeBloqueado arriba) hasta tener el fix de useUbicacionParaLibre — así
+  // que para cuando esta función corre, ya debería haber coordenadas.
+  const obtenerCoordsParaMarcaje = useCallback(async () => {
+    if (requiereGeofence) {
+      return geo.currentLocation
         ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
         : undefined;
+    }
+    return ubicacionLibreState.coords
+      ? { latitud: ubicacionLibreState.coords.lat, longitud: ubicacionLibreState.coords.lng }
+      : undefined;
+  }, [requiereGeofence, geo.currentLocation, ubicacionLibreState.coords]);
+
+  const handleEntrada = useCallback(async () => {
+    try {
+      const coords = await obtenerCoordsParaMarcaje();
       await entradaMutation.mutateAsync(coords);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar entrada';
       Alert.alert('Error', msg);
     }
-  }, [requiereGeofence, geo.currentLocation, entradaMutation]);
+  }, [obtenerCoordsParaMarcaje, entradaMutation]);
 
   const handleSalida = useCallback(async () => {
-    if (!registroHoy) return;
+    if (!registroHoy?.hora_entrada) return;
     const ok = await confirm({
       title: 'Confirmar salida',
       message: '¿Confirmas que deseas marcar tu salida?',
       confirmLabel: 'Marcar salida',
     });
     if (!ok) return;
+
+    // Por defecto se descuenta 1h de almuerzo en jornadas largas (Art. 167 CST).
+    // Solo se ofrece la ventana cuando ya es relevante: si la jornada no llega
+    // al umbral, el descuento no aplicaría de todas formas. Es una ventana con
+    // tiempo límite (no un diálogo bloqueante) — si no responde a tiempo, se
+    // asume el comportamiento por defecto (si tomó almuerzo).
+    const jornadaContinua = debePreguntarJornadaContinua(registroHoy.hora_entrada)
+      ? await actionToast({
+          message: 'Por defecto se descuenta 1h de almuerzo en jornadas largas. ¿Trabajaste jornada continua, sin tomar almuerzo?',
+          actionLabel: 'Sí, jornada continua',
+        })
+      : false;
+
     try {
-      const coords = requiereGeofence && geo.currentLocation
-        ? { latitud: geo.currentLocation.lat, longitud: geo.currentLocation.lng }
-        : undefined;
-      const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, ...coords });
+      const coords = await obtenerCoordsParaMarcaje();
+      const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, jornada_continua: jornadaContinua, ...coords });
       if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
       Alert.alert('Error', msg);
     }
-  }, [registroHoy, requiereGeofence, geo.currentLocation, salidaMutation]);
+  }, [registroHoy, obtenerCoordsParaMarcaje, salidaMutation]);
 
   // La confirmación (con explicación + motivo opcional) vive en la pantalla, en un
   // modal propio — un Alert nativo no permite pedir texto de forma consistente en iOS/Android.
@@ -218,8 +313,12 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     miLiquidacion,
     tipoContrato,
     misDescuentos,
+    aceptaExtras,
+    periodoEventual,
+    miLineaEventual,
     geo,
     marcajeBloqueado,
+    ubicacionLibre: { estado: ubicacionLibreState.estado, reintentar: ubicacionLibreState.reintentar },
     isMutating,
     handleEntrada,
     handleSalida,

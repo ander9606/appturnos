@@ -1,5 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { Search, X, LocateFixed, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Search, X, LocateFixed, CheckCircle2, Map, Library } from 'lucide-react';
+import { MapaSelector } from '@/shared/components/MapaSelector';
+import { usePuntosParaTurnos } from '@/modules/configuracion/hooks/useConfiguracion';
+
+// Mismo radio de referencia que usa mobile (lib/geo.ts → DEFAULT_GEOFENCE_RADIUS).
+const DEFAULT_GEOFENCE_RADIUS = 1000;
 
 interface Sugerencia {
   place_id: number;
@@ -21,7 +27,11 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
   const [buscando, setBuscando] = useState(false);
   const [locLoading, setLocLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [mapaAbierto, setMapaAbierto] = useState(false);
+  const [bibliotecaAbierta, setBibliotecaAbierta] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { data: puntosData } = usePuntosParaTurnos();
+  const puntos = puntosData?.data ?? [];
 
   const buscar = useCallback(async (q: string) => {
     if (q.trim().length < 3) {
@@ -58,6 +68,11 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
     setOpen(false);
   };
 
+  const handleSelectPunto = (p: { nombre: string; latitud: number; longitud: number }) => {
+    onChange(p.nombre, p.latitud, p.longitud);
+    setBibliotecaAbierta(false);
+  };
+
   const usarUbicacion = () => {
     if (!navigator.geolocation) return;
     setLocLoading(true);
@@ -79,7 +94,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
       },
       () => {
         setLocLoading(false);
-        window.alert('No se pudo obtener tu ubicación. Revisa los permisos del navegador o busca el lugar por texto.');
+        toast.error('No se pudo obtener tu ubicación. Revisa los permisos del navegador o busca el lugar por texto.');
       },
     );
   };
@@ -125,7 +140,16 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
+        {puntos.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setBibliotecaAbierta(v => !v)}
+            className="flex items-center gap-1 text-xs text-info hover:text-primary-600 font-medium"
+          >
+            <Library size={13} /> De la biblioteca de ubicaciones
+          </button>
+        )}
         <button
           type="button"
           onClick={usarUbicacion}
@@ -134,6 +158,13 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
         >
           <LocateFixed size={13} /> {locLoading ? 'Obteniendo…' : 'Usar mi ubicación'}
         </button>
+        <button
+          type="button"
+          onClick={() => setMapaAbierto(true)}
+          className="flex items-center gap-1 text-xs text-info hover:text-primary-600 font-medium"
+        >
+          <Map size={13} /> Ajustar en mapa
+        </button>
         {buscando && <span className="text-xs text-muted-foreground">Buscando…</span>}
         {latitud != null && longitud != null && (
           <span className="flex items-center gap-1 text-xs text-success">
@@ -141,6 +172,34 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
           </span>
         )}
       </div>
+
+      {bibliotecaAbierta && (
+        <div className="border border-border rounded-lg overflow-hidden">
+          {puntos.map(p => (
+            <button
+              type="button"
+              key={p.id}
+              onClick={() => handleSelectPunto(p)}
+              className="w-full text-left px-3 py-2 text-xs text-foreground hover:bg-muted border-b border-border last:border-0"
+            >
+              {p.nombre} <span className="text-muted-foreground">· radio {p.radio_metros} m</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mapaAbierto && (
+        <MapaSelector
+          initialLat={latitud}
+          initialLng={longitud}
+          radiusM={DEFAULT_GEOFENCE_RADIUS}
+          onClose={() => setMapaAbierto(false)}
+          onConfirm={(lat, lng) => {
+            onChange(value, lat, lng);
+            setMapaAbierto(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -18,6 +18,11 @@ function traducirErrorMySQL(err) {
     case 'ER_ROW_IS_REFERENCED_2':
     case 'ER_ROW_IS_REFERENCED':
       return new AppError('No se puede eliminar: tiene registros asociados', 409);
+    case 'ER_TRUNCATED_WRONG_VALUE':
+    case 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD':
+      return new AppError('Tipo de dato inválido: verifica que las horas sean fechas válidas en formato ISO 8601', 422);
+    case 'ER_DATA_OUT_OF_RANGE':
+      return new AppError('Valor fuera de rango permitido', 422);
     default:
       return null;
   }
@@ -39,7 +44,13 @@ function errorHandler(err, req, res, _next) {
   const esOperacional = error instanceof AppError;
   const statusCode = esOperacional ? error.statusCode : 500;
 
-  if (!esOperacional) {
+  // El cliente cortó la conexión antes de que termináramos de leer el body (logout/backgrounding
+  // en mobile con un fetch en vuelo, red inestable, etc.) — raw-body lo reporta como error, pero
+  // no es un bug del servidor: no hay nada que corregir ni alertar. El socket ya está cerrado del
+  // lado del cliente, así que la respuesta de abajo no le llega a nadie de todos modos.
+  const esAbortoDeCliente = error?.type === 'request.aborted';
+
+  if (!esOperacional && !esAbortoDeCliente) {
     logger.error(`${req.method} ${req.originalUrl}`, err.stack || err.message);
     Sentry.captureException(err);
   }
@@ -54,8 +65,12 @@ function errorHandler(err, req, res, _next) {
     cuerpo.detalles = error.detalles;
   }
 
-  if (process.env.NODE_ENV !== 'production' && !esOperacional) {
-    cuerpo.stack = err.stack;
+  if (process.env.NODE_ENV !== 'production') {
+    if (!esOperacional) {
+      cuerpo.stack = err.stack;
+      cuerpo.debug_message = err.message;
+      cuerpo.debug_code = error?.code;
+    }
   }
 
   res.status(statusCode).json(cuerpo);

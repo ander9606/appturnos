@@ -11,7 +11,7 @@ export function PrivacidadPage() {
 
 const PRIVACIDAD_TEXT = `POLÍTICA DE PRIVACIDAD — ZATURNO
 
-Fecha de vigencia: 1 de julio de 2026
+Fecha de vigencia: 13 de septiembre de 2026
 
 1. RESPONSABLE DEL TRATAMIENTO
 Zaturno SAS (en adelante "Zaturno"), NIT pendiente de asignación, con correo de contacto soporte@zaturno.app.
@@ -19,7 +19,8 @@ Zaturno SAS (en adelante "Zaturno"), NIT pendiente de asignación, con correo de
 2. DATOS QUE RECOPILAMOS
 • Datos de identificación: nombre, apellido, número de cédula, correo electrónico y teléfono celular.
 • Datos laborales: cargo, salario, jornada laboral, empresa empleadora, historial de turnos.
-• Datos de ubicación: coordenadas GPS capturadas únicamente en el momento del marcaje de ingreso/egreso al turno, para validar que el trabajador se encuentra en el punto de marcaje autorizado.
+• Datos de ubicación: coordenadas GPS capturadas en el momento del marcaje de ingreso/egreso al turno — tanto cuando existe un punto de marcaje fijo que validar (geofence) como en el marcaje libre, donde no hay un punto fijo asignado.
+• Identificador del dispositivo: un identificador técnico del teléfono usado para marcar, usado para la prevención de fraude descrita en la sección 3.
 • Firma electrónica: imagen de la firma del trabajador para contratos diarios de turno.
 • Datos de uso: registros de actividad dentro de la app para mejoras del servicio y soporte técnico.
 
@@ -28,6 +29,7 @@ Zaturno SAS (en adelante "Zaturno"), NIT pendiente de asignación, con correo de
 • Liquidación de nómina conforme a la ley laboral colombiana.
 • Comunicaciones operativas (notificaciones push de turnos, ausencias, pagos).
 • Cumplimiento de obligaciones legales ante autoridades colombianas.
+• Prevención de fraude en el marcaje: comparamos la ubicación y el identificador de dispositivo entre las marcaciones de los trabajadores de una misma empresa para detectar posibles registros duplicados o suplantados (por ejemplo, dos personas marcando desde el mismo teléfono y lugar). Cuando se detecta una coincidencia, un gestor de la empresa la revisa manualmente antes de tomar cualquier decisión.
 
 4. BASE LEGAL
 El tratamiento se basa en la ejecución del contrato de prestación de servicios entre Zaturno y la empresa empleadora, y en el consentimiento del trabajador al registrarse o activar su cuenta.
@@ -53,7 +55,7 @@ Puedes eliminar tu cuenta directamente desde la app (Perfil → Eliminar cuenta)
 Implementamos cifrado en tránsito (TLS), almacenamiento seguro de tokens (Keystore/SecureStore) y control de acceso por roles para proteger tus datos.
 
 9. DATOS DE UBICACIÓN
-La ubicación se captura exclusivamente al momento del marcaje. No rastreamos la ubicación de forma continua ni en segundo plano.
+La ubicación se captura exclusivamente al momento del marcaje, incluido el marcaje libre. No rastreamos la ubicación de forma continua ni en segundo plano. La única comparación que hacemos entre trabajadores es la de prevención de fraude descrita en la sección 3.
 
 10. CAMBIOS A ESTA POLÍTICA
 Notificaremos cambios materiales con al menos 7 días de anticipación mediante notificación push o correo electrónico.

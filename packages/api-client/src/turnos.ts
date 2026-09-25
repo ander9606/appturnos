@@ -49,13 +49,18 @@ export interface Asignacion {
   hora_egreso_real: string | null;
   horas_trabajadas: number | null;
   pago_total: number | null;
+  /** Bono extra (ej. propina) que el gestor asignó a este turno — ya sumado dentro de `pago_total`. */
+  bono_monto?: number;
+  bono_motivo?: string | null;
   latitud_ingreso: number | null;
   longitud_ingreso: number | null;
+  latitud_egreso: number | null;
+  longitud_egreso: number | null;
+  sospechoso: 0 | 1; // otro trabajador marcó ingreso desde el mismo dispositivo y ubicación — posible buddy punching, solo auditoría
   firma_digital: string | null;
   created_at: string;
   /** Solo presente en listarPorUsuario (feed "Mis Turnos" multi-empresa del trabajador). */
   empresa_nombre?: string;
-  /** Solo presente en obtenerConDetalles (detalle de una asignación). */
   empresa_tipo_liquidacion?: TipoLiquidacion;
   // Joined from ofertas_turno
   oferta_titulo: string;
@@ -76,7 +81,7 @@ export interface Asignacion {
   cargo_codigo?: string;
   cargo_nombre?: string;
   tipo_geofence?: TipoGeofence;
-  // Constructed by model (only on obtenerConDetalles)
+  // Constructed by model — obtenerConDetalles, listarPorTrabajador, listarPorUsuario
   geofence_info?: GeofenceInfo;
   // Hour breakdown (computed on-the-fly for completado shifts — all optional)
   horas_ordinarias?: number;
@@ -93,10 +98,20 @@ export interface Asignacion {
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;
+  /** Si es `0`, el contrato del turno completado aún no lo firma el trabajador
+   *  — su pago no cuenta en la liquidación hasta que exista la firma. Siempre
+   *  viene `0` cuando trabajador_tipo es 'nomina' aunque no exista contrato
+   *  (no aplica — su turno eventual se paga como bono, no como contrato). */
+  contrato_firmado?: 0 | 1;
+  /** tipo del trabajador dueño de la asignación ('nomina' = turno eventual
+   *  pagado como bono, sin contrato civil independiente). */
+  trabajador_tipo?: 'nomina' | 'turnos' | 'ambos';
   // Joined from trabajadores (only in gestor detail view)
   trabajador_nombre?: string;
   trabajador_apellido?: string;
   trabajador_cargo?: string;
+  /** Avisos devueltos por el backend (ej: turno ya empezó). Presente solo cuando hay condiciones que avisar. */
+  warnings?: string[];
 }
 
 export interface CalificacionResponse {
@@ -130,6 +145,15 @@ export interface OfertaDestinatario {
   apellido: string;
 }
 
+/** Punto zonal acotado para este turno (migración 099) — ver PuntosMarcajeModel.listarZonalesEfectivos. */
+export interface OfertaPuntoMarcaje {
+  id: number;
+  nombre: string;
+  latitud: number;
+  longitud: number;
+  radio_metros: number;
+}
+
 export interface Oferta {
   id: number;
   empresa_id: number;
@@ -143,6 +167,8 @@ export interface Oferta {
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
+  /** Sin restricción de ubicación al marcar ingreso/egreso — gana sobre el tipo_geofence del cargo. */
+  ubicacion_libre: 0 | 1;
   encargado_nombre: string | null;
   encargado_telefono: string | null;
   estado: EstadoOferta;
@@ -151,6 +177,8 @@ export interface Oferta {
   visibilidad: VisibilidadOferta;
   /** Presente cuando visibilidad = 'dirigida'. */
   destinatarios: OfertaDestinatario[];
+  /** Puntos zonales que acotan el geofence de este turno — vacío = sin acotar (cualquier punto zonal de la empresa). */
+  puntos_marcaje: OfertaPuntoMarcaje[];
   creado_por: number;
   created_at: string;
   puestos: OfertaPuesto[];
@@ -168,18 +196,45 @@ export interface CrearOfertaPayload {
   lugar?: string;
   latitud?: number;
   longitud?: number;
+  /** Sin restricción de ubicación al marcar ingreso/egreso (ej. rutas, entregas). Default: false. */
+  ubicacion_libre?: boolean;
   encargado_nombre?: string;
   encargado_telefono?: string;
   para_quien?: ParaQuienOferta;
   /** 'dirigida' requiere trabajador_ids con al menos una persona. */
   visibilidad?: VisibilidadOferta;
   trabajador_ids?: number[];
+  /** IDs de puntos_marcaje que acotan el geofence 'zonal' de este turno. Omitido = sin acotar. */
+  punto_marcaje_ids?: number[];
   puestos: Array<{
     cargo_id: number;
     plazas: number;
     tarifa_dia: number;
     notas?: string;
   }>;
+}
+
+/**
+ * Edición parcial de una oferta ya creada (PUT). Solo aplica mientras está en
+ * 'abierta' o 'borrador' — el backend rechaza el resto de estados. Refleja
+ * CAMPOS_EDITABLES en ofertas.model.js; puestos/destinatarios no son editables
+ * acá. `punto_marcaje_ids` sí es editable — reemplaza por completo el set
+ * acotado de este turno (enviar `[]` lo vuelve a dejar sin acotar).
+ */
+export interface ActualizarOfertaPayload {
+  titulo?: string;
+  descripcion?: string;
+  fecha?: string;
+  hora_inicio?: string;
+  hora_fin_estimada?: string;
+  lugar?: string;
+  latitud?: number;
+  longitud?: number;
+  ubicacion_libre?: boolean;
+  encargado_nombre?: string;
+  encargado_telefono?: string;
+  para_quien?: ParaQuienOferta;
+  punto_marcaje_ids?: number[];
 }
 
 export interface OfertaDetalle extends Oferta {
@@ -215,8 +270,14 @@ export interface LiquidacionTurnoLinea {
   tarifa_dia: number;
   cargo_nombre: string;
   pago_extra: number;
+  /** Bono extra (ej. propina) de este turno — ya sumado dentro de `pago_total`. */
+  bono_monto: number;
+  bono_motivo: string | null;
   pago_total: number;
   calificacion: number | null;
+  /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
+   *  su pago no está incluido en los totales de `LiquidacionTurnosTrabajador`. */
+  firmado_trabajador: boolean;
 }
 
 export interface LiquidacionTurnosTrabajador {
@@ -230,7 +291,11 @@ export interface LiquidacionTurnosTrabajador {
   total_horas: number;
   pago_base: number;
   pago_extra: number;
+  /** Suma de bonos extra (ej. propinas) de los turnos firmados — ya incluida en `pago_total`. */
+  bono_monto: number;
   pago_total: number;
+  /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
+  turnos_pendientes_firma: number;
   turnos: LiquidacionTurnoLinea[];
 }
 
@@ -251,6 +316,8 @@ export const turnosApi = {
     estado?: EstadoOferta;
     disponibles?: boolean;
     fecha?: string;
+    fecha_desde?: string;
+    fecha_hasta?: string;
     page?: number;
     limit?: number;
     para_quien?: ParaQuienOferta;
@@ -259,6 +326,8 @@ export const turnosApi = {
     if (params?.estado) qs.set('estado', params.estado);
     if (params?.disponibles) qs.set('disponibles', '1');
     if (params?.fecha) qs.set('fecha', params.fecha);
+    if (params?.fecha_desde) qs.set('fecha_desde', params.fecha_desde);
+    if (params?.fecha_hasta) qs.set('fecha_hasta', params.fecha_hasta);
     if (params?.page)  qs.set('page',  String(params.page));
     if (params?.limit) qs.set('limit', String(params.limit));
     if (params?.para_quien) qs.set('para_quien', params.para_quien);
@@ -276,9 +345,26 @@ export const turnosApi = {
     return api.post<Oferta>('/api/turnos/ofertas', payload);
   },
 
-  /** Duplica una oferta a una nueva fecha (copia título, horario, lugar y puestos). */
-  duplicarOferta(ofertaId: number, fecha: string): Promise<Oferta> {
-    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/duplicar`, { fecha });
+  /**
+   * Edita una oferta existente (parcial). Solo mientras esté 'abierta' o
+   * 'borrador' — el backend rechaza el resto de estados con 409.
+   */
+  actualizarOferta(ofertaId: number, payload: ActualizarOfertaPayload): Promise<Oferta> {
+    return api.put<Oferta>(`/api/turnos/ofertas/${ofertaId}`, payload);
+  },
+
+  /**
+   * Duplica una oferta a una nueva fecha (copia título, lugar y puestos).
+   * `hora_inicio` (HH:MM:SS) es opcional — si se omite, conserva el horario original;
+   * si se envía, la hora de fin se recalcula para conservar la misma duración.
+   */
+  duplicarOferta(ofertaId: number, fecha: string, hora_inicio?: string): Promise<Oferta> {
+    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/duplicar`, { fecha, hora_inicio });
+  },
+
+  /** Marca la oferta como completada a mano (el jefe/admin decide, sin depender de la fecha ni del estado de las asignaciones). */
+  completarOferta(ofertaId: number): Promise<Oferta> {
+    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/completar`, {});
   },
 
   /** Cancela una oferta completa (todos sus puestos) y notifica a los postulados/asignados. */
@@ -315,23 +401,34 @@ export const turnosApi = {
   // ── Asignaciones ──────────────────────────────────────────────────────
 
   /**
-   * Marca ingreso con GPS.
+   * Marca ingreso con GPS. lat/lng quedan `undefined` para cargos con
+   * tipo_geofence='libre' sin fix de GPS disponible (ej. camioneros) — el
+   * backend no exige ubicación en ese caso.
    * @param latitud  Latitud actual del dispositivo
    * @param longitud Longitud actual del dispositivo
    */
-  marcarIngreso(asignacionId: number, latitud: number, longitud: number): Promise<Asignacion> {
+  marcarIngreso(asignacionId: number, latitud: number | undefined, longitud: number | undefined, deviceId?: string): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/ingreso`, {
       latitud,
       longitud,
+      device_id: deviceId,
     });
   },
 
+  /** Descarta el flag de sospechoso de una asignación tras revisión del gestor. */
+  descartarSospechoso(asignacionId: number): Promise<null> {
+    return api.put<null>(`/api/turnos/asignaciones/${asignacionId}/sospechoso/descartar`);
+  },
+
   /**
-   * Marca egreso con firma digital (base64 PNG).
+   * Marca egreso con firma digital (base64 PNG). Requiere ubicación GPS salvo
+   * en cargos con tipo_geofence='libre' — igual que marcarIngreso.
    */
-  marcarEgreso(asignacionId: number, firmaB64: string): Promise<Asignacion> {
+  marcarEgreso(asignacionId: number, firmaB64: string, latitud: number | undefined, longitud: number | undefined): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/egreso`, {
       firma_b64: firmaB64,
+      latitud,
+      longitud,
     });
   },
 
@@ -350,7 +447,8 @@ export const turnosApi = {
     trabajador_id?: number;
     oferta_id?: number;
     fecha?: string;
-    estado?: EstadoAsignacion;
+    /** Uno o varios estados (ej. para "aceptados" = todo lo que alguna vez se confirmó). */
+    estado?: EstadoAsignacion | EstadoAsignacion[];
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Asignacion>> {
@@ -358,7 +456,7 @@ export const turnosApi = {
     if (params?.trabajador_id) qs.set('trabajador_id', String(params.trabajador_id));
     if (params?.oferta_id)     qs.set('oferta_id',     String(params.oferta_id));
     if (params?.fecha)          qs.set('fecha',          params.fecha);
-    if (params?.estado)         qs.set('estado',         params.estado);
+    if (params?.estado)         qs.set('estado',         Array.isArray(params.estado) ? params.estado.join(',') : params.estado);
     if (params?.page)           qs.set('page',           String(params.page));
     if (params?.limit)          qs.set('limit',          String(params.limit));
     const query = qs.toString() ? `?${qs}` : '';
@@ -396,6 +494,15 @@ export const turnosApi = {
     datos: { hora_ingreso_real?: string; hora_egreso_real?: string }
   ): Promise<Asignacion> {
     return api.patch<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/corregir`, datos);
+  },
+
+  /**
+   * Agrega o edita el bono extra (ej. propina) de un turno puntual. Solo
+   * gestores/admin, y solo mientras el contrato del turno no esté firmado.
+   * `monto: 0` quita el bono.
+   */
+  agregarBono(asignacionId: number, datos: { monto: number; motivo?: string }): Promise<Asignacion> {
+    return api.put<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/bono`, datos);
   },
 
   /**

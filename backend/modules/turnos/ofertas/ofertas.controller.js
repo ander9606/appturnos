@@ -5,13 +5,20 @@ const AsignacionesService = require('../asignaciones/asignaciones.service');
 
 async function listar(req, res) {
   const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
-  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const disponibles = req.query.disponibles === 'true' || req.query.disponibles === '1';
 
   const { data, pagination } = await OfertasService.listar(
     req.empresa_id,
     req.usuario,
-    { fecha: req.query.fecha || undefined, estado: req.query.estado || undefined, disponibles, page, limit, paraQuien: req.query.para_quien || undefined },
+    {
+      fecha: req.query.fecha || undefined,
+      fechaDesde: req.query.fecha_desde || undefined,
+      fechaHasta: req.query.fecha_hasta || undefined,
+      estado: req.query.estado || undefined,
+      disponibles, page, limit,
+      paraQuien: req.query.para_quien || undefined,
+    },
     req.empresasActivas   // ← inyectado por resolverEmpresasActivas para TRABAJADOR_TURNOS
   );
   res.json({ success: true, data: { data, pagination } });
@@ -40,6 +47,11 @@ async function actualizar(req, res) {
 async function publicar(req, res) {
   const data = await OfertasService.publicar(req.empresa_id, Number(req.params.id));
   res.json({ success: true, data, message: 'Oferta publicada' });
+}
+
+async function completar(req, res) {
+  const data = await OfertasService.completar(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data, message: 'Oferta marcada como completada' });
 }
 
 async function cancelar(req, res) {
@@ -99,9 +111,10 @@ async function duplicar(req, res) {
     req.empresa_id,
     Number(req.params.id),
     req.body.fecha,
-    req.usuario.sub
+    req.usuario.sub,
+    req.body.hora_inicio || null
   );
   res.status(201).json({ success: true, data, message: 'Oferta duplicada' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, publicar, cancelar, eliminarDefinitivo, aplicar, retirar, asignar, cerrar, duplicar };
+module.exports = { listar, obtener, crear, actualizar, publicar, completar, cancelar, eliminarDefinitivo, aplicar, retirar, asignar, cerrar, duplicar };

@@ -17,11 +17,13 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.zaturno.mobile",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Zaturno necesita tu ubicación para verificar que estás en el punto de trabajo al marcar entrada/salida.",
         "NSFaceIDUsageDescription": "Usa Face ID para acceder rápidamente a Zaturno.",
         "NSCameraUsageDescription": "Zaturno necesita la cámara para adjuntar fotos a los reportes de novedades.",
-        "NSPhotoLibraryUsageDescription": "Zaturno necesita acceso a tus fotos para adjuntarlas a los reportes de novedades."
+        "NSPhotoLibraryUsageDescription": "Zaturno necesita acceso a tus fotos para adjuntarlas a los reportes de novedades.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -71,21 +73,32 @@
         }
       ],
       "expo-location",
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.983031197089-o3vfhunbs1edjuuf1hjlaq2tgrbugknu"
+        }
+      ],
       [
         "expo-build-properties",
         {
           "android": {
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
+          },
+          "ios": {
+            "extraPods": [
+              { "name": "GoogleUtilities", "modular_headers": true },
+              { "name": "RecaptchaInterop", "modular_headers": true }
+            ]
           }
         }
       ]
     ],
-    "privacyPolicyUrl": "https://zaturno.app/privacidad",
     "experiments": {
       "typedRoutes": true
     },
+    "_comment": "OTA update trigger for staging deployment",
     "extra": {
       "router": {},
       "eas": {

@@ -25,6 +25,11 @@ export interface Contrato extends ContratoResumen {
   lugar: string | null;
   empresa_nombre: string;
   empresa_nit: string | null;
+  /** Última firma guardada del trabajador — atajo para firmar sin redibujar. */
+  trabajador_firma_guardada: string | null;
+  /** Bono extra (ej. propina) asignado al turno — 0 si no tiene. */
+  bono_monto: number;
+  bono_motivo: string | null;
 }
 
 export const contratosApi = {
@@ -41,3 +46,8 @@ export const contratosApi = {
     return api.post(`/api/contratos/${id}/firmar`, { firma_b64 });
   },
 };
+
+export function obtenerContratoURL(asignacionId: number, token: string): string {
+  const base = process.env.EXPO_PUBLIC_API_URL;
+  return `${base}/api/contratos/asignacion/${asignacionId}/pdf?token=${token}`;
+}

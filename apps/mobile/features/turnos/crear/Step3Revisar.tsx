@@ -12,6 +12,8 @@ type Props = {
   onBack: () => void;
   onPublish: () => void;
   isPublishing: boolean;
+  isPublished: boolean;
+  onClose: () => void;
 };
 
 function SummaryRow({ icon, label, value }: { icon: string; label: string; value: string }) {
@@ -26,7 +28,7 @@ function SummaryRow({ icon, label, value }: { icon: string; label: string; value
   );
 }
 
-export function Step3Revisar({ data, onBack, onPublish, isPublishing }: Props) {
+export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublished, onClose }: Props) {
   const fecha = data.fecha ? formatDateObj(data.fecha) : '';
   const inicio = data.hora_inicio ? formatTimeObj(data.hora_inicio) : '';
   const fin = data.hora_fin ? ` – ${formatTimeObj(data.hora_fin)}` : '';
@@ -43,6 +45,9 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing }: Props) {
         <SummaryRow icon="text-outline"     label="Título"   value={data.titulo} />
         <SummaryRow icon="calendar-outline" label="Fecha"    value={fecha} />
         <SummaryRow icon="time-outline"     label="Horario"  value={`${inicio}${fin}`} />
+        {data.ubicacion_libre ? (
+          <SummaryRow icon="navigate-circle-outline" label="Ubicación" value="Libre — sin restricción geográfica" />
+        ) : null}
         {data.lugar ? (
           <SummaryRow icon="location-outline" label="Lugar" value={data.lugar} />
         ) : null}
@@ -103,14 +108,16 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing }: Props) {
       </View>
 
       <View className="flex-row gap-3">
-        <Button label="← Atrás" variant="secondary" onPress={onBack} style={{ flex: 1 }} disabled={isPublishing} />
+        {!isPublished && (
+          <Button label="← Atrás" variant="secondary" onPress={onBack} style={{ flex: 1 }} disabled={isPublishing} />
+        )}
         <Button
-          label={isPublishing ? 'Publicando…' : 'Publicar turno'}
+          label={isPublishing ? 'Publicando…' : isPublished ? 'Cerrar' : 'Publicar turno'}
           variant="primary"
           size="lg"
           loading={isPublishing}
-          onPress={onPublish}
-          style={{ flex: 2 }}
+          onPress={isPublished ? onClose : onPublish}
+          style={{ flex: isPublished ? 1 : 2 }}
         />
       </View>
     </ScrollView>

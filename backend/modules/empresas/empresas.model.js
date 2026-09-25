@@ -18,8 +18,11 @@ const EmpresasModel = {
       params.push(`%${busqueda}%`, `%${busqueda}%`);
     }
     if (ciudad) {
-      where.push('ciudad = ?');
-      params.push(ciudad);
+      // LIKE, no "=" — el campo ciudad es texto libre (mi-empresa.tsx), así que
+      // "Bogotá D.C." o "bogota" no calzaban con el chip fijo "Bogotá" y la
+      // empresa quedaba invisible en el directorio para ese filtro.
+      where.push('ciudad LIKE ?');
+      params.push(`%${ciudad}%`);
     }
     const whereSql = where.join(' AND ');
     const [filas] = await pool.query(
@@ -30,6 +33,30 @@ const EmpresasModel = {
       `SELECT COUNT(*) AS total FROM empresas WHERE ${whereSql}`,
       params
     );
+
+    // Cargos visibles en el directorio — solo informativo, para que el
+    // trabajador sepa qué roles tiene la empresa antes de solicitar vínculo.
+    // La empresa sigue eligiendo qué cargo(s) asignarle al aprobar (solicitudes.tsx).
+    const empresaIds = filas.map((f) => f.id);
+    if (empresaIds.length > 0) {
+      const [cargoFilas] = await pool.query(
+        `SELECT id, nombre, empresa_id FROM cargos
+         WHERE activo = 1 AND (empresa_id IS NULL OR empresa_id IN (?))
+         ORDER BY nombre`,
+        [empresaIds]
+      );
+      const sistema = cargoFilas.filter((c) => c.empresa_id === null).map(({ id, nombre }) => ({ id, nombre }));
+      const porEmpresa = new Map();
+      for (const c of cargoFilas) {
+        if (c.empresa_id === null) continue;
+        if (!porEmpresa.has(c.empresa_id)) porEmpresa.set(c.empresa_id, []);
+        porEmpresa.get(c.empresa_id).push({ id: c.id, nombre: c.nombre });
+      }
+      for (const f of filas) {
+        f.cargos = [...sistema, ...(porEmpresa.get(f.id) ?? [])].sort((a, b) => a.nombre.localeCompare(b.nombre));
+      }
+    }
+
     return { data: filas, total };
   },
 
@@ -82,6 +109,14 @@ const EmpresasModel = {
       [empresaId]
     );
     return filas[0] || null;
+  },
+
+  async contarTrabajadoresActivos(empresaId) {
+    const [[{ total }]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM trabajadores WHERE empresa_id = ? AND activo = 1',
+      [empresaId]
+    );
+    return Number(total);
   },
 
   async obtenerEstadoSuscripcion(empresaId) {

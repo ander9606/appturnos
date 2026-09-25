@@ -15,15 +15,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { useCrearEmpresa } from '@/features/admin/useAdmin';
-import type { PlanEmpresa } from '@api-client';
-
-// ── Constants ─────────────────────────────────────────────────────────────
-
-const PLANES: { value: PlanEmpresa; label: string; color: string; desc: string }[] = [
-  { value: 'basico', label: 'Básico', color: '#94A3B8', desc: 'Para equipos pequeños' },
-  { value: 'profesional', label: 'Profesional', color: '#3B82F6', desc: 'Más funcionalidades' },
-  { value: 'empresarial', label: 'Empresarial', color: '#8B5CF6', desc: 'Sin límites' },
-];
 
 // ── Helper: auto-generar slug desde nombre ────────────────────────────────
 
@@ -90,7 +81,6 @@ export default function NuevaEmpresaScreen() {
   const [slugManual, setSlugManual] = useState(false);
   const [nit, setNit] = useState('');
   const [ciudad, setCiudad] = useState('');
-  const [plan, setPlan] = useState<PlanEmpresa>('basico');
   const [descripcion, setDescripcion] = useState('');
   const [adminNombre, setAdminNombre] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -135,7 +125,6 @@ export default function NuevaEmpresaScreen() {
         slug: slug.trim(),
         nit: nit.trim() || null,
         ciudad: ciudad.trim() || null,
-        plan,
         descripcion: descripcion.trim() || null,
         admin_nombre: adminNombre.trim() || undefined,
         admin_email: adminEmail.trim() || undefined,
@@ -244,39 +233,6 @@ export default function NuevaEmpresaScreen() {
             onChangeText={setDescripcion}
             placeholder="Breve descripción de la empresa"
           />
-        </View>
-
-        {/* ── Plan ───────────────────────────────────────────────────── */}
-        <View className="bg-card border border-border rounded-2xl p-4 gap-3">
-          <Text className="text-sm font-bold text-foreground">Plan</Text>
-          {PLANES.map((p) => (
-            <Pressable
-              key={p.value}
-              onPress={() => setPlan(p.value)}
-              className="flex-row items-center gap-3 p-3 rounded-xl border"
-              style={{
-                borderColor: plan === p.value ? p.color : '#E2E8F0',
-                backgroundColor: plan === p.value ? p.color + '15' : 'transparent',
-              }}
-            >
-              <View
-                className="w-4 h-4 rounded-full border-2"
-                style={{
-                  borderColor: p.color,
-                  backgroundColor: plan === p.value ? p.color : 'transparent',
-                }}
-              />
-              <View className="flex-1">
-                <Text
-                  className="text-sm font-semibold"
-                  style={{ color: plan === p.value ? p.color : '#1E293B' }}
-                >
-                  {p.label}
-                </Text>
-                <Text className="text-xs text-muted-foreground">{p.desc}</Text>
-              </View>
-            </Pressable>
-          ))}
         </View>
 
         {/* ── Admin de la empresa ───────────────────────────────────── */}

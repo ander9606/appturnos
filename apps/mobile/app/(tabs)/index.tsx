@@ -16,6 +16,7 @@ import {
   RefreshControl,
   Linking,
   Alert,
+  Platform,
 } from 'react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { empresasApi, ApiError } from '@api-client';
@@ -139,7 +140,9 @@ export default function DashboardScreen() {
   const suscVencida       = isManager && suscData?.activa === false;
   const logiq360Conectado = isManager && suscData?.logiq360_conectado === true;
   // Solo admin_empresa puede pagar, y solo si la empresa no la factura logiq360.
-  const puedeAutopagar    = isAdmin && !logiq360Conectado;
+  // En iOS no se abre el link de pago externo desde acá (guideline 3.1.1) —
+  // el admin va a Mi plan, que en iOS solo muestra uso, no pago.
+  const puedeAutopagar    = isAdmin && !logiq360Conectado && Platform.OS !== 'ios';
   // Aviso suave de renovación próxima — no aplica si logiq360 cubre la cuenta.
   const suscPorVencer =
     isManager && !logiq360Conectado && suscData?.activa === true &&
@@ -154,6 +157,12 @@ export default function DashboardScreen() {
   });
 
   function iniciarRenovacion() {
+    if (isAdmin && Platform.OS === 'ios') {
+      // Apple guideline 3.1.1: no iniciar el pago externo (Wompi) desde acá
+      // en iOS — Mi plan explica cómo renovar desde la web.
+      router.push('/mi-plan');
+      return;
+    }
     if (!isAdmin) {
       // Solo el admin_empresa puede pagar — el resto solo puede avisarle.
       Linking.openURL('mailto:soporte@zaturno.app');
@@ -208,7 +217,12 @@ export default function DashboardScreen() {
 
   const periodoLabel = periodoAbierto ? `Período · ${TIPO_PERIODO_LABEL[periodoAbierto.tipo]}` : 'Período';
 
-  const stats: { value: string | number; label: string; color: string; onPress?: () => void }[] = isNomina
+  // Completados sin firmar → mostrar alerta
+  const completadosSinFirmar = turnos.filter(
+    (a) => a.estado === 'completado' && a.contrato_firmado === 0
+  ).length;
+
+  const stats: { value: string | number; label: string; color: string; alert?: boolean; onPress?: () => void }[] = isNomina
     ? [
         { value: periodoAbierto ? fmtPeriodo(periodoAbierto) : '—', label: periodoLabel, color: periodoAbierto ? 'text-success' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
         { value: nominaPerfil?.acepta_extras ? '✓' : '—',             label: 'Extras activos', color: nominaPerfil?.acepta_extras ? 'text-info' : 'text-muted-foreground', onPress: () => router.push('/(tabs)/nomina') },
@@ -218,7 +232,7 @@ export default function DashboardScreen() {
     ? [
         { value: turnosHoy.length,                                          label: 'Turnos hoy',  color: 'text-foreground', onPress: () => router.push('/(tabs)/turnos') },
         { value: proximos.length,                                           label: 'Próximos',    color: 'text-info',       onPress: () => router.push('/(tabs)/turnos') },
-        { value: turnos.filter((a) => a.estado === 'completado').length,    label: 'Completados', color: 'text-success',    onPress: () => router.push('/(tabs)/turnos') },
+        { value: turnos.filter((a) => a.estado === 'completado').length,    label: 'Completados', color: 'text-success',    alert: completadosSinFirmar > 0, onPress: () => router.push('/(tabs)/turnos') },
       ]
     : isJefeNomina
     ? [
@@ -475,7 +489,7 @@ export default function DashboardScreen() {
         {/* ── Stat cards ───────────────────────────────────────────────── */}
         <View className="flex-row px-4 mt-4 gap-3">
           {stats.map((s) => (
-            <StatCard key={s.label} value={s.value} label={s.label} color={s.color} onPress={s.onPress} />
+            <StatCard key={s.label} value={s.value} label={s.label} color={s.color} alert={s.alert} onPress={s.onPress} />
           ))}
         </View>
 
@@ -509,7 +523,8 @@ export default function DashboardScreen() {
         {/* ── Estado de suscripción (discreto, solo caso normal activa) ── */}
         {isManager && !logiq360Conectado && !suscVencida && !suscPorVencer && suscData?.activa && (
           <Pressable
-            onPress={iniciarRenovacion}
+            // admin_empresa va a Mi plan (uso + ampliar); el resto sigue avisando a soporte.
+            onPress={isAdmin ? () => router.push('/mi-plan') : iniciarRenovacion}
             disabled={pagarMutation.isPending}
             className="flex-row items-center justify-center gap-1.5 mx-4 mt-4 py-2 rounded-full bg-card border border-border active:opacity-60"
             accessibilityRole="button"

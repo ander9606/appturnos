@@ -5,11 +5,11 @@
  */
 
 // Salario mínimo mensual legal vigente. Cambia cada 1-ene por decreto del
-// Gobierno — actualizar aquí. Valor 2025; verificar el vigente antes de usar en 2026.
-export const SMMLV_COP = 1_423_500;
+// Gobierno — actualizar aquí. Valor 2026 (Decreto 1469 de 2025).
+export const SMMLV_COP = 1_750_905;
 
-// Convención laboral colombiana: 30 días × 8 h.
-export const HORAS_MES_NOMINA = 240;
+// Jornada de 42 h/semana (Ley 2101): 42 ÷ 6 días × 30 = 210. Espejo de backend/config/constants.js.
+export const HORAS_MES_NOMINA = 210;
 
 // A cargo del trabajador. ARL y caja de compensación no se incluyen: en
 // Colombia corren 100% por cuenta del empleador, nunca se descuentan del trabajador.
@@ -49,4 +49,18 @@ export function calcularDeducciones(ibc: number): Deducciones {
 
   const total = salud + pension;
   return { salud, pension, fondoSolidaridadTasa, total, neto: base - total };
+}
+
+// Espejo de RECARGO_FESTIVO_VIGENCIAS (backend/config/constants.js) — Ley 2466
+// de 2025: recargo dominical/festivo gradual 80 % → 90 % → 100 %.
+const RECARGO_FESTIVO_VIGENCIAS = [
+  { desde: '2027-07-01', factor: 2.0 },
+  { desde: '2026-07-01', factor: 1.9 },
+  { desde: '2025-07-01', factor: 1.8 },
+  { desde: '0000-01-01', factor: 1.75 },
+];
+
+/** Multiplicador de la hora dominical/festiva trabajada en `fecha` ('YYYY-MM-DD'). */
+export function recargoFestivo(fecha: string): number {
+  return RECARGO_FESTIVO_VIGENCIAS.find((v) => v.desde <= fecha.slice(0, 10))!.factor;
 }

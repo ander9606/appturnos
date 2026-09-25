@@ -1,11 +1,14 @@
 /**
  * Pantalla de postulaciones (gestores / admin_empresa).
- * Dos pestañas — Pendientes / Confirmados — cada una agrupada por
- * fecha → oferta, con botones de confirmar/rechazar/cancelar inline.
- * El filtro por estado va server-side (evita traer confirmados viejos
- * mezclados con lo que realmente necesita acción).
+ * Tres pestañas — Pendientes / Aceptados / Rechazados — cada una agrupada
+ * por fecha → oferta (evento), ordenadas de más reciente a más antigua.
+ * Aceptados y Rechazados cargan de a 10 eventos con "Ver más" (Pendientes
+ * siempre se ve completa: requiere acción). El filtro por estado va
+ * server-side (evita traer confirmados viejos mezclados con lo que
+ * realmente necesita acción); Rechazados se filtra client-side por
+ * rechazado_por, porque comparte estado='cancelado' con las cancelaciones.
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -21,10 +24,13 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   usePostulacionesPendientes,
   useAsignacionesConfirmadas,
+  useAsignacionesRechazadas,
   useConfirmar,
   useRechazar,
   useCancelar,
+  useNoPresentado,
 } from '@/features/turnos/useTurnos';
+import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui/Button';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -50,6 +56,7 @@ function fmtHora(h: string) {
 interface OfertaGroup {
   ofertaId: number;
   titulo: string;
+  descripcion: string | null;
   fecha: string;
   horaInicio: string;
   asignaciones: Asignacion[];
@@ -65,17 +72,27 @@ interface Section {
 
 function PostulanteItem({
   asignacion,
+  esPasado,
+  turnoIniciado,
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
+  noPresentadoMutation,
 }: {
   asignacion: Asignacion;
+  esPasado: boolean;
+  turnoIniciado: boolean;
   confirmarMutation: ReturnType<typeof useConfirmar>;
   rechazarMutation:  ReturnType<typeof useRechazar>;
   cancelarMutation:  ReturnType<typeof useCancelar>;
+  noPresentadoMutation: ReturnType<typeof useNoPresentado>;
 }) {
-  const isPending   = asignacion.estado === 'pendiente';
-  const isConfirmed = asignacion.estado === 'confirmado';
+  const isPending     = asignacion.estado === 'pendiente';
+  const isConfirmed   = asignacion.estado === 'confirmado';
+  const isEnProgreso  = asignacion.estado === 'en_progreso';
+  const isCompletado  = asignacion.estado === 'completado';
+  const isNoPresentado = asignacion.estado === 'no_presentado';
+  const isRechazado   = asignacion.estado === 'cancelado' && asignacion.rechazado_por != null;
 
   const isConfirming =
     confirmarMutation.isPending &&
@@ -86,8 +103,11 @@ function PostulanteItem({
   const isCancelling =
     cancelarMutation.isPending &&
     (cancelarMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
+  const isMarkingNP =
+    noPresentadoMutation.isPending &&
+    (noPresentadoMutation.variables as { asignacionId: number } | undefined)?.asignacionId === asignacion.id;
 
-  const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending;
+  const isBusy = confirmarMutation.isPending || rechazarMutation.isPending || cancelarMutation.isPending || noPresentadoMutation.isPending;
 
   async function handleRechazar() {
     const ok = await confirm({
@@ -110,6 +130,16 @@ function PostulanteItem({
     if (ok) cancelarMutation.mutate({ asignacionId: asignacion.id, ofertaId: asignacion.oferta_id });
   }
 
+  async function handleNoPresentado() {
+    const ok = await confirm({
+      title: 'No se presentó',
+      message: `¿Marcar a ${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} como no presentado? Esto registra 0 estrellas automáticamente y afecta su ranking.`,
+      confirmLabel: 'Marcar ausente',
+      destructive: true,
+    });
+    if (ok) noPresentadoMutation.mutate({ asignacionId: asignacion.id, ofertaId: asignacion.oferta_id });
+  }
+
   return (
     <View className="py-2.5 border-b border-border gap-1.5">
       <View className="flex-row items-start justify-between">
@@ -123,8 +153,14 @@ function PostulanteItem({
         </View>
       </View>
 
+      {/* Pendiente sobre un turno ya pasado → solo Rechazar (confirmar ya no aplica, el backend lo rechazaría igual) */}
+      {isPending && esPasado && (
+        <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
+          loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
+      )}
+
       {/* Pendiente → Rechazar + Confirmar */}
-      {isPending && (
+      {isPending && !esPasado && (
         <View className="flex-row gap-2">
           <Button label={isRejecting ? '…' : 'Rechazar'} variant="danger" size="sm"
             loading={isRejecting} disabled={isBusy} onPress={handleRechazar} />
@@ -134,15 +170,63 @@ function PostulanteItem({
         </View>
       )}
 
-      {/* Confirmado → chip Aceptado + Cancelar turno */}
-      {isConfirmed && (
+      {/* Confirmado sobre un turno ya pasado → chip Aceptado + No vino (cancelar ya no
+          tiene sentido: el turno ya ocurrió, "cancelado" mentiría sobre lo que pasó). */}
+      {isConfirmed && esPasado && (
         <View className="flex-row items-center gap-2">
+          <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
+            <Ionicons name="checkmark-circle" size={14} color="#059669" />
+            <Text className="text-xs font-semibold text-success">Aceptado</Text>
+          </View>
+          <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
+            loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+        </View>
+      )}
+
+      {/* Confirmado, turno futuro o de hoy → chip Aceptado + Cancelar turno
+          (+ No vino si ya empezó y sigue sin marcar ingreso) */}
+      {isConfirmed && !esPasado && (
+        <View className="flex-row items-center gap-2 flex-wrap">
           <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
             <Ionicons name="checkmark-circle" size={14} color="#059669" />
             <Text className="text-xs font-semibold text-success">Aceptado</Text>
           </View>
           <Button label={isCancelling ? '…' : 'Cancelar turno'} variant="danger" size="sm"
             loading={isCancelling} disabled={isBusy} onPress={handleCancelar} />
+          {turnoIniciado && (
+            <Button label={isMarkingNP ? '…' : 'No vino'} variant="secondary" size="sm"
+              loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
+          )}
+        </View>
+      )}
+
+      {/* En progreso → solo chip informativo, se resuelve solo al cerrar la jornada */}
+      {isEnProgreso && (
+        <View className="flex-row items-center gap-1 self-start bg-info/10 px-3 py-1.5 rounded-xl">
+          <Ionicons name="time-outline" size={14} color="#3B82F6" />
+          <Text className="text-xs font-semibold text-info">En curso</Text>
+        </View>
+      )}
+
+      {/* Completado / No presentado → historial de lo aceptado, sin acciones */}
+      {isCompletado && (
+        <View className="flex-row items-center gap-1 self-start bg-muted px-3 py-1.5 rounded-xl">
+          <Ionicons name="checkmark-done-circle" size={14} color="#64748B" />
+          <Text className="text-xs font-semibold text-muted-foreground">Completado</Text>
+        </View>
+      )}
+      {isNoPresentado && (
+        <View className="flex-row items-center gap-1 self-start bg-danger-light px-3 py-1.5 rounded-xl">
+          <Ionicons name="alert-circle" size={14} color="#EF4444" />
+          <Text className="text-xs font-semibold text-danger">No se presentó</Text>
+        </View>
+      )}
+
+      {/* Rechazado → solo chip, es un estado final sin acciones */}
+      {isRechazado && (
+        <View className="flex-row items-center gap-1 self-start bg-danger-light px-3 py-1.5 rounded-xl">
+          <Ionicons name="close-circle" size={14} color="#EF4444" />
+          <Text className="text-xs font-semibold text-danger">Rechazado</Text>
         </View>
       )}
     </View>
@@ -153,29 +237,45 @@ function PostulanteItem({
 
 function OfertaCard({
   group,
+  today,
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
+  noPresentadoMutation,
 }: {
   group: OfertaGroup;
+  today: string;
   confirmarMutation: ReturnType<typeof useConfirmar>;
   rechazarMutation:  ReturnType<typeof useRechazar>;
   cancelarMutation:  ReturnType<typeof useCancelar>;
+  noPresentadoMutation: ReturnType<typeof useNoPresentado>;
 }) {
+  const router = useRouter();
+  const esPasado = group.fecha < today;
+  const turnoIniciado = turnoYaInicio(group.fecha, group.horaInicio);
+
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden mb-3"
       style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6 }}
     >
-      {/* Cabecera de la oferta */}
-      <View className="flex-row">
+      {/* Cabecera de la oferta — toca para ver el detalle completo del evento */}
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => router.push(`/oferta/${group.ofertaId}` as any)}
+        className="flex-row"
+      >
         <View className="w-1.5 bg-primary-400" />
         <View className="flex-1 px-4 pt-3 pb-2 gap-0.5">
           <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
             {group.titulo}
           </Text>
-          <View className="flex-row items-center gap-1">
-            <Ionicons name="time-outline" size={11} color="#64748B" />
+          <View className="flex-row items-center gap-1 flex-wrap">
+            <Ionicons name="calendar-outline" size={11} color="#64748B" />
+            <Text className="text-xs text-muted-foreground">
+              {fmtFecha(group.fecha)}
+            </Text>
+            <Ionicons name="time-outline" size={11} color="#64748B" style={{ marginLeft: 6 }} />
             <Text className="text-xs text-muted-foreground">
               {fmtHora(group.horaInicio)}
             </Text>
@@ -183,8 +283,16 @@ function OfertaCard({
               {group.asignaciones.length} postulante{group.asignaciones.length !== 1 ? 's' : ''}
             </Text>
           </View>
+          {group.descripcion ? (
+            <Text className="text-xs text-muted-foreground mt-0.5" numberOfLines={2}>
+              {group.descripcion}
+            </Text>
+          ) : null}
         </View>
-      </View>
+        <View className="items-center justify-center pr-3">
+          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+        </View>
+      </TouchableOpacity>
 
       {/* Lista de postulantes */}
       <View className="px-4 pb-2">
@@ -192,9 +300,12 @@ function OfertaCard({
           <PostulanteItem
             key={a.id}
             asignacion={a}
+            esPasado={esPasado}
+            turnoIniciado={turnoIniciado}
             confirmarMutation={confirmarMutation}
             rechazarMutation={rechazarMutation}
             cancelarMutation={cancelarMutation}
+            noPresentadoMutation={noPresentadoMutation}
           />
         ))}
       </View>
@@ -204,34 +315,48 @@ function OfertaCard({
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 10;
+
 export default function PostulacionesScreen() {
   const router  = useRouter();
   const theme   = useTheme();
-  const [tab, setTab] = useState<'pendientes' | 'confirmados'>('pendientes');
+  const [tab, setTab] = useState<'pendientes' | 'aceptados' | 'rechazados'>('pendientes');
 
   const pendientesQuery  = usePostulacionesPendientes();
-  const confirmadosQuery = useAsignacionesConfirmadas({ enabled: tab === 'confirmados' });
+  const aceptadosQuery   = useAsignacionesConfirmadas({ enabled: tab === 'aceptados' });
+  const rechazadosQuery  = useAsignacionesRechazadas({ enabled: tab === 'rechazados' });
   const { data: resp, isLoading, isRefetching, isError, refetch } =
-    tab === 'pendientes' ? pendientesQuery : confirmadosQuery;
+    tab === 'pendientes' ? pendientesQuery : tab === 'aceptados' ? aceptadosQuery : rechazadosQuery;
 
-  const confirmarMutation = useConfirmar();
-  const rechazarMutation  = useRechazar();
-  const cancelarMutation  = useCancelar();
+  const confirmarMutation    = useConfirmar();
+  const rechazarMutation     = useRechazar();
+  const cancelarMutation     = useCancelar();
+  const noPresentadoMutation = useNoPresentado();
+  const today = useMemo(() => bogotaToday(), []);
 
   const totalPendientes = pendientesQuery.data?.data.length ?? 0;
 
-  const sections: Section[] = useMemo(() => {
-    const asignaciones = resp?.data ?? [];
-    // Agrupar por fecha → oferta_id (el evento/turno al que pertenece cada postulante)
-    const byFecha = new Map<string, Map<number, OfertaGroup>>();
+  // Aceptados/Rechazados cargan de a PAGE_SIZE eventos (más recientes primero);
+  // Pendientes siempre se ve completa porque requiere acción del gestor.
+  const paginaPorEventos = tab !== 'pendientes';
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => setVisibleCount(PAGE_SIZE), [tab]);
 
+  const grupos: OfertaGroup[] = useMemo(() => {
+    let asignaciones = resp?.data ?? [];
+    // Rechazar deja estado='cancelado', igual que cancelar un confirmado —
+    // solo lo rechazado desde "pendiente" trae rechazado_por.
+    if (tab === 'rechazados') {
+      asignaciones = asignaciones.filter((a) => a.rechazado_por != null);
+    }
+    // Agrupar por oferta_id (el evento/turno al que pertenece cada postulante)
+    const byOferta = new Map<number, OfertaGroup>();
     for (const a of asignaciones) {
-      if (!byFecha.has(a.oferta_fecha)) byFecha.set(a.oferta_fecha, new Map());
-      const byOferta = byFecha.get(a.oferta_fecha)!;
       if (!byOferta.has(a.oferta_id)) {
         byOferta.set(a.oferta_id, {
           ofertaId: a.oferta_id,
           titulo: a.oferta_titulo,
+          descripcion: a.oferta_descripcion,
           fecha: a.oferta_fecha,
           horaInicio: a.hora_inicio,
           asignaciones: [],
@@ -239,17 +364,25 @@ export default function PostulacionesScreen() {
       }
       byOferta.get(a.oferta_id)!.asignaciones.push(a);
     }
+    // Más reciente primero.
+    return Array.from(byOferta.values()).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  }, [resp, tab]);
 
+  const gruposVisibles = paginaPorEventos ? grupos.slice(0, visibleCount) : grupos;
+  const hayMasEventos  = paginaPorEventos && grupos.length > gruposVisibles.length;
+
+  const sections: Section[] = useMemo(() => {
+    const byFecha = new Map<string, OfertaGroup[]>();
+    for (const g of gruposVisibles) {
+      if (!byFecha.has(g.fecha)) byFecha.set(g.fecha, []);
+      byFecha.get(g.fecha)!.push(g);
+    }
     return Array.from(byFecha.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([fecha, byOferta]) => ({
-        title: fmtFecha(fecha),
-        fecha,
-        data: Array.from(byOferta.values()),
-      }));
-  }, [resp]);
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([fecha, data]) => ({ title: fmtFecha(fecha), fecha, data }));
+  }, [gruposVisibles]);
 
-  const totalTab = sections.reduce((s, sec) => s + sec.data.reduce((s2, g) => s2 + g.asignaciones.length, 0), 0);
+  const totalTab = grupos.reduce((s, g) => s + g.asignaciones.length, 0);
 
   const onRefresh = useCallback(() => { refetch(); }, [refetch]);
 
@@ -307,11 +440,12 @@ export default function PostulacionesScreen() {
         </View>
       </View>
 
-      {/* ── Tabs Pendientes / Confirmados ─────────────────────────────── */}
+      {/* ── Tabs Pendientes / Aceptados / Rechazados ────────────────────── */}
       <View className="flex-row gap-2 px-5 pt-3 pb-1 bg-card border-b border-border">
         {([
           { key: 'pendientes' as const, label: 'Pendientes', count: totalPendientes },
-          { key: 'confirmados' as const, label: 'Confirmados', count: tab === 'confirmados' ? totalTab : undefined },
+          { key: 'aceptados' as const, label: 'Aceptados', count: tab === 'aceptados' ? totalTab : undefined },
+          { key: 'rechazados' as const, label: 'Rechazados', count: tab === 'rechazados' ? totalTab : undefined },
         ]).map((opt) => {
           const active = tab === opt.key;
           return (
@@ -338,10 +472,14 @@ export default function PostulacionesScreen() {
             <Ionicons name="checkmark-done-outline" size={36} color={theme.primary} />
           </View>
           <Text className="text-base font-semibold text-foreground text-center">
-            {tab === 'pendientes' ? 'Sin postulaciones pendientes' : 'Sin confirmados'}
+            {tab === 'pendientes' ? 'Sin postulaciones pendientes' : tab === 'aceptados' ? 'Sin aceptados' : 'Sin rechazados'}
           </Text>
           <Text className="text-sm text-muted-foreground text-center">
-            {tab === 'pendientes' ? 'Todas las postulaciones han sido revisadas.' : 'Todavía no hay trabajadores confirmados.'}
+            {tab === 'pendientes'
+              ? 'Todas las postulaciones han sido revisadas.'
+              : tab === 'aceptados'
+              ? 'Todavía no hay trabajadores confirmados.'
+              : 'No hay postulaciones rechazadas.'}
           </Text>
         </View>
       ) : (
@@ -359,9 +497,11 @@ export default function PostulacionesScreen() {
             <View className="px-5">
               <OfertaCard
                 group={item}
+                today={today}
                 confirmarMutation={confirmarMutation}
                 rechazarMutation={rechazarMutation}
                 cancelarMutation={cancelarMutation}
+                noPresentadoMutation={noPresentadoMutation}
               />
             </View>
           )}
@@ -372,6 +512,17 @@ export default function PostulacionesScreen() {
               tintColor={theme.primary}
               colors={[theme.primary]}
             />
+          }
+          ListFooterComponent={
+            hayMasEventos ? (
+              <View className="px-5 pt-1 pb-2">
+                <Button
+                  label={`Ver ${Math.min(PAGE_SIZE, grupos.length - gruposVisibles.length)} más`}
+                  variant="secondary"
+                  onPress={() => setVisibleCount((v) => v + PAGE_SIZE)}
+                />
+              </View>
+            ) : null
           }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 32 }}

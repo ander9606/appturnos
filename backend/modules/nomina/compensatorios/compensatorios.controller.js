@@ -19,3 +19,19 @@ exports.asignar = async (req, res, next) => {
     res.json({ success: true, data });
   } catch (e) { next(e); }
 };
+
+exports.reasignar = async (req, res, next) => {
+  try {
+    const data = await CompensatoriosService.reasignar(
+      req.empresa_id, req.usuario.sub, Number(req.params.id), req.body
+    );
+    res.json({ success: true, data });
+  } catch (e) { next(e); }
+};
+
+exports.rango = async (req, res, next) => {
+  try {
+    const data = await CompensatoriosService.rango(req.empresa_id, Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (e) { next(e); }
+};

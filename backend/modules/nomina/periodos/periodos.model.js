@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../../config/database');
+const { HORAS_MES_NOMINA } = require('../../../config/constants');
 
 /** Acceso a datos de períodos de nómina (tabla periodos_nomina). */
 
@@ -8,12 +9,23 @@ const COLUMNAS = `id, empresa_id, fecha_inicio, fecha_fin, tipo, estado,
   cerrado_por, cerrado_at, created_at`;
 
 const PeriodosModel = {
-  async listar(empresaId, { estado, limit, offset }) {
+  async listar(empresaId, { estado, fechaDesde, fechaHasta, limit, offset }) {
     const where = ['empresa_id = ?'];
     const params = [empresaId];
     if (estado) {
       where.push('estado = ?');
       params.push(estado);
+    }
+    // Solapamiento de rango: el período cubre algún día entre fechaDesde y fechaHasta
+    // (no que haya empezado dentro del rango) — así una vista de calendario mensual
+    // también encuentra el período que ya estaba abierto antes del mes visible.
+    if (fechaDesde) {
+      where.push('fecha_fin >= ?');
+      params.push(fechaDesde);
+    }
+    if (fechaHasta) {
+      where.push('fecha_inicio <= ?');
+      params.push(fechaHasta);
     }
     const whereSql = where.join(' AND ');
 
@@ -31,6 +43,48 @@ const PeriodosModel = {
     return { data: filas, total };
   },
 
+  /**
+   * Períodos de todas las empresas activas del usuario — trabajador_turnos
+   * multi-empresa (empresa_id null en el JWT). trabajador_empresa ya trae
+   * empresa_id directo, sin necesidad de pasar por trabajadores.
+   */
+  async listarPorUsuario(usuarioId, { estado, fechaDesde, fechaHasta, limit, offset }) {
+    const where = ['te.usuario_id = ?', "te.estado = 'activo'"];
+    const params = [usuarioId];
+    if (estado) {
+      where.push('p.estado = ?');
+      params.push(estado);
+    }
+    if (fechaDesde) {
+      where.push('p.fecha_fin >= ?');
+      params.push(fechaDesde);
+    }
+    if (fechaHasta) {
+      where.push('p.fecha_inicio <= ?');
+      params.push(fechaHasta);
+    }
+    const whereSql = where.join(' AND ');
+
+    const [filas] = await pool.query(
+      `SELECT DISTINCT p.id, p.empresa_id, p.fecha_inicio, p.fecha_fin, p.tipo, p.estado,
+              p.cerrado_por, p.cerrado_at, p.created_at
+       FROM periodos_nomina p
+       JOIN trabajador_empresa te ON te.empresa_id = p.empresa_id
+       WHERE ${whereSql}
+       ORDER BY p.fecha_inicio DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(DISTINCT p.id) AS total
+       FROM periodos_nomina p
+       JOIN trabajador_empresa te ON te.empresa_id = p.empresa_id
+       WHERE ${whereSql}`,
+      params
+    );
+    return { data: filas, total };
+  },
+
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT ${COLUMNAS} FROM periodos_nomina WHERE id = ? AND empresa_id = ? LIMIT 1`,
@@ -40,12 +94,26 @@ const PeriodosModel = {
   },
 
   async crear(empresaId, { fecha_inicio, fecha_fin, tipo }) {
-    const [res] = await pool.query(
-      `INSERT INTO periodos_nomina (empresa_id, fecha_inicio, fecha_fin, tipo)
-       VALUES (?, ?, ?, ?)`,
-      [empresaId, fecha_inicio, fecha_fin, tipo || 'quincenal']
-    );
-    return res.insertId;
+    try {
+      const [res] = await pool.query(
+        `INSERT INTO periodos_nomina (empresa_id, fecha_inicio, fecha_fin, tipo)
+         VALUES (?, ?, ?, ?)`,
+        [empresaId, fecha_inicio, fecha_fin, tipo || 'quincenal']
+      );
+      return { id: res.insertId, esNuevo: true };
+    } catch (err) {
+      // Race condition: otro proceso ya creó el período con esas fechas.
+      // Retornar el ID del período existente sin disparar notificación.
+      if (err.code === 'ER_DUP_ENTRY') {
+        const [filas] = await pool.query(
+          `SELECT id FROM periodos_nomina
+           WHERE empresa_id = ? AND fecha_inicio = ? AND fecha_fin = ? LIMIT 1`,
+          [empresaId, fecha_inicio, fecha_fin]
+        );
+        if (filas.length > 0) return { id: filas[0].id, esNuevo: false };
+      }
+      throw err;
+    }
   },
 
   async cerrar(empresaId, id, cerradoPor) {
@@ -63,9 +131,9 @@ const PeriodosModel = {
    * en todos sus registros_diarios del período, en una sola transacción.
    *
    * Prioridad del sueldo (igual que laboralUtils.valorHora):
-   *   1. tarifa_hora      — tarifa directa por hora
-   *   2. salario_base/240 — derivada del mensual (30 días × 8 h)
-   *   3. 0               — trabajador sin sueldo configurado
+   *   1. salario_base / HORAS_MES_NOMINA — el mensual manda si está cargado
+   *   2. tarifa_hora                     — tarifa directa por hora
+   *   3. 0                               — trabajador sin sueldo configurado
    *
    * Usar este método en lugar de `cerrar` garantiza que cualquier
    * modificación de sueldo posterior no afecte períodos ya cerrados.
@@ -83,18 +151,21 @@ const PeriodosModel = {
         [cerradoPor, periodoId, empresaId],
       );
 
-      // 2. Congelar valor_hora en todos los registros del período.
-      //    240 = HORAS_MES_NOMINA (30 días × 8 h, ley laboral colombiana).
+      // 2. Congelar valor_hora y salario_base en todos los registros del período.
+      //    salario_base_snapshot: si el jefe sube/baja el sueldo después de
+      //    cerrar, la liquidación de este período no debe recalcularse con el
+      //    valor nuevo — solo el próximo período abierto lo usa.
       await conn.query(
         `UPDATE registros_diarios r
          JOIN  trabajadores t ON t.id = r.trabajador_id
          SET   r.valor_hora_snapshot = CASE
+                 WHEN t.salario_base IS NOT NULL THEN t.salario_base / ?
                  WHEN t.tarifa_hora  IS NOT NULL THEN t.tarifa_hora
-                 WHEN t.salario_base IS NOT NULL THEN t.salario_base / 240
                  ELSE 0
-               END
+               END,
+               r.salario_base_snapshot = t.salario_base
          WHERE r.periodo_id = ? AND r.empresa_id = ?`,
-        [periodoId, empresaId],
+        [HORAS_MES_NOMINA, periodoId, empresaId],
       );
 
       await conn.commit();

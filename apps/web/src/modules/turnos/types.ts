@@ -19,6 +19,7 @@ export interface Puesto {
 }
 
 export type VisibilidadOferta = 'abierta' | 'dirigida';
+export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
 
 export interface OfertaDestinatario {
   trabajador_id: number;
@@ -39,6 +40,7 @@ export interface Oferta {
   encargado_nombre: string | null;
   encargado_telefono: string | null;
   estado: EstadoOferta;
+  para_quien: ParaQuienOferta;
   // 'dirigida': solo `destinatarios` la ven/reciben notificación, sin filtro de cargo ni ranking.
   visibilidad: VisibilidadOferta;
   destinatarios: OfertaDestinatario[];
@@ -63,8 +65,14 @@ export interface LiquidacionTurno {
   tarifa_dia: number;
   cargo_nombre: string;
   pago_extra: number;
+  /** Bono extra (ej. propina) de este turno — ya sumado dentro de `pago_total`. */
+  bono_monto: number;
+  bono_motivo: string | null;
   pago_total: number;
   calificacion: number | null;
+  /** Si es `false`, el contrato del turno aún no lo firma el trabajador —
+   *  su pago no está incluido en los totales de `LiquidacionTurnosTrabajador`. */
+  firmado_trabajador: boolean;
 }
 
 export interface LiquidacionTurnosTrabajador {
@@ -78,8 +86,41 @@ export interface LiquidacionTurnosTrabajador {
   total_horas: number;
   pago_base: number;
   pago_extra: number;
+  /** Suma de bonos extra (ej. propinas) de los turnos firmados — ya incluida en `pago_total`. */
+  bono_monto: number;
   pago_total: number;
+  /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
+  turnos_pendientes_firma: number;
   turnos: LiquidacionTurno[];
+}
+
+export interface PeriodoTurnoEventual {
+  id: number;
+  segmento: 'nomina' | 'turnos';
+  tipo: 'mensual' | 'quincenal' | 'semanal' | 'trimestral';
+  fecha_inicio: string; // YYYY-MM-DD
+  fecha_fin: string;
+  estado: 'abierto' | 'liquidado';
+}
+
+export interface PeriodosEventualActivos {
+  nomina: PeriodoTurnoEventual;
+  /** Personal de apoyo 100% turnos — sigue el ciclo de liquidación de la empresa. */
+  turnos: PeriodoTurnoEventual;
+}
+
+export interface LineaLiquidacionEventual {
+  trabajador_id: number;
+  nombre_completo: string;
+  turnos: number;
+  horas: number;
+  total: number;
+}
+
+export interface LiquidacionEventualResponse {
+  periodo: PeriodoTurnoEventual;
+  lineas: LineaLiquidacionEventual[];
+  total_general: number;
 }
 
 export interface Asignacion {
@@ -90,9 +131,19 @@ export interface Asignacion {
   estado: EstadoAsignacion;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
+  /** Otro trabajador marcó ingreso desde el mismo dispositivo y ubicación — posible buddy punching. Solo auditoría, no bloquea. */
+  sospechoso: 0 | 1;
   trabajador_nombre: string;
   trabajador_apellido: string;
   cargo_nombre: string;
+  // Datos de la oferta — presentes al listar asignaciones de una oferta
+  oferta_fecha?: string;
+  oferta_titulo?: string;
   // Solo viene poblado en el detalle puntual (obtenerAsignacion), no en el listado.
   calificacion?: number | null;
+  /** Si es 0, el contrato del turno completado aún no fue firmado — su pago no cuenta en liquidación. */
+  contrato_firmado?: 0 | 1;
+  /** Bono extra (ej. propina) asignado al turno — ya sumado dentro de `pago_total`. */
+  bono_monto?: number;
+  bono_motivo?: string | null;
 }

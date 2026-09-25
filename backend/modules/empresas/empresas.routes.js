@@ -5,6 +5,7 @@ const { body, query, param } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const promoverTokenDeQuery = require('../../middleware/promoverTokenDeQuery');
 const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./empresas.controller');
@@ -18,6 +19,18 @@ const PUEDEN_VER_DIRECTORIO = [
 ];
 
 const SOLO_ADMIN = [ROLES.ADMIN_EMPRESA];
+
+// GET /api/empresas/reglas-pago — PDF de reglas de cálculo de pagos, solo
+// admin_empresa (documento pensado para quien administra la empresa, no
+// para todo el equipo). Acepta ?token= para abrirlo desde el navegador
+// externo en mobile (WebBrowser.openBrowserAsync, sin headers propios).
+router.get(
+  '/reglas-pago',
+  promoverTokenDeQuery,
+  verificarToken,
+  verificarRol(SOLO_ADMIN),
+  ctrl.reglasPago
+);
 
 // GET /api/empresas/directorio
 router.get(
@@ -45,6 +58,7 @@ router.post(
   verificarRol(SOLO_ADMIN),
   [
     body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
+    body('plan').optional().isIn(['basico', 'profesional', 'empresarial']),
   ],
   validar,
   ctrl.generarLinkPago
@@ -66,7 +80,8 @@ router.patch(
     body('ciudad').optional({ values: 'falsy' }).isString().trim(),
     body('descripcion').optional({ values: 'falsy' }).isString().trim(),
     body('actividad').optional({ values: 'falsy' }).isString().trim(),
-    body('logo_url').optional({ values: 'falsy' }).isURL().withMessage('logo_url debe ser una URL válida'),
+    // Acepta tanto una URL externa como un data URI subido desde la app (cámara/galería).
+    body('logo_url').optional({ values: 'falsy' }).isString().withMessage('logo_url inválido'),
     body('telefono').optional({ values: 'falsy' }).isString().trim().isLength({ max: 30 }),
     body('email_empresa').optional({ values: 'falsy' }).isEmail().withMessage('email_empresa debe ser un email válido')
       .customSanitizer(v => v.trim().toLowerCase()),

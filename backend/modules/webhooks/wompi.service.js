@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/database');
 const logger   = require('../../utils/logger');
-const { SUSCRIPCION_ESTANDAR_COP } = require('../../config/constants');
+const { PlanesModel, precioPlanCop, planParaTrabajadores } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 
 const ESTADOS_RECHAZO = ['DECLINED', 'VOIDED', 'ERROR'];
@@ -191,17 +191,35 @@ const WompiService = {
 
   /**
    * Genera un link de pago de Wompi. Referencia AT-{empresaId}-{plan}-{meses}.
-   * Precio fijo (SUSCRIPCION_ESTANDAR_COP) para toda empresa no-logiq360 — `plan`
-   * no afecta el monto, pero SÍ debe ser uno de los valores del ENUM `empresas.plan`
-   * (basico/profesional/empresarial): parsearReferencia() y activarSuscripcion()
-   * lo leen de vuelta del webhook y lo escriben tal cual en esa columna.
+   * El monto sale de la tabla `planes` (editable por super_admin) según el plan y los trabajadores
+   * activos (el Empresarial cobra por trabajador sobre los incluidos).
+   * Sin `plan` se renueva el plan actual de la empresa, o el más barato que
+   * admita sus trabajadores activos si el actual ya no alcanza — nunca baja
+   * de plan (antes caía siempre a 'basico' y bloqueaba a empresas con >10).
+   * `plan` debe ser uno de los valores del ENUM `empresas.plan`:
+   * parsearReferencia() y activarSuscripcion() lo leen de vuelta del webhook.
    */
-  async generarLinkPago({ empresaId, nombreEmpresa, plan = 'basico', meses = 1 }) {
+  async generarLinkPago({ empresaId, nombreEmpresa, plan, meses = 1 }) {
     const privateKey = process.env.WOMPI_PRIVATE_KEY;
     if (!privateKey) throw new Error('WOMPI_PRIVATE_KEY no configurada');
 
-    const amountCents = SUSCRIPCION_ESTANDAR_COP * meses * 100;
-    const reference   = `AT-${empresaId}-${plan}-${meses}`;
+    const [[{ activos, plan_actual }]] = await pool.query(
+      `SELECT (SELECT COUNT(*) FROM trabajadores WHERE empresa_id = e.id AND activo = 1) AS activos,
+              e.plan AS plan_actual
+         FROM empresas e WHERE e.id = ?`,
+      [empresaId]
+    );
+    const n = Number(activos);
+    const planes = await PlanesModel.listar();
+    const minimo = planParaTrabajadores(planes, n);
+    const actual = planes.find((p) => p.codigo === plan_actual);
+    const elegido = plan
+      ? planes.find((p) => p.codigo === plan)
+      : (actual && actual.orden >= minimo.orden ? actual : minimo);
+    const planCobro   = elegido.codigo;
+    const montoCop    = precioPlanCop(elegido, n) * meses;
+    const amountCents = montoCop * 100;
+    const reference   = `AT-${empresaId}-${planCobro}-${meses}`;
     const expiresAt   = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19) + '.000Z';
     const redirectUrl = process.env.WOMPI_REDIRECT_URL || 'https://zaturno.app';
 
@@ -209,7 +227,7 @@ const WompiService = {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${privateKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name: `Zaturno — Plan ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
+        name: `Zaturno — Plan ${planCobro.charAt(0).toUpperCase() + planCobro.slice(1)}`,
         description: `Suscripcion ${meses} mes(es) para ${nombreEmpresa}`,
         single_use: true,
         collect_shipping: false,
@@ -229,7 +247,7 @@ const WompiService = {
 
     // La API de creación no devuelve la URL pública — se construye a partir del id.
     const url = `https://checkout.wompi.co/l/${json.data.id}`;
-    return { url, referencia: reference, monto_cop: SUSCRIPCION_ESTANDAR_COP * meses, expira_at: expiresAt };
+    return { url, referencia: reference, plan: planCobro, monto_cop: montoCop, expira_at: expiresAt };
   },
 };
 

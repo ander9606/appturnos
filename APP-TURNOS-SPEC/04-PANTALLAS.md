@@ -1,6 +1,6 @@
 # App Turnos — Pantallas y Flujos de Usuario
 
-> **Diseño visual:** los wireframes y mockups vivos están en Figma (links pendientes por iteración). Este documento describe **flujos, datos y endpoints**, no layout pixel-perfect. El prototipo HTML de referencia con device frame iOS 26 está en `App Turnos.html` (servir como `file://` o desde cualquier estático).
+> **Diseño visual:** los wireframes y mockups vivos están en Figma (links pendientes por iteración). Este documento describe **flujos, datos y endpoints**, no layout pixel-perfect. El prototipo HTML de referencia con device frame iOS 26 está en `docs/prototipo/app-turnos-prototipo.html` (servir como `file://` o desde cualquier estático).
 >
 > **Estados transversales obligatorios en toda pantalla:**
 > - `loading` — esqueleto o spinner mientras llega data
@@ -18,7 +18,7 @@
 | **Nómina** (TRABAJADOR_NOMINA, JEFE_NOMINA) | `#059669` (emerald-600) | `#065F46` | `#D1FAE5` | TabBar activa, marca de "HOY" en grid de registros, botones primarios del track |
 | **Compartido** | `text` `#0F172A`, `muted` `#64748B`, `border` `#E2E8F0`, `bg` `#F8FAFC` | — | — | Tipografía, fondos, separadores |
 
-**Regla:** el color se elige por el **track del rol activo**, no por el rol del usuario. Un jefe que entra a una vista del track nómina ve verde; en su tablero de turnos ve naranja. La TabBar cambia el color del borde superior y del icono activo según el tab actual (ver `App Turnos.html` para la implementación de referencia).
+**Regla:** el color se elige por el **track del rol activo**, no por el rol del usuario. Un jefe que entra a una vista del track nómina ve verde; en su tablero de turnos ve naranja. La TabBar cambia el color del borde superior y del icono activo según el tab actual (ver `docs/prototipo/app-turnos-prototipo.html` para la implementación de referencia).
 
 **Estados semánticos** (transversales a ambos tracks): `success` `#10B981` · `warning` `#F59E0B` · `destructive` `#EF4444` · `info` `#3B82F6`.
 

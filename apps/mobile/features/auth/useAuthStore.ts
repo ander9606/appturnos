@@ -102,8 +102,8 @@ interface AuthState {
     email_token: string;
   }): Promise<void>;
 
-  /** Login / registro vía Google OAuth. Devuelve `tipo` para que el caller sepa si fue registro. */
-  loginConGoogle(idToken: string): Promise<'login' | 'vinculacion' | 'registro'>;
+  /** Login / registro vía OAuth (Google, Apple, ...). Devuelve `tipo` para que el caller sepa si fue registro. */
+  loginConProvider(provider: string, idToken: string): Promise<'login' | 'vinculacion' | 'registro'>;
 
   /** Actualiza el usuario en memoria y en SecureStore (tras edición de perfil) */
   setUsuario(usuario: UsuarioPerfil): Promise<void>;
@@ -202,9 +202,9 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ status: 'authenticated', usuario });
   },
 
-  // ── loginConGoogle ────────────────────────────────────────────────────
-  async loginConGoogle(idToken) {
-    const { access_token, refresh_token, usuario, tipo } = await authApi.loginConProvider('google', idToken);
+  // ── loginConProvider ──────────────────────────────────────────────────
+  async loginConProvider(provider, idToken) {
+    const { access_token, refresh_token, usuario, tipo } = await authApi.loginConProvider(provider, idToken);
     await secureTokenStore.setTokens(access_token, refresh_token);
     await cacheUsuario(usuario);
     queryClient.clear();

@@ -69,6 +69,30 @@ const AdminController = {
     }
   },
 
+  // GET /api/admin/planes
+  async listarPlanes(req, res, next) {
+    try {
+      res.json({ success: true, data: await AdminService.listarPlanes() });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // PUT /api/admin/planes/:codigo
+  async actualizarPlan(req, res, next) {
+    try {
+      const { precio_cop, max_trabajadores, incluidos, precio_adicional_cop } = req.body;
+      const planes = await AdminService.actualizarPlan(
+        req.params.codigo,
+        { precio_cop, max_trabajadores, incluidos, precio_adicional_cop },
+        req.usuario.sub
+      );
+      res.json({ success: true, data: planes, message: 'Plan actualizado' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // POST /api/admin/empresas/:id/link-pago
   async generarLinkPago(req, res, next) {
     try {

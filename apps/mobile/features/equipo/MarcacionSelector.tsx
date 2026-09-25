@@ -4,7 +4,7 @@
  * (edición puntual), ambos guardan vía el mismo PATCH /trabajadores/:id/marcacion.
  */
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useActualizarMarcacion } from './useEquipo';
 import { confirm } from '@/lib/confirmDialog';
@@ -93,45 +93,47 @@ export function MarcacionSelector({ trabajador: t, puntos }: Props) {
       {/* Modal selector de punto fijo */}
       <Modal visible={showPuntos} transparent animationType="slide" onRequestClose={() => setShowPuntos(false)}>
         <Pressable className="flex-1 bg-black/40" onPress={() => setShowPuntos(false)} />
-        <View className="bg-background rounded-t-3xl px-5 pb-10 pt-4 gap-3">
+        <View className="bg-background rounded-t-3xl pt-4" style={{ maxHeight: '80%' }}>
           <View className="w-10 h-1 bg-border rounded-full self-center mb-1" />
-          <Text className="text-base font-bold text-foreground">
+          <Text className="text-base font-bold text-foreground px-5 mb-2">
             Seleccionar punto — {t.nombre}
           </Text>
-          {puntosFijos.length === 0 ? (
-            <View className="py-8 items-center gap-2">
-              <Ionicons name="location-outline" size={32} color="#94A3B8" />
-              <Text className="text-sm text-muted-foreground text-center">
-                No hay puntos fijos configurados.{'\n'}Créalos en la sección de Empresa.
-              </Text>
-            </View>
-          ) : (
-            puntosFijos.map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                onPress={() => asignarPunto(p)}
-                className={[
-                  'flex-row items-center gap-3 px-4 py-3 rounded-2xl border',
-                  p.id === t.punto_marcaje_id ? 'bg-primary/5 border-primary' : 'bg-card border-border',
-                ].join(' ')}
-              >
-                <Ionicons
-                  name="location"
-                  size={18}
-                  color={p.id === t.punto_marcaje_id ? '#6366F1' : '#64748B'}
-                />
-                <View className="flex-1">
-                  <Text className={`text-sm font-semibold ${p.id === t.punto_marcaje_id ? 'text-primary' : 'text-foreground'}`}>
-                    {p.nombre}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">Radio {p.radio_metros} m</Text>
-                </View>
-                {p.id === t.punto_marcaje_id && (
-                  <Ionicons name="checkmark-circle" size={18} color="#6366F1" />
-                )}
-              </TouchableOpacity>
-            ))
-          )}
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}>
+            {puntosFijos.length === 0 ? (
+              <View className="py-8 items-center gap-2">
+                <Ionicons name="location-outline" size={32} color="#94A3B8" />
+                <Text className="text-sm text-muted-foreground text-center">
+                  No hay puntos fijos configurados.{'\n'}Créalos en la sección de Empresa.
+                </Text>
+              </View>
+            ) : (
+              puntosFijos.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  onPress={() => asignarPunto(p)}
+                  className={[
+                    'flex-row items-center gap-3 px-4 py-3 rounded-2xl border',
+                    p.id === t.punto_marcaje_id ? 'bg-primary/5 border-primary' : 'bg-card border-border',
+                  ].join(' ')}
+                >
+                  <Ionicons
+                    name="location"
+                    size={18}
+                    color={p.id === t.punto_marcaje_id ? '#6366F1' : '#64748B'}
+                  />
+                  <View className="flex-1">
+                    <Text className={`text-sm font-semibold ${p.id === t.punto_marcaje_id ? 'text-primary' : 'text-foreground'}`}>
+                      {p.nombre}
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">Radio {p.radio_metros} m</Text>
+                  </View>
+                  {p.id === t.punto_marcaje_id && (
+                    <Ionicons name="checkmark-circle" size={18} color="#6366F1" />
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
         </View>
       </Modal>
     </>

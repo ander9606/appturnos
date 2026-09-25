@@ -20,7 +20,8 @@ const LiquidacionModel = {
               -- Snapshot congelado al cerrar el período (NULL si sigue abierto).
               -- MAX() es seguro: todos los registros del mismo trabajador
               -- en el mismo período tienen el mismo snapshot.
-              MAX(r.valor_hora_snapshot) AS valor_hora_snapshot,
+              MAX(r.valor_hora_snapshot)    AS valor_hora_snapshot,
+              MAX(r.salario_base_snapshot)  AS salario_base_snapshot,
               COUNT(*)                   AS dias_registrados,
               SUM(r.horas_ordinarias)      AS horas_ordinarias,
               SUM(r.horas_extra_diurnas)   AS horas_extra_diurnas,

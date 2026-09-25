@@ -8,10 +8,49 @@ jest.mock('../modules/nomina/periodos/periodos.model');
 jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
 }));
+// generarCuentasDeCobroSiAplica llama PeriodosModel.obtenerPorId de nuevo internamente —
+// mockeado aparte para no interferir con la cola de mockResolvedValueOnce de estos tests.
+jest.mock('../modules/cuentas-cobro/cuentas-cobro.service', () => ({
+  generarParaPeriodo: jest.fn().mockResolvedValue({ generadas: 0 }),
+}));
 
 const PeriodosModel  = require('../modules/nomina/periodos/periodos.model');
 const PeriodosService = require('../modules/nomina/periodos/periodos.service');
 const AppError        = require('../utils/AppError');
+
+// ── listar ────────────────────────────────────────────────────────────────────
+
+// Regresión: PeriodosModel.listar arma "WHERE empresa_id = ?" con
+// empresaId=null (trabajador_turnos multi-empresa) — en MySQL eso nunca
+// matchea nada, así que estos trabajadores veían SIEMPRE 0 períodos (y por
+// lo tanto $0 en su quincena) sin importar cuántos existieran de verdad.
+describe('PeriodosService.listar', () => {
+  test('empresaId real → usa PeriodosModel.listar y dispara autoCrear', async () => {
+    PeriodosModel.listar.mockResolvedValue({ data: [{ id: 1 }], total: 1 });
+    jest.spyOn(PeriodosService, 'autoCrear').mockResolvedValue(null);
+
+    const result = await PeriodosService.listar(1, { page: 1, limit: 20 }, { sub: 99 });
+
+    expect(PeriodosService.autoCrear).toHaveBeenCalledWith(1);
+    expect(PeriodosModel.listar).toHaveBeenCalledWith(1, expect.objectContaining({ limit: 20, offset: 0 }));
+    expect(PeriodosModel.listarPorUsuario).not.toHaveBeenCalled();
+    expect(result.data).toEqual([{ id: 1 }]);
+    PeriodosService.autoCrear.mockRestore();
+  });
+
+  test('empresaId null (trabajador_turnos multi-empresa) → agrega por usuario, sin autoCrear', async () => {
+    PeriodosModel.listarPorUsuario.mockResolvedValue({ data: [{ id: 5, empresa_id: 3 }, { id: 6, empresa_id: 4 }], total: 2 });
+    const autoCrearSpy = jest.spyOn(PeriodosService, 'autoCrear');
+
+    const result = await PeriodosService.listar(null, { page: 1, limit: 20 }, { sub: 69 });
+
+    expect(PeriodosModel.listarPorUsuario).toHaveBeenCalledWith(69, expect.objectContaining({ limit: 20, offset: 0 }));
+    expect(PeriodosModel.listar).not.toHaveBeenCalled();
+    expect(autoCrearSpy).not.toHaveBeenCalled();
+    expect(result.data).toHaveLength(2);
+    autoCrearSpy.mockRestore();
+  });
+});
 
 // ── crear ─────────────────────────────────────────────────────────────────────
 
@@ -23,7 +62,7 @@ describe('PeriodosService.crear', () => {
   });
 
   test('fecha_inicio === fecha_fin → se crea sin error', async () => {
-    PeriodosModel.crear.mockResolvedValue(99);
+    PeriodosModel.crear.mockResolvedValue({ id: 99, esNuevo: true });
     PeriodosModel.obtenerPorId.mockResolvedValue({
       id: 99,
       fecha_inicio: '2026-06-01',
@@ -39,7 +78,7 @@ describe('PeriodosService.crear', () => {
   });
 
   test('llamada exitosa invoca PeriodosModel.crear', async () => {
-    PeriodosModel.crear.mockResolvedValue(42);
+    PeriodosModel.crear.mockResolvedValue({ id: 42, esNuevo: true });
     PeriodosModel.obtenerPorId.mockResolvedValue({
       id: 42,
       fecha_inicio: '2026-06-01',

@@ -8,6 +8,15 @@ const PuntosMarcajeService = {
     return PuntosMarcajeModel.listar(empresaId);
   },
 
+  async listarParaTurnos(empresaId) {
+    return PuntosMarcajeModel.listarParaTurnos(empresaId);
+  },
+
+  /** Puntos zonales válidos para el geofence del cliente — ver listarZonalesEfectivos. */
+  async listarZonales(empresaId, ofertaId) {
+    return PuntosMarcajeModel.listarZonalesEfectivos(empresaId, ofertaId);
+  },
+
   async crear(empresaId, datos) {
     const id = await PuntosMarcajeModel.crear({ empresaId, ...datos });
     return PuntosMarcajeModel.obtenerPorId(empresaId, id);

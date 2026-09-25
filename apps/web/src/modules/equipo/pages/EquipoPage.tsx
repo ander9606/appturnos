@@ -4,7 +4,13 @@ import { Plus, UserX, UserPlus, Search } from 'lucide-react';
 import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador, useInvitarTrabajador } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { EmptyState } from '@/shared/components/EmptyState';
 import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { HORAS_MES_NOMINA } from '@/shared/laboral';
+import { useConfirm } from '@/shared/hooks/useConfirm';
+import { fmtCOP as fmtCOPBase } from '@/shared/lib/format';
 import type { TipoTrabajador, Trabajador } from '../types';
 
 /** Mismo código de colores que el resto de la app: Turnos = naranja, Nómina = verde. "Ambos" es su propio color — no reusa el verde para no leerse como "solo nómina". */
@@ -29,8 +35,15 @@ const TIPO_LABEL: Record<TipoTrabajador, string> = {
 };
 
 function fmtCOP(n: number | null) {
-  if (n === null) return '—';
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+  return n === null ? '—' : fmtCOPBase(n);
+}
+
+/** Misma prioridad que `valorHora()` en backend/utils/laboralUtils.js: salario_base
+ *  manda si está definido; si no, se deriva del mensual equivalente a tarifa_hora × HORAS_MES_NOMINA (210). */
+function salarioMensual(t: Trabajador): number | null {
+  if (t.salario_base != null) return t.salario_base;
+  if (t.tarifa_hora != null) return t.tarifa_hora * HORAS_MES_NOMINA;
+  return null;
 }
 
 type EstadoFiltro = true | false | undefined;
@@ -141,7 +154,10 @@ export function EquipoPage() {
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : trabajadores.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No hay trabajadores</p>
+        <EmptyState
+          message={term ? 'Sin resultados para tu búsqueda' : 'No hay trabajadores'}
+          action={!term && isAdmin ? { label: '+ Agregar el primero', onClick: () => setShowCrear(true) } : undefined}
+        />
       ) : tipoFiltro === undefined ? (
         <div className="flex flex-col gap-5">
           {TIPO_ORDEN.map(tipo => {
@@ -200,6 +216,7 @@ function TablaTrabajadores({
   navigate: ReturnType<typeof useNavigate>;
   desactivar: ReturnType<typeof useDesactivarTrabajador>;
 }) {
+  const { confirmState, confirm, close } = useConfirm();
   return (
     <div className="bg-card border border-border rounded-2xl overflow-hidden">
       <table className="w-full text-sm">
@@ -209,7 +226,7 @@ function TablaTrabajadores({
             <th className="text-left px-4 py-3 font-medium">Cédula</th>
             <th className="text-left px-4 py-3 font-medium">Tipo</th>
             <th className="text-left px-4 py-3 font-medium">Cargo</th>
-            <th className="text-right px-4 py-3 font-medium">Tarifa/hora</th>
+            <th className="text-right px-4 py-3 font-medium">Compensación</th>
             <th className="text-left px-4 py-3 font-medium">Estado</th>
             <th className="px-4 py-3" />
           </tr>
@@ -225,7 +242,21 @@ function TablaTrabajadores({
                 </span>
               </td>
               <td className="px-4 py-3 text-muted-foreground">{t.cargo ?? '—'}</td>
-              <td className="px-4 py-3 text-right text-muted-foreground">{fmtCOP(t.tarifa_hora)}</td>
+              <td className="px-4 py-3 text-right">
+                {t.tipo === 'turnos' ? (
+                  <>
+                    <p className="text-foreground text-sm">Variable por turno</p>
+                    <p className="text-muted-foreground text-xs">
+                      {t.promedio_pago_turno != null ? `prom. ${fmtCOP(Number(t.promedio_pago_turno))}` : 'Sin turnos completados'}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-foreground text-sm font-medium">{fmtCOP(salarioMensual(t))}</p>
+                    <p className="text-muted-foreground text-xs">mensual</p>
+                  </>
+                )}
+              </td>
               <td className="px-4 py-3">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${t.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'}`}>
                   {t.activo ? 'Activo' : 'Inactivo'}
@@ -235,11 +266,12 @@ function TablaTrabajadores({
                 <div className="flex items-center gap-2 justify-end">
                   {isAdmin && Boolean(t.activo) && (
                     <button
-                      onClick={() => {
-                        if (window.confirm(`¿Desactivar a ${t.nombre} ${t.apellido}?`)) {
-                          desactivar.mutate(t.id);
-                        }
-                      }}
+                      onClick={() => confirm({
+                        title: 'Desactivar trabajador',
+                        detail: `¿Desactivar a ${t.nombre} ${t.apellido}? Deja de aparecer en las listas activas, pero conserva su historial.`,
+                        confirmLabel: 'Desactivar',
+                        onConfirm: () => { desactivar.mutate(t.id); close(); },
+                      })}
                       className="text-muted-foreground/60 hover:text-danger transition-colors"
                       title="Desactivar"
                     >
@@ -258,6 +290,15 @@ function TablaTrabajadores({
           ))}
         </tbody>
       </table>
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }
@@ -265,41 +306,64 @@ function TablaTrabajadores({
 function InvitarModal({ onClose }: { onClose: () => void }) {
   const invitar = useInvitarTrabajador();
   const [cedula, setCedula] = useState('');
+  const [tipo, setTipo] = useState<'turnos' | 'nomina'>('turnos');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await invitar.mutateAsync(cedula.trim());
+    await invitar.mutateAsync({ cedula: cedula.trim(), tipo });
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-sm">
-        <h2 className="text-lg font-semibold text-foreground mb-1">Invitar trabajador</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Ingresa la cédula del trabajador. Si ya tiene cuenta, quedará vinculado a tu empresa. Si no, podrá activarla con esta cédula.
-        </p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Cédula *</label>
-            <input
-              required
-              type="text"
-              value={cedula}
-              onChange={e => setCedula(e.target.value)}
-              placeholder="Ej. 1234567890"
-              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Invitar trabajador</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        Ingresa la cédula del trabajador. Si ya tiene cuenta, quedará vinculado a tu empresa. Si no, podrá activarla con esta cédula.
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Cédula *</label>
+          <input
+            required
+            type="text"
+            value={cedula}
+            onChange={e => setCedula(e.target.value)}
+            placeholder="Ej. 1234567890"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Tipo de vínculo</label>
+          <div className="flex gap-2">
+            {(['turnos', 'nomina'] as const).map(v => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setTipo(v)}
+                className={`flex-1 border rounded-lg py-2 text-sm font-medium transition-colors ${
+                  tipo === v ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {v === 'turnos' ? 'Turnos' : 'Nómina'}
+              </button>
+            ))}
           </div>
-          <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" disabled={invitar.isPending || !cedula.trim()} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {invitar.isPending ? 'Enviando...' : 'Invitar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          {tipo === 'nomina' && (
+            <p className="text-xs bg-warning-light text-warning rounded-lg px-3 py-2 mt-2">
+              Nómina implica exclusividad: si acepta, dejará de estar disponible para turnos en otras empresas
+              (sus demás vínculos se archivan). Solo puedes invitar así a alguien que ya tenga cuenta activa
+              como trabajador de turnos.
+            </p>
+          )}
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+          <button type="submit" disabled={invitar.isPending || !cedula.trim()} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {invitar.isPending ? 'Enviando...' : 'Invitar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -308,7 +372,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
     nombre: '', apellido: '', tipo: 'nomina' as TipoTrabajador,
     email: '', cedula: '', telefono: '', cargo: '',
-    tarifa_hora: '', salario_base: '',
+    tarifa_hora: '', salario_base: '', hora_entrada_esperada: '',
     banco: '', tipo_cuenta: '', numero_cuenta: '',
   });
 
@@ -324,6 +388,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
       cargo: form.cargo || undefined,
       tarifa_hora: form.tarifa_hora ? Number(form.tarifa_hora) : undefined,
       salario_base: form.salario_base ? Number(form.salario_base) : undefined,
+      hora_entrada_esperada: form.tipo !== 'turnos' ? (form.hora_entrada_esperada || undefined) : undefined,
       banco: form.banco || undefined,
       tipo_cuenta: form.tipo_cuenta || undefined,
       numero_cuenta: form.numero_cuenta || undefined,
@@ -338,13 +403,12 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo trabajador</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+    <Modal onClose={onClose} size="lg" scrollable>
+      <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo trabajador</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
               <input required type="text" {...field('nombre')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
@@ -391,6 +455,16 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
 
           <DeduccionesChecklist tarifaHora={form.tarifa_hora} salarioBase={form.salario_base} />
 
+          {form.tipo !== 'turnos' && (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Hora habitual de entrada</label>
+              <input type="time" {...field('hora_entrada_esperada')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              <p className="text-xs text-muted-foreground mt-1">
+                Opcional — si la dejas, le avisamos 15 min antes para que no se le olvide marcar ingreso.
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Banco</label>
@@ -416,8 +490,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
               {crear.isPending ? 'Creando...' : 'Crear'}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </Modal>
   );
 }

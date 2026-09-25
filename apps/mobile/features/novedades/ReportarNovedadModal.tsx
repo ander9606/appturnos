@@ -4,9 +4,10 @@ import {
   ScrollView, Alert, ActivityIndicator, Image, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-// ponytail: lazy import — native module only loaded when handler runs, not at route discovery time
+import { ApiError } from '@api-client';
 import type { TipoNovedad } from '@api-client';
 import { useCrearNovedad } from './useNovedades';
+import { obtenerUbicacionActual } from '@/lib/currentLocation';
 
 const TIPOS: { value: TipoNovedad; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
   { value: 'retraso',   label: 'Retraso',   icon: 'time-outline' },
@@ -77,19 +78,6 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
 
   const handleUsarAhora = () => setHoraEvento(toLocalIso(new Date()));
 
-  /** GPS del momento del reporte — opcional, nunca bloquea el envío si falla o se niega el permiso. */
-  const obtenerUbicacionActual = async (): Promise<{ latitud?: number; longitud?: number }> => {
-    try {
-      const Location = await import('expo-location');
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return {};
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      return { latitud: loc.coords.latitude, longitud: loc.coords.longitude };
-    } catch {
-      return {};
-    }
-  };
-
   const handleEnviar = async () => {
     if (!descripcion.trim()) {
       Alert.alert('Campo requerido', 'Escribe una descripción de la novedad.');
@@ -110,8 +98,9 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
       setHoraEvento(null);
       setFotoB64(null);
       onClose();
-    } catch {
-      Alert.alert('Error', 'No se pudo reportar la novedad. Intenta de nuevo.');
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'No se pudo reportar la novedad. Intenta de nuevo.';
+      Alert.alert('Error', message);
     }
   };
 

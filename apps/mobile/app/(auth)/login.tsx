@@ -23,10 +23,12 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 import { loginSchema, type LoginFormData } from '@/features/auth/schemas';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useGoogleAuth } from '@/features/auth/useGoogleAuth';
+import { useAppleAuth } from '@/features/auth/useAppleAuth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { t } from '@/lib/i18n';
@@ -39,6 +41,7 @@ export default function LoginScreen() {
   const login  = useAuthStore((s) => s.login);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const { signIn: googleLogin, loading: googleLoading } = useGoogleAuth((msg) => setServerError(msg));
+  const { signIn: appleLogin, loading: appleLoading } = useAppleAuth((msg) => setServerError(msg));
 
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -151,13 +154,26 @@ export default function LoginScreen() {
             size="lg"
           />
 
-          {!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB && (
+          {(!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB || Platform.OS === 'ios') && (
             <>
               <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>O continúa con</Text><View style={styles.dividerLine} /></View>
-              <TouchableOpacity style={styles.googleBtn} onPress={() => googleLogin()} disabled={googleLoading} activeOpacity={0.8}>
-                <Ionicons name="logo-google" size={20} color="#4285F4" />
-                <Text style={styles.googleBtnText}>{googleLoading ? 'Conectando…' : 'Continuar con Google'}</Text>
-              </TouchableOpacity>
+
+              {Platform.OS === 'ios' && (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                  buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={14}
+                  style={styles.appleBtn}
+                  onPress={() => appleLogin()}
+                />
+              )}
+
+              {!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB && (
+                <TouchableOpacity style={styles.googleBtn} onPress={() => googleLogin()} disabled={googleLoading || appleLoading} activeOpacity={0.8}>
+                  <Ionicons name="logo-google" size={20} color="#4285F4" />
+                  <Text style={styles.googleBtnText}>{googleLoading ? 'Conectando…' : 'Continuar con Google'}</Text>
+                </TouchableOpacity>
+              )}
             </>
           )}
 
@@ -173,11 +189,15 @@ export default function LoginScreen() {
               action="Regístrate aquí"
               onPress={() => router.push('/(auth)/registro')}
             />
-            <LinkRow
-              label="¿Primera vez con tu empresa?"
-              action="Regístrala aquí"
-              onPress={() => router.push('/(auth)/registro-empresa')}
-            />
+            {/* Apple guideline 3.1.1: registro de empresas/organizaciones no se
+                expone en iOS (se sigue ofreciendo en Android y en la web). */}
+            {Platform.OS !== 'ios' && (
+              <LinkRow
+                label="¿Primera vez con tu empresa?"
+                action="Regístrala aquí"
+                onPress={() => router.push('/(auth)/registro-empresa')}
+              />
+            )}
           </View>
         </View>
       </ScrollView>
@@ -258,4 +278,5 @@ const styles = StyleSheet.create({
 
   googleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 14, paddingVertical: 14, backgroundColor: 'white', marginBottom: 20 },
   googleBtnText: { fontSize: 15, fontWeight: '600', color: '#0F172A' },
+  appleBtn:      { height: 50, marginBottom: 12 },
 });

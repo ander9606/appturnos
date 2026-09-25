@@ -46,6 +46,14 @@ export function LiquidacionTrabajadorCard({ trabajador, primaryColor }: Props) {
                   </Text>
                 </View>
               )}
+              {trabajador.turnos_pendientes_firma > 0 && (
+                <View className="flex-row items-center gap-0.5">
+                  <Ionicons name="warning" size={10} color="#D97706" />
+                  <Text className="text-[10px] font-medium text-warning">
+                    {trabajador.turnos_pendientes_firma} sin firmar
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
           <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#94A3B8" />

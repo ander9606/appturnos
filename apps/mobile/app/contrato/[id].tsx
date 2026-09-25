@@ -51,6 +51,10 @@ export default function ContratoScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contrato', id] });
       qc.invalidateQueries({ queryKey: ['mis-contratos'] });
+      // El turno recién firmado deja de contar como "pendiente de firma" —
+      // refresca las pantallas que muestran ese estado (Mis Turnos, detalle).
+      qc.invalidateQueries({ queryKey: ['misTurnos'] });
+      qc.invalidateQueries({ queryKey: ['asignacion', contrato?.asignacion_id] });
       setShowFirma(false);
     },
     onError: () => Alert.alert('Error', 'No se pudo registrar la firma.'),
@@ -130,7 +134,15 @@ export default function ContratoScreen() {
                 <Text style={s.summaryEmphasized}>{fmtLegal(contrato.fecha)}</Text>, de{' '}
                 <Text style={s.summaryEmphasized}>{fmtH(contrato.hora_inicio)}</Text> a{' '}
                 <Text style={s.summaryEmphasized}>{fmtH(contrato.hora_fin_estimada)}</Text>, por{' '}
-                <Text style={s.summaryEmphasized}>{formatCOP(contrato.valor_dia)}</Text>.
+                <Text style={s.summaryEmphasized}>{formatCOP(contrato.valor_dia)}</Text>
+                {contrato.bono_monto > 0 && (
+                  <>
+                    {' '}más un bono de{' '}
+                    <Text style={s.summaryEmphasized}>{formatCOP(contrato.bono_monto)}</Text>
+                    {contrato.bono_motivo ? ` (${contrato.bono_motivo})` : ''}
+                  </>
+                )}
+                .
               </Text>
             </View>
           )}
@@ -187,6 +199,13 @@ export default function ContratoScreen() {
               El CONTRATANTE pagará al CONTRATISTA la suma de{' '}
               <Text style={s.clauseEmphasized}>{formatCOP(contrato.valor_dia)} (COP)</Text>{' '}
               por la jornada pactada, una vez el CONTRATISTA haya completado la labor y firmado el presente contrato.
+              {contrato.bono_monto > 0 && (
+                <>
+                  {' '}Adicionalmente, el CONTRATANTE reconoce un bono extra de{' '}
+                  <Text style={s.clauseEmphasized}>{formatCOP(contrato.bono_monto)} (COP)</Text>
+                  {contrato.bono_motivo ? ` por concepto de: ${contrato.bono_motivo}.` : '.'}
+                </>
+              )}
             </Clausula>
 
             <Clausula num={nums.natura} titulo="NATURALEZA JURÍDICA">
@@ -233,15 +252,39 @@ export default function ContratoScreen() {
             <Text style={s.footer}>Generado por Zaturno · zaturno.app</Text>
           </View>
 
-          {/* Botón firmar — solo trabajador, solo si no firmado */}
+          {/* Botones firmar — solo trabajador, solo si no firmado */}
           {!firmado && !isGestor && (
-            <TouchableOpacity
-              onPress={() => setShowFirma(true)}
-              style={s.signButton}
-            >
-              <Ionicons name="pencil" size={18} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={s.signButtonLabel}>Firmar contrato</Text>
-            </TouchableOpacity>
+            contrato.trabajador_firma_guardada ? (
+              <View style={{ gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => firmarM.mutate(contrato.trabajador_firma_guardada!)}
+                  disabled={firmarM.isPending}
+                  style={[s.signButton, firmarM.isPending && { opacity: 0.6 }]}
+                >
+                  <Ionicons name="checkmark-circle" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={s.signButtonLabel}>
+                    {firmarM.isPending ? 'Firmando…' : 'Firmar con mi firma guardada'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setShowFirma(true)}
+                  disabled={firmarM.isPending}
+                  style={{ alignItems: 'center', paddingVertical: 4 }}
+                >
+                  <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>
+                    Firmar con una firma nueva
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setShowFirma(true)}
+                style={s.signButton}
+              >
+                <Ionicons name="pencil" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={s.signButtonLabel}>Firmar contrato</Text>
+              </TouchableOpacity>
+            )
           )}
         </ScrollView>
       </SafeAreaView>

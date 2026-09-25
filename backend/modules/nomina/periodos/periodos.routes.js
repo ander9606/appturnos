@@ -3,7 +3,7 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
 
-const { validar } = require('../../../middleware/validator');
+const { validar, rangoFechasMax } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
 const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
 const { ROLES, ESTADOS_PERIODO } = require('../../../config/constants');
@@ -31,6 +31,9 @@ router.get(
   verificarRol(VER),
   [
     query('estado').optional().isIn(ESTADOS_PERIODO).withMessage('estado inválido'),
+    query('fecha_desde').optional().isISO8601().withMessage('fecha_desde inválida'),
+    query('fecha_hasta').optional().isISO8601().withMessage('fecha_hasta inválida'),
+    rangoFechasMax(60, 'fecha_desde', 'fecha_hasta'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
     query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
     query('conTotales').optional().isBoolean().withMessage('conTotales inválido'),

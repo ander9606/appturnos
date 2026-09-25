@@ -6,15 +6,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, ActivityIndicator,
-  TouchableOpacity, Platform, RefreshControl,
+  TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
-import { toISODate } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
@@ -22,9 +20,19 @@ import {
   useCompensatoriosTodos,
   useAsignarCompensatorio,
 } from '@/features/nomina/compensatorios/useCompensatorios';
+import { AsignadoRow, ClasificacionBadge } from '@/features/nomina/compensatorios/GestorCompensatoriosPanel';
+import { RangoFechasCompensatorio } from '@/features/nomina/compensatorios/RangoFechasCompensatorio';
 import { useRoleGuard } from '@/components/RoleGuard';
 
 type Filtro = 'todos' | 'pendiente' | 'asignado';
+
+/** 'asignado' agrupa también 'tomado' — es el estado normal tras la asignación
+ * manual del jefe/admin (ver compensatorios.service.js _ejecutarAsignacion). */
+function enBucket(estado: DescansoCompensatorio['estado'], filtro: Filtro): boolean {
+  if (filtro === 'todos') return true;
+  if (filtro === 'asignado') return estado !== 'pendiente';
+  return estado === filtro;
+}
 
 const FILTROS: { v: Filtro; label: string }[] = [
   { v: 'todos',     label: 'Todos'     },
@@ -39,7 +47,7 @@ export default function GestorCompensatoriosScreen() {
   const { data: todos = [], isLoading, isRefetching, refetch } = useCompensatoriosTodos();
 
   const pendientes = todos.filter((c) => c.estado === 'pendiente').length;
-  const lista = filtro === 'todos' ? todos : todos.filter((c) => c.estado === filtro);
+  const lista = todos.filter((c) => enBucket(c.estado, filtro));
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_nomina']);
   if (denied) return denied;
@@ -101,7 +109,7 @@ export default function GestorCompensatoriosScreen() {
                   >
                     <Text className={`text-xs font-semibold ${filtro === f.v ? 'text-white' : 'text-muted-foreground'}`}>
                       {f.label}
-                      {f.v !== 'todos' && ` · ${todos.filter((c) => c.estado === f.v).length}`}
+                      {f.v !== 'todos' && ` · ${todos.filter((c) => enBucket(c.estado, f.v)).length}`}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -125,28 +133,18 @@ export default function GestorCompensatoriosScreen() {
 // ── Fila pendiente ────────────────────────────────────────────────────────────
 
 function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompensatorio }) {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const [fecha, setFecha]           = useState(tomorrow);
   const [showPicker, setShowPicker] = useState(false);
+  const [fecha, setFecha]           = useState<string | null>(null);
   const { mutate, isPending }       = useAsignarCompensatorio();
 
-  function onDateChange(_: DateTimePickerEvent, selected?: Date) {
-    if (Platform.OS === 'android') setShowPicker(false);
-    if (selected) setFecha(selected);
-  }
-
   async function confirmar() {
-    const iso = toISODate(fecha);
+    if (!fecha) return;
     const ok = await confirm({
       title: 'Confirmar descanso',
-      message: `¿Asignar el ${fmtFechaCorta(iso)} como descanso para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
+      message: `¿Asignar el ${fmtFechaCorta(fecha)} como descanso para ${c.trabajador_nombre} ${c.trabajador_apellido}?`,
     });
-    if (ok) mutate({ id: c.id, fecha: iso });
+    if (ok) mutate({ id: c.id, fecha }, { onSuccess: () => setShowPicker(false) });
   }
-
-  const iso = toISODate(fecha);
 
   return (
     <View
@@ -162,76 +160,46 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
             Trabajó el {fmtFechaCorta(c.origen_fecha)}
           </Text>
         </View>
-        <View className="bg-warning-light px-2 py-0.5 rounded-full">
-          <Text className="text-[10px] font-semibold text-amber-700">Pendiente</Text>
+        <View className="items-end gap-1">
+          <ClasificacionBadge clasificacion={c.clasificacion} />
+          <View className="bg-warning-light px-2 py-0.5 rounded-full">
+            <Text className="text-[10px] font-semibold text-amber-700">Pendiente</Text>
+          </View>
         </View>
       </View>
 
-      <View className="flex-row gap-2 items-center">
+      {!showPicker ? (
         <TouchableOpacity
           onPress={() => setShowPicker(true)}
-          className="flex-1 bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
+          className="self-start bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
         >
           <Ionicons name="calendar-outline" size={14} color="#64748B" />
-          <Text className="text-sm text-foreground">{fmtFechaCorta(iso)}</Text>
+          <Text className="text-sm text-foreground">Elegir fecha</Text>
         </TouchableOpacity>
+      ) : (
+        <View className="gap-2">
+          <RangoFechasCompensatorio compensatorioId={c.id} seleccionada={fecha ?? ''} onSeleccionar={setFecha} />
 
-        <TouchableOpacity
-          onPress={confirmar}
-          disabled={isPending}
-          className={`px-4 py-2 rounded-xl ${isPending ? 'bg-muted' : 'bg-primary'}`}
-        >
-          <Text className={`text-sm font-semibold ${isPending ? 'text-muted-foreground' : 'text-white'}`}>
-            {isPending ? 'Guardando…' : 'Asignar'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <View className="flex-row gap-2 items-center">
+            <TouchableOpacity
+              onPress={() => { setShowPicker(false); setFecha(null); }}
+              className="px-3 py-2 rounded-xl bg-muted"
+            >
+              <Text className="text-sm font-semibold text-muted-foreground">Cancelar</Text>
+            </TouchableOpacity>
 
-      {showPicker && (
-        <DateTimePicker
-          value={fecha}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          minimumDate={tomorrow}
-          onChange={onDateChange}
-        />
-      )}
-      {showPicker && Platform.OS === 'ios' && (
-        <TouchableOpacity
-          onPress={() => setShowPicker(false)}
-          className="bg-primary/10 rounded-xl py-2 items-center"
-        >
-          <Text className="text-sm font-semibold text-primary">Listo</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-// ── Fila asignada ─────────────────────────────────────────────────────────────
-
-function AsignadoRow({ compensatorio: c }: { compensatorio: DescansoCompensatorio }) {
-  return (
-    <View
-      className="bg-card rounded-2xl px-4 py-3 flex-row items-center justify-between"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
-    >
-      <View className="flex-1">
-        <Text className="text-sm font-semibold text-foreground">
-          {c.trabajador_nombre} {c.trabajador_apellido}
-        </Text>
-        <Text className="text-xs text-muted-foreground mt-0.5">
-          Por trabajo el {fmtFechaCorta(c.origen_fecha)}
-        </Text>
-      </View>
-      <View className="items-end gap-1">
-        <View className="bg-green-50 px-2 py-0.5 rounded-full">
-          <Text className="text-[10px] font-semibold text-green-700">Asignado</Text>
+            <TouchableOpacity
+              onPress={confirmar}
+              disabled={isPending || !fecha}
+              className={`flex-1 items-center px-4 py-2 rounded-xl ${isPending || !fecha ? 'bg-muted' : 'bg-primary'}`}
+            >
+              <Text className={`text-sm font-semibold ${isPending || !fecha ? 'text-muted-foreground' : 'text-white'}`}>
+                {isPending ? 'Guardando…' : fecha ? `Asignar ${fmtFechaCorta(fecha)}` : 'Elige una fecha'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <Text className="text-xs text-muted-foreground">
-          {fmtFechaCorta(c.fecha_asignada!)}
-        </Text>
-      </View>
+      )}
     </View>
   );
 }

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert, Linking, Platform,
+  ActivityIndicator, Alert, Linking, Platform, Switch,
+  Modal, Pressable,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,15 +12,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme }    from '@/lib/theme';
 import { confirm }     from '@/lib/confirmDialog';
 import { showToast }   from '@/lib/toast';
+import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
-  useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta, useCancelarOferta,
+  useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,
+  useCancelarOferta, useCompletarOferta,
+  useActualizarOferta,
 } from '@/features/turnos/useTurnos';
 import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
+import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
+import { formatTimeObj, toISODate } from '@/lib/formatters';
 import type { AsignacionResumen, EstadoAsignacion, OfertaPuesto } from '@api-client';
 import { ApiError } from '@api-client';
 
@@ -62,10 +68,12 @@ function PostulanteRow({
   cancelarM:     ReturnType<typeof useCancelar>;
   noPresentadoM: ReturnType<typeof useNoPresentado>;
 }) {
+  const router    = useRouter();
   const cfg       = ESTADO_CFG[asignacion.estado];
   const isPending = asignacion.estado === 'pendiente';
   const isConf    = asignacion.estado === 'confirmado';
   const isEnProg  = asignacion.estado === 'en_progreso';
+  const isCompletado = asignacion.estado === 'completado';
   const isBusy    = confirmarM.isPending || rechazarM.isPending || cancelarM.isPending || noPresentadoM.isPending;
   const nombre    = `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}`;
 
@@ -129,7 +137,10 @@ function PostulanteRow({
                 loading={cancelarM.isPending} disabled={isBusy}
                 onPress={async () => {
                   if (await confirm({ title: 'Cancelar turno', message: `¿Cancelar el turno de ${nombre}?`, cancelLabel: 'Volver', confirmLabel: 'Cancelar turno', destructive: true })) {
-                    cancelarM.mutate({ asignacionId: asignacion.id, ofertaId });
+                    cancelarM.mutate(
+                      { asignacionId: asignacion.id, ofertaId },
+                      { onSuccess: () => showAnuncioTurno(`Turno de ${nombre} cancelado.`, 'cancelado') }
+                    );
                   }
                 }} />
               {turnoIniciado && (
@@ -151,6 +162,20 @@ function PostulanteRow({
           )}
         </>
       )}
+
+      {/* Ver detalle del turno — ahí se corrige ingreso/egreso y se agrega el
+          bono, disponible incluso con esPasado (arreglar una salida que el
+          trabajador olvidó marcar). */}
+      {(isConf || isEnProg || isCompletado) && (
+        <TouchableOpacity
+          onPress={() => router.push(`/turno/${asignacion.id}`)}
+          className="flex-row items-center gap-1 self-start"
+          hitSlop={6}
+        >
+          <Ionicons name="chevron-forward-circle-outline" size={13} color="#64748B" />
+          <Text className="text-xs font-semibold text-muted-foreground">Ver detalle</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -169,7 +194,7 @@ export default function OfertaDetailScreen() {
   // Backend restringe cancelar oferta a admin_empresa/jefe_turnos (no jefe_nomina).
   const puedeCancelarOferta = rol === 'admin_empresa' || rol === 'jefe_turnos';
 
-  const { data: oferta, isLoading } = useOferta(id);
+  const { data: oferta, isLoading, error } = useOferta(id);
   const { data: misTurnos }         = useMisTurnos({ enabled: isWorker });
   const esPasado      = oferta ? oferta.fecha < bogotaToday() : false;
   const turnoIniciado = oferta ? turnoYaInicio(oferta.fecha, oferta.hora_inicio) : false;
@@ -184,10 +209,13 @@ export default function OfertaDetailScreen() {
   const rechazarM      = useRechazar();
   const cancelarM      = useCancelar();
   const noPresentadoM  = useNoPresentado();
-  const duplicarM      = useDuplicarOferta();
   const cancelarOfertaM = useCancelarOferta();
+  const completarOfertaM = useCompletarOferta();
+  const actualizarOfertaM = useActualizarOferta();
+  // El backend solo permite editar mientras la oferta sigue 'abierta' o 'borrador'.
+  const ofertaEsEditable = oferta?.estado === 'abierta' || oferta?.estado === 'borrador';
 
-  const [showDuplicarPicker, setShowDuplicarPicker] = useState(false);
+  const [showDuplicarModal, setShowDuplicarModal] = useState(false);
 
   const miAsignacion = isWorker
     ? (misTurnos ?? []).find((a) => a.oferta_id === id)
@@ -232,10 +260,26 @@ export default function OfertaDetailScreen() {
     );
   }
 
+  async function handleToggleUbicacionLibre(value: boolean) {
+    if (!oferta) return;
+    try {
+      await actualizarOfertaM.mutateAsync({ id: oferta.id, ubicacion_libre: value });
+      showToast(value ? 'Turno marcado con ubicación libre.' : 'Ubicación libre desactivada.');
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar el turno.');
+    }
+  }
+
   async function handleAplicar() {
     if (!selectedPuesto) return;
     try {
-      await aplicarM.mutateAsync({ ofertaId: id!, puestoId: selectedPuesto.id });
+      const result = await aplicarM.mutateAsync({ ofertaId: id!, puestoId: selectedPuesto.id });
+
+      // Mostrar warning si el turno ya comenzó
+      if (result.warnings && result.warnings.length > 0) {
+        showToast(result.warnings[0]);
+      }
+
       showToast(`Has solicitado el turno como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
     } catch (err) {
       Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');
@@ -252,11 +296,28 @@ export default function OfertaDetailScreen() {
   }
 
   if (!oferta) {
+    const apiErr = error instanceof ApiError ? error : null;
+    const esExtrasApagadas = esErrorTurnosExtraApagadas(error);
+    const esDelayRanking   = apiErr?.status === 403 && apiErr.message.includes('ranking');
+    const esNoEncontrada   = apiErr?.status === 404;
+
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Detalle del turno', headerShown: true }} />
-        <Ionicons name="search-outline" size={48} color="#94A3B8" />
-        <Text className="text-base font-semibold text-foreground text-center">Turno no encontrado</Text>
+        {esExtrasApagadas ? (
+          <TurnosExtraOptIn />
+        ) : (
+          <View className="flex-1 items-center justify-center gap-4 px-6">
+            <Ionicons name="search-outline" size={48} color="#94A3B8" />
+            <Text className="text-base font-semibold text-foreground text-center">
+              {esDelayRanking
+                ? 'Este turno aún no está disponible para tu nivel de calificación'
+                : esNoEncontrada
+                  ? 'Este turno ya no está disponible'
+                  : 'Turno no encontrado'}
+            </Text>
+          </View>
+        )}
       </SafeAreaView>
     );
   }
@@ -266,7 +327,22 @@ export default function OfertaDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: oferta.titulo, headerShown: true }} />
+      <Stack.Screen
+        options={{
+          title: oferta.titulo,
+          headerShown: true,
+          headerRight: isGestor ? () => (
+            <TouchableOpacity
+              onPress={() => setShowDuplicarModal(true)}
+              hitSlop={10}
+              accessibilityLabel="Duplicar oferta"
+              style={{ marginRight: 4 }}
+            >
+              <Ionicons name="copy-outline" size={22} color="#FF5A3C" />
+            </TouchableOpacity>
+          ) : undefined,
+        }}
+      />
 
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <ScrollView contentContainerClassName="px-5 py-5 gap-4 pb-12" showsVerticalScrollIndicator={false}>
@@ -331,6 +407,39 @@ export default function OfertaDetailScreen() {
                   )}
                 </View>
               )}
+
+              {/* Ubicación libre: gestor puede editarla mientras la oferta siga
+                  abierta/borrador; el resto solo ve el aviso si está activa. */}
+              {isGestor && ofertaEsEditable ? (
+                <View className="flex-row items-center gap-3">
+                  <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
+                    <Ionicons name="navigate-circle-outline" size={16} color="#64748B" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-foreground">Ubicación libre</Text>
+                    <Text className="text-xs text-muted-foreground">
+                      Sin restricción al marcar ingreso/egreso
+                    </Text>
+                  </View>
+                  <Switch
+                    value={oferta.ubicacion_libre === 1}
+                    onValueChange={handleToggleUbicacionLibre}
+                    disabled={actualizarOfertaM.isPending}
+                    trackColor={{ true: theme.primary }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              ) : oferta.ubicacion_libre === 1 ? (
+                <View className="flex-row items-center gap-3">
+                  <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
+                    <Ionicons name="navigate-circle-outline" size={16} color="#64748B" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xs text-muted-foreground">Ubicación</Text>
+                    <Text className="text-sm font-medium text-foreground">Libre — sin restricción geográfica</Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
           </View>
 
@@ -450,36 +559,29 @@ export default function OfertaDetailScreen() {
             </View>
           )}
 
-          {/* ── Duplicar oferta (gestores) ──────────────────────── */}
-          {isGestor && (
-            <>
-              <Button
-                label={duplicarM.isPending ? 'Duplicando…' : 'Duplicar a otra fecha'}
-                variant="secondary"
-                fullWidth
-                loading={duplicarM.isPending}
-                onPress={() => setShowDuplicarPicker(true)}
-              />
-              {showDuplicarPicker && (
-                <DateTimePicker
-                  mode="date"
-                  display="default"
-                  minimumDate={new Date()}
-                  value={new Date()}
-                  onChange={async (_, date) => {
-                    setShowDuplicarPicker(false);
-                    if (!date || !id) return;
-                    const fecha = date.toISOString().slice(0, 10);
-                    try {
-                      const nueva = await duplicarM.mutateAsync({ ofertaId: id, fecha });
-                      showToast(`"${nueva.titulo}" creada para el ${fecha}.`);
-                    } catch {
-                      Alert.alert('Error', 'No se pudo duplicar la oferta.');
-                    }
-                  }}
-                />
-              )}
-            </>
+          {/* ── Marcar completada (gestores) — disponible en cualquier momento del turno ── */}
+          {isGestor && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador' && (
+            <Button
+              label={completarOfertaM.isPending ? 'Marcando…' : 'Marcar completada'}
+              variant="success"
+              fullWidth
+              loading={completarOfertaM.isPending}
+              onPress={async () => {
+                const ok = await confirm({
+                  title: 'Marcar como completada',
+                  message: 'Úsalo cuando el turno ya terminó en la realidad, sin importar si todas las asignaciones están cerradas en el sistema.',
+                  cancelLabel: 'Volver',
+                  confirmLabel: 'Marcar completada',
+                });
+                if (!ok) return;
+                try {
+                  await completarOfertaM.mutateAsync(oferta.id);
+                  showToast(`"${oferta.titulo}" marcado como completado.`);
+                } catch (err) {
+                  Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo completar la oferta.');
+                }
+              }}
+            />
           )}
 
           {/* ── Cancelar oferta (admin_empresa / jefe_turnos) ────── */}
@@ -500,6 +602,7 @@ export default function OfertaDetailScreen() {
                 if (!ok) return;
                 try {
                   await cancelarOfertaM.mutateAsync(oferta.id);
+                  showAnuncioTurno(`"${oferta.titulo}" cancelado.`, 'cancelado');
                   router.back();
                 } catch (err) {
                   Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
@@ -544,6 +647,141 @@ export default function OfertaDetailScreen() {
         cargoId={funcionesPuesto?.cargo_id ?? null}
         cargoNombre={funcionesPuesto?.cargo_nombre ?? ''}
       />
+
+      <DuplicarOfertaModal
+        visible={showDuplicarModal}
+        oferta={oferta}
+        onClose={() => setShowDuplicarModal(false)}
+      />
     </>
   );
 }
+
+// ── Duplicar oferta (gestores) ──────────────────────────────────────────────
+
+function DuplicarOfertaModal({
+  visible,
+  oferta,
+  onClose,
+}: {
+  visible: boolean;
+  oferta: { id: number; hora_inicio: string };
+  onClose: () => void;
+}) {
+  const duplicarM = useDuplicarOferta();
+  const [fecha, setFecha] = useState(new Date());
+  const [hora, setHora]   = useState(new Date());
+  const [showFecha, setShowFecha] = useState(false);
+  const [showHora, setShowHora]   = useState(false);
+
+  React.useEffect(() => {
+    if (!visible) return;
+    setFecha(new Date());
+    const [h, m] = oferta.hora_inicio.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    setHora(d);
+    setShowFecha(false);
+    setShowHora(false);
+  }, [visible, oferta.hora_inicio]);
+
+  function onChangeFecha(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowFecha(false);
+    if (d) setFecha(d);
+  }
+  function onChangeHora(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowHora(false);
+    if (d) setHora(d);
+  }
+
+  async function handleDuplicar() {
+    try {
+      const nueva = await duplicarM.mutateAsync({
+        ofertaId: oferta.id,
+        fecha: toISODate(fecha),
+        hora_inicio: `${formatTimeObj(hora)}:00`,
+      });
+      onClose();
+      showToast(`"${nueva.titulo}" creada para el ${fmtDate(toISODate(fecha))}.`);
+    } catch {
+      Alert.alert('Error', 'No se pudo duplicar la oferta.');
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View className="flex-1 justify-end bg-black/40">
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          className="bg-background rounded-t-3xl"
+          contentContainerClassName="px-6 pt-5 pb-10 gap-5"
+        >
+          <View className="flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-foreground">Duplicar oferta</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color="#64748B" />
+            </Pressable>
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Fecha</Text>
+            <TouchableOpacity
+              onPress={() => setShowFecha(true)}
+              className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+            >
+              <Ionicons name="calendar-outline" size={16} color="#64748B" />
+              <Text className="text-sm text-foreground">{fmtDate(toISODate(fecha))}</Text>
+            </TouchableOpacity>
+            {showFecha && (
+              <DateTimePicker
+                value={fecha}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={new Date()}
+                onChange={onChangeFecha}
+              />
+            )}
+            {showFecha && Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowFecha(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Hora de inicio</Text>
+            <TouchableOpacity
+              onPress={() => setShowHora(true)}
+              className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+            >
+              <Ionicons name="time-outline" size={16} color="#64748B" />
+              <Text className="text-sm text-foreground">{formatTimeObj(hora)}</Text>
+            </TouchableOpacity>
+            {showHora && (
+              <DateTimePicker
+                value={hora}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onChangeHora}
+              />
+            )}
+            {showHora && Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowHora(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <Button
+            label={duplicarM.isPending ? 'Duplicando…' : 'Duplicar'}
+            variant="primary"
+            fullWidth
+            loading={duplicarM.isPending}
+            onPress={handleDuplicar}
+          />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+

@@ -7,8 +7,14 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:3001"
+        "EXPO_PUBLIC_API_URL": "http://localhost:3001",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "983031197089-o3vfhunbs1edjuuf1hjlaq2tgrbugknu.apps.googleusercontent.com",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "preview": {
@@ -21,13 +27,16 @@
         "EXPO_PUBLIC_API_URL": "https://api.zaturno.app",
         "EXPO_PUBLIC_SENTRY_DSN": "https://a3220f0cc0934d193c873f1d2b7317e0@o4511691270258688.ingest.us.sentry.io/4511691954257920",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "983031197089-o3vfhunbs1edjuuf1hjlaq2tgrbugknu.apps.googleusercontent.com",
+        "SENTRY_ORG": "zaturno",
+        "SENTRY_PROJECT": "react-native",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
       "autoIncrement": true,
       "channel": "production",
-      "prebuildCommand": "npx expo prebuild --clean --platform android",
+      "prebuildCommand": "npx expo prebuild --clean --no-install",
       "android": {
         "buildType": "app-bundle"
       },
@@ -35,7 +44,9 @@
         "EXPO_PUBLIC_API_URL": "https://api.zaturno.app",
         "EXPO_PUBLIC_SENTRY_DSN": "https://a3220f0cc0934d193c873f1d2b7317e0@o4511691270258688.ingest.us.sentry.io/4511691954257920",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "983031197089-o3vfhunbs1edjuuf1hjlaq2tgrbugknu.apps.googleusercontent.com",
+        "SENTRY_ORG": "zaturno",
+        "SENTRY_PROJECT": "react-native"
       }
     }
   },
@@ -44,6 +55,11 @@
       "android": {
         "serviceAccountKeyPath": "./google-service-account.json",
         "track": "alpha"
+      },
+      "ios": {
+        "appleId": "anderson960616@gmail.com",
+        "ascAppId": "6813078911",
+        "appleTeamId": "84259DFLF6"
       }
     }
   }

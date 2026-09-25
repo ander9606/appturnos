@@ -1,21 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { nominaApi, trabajadoresApi } from '@api-client';
 import type { EstadoPeriodo, TipoPeriodo, TipoDia } from '@api-client';
+import { getDeviceId } from '@/lib/deviceId';
 
 // ── Query keys ────────────────────────────────────────────────────────────
 
 export const NOMINA_KEYS = {
-  periodos:     (estado?: EstadoPeriodo) => ['periodos', estado] as const,
+  periodos:     (estado?: EstadoPeriodo, fechaDesde?: string, fechaHasta?: string) =>
+    ['periodos', estado, fechaDesde, fechaHasta] as const,
   registros:    (params: object)         => ['registros', params] as const,
   liquidacion:  (periodoId: number)      => ['liquidacion', periodoId] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
 
-export function usePeriodos(estado?: EstadoPeriodo, enabled = true) {
+export function usePeriodos(
+  estado?: EstadoPeriodo,
+  enabled = true,
+  opts: { fechaDesde?: string; fechaHasta?: string } = {},
+) {
   return useQuery({
-    queryKey: NOMINA_KEYS.periodos(estado),
-    queryFn:  () => nominaApi.listarPeriodos({ estado, limit: 20 }),
+    queryKey: NOMINA_KEYS.periodos(estado, opts.fechaDesde, opts.fechaHasta),
+    queryFn:  () => nominaApi.listarPeriodos({
+      estado, limit: 20,
+      fecha_desde: opts.fechaDesde, fecha_hasta: opts.fechaHasta,
+    }),
     staleTime: 60_000,
     enabled,
   });
@@ -35,12 +44,18 @@ export function useRegistros(params: {
   });
 }
 
-/** Últimos registros del trabajador autenticado, sin filtrar por período — para el historial de ganancias. */
-export function useRegistrosHistorial() {
+/** Últimos registros del trabajador autenticado, sin filtrar por período — para el historial de
+ *  ganancias y para el calendario mensual (que sí acota por fecha_desde/fecha_hasta). */
+export function useRegistrosHistorial(opts: { enabled?: boolean; fechaDesde?: string; fechaHasta?: string } = {}) {
   return useQuery({
-    queryKey: ['registros', 'historial'] as const,
-    queryFn:  () => nominaApi.listarRegistros({ limit: 500 }),
+    queryKey: ['registros', 'historial', opts.fechaDesde, opts.fechaHasta] as const,
+    queryFn:  () => nominaApi.listarRegistros({
+      limit: 500,
+      fecha_desde: opts.fechaDesde,
+      fecha_hasta: opts.fechaHasta,
+    }),
     staleTime: 60_000,
+    enabled: opts.enabled ?? true,
   });
 }
 
@@ -70,10 +85,11 @@ export function useCrearRegistro() {
     mutationFn: (datos: {
       periodo_id: number;
       fecha: string;
-      hora_entrada: string;
+      hora_entrada?: string;
       hora_salida?: string;
       trabajador_id?: number;
       novedad?: string;
+      tipo_dia?: TipoDia;
     }) => nominaApi.crearRegistro(datos),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
   });
@@ -82,7 +98,7 @@ export function useCrearRegistro() {
 export function useCorregirRegistro() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...datos }: { id: number; tipo_dia?: TipoDia; novedad?: string; hora_entrada?: string; hora_salida?: string }) =>
+    mutationFn: ({ id, ...datos }: { id: number; tipo_dia?: TipoDia; novedad?: string; hora_entrada?: string | null; hora_salida?: string | null }) =>
       nominaApi.corregirRegistro(id, datos),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
   });
@@ -124,8 +140,8 @@ export function useNominaPerfil(enabled = true) {
 export function useMarcarEntrada() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (datos?: { latitud?: number; longitud?: number }) =>
-      nominaApi.marcarEntrada(datos),
+    mutationFn: async (datos?: { latitud?: number; longitud?: number }) =>
+      nominaApi.marcarEntrada({ ...datos, device_id: await getDeviceId() }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registros'] });
     },
@@ -138,6 +154,10 @@ export function useActualizarExtras() {
     mutationFn: (acepta: boolean) => trabajadoresApi.actualizarExtras(acepta),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nomina-perfil'] });
+      // Activar el flag desbloquea listas/detalles de ofertas que antes daban 403 —
+      // sin esto quedarían con el error viejo en caché hasta un pull-to-refresh manual.
+      qc.invalidateQueries({ queryKey: ['ofertas'] });
+      qc.invalidateQueries({ queryKey: ['oferta'] });
     },
   });
 }
@@ -145,11 +165,12 @@ export function useActualizarExtras() {
 export function useMarcarSalida() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ registroId, latitud, longitud }: {
+    mutationFn: async ({ registroId, latitud, longitud, jornada_continua }: {
       registroId: number;
       latitud?: number;
       longitud?: number;
-    }) => nominaApi.marcarSalida(registroId, { latitud, longitud }),
+      jornada_continua?: boolean;
+    }) => nominaApi.marcarSalida(registroId, { latitud, longitud, jornada_continua, device_id: await getDeviceId() }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registros'] });
     },

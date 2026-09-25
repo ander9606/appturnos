@@ -6,21 +6,28 @@ const { body, param, query } = require('express-validator');
 const { validar } = require('../../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../../middleware/authMiddleware');
 const verificarSuscripcion = require('../../../middleware/verificarSuscripcion');
-const { ROLES } = require('../../../config/constants');
+const { ROLES, ESTADOS_ASIGNACION } = require('../../../config/constants');
 const ctrl = require('./asignaciones.controller');
 
 const router = express.Router();
 
 // Permisos según la matriz de 06-AUTH.md.
 const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
-const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS];
+// trabajador_nomina puede tomar turnos eventuales (extra) — marca ingreso/egreso
+// igual que trabajador_turnos, pero su turno se paga como bono, no como
+// contrato civil independiente (ver asignaciones.service.js#marcarEgreso).
+const TRABAJADOR = [ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA];
 
 const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
-// Coordenadas GPS obligatorias para el marcaje de ingreso.
+// Coordenadas GPS del marcaje de ingreso/egreso — opcionales a nivel de ruta
+// (igual que registros.routes.js en nómina): un cargo con tipo_geofence='libre'
+// (ej. camioneros, que no entran y salen del mismo punto) puede marcar sin GPS.
+// El service exige la ubicación cuando el geofence sí la necesita (fijo/zonal/oferta).
 const reglasCoordenadas = [
-  body('latitud').isFloat({ min: -90, max: 90 }).withMessage('latitud requerida y válida'),
-  body('longitud').isFloat({ min: -180, max: 180 }).withMessage('longitud requerida y válida'),
+  body('latitud').optional().isFloat({ min: -90, max: 90 }).withMessage('latitud inválida'),
+  body('longitud').optional().isFloat({ min: -180, max: 180 }).withMessage('longitud inválida'),
+  body('device_id').optional({ values: 'falsy' }).isString().isLength({ max: 64 }).withMessage('device_id inválido'),
 ];
 
 router.use(verificarToken);
@@ -46,7 +53,13 @@ router.get(
     query('fecha').optional().isISO8601().withMessage('fecha inválida'),
     query('oferta_id').optional().isInt({ min: 1 }).withMessage('oferta_id inválido'),
     query('trabajador_id').optional().isInt({ min: 1 }).withMessage('trabajador_id inválido'),
-    query('estado').optional().isIn(['pendiente','confirmado','en_progreso','completado','no_presentado','cancelado']).withMessage('estado inválido'),
+    // Acepta uno o varios separados por coma (ej. "confirmado,en_progreso,completado,no_presentado")
+    // — la pestaña "Aceptados" del inbox de postulaciones necesita ver todo lo que
+    // alguna vez se confirmó, sin importar en qué terminó.
+    query('estado').optional().custom((value) =>
+      String(value).split(',').every((v) => ESTADOS_ASIGNACION.includes(v))
+    ).withMessage('estado inválido'),
+    query('sospechoso').optional().isIn(['0', '1']).withMessage('sospechoso inválido'),
     query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
     query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('limit inválido'),
   ],
@@ -82,7 +95,7 @@ router.post(
 router.post(
   '/:id/egreso',
   verificarRol(TRABAJADOR),
-  [idParam, body('firma_b64').isString().notEmpty().withMessage('firma_b64 requerida')],
+  [idParam, body('firma_b64').isString().notEmpty().withMessage('firma_b64 requerida'), ...reglasCoordenadas],
   validar,
   ctrl.egreso
 );
@@ -99,6 +112,26 @@ router.patch(
   ],
   validar,
   ctrl.corregir
+);
+
+// PUT /api/turnos/asignaciones/:id/bono  (jefe/admin agrega o edita el bono extra de un turno)
+router.put(
+  '/:id/bono',
+  verificarRol(GESTIONAR),
+  verificarSuscripcion,
+  [
+    idParam,
+    body('monto').isFloat({ min: 0 }).withMessage('monto debe ser un número mayor o igual a 0'),
+    body('motivo').optional({ values: 'falsy' }).isString().isLength({ max: 255 }).withMessage('motivo inválido (máx. 255 caracteres)'),
+    body('motivo').custom((value, { req }) => {
+      if (Number(req.body.monto) > 0 && !String(value || '').trim()) {
+        throw new Error('motivo es obligatorio cuando el bono es mayor a 0');
+      }
+      return true;
+    }),
+  ],
+  validar,
+  ctrl.agregarBono
 );
 
 // POST /api/turnos/asignaciones/:id/no-presentado  (jefe/admin marca ausencia + 0 estrellas auto)
@@ -118,6 +151,15 @@ router.post(
   ],
   validar,
   ctrl.calificar
+);
+
+// PUT /api/turnos/asignaciones/:id/sospechoso/descartar  — gestor revisó, no era fraude
+router.put(
+  '/:id/sospechoso/descartar',
+  verificarRol(GESTIONAR),
+  [idParam],
+  validar,
+  ctrl.descartarSospechoso
 );
 
 module.exports = router;

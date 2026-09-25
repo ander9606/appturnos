@@ -4,6 +4,35 @@ import { api } from './client';
 
 export type PlanEmpresa = 'basico' | 'profesional' | 'empresarial';
 
+/** Fila de la tabla `planes` — precios editables por super_admin (COP/mes). */
+export interface PlanConfig {
+  codigo: PlanEmpresa;
+  nombre: string;
+  orden: number;
+  /** null = sin tope de trabajadores activos. */
+  max_trabajadores: number | null;
+  precio_cop: number;
+  /** Trabajadores cubiertos por precio_cop; null = no cobra adicionales. */
+  incluidos: number | null;
+  precio_adicional_cop: number | null;
+  updated_at: string;
+}
+
+export type ActualizarPlanPayload = Pick<PlanConfig, 'precio_cop' | 'max_trabajadores' | 'incluidos' | 'precio_adicional_cop'>;
+
+/**
+ * Precio mensual de un plan para `activos` trabajadores activos — espejo de
+ * precioPlanCop (backend/modules/suscripciones/planes.model.js). Solo para
+ * vistas previas: el monto que se cobra lo calcula siempre el backend.
+ */
+export function precioPlanCop(
+  plan: Pick<PlanConfig, 'precio_cop' | 'incluidos' | 'precio_adicional_cop'>,
+  activos: number,
+): number {
+  const extra = plan.incluidos != null ? Math.max(0, activos - plan.incluidos) : 0;
+  return plan.precio_cop + extra * (plan.precio_adicional_cop ?? 0);
+}
+
 export type SuscripcionOrigen = 'manual' | 'wompi' | 'logiq360';
 
 export interface EmpresaAdmin {
@@ -25,6 +54,8 @@ export interface EmpresaAdmin {
   trabajadores_nomina: number;
   trabajadores_ambos: number;
   logiq360_conectado: boolean;
+  /** Ingresos históricos (COP) generados por esta empresa vía Wompi. */
+  ingresos_totales_cop?: number;
   total_ofertas?: number;
   total_periodos?: number;
   created_at: string;
@@ -94,21 +125,29 @@ export interface ReportesGlobales {
   nomina: {
     periodos_abiertos: number;
   };
-  distribucion_planes: Partial<Record<PlanEmpresa, number>>;
   integraciones: {
     logiq360: number;
     pago_directo: number;
   };
   ingresos: {
+    mes_actual: number;
     proyeccion_mes_actual: number;
     ganado_mes_pasado: number;
-    tarifa_cop: number;
+    planes: PlanConfig[];
+    mrr_historico: { mes: string; ingresos_cop: number }[];
   };
+  renovaciones_riesgo: {
+    id: number;
+    nombre: string;
+    vigente_hasta: string;
+    dias_restantes: number;
+  }[];
 }
 
 export interface LinkPagoResponse {
   url: string;
   referencia: string;
+  plan: PlanEmpresa;
   monto_cop: number;
   expira_at: string;
 }
@@ -123,6 +162,8 @@ export interface WompiEvento {
   empresa_nombre: string | null;
   plan: PlanEmpresa | null;
   meses: number | null;
+  /** Monto real cobrado por Wompi (COP). */
+  monto_cop: number | null;
   estado: WompiEstado;
   intentos: number;
   error_detalle: string | null;
@@ -179,6 +220,17 @@ export const adminApi = {
 
   async generarLinkPago(id: number, datos: { plan: PlanEmpresa; meses?: number }): Promise<LinkPagoResponse> {
     return api.post<LinkPagoResponse>(`/api/admin/empresas/${id}/link-pago`, datos);
+  },
+
+  // ── Planes y precios ─────────────────────────────────────────────────────
+
+  async listarPlanes(): Promise<PlanConfig[]> {
+    return api.get<PlanConfig[]>('/api/admin/planes');
+  },
+
+  /** Devuelve la lista completa actualizada. Aplica a los próximos links de pago. */
+  async actualizarPlan(codigo: PlanEmpresa, datos: ActualizarPlanPayload): Promise<PlanConfig[]> {
+    return api.put<PlanConfig[]>(`/api/admin/planes/${codigo}`, datos);
   },
 
   // ── Wompi eventos ────────────────────────────────────────────────────────

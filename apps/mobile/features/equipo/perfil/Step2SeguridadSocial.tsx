@@ -124,7 +124,7 @@ export function Step2SeguridadSocial({ data, onChange, onBack, onNext }: Props) 
           <View className="flex-1 h-px bg-border" />
         </View>
         <Text className="text-xs text-muted-foreground -mt-2">
-          Solo uno es necesario. Tarifa/hora tiene prioridad sobre salario mensual.
+          Solo uno es necesario. Salario mensual tiene prioridad sobre tarifa/hora.
         </Text>
         <Input
           label="Tarifa por hora (COP)"
@@ -136,7 +136,7 @@ export function Step2SeguridadSocial({ data, onChange, onBack, onNext }: Props) 
         <Input
           label="Salario base mensual (COP)"
           placeholder="Ej. 1300000"
-          hint="Se divide entre 240 para obtener el valor/hora."
+          hint="Se divide entre 210 (jornada de 42 h) para obtener el valor/hora."
           value={data.salario_base}
           onChangeText={(t) => onChange({ salario_base: t })}
           keyboardType="numeric"

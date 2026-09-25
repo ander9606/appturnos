@@ -5,11 +5,16 @@ import { nominaApi } from '../api/nominaApi';
 import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento } from '../types';
 
 const KEYS = {
-  periodos: (estado?: EstadoPeriodo, conTotales?: boolean) => ['nomina', 'periodos', estado, conTotales] as const,
+  periodos: (estado?: EstadoPeriodo, conTotales?: boolean, fechaDesde?: string, fechaHasta?: string) =>
+    ['nomina', 'periodos', estado, conTotales, fechaDesde, fechaHasta] as const,
   registros: (params: object) => ['nomina', 'registros', params] as const,
   liquidacion: (id: number) => ['nomina', 'liquidacion', id] as const,
   trabajadores: () => ['trabajadores', 'nomina'] as const,
   descuentos: (periodoId: number) => ['nomina', 'descuentos', periodoId] as const,
+  compensatorios: () => ['nomina', 'compensatorios'] as const,
+  rangoCompensatorio: (id: number) => ['nomina', 'compensatorios', id, 'rango'] as const,
+  periodoActivoEventual: () => ['nomina', 'eventual', 'periodo-activo'] as const,
+  liquidacionEventual: (id: number) => ['nomina', 'eventual', 'liquidacion', id] as const,
 };
 
 function getErrMsg(err: unknown) {
@@ -18,11 +23,19 @@ function getErrMsg(err: unknown) {
     : 'Error inesperado';
 }
 
-export function usePeriodos(estado?: EstadoPeriodo, conTotales = false) {
+export function usePeriodos(
+  estado?: EstadoPeriodo,
+  conTotales = false,
+  opts: { enabled?: boolean; fechaDesde?: string; fechaHasta?: string } = {},
+) {
   return useQuery({
-    queryKey: KEYS.periodos(estado, conTotales),
-    queryFn: () => nominaApi.listarPeriodos({ estado, limit: 50, conTotales }),
+    queryKey: KEYS.periodos(estado, conTotales, opts.fechaDesde, opts.fechaHasta),
+    queryFn: () => nominaApi.listarPeriodos({
+      estado, conTotales, limit: 50,
+      fecha_desde: opts.fechaDesde, fecha_hasta: opts.fechaHasta,
+    }),
     staleTime: 60_000,
+    enabled: opts.enabled ?? true,
   });
 }
 
@@ -90,6 +103,36 @@ export function useLiquidarPeriodo() {
   });
 }
 
+/** Período activo del segmento 'nomina' de turnos eventuales (extra) — trimestral. */
+export function usePeriodoActivoEventual() {
+  return useQuery({
+    queryKey: KEYS.periodoActivoEventual(),
+    queryFn: () => nominaApi.periodoActivoEventual(),
+    staleTime: 60_000,
+  });
+}
+
+export function useLiquidacionEventual(periodoId: number | null) {
+  return useQuery({
+    queryKey: KEYS.liquidacionEventual(periodoId!),
+    queryFn: () => nominaApi.liquidacionEventual(periodoId!),
+    enabled: periodoId !== null,
+    staleTime: 60_000,
+  });
+}
+
+export function useLiquidarEventual() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (periodoId: number) => nominaApi.liquidarEventual(periodoId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nomina', 'eventual'] });
+      toast.success('Período de turnos extra liquidado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useCrearRegistro() {
   const qc = useQueryClient();
   return useMutation({
@@ -138,10 +181,73 @@ export function useEliminarDescuento() {
   });
 }
 
+/** Todos los descansos compensatorios de la empresa — para cruzarlos con los registros por trabajador_id + fecha. */
+export function useCompensatorios() {
+  return useQuery({
+    queryKey: KEYS.compensatorios(),
+    queryFn: () => nominaApi.listarCompensatorios(),
+    staleTime: 30_000,
+  });
+}
+
+/** Asigna por primera vez la fecha de un descanso compensatorio pendiente. */
+export function useAsignarCompensatorio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, fecha }: { id: number; fecha: string }) =>
+      nominaApi.asignarCompensatorio(id, fecha),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.compensatorios() });
+      qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      qc.invalidateQueries({ queryKey: ['nomina', 'liquidacion'] });
+      toast.success('Descanso asignado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+/** Los 28 días candidatos para asignar/reasignar un descanso, con su zona de color y disponibilidad. */
+export function useRangoCompensatorio(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: KEYS.rangoCompensatorio(id),
+    queryFn: () => nominaApi.rangoCompensatorio(id),
+    enabled,
+    staleTime: 30_000,
+  });
+}
+
+/** Mueve un descanso compensatorio ya asignado a otra fecha dentro del plazo legal (28 días desde el día festivo/domingo trabajado). */
+export function useReasignarCompensatorio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, fecha }: { id: number; fecha: string }) =>
+      nominaApi.reasignarCompensatorio(id, fecha),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEYS.compensatorios() });
+      qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      qc.invalidateQueries({ queryKey: ['nomina', 'liquidacion'] });
+      toast.success('Descanso reasignado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useDescartarSospechoso() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => nominaApi.descartarSospechoso(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      toast.success('Marcaje ya no está marcado como sospechoso');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useCorregirRegistro() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: number; hora_entrada?: string; hora_salida?: string; novedad?: string; tipo_dia?: TipoDia }) =>
+    mutationFn: ({ id, ...data }: { id: number; hora_entrada?: string | null; hora_salida?: string | null; novedad?: string; tipo_dia?: TipoDia }) =>
       nominaApi.corregirRegistro(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });

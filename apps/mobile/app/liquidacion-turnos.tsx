@@ -5,7 +5,7 @@
  * completados en el período seleccionado.  Cada card es expandible para
  * ver el desglose turno por turno (pago base + extra + total).
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,10 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useLiquidacionTurnos } from '@/features/turnos/useTurnos';
+import { usePeriodos } from '@/features/nomina/useNomina';
+import { PeriodoSelector } from '@/features/nomina/PeriodoSelector';
+import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
+import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -42,27 +46,13 @@ function fmtHora(ts: string | null): string {
 function cop(n: number): string {
   return '$' + Math.round(n).toLocaleString('es-CO');
 }
-function buildDefaultRange(): { inicio: string; fin: string } {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = now.getMonth() + 1;
-  const inicio = `${y}-${String(m).padStart(2, '0')}-01`;
-  const lastDay = new Date(y, m, 0).getDate();
-  const fin = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
-  return { inicio, fin };
-}
-function buildMonthLabel(inicio: string): string {
-  const d = new Date(`${inicio}T00:00:00`);
-  const nombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  return `${nombres[d.getMonth()]} ${d.getFullYear()}`;
-}
 
 // ── TurnoLineaRow ─────────────────────────────────────────────────────────
 
 function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: string }) {
   const router = useRouter();
   const hasExtra = t.pago_extra > 0;
+  const hasBono = t.bono_monto > 0;
   return (
     <TouchableOpacity
       onPress={() => router.push(`/turno/${t.asignacion_id}`)}
@@ -95,13 +85,20 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
         <View className="flex-row items-center gap-1">
           <Ionicons name="cash-outline" size={12} color="#64748B" />
           <Text className="text-xs text-muted-foreground">
-            Base: {cop(t.pago_total - t.pago_extra)}
+            Base: {cop(t.pago_total - t.pago_extra - t.bono_monto)}
           </Text>
         </View>
         {hasExtra && (
           <View className="bg-amber-100 px-2 py-0.5 rounded-full">
             <Text className="text-[10px] font-semibold text-amber-700">
               Extra +{cop(t.pago_extra)}
+            </Text>
+          </View>
+        )}
+        {hasBono && (
+          <View className="bg-success-light px-2 py-0.5 rounded-full">
+            <Text className="text-[10px] font-semibold text-success">
+              Bono +{cop(t.bono_monto)}
             </Text>
           </View>
         )}
@@ -132,13 +129,14 @@ function TrabajadorCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const hasExtra = item.pago_extra > 0;
+  const hasBono = item.bono_monto > 0;
 
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
       style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
     >
-      {/* ── Header ──────────────────────────────────────────────────── */}
+      {/* ── Header: nombre + monto a pagar, visibles sin expandir ─────── */}
       <TouchableOpacity
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
@@ -147,70 +145,55 @@ function TrabajadorCard({
         {/* Barra lateral de color */}
         <View className="w-1.5" style={{ backgroundColor: primary }} />
 
-        <View className="flex-1 px-4 py-4 gap-2">
-          {/* Nombre + chevron */}
-          <View className="flex-row items-start justify-between gap-2">
-            <View className="flex-1">
-              <Text className="text-base font-bold text-foreground">
-                {item.nombre} {item.apellido}
-              </Text>
-              <View className="flex-row items-center gap-2 mt-0.5">
-                {item.cargo && (
-                  <Text className="text-xs text-muted-foreground">{item.cargo}</Text>
-                )}
-                {item.ranking != null && (
-                  <View className="flex-row items-center gap-0.5">
-                    <Ionicons name="star" size={11} color="#F59E0B" />
-                    <Text className="text-xs text-muted-foreground">
-                      {item.ranking.toFixed(1)}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            <Ionicons
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color="#94A3B8"
-            />
-          </View>
-
-          {/* Stats */}
-          <View className="flex-row items-center gap-4">
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="briefcase-outline" size={13} color="#64748B" />
+        <View className="flex-1 px-4 py-4 flex-row items-center gap-3">
+          {/* Nombre + meta */}
+          <View className="flex-1 gap-1">
+            <Text className="text-base font-bold text-foreground" numberOfLines={1}>
+              {item.nombre} {item.apellido}
+            </Text>
+            <View className="flex-row items-center gap-3 flex-wrap">
+              {item.cargo && (
+                <Text className="text-xs text-muted-foreground">{item.cargo}</Text>
+              )}
+              {item.ranking != null && (
+                <View className="flex-row items-center gap-0.5">
+                  <Ionicons name="star" size={11} color="#F59E0B" />
+                  <Text className="text-xs text-muted-foreground">{Number(item.ranking).toFixed(1)}</Text>
+                </View>
+              )}
               <Text className="text-xs text-muted-foreground">
-                {item.total_turnos} turno{item.total_turnos !== 1 ? 's' : ''}
-              </Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Ionicons name="time-outline" size={13} color="#64748B" />
-              <Text className="text-xs text-muted-foreground">
-                {item.total_horas.toFixed(1)}h
-              </Text>
-            </View>
-          </View>
-
-          {/* Total a pagar */}
-          <View className="flex-row items-center justify-between mt-1">
-            <View className="gap-0.5">
-              <Text className="text-xs text-muted-foreground">A pagar</Text>
-              <Text className="text-xl font-bold" style={{ color: primary }}>
-                {cop(item.pago_total)}
+                {item.total_turnos} turno{item.total_turnos !== 1 ? 's' : ''} · {item.total_horas.toFixed(1)}h
               </Text>
             </View>
             {hasExtra && (
-              <View className="items-end gap-0.5">
-                <Text className="text-[10px] text-muted-foreground">
-                  Base: {cop(item.pago_base)}
+              <View className="bg-amber-100 self-start px-2 py-0.5 rounded-full mt-0.5">
+                <Text className="text-[10px] font-semibold text-amber-700">
+                  Incluye {cop(item.pago_extra)} extra
                 </Text>
-                <View className="bg-amber-100 px-2.5 py-1 rounded-xl">
-                  <Text className="text-xs font-semibold text-amber-700">
-                    + {cop(item.pago_extra)} extra
-                  </Text>
-                </View>
               </View>
             )}
+            {hasBono && (
+              <View className="bg-success-light self-start px-2 py-0.5 rounded-full mt-0.5">
+                <Text className="text-[10px] font-semibold text-success">
+                  Incluye {cop(item.bono_monto)} en bonos
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Monto a pagar + chevron */}
+          <View className="items-end gap-0.5">
+            <Text className="text-lg font-bold" style={{ color: primary }}>
+              {cop(item.pago_total)}
+            </Text>
+            <View className="flex-row items-center gap-0.5">
+              <Text className="text-[10px] text-muted-foreground">A pagar</Text>
+              <Ionicons
+                name={expanded ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color="#94A3B8"
+              />
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -244,8 +227,14 @@ function TrabajadorCard({
 export default function LiquidacionTurnosScreen() {
   const theme  = useTheme();
   const router = useRouter();
-  const { inicio, fin } = useMemo(() => buildDefaultRange(), []);
-  const monthLabel = useMemo(() => buildMonthLabel(inicio), [inicio]);
+
+  // periodos_nomina — mismo período que ve el trabajador de turnos, no un mes
+  // calendario fijo (una empresa quincenal no factura por mes completo).
+  const { data: periodosResp, refetch: refetchPeriodos } = usePeriodos();
+  const periodos = periodosResp?.data ?? [];
+  const [periodoId, setPeriodoId] = useState<number | undefined>(undefined);
+  const activePeriodoId = periodoId ?? periodos[0]?.id;
+  const periodo = periodos.find((p) => p.id === activePeriodoId);
 
   const {
     data,
@@ -253,7 +242,10 @@ export default function LiquidacionTurnosScreen() {
     isError,
     refetch,
     isRefetching,
-  } = useLiquidacionTurnos({ fecha_inicio: inicio, fecha_fin: fin });
+  } = useLiquidacionTurnos(
+    { fecha_inicio: periodo?.fecha_inicio ?? '', fecha_fin: periodo?.fecha_fin ?? '' },
+    { enabled: periodo !== undefined },
+  );
 
   const trabajadores = data ?? [];
 
@@ -261,6 +253,8 @@ export default function LiquidacionTurnosScreen() {
     () => trabajadores.reduce((s, w) => s + w.pago_total, 0),
     [trabajadores]
   );
+
+  const onRefresh = useCallback(() => { refetch(); refetchPeriodos(); }, [refetch, refetchPeriodos]);
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
@@ -272,7 +266,6 @@ export default function LiquidacionTurnosScreen() {
           headerShown: true,
           headerTitle: 'Liquidación',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Turnos',
           headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,
@@ -301,7 +294,7 @@ export default function LiquidacionTurnosScreen() {
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
-                onRefresh={refetch}
+                onRefresh={onRefresh}
                 tintColor={theme.primary}
                 colors={[theme.primary]}
               />
@@ -309,20 +302,16 @@ export default function LiquidacionTurnosScreen() {
             ListHeaderComponent={
               <View className="mb-2 gap-3">
                 {/* Período */}
-                <View className="flex-row items-center justify-between">
-                  <View>
-                    <Text className="text-xs text-muted-foreground uppercase tracking-wide">
-                      Período
-                    </Text>
-                    <Text className="text-base font-semibold text-foreground">
-                      {monthLabel}
-                    </Text>
-                  </View>
-                  <View className="bg-muted px-3 py-1.5 rounded-xl">
-                    <Text className="text-xs text-muted-foreground">
-                      {inicio.slice(8)} – {fin.slice(8)} {SHORT_MONTHS[new Date(`${inicio}T00:00:00`).getMonth()]}
-                    </Text>
-                  </View>
+                <View className="gap-2">
+                  <PeriodoSelector periodos={periodos} activeId={activePeriodoId} onSelect={setPeriodoId} />
+                  {periodo && (
+                    <View className="flex-row items-center gap-1.5">
+                      <Text className="text-base font-semibold text-foreground">
+                        {fmtPeriodo(periodo)}
+                      </Text>
+                      <TipoPeriodoBadge tipo={periodo.tipo} />
+                    </View>
+                  )}
                 </View>
 
                 {/* Resumen global */}
@@ -362,7 +351,7 @@ export default function LiquidacionTurnosScreen() {
                   Sin turnos completados
                 </Text>
                 <Text className="text-sm text-muted-foreground text-center">
-                  No hay asignaciones completadas en {monthLabel.toLowerCase()}.
+                  No hay asignaciones completadas en el período{periodo ? ` ${fmtPeriodo(periodo)}` : ''}.
                 </Text>
               </View>
             }

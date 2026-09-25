@@ -6,6 +6,9 @@ web-build/
 *.local
 google-service-account.json
 *firebase-adminsdk*.json
+credentials/
+*.p8
+AuthKey_*.p8
 ios/
 android/
 

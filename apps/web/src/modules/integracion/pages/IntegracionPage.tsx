@@ -8,6 +8,7 @@ import {
   useUpdateConfigIntegracion, useEmparejar,
   useConciliacion, useVincular,
 } from '../hooks/useIntegracion';
+import { ErrorState } from '@/shared/components/ErrorState';
 import type { TrabajadorPendiente, CandidatoLogiq360 } from '../types';
 
 type Tab = 'estado' | 'configuracion' | 'conciliacion';
@@ -69,12 +70,13 @@ export function IntegracionPage() {
 
 /* ── Tab Estado ── */
 function TabEstado({ conectado, onGoConfig }: { conectado: boolean; onGoConfig: () => void }) {
-  const { data: estadoData, isLoading } = useEstadoIntegracion();
+  const { data: estadoData, isLoading, isError, error, refetch } = useEstadoIntegracion();
   const { data: cfgData } = useConfigIntegracion();
   const estado = estadoData?.data;
   const cfg = cfgData?.data;
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const salientes = estado?.eventos?.salientes ?? [];
   const entrantes = estado?.eventos?.entrantes ?? [];
@@ -122,7 +124,8 @@ function TabEstado({ conectado, onGoConfig }: { conectado: boolean; onGoConfig: 
             <StatusRow label="Webhook URL" ok={Boolean(cfg?.webhook_url)} okLabel="Configurada" koLabel="Sin URL" />
             <StatusRow label="Webhook secret" ok={Boolean(cfg?.tiene_webhook_secret)} okLabel="Configurado" koLabel="Falta" />
             <StatusRow label="API Key (saliente)" ok={Boolean(cfg?.tiene_api_key)} okLabel="Configurada" koLabel="Falta" />
-            <StatusRow label="API Key (entrante)" ok={Boolean(cfg?.tiene_incoming_secret)} okLabel="Configurada" koLabel="Falta" />
+            <StatusRow label="Firma webhooks (entrante)" ok={Boolean(cfg?.tiene_incoming_secret)} okLabel="Configurada" koLabel="Falta" />
+            <StatusRow label="API Key logiq360 (pull)" ok={Boolean(cfg?.tiene_logiq360_api_key)} okLabel="Configurada" koLabel="Falta" />
           </div>
           {cfg?.webhook_url && (
             <p className="text-xs text-muted-foreground mt-3 break-all">{cfg.webhook_url}</p>
@@ -196,7 +199,7 @@ function EventCard({ label, value, color, icon: Icon }: {
 
 /* ── Tab Configuración ── */
 function TabConfiguracion() {
-  const { data: cfgData, isLoading } = useConfigIntegracion();
+  const { data: cfgData, isLoading, isError, error, refetch } = useConfigIntegracion();
   const cfg = cfgData?.data;
   const update = useUpdateConfigIntegracion();
   const emparejar = useEmparejar();
@@ -206,6 +209,7 @@ function TabConfiguracion() {
   const [codigo, setCodigo] = useState('');
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const activo = Boolean(cfg?.activo);
 
@@ -324,7 +328,8 @@ function TabConfiguracion() {
           <div className="flex flex-col gap-2">
             <StatusRow label="Webhook secret" ok={Boolean(cfg?.tiene_webhook_secret)} okLabel="Configurado" koLabel="Falta — re-empareja" />
             <StatusRow label="API Key saliente" ok={Boolean(cfg?.tiene_api_key)} okLabel="Configurada" koLabel="Falta — re-empareja" />
-            <StatusRow label="API Key entrante" ok={Boolean(cfg?.tiene_incoming_secret)} okLabel="Configurada" koLabel="Falta — re-empareja" />
+            <StatusRow label="Firma webhooks (entrante)" ok={Boolean(cfg?.tiene_incoming_secret)} okLabel="Configurada" koLabel="Falta — re-empareja" />
+            <StatusRow label="API Key logiq360 (pull)" ok={Boolean(cfg?.tiene_logiq360_api_key)} okLabel="Configurada" koLabel="Falta — re-empareja" />
           </div>
         </div>
       )}
@@ -334,7 +339,7 @@ function TabConfiguracion() {
 
 /* ── Tab Conciliación ── */
 function TabConciliacion() {
-  const { data, isLoading, refetch } = useConciliacion();
+  const { data, isLoading, isError, error, refetch } = useConciliacion();
   const conciliacion = data?.data;
   const pendientes: TrabajadorPendiente[] = conciliacion?.pendientes ?? [];
   const candidatos: CandidatoLogiq360[] = conciliacion?.candidatos ?? [];
@@ -349,6 +354,7 @@ function TabConciliacion() {
   };
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   if (pendientes.length === 0) {
     return (

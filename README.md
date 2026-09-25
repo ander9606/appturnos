@@ -1,58 +1,60 @@
-# App Turnos
+# Zaturno
 
-App móvil para control de turnos y nómina de operarios, integrada con logiq360 (sistema de inventario y alquileres de carpas).
+Sistema de turnos, nómina y geocercas para empresas con personal en campo. Marcaje de entrada/salida con validación de ubicación, liquidación de nómina con recargos legales colombianos, y gestión de equipo — todo multi-tenant.
 
----
+Antes de Zaturno, cuadrar turnos y calcular nómina con recargos (nocturno, dominical, festivo) a mano generaba errores costosos y reclamos de los trabajadores. Zaturno automatiza el marcaje geolocalizado, el cálculo de horas y la liquidación, con vistas distintas para administradores, jefes de turno/nómina y trabajadores.
 
-## 🤖 Cómo se construye este proyecto
+Se integra en tiempo real con [logiq360](https://github.com/ander9606/aprendizaje-inventario-carpas) — el sistema de inventario y alquileres de eventos que construí en paralelo — sincronizando el costo de personal de cada operación.
+
+## Cómo se construye este proyecto
 
 Este proyecto lo diseño y dirijo yo: arquitectura, reglas de negocio, modelo de datos y qué construir en cada momento. Uso Claude Code como el colaborador que implementa bajo mi dirección — reviso cada cambio antes de aceptarlo, y entiendo cada parte del sistema lo suficiente para explicarla sin mirar el código. Los commits llevan mi autoría con `Co-Authored-By: Claude` cuando aplica, en vez de ocultar esa colaboración.
 
----
+## Qué hace
 
-## 📋 Documentación
+- **Turnos**: creación y asignación de turnos con ubicación geolocalizada, ofertas a trabajadores.
+- **Marcaje**: entrada/salida con geocerca (radio configurable, 100 m por defecto) — el cliente bloquea el botón fuera de rango, el backend revalida lat/lng por seguridad.
+- **Nómina**: liquidación con los recargos de la ley laboral colombiana ya ajustados a la reforma laboral (Ley 2466 de 2025: nocturno desde las 19:00, dominical/festivo gradual 80 % → 90 % → 100 %), horas extra sobre la jornada de 42 h, descuentos de salud/pensión y auxilio de transporte, y snapshot de salario al cerrar un período para no alterar liquidaciones ya cerradas.
+- **Contratos y pagos**: contratos diarios con firma digital y cuentas de cobro para prestación de servicios.
+- **Equipo**: gestión de trabajadores, cargos, ausencias, novedades y contratos, con una matriz de 7 roles (desde super-admin multi-tenant hasta trabajador de solo consulta).
+- **Notificaciones push** y **reportes** exportables.
+- **Suscripción** por plan con pago en Wompi: Básico $129.000 (hasta 10 trabajadores), Profesional $169.000 (hasta 30), Empresarial $299.000 (80 incluidos + $3.500 por trabajador adicional), en COP/mes; 30 días de prueba. Precios editables por el super admin; el admin de cada empresa ve su uso y amplía su plan desde "Mi plan". Gratis para empresas conectadas a logiq360.
+- **Integración con logiq360**: worker que sincroniza eventos entre ambos sistemas vía webhooks, con reintentos exponenciales.
 
-### 🔴 Esenciales — leer primero
+## Stack
 
-| Archivo | Qué contiene |
-|---------|-------------|
-| [docs/INTEGRACION-LOGIQ360-APP-TURNOS.md](docs/INTEGRACION-LOGIQ360-APP-TURNOS.md) | Contrato técnico completo — todos los payloads de eventos (entrantes y salientes), autenticación HMAC, `external_ref`, reintentos, flujo end-to-end |
-| [docs/APP-CONTROL-TURNOS.md](docs/APP-CONTROL-TURNOS.md) | Ciclo de vida completo de la app: roles, flujos por rol, tablas SQL, endpoints, horas Colombia, integración con sistema principal |
+**Backend** — Node.js 20 + Express 5, MySQL 8 (SQL parametrizado con `mysql2/promise`, sin ORM), JWT + refresh tokens, Sentry, Twilio, PDFKit/ExcelJS para reportes.
 
-### 🟡 API de logiq360 (sistema con el que se integra)
+**App móvil** — Expo ~54 + React Native + Expo Router, NativeWind (Tailwind para RN), TanStack Query, React Hook Form + Zod, Zustand.
 
-| Archivo | Qué contiene |
-|---------|-------------|
-| [docs/API-INTEGRACION-APP-TO-APP.md](docs/API-INTEGRACION-APP-TO-APP.md) | Diseño de la API `/v1` de logiq360 — roles, endpoints, seguridad, serialización por rol, scopes, datos a proteger, roadmap |
+**Web** — Vite + React 19 + React Router, Tailwind, Zustand.
 
-### 🟠 Spec de App Turnos — diseño de la propia app
+**Compartido** — `packages/api-client`, un cliente TypeScript usado tanto por la app móvil como por el web.
 
-Los specs de diseño están en [APP-TURNOS-SPEC/](APP-TURNOS-SPEC/):
+## Correr el proyecto
 
-| Archivo | Qué contiene |
-|---------|-------------|
-| [APP-TURNOS-SPEC/01-ARQUITECTURA.md](APP-TURNOS-SPEC/01-ARQUITECTURA.md) | Stack tecnológico, estructura de directorios, roles, multi-tenancy |
-| [APP-TURNOS-SPEC/02-BASE-DATOS.md](APP-TURNOS-SPEC/02-BASE-DATOS.md) | Esquema de tablas de App Turnos |
-| [APP-TURNOS-SPEC/03-API-ENDPOINTS.md](APP-TURNOS-SPEC/03-API-ENDPOINTS.md) | Endpoints que App Turnos expone |
-| [APP-TURNOS-SPEC/04-PANTALLAS.md](APP-TURNOS-SPEC/04-PANTALLAS.md) | Pantallas y flujos de usuario |
-| [APP-TURNOS-SPEC/05-INTEGRACION.md](APP-TURNOS-SPEC/05-INTEGRACION.md) | Integración desde la perspectiva de App Turnos (resumen ejecutivo) |
-| [APP-TURNOS-SPEC/06-AUTH.md](APP-TURNOS-SPEC/06-AUTH.md) | Autenticación JWT + refresh tokens |
-| [APP-TURNOS-SPEC/07-FRONTEND.md](APP-TURNOS-SPEC/07-FRONTEND.md) | **Stack frontend** — Expo, NativeWind, TanStack Query, decisiones de arquitectura UI |
+```bash
+# Backend
+cd backend
+npm install
+cp .env.example .env   # completar credenciales de MySQL y JWT_SECRET
+npm run migrate          # aplica migraciones SQL (idempotente)
+npm run seed              # datos de demo
+npm run dev                # puerto 3001
+npm test                   # pruebas (jest)
 
----
+# App móvil (Expo)
+cd apps/mobile
+cp .env.example .env    # EXPO_PUBLIC_API_URL apuntando al backend
+npx expo start
 
-## 🗂️ Orden de lectura recomendado
+# Web
+cd apps/web
+npm run dev
+```
 
-1. [APP-CONTROL-TURNOS.md](docs/APP-CONTROL-TURNOS.md) → entender el negocio y los flujos
-2. [INTEGRACION-LOGIQ360-APP-TURNOS.md](docs/INTEGRACION-LOGIQ360-APP-TURNOS.md) → entender el contrato técnico con logiq360
-3. [APP-TURNOS-SPEC/05-INTEGRACION.md](APP-TURNOS-SPEC/05-INTEGRACION.md) → cómo construirlo desde el lado de App Turnos
-4. [APP-TURNOS-SPEC/03-API-ENDPOINTS.md](APP-TURNOS-SPEC/03-API-ENDPOINTS.md) → endpoints que se deben implementar
-5. [APP-TURNOS-SPEC/07-FRONTEND.md](APP-TURNOS-SPEC/07-FRONTEND.md) → decisiones de stack del frontend
-6. El resto de `APP-TURNOS-SPEC/` según necesidad
+## Documentación
 
----
+Las reglas de cálculo de pagos (horas, recargos, descuentos, turnos) están en [`docs/REGLAS-CALCULO-PAGOS.md`](./docs/REGLAS-CALCULO-PAGOS.md); el admin de cada empresa descarga el PDF desde Configuración → Mi plan (web) o Mi empresa (móvil).
 
-## 🔗 Repos relacionados
-
-- **logiq360** (sistema principal): `aprendizaje-inventario-carpas` — API base en `http://localhost:3000/api`
-- App Turnos backend: puerto `3001` | BD: `app_turnos`
+Documentación técnica adicional en [`docs/`](./docs) y [`APP-TURNOS-SPEC/`](./APP-TURNOS-SPEC): arquitectura, esquema de base de datos, endpoints, autenticación y el contrato de integración con logiq360.

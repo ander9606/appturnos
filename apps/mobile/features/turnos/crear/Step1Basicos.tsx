@@ -5,12 +5,14 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Switch,
   Alert,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
+import { useTheme }    from '@/lib/theme';
 import { Button }      from '@/components/ui/Button';
 import { LugarInput }   from './LugarInput';
 import { TrabajadorPickerModal } from './TrabajadorPickerModal';
@@ -25,6 +27,7 @@ type Props = {
 };
 
 export function Step1Basicos({ data, onChange, onNext }: Props) {
+  const theme = useTheme();
   const [pickerVisible, setPickerVisible] = useState(false);
   const [showFecha, setShowFecha] = useState(false);
   const [showInicio, setShowInicio] = useState(false);
@@ -121,19 +124,6 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
                 {data.hora_inicio ? formatTimeObj(data.hora_inicio) : '--:--'}
               </Text>
             </TouchableOpacity>
-            {showInicio && (
-              <DateTimePicker
-                value={data.hora_inicio ?? new Date()}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onChangeInicio}
-              />
-            )}
-            {showInicio && Platform.OS === 'ios' && (
-              <TouchableOpacity onPress={() => setShowInicio(false)} className="bg-primary/10 rounded-xl py-2 items-center">
-                <Text className="text-sm font-semibold text-primary">Listo</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           <View className="flex-1 gap-1.5">
@@ -146,25 +136,64 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
                 {data.hora_fin ? formatTimeObj(data.hora_fin) : '--:--'}
               </Text>
             </TouchableOpacity>
-            {showFin && (
-              <DateTimePicker
-                value={data.hora_fin ?? new Date()}
-                mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={onChangeFin}
-              />
+          </View>
+        </View>
+
+        {/* ponytail: pickers renderizados fuera de las columnas flex-1 — el spinner de iOS ignora el ancho del padre y se salía de pantalla en una columna angosta */}
+        {showInicio && (
+          <View className="gap-1.5">
+            <DateTimePicker
+              value={data.hora_inicio ?? new Date()}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onChangeInicio}
+              style={{ width: '100%' }}
+            />
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowInicio(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
             )}
-            {showFin && Platform.OS === 'ios' && (
+          </View>
+        )}
+
+        {showFin && (
+          <View className="gap-1.5">
+            <DateTimePicker
+              value={data.hora_fin ?? new Date()}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onChangeFin}
+              style={{ width: '100%' }}
+            />
+            {Platform.OS === 'ios' && (
               <TouchableOpacity onPress={() => setShowFin(false)} className="bg-primary/10 rounded-xl py-2 items-center">
                 <Text className="text-sm font-semibold text-primary">Listo</Text>
               </TouchableOpacity>
             )}
           </View>
+        )}
+      </View>
+
+      <View className="flex-row items-center justify-between bg-muted rounded-2xl px-4 py-3">
+        <View className="flex-1 mr-4">
+          <Text className="text-sm font-semibold text-foreground">Ubicación libre</Text>
+          <Text className="text-xs text-muted-foreground mt-0.5">
+            El trabajador podrá marcar entrada y salida desde cualquier lugar — para turnos sin un punto fijo (rutas, entregas, mandados).
+          </Text>
         </View>
+        <Switch
+          value={data.ubicacion_libre}
+          onValueChange={(v) => onChange({ ubicacion_libre: v })}
+          trackColor={{ true: theme.primary }}
+          thumbColor="#fff"
+        />
       </View>
 
       <View className="gap-1.5">
-        <Text className="text-sm font-semibold text-foreground">Lugar</Text>
+        <Text className="text-sm font-semibold text-foreground">
+          Lugar{data.ubicacion_libre ? ' (opcional)' : ''}
+        </Text>
         <LugarInput
           value={data.lugar}
           latitud={data.latitud}
@@ -210,7 +239,11 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
             return (
               <TouchableOpacity
                 key={opt.value}
-                onPress={() => onChange({ para_quien: opt.value })}
+                onPress={() => onChange({
+                  para_quien: opt.value,
+                  // cambiar el destinatario invalida personas ya elegidas que no calificaban con el nuevo tipo
+                  destinatarios: data.para_quien === opt.value ? data.destinatarios : [],
+                })}
                 className={`flex-1 rounded-2xl border py-3 px-2 items-center ${
                   active ? 'border-primary bg-primary/10' : 'border-border bg-card'
                 }`}
@@ -271,6 +304,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         seleccionados={data.destinatarios}
         onConfirm={(destinatarios) => onChange({ destinatarios })}
         onClose={() => setPickerVisible(false)}
+        paraQuien={data.para_quien}
       />
     </ScrollView>
   );

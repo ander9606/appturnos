@@ -10,6 +10,8 @@ export type EstadoVinculo =
   | 'rechazado'
   | 'archivado';
 
+export type TipoOfrecido = 'turnos' | 'nomina';
+
 export interface Vinculo {
   id: number;
   usuario_id: number;
@@ -17,6 +19,8 @@ export interface Vinculo {
   trabajador_id: number | null;
   estado: EstadoVinculo;
   iniciado_por: 'trabajador' | 'empresa';
+  /** 'nomina' implica exclusividad: al aceptar, el trabajador pasa a rol trabajador_nomina y sus demás vínculos se archivan. */
+  tipo_ofrecido: TipoOfrecido;
   fecha_solicitud: string;
   fecha_resuelto: string | null;
   motivo_rechazo: string | null;
@@ -24,6 +28,9 @@ export interface Vinculo {
   empresa_slug: string;
   empresa_logo: string | null;
   empresa_ciudad: string | null;
+  /** Contacto de la empresa — para casos de emergencia o especiales. */
+  empresa_telefono: string | null;
+  empresa_email: string | null;
   ranking: number | null;
   total_calificaciones: number;
 }
@@ -57,6 +64,8 @@ export interface SolicitudAdmin {
   usuario_foto_perfil: string | null;
   /** Cédula/experiencia/diplomas si ya tiene ficha activa en otra empresa; null si es su primera. */
   perfil_previo: PerfilPrevio | null;
+  /** IDs de cargos que el trabajador marcó como interés al solicitar — solo una sugerencia. */
+  cargos_interes: number[];
 }
 
 // ── API ───────────────────────────────────────────────────────────────────
@@ -67,9 +76,9 @@ export const trabajadorEmpresaApi = {
     return api.get<MisEmpresasResponse>('/api/trabajador-empresa/mis-empresas');
   },
 
-  /** Trabajador: solicitar unirse a una empresa */
-  solicitar(empresa_id: number): Promise<Vinculo> {
-    return api.post<Vinculo>('/api/trabajador-empresa/solicitar', { empresa_id });
+  /** Trabajador: solicitar unirse a una empresa, opcionalmente marcando cargos de interés */
+  solicitar(empresa_id: number, cargoIds?: number[]): Promise<Vinculo> {
+    return api.post<Vinculo>('/api/trabajador-empresa/solicitar', { empresa_id, cargo_ids: cargoIds });
   },
 
   /** Trabajador: aceptar una invitación de empresa */
@@ -88,9 +97,9 @@ export const trabajadorEmpresaApi = {
     return api.get<SolicitudAdmin[]>(`/api/trabajador-empresa/solicitudes${suffix}`);
   },
 
-  /** Admin/Jefe: invitar a un trabajador por número de cédula */
-  invitar(cedula: string): Promise<Vinculo> {
-    return api.post<Vinculo>('/api/trabajador-empresa/invitar', { cedula });
+  /** Admin/Jefe: invitar a un trabajador por número de cédula. tipo='nomina' requiere que ya tenga cuenta trabajador_turnos. */
+  invitar(cedula: string, tipo: TipoOfrecido = 'turnos'): Promise<Vinculo> {
+    return api.post<Vinculo>('/api/trabajador-empresa/invitar', { cedula, tipo });
   },
 
   /** Admin/Jefe: aprobar solicitud de un trabajador */

@@ -6,10 +6,7 @@
 import { CheckCircle2, Circle } from 'lucide-react';
 import { useEmpresa } from '@/modules/configuracion/hooks/useConfiguracion';
 import { calcularDeducciones, HORAS_MES_NOMINA } from '../laboral';
-
-function fmtCOP(n: number) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
-}
+import { fmtCOP } from '../lib/format';
 
 interface Props {
   tarifaHora: string;

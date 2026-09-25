@@ -13,29 +13,54 @@ const ContratosModel = {
     const numeroContrato = `CT-${datos.anio}-${datos.asignacionId}`;
     const [res] = await ejecutor.query(
       `INSERT INTO contratos_diarios
-         (empresa_id, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+         (empresa_id, tipo_contrato, asignacion_id, numero_contrato, fecha, descripcion_labor, valor_dia, salario_minimo_validado, firmado_trabajador)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+       ON DUPLICATE KEY UPDATE
+         tipo_contrato = VALUES(tipo_contrato),
+         fecha = VALUES(fecha),
+         descripcion_labor = VALUES(descripcion_labor),
+         valor_dia = VALUES(valor_dia),
+         salario_minimo_validado = VALUES(salario_minimo_validado)`,
       [
         empresaId,
+        datos.tipoContrato || 'LABORAL',
         datos.asignacionId,
         numeroContrato,
         datos.fecha,
         datos.descripcionLabor,
         datos.valorDia,
+        datos.salarioMinimoValidado ? 1 : 0,
       ]
     );
+    // Si insertId es 0, significa que fue un update (contrato ya existía)
+    // En ese caso, buscamos el ID del contrato existente
+    if (res.insertId === 0) {
+      const [filas] = await ejecutor.query(
+        `SELECT id FROM contratos_diarios
+         WHERE empresa_id = ? AND asignacion_id = ? LIMIT 1`,
+        [empresaId, datos.asignacionId]
+      );
+      return filas[0]?.id;
+    }
     return res.insertId;
   },
 
-  /** Contrato con datos de trabajador, oferta y empresa (para detalle y PDF). */
+  /**
+   * Contrato con datos de trabajador, oferta y empresa (para detalle y PDF).
+   * empresaId null: TRABAJADOR_TURNOS multi-empresa — el id de contrato ya es
+   * globalmente único, así que se busca sin acotar por empresa (el llamador
+   * verifica pertenencia después con verificarAcceso).
+   */
   async obtenerPorId(empresaId, id) {
     const [filas] = await pool.query(
       `SELECT c.id, c.empresa_id, c.asignacion_id, c.numero_contrato, c.fecha,
               c.descripcion_labor, c.valor_dia, c.firmado_trabajador, c.firmado_at,
               c.firma_b64, c.pdf_url, c.created_at,
               a.trabajador_id, a.estado AS asignacion_estado,
+              a.bono_monto, a.bono_motivo,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cedula AS trabajador_cedula, t.usuario_id AS trabajador_usuario_id,
+              t.firma_guardada AS trabajador_firma_guardada,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
               e.nombre AS empresa_nombre, e.nit AS empresa_nit
        FROM contratos_diarios c
@@ -43,35 +68,44 @@ const ContratosModel = {
        JOIN trabajadores t ON t.id = a.trabajador_id
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN empresas e ON e.id = c.empresa_id
-       WHERE c.id = ? AND c.empresa_id = ? LIMIT 1`,
-      [id, empresaId]
+       WHERE c.id = ?${empresaId != null ? ' AND c.empresa_id = ?' : ''} LIMIT 1`,
+      empresaId != null ? [id, empresaId] : [id]
     );
     return filas[0] || null;
   },
 
-  async listarPorTrabajador(empresaId, trabajadorId) {
+  /** Todos los contratos del usuario, a través de todas sus empresas activas. */
+  async listarPorUsuario(usuarioId) {
     const [filas] = await pool.query(
       `SELECT c.id, c.numero_contrato, c.fecha, c.valor_dia,
               c.firmado_trabajador, c.firmado_at,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada
        FROM contratos_diarios c
-       JOIN asignaciones_turno a ON a.id = c.asignacion_id
-       JOIN ofertas_turno o ON o.id = a.oferta_id
-       WHERE c.empresa_id = ? AND a.trabajador_id = ?
+       JOIN asignaciones_turno a  ON a.id = c.asignacion_id
+       JOIN trabajador_empresa te ON te.trabajador_id = a.trabajador_id
+       JOIN ofertas_turno o       ON o.id = a.oferta_id
+       WHERE te.usuario_id = ? AND te.estado = 'activo'
        ORDER BY c.fecha DESC`,
-      [empresaId, trabajadorId]
+      [usuarioId]
     );
     return filas;
   },
 
+  /**
+   * Contrato de una asignación. empresaId null: TRABAJADOR_TURNOS
+   * multi-empresa — asignacion_id ya es único en contratos_diarios, así que
+   * se busca sin acotar por empresa (ver obtenerPorId).
+   */
   async obtenerPorAsignacion(empresaId, asignacionId) {
     const [filas] = await pool.query(
       `SELECT c.id, c.empresa_id, c.asignacion_id, c.numero_contrato, c.fecha,
               c.descripcion_labor, c.valor_dia, c.firmado_trabajador, c.firmado_at,
               c.firma_b64, c.pdf_url, c.created_at,
               a.trabajador_id, a.estado AS asignacion_estado,
+              a.bono_monto, a.bono_motivo,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cedula AS trabajador_cedula, t.usuario_id AS trabajador_usuario_id,
+              t.firma_guardada AS trabajador_firma_guardada,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
               e.nombre AS empresa_nombre, e.nit AS empresa_nit
        FROM contratos_diarios c
@@ -79,8 +113,8 @@ const ContratosModel = {
        JOIN trabajadores t ON t.id = a.trabajador_id
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN empresas e ON e.id = c.empresa_id
-       WHERE c.asignacion_id = ? AND c.empresa_id = ? LIMIT 1`,
-      [asignacionId, empresaId]
+       WHERE c.asignacion_id = ?${empresaId != null ? ' AND c.empresa_id = ?' : ''} LIMIT 1`,
+      empresaId != null ? [asignacionId, empresaId] : [asignacionId]
     );
     return filas[0] || null;
   },
@@ -93,6 +127,63 @@ const ContratosModel = {
       [firmaB64, id, empresaId]
     );
     return res.affectedRows;
+  },
+
+  /** Revierte la firma: se usa cuando un bono agregado después de firmar cambia el monto pactado. */
+  async resetearFirma(empresaId, id) {
+    const [res] = await pool.query(
+      `UPDATE contratos_diarios
+       SET firmado_trabajador = 0, firmado_at = NULL, firma_b64 = NULL
+       WHERE id = ? AND empresa_id = ?`,
+      [id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
+  async contarPorTrabajadorUltimo12Meses(empresaId, trabajadorId) {
+    const [resultado] = await pool.query(
+      `SELECT COUNT(*) as cantidad
+       FROM contratos_diarios c
+       JOIN asignaciones_turno a ON a.id = c.asignacion_id
+       WHERE c.empresa_id = ? AND a.trabajador_id = ?
+         AND c.created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)`,
+      [empresaId, trabajadorId]
+    );
+    return resultado[0]?.cantidad || 0;
+  },
+
+  async registrarAuditoria(empresaId, trabajadorId, cantidad, estado, accion) {
+    await pool.query(
+      `INSERT INTO contratos_acumulacion_auditoria
+       (empresa_id, trabajador_id, contratos_ultima_12_meses, estado, accion)
+       VALUES (?, ?, ?, ?, ?)`,
+      [empresaId, trabajadorId, cantidad, estado, accion]
+    );
+  },
+
+  /**
+   * Contratos sin firmar del usuario, a través de todas sus empresas activas.
+   * Un trabajador_turnos marketplace puede tener fila de trabajador en más de
+   * una empresa — filtrar por un solo (empresa, trabajador) resuelto de
+   * antemano escondía los contratos de las demás empresas.
+   */
+  async listarSinFirmarPorUsuario(usuarioId) {
+    const [filas] = await pool.query(
+      `SELECT c.id, c.numero_contrato, c.fecha, c.valor_dia,
+              c.descripcion_labor, c.tipo_contrato,
+              o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
+              a.id AS asignacion_id
+       FROM contratos_diarios c
+       JOIN asignaciones_turno a  ON a.id = c.asignacion_id
+       JOIN trabajador_empresa te ON te.trabajador_id = a.trabajador_id
+       JOIN ofertas_turno o       ON o.id = a.oferta_id
+       WHERE te.usuario_id = ? AND te.estado = 'activo'
+         AND c.firmado_trabajador = 0
+         AND a.estado = 'completado'
+       ORDER BY c.fecha DESC`,
+      [usuarioId]
+    );
+    return filas;
   },
 };
 

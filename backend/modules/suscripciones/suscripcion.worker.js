@@ -43,7 +43,6 @@ async function procesarRenovaciones() {
         const link = await WompiService.generarLinkPago({
           empresaId:     emp.id,
           nombreEmpresa: emp.nombre,
-          plan:          emp.plan,
           meses:         1,
         });
 

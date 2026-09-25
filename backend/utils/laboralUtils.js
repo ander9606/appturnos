@@ -8,19 +8,22 @@
  *  2. Desglose de horas trabajadas en ordinarias / extra / nocturnas / festivo
  *     a partir de la hora de entrada y salida.
  *
- * Referencia de recargos (ver 02-BASE-DATOS.md):
- *   Jornada ordinaria        8 h/día
- *   Horario nocturno         21:00 – 06:00
+ * Referencia de recargos (ver APP-TURNOS-SPEC/02-BASE-DATOS.md):
+ *   Jornada ordinaria        42 h/semana
+ *   Horario nocturno         19:00 – 06:00 (21:00 antes del 25-dic-2025)
  *   Extra diurna             ×1.25
  *   Extra nocturna           ×1.75
- *   Recargo nocturno         ×1.35
- *   Dominical/festivo        ×1.75 (diurno) / ×2.10 (nocturno)
+ *   Recargo nocturno         +35 % (×0.35 asalariado, ×1.35 por tarifa_hora)
+ *   Dominical/festivo        ×1.80 / ×1.90 / ×2.00 según fecha (Ley 2466 de 2025)
  */
 
 const {
   JORNADA_SEMANAL_HORAS,
-  HORA_INICIO_NOCTURNO,
+  HORA_INICIO_NOCTURNO_VIGENCIAS,
+  RECARGO_FESTIVO_VIGENCIAS,
   HORA_FIN_NOCTURNO,
+  JORNADA_CONTINUA_UMBRAL_HORAS,
+  DURACION_ALMUERZO_MIN,
   HORAS_MES_NOMINA,
   RECARGOS,
   SMMLV_COP,
@@ -122,6 +125,18 @@ function festivosDeAnio(anio) {
 const _cacheFestivos = new Map();
 
 /**
+ * Indica si una fecha cae en domingo — se usa para la clasificación
+ * ocasional/habitual (Art. 180/181 CST), que solo aplica a domingos, no a
+ * festivos entre semana.
+ * @param {string|Date} fecha  'YYYY-MM-DD' o Date.
+ * @returns {boolean}
+ */
+function esDomingo(fecha) {
+  const iso = typeof fecha === 'string' ? fecha.slice(0, 10) : aISODate(fecha);
+  return new Date(`${iso}T00:00:00Z`).getUTCDay() === 0;
+}
+
+/**
  * Indica si una fecha es festivo o domingo (ambos llevan recargo dominical/festivo).
  * @param {string|Date} fecha  'YYYY-MM-DD' o Date.
  * @returns {boolean}
@@ -150,14 +165,67 @@ function horaAMinutos(hora) {
   return h * 60 + (m || 0);
 }
 
-/** True si el minuto del día (0-1439) cae en horario nocturno (21:00–06:00). */
-function esMinutoNocturno(minutoDelDia) {
+/**
+ * Fila de una tabla de vigencias (constants.js) que aplica en `fecha`
+ * ('YYYY-MM-DD' o Date; sin fecha = hoy en Colombia).
+ */
+function vigenteEn(tabla, fecha) {
+  const iso = fecha instanceof Date
+    ? aISODate(fecha)
+    : fecha ? String(fecha).slice(0, 10) : new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Bogota' });
+  return tabla.find((v) => v.desde <= iso);
+}
+
+/** Hora (0-23) en que empieza el trabajo nocturno en `fecha` (Ley 2466: 19 desde 25-dic-2025). */
+function horaInicioNocturno(fecha) {
+  return vigenteEn(HORA_INICIO_NOCTURNO_VIGENCIAS, fecha).hora;
+}
+
+/** Multiplicador de la hora dominical/festiva en `fecha` (Ley 2466: 1.80 → 1.90 → 2.00). */
+function recargoFestivo(fecha) {
+  return vigenteEn(RECARGO_FESTIVO_VIGENCIAS, fecha).factor;
+}
+
+/** True si el minuto del día (0-1439) cae en horario nocturno (horaInicio:00–06:00). */
+function esMinutoNocturno(minutoDelDia, horaInicio = horaInicioNocturno()) {
   const h = Math.floor((minutoDelDia % MIN_POR_DIA) / 60);
-  return h >= HORA_INICIO_NOCTURNO || h < HORA_FIN_NOCTURNO;
+  return h >= horaInicio || h < HORA_FIN_NOCTURNO;
 }
 
 function redondear(horas) {
   return Math.round(horas * 100) / 100;
+}
+
+/**
+ * Minutos (índices absolutos dentro de [inicio, fin), pueden superar 1439 si
+ * el turno cruza medianoche) que se descuentan como almuerzo.
+ *
+ * Por defecto, si la jornada supera JORNADA_CONTINUA_UMBRAL_HORAS se asume
+ * que el trabajador tomó su hora de almuerzo (Art. 167 CST) y se descuentan
+ * DURACION_ALMUERZO_MIN minutos — tomados del FINAL DEL BLOQUE DIURNO (se
+ * escanea hacia atrás desde `fin` saltando minutos nocturnos) para no
+ * comerse horas nocturnas ya causadas. `jornadaContinua: true` (el
+ * trabajador indica que NO tomó almuerzo al cerrar) omite el descuento.
+ *
+ * @param {number} inicio  Minuto de inicio del turno (ver horaAMinutos).
+ * @param {number} fin     Minuto de fin (> inicio; ya ajustado si cruza medianoche).
+ * @param {boolean} jornadaContinua
+ * @param {number} [horaInicioNoct]  Ver horaInicioNocturno(); por defecto la regla de hoy.
+ * @returns {Set<number>}
+ */
+function calcularMinutosAlmuerzo(inicio, fin, jornadaContinua, horaInicioNoct = horaInicioNocturno()) {
+  const totalMin = fin - inicio;
+  let pendiente =
+    !jornadaContinua && totalMin > JORNADA_CONTINUA_UMBRAL_HORAS * 60 ? DURACION_ALMUERZO_MIN : 0;
+
+  const minutos = new Set();
+  for (let m = fin - 1; m >= inicio && pendiente > 0; m--) {
+    if (!esMinutoNocturno(m, horaInicioNoct)) {
+      minutos.add(m);
+      pendiente--;
+    }
+  }
+  return minutos;
 }
 
 /**
@@ -184,8 +252,24 @@ function redondear(horas) {
  * @param {number} [params.horasOrdinariasAcumuladas=0]
  *   Horas ordinarias + nocturnas ya registradas esta semana (lunes–ayer).
  *   Cuando se supera JORNADA_SEMANAL_HORAS el resto del turno pasa a extra.
+ * @param {boolean} [params.jornadaContinua=false]
+ *   Si la jornada supera JORNADA_CONTINUA_UMBRAL_HORAS, por defecto se asume
+ *   que el trabajador tomó su hora de almuerzo (Art. 167 CST) y se descuentan
+ *   DURACION_ALMUERZO_MIN minutos de la jornada. Marcar `jornadaContinua: true`
+ *   (el trabajador indica que NO tomó almuerzo al cerrar) omite ese descuento.
+ * @param {boolean} [params.recargoFestivo=true]
+ *   Si el día es domingo/festivo, controla si sus horas llevan el recargo
+ *   festivo (Art. 179 CST) o se pagan como ordinarias/nocturnas normales.
+ *   En falso para un domingo "ocasional" (≤2 domingos trabajados en el mes
+ *   calendario, Art. 180 CST): el trabajador recibe el descanso compensatorio
+ *   pero no el recargo en dinero para esas horas. `es_festivo` en el
+ *   resultado no cambia — sigue marcando que el día fue domingo/festivo
+ *   (dispara el compensatorio) independientemente de este parámetro.
  */
-function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinariasAcumuladas = 0 } = {}) {
+function calcularHoras({
+  horaEntrada, horaSalida, fecha, esFestivo, horasOrdinariasAcumuladas = 0, jornadaContinua = false,
+  recargoFestivo = true,
+} = {}) {
   const vacio = {
     horas_ordinarias: 0,
     horas_extra_diurnas: 0,
@@ -208,6 +292,10 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
   const festivo =
     typeof esFestivo === 'boolean' ? esFestivo : fecha ? esDiaFestivo(fecha) : false;
 
+  // El inicio del nocturno depende de la fecha trabajada (Ley 2466); sin fecha, regla de hoy.
+  const horaInicioNoct = horaInicioNocturno(fecha);
+  const esAlmuerzo = calcularMinutosAlmuerzo(inicio, fin, jornadaContinua, horaInicioNoct);
+
   let ordinariasDiurnas = 0;
   let ordinariasNocturnas = 0;
   let extraDiurnas = 0;
@@ -217,12 +305,13 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
   // Minutos ordinarios restantes para completar la jornada semanal (42 h).
   const minOrdinarioRestante = Math.max(0, (JORNADA_SEMANAL_HORAS - horasOrdinariasAcumuladas) * 60);
 
+  let minutosContados = 0; // excluye almuerzo del acumulado semanal
   for (let m = inicio; m < fin; m++) {
-    const trabajados = m - inicio; // minutos acumulados del turno actual
-    const esOrdinario = trabajados < minOrdinarioRestante;
-    const nocturno = esMinutoNocturno(m);
+    if (esAlmuerzo.has(m)) continue;
+    const esOrdinario = minutosContados < minOrdinarioRestante;
+    const nocturno = esMinutoNocturno(m, horaInicioNoct);
 
-    if (festivo) {
+    if (festivo && recargoFestivo) {
       festivoMin++;
     } else if (esOrdinario) {
       if (nocturno) ordinariasNocturnas++;
@@ -232,18 +321,19 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
     } else {
       extraDiurnas++;
     }
+    minutosContados++;
   }
 
   return {
     // Las ordinarias nocturnas siguen siendo ordinarias para el conteo de jornada,
-    // pero se reportan aparte porque devengan el recargo nocturno (×1.35).
+    // pero se reportan aparte porque devengan el recargo nocturno (+35 %).
     horas_ordinarias: redondear(ordinariasDiurnas / 60),
     horas_extra_diurnas: redondear(extraDiurnas / 60),
     horas_extra_nocturnas: redondear(extraNocturnas / 60),
     horas_nocturnas: redondear(ordinariasNocturnas / 60),
     horas_festivo: redondear(festivoMin / 60),
     es_festivo: festivo ? 1 : 0,
-    total_horas: redondear(totalMin / 60),
+    total_horas: redondear((totalMin - esAlmuerzo.size) / 60),
   };
 }
 
@@ -253,14 +343,69 @@ function calcularHoras({ horaEntrada, horaSalida, fecha, esFestivo, horasOrdinar
 
 /**
  * Valor de la hora ordinaria de un trabajador.
- * Usa `tarifa_hora` si está definida; si no, lo deriva del salario mensual.
+ * Usa `salario_base` (÷HORAS_MES_NOMINA = 210) si está definido; si no, cae a `tarifa_hora`.
+ * Un trabajador solo debería tener uno de los dos, pero si por error quedan
+ * ambos cargados, el salario mensual manda — es el dato "de contrato".
  */
 function valorHora(trabajador) {
-  if (trabajador.tarifa_hora != null) return Number(trabajador.tarifa_hora);
   if (trabajador.salario_base != null) {
     return Number(trabajador.salario_base) / HORAS_MES_NOMINA;
   }
+  if (trabajador.tarifa_hora != null) return Number(trabajador.tarifa_hora);
   return 0;
+}
+
+/**
+ * Salario base de un trabajador para un período de nómina.
+ *
+ * Un trabajador con salario mensual asignado (`salario_base`) cobra su sueldo
+ * fijo COMPLETO cada período, prorrateado por días — nunca depende de cuántas
+ * `horas_ordinarias` haya marcado ese período (jornada corta no le descuenta
+ * el sueldo; eso se maneja aparte con descuentos manuales por inasistencia).
+ * Las horas extra/recargo se calculan por separado sobre las horas reales
+ * (ver desglosarPagoNomina) y se SUMAN a este salario base.
+ *
+ * Un trabajador por `tarifa_hora` (sin salario mensual) sigue cobrando por
+ * hora realmente ordinaria trabajada — no hay salario fijo que prorratear.
+ * Si por error quedan ambos campos cargados, `salario_base` manda (igual
+ * que en `valorHora`) — evita que una tarifa vieja/residual le baje el sueldo
+ * fijo a alguien que ya pasó a nómina mensual.
+ *
+ * @param {object} params
+ * @param {number|null} params.salarioBase       trabajador.salario_base (mensual)
+ * @param {number} params.horasOrdinarias        Solo se usa si es por tarifa_hora.
+ * @param {number} params.valorHoraTrabajador    Solo se usa si es por tarifa_hora.
+ * @param {number} params.diasPeriodo            Días comerciales del período (ver diasComerciales).
+ */
+/**
+ * Días de un rango en mes comercial de 30 días (convención de nómina en
+ * Colombia): cada mes cuenta 30, el 31 no suma y el último día de febrero
+ * cuenta hasta el 30. Así una quincena siempre es 15 y un mes siempre 30,
+ * sin importar si el mes trae 28, 29 o 31 días.
+ * @param {string} desde 'YYYY-MM-DD'
+ * @param {string} hasta 'YYYY-MM-DD' (incluido)
+ */
+function diasComerciales(desde, hasta) {
+  const [y1, m1, d1] = String(desde).slice(0, 10).split('-').map(Number);
+  const [y2, m2, d2] = String(hasta).slice(0, 10).split('-').map(Number);
+  const ultimoDiaMes = new Date(Date.UTC(y2, m2, 0)).getUTCDate();
+  const fin = d2 === ultimoDiaMes ? 30 : Math.min(d2, 30);
+  return (y2 - y1) * 360 + (m2 - m1) * 30 + fin - Math.min(d1, 30) + 1;
+}
+
+/**
+ * Días a pagar de un período de nómina: semanal = 7 siempre (sueldo semanal
+ * = mensual ÷ 30 × 7); mensual y quincenal = días comerciales.
+ */
+function diasPagoPeriodo({ tipo, fecha_inicio, fecha_fin }) {
+  return tipo === 'semanal' ? 7 : diasComerciales(fecha_inicio, fecha_fin);
+}
+
+function calcularSalarioBasePeriodo({ salarioBase, horasOrdinarias, valorHoraTrabajador, diasPeriodo }) {
+  if (salarioBase != null) {
+    return (Number(salarioBase) || 0) / 30 * Number(diasPeriodo);
+  }
+  return (Number(horasOrdinarias) || 0) * (Number(valorHoraTrabajador) || 0);
 }
 
 /**
@@ -270,16 +415,49 @@ function valorHora(trabajador) {
  *                           horas_extra_nocturnas, horas_nocturnas, horas_festivo.
  * @param {number} valorHoraTrabajador
  */
-function calcularPagoNomina(desglose, valorHoraTrabajador) {
+function calcularPagoNomina(desglose, valorHoraTrabajador, fecha) {
+  return desglosarPagoNomina(desglose, valorHoraTrabajador, fecha).total;
+}
+
+/**
+ * Igual que calcularPagoNomina() pero devuelve el monto de cada concepto por
+ * separado en vez de solo la suma — para que la UI pueda mostrar "salario
+ * base $X + horas extra $Y" en vez de un solo total sin desglosar.
+ * @param {object} desglose  Campos horas_ordinarias, horas_extra_diurnas,
+ *                           horas_extra_nocturnas, horas_nocturnas, horas_festivo.
+ * @param {number} valorHoraTrabajador
+ * @param {string|Date} [fecha]  Fecha que fija el recargo dominical/festivo
+ *   (normalmente el fin del período); sin fecha, el vigente hoy.
+ * @param {object} [opciones]
+ * @param {boolean} [opciones.salarioFijo=false]  true si el trabajador cobra
+ *   salario_base: su sueldo ya paga la hora nocturna ordinaria, así que solo
+ *   se suma el recargo (×0.35). Por tarifa_hora se paga base + recargo (×1.35).
+ *   ponytail: las horas festivas llegan sumadas por período, así que un período
+ *   que cruce un 1-jul usa una sola tasa — upgrade path: sumar horas_festivo
+ *   × recargoFestivo(fecha) por registro en el SQL de liquidación.
+ */
+function desglosarPagoNomina(desglose, valorHoraTrabajador, fecha, { salarioFijo = false } = {}) {
   const n = (v) => Number(v) || 0;
-  return (
-    valorHoraTrabajador *
-    (n(desglose.horas_ordinarias) +
-      RECARGOS.NOCTURNA * n(desglose.horas_nocturnas) +
-      RECARGOS.EXTRA_DIURNA * n(desglose.horas_extra_diurnas) +
-      RECARGOS.EXTRA_NOCTURNA * n(desglose.horas_extra_nocturnas) +
-      RECARGOS.FESTIVO_DIURNO * n(desglose.horas_festivo))
-  );
+  const vh = Number(valorHoraTrabajador) || 0;
+  const recargo_festivo = recargoFestivo(fecha);
+  const recargo_nocturno = (salarioFijo ? 0 : 1) + RECARGOS.NOCTURNO_ADICIONAL;
+
+  const pago_ordinario      = vh * n(desglose.horas_ordinarias);
+  const pago_nocturno       = vh * recargo_nocturno * n(desglose.horas_nocturnas);
+  const pago_extra_diurno   = vh * RECARGOS.EXTRA_DIURNA * n(desglose.horas_extra_diurnas);
+  const pago_extra_nocturno = vh * RECARGOS.EXTRA_NOCTURNA * n(desglose.horas_extra_nocturnas);
+  const pago_festivo        = vh * recargo_festivo * n(desglose.horas_festivo);
+
+  return {
+    recargo_festivo,
+    recargo_nocturno,
+    pago_ordinario,
+    pago_nocturno,
+    pago_extra_diurno,
+    pago_extra_nocturno,
+    pago_festivo,
+    total: pago_ordinario + pago_nocturno + pago_extra_diurno + pago_extra_nocturno + pago_festivo,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -315,22 +493,31 @@ function calcularDeducciones(ibc) {
  * SUBSIDIO_TRANSPORTE_TOPE_SMMLV salarios mínimos. No es IBC — no lleva
  * descuento de salud/pensión.
  * @param {number} salarioMensualEquivalente  valorHora(trabajador) * HORAS_MES_NOMINA.
- * @param {number} diasPeriodo  días calendario del período de nómina.
+ * @param {number} diasPeriodo  días comerciales del período (ver diasPagoPeriodo).
  */
 function calcularSubsidioTransporte(salarioMensualEquivalente, diasPeriodo) {
   const salario = Number(salarioMensualEquivalente) || 0;
   if (salario <= 0 || salario > SMMLV_COP * SUBSIDIO_TRANSPORTE_TOPE_SMMLV) return 0;
-  return (SUBSIDIO_TRANSPORTE_COP / 30) * diasPeriodo;
+  // Multiplicar antes de dividir: 249095 / 30 * 30 da 249094.9999… en punto flotante.
+  return (SUBSIDIO_TRANSPORTE_COP * diasPeriodo) / 30;
 }
 
 module.exports = {
   calcularPascua,
   festivosDeAnio,
   esDiaFestivo,
+  esDomingo,
   calcularHoras,
+  calcularMinutosAlmuerzo,
   horaAMinutos,
+  horaInicioNocturno,
+  recargoFestivo,
   valorHora,
   calcularPagoNomina,
+  desglosarPagoNomina,
+  calcularSalarioBasePeriodo,
+  diasComerciales,
+  diasPagoPeriodo,
   calcularDeducciones,
   calcularSubsidioTransporte,
 };

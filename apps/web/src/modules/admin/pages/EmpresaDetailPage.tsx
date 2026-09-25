@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Building2, Users, Briefcase, Calendar, DollarSign, ToggleLeft, ToggleRight, Copy, Check, CreditCard, Zap } from 'lucide-react';
-import { useEmpresa, useCambiarEstadoEmpresa, useGestionarSuscripcion, useGenerarLinkPago } from '../hooks/useAdmin';
-import type { Plan, OrigenSuscripcion } from '../types';
+import { useEmpresa, useCambiarEstadoEmpresa, useGestionarSuscripcion, useGenerarLinkPago, usePlanes } from '../hooks/useAdmin';
+import { ErrorState } from '@/shared/components/ErrorState';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { useConfirm } from '@/shared/hooks/useConfirm';
+import { fmtCOP } from '@/shared/lib/format';
+import { precioPlan, type Plan, type OrigenSuscripcion, type PlanConfig } from '../types';
 
 const PLAN_BADGE: Record<Plan, string> = {
   basico: 'bg-muted text-muted-foreground',
@@ -22,17 +26,16 @@ const ORIGEN_BADGE: Record<OrigenSuscripcion, string> = {
   logiq360: 'bg-success-light text-success',
 };
 
-// Precio único mensual (COP) para empresas sin integración logiq360 activa —
-// ver backend/config/constants.js PRECIO_MENSUAL_COP. El plan ya no afecta el precio,
-// solo límites de features (max_trabajadores).
-const PRECIO_MENSUAL_COP = 129000;
-
-function fmtDate(s: string) {
-  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(s));
+/** "hasta 10 trabajadores" / "80 incluidos + $3.500 c/u adicional" / "sin tope". */
+function describirTope(p: PlanConfig): string {
+  if (p.incluidos != null) return `${p.incluidos} incluidos + ${fmtCOP(p.precio_adicional_cop ?? 0)} c/u adicional`;
+  return p.max_trabajadores != null ? `hasta ${p.max_trabajadores} trabajadores` : 'sin tope';
 }
 
-function fmtCOP(n: number) {
-  return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+// ponytail: created_at es TIMESTAMP (llega "YYYY-MM-DD HH:MM:SS", dateStrings:true en el pool) —
+// el fmtDate compartido asume fechas puras y le agrega T00:00:00, rompería este formato.
+function fmtDate(s: string) {
+  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date(s));
 }
 
 function suscripcionActiva(vigente_hasta: string | null): boolean {
@@ -45,17 +48,22 @@ export function EmpresaDetailPage() {
   const navigate = useNavigate();
   const empresaId = Number(id);
 
-  const { data, isLoading } = useEmpresa(empresaId);
+  const { data, isLoading, isError, error, refetch } = useEmpresa(empresaId);
+  const { data: planesData } = usePlanes();
+  const planes = planesData?.data ?? [];
   const empresa = data?.data;
 
   const cambiarEstado      = useCambiarEstadoEmpresa();
   const gestionarSusc      = useGestionarSuscripcion(empresaId);
   const generarLink        = useGenerarLinkPago(empresaId);
+  const { confirmState, confirm, close } = useConfirm();
 
   // Link de pago
   const [linkPlan, setLinkPlan]   = useState<Plan>('basico');
   const [linkMeses, setLinkMeses] = useState(1);
   const [linkUrl, setLinkUrl]     = useState('');
+  const [linkMonto, setLinkMonto] = useState<number | null>(null);
+  const planLink = planes.find(p => p.codigo === linkPlan);
   const [copied, setCopied]       = useState(false);
 
   // Activación manual
@@ -63,6 +71,7 @@ export function EmpresaDetailPage() {
   const [manualFecha, setManualFecha] = useState('');
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-12 text-center">Cargando...</p>;
+  if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!empresa)  return <p className="text-muted-foreground text-sm py-12 text-center">Empresa no encontrada</p>;
 
   const activo  = Boolean(empresa.activo);
@@ -71,6 +80,7 @@ export function EmpresaDetailPage() {
   async function handleGenerarLink() {
     const res = await generarLink.mutateAsync({ plan: linkPlan, meses: linkMeses });
     setLinkUrl(res.data?.url ?? '');
+    setLinkMonto(res.data?.monto_cop ?? null);
   }
 
   function handleCopiar() {
@@ -126,12 +136,14 @@ export function EmpresaDetailPage() {
             </div>
           </div>
           <button
-            onClick={() => {
-              const msg = activo
+            onClick={() => confirm({
+              title: activo ? 'Desactivar empresa' : 'Activar empresa',
+              detail: activo
                 ? `¿Desactivar ${empresa.nombre}? Todos sus usuarios y trabajadores perderán acceso.`
-                : `¿Activar ${empresa.nombre}?`;
-              if (window.confirm(msg)) cambiarEstado.mutate({ id: empresa.id, activo: !activo });
-            }}
+                : `¿Activar ${empresa.nombre}?`,
+              confirmLabel: activo ? 'Desactivar' : 'Activar',
+              onConfirm: () => { cambiarEstado.mutate({ id: empresa.id, activo: !activo }); close(); },
+            })}
             disabled={cambiarEstado.isPending}
             className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl border transition-colors disabled:opacity-50 ${
               activo
@@ -210,9 +222,11 @@ export function EmpresaDetailPage() {
                 onChange={e => { setLinkPlan(e.target.value as Plan); setLinkUrl(''); }}
                 className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background text-foreground"
               >
-                <option value="basico">Básico — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
-                <option value="profesional">Profesional — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
-                <option value="empresarial">Empresarial — {fmtCOP(PRECIO_MENSUAL_COP)}/mes</option>
+                {planes.map(p => (
+                  <option key={p.codigo} value={p.codigo}>
+                    {p.nombre} — {fmtCOP(p.precio_cop)}/mes ({describirTope(p)})
+                  </option>
+                ))}
               </select>
             </div>
             <div className="w-24">
@@ -228,7 +242,12 @@ export function EmpresaDetailPage() {
           </div>
 
           <p className="text-xs text-muted-foreground mb-3">
-            Total: <span className="font-semibold text-foreground">{fmtCOP(PRECIO_MENSUAL_COP * linkMeses)}</span>
+            {linkUrl && linkMonto != null ? 'Total cobrado' : 'Total estimado'}:{' '}
+            <span className="font-semibold text-foreground">
+              {fmtCOP(linkUrl && linkMonto != null
+                ? linkMonto
+                : planLink ? precioPlan(planLink, empresa.total_trabajadores ?? 0) * linkMeses : 0)}
+            </span>
           </p>
 
           {linkUrl ? (
@@ -304,6 +323,16 @@ export function EmpresaDetailPage() {
           </button>
         </div>
       </div>
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }

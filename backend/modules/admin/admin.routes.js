@@ -23,6 +23,35 @@ router.get(
   ctrl.reportesGlobales
 );
 
+// ── Planes y precios ─────────────────────────────────────────────────────
+
+// GET /api/admin/planes
+router.get('/planes', verificarToken, verificarRol(SOLO_SUPER), ctrl.listarPlanes);
+
+// PUT /api/admin/planes/:codigo — el nuevo precio aplica a los próximos links
+// de pago; lo ya pagado no cambia.
+const enteroONull = (campo, { min, max }) =>
+  body(campo)
+    .exists().withMessage(`${campo} es requerido (null para "sin valor")`)
+    .custom((v) => v === null || (Number.isInteger(v) && v >= min && v <= max))
+    .withMessage(`${campo} debe ser un entero entre ${min} y ${max}, o null`);
+
+router.put(
+  '/planes/:codigo',
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [
+    param('codigo').isIn(['basico', 'profesional', 'empresarial']),
+    body('precio_cop').isInt({ min: 0, max: 10_000_000 }).toInt()
+      .withMessage('precio_cop debe ser un entero entre 0 y 10.000.000'),
+    enteroONull('max_trabajadores', { min: 1, max: 100_000 }),
+    enteroONull('incluidos', { min: 0, max: 100_000 }),
+    enteroONull('precio_adicional_cop', { min: 0, max: 1_000_000 }),
+  ],
+  validar,
+  ctrl.actualizarPlan
+);
+
 // ── Empresas ──────────────────────────────────────────────────────────────
 
 // GET /api/admin/empresas

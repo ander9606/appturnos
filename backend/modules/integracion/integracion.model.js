@@ -20,8 +20,8 @@ const IntegracionModel = {
     await pool.query(
       `INSERT INTO integracion_config
          (empresa_id, activo, webhook_url, webhook_secret, api_key, incoming_secret,
-          logiq360_tenant_id, logiq360_base_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          logiq360_tenant_id, logiq360_base_url, logiq360_api_key)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          activo = VALUES(activo),
          webhook_url = VALUES(webhook_url),
@@ -29,7 +29,8 @@ const IntegracionModel = {
          api_key = VALUES(api_key),
          incoming_secret = VALUES(incoming_secret),
          logiq360_tenant_id = VALUES(logiq360_tenant_id),
-         logiq360_base_url = VALUES(logiq360_base_url)`,
+         logiq360_base_url = VALUES(logiq360_base_url),
+         logiq360_api_key = VALUES(logiq360_api_key)`,
       [
         empresaId,
         d.activo ? 1 : 0,
@@ -39,6 +40,7 @@ const IntegracionModel = {
         d.incoming_secret ?? null,
         d.logiq360_tenant_id ?? null,
         d.logiq360_base_url ?? null,
+        d.logiq360_api_key ?? null,
       ]
     );
   },

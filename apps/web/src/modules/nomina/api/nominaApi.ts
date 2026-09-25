@@ -1,8 +1,8 @@
 import { api } from '@/shared/api/axios';
-import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento, EstadoDescuento } from '../types';
+import type { EstadoPeriodo, TipoPeriodo, TipoDia, TipoDescuento, EstadoDescuento, EstadoCompensatorio } from '../types';
 
 export const nominaApi = {
-  listarPeriodos: (params?: { estado?: EstadoPeriodo; page?: number; limit?: number; conTotales?: boolean }) =>
+  listarPeriodos: (params?: { estado?: EstadoPeriodo; fecha_desde?: string; fecha_hasta?: string; page?: number; limit?: number; conTotales?: boolean }) =>
     api.get('/nomina/periodos', { params }).then(r => r.data),
 
   crearPeriodo: (data: { fecha_inicio: string; fecha_fin: string; tipo?: TipoPeriodo }) =>
@@ -14,14 +14,17 @@ export const nominaApi = {
   liquidarPeriodo: (id: number) =>
     api.post(`/nomina/periodos/${id}/liquidar`).then(r => r.data),
 
-  listarRegistros: (params: { periodo_id?: number; trabajador_id?: number; fecha?: string; page?: number; limit?: number }) =>
-    api.get('/nomina/registros', { params }).then(r => r.data),
+  listarRegistros: (params: { periodo_id?: number; trabajador_id?: number; fecha?: string; sospechoso?: boolean; page?: number; limit?: number }) =>
+    api.get('/nomina/registros', { params: { ...params, sospechoso: params.sospechoso === undefined ? undefined : (params.sospechoso ? '1' : '0') } }).then(r => r.data),
 
   crearRegistro: (data: { periodo_id: number; fecha: string; hora_entrada: string; hora_salida?: string; trabajador_id: number; novedad?: string }) =>
     api.post('/nomina/registros', data).then(r => r.data),
 
-  corregirRegistro: (id: number, data: { hora_entrada?: string; hora_salida?: string; novedad?: string; tipo_dia?: TipoDia }) =>
+  corregirRegistro: (id: number, data: { hora_entrada?: string | null; hora_salida?: string | null; novedad?: string; tipo_dia?: TipoDia }) =>
     api.put(`/nomina/registros/${id}`, data).then(r => r.data),
+
+  descartarSospechoso: (id: number) =>
+    api.put(`/nomina/registros/${id}/sospechoso/descartar`).then(r => r.data),
 
   obtenerLiquidacion: (periodoId: number) =>
     api.get(`/nomina/liquidacion/${periodoId}`).then(r => r.data),
@@ -40,4 +43,27 @@ export const nominaApi = {
 
   eliminarDescuento: (id: number) =>
     api.delete(`/nomina/descuentos/${id}`).then(r => r.data),
+
+  listarCompensatorios: (params?: { estado?: EstadoCompensatorio }) =>
+    api.get('/nomina/compensatorios', { params }).then(r => r.data),
+
+  asignarCompensatorio: (id: number, fechaAsignada: string) =>
+    api.put(`/nomina/compensatorios/${id}/asignar`, { fechaAsignada }).then(r => r.data),
+
+  reasignarCompensatorio: (id: number, fechaAsignada: string) =>
+    api.put(`/nomina/compensatorios/${id}/reasignar`, { fechaAsignada }).then(r => r.data),
+
+  rangoCompensatorio: (id: number) =>
+    api.get(`/nomina/compensatorios/${id}/rango`).then(r => r.data),
+
+  // Turnos eventuales (extra) del segmento 'nomina' — trabajadores de nómina que
+  // además toman turnos ocasionales, pagados como bono trimestral (no contrato).
+  periodoActivoEventual: () =>
+    api.get('/turnos/eventual/periodo-activo').then(r => r.data),
+
+  liquidacionEventual: (periodoId: number) =>
+    api.get(`/turnos/eventual/${periodoId}/liquidacion`).then(r => r.data),
+
+  liquidarEventual: (periodoId: number) =>
+    api.post(`/turnos/eventual/${periodoId}/liquidar`).then(r => r.data),
 };

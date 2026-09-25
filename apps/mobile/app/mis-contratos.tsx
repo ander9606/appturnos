@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { contratosApi } from '@api-client';
@@ -15,6 +15,8 @@ import type { ContratoResumen } from '@api-client';
 export default function MisContratosScreen() {
   const router = useRouter();
   const theme  = useTheme();
+  const { pendientes } = useLocalSearchParams<{ pendientes?: string }>();
+  const [soloPendientes, setSoloPendientes] = useState(pendientes === '1');
 
   const { data, isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['mis-contratos'],
@@ -22,10 +24,38 @@ export default function MisContratosScreen() {
     staleTime: 60_000,
   });
 
-  const contratos = data ?? [];
+  const contratos = useMemo(() => {
+    const todos = data ?? [];
+    return soloPendientes ? todos.filter((c) => !c.firmado_trabajador) : todos;
+  }, [data, soloPendientes]);
+  const pendientesCount = useMemo(
+    () => (data ?? []).filter((c) => !c.firmado_trabajador).length,
+    [data]
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
+      <View className="flex-row gap-2 px-5 pt-4 pb-1">
+        {([
+          { key: false, label: 'Todos' },
+          { key: true, label: `Sin firmar${pendientesCount > 0 ? ` (${pendientesCount})` : ''}` },
+        ] as const).map((f) => {
+          const active = soloPendientes === f.key;
+          return (
+            <TouchableOpacity
+              key={String(f.key)}
+              onPress={() => setSoloPendientes(f.key)}
+              className={`px-3 py-1.5 rounded-full border ${active ? 'border-transparent' : 'border-border'}`}
+              style={active ? { backgroundColor: theme.primary } : undefined}
+            >
+              <Text className={`text-xs font-semibold ${active ? 'text-white' : 'text-muted-foreground'}`}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       <FlatList
         data={contratos}
         keyExtractor={(c) => String(c.id)}
@@ -41,9 +71,13 @@ export default function MisContratosScreen() {
           ) : (
             <View className="items-center justify-center py-16 gap-3">
               <Ionicons name="document-text-outline" size={48} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground">Sin contratos</Text>
+              <Text className="text-base font-semibold text-foreground">
+                {soloPendientes ? 'Sin contratos pendientes' : 'Sin contratos'}
+              </Text>
               <Text className="text-sm text-muted-foreground text-center">
-                Tus contratos de turno aparecerán aquí una vez seas asignado.
+                {soloPendientes
+                  ? 'Ya firmaste todos tus contratos.'
+                  : 'Tus contratos de turno aparecerán aquí una vez seas asignado.'}
               </Text>
             </View>
           )

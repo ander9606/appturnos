@@ -1,14 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, ChevronRight, XCircle } from 'lucide-react';
+import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes } from '../hooks/useTurnos';
-import type { EstadoOferta, Oferta, VisibilidadOferta } from '../types';
+import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes, useLiquidacionTurnos } from '../hooks/useTurnos';
+import type { EstadoOferta, Oferta, VisibilidadOferta, ParaQuienOferta, LiquidacionTurnosTrabajador } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
+import { EmptyState } from '@/shared/components/EmptyState';
+import { Modal } from '@/shared/components/Modal';
+import { ConfirmModal } from '@/shared/components/ConfirmModal';
+import { StatCard } from '@/shared/components/StatCard';
+import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
+import { ZonasMarcajeInput, type ZonaMarcaje } from '../components/ZonasMarcajeInput';
 import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
-import { fmtDate, bogotaToday } from '@/shared/lib/format';
+import { fmtDate, fmtCOP, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -45,6 +51,7 @@ export function TurnosPage() {
   const { data, isLoading, isError, error, refetch } = useOfertas({ estado, limit: 100 });
   const ofertas: Oferta[] = data?.data?.data ?? [];
   const cancelar = useCancelarOferta();
+  const { confirmState, confirm, close } = useConfirm();
   const today = bogotaToday();
 
   const { data: pendientesData } = usePostulacionesPendientes();
@@ -54,17 +61,13 @@ export function TurnosPage() {
   }
   const totalPendientes = pendientesData?.data?.pagination?.total ?? 0;
 
+  const { data: liqData } = useLiquidacionTurnos({ fecha_inicio: inicioMesActual(), fecha_fin: today });
+  const totalAPagarMes = (liqData?.data ?? []).reduce((s: number, w: LiquidacionTurnosTrabajador) => s + Number(w.pago_total), 0);
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-foreground">Turnos</h1>
-          {totalPendientes > 0 && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-warning-light text-warning">
-              {totalPendientes} postulante{totalPendientes !== 1 ? 's' : ''} esperando revisión
-            </span>
-          )}
-        </div>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-foreground">Turnos</h1>
         {vista === 'ofertas' && (
           <button
             onClick={() => setShowCrear(true)}
@@ -91,6 +94,24 @@ export function TurnosPage() {
         ))}
       </div>
 
+      {vista === 'ofertas' && (
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <StatCard
+            label="Total a pagar este mes"
+            value={fmtCOP(totalAPagarMes)}
+            icon={DollarSign}
+            color="default"
+            onClick={() => setVista('pagos')}
+          />
+          <StatCard
+            label={totalPendientes > 0 ? `${totalPendientes} postulante${totalPendientes !== 1 ? 's' : ''} esperando revisión` : 'Postulaciones al día'}
+            value={totalPendientes}
+            icon={totalPendientes > 0 ? AlertTriangle : Users}
+            color={totalPendientes > 0 ? 'warning' : 'success'}
+          />
+        </div>
+      )}
+
       {vista === 'pagos' ? (
         <LiquidacionTurnosView />
       ) : (
@@ -116,7 +137,7 @@ export function TurnosPage() {
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : ofertas.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No hay ofertas</p>
+        <EmptyState message="No hay ofertas" action={{ label: '+ Crear la primera', onClick: () => setShowCrear(true) }} />
       ) : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
@@ -136,7 +157,7 @@ export function TurnosPage() {
                 const totalPlazas = o.puestos?.reduce((s, p) => s + p.plazas, 0) ?? 0;
                 const totalAsignados = o.puestos?.reduce((s, p) => s + p.plazas_cubiertas, 0) ?? 0;
                 const pendientes = pendientesPorOferta.get(o.id) ?? 0;
-                const esPasado = o.fecha < today;
+                const esPasado = o.fecha < today && o.estado !== 'completada';
                 return (
                   <tr key={o.id} className={`border-t border-border/60 hover:bg-muted transition-opacity ${esPasado ? 'opacity-50' : ''}`}>
                     <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>{o.titulo}</td>
@@ -160,11 +181,12 @@ export function TurnosPage() {
                       <div className="flex items-center gap-2 justify-end">
                         {(o.estado !== 'completada' && o.estado !== 'cancelada') && (
                           <button
-                            onClick={() => {
-                              if (window.confirm(`¿Cancelar la oferta "${o.titulo}"?`)) {
-                                cancelar.mutate(o.id);
-                              }
-                            }}
+                            onClick={() => confirm({
+                              title: 'Cancelar oferta',
+                              detail: `¿Cancelar la oferta "${o.titulo}"? Los trabajadores ya asignados serán notificados.`,
+                              confirmLabel: 'Cancelar oferta',
+                              onConfirm: () => { cancelar.mutate(o.id); close(); },
+                            })}
                             className="text-muted-foreground/60 hover:text-danger transition-colors"
                             title="Cancelar oferta"
                           >
@@ -190,6 +212,16 @@ export function TurnosPage() {
       )}
 
       {showCrear && <NuevaOfertaModal onClose={() => setShowCrear(false)} />}
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }
@@ -203,9 +235,11 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   });
   const [latitud, setLatitud] = useState<number | null>(null);
   const [longitud, setLongitud] = useState<number | null>(null);
+  const [paraQuien, setParaQuien] = useState<ParaQuienOferta>('turnos');
   const [visibilidad, setVisibilidad] = useState<VisibilidadOferta>('abierta');
   const [destinatarios, setDestinatarios] = useState<DestinatarioSeleccionado[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [zonas, setZonas] = useState<ZonaMarcaje[]>([]);
 
   const dirigidaSinPersonas = visibilidad === 'dirigida' && destinatarios.length === 0;
 
@@ -229,8 +263,10 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
       lugar: form.lugar || undefined,
       latitud: latitud ?? undefined,
       longitud: longitud ?? undefined,
+      para_quien: paraQuien,
       visibilidad,
       trabajador_ids: visibilidad === 'dirigida' ? destinatarios.map(d => d.id) : undefined,
+      punto_marcaje_ids: zonas.length > 0 ? zonas.map(z => z.id) : undefined,
       puestos: [],
     });
     onClose();
@@ -244,98 +280,133 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-2xl p-6 w-full max-w-lg">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Nueva oferta de turno</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <Modal onClose={onClose} size="lg">
+      <h2 className="text-lg font-semibold text-foreground mb-4">Nueva oferta de turno</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Título *</label>
+          <input required type="text" {...field('titulo')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Título *</label>
-            <input required type="text" {...field('titulo')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
-              <input required type="date" min={bogotaToday()} {...field('fecha')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Hora inicio *</label>
-              <input required type="time" {...field('hora_inicio')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
+            <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
+            <input required type="date" min={bogotaToday()} {...field('fecha')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Hora fin estimada</label>
-            <input type="time" {...field('hora_fin_estimada')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            <label className="block text-sm font-medium text-foreground mb-1">Hora inicio *</label>
+            <input required type="time" {...field('hora_inicio')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Lugar</label>
-            <LugarInput
-              value={form.lugar}
-              latitud={latitud}
-              longitud={longitud}
-              onChange={(lugar, lat, lng) => {
-                setForm(f => ({ ...f, lugar }));
-                setLatitud(lat);
-                setLongitud(lng);
-              }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
-            <textarea rows={2} {...field('descripcion')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">¿Quién puede ver esta oferta?</label>
-            <div className="grid grid-cols-2 gap-2">
-              {([
-                { value: 'abierta' as const, label: 'Todos los que califican' },
-                { value: 'dirigida' as const, label: 'Personas específicas' },
-              ]).map(opt => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setVisibilidad(opt.value)}
-                  className={`text-xs font-medium py-2 rounded-lg border transition-colors ${
-                    visibilidad === opt.value
-                      ? 'border-primary bg-primary-50 text-primary-600'
-                      : 'border-border text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            {visibilidad === 'dirigida' && (
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Hora fin estimada</label>
+          <input type="time" {...field('hora_fin_estimada')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Lugar</label>
+          <LugarInput
+            value={form.lugar}
+            latitud={latitud}
+            longitud={longitud}
+            onChange={(lugar, lat, lng) => {
+              setForm(f => ({ ...f, lugar }));
+              setLatitud(lat);
+              setLongitud(lng);
+            }}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Zonas de marcaje válidas (opcional)</label>
+          <p className="text-xs text-muted-foreground mb-1.5">
+            Solo aplica si el cargo asignado tiene marcaje zonal. Sin elegir ninguna, se acepta cualquier punto zonal de la empresa.
+          </p>
+          <ZonasMarcajeInput zonas={zonas} onChange={setZonas} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
+          <textarea rows={2} {...field('descripcion')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Destinatarios</label>
+          <p className="text-xs text-muted-foreground mb-1">¿A quién va dirigido este turno?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { value: 'turnos' as const, label: 'Trabajadores turnos' },
+              { value: 'nomina' as const, label: 'Personal nómina' },
+              { value: 'ambos' as const, label: 'Ambos' },
+            ]).map(opt => (
               <button
+                key={opt.value}
                 type="button"
-                onClick={() => setPickerOpen(true)}
-                className="mt-2 w-full flex items-center justify-between border border-border rounded-lg px-3 py-2 text-sm hover:bg-muted transition-colors"
+                onClick={() => {
+                  if (paraQuien !== opt.value) setDestinatarios([]);
+                  setParaQuien(opt.value);
+                }}
+                className={`text-xs font-medium py-2 rounded-lg border transition-colors ${
+                  paraQuien === opt.value
+                    ? 'border-primary bg-primary-50 text-primary-600'
+                    : 'border-border text-muted-foreground hover:bg-muted'
+                }`}
               >
-                <span className={dirigidaSinPersonas ? 'text-danger' : 'text-foreground'}>
-                  {destinatarios.length === 0
-                    ? 'Elegir personas'
-                    : `${destinatarios.length} persona${destinatarios.length !== 1 ? 's' : ''} elegida${destinatarios.length !== 1 ? 's' : ''}`}
-                </span>
-                <span className="text-muted-foreground text-xs">Cambiar</span>
+                {opt.label}
               </button>
-            )}
+            ))}
           </div>
-          <p className="text-xs text-muted-foreground">Los puestos se agregan desde el detalle de la oferta.</p>
-          <div className="flex gap-2 pt-2">
-            <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" disabled={crear.isPending || dirigidaSinPersonas} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-              {crear.isPending ? 'Creando...' : 'Crear y configurar'}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">¿Quién puede ver esta oferta?</label>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { value: 'abierta' as const, label: 'Todos los que califican' },
+              { value: 'dirigida' as const, label: 'Personas específicas' },
+            ]).map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setVisibilidad(opt.value)}
+                className={`text-xs font-medium py-2 rounded-lg border transition-colors ${
+                  visibilidad === opt.value
+                    ? 'border-primary bg-primary-50 text-primary-600'
+                    : 'border-border text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {visibilidad === 'dirigida' && (
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="mt-2 w-full flex items-center justify-between border border-border rounded-lg px-3 py-2 text-sm hover:bg-muted transition-colors"
+            >
+              <span className={dirigidaSinPersonas ? 'text-danger' : 'text-foreground'}>
+                {destinatarios.length === 0
+                  ? 'Elegir personas'
+                  : `${destinatarios.length} persona${destinatarios.length !== 1 ? 's' : ''} elegida${destinatarios.length !== 1 ? 's' : ''}`}
+              </span>
+              <span className="text-muted-foreground text-xs">Cambiar</span>
             </button>
-          </div>
-        </form>
-      </div>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Los puestos se agregan en el siguiente paso, desde el detalle de la oferta — todavía no queda publicada para nadie.
+        </p>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+          <button type="submit" disabled={crear.isPending || dirigidaSinPersonas} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {crear.isPending ? 'Creando...' : 'Crear y agregar puestos →'}
+          </button>
+        </div>
+      </form>
 
       {pickerOpen && (
         <TrabajadorPickerModal
           seleccionados={destinatarios}
           onConfirm={setDestinatarios}
           onClose={() => setPickerOpen(false)}
+          paraQuien={paraQuien}
         />
       )}
-    </div>
+    </Modal>
   );
 }

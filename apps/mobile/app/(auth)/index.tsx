@@ -4,10 +4,11 @@ import {
   Text,
   Pressable,
   TouchableOpacity,
-  SafeAreaView,
   Dimensions,
   StyleSheet,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,13 +55,17 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/(auth)/activar')}
             variant="filled"
           />
-          <OptionCard
-            icon="briefcase"
-            title="Tengo una empresa"
-            description="Administra empleados, turnos y nómina"
-            onPress={() => router.push('/(auth)/registro-empresa')}
-            variant="outline"
-          />
+          {/* Apple guideline 3.1.1: registro de empresas/organizaciones no se
+              expone en iOS (se sigue ofreciendo en Android y en la web). */}
+          {Platform.OS !== 'ios' && (
+            <OptionCard
+              icon="briefcase"
+              title="Tengo una empresa"
+              description="Administra empleados, turnos y nómina"
+              onPress={() => router.push('/(auth)/registro-empresa')}
+              variant="outline"
+            />
+          )}
           <OptionCard
             icon="calendar"
             title="Busco trabajo por turnos"

@@ -28,9 +28,9 @@ jobs:
         working-directory: apps/mobile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -55,9 +55,9 @@ jobs:
         working-directory: apps/mobile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -80,9 +80,33 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ secrets.EXPO_PUBLIC_SENTRY_DSN }}
-          # Client ID público de Google OAuth (no sensible — mismo valor que en eas.json).
-          # Hardcodeado en vez de secret: no requiere configurar nada en GitHub.
+          # Client IDs públicos de Google OAuth (no sensibles — mismos valores que en eas.json).
+          # Hardcodeados en vez de secrets: no requieren configurar nada en GitHub.
+          # `eas update` NO lee el env de los perfiles de eas.json: cada EXPO_PUBLIC_*
+          # que falte aquí queda undefined dentro del bundle OTA. Sin el de iOS,
+          # GoogleSignin.configure() revienta en iOS ("failed to determine clientID").
           EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: "983031197089-h85egasr849sd2h042kprj18d9l45bn2.apps.googleusercontent.com"
+          EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS: "983031197089-o3vfhunbs1edjuuf1hjlaq2tgrbugknu.apps.googleusercontent.com"
+
+      # `eas update` corre `expo export` internamente y deja ese mismo dist/ en
+      # el runner (se confirmó en los logs: "[expo-cli] Exported: dist" sale
+      # DURANTE este paso, antes de que existiera ningún otro export). Acá
+      # antes se volvía a correr `expo export` por separado "para generar los
+      # sourcemaps" — pero cada export genera un debug id nuevo, así que ese
+      # segundo export SOBRESCRIBÍA el dist/ real y lo que se subía a Sentry
+      # era el sourcemap de un bundle que nunca se publicó (por eso los stack
+      # traces en producción salían symbolicados con archivos/líneas sin
+      # sentido). El fix es no reexportar: subir el dist/ que ya dejó `eas update`.
+      - name: Subir sourcemaps a Sentry
+        run: node node_modules/@sentry/react-native/scripts/expo-upload-sourcemaps.js dist
+        env:
+          SENTRY_ORG: zaturno
+          SENTRY_PROJECT: react-native
+          # El script solo evita leer el expo config (donde no está configurado, ya
+          # que el plugin se llama "@sentry/react-native" y no "@sentry/react-native/expo")
+          # si ORG, PROJECT y URL están las tres presentes.
+          SENTRY_URL: https://sentry.io/
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
   # ── Promover a producción (manual) ────────────────────────────
   # Dispara desde GitHub Actions → "Run workflow", pasando el group_id que
@@ -97,9 +121,9 @@ jobs:
         working-directory: apps/mobile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -124,15 +148,9 @@ jobs:
 
 # ──────────────────────────────────────────────────────────────────
 # NOTA: Build nativo (cuando cambias dependencias o app.json)
-# No corre automáticamente — lanzar manualmente:
+# El build corre automático — ver mobile-build.yml (tag v* o manual).
+# `eas submit` sigue siendo manual a propósito:
 #
-#   eas build --platform android --profile production
-#   eas build --platform ios     --profile production
-#   eas submit --platform android
-#   eas submit --platform ios
-#
-# O agregar un workflow separado disparado por tags:
-#   on:
-#     push:
-#       tags: ['v*']
+#   eas submit --platform android --latest
+#   eas submit --platform ios     --latest
 # ──────────────────────────────────────────────────────────────────

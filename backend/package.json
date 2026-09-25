@@ -12,6 +12,8 @@
     "seed:logiq360": "node scripts/seed-logiq360-demo.js",
     "generar-vapid": "node scripts/generar-vapid.js",
     "crear-super-admin": "node scripts/crear-super-admin.js",
+    "limpiar-periodos-vacios": "node scripts/limpiar-periodos-vacios.js",
+    "backfill-contratos": "node scripts/backfill-contratos-completados.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },
@@ -20,6 +22,7 @@
   },
   "dependencies": {
     "@sentry/node": "^10.63.0",
+    "apple-signin-auth": "^1.7.6",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",

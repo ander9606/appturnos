@@ -32,6 +32,8 @@ export interface Trabajador {
   email: string | null;
   tipo: TipoTrabajador;
   cargo: string | null;
+  /** Texto libre: qué sabe hacer el trabajador, visible para las empresas. */
+  descripcion: string | null;
   tarifa_hora: number | null;
   salario_base: number | null;
   acepta_extras: boolean;
@@ -44,6 +46,8 @@ export interface Trabajador {
   ant_disciplinarios_fecha: string | null;
   tipo_marcacion: 'libre' | 'fijo' | 'zonal';
   punto_marcaje_id: number | null;
+  /** Hora habitual de entrada (HH:MM:SS) — si está definida, dispara el recordatorio de inicio de turno. Solo aplica a nómina/ambos. */
+  hora_entrada_esperada: string | null;
   activo: boolean;
   external_ref: string | null;
   ranking: number | null;
@@ -111,6 +115,7 @@ export interface CrearTrabajadorPayload {
   tipo_cuenta?: TipoCuenta;
   numero_cuenta?: string;
   cargo?: string;
+  descripcion?: string;
   tarifa_hora?: number;
   salario_base?: number;
   ant_judiciales_fecha?: string;
@@ -120,6 +125,8 @@ export interface CrearTrabajadorPayload {
   cargo_ids?: number[];
   empresa_ids?: number[];
   external_ref?: string;
+  /** HH:MM — pasar null/'' para desactivar el recordatorio. */
+  hora_entrada_esperada?: string | null;
 }
 
 export interface ActualizarTrabajadorPayload extends Partial<CrearTrabajadorPayload> {}
@@ -131,6 +138,7 @@ export interface UpdateMePayload {
   fecha_nacimiento?: string;
   sexo?: SexoTrabajador;
   telefono?: string;
+  descripcion?: string;
   contacto_emergencia_nombre?: string;
   contacto_emergencia_tel?: string;
   eps?: string;

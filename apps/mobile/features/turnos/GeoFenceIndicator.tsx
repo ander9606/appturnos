@@ -7,7 +7,7 @@
  * Gris   → calculando / sin GPS
  */
 import React from 'react';
-import { View, Text, Linking, TouchableOpacity } from 'react-native';
+import { View, Text, Linking, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { formatDistance, type GeofenceStatus } from '@/lib/geo';
@@ -39,6 +39,17 @@ export function GeoFenceIndicator({
   permissionDenied = false,
   locationUnavailable = false,
 }: GeoFenceIndicatorProps) {
+  const loading = !permissionDenied && !(locationUnavailable && distanceM === null) && distanceM === null;
+
+  // Mientras carga, un punto estático no distingue "calculando" de "se trabó" —
+  // si tarda más de lo normal (GPS débil, primer uso sin ubicación cacheada), lo decimos.
+  const [tardando, setTardando] = React.useState(false);
+  React.useEffect(() => {
+    if (!loading) { setTardando(false); return; }
+    const t = setTimeout(() => setTardando(true), 6000);
+    return () => clearTimeout(t);
+  }, [loading]);
+
   if (permissionDenied) {
     return (
       <View className="bg-warning-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
@@ -78,13 +89,19 @@ export function GeoFenceIndicator({
 
   return (
     <View className={`${cfg.bg} rounded-2xl px-4 py-3 flex-row ${cfg.hint ? 'items-start' : 'items-center'} gap-3`}>
-      {/* Pulsing dot */}
       <View className="relative w-8 h-8 items-center justify-center">
-        <View className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />
+        {key === 'loading'
+          ? <ActivityIndicator size="small" color="#94A3B8" />
+          : <View className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />}
       </View>
 
       <View className="flex-1">
         <Text className={`text-sm font-semibold ${cfg.text}`}>{cfg.label}</Text>
+        {key === 'loading' && tardando && (
+          <Text className={`text-xs mt-0.5 ${cfg.text} opacity-80`}>
+            Tu señal GPS está débil, esto puede tardar unos segundos más…
+          </Text>
+        )}
         {distanceM !== null && (
           <Text className={`text-xs mt-0.5 ${cfg.text} opacity-80`}>
             {formatDistance(distanceM)} del punto de marcaje

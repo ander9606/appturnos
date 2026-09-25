@@ -9,10 +9,12 @@ const { pool } = require('../../config/database');
  */
 
 const COLUMNAS = `te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
-  te.estado, te.iniciado_por, te.fecha_solicitud, te.fecha_resuelto,
-  te.motivo_rechazo,
+  te.estado, te.iniciado_por, te.tipo_ofrecido, te.activo_antes_de_oferta,
+  te.cargos_interes,
+  te.fecha_solicitud, te.fecha_resuelto, te.motivo_rechazo,
   e.nombre AS empresa_nombre, e.slug AS empresa_slug, e.logo_url AS empresa_logo,
-  e.ciudad AS empresa_ciudad`;
+  e.ciudad AS empresa_ciudad,
+  e.telefono AS empresa_telefono, e.email_empresa AS empresa_email`;
 
 const TrabajadorEmpresaModel = {
   async obtenerPorId(id) {
@@ -66,7 +68,8 @@ const TrabajadorEmpresaModel = {
        ORDER BY te.fecha_solicitud DESC`,
       [usuarioId]
     );
-    return filas;
+    // ROUND(AVG(...)) es DECIMAL — mysql2 lo devuelve como string, el cliente espera number.
+    return filas.map((f) => ({ ...f, ranking: f.ranking != null ? Number(f.ranking) : null }));
   },
 
   /** Solicitudes pendientes para una empresa (panel del jefe de turnos). */
@@ -82,7 +85,7 @@ const TrabajadorEmpresaModel = {
     }
     const [filas] = await pool.query(
       `SELECT te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
-              te.estado, te.iniciado_por, te.fecha_solicitud,
+              te.estado, te.iniciado_por, te.fecha_solicitud, te.cargos_interes,
               u.nombre AS usuario_nombre, u.apellido AS usuario_apellido,
               u.email AS usuario_email, u.telefono AS usuario_telefono,
               u.foto_perfil AS usuario_foto_perfil
@@ -120,17 +123,17 @@ const TrabajadorEmpresaModel = {
     return filas.map((f) => f.empresa_id);
   },
 
-  async crear({ usuarioId, empresaId, estado, iniciadoPor }) {
+  async crear({ usuarioId, empresaId, estado, iniciadoPor, tipoOfrecido = 'turnos', cargosInteres }) {
     const [res] = await pool.query(
       `INSERT INTO trabajador_empresa
-         (usuario_id, empresa_id, estado, iniciado_por)
-       VALUES (?, ?, ?, ?)`,
-      [usuarioId, empresaId, estado, iniciadoPor]
+         (usuario_id, empresa_id, estado, iniciado_por, tipo_ofrecido, cargos_interes)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [usuarioId, empresaId, estado, iniciadoPor, tipoOfrecido, cargosInteres?.length ? JSON.stringify(cargosInteres) : null]
     );
     return res.insertId;
   },
 
-  async cambiarEstado(id, estado, { motivo, trabajadorId, fechaResuelto } = {}) {
+  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto, activoAntesDeOferta, cargosInteres } = {}) {
     const sets = ['estado = ?'];
     const params = [estado];
 
@@ -138,9 +141,21 @@ const TrabajadorEmpresaModel = {
       sets.push('motivo_rechazo = ?');
       params.push(motivo);
     }
+    if (cargosInteres !== undefined) {
+      sets.push('cargos_interes = ?');
+      params.push(cargosInteres?.length ? JSON.stringify(cargosInteres) : null);
+    }
     if (trabajadorId !== undefined) {
       sets.push('trabajador_id = ?');
       params.push(trabajadorId);
+    }
+    if (tipoOfrecido !== undefined) {
+      sets.push('tipo_ofrecido = ?');
+      params.push(tipoOfrecido);
+    }
+    if (activoAntesDeOferta !== undefined) {
+      sets.push('activo_antes_de_oferta = ?');
+      params.push(activoAntesDeOferta ? 1 : 0);
     }
     if (estado !== 'solicitado_por_trabajador' && estado !== 'solicitado_por_empresa') {
       sets.push('fecha_resuelto = ?');
@@ -153,6 +168,29 @@ const TrabajadorEmpresaModel = {
       params
     );
     return res.affectedRows;
+  },
+
+  /**
+   * Archiva las demás relaciones del usuario (activas, o solicitudes/invitaciones
+   * pendientes) al convertirse a nómina — exclusiva a una sola empresa. Deja
+   * intactas las ya cerradas (rechazado/archivado), no hay nada que tocar ahí.
+   */
+  async archivarOtrasRelacionesDeUsuario(usuarioId, exceptoId) {
+    const [filas] = await pool.query(
+      `SELECT id, empresa_id, trabajador_id FROM trabajador_empresa
+       WHERE usuario_id = ? AND id != ?
+         AND estado IN ('activo', 'solicitado_por_trabajador', 'solicitado_por_empresa')`,
+      [usuarioId, exceptoId]
+    );
+    if (filas.length) {
+      const ids = filas.map((f) => f.id);
+      await pool.query(
+        `UPDATE trabajador_empresa SET estado = 'archivado', fecha_resuelto = NOW()
+         WHERE id IN (${ids.map(() => '?').join(',')})`,
+        ids
+      );
+    }
+    return filas;
   },
 };
 

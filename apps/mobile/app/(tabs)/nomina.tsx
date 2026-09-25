@@ -24,11 +24,15 @@ import { NominaTurnosView }       from '@/features/nomina/NominaTurnosView';
 import { NominaGestorTurnosView } from '@/features/nomina/NominaGestorTurnosView';
 import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
 import { TipoPeriodoBadge }       from '@/features/nomina/TipoPeriodoBadge';
+import { PeriodoSelector }        from '@/features/nomina/PeriodoSelector';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
+import { MonthCalendar }          from '@/components/ui/MonthCalendar';
+import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
 import { HOUR_TYPE_COLORS }       from '@/lib/designTokens';
-import { fmtPeriodo }             from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { bogotaToday } from '@/lib/formatters';
 import {
   usePeriodos, useLiquidacion,
   useLiquidarPeriodo,
@@ -73,10 +77,26 @@ function NominaGestorView() {
 
   const activePeriodoId = periodoId ?? periodos[0]?.id;
   const activePeriodo   = periodos.find((p) => p.id === activePeriodoId) ?? periodos[0];
-  // Solo mostrar en el selector períodos del mismo tipo que el más reciente — evita mezclar
+  // PeriodoSelector ya filtra por el mismo tipo que el más reciente — evita mezclar
   // quincenales con mensuales cuando la empresa cambia su esquema de facturación.
-  const tipoActual        = periodos[0]?.tipo;
-  const periodosSelector  = periodos.filter((p) => p.tipo === tipoActual);
+  // periodosMes (calendario) necesita el mismo filtro por separado.
+  const tipoActual = periodos[0]?.tipo;
+
+  // Vista mensual — bandas de color por período, alterna con la lista de liquidación.
+  const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
+  const [mesCursor, setMesCursor] = useState(() => {
+    const [y, m] = bogotaToday().split('-').map(Number);
+    return { year: y, month: m };
+  });
+  const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  // Consulta aparte (no la de arriba, topada a 20) para que navegar el mes lejos en el tiempo
+  // siga encontrando el período correspondiente en vez de mostrar el mes vacío en silencio.
+  const { data: periodosMesResp } = usePeriodos(undefined, viewMode === 'mes', {
+    fechaDesde: mesWeeks[0][0].date,
+    fechaHasta: mesWeeks[mesWeeks.length - 1][6].date,
+  });
+  const periodosMes = (periodosMesResp?.data ?? []).filter((p) => p.tipo === tipoActual);
+  const periodoDeDia = (fecha: string) => periodosMes.find((p) => p.fecha_inicio <= fecha && fecha <= p.fecha_fin);
 
   const {
     data: liquidacion,
@@ -113,6 +133,12 @@ function NominaGestorView() {
       festivo:       sum('horas_festivo'),
     };
   }, [lineas]);
+
+  const pagoExtraEquipo = lineas.reduce(
+    (s, l) => s + Number(l.pago_nocturno) + Number(l.pago_extra_diurno) +
+      Number(l.pago_extra_nocturno) + Number(l.pago_festivo),
+    0
+  );
 
   // Ordenado por total (de más a menos) y marcado el que tiene una proporción
   // de recargo/extra notablemente por encima del promedio del equipo — así
@@ -214,6 +240,13 @@ function NominaGestorView() {
                       <TipoPeriodoBadge tipo={activePeriodo.tipo} />
                     </>
                   )}
+                  <TouchableOpacity
+                    onPress={() => setViewMode((v) => (v === 'lista' ? 'mes' : 'lista'))}
+                    accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+                    className="p-1"
+                  >
+                    <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={20} color="#fff" />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -231,34 +264,57 @@ function NominaGestorView() {
                       ? ` · bruto $${totales.total_general.toLocaleString('es-CO')}`
                       : ''}
                   </Text>
+                  {pagoExtraEquipo > 0 && (
+                    <Text className="text-amber-200 text-xs font-semibold mt-0.5">
+                      ⚡ incluye ${pagoExtraEquipo.toLocaleString('es-CO')} en horas extra
+                    </Text>
+                  )}
                 </View>
               )}
             </View>
 
             <View className="px-5 gap-3">
-              {periodosSelector.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View className="flex-row gap-2 py-1">
-                    {periodosSelector.slice(0, 8).map((p) => (
-                      <TouchableOpacity
-                        key={p.id}
-                        onPress={() => setPeriodoId(p.id)}
-                        className={[
-                          'px-4 py-2 rounded-full border flex-row items-center gap-1.5',
-                          p.id === activePeriodoId
-                            ? 'bg-foreground border-foreground'
-                            : 'bg-card border-border',
-                        ].join(' ')}
-                      >
-                        <Text className={`text-xs font-medium ${
-                          p.id === activePeriodoId ? 'text-white' : 'text-foreground'
-                        }`}>
-                          {fmtPeriodo(p)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+              {viewMode === 'mes' ? (
+                <View className="gap-2">
+                  <View className="flex-row items-center gap-3">
+                    <TouchableOpacity
+                      onPress={() => setMesCursor((c) => shiftMonth(c, -1))}
+                      className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                    >
+                      <Ionicons name="chevron-back" size={16} color={theme.primary} />
+                    </TouchableOpacity>
+                    <Text className="text-sm font-semibold text-foreground flex-1 text-center">
+                      {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setMesCursor((c) => shiftMonth(c, 1))}
+                      className="w-8 h-8 items-center justify-center rounded-lg border border-border"
+                    >
+                      <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+                    </TouchableOpacity>
                   </View>
-                </ScrollView>
+                  <MonthCalendar
+                    weeks={mesWeeks}
+                    onDayPress={(day: CalendarDay) => {
+                      const periodo = periodoDeDia(day.date);
+                      if (periodo) { setPeriodoId(periodo.id); setViewMode('lista'); }
+                    }}
+                    renderDay={(day: CalendarDay) => {
+                      const periodo = periodoDeDia(day.date);
+                      if (!periodo) return null;
+                      const bg = periodo.estado === 'abierto' ? 'bg-success-light'
+                        : periodo.estado === 'cerrado' ? 'bg-warning-light' : 'bg-primary-100';
+                      const esCierre = periodo.fecha_fin === day.date;
+                      return (
+                        <View className={`flex-1 -m-1 mt-0 rounded-b-md px-1 py-0.5 ${bg}`}>
+                          {esCierre && <Text className="text-[8px] font-semibold text-foreground">Cierre</Text>}
+                        </View>
+                      );
+                    }}
+                  />
+                </View>
+              ) : (
+                <PeriodoSelector periodos={periodos} activeId={activePeriodoId} onSelect={setPeriodoId} />
               )}
 
               {activePeriodo && (
@@ -334,6 +390,17 @@ function NominaGestorView() {
                     <View className="flex-row items-center gap-2">
                       <Ionicons name="people-outline" size={16} color="#64748B" />
                       <Text className="text-sm font-medium text-foreground">Asistencia hoy</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => router.push('/liquidacion-eventual')}
+                    className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
+                  >
+                    <View className="flex-row items-center gap-2">
+                      <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Turnos eventuales (extra)</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                   </TouchableOpacity>

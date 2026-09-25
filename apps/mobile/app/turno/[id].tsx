@@ -11,87 +11,60 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   ActivityIndicator,
   Alert,
   Linking,
   Platform,
-  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }            from '@/lib/theme';
 import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
-import { NovedadCard }         from '@/features/novedades/NovedadCard';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
 import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar } from '@/features/turnos/useTurnos';
-import { useGeofence }         from '@/features/turnos/useGeofence';
-import { GeoFenceIndicator }   from '@/features/turnos/GeoFenceIndicator';
+import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
 import { TurnoTimeline }       from '@/features/turnos/TurnoTimeline';
-import { StarRating }          from '@/features/turnos/StarRating';
-import { Badge }               from '@/components/ui/Badge';
 import { Button }              from '@/components/ui/Button';
-import { getEstadoConfig, fmtRange, fmtTime } from '@/features/turnos/turnosUtils';
-import { ApiError }            from '@api-client';
+import { getEstadoConfig } from '@/features/turnos/turnosUtils';
+import { ApiError, puntosMarcajeApi, type PuntoParaTurno } from '@api-client';
+import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
+import { obtenerUbicacionActual } from '@/lib/currentLocation';
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
-
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-/** Convierte minutos restantes en etiqueta legible: "1h 23m", "45 min". */
-function fmtFaltan(min: number): string {
-  const m = Math.max(1, Math.ceil(min));
-  const h = Math.floor(m / 60);
-  const rem = m % 60;
-  if (h > 0 && rem > 0) return `${h}h ${rem}m`;
-  if (h > 0) return `${h}h`;
-  return `${rem} min`;
-}
-
-function InfoRow({ icon, label, value }: { icon: IoniconsName; label: string; value: string }) {
-  return (
-    <View className="flex-row items-start gap-3 py-3 border-b border-border last:border-0">
-      <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
-        <Ionicons name={icon} size={16} color="#64748B" />
-      </View>
-      <View className="flex-1 gap-0.5">
-        <Text className="text-xs text-muted-foreground">{label}</Text>
-        <Text className="text-sm font-medium text-foreground">{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-const SHORT_DAYS   = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const SHORT_MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-const LIQUIDACION_LABELS: Record<string, string> = {
-  mensual: 'Mensual', quincenal: 'Quincenal', semanal: 'Semanal',
-};
-function fmtDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  return `${SHORT_DAYS[d.getDay()]}, ${d.getDate()} de ${SHORT_MONTHS[d.getMonth()]}`;
-}
-
-// ── Screen ────────────────────────────────────────────────────────────────
+import { TurnoHeroCard }        from '@/features/turnos/detalle/TurnoHeroCard';
+import { TurnoDescripcionCard } from '@/features/turnos/detalle/TurnoDescripcionCard';
+import { TurnoUbicacionMarcada } from '@/features/turnos/detalle/TurnoUbicacionMarcada';
+import { TurnoCompletadoCard }  from '@/features/turnos/detalle/TurnoCompletadoCard';
+import { CalificacionCard }     from '@/features/turnos/detalle/CalificacionCard';
+import { CTAConfirmadoCard }    from '@/features/turnos/detalle/CTAConfirmadoCard';
+import { CTAEnProgresoCard }    from '@/features/turnos/detalle/CTAEnProgresoCard';
+import { NovedadesCard }        from '@/features/turnos/detalle/NovedadesCard';
+import { CorregirIngresoEgresoModal } from '@/features/turnos/detalle/CorregirIngresoEgresoModal';
+import { BonoModal }            from '@/features/turnos/detalle/BonoModal';
 
 export default function TurnoDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string }>();
   const id = idParam ? parseInt(idParam, 10) : null;
   const router = useRouter();
   const theme  = useTheme();
+  const qc = useQueryClient();
 
   const [signatureVisible, setSignatureVisible] = useState(false);
   const [novedadModalVisible, setNovedadModalVisible] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [selectedRating, setSelectedRating] = useState(0);
   const [comentario, setComentario] = useState('');
+  const [cargandoContrato, setCargandoContrato] = useState(false);
+  const [corrigiendoIngreso, setCorrigiendoIngreso] = useState(false);
+  const [editandoBono, setEditandoBono] = useState(false);
 
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
@@ -112,19 +85,46 @@ export default function TurnoDetailScreen() {
   }, [asignacion?.estado]);
 
   // ── Geofence targets from geofence_info ───────────────────────────────
-  const geofenceTargets = useMemo(() => {
+  // Activo durante 'confirmado' (para el ingreso) y 'en_progreso' (para el
+  // egreso) — antes solo cubría 'confirmado', así que al llegar a en_progreso
+  // el poll se apagaba y el egreso nunca tenía una ubicación fresca.
+  const activoParaGeofence = asignacion?.estado === 'confirmado' || asignacion?.estado === 'en_progreso';
+  const isLibre = asignacion?.geofence_info?.tipo === 'libre';
+  const isZonal = asignacion?.geofence_info?.tipo === 'zonal';
+
+  // El servidor ya resuelve el set correcto (acotado al turno si el gestor
+  // eligió zonas específicas, o todos los puntos zonales de la empresa si
+  // no) — ver PuntosMarcajeModel.listarZonalesEfectivos.
+  const { data: zonalPuntos } = useQuery<PuntoParaTurno[]>({
+    queryKey: ['puntos-marcaje', 'zonales', asignacion?.oferta_id],
+    queryFn:  () => puntosMarcajeApi.listarZonales(asignacion?.oferta_id),
+    enabled:  isZonal && activoParaGeofence && asignacion?.oferta_id != null,
+    staleTime: 5 * 60_000,
+  });
+
+  const geofenceTargets = useMemo<GeofenceTarget[] | null>(() => {
     const gf = asignacion?.geofence_info;
     if (!gf) return null;
-    if (gf.tipo === 'libre' || gf.tipo === 'zonal') return null;
-    if (gf.latitud != null && gf.longitud != null) {
-      return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+    switch (gf.tipo) {
+      case 'libre':
+        return null;
+      case 'fijo':
+        if (gf.latitud == null) return null;
+        return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+      case 'oferta':
+        if (gf.latitud == null || gf.longitud == null) return null;
+        return [{ lat: gf.latitud, lng: gf.longitud, radiusM: gf.radio_metros }];
+      case 'zonal':
+        if (!zonalPuntos?.length) return null;
+        return zonalPuntos.map((p) => ({ lat: p.latitud, lng: p.longitud, radiusM: p.radio_metros }));
+      default:
+        return null;
     }
-    return null;
-  }, [asignacion?.geofence_info]);
+  }, [asignacion?.geofence_info, zonalPuntos]);
 
   const { distanceM, status: geoStatus, canMark, permissionDenied, locationUnavailable, currentLocation } = useGeofence({
     targets: geofenceTargets,
-    enabled: asignacion?.estado === 'confirmado',
+    enabled: activoParaGeofence,
   });
 
   // ── Ventana de ingreso: habilitado 30 min antes del hora_inicio ──────
@@ -175,13 +175,22 @@ export default function TurnoDetailScreen() {
     );
   }, [minutosParaIngreso]);
 
+  // Geofence 'libre' no tiene targets, así que useGeofence nunca hace polling
+  // y currentLocation queda en null — best-effort, nunca bloquea si falla o el
+  // permiso está negado (ver obtenerUbicacionActual).
+  async function ubicacionParaMarcaje() {
+    if (currentLocation) return currentLocation;
+    if (geofenceTargets !== null) return null; // hay geofence real: solo vale el fix vigilado por useGeofence
+    const u = await obtenerUbicacionActual();
+    return u.latitud != null && u.longitud != null ? { lat: u.latitud, lng: u.longitud } : null;
+  }
+
   const handleIngreso = async () => {
     if (!asignacion || !canMark) return;
-    const lat = currentLocation?.lat ?? 0;
-    const lng = currentLocation?.lng ?? 0;
+    const ubicacion = await ubicacionParaMarcaje();
 
     try {
-      await ingresoMutation.mutateAsync({ id: asignacion.id, lat, lng });
+      await ingresoMutation.mutateAsync({ id: asignacion.id, lat: ubicacion?.lat, lng: ubicacion?.lng });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast('Ingreso registrado — tu llegada ha sido confirmada.');
     } catch (err) {
@@ -191,9 +200,11 @@ export default function TurnoDetailScreen() {
   };
 
   const handleEgreso = async (firmaBase64: string) => {
-    if (!asignacion) return;
+    if (!asignacion || !canMark) return;
+    const ubicacion = await ubicacionParaMarcaje();
+
     try {
-      await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64 });
+      await egresoMutation.mutateAsync({ id: asignacion.id, firma: firmaBase64, lat: ubicacion?.lat, lng: ubicacion?.lng });
       setSignatureVisible(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast('Salida registrada — ¡turno completado, buen trabajo!');
@@ -218,6 +229,25 @@ export default function TurnoDetailScreen() {
       Alert.alert('Error', msg);
     }
   };
+
+  const handleDescargarContrato = async () => {
+    if (!id) return;
+    setCargandoContrato(true);
+    try {
+      const token = await SecureStore.getItemAsync('appturnos.access_token');
+      const base  = process.env.EXPO_PUBLIC_API_URL;
+      await WebBrowser.openBrowserAsync(`${base}/api/contratos/asignacion/${id}/pdf?token=${token}`);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo abrir el contrato.';
+      Alert.alert('Error', msg);
+    } finally {
+      setCargandoContrato(false);
+    }
+  };
+
+  const handleIrAMisContratos = useCallback(() => {
+    router.push('/mis-contratos?pendientes=1');
+  }, [router]);
 
   const openInMaps = useCallback(() => {
     const lat = asignacion?.latitud;
@@ -255,15 +285,9 @@ export default function TurnoDetailScreen() {
     );
   }
 
-  const { estado, oferta_titulo, oferta_fecha, hora_inicio, hora_fin_estimada,
-          lugar, tarifa_dia, hora_ingreso_real, hora_egreso_real,
-          horas_trabajadas, pago_total,
-          calificacion, calificacion_comentario,
-          oferta_descripcion, oferta_externo_notas,
-          empresa_nombre, empresa_tipo_liquidacion,
-          encargado_nombre, encargado_telefono } = asignacion;
-
-  const hasMapCoords = asignacion.latitud != null && asignacion.longitud != null;
+  const { estado, oferta_titulo, oferta_descripcion, oferta_externo_notas,
+          hora_ingreso_real, hora_egreso_real,
+          bono_monto, calificacion, calificacion_comentario } = asignacion;
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -274,7 +298,6 @@ export default function TurnoDetailScreen() {
           headerShown: true,
           headerTitle: oferta_titulo,
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerBackTitle: 'Turnos',
           headerTintColor: theme.primary,
           headerStyle: { backgroundColor: '#FFFFFF' },
           headerShadowVisible: true,
@@ -286,132 +309,14 @@ export default function TurnoDetailScreen() {
           contentContainerClassName="px-5 py-5 gap-5 pb-10"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Hero card ─────────────────────────────────────── */}
-          <View
-            className="bg-card rounded-3xl overflow-hidden"
-            style={{ elevation: 3, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
-          >
-            <View
-              className="h-2"
-              style={{ backgroundColor: estadoConfig?.accentColor ?? '#E2E8F0' }}
-            />
+          <TurnoHeroCard
+            asignacion={asignacion}
+            estadoConfig={estadoConfig}
+            isGestor={isGestor}
+            onOpenMaps={openInMaps}
+          />
 
-            <View className="px-5 py-5 gap-1">
-              {empresa_nombre && (
-                <View className="flex-row items-center gap-1.5 mb-1">
-                  <Ionicons name="business-outline" size={12} color="#94A3B8" />
-                  <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    {empresa_nombre}
-                  </Text>
-                </View>
-              )}
-
-              <View className="flex-row items-start justify-between">
-                <Text className="text-xl font-bold text-foreground flex-1 pr-3" numberOfLines={2}>
-                  {oferta_titulo}
-                </Text>
-                {estadoConfig && (
-                  <Badge label={estadoConfig.label} variant={estadoConfig.badgeVariant} />
-                )}
-              </View>
-
-              <View className="mt-3">
-                <InfoRow icon="calendar-outline" label="Fecha"   value={fmtDate(oferta_fecha)} />
-                <InfoRow icon="time-outline"     label="Horario" value={fmtRange(hora_inicio, hora_fin_estimada)} />
-
-                {/* Location row with Google Maps button */}
-                {lugar && (
-                  <View className="flex-row items-start gap-3 py-3 border-b border-border">
-                    <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
-                      <Ionicons name="location-outline" size={16} color="#64748B" />
-                    </View>
-                    <View className="flex-1 gap-0.5">
-                      <Text className="text-xs text-muted-foreground">Lugar</Text>
-                      <Text className="text-sm font-medium text-foreground">{lugar}</Text>
-                    </View>
-                    {hasMapCoords && (
-                      <TouchableOpacity
-                        onPress={openInMaps}
-                        className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted mt-0.5"
-                        accessibilityLabel="Ver en Google Maps"
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="map-outline" size={14} color="#3B82F6" />
-                        <Text className="text-xs font-semibold text-info">Mapa</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-
-                {/* Encargado en el punto — a quién buscar/llamar al llegar */}
-                {encargado_nombre && (
-                  <View className="flex-row items-start gap-3 py-3 border-b border-border">
-                    <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
-                      <Ionicons name="person-outline" size={16} color="#64748B" />
-                    </View>
-                    <View className="flex-1 gap-0.5">
-                      <Text className="text-xs text-muted-foreground">Encargado en el punto</Text>
-                      <Text className="text-sm font-medium text-foreground">{encargado_nombre}</Text>
-                    </View>
-                    {encargado_telefono && (
-                      <TouchableOpacity
-                        onPress={() => Linking.openURL(`tel:${encargado_telefono}`)}
-                        className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted mt-0.5"
-                        accessibilityLabel={`Llamar a ${encargado_nombre}`}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="call-outline" size={14} color="#3B82F6" />
-                        <Text className="text-xs font-semibold text-info">Llamar</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-
-                <InfoRow icon="cash-outline" label="Tarifa" value={`$${tarifa_dia.toLocaleString('es-CO')} / turno`} />
-                {empresa_tipo_liquidacion && (
-                  <InfoRow
-                    icon="calendar-number-outline"
-                    label="Pago"
-                    value={LIQUIDACION_LABELS[empresa_tipo_liquidacion] ?? empresa_tipo_liquidacion}
-                  />
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* ── Descripción del turno (productos + equipo nómina) ─ */}
-          {(oferta_descripcion || oferta_externo_notas) && (
-            <View
-              className="bg-card rounded-2xl px-5 py-4 gap-3"
-              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
-            >
-              {oferta_descripcion && (
-                <View className="gap-1">
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="cube-outline" size={14} color="#64748B" />
-                    <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Material a instalar
-                    </Text>
-                  </View>
-                  <Text className="text-sm text-foreground leading-5 pl-5">{oferta_descripcion}</Text>
-                </View>
-              )}
-              {oferta_descripcion && oferta_externo_notas && (
-                <View className="border-t border-border" />
-              )}
-              {oferta_externo_notas && (
-                <View className="gap-1">
-                  <View className="flex-row items-center gap-2">
-                    <Ionicons name="people-outline" size={14} color="#64748B" />
-                    <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Equipo del cliente
-                    </Text>
-                  </View>
-                  <Text className="text-sm text-foreground leading-5 pl-5">{oferta_externo_notas}</Text>
-                </View>
-              )}
-            </View>
-          )}
+          <TurnoDescripcionCard descripcion={oferta_descripcion} notasExterno={oferta_externo_notas} />
 
           {/* ── Timeline ──────────────────────────────────────── */}
           <View
@@ -426,177 +331,67 @@ export default function TurnoDetailScreen() {
             />
           </View>
 
+          <TurnoUbicacionMarcada asignacion={asignacion} />
+
           {/* ── Completado: resumen ────────────────────────────── */}
           {estado === 'completado' && (
             <>
-              <View className="bg-success-light rounded-2xl px-5 py-5 gap-3">
-                <View className="flex-row items-center gap-2">
-                  <Ionicons name="checkmark-circle" size={26} color="#059669" />
-                  <Text className="text-base font-bold text-success">¡Turno completado!</Text>
-                </View>
-                <View className="flex-row gap-4">
-                  {pago_total != null && (
-                    <View className="flex-1 bg-white/60 rounded-xl px-4 py-3">
-                      <Text className="text-xs text-success/70">Pago del turno</Text>
-                      <Text className="text-lg font-bold text-success">
-                        ${Number(pago_total).toLocaleString('es-CO')}
-                      </Text>
-                    </View>
-                  )}
-                  {horas_trabajadas != null && (
-                    <View className="flex-1 bg-white/60 rounded-xl px-4 py-3">
-                      <Text className="text-xs text-success/70">Horas en sitio</Text>
-                      <Text className="text-lg font-bold text-success">
-                        {Number(horas_trabajadas).toFixed(1)}h
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-xs text-success/80">Entrada:</Text>
-                  <Text className="text-xs font-medium text-success">
-                    {hora_ingreso_real ? fmtTime(hora_ingreso_real.slice(11, 19)) : '—'}
-                  </Text>
-                  <Text className="text-xs text-success/60 mx-1">·</Text>
-                  <Text className="text-xs text-success/80">Salida:</Text>
-                  <Text className="text-xs font-medium text-success">
-                    {hora_egreso_real ? fmtTime(hora_egreso_real.slice(11, 19)) : '—'}
-                  </Text>
-                </View>
-              </View>
+              <TurnoCompletadoCard
+                asignacion={asignacion}
+                isGestor={isGestor}
+                cargandoContrato={cargandoContrato}
+                onDescargarContrato={handleDescargarContrato}
+                onCorregir={() => setCorrigiendoIngreso(true)}
+                onIrAMisContratos={handleIrAMisContratos}
+              />
 
-              {/* Calificación */}
-              <View className="bg-card rounded-2xl px-5 py-4 border border-border">
-                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                  Calificación
-                </Text>
-                {calificacion != null ? (
-                  <View className="gap-2">
-                    <StarRating mode="display" value={calificacion} size="lg" />
-                    {calificacion_comentario != null && (
-                      <Text className="text-sm text-foreground italic mt-1">
-                        "{calificacion_comentario}"
-                      </Text>
-                    )}
-                  </View>
-                ) : isGestor ? (
-                  <View className="gap-3">
-                    <StarRating mode="input" value={selectedRating} onChange={setSelectedRating} size="lg" />
-                    <TextInput
-                      placeholder="Comentario (opcional)"
-                      value={comentario}
-                      onChangeText={setComentario}
-                      className="text-sm text-foreground border border-border rounded-xl px-3 py-2.5"
-                      placeholderTextColor="#94A3B8"
-                      maxLength={500}
-                      multiline
-                    />
-                    <Button
-                      label={calificarMutation.isPending ? 'Guardando…' : 'Guardar calificación'}
-                      variant="primary"
-                      fullWidth
-                      loading={calificarMutation.isPending}
-                      disabled={selectedRating === 0 || calificarMutation.isPending}
-                      onPress={handleCalificar}
-                    />
-                  </View>
-                ) : (
-                  <View className="flex-row items-center gap-2">
-                    <StarRating mode="display" value={null} showEmpty size="md" />
-                    <Text className="text-sm text-muted-foreground">Pendiente de calificación</Text>
-                  </View>
-                )}
-              </View>
+              <CalificacionCard
+                calificacion={calificacion}
+                calificacionComentario={calificacion_comentario}
+                isGestor={isGestor}
+                selectedRating={selectedRating}
+                onRatingChange={setSelectedRating}
+                comentario={comentario}
+                onComentarioChange={setComentario}
+                onGuardar={handleCalificar}
+                guardando={calificarMutation.isPending}
+              />
             </>
           )}
 
           {/* ── CTA: Marcar Ingreso (estado: confirmado) ─────────────────── */}
           {estado === 'confirmado' && (
-            <View
-              className="bg-card rounded-2xl px-5 py-5 gap-4"
-              style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
-            >
-              <Text className="text-sm font-semibold text-foreground">Marcar llegada</Text>
-
-              {/* Countdown — visible mientras falte más de 30 min */}
-              {!dentroVentana && minutosParaIngreso !== null && (
-                <View className="flex-row items-center gap-2.5 bg-muted rounded-xl px-3 py-3">
-                  <Ionicons name="time-outline" size={18} color="#64748B" />
-                  <View className="flex-1">
-                    <Text className="text-xs text-muted-foreground">El marcaje se habilita en</Text>
-                    <Text className="text-base font-bold text-foreground tabular-nums">
-                      {fmtFaltan(minutosParaIngreso - WINDOW_MIN)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              <GeoFenceIndicator
-                distanceM={distanceM}
-                status={geoStatus}
-                permissionDenied={permissionDenied}
-                locationUnavailable={locationUnavailable}
-              />
-
-              {dentroVentana && !canMark && distanceM !== null && (
-                <View className="flex-row items-start gap-2">
-                  <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
-                  <Text className="flex-1 text-xs text-muted-foreground">
-                    Acércate al punto de trabajo para habilitar el marcaje de entrada.
-                  </Text>
-                </View>
-              )}
-
-              <Button
-                label={ingresoMutation.isPending ? 'Registrando ingreso…' : 'Marcar Ingreso'}
-                variant="primary"
-                size="lg"
-                fullWidth
-                loading={ingresoMutation.isPending}
-                disabled={!dentroVentana || !canMark}
-                onPress={handleIngreso}
-                onPressDisabled={!dentroVentana ? handleIngresoPronto : undefined}
-              />
-            </View>
+            <CTAConfirmadoCard
+              dentroVentana={dentroVentana}
+              minutosParaIngreso={minutosParaIngreso}
+              windowMin={WINDOW_MIN}
+              isLibre={isLibre}
+              distanceM={distanceM}
+              geoStatus={geoStatus}
+              canMark={canMark}
+              permissionDenied={permissionDenied}
+              locationUnavailable={locationUnavailable}
+              ingresando={ingresoMutation.isPending}
+              onIngreso={handleIngreso}
+              onIngresoPronto={handleIngresoPronto}
+            />
           )}
 
           {/* ── CTA: En progreso → Marcar Egreso ────────────────────────── */}
           {estado === 'en_progreso' && (
-            <View
-              className="bg-card rounded-2xl px-5 py-5 gap-4"
-              style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
-            >
-              <Text className="text-sm font-semibold text-foreground">Turno en curso</Text>
-
-              {/* Live elapsed time */}
-              <View className="bg-success-light rounded-2xl px-4 py-4 items-center gap-1">
-                <View className="flex-row items-center gap-2 mb-1">
-                  <View className="w-2 h-2 rounded-full bg-success" />
-                  <Text className="text-xs font-medium text-success uppercase tracking-wide">
-                    Tiempo transcurrido
-                  </Text>
-                </View>
-                <Text className="text-3xl font-bold text-success tabular-nums">
-                  {elapsedLabel ?? '—'}
-                </Text>
-                {hora_ingreso_real && (
-                  <Text className="text-xs text-success/70 mt-1">
-                    Ingreso registrado a las {fmtTime(hora_ingreso_real.slice(11, 19))}
-                  </Text>
-                )}
-              </View>
-
-              <Button
-                label="Marcar Salida"
-                variant="primary"
-                size="lg"
-                fullWidth
-                onPress={() => setSignatureVisible(true)}
-              />
-              <Text className="text-xs text-center text-muted-foreground">
-                Se requiere firma digital para confirmar la salida.
-              </Text>
-            </View>
+            <CTAEnProgresoCard
+              elapsedLabel={elapsedLabel}
+              horaIngresoReal={hora_ingreso_real}
+              isLibre={isLibre}
+              distanceM={distanceM}
+              geoStatus={geoStatus}
+              canMark={canMark}
+              permissionDenied={permissionDenied}
+              locationUnavailable={locationUnavailable}
+              onMarcarSalida={() => setSignatureVisible(true)}
+              isGestor={isGestor}
+              onCorregir={() => setCorrigiendoIngreso(true)}
+            />
           )}
 
           {/* ── Pendiente: informativo ───────────────────────────── */}
@@ -614,32 +409,41 @@ export default function TurnoDetailScreen() {
             </View>
           )}
 
-          {/* ── Novedades ─────────────────────────────────────── */}
-          <View
-            className="bg-card rounded-2xl px-5 py-4"
-            style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
-          >
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-sm font-semibold text-foreground">Novedades</Text>
-              <TouchableOpacity
-                onPress={() => setNovedadModalVisible(true)}
-                className="flex-row items-center gap-1.5 px-3 py-1.5 bg-muted rounded-xl"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="add" size={16} color="#0284C7" />
-                <Text className="text-xs font-semibold text-info">Reportar</Text>
-              </TouchableOpacity>
-            </View>
-            {novedades.length === 0 ? (
-              <Text className="text-sm text-muted-foreground">Sin novedades reportadas.</Text>
-            ) : (
-              novedades.map((n) => <NovedadCard key={n.id} novedad={n} />)
-            )}
-          </View>
+          {/* ── Gestor: Corregir horario (siempre disponible) ─────────────── */}
+          {isGestor && (
+            <Button
+              label="Corregir horario de entrada/salida"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onPress={() => setCorrigiendoIngreso(true)}
+            />
+          )}
+
+          {/* ── Gestor: Agregar/editar bono extra — solo turnos confirmados, en
+              progreso o completados (nunca cancelados/no-presentados/pendientes).
+              Si el contrato ya fue firmado, el backend revierte la firma y
+              pide al trabajador refirmar con el nuevo monto (ver aviso en
+              BonoModal) en vez de bloquear el cambio — el contrato se
+              autofirma al marcar salida, así que bloquear por firma lo
+              dejaba casi inutilizable. Mismo criterio que la versión web
+              (OfertaDetailPage.tsx). ── */}
+          {isGestor
+            && (estado === 'confirmado' || estado === 'en_progreso' || estado === 'completado') && (
+            <Button
+              label={Number(bono_monto) > 0 ? 'Editar bono extra' : 'Agregar bono extra'}
+              variant="secondary"
+              size="md"
+              fullWidth
+              onPress={() => setEditandoBono(true)}
+            />
+          )}
+
+          <NovedadesCard novedades={novedades} onReportar={() => setNovedadModalVisible(true)} />
         </ScrollView>
       </SafeAreaView>
 
-      {/* ── Signature modal ───────────────────────────────────── */}
+      {/* ── Signature modal (egreso) ─────────────────────────── */}
       <SignaturePad
         visible={signatureVisible}
         onClose={() => setSignatureVisible(false)}
@@ -653,6 +457,24 @@ export default function TurnoDetailScreen() {
           visible={novedadModalVisible}
           asignacionId={id}
           onClose={() => setNovedadModalVisible(false)}
+        />
+      )}
+
+      {/* ── Corregir ingreso/egreso modal ─────────────────────── */}
+      {id != null && (
+        <CorregirIngresoEgresoModal
+          visible={corrigiendoIngreso}
+          asignacion={asignacion}
+          onClose={() => setCorrigiendoIngreso(false)}
+        />
+      )}
+
+      {/* ── Bono extra modal ───────────────────────────────────── */}
+      {id != null && (
+        <BonoModal
+          visible={editandoBono}
+          asignacion={asignacion}
+          onClose={() => setEditandoBono(false)}
         />
       )}
     </>

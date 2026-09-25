@@ -105,7 +105,7 @@ describe('validateStep1', () => {
     fecha: daysFromNow(30),
     hora_inicio: timeAt(7, 0),
     hora_fin: timeAt(15, 0),
-    lugar: '', latitud: null, longitud: null,
+    lugar: '', latitud: null, longitud: null, ubicacion_libre: false,
     encargado_nombre: '', encargado_telefono: '',
     para_quien: 'turnos', visibilidad: 'abierta', destinatarios: [], puestos: [],
   };

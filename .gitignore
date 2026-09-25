@@ -31,3 +31,7 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/
+
+# Internal working notes (not public)
+PENDIENTES.md
+PONYTAIL-DEBT.md

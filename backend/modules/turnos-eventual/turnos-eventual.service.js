@@ -2,7 +2,9 @@
 
 const TurnosEventualModel = require('./turnos-eventual.model');
 const EmpresasModel = require('../empresas/empresas.model');
+const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
+const { ROLES } = require('../../config/constants');
 const { calcularPeriodoActual } = require('../../utils/periodoCiclo');
 
 /**
@@ -15,11 +17,13 @@ const { calcularPeriodoActual } = require('../../utils/periodoCiclo');
 const SEGMENTOS = {
   nomina: {
     tipo: () => 'trimestral',
-    paraQuien: ['nomina', 'ambos'],
+    // trabajadores.tipo, no ofertas_turno.para_quien: una oferta 'ambos' la
+    // puede completar un trabajador_turnos, y eso no lo vuelve nómina.
+    tiposTrabajador: ['nomina'],
   },
   turnos: {
     tipo: (empresa) => empresa?.tipo_liquidacion || 'mensual',
-    paraQuien: ['turnos', 'ambos'],
+    tiposTrabajador: ['turnos', 'ambos'],
   },
 };
 
@@ -43,12 +47,24 @@ const TurnosEventualService = {
     return { nomina, turnos };
   },
 
-  async liquidacion(empresaId, periodoId) {
+  async liquidacion(empresaId, periodoId, usuario) {
     const periodo = await TurnosEventualModel.obtenerPorId(empresaId, periodoId);
     if (!periodo) throw new AppError('Período no encontrado', 404);
-    const { paraQuien } = SEGMENTOS[periodo.segmento];
-    const lineas = await TurnosEventualModel.liquidacion(empresaId, periodoId, paraQuien);
-    const total_general = lineas.reduce((s, l) => s + Number(l.total || 0), 0);
+    const { tiposTrabajador } = SEGMENTOS[periodo.segmento];
+
+    // trabajador_nomina solo ve su propia línea — nunca la de sus compañeros
+    // (mismo patrón que liquidacion.service.js#generar para nómina regular).
+    let trabajadorId;
+    if (usuario?.rol === ROLES.TRABAJADOR_NOMINA) {
+      const trabajador = await TrabajadoresModel.obtenerPorUsuarioId(empresaId, usuario.sub);
+      if (!trabajador) throw new AppError('Tu usuario no está vinculado a un trabajador activo', 403);
+      trabajadorId = trabajador.id;
+    }
+
+    const filas = await TurnosEventualModel.liquidacion(empresaId, periodoId, tiposTrabajador, trabajadorId);
+    // ponytail: SUM() sobre columnas DECIMAL vuelve como string en mysql2 (sin decimalNumbers) — castear antes de responder al cliente.
+    const lineas = filas.map((l) => ({ ...l, horas: Number(l.horas) || 0, total: Number(l.total) || 0 }));
+    const total_general = lineas.reduce((s, l) => s + l.total, 0);
     return { periodo, lineas, total_general };
   },
 

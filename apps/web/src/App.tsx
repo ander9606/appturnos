@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { LoginPage } from '@/modules/auth/LoginPage';
+import { RecuperarPasswordPage } from '@/modules/auth/RecuperarPasswordPage';
 import { ProtectedRoute, RoleRoute } from '@/modules/auth/ProtectedRoute';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { Layout } from '@/shared/components/Layout';
@@ -9,6 +10,7 @@ import { RegistroEmpresaPage } from '@/pages/RegistroEmpresaPage';
 import { PrivacidadPage } from '@/pages/PrivacidadPage';
 import { TerminosPage } from '@/pages/TerminosPage';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { CalendarioPage } from '@/pages/CalendarioPage';
 import { NominaPage } from '@/modules/nomina/pages/NominaPage';
 import { PeriodoDetailPage } from '@/modules/nomina/pages/PeriodoDetailPage';
 import { EquipoPage } from '@/modules/equipo/pages/EquipoPage';
@@ -20,6 +22,7 @@ import { IntegracionPage } from '@/modules/integracion/pages/IntegracionPage';
 import { SuperAdminPage } from '@/modules/admin/pages/SuperAdminPage';
 import { EmpresaDetailPage } from '@/modules/admin/pages/EmpresaDetailPage';
 import { WompiEventosPage } from '@/modules/admin/pages/WompiEventosPage';
+import { PlanesPage } from '@/modules/admin/pages/PlanesPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 /** La raíz es pública (landing de marketing) para visitantes anónimos; un usuario
@@ -38,12 +41,14 @@ export default function App() {
         <Route path="/bienvenida" element={<WelcomePage />} />
         <Route path="/registro" element={<RegistroEmpresaPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/recuperar" element={<RecuperarPasswordPage />} />
         <Route path="/privacidad" element={<PrivacidadPage />} />
         <Route path="/terminos" element={<TerminosPage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_nomina', 'jefe_turnos', 'nomina']} />}>
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="calendario" element={<CalendarioPage />} />
             </Route>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_nomina', 'nomina']} />}>
               <Route path="nomina" element={<NominaPage />} />
@@ -65,6 +70,7 @@ export default function App() {
               <Route path="admin/empresas" element={<SuperAdminPage />} />
               <Route path="admin/empresas/:id" element={<EmpresaDetailPage />} />
               <Route path="admin/wompi-eventos" element={<WompiEventosPage />} />
+              <Route path="admin/planes" element={<PlanesPage />} />
             </Route>
           </Route>
         </Route>
