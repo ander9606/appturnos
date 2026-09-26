@@ -188,7 +188,15 @@ export function useGeofence({
     // ponytail: no re-prompt on resume, just re-check silently — request*Async only shows
     // a system dialog when status is undetermined, so this is safe to call repeatedly.
     const sub = AppState.addEventListener('change', async (next) => {
-      if (next !== 'active' || cancelled) return;
+      if (cancelled) return;
+      if (next !== 'active') {
+        // App a segundo plano: nadie está mirando la pantalla — seguir sondeando
+        // GPS de alta precisión ahí solo gasta batería/CPU sin necesidad, y es
+        // justo el tipo de actividad en background que el watchdog del OS puede
+        // castigar matando la app. Se reanuda solo al volver a 'active'.
+        if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+        return;
+      }
       const { status } = await Location.getForegroundPermissionsAsync();
       if (cancelled) return;
       await startIfGranted(status);
