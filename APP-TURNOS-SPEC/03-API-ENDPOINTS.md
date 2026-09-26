@@ -103,12 +103,24 @@ ofertas aún no visibles devuelven 404.
 
 ---
 
-## Integración (webhook receiver)
+## Integración
+
+Auth real verificada contra `integracion.routes.js` (2026-09-17) — **no es
+X-API-Key en todos los casos**, cada endpoint usa un mecanismo distinto:
 
 | Método | Path | Auth | Descripción |
 |--------|------|------|-------------|
-| POST | `/api/integracion/eventos` | X-API-Key de logiq360 | Recibir eventos de logiq360 |
-| GET | `/api/integracion/estado` | X-API-Key de logiq360 | Health check de integración |
+| POST | `/api/integracion/eventos` | Firma HMAC (`X-Logiq360-Signature`), sin JWT ni X-API-Key | Recibir eventos de logiq360 |
+| GET | `/api/integracion/estado` | JWT + rol `admin_empresa`/`jefe_turnos` | Health check interno (panel de Zaturno, no lo llama logiq360) |
+| POST | `/api/integracion/reintentar-fallidos` | JWT + rol `admin_empresa` | Reencolar eventos salientes fallidos |
+| GET/PUT | `/api/integracion/configuracion` | JWT + rol `admin_empresa` | Leer/actualizar config de integración |
+| POST | `/api/integracion/emparejar` | JWT + rol `admin_empresa` | Confirmar emparejamiento con código de logiq360 |
+| GET | `/api/integracion/conciliacion` | JWT + rol `admin_empresa` | Personal sin vincular + candidatos de logiq360 |
+| POST | `/api/integracion/conciliacion/vincular` | JWT + rol `admin_empresa` | Vincular trabajador ↔ empleado logiq360 manualmente |
+| GET | `/api/integracion/public/ping` | X-API-Key de logiq360 | Test de conectividad |
+| GET | `/api/integracion/public/estado/:external_ref` | X-API-Key de logiq360 | Estado de oferta/contratos |
+| GET | `/api/integracion/public/en-sitio/:external_ref` | X-API-Key de logiq360 | Quién está en sitio ahora |
+| GET | `/api/integracion/public/trabajadores` | X-API-Key de logiq360 | Sincronizar personal hacia logiq360 |
 
 ---
 
@@ -142,8 +154,7 @@ ofertas aún no visibles devuelven 404.
 ```json
 POST /api/integracion/eventos
 Headers:
-  X-API-Key: lt_<key>
-  X-Logiq360-Signature: sha256=<hmac>
+  X-Logiq360-Signature: sha256=<hmac>   ← única credencial; NO se envía X-API-Key aquí
   X-Logiq360-Event: orden.creada
 
 Body:
