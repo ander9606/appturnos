@@ -57,6 +57,7 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `nomina.sospechoso` | Posible marcaje fraudulento | Dos trabajadores marcan registro diario desde el mismo dispositivo | `registros.service.js:93` |
 | `nomina.descuento_respondido` | Descuento aceptado / rechazado | Trabajador responde a un descuento pendiente | `descuentos.service.js:69` |
 | `trabajador_empresa.archivado_por_conversion` | Trabajador ya no disponible | Uno de sus trabajadores se convirtió a nómina de otra empresa | `trabajador-empresa.service.js:313` |
+| `oferta.creada` | Nuevo turno creado | Un jefe_turnos/admin_empresa crea o duplica un turno — avisa a los demás co-gestores de la empresa (no al creador) para que no lo dupliquen | `ofertas.gestion.service.js:crear,duplicar` |
 
 ## Solo `admin_empresa`
 
@@ -79,7 +80,9 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 
 - Nada notifica a `jefe_nomina` ni a `nomina` (rol de solo lectura) específicamente — comparten
   los tipos de nómina solo si también son `admin_empresa`.
-- No hay notificación al **crear** un período/oferta desde cero, solo en cambios sobre algo existente.
+- No hay notificación al **crear** un período de nómina desde cero, solo en cambios sobre algo
+  existente. Para ofertas de turno sí existe desde `oferta.creada` (arriba) — avisa a los
+  co-gestores, no al que la crea.
 
 ## Navegación al tocar (`destino()` en `apps/mobile/app/notificaciones.tsx`)
 
