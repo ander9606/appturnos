@@ -138,6 +138,26 @@ async function notificarPoolPorPuestos(empresaId, oferta) {
   }
 }
 
+/**
+ * Avisa a los demás jefe_turnos/admin_empresa de la empresa cuando alguien
+ * crea un turno, para que no lo dupliquen sin saberlo — mismo query de
+ * co-gestores que asignaciones.marcaje.service.js usa para "sospechoso".
+ */
+async function notificarCoGestores(empresaId, oferta, creadoPor) {
+  const [gestores] = await pool.query(
+    `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1 AND id != ?`,
+    [empresaId, creadoPor]
+  );
+  if (gestores.length === 0) return;
+  await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+    empresaId,
+    tipo: 'oferta.creada',
+    titulo: 'Nuevo turno creado',
+    mensaje: `Se creó el turno "${oferta.titulo}" — ${oferta.fecha}. Revisa antes de crear uno duplicado.`,
+    data: { oferta_id: oferta.id },
+  });
+}
+
 /** Notifica solo a los destinatarios elegidos a mano de un turno dirigido (best-effort). */
 async function notificarDestinatariosDirectos(empresaId, oferta) {
   const destinatarios = oferta.destinatarios || [];
@@ -213,6 +233,7 @@ module.exports = {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
 
     await notificarPoolPorPuestos(empresaId, oferta);
+    await notificarCoGestores(empresaId, oferta, creadoPor);
 
     // No bloquea la creación — solo avisa al gestor si el catálogo de
     // trabajadores de la empresa no alcanza para cubrir lo pedido.
@@ -354,6 +375,8 @@ module.exports = {
       );
     }
     const nuevaId = await OfertasModel.duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio);
-    return OfertasModel.obtenerPorId(empresaId, nuevaId);
+    const oferta = await OfertasModel.obtenerPorId(empresaId, nuevaId);
+    await notificarCoGestores(empresaId, oferta, creadoPor);
+    return oferta;
   },
 };

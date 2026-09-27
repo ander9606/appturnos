@@ -43,6 +43,7 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'nomina.periodo_liquidado':    'cash-outline',
   'cuenta_cobro.pendiente_firma': 'document-text-outline',
   'nomina.sospechoso':           'alert-circle-outline',
+  'oferta.creada':               'add-circle-outline',
   'oferta.nueva':                'megaphone-outline',
   'oferta.modificada':           'create-outline',
   'oferta.cancelada':            'close-circle-outline',
