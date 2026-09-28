@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { SystemBars } from 'react-native-edge-to-edge';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 
@@ -25,7 +25,7 @@ export default function WelcomeScreen() {
 
   return (
     <SafeAreaView style={styles.root}>
-      <SystemBars style="light" />
+      <StatusBar style="light" />
 
       {/* ── Hero ── */}
       <View style={styles.hero}>
