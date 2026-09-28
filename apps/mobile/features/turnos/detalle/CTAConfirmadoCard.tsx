@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { GeoFenceIndicator } from '../GeoFenceIndicator';
 import { UbicacionLibreIndicator } from '../UbicacionLibreIndicator';
+import { TrabajadorInfoGestor } from './TrabajadorInfoGestor';
 import type { EstadoUbicacionLibre } from '../useUbicacionLibre';
 import { fmtFaltan } from '../turnosUtils';
 import type { GeofenceStatus } from '@/lib/geo';
@@ -13,6 +14,7 @@ export function CTAConfirmadoCard({
   dentroVentana, minutosParaIngreso, windowMin, isLibre,
   distanceM, geoStatus, canMark, permissionDenied, locationUnavailable,
   ubicacionLibre, ingresando, onIngreso, onIngresoPronto, isGestor,
+  trabajadorTelefono, trabajadorRanking, trabajadorTotalCalificaciones,
 }: {
   dentroVentana: boolean;
   minutosParaIngreso: number | null;
@@ -28,6 +30,9 @@ export function CTAConfirmadoCard({
   onIngreso: () => void;
   onIngresoPronto: () => void;
   isGestor: boolean;
+  trabajadorTelefono?: string | null;
+  trabajadorRanking?: number | null;
+  trabajadorTotalCalificaciones?: number;
 }) {
   // El gestor no marca su propia llegada — este CTA es la acción del
   // trabajador (GPS + botón "Marcar Ingreso"). Para el gestor solo tiene
@@ -51,6 +56,12 @@ export function CTAConfirmadoCard({
               ? `El marcaje se habilita en ${fmtFaltan(minutosParaIngreso - windowMin)}.`
               : 'El marcaje se habilitará cerca de la hora de entrada.'}
         </Text>
+
+        <TrabajadorInfoGestor
+          telefono={trabajadorTelefono}
+          ranking={trabajadorRanking}
+          totalCalificaciones={trabajadorTotalCalificaciones}
+        />
       </View>
     );
   }

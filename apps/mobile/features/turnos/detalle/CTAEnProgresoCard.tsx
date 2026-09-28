@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { GeoFenceIndicator } from '../GeoFenceIndicator';
 import { UbicacionLibreIndicator } from '../UbicacionLibreIndicator';
+import { TrabajadorInfoGestor } from './TrabajadorInfoGestor';
 import type { EstadoUbicacionLibre } from '../useUbicacionLibre';
 import { fmtTime } from '../turnosUtils';
 import type { GeofenceStatus } from '@/lib/geo';
@@ -13,6 +14,7 @@ export function CTAEnProgresoCard({
   elapsedLabel, horaIngresoReal, isLibre,
   distanceM, geoStatus, canMark, permissionDenied, locationUnavailable,
   ubicacionLibre, onMarcarSalida, isGestor, onCorregir,
+  trabajadorTelefono, trabajadorRanking, trabajadorTotalCalificaciones,
 }: {
   elapsedLabel: string | null;
   horaIngresoReal: string | null;
@@ -26,6 +28,9 @@ export function CTAEnProgresoCard({
   onMarcarSalida: () => void;
   isGestor: boolean;
   onCorregir: () => void;
+  trabajadorTelefono?: string | null;
+  trabajadorRanking?: number | null;
+  trabajadorTotalCalificaciones?: number;
 }) {
   return (
     <View
@@ -57,13 +62,20 @@ export function CTAEnProgresoCard({
           transcurrido de arriba ya es la info relevante; "Corregir
           ingreso/egreso" cubre cualquier ajuste manual. */}
       {isGestor ? (
-        <TouchableOpacity
-          onPress={onCorregir}
-          className="flex-row items-center justify-center gap-1.5 py-2"
-        >
-          <Ionicons name="time-outline" size={14} color="#64748B" />
-          <Text className="text-xs font-semibold text-muted-foreground">Corregir ingreso/egreso</Text>
-        </TouchableOpacity>
+        <>
+          <TrabajadorInfoGestor
+            telefono={trabajadorTelefono}
+            ranking={trabajadorRanking}
+            totalCalificaciones={trabajadorTotalCalificaciones}
+          />
+          <TouchableOpacity
+            onPress={onCorregir}
+            className="flex-row items-center justify-center gap-1.5 py-2"
+          >
+            <Ionicons name="time-outline" size={14} color="#64748B" />
+            <Text className="text-xs font-semibold text-muted-foreground">Corregir ingreso/egreso</Text>
+          </TouchableOpacity>
+        </>
       ) : (
         <>
           {isLibre ? (
