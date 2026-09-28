@@ -3,7 +3,7 @@
  * Accesible desde la campana del header en cualquier tab.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import {
   useMarcarTodasLeidas,
 } from '@/features/notificaciones/useNotificaciones';
 import { useTheme } from '@/lib/theme';
+import { THEME_COLORS, COLORS } from '@/lib/designTokens';
 import type { Notificacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -84,6 +85,40 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
 
 function iconForTipo(tipo: string): React.ComponentProps<typeof Ionicons>['name'] {
   return TIPO_ICON[tipo] ?? 'notifications-outline';
+}
+
+// Clasifica por módulo usando el prefijo de `tipo` — así un gestor con
+// trabajadores tanto de turnos como de nómina puede separar el feed en vez
+// de tener que leer todo mezclado para encontrar lo que le interesa.
+type Categoria = 'todas' | 'turnos' | 'nomina' | 'general';
+
+function categoriaDeTipo(tipo: string): Exclude<Categoria, 'todas'> {
+  if (tipo.startsWith('nomina.') || tipo.startsWith('reingreso.') || tipo === 'trabajador_empresa.bienvenida_nomina') {
+    return 'nomina';
+  }
+  if (
+    tipo.startsWith('turno.') || tipo.startsWith('asignacion.') || tipo.startsWith('postulacion.') ||
+    tipo.startsWith('oferta.') || tipo === 'novedad_turno' || tipo === 'contrato.pendiente_firma' ||
+    tipo === 'calificacion.recibida' || tipo === 'cuenta_cobro.pendiente_firma'
+  ) {
+    return 'turnos';
+  }
+  // Empresa/suscripción/integración/ausencias — cruzan ambos módulos o son
+  // de nivel empresa, no de un trabajador de turnos o nómina en particular.
+  return 'general';
+}
+
+const CATEGORIA_LABEL: Record<Categoria, string> = {
+  todas: 'Todas', turnos: 'Turnos', nomina: 'Nómina', general: 'General',
+};
+
+// Mismos colores que el resto de la app usa para turnos/nómina (ver
+// TrabajadorCard/THEME_COLORS) — 'general' no tiene un rol propio, así que
+// usa el azul info ya reservado para gestores/neutro.
+function colorDeCategoria(categoria: Exclude<Categoria, 'todas'>): string {
+  if (categoria === 'turnos') return THEME_COLORS.turnos.primary;
+  if (categoria === 'nomina') return THEME_COLORS.nomina.primary;
+  return COLORS.info;
 }
 
 function fmtDate(iso: string): string {
@@ -171,10 +206,24 @@ export default function NotificacionesScreen() {
   const { mutate: marcarLeida } = useMarcarLeida();
   const { mutate: marcarTodas, isPending: marcandoTodas } = useMarcarTodasLeidas();
   const [soloNoLeidas, setSoloNoLeidas] = useState(false);
+  const [categoria, setCategoria] = useState<Categoria>('todas');
 
   const todas = data?.data ?? [];
   const noLeidas = data?.no_leidas ?? 0;
-  const notificaciones = soloNoLeidas ? todas.filter((n) => !n.leida) : todas;
+
+  // Solo se muestra el filtro de categoría si hay más de una presente —
+  // evita chips vacíos para un trabajador que solo recibe notificaciones
+  // de un módulo (turnos o nómina, nunca ambos).
+  const categoriasPresentes = useMemo(() => {
+    const set = new Set<Categoria>();
+    todas.forEach((n) => set.add(categoriaDeTipo(n.tipo)));
+    return set;
+  }, [todas]);
+  const mostrarFiltroCategoria = categoriasPresentes.size > 1;
+
+  const notificaciones = todas
+    .filter((n) => !soloNoLeidas || !n.leida)
+    .filter((n) => categoria === 'todas' || categoriaDeTipo(n.tipo) === categoria);
 
   const handleTap = useCallback((n: Notificacion) => {
     if (!n.leida) marcarLeida(n.id);
@@ -191,15 +240,15 @@ export default function NotificacionesScreen() {
       ].join(' ')}
       accessibilityRole="button"
     >
-      {/* Icono del tipo */}
+      {/* Icono del tipo — coloreado por módulo (turnos/nómina/general) */}
       <View
         className="w-9 h-9 rounded-full items-center justify-center shrink-0 mt-0.5"
-        style={{ backgroundColor: item.leida ? '#E2E8F022' : theme.primary + '18' }}
+        style={{ backgroundColor: item.leida ? '#E2E8F022' : colorDeCategoria(categoriaDeTipo(item.tipo)) + '18' }}
       >
         <Ionicons
           name={iconForTipo(item.tipo)}
           size={18}
-          color={item.leida ? '#94A3B8' : theme.primary}
+          color={item.leida ? '#94A3B8' : colorDeCategoria(categoriaDeTipo(item.tipo))}
         />
       </View>
 
@@ -277,6 +326,30 @@ export default function NotificacionesScreen() {
           );
         })}
       </View>
+
+      {/* Filtro por módulo — solo si el feed mezcla más de uno */}
+      {mostrarFiltroCategoria && (
+        <View className="flex-row gap-2 px-5 py-3 border-b border-border">
+          {(['todas', 'turnos', 'nomina', 'general'] as const)
+            .filter((c) => c === 'todas' || categoriasPresentes.has(c))
+            .map((c) => {
+              const active = categoria === c;
+              const color = c === 'todas' ? theme.primary : colorDeCategoria(c);
+              return (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setCategoria(c)}
+                  className="px-3 py-1.5 rounded-full"
+                  style={{ backgroundColor: active ? color : color + '18' }}
+                >
+                  <Text className="text-xs font-semibold" style={{ color: active ? '#FFFFFF' : color }}>
+                    {CATEGORIA_LABEL[c]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+        </View>
+      )}
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
