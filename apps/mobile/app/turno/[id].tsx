@@ -88,7 +88,11 @@ export default function TurnoDetailScreen() {
   // Activo durante 'confirmado' (para el ingreso) y 'en_progreso' (para el
   // egreso) — antes solo cubría 'confirmado', así que al llegar a en_progreso
   // el poll se apagaba y el egreso nunca tenía una ubicación fresca.
-  const activoParaGeofence = asignacion?.estado === 'confirmado' || asignacion?.estado === 'en_progreso';
+  // El gestor nunca marca su propia entrada/salida en el turno de otro
+  // trabajador — sondear su GPS aquí no serviría para nada y solo gasta
+  // batería/permiso de ubicación de su teléfono.
+  const activoParaGeofence = !isGestor
+    && (asignacion?.estado === 'confirmado' || asignacion?.estado === 'en_progreso');
   const isLibre = asignacion?.geofence_info?.tipo === 'libre';
   const isZonal = asignacion?.geofence_info?.tipo === 'zonal';
 
@@ -376,6 +380,7 @@ export default function TurnoDetailScreen() {
               ingresando={ingresoMutation.isPending}
               onIngreso={handleIngreso}
               onIngresoPronto={handleIngresoPronto}
+              isGestor={isGestor}
             />
           )}
 

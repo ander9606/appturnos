@@ -52,41 +52,11 @@ export function CTAEnProgresoCard({
         )}
       </View>
 
-      {isLibre ? (
-        <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
-      ) : (
-        <>
-          <GeoFenceIndicator
-            distanceM={distanceM}
-            status={geoStatus}
-            permissionDenied={permissionDenied}
-            locationUnavailable={locationUnavailable}
-          />
-
-          {!canMark && distanceM !== null && (
-            <View className="flex-row items-start gap-2">
-              <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
-              <Text className="flex-1 text-xs text-muted-foreground">
-                Acércate al punto de trabajo para habilitar el marcaje de salida.
-              </Text>
-            </View>
-          )}
-        </>
-      )}
-
-      <Button
-        label="Marcar Salida"
-        variant="primary"
-        size="lg"
-        fullWidth
-        disabled={!canMark}
-        onPress={onMarcarSalida}
-      />
-      <Text className="text-xs text-center text-muted-foreground">
-        Se requiere firma digital para confirmar la salida.
-      </Text>
-
-      {isGestor && (
+      {/* El gestor no marca su propia salida — "Marcar Salida" y el GPS de
+          abajo son la acción del trabajador. Para el gestor, el tiempo
+          transcurrido de arriba ya es la info relevante; "Corregir
+          ingreso/egreso" cubre cualquier ajuste manual. */}
+      {isGestor ? (
         <TouchableOpacity
           onPress={onCorregir}
           className="flex-row items-center justify-center gap-1.5 py-2"
@@ -94,6 +64,42 @@ export function CTAEnProgresoCard({
           <Ionicons name="time-outline" size={14} color="#64748B" />
           <Text className="text-xs font-semibold text-muted-foreground">Corregir ingreso/egreso</Text>
         </TouchableOpacity>
+      ) : (
+        <>
+          {isLibre ? (
+            <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
+          ) : (
+            <>
+              <GeoFenceIndicator
+                distanceM={distanceM}
+                status={geoStatus}
+                permissionDenied={permissionDenied}
+                locationUnavailable={locationUnavailable}
+              />
+
+              {!canMark && distanceM !== null && (
+                <View className="flex-row items-start gap-2">
+                  <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
+                  <Text className="flex-1 text-xs text-muted-foreground">
+                    Acércate al punto de trabajo para habilitar el marcaje de salida.
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          <Button
+            label="Marcar Salida"
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={!canMark}
+            onPress={onMarcarSalida}
+          />
+          <Text className="text-xs text-center text-muted-foreground">
+            Se requiere firma digital para confirmar la salida.
+          </Text>
+        </>
       )}
     </View>
   );

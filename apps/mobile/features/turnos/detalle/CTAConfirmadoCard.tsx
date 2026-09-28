@@ -12,7 +12,7 @@ import type { GeofenceStatus } from '@/lib/geo';
 export function CTAConfirmadoCard({
   dentroVentana, minutosParaIngreso, windowMin, isLibre,
   distanceM, geoStatus, canMark, permissionDenied, locationUnavailable,
-  ubicacionLibre, ingresando, onIngreso, onIngresoPronto,
+  ubicacionLibre, ingresando, onIngreso, onIngresoPronto, isGestor,
 }: {
   dentroVentana: boolean;
   minutosParaIngreso: number | null;
@@ -27,7 +27,34 @@ export function CTAConfirmadoCard({
   ingresando: boolean;
   onIngreso: () => void;
   onIngresoPronto: () => void;
+  isGestor: boolean;
 }) {
+  // El gestor no marca su propia llegada — este CTA es la acción del
+  // trabajador (GPS + botón "Marcar Ingreso"). Para el gestor solo tiene
+  // sentido el estado informativo: si ya se habilitó el marcaje o cuánto
+  // falta. Corregir manualmente el ingreso está en el botón "Corregir
+  // horario de entrada/salida" que ya se muestra debajo, en la pantalla.
+  if (isGestor) {
+    return (
+      <View
+        className="bg-card rounded-2xl px-5 py-5 gap-2"
+        style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
+      >
+        <View className="flex-row items-center gap-2">
+          <Ionicons name="hourglass-outline" size={20} color="#64748B" />
+          <Text className="text-sm font-semibold text-foreground">Esperando ingreso del trabajador</Text>
+        </View>
+        <Text className="text-xs text-muted-foreground">
+          {dentroVentana
+            ? 'El marcaje de entrada ya está habilitado para el trabajador.'
+            : minutosParaIngreso !== null
+              ? `El marcaje se habilita en ${fmtFaltan(minutosParaIngreso - windowMin)}.`
+              : 'El marcaje se habilitará cerca de la hora de entrada.'}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View
       className="bg-card rounded-2xl px-5 py-5 gap-4"
