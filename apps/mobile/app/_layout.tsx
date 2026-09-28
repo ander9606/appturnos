@@ -31,7 +31,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { AlertDialog } from '@/components/ui/AlertDialog';
 import { showInvitacionFlotante } from '@/lib/invitacionFlotante';
 import { trabajadorEmpresaApi } from '@api-client';
-import { destino as destinoNotificacion } from './notificaciones';
+import { destino as destinoNotificacion } from '@/features/notificaciones/destino';
 
 const TIPOS_INVITACION_EMPRESA = new Set(['invitacion_empresa_nomina', 'invitacion_empresa']);
 
