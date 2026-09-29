@@ -10,7 +10,7 @@
  * fijo/zonal. Mismo criterio que useUbicacionParaLibre en
  * nomina/trabajador/useNominaTrabajador.ts.
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 export type EstadoUbicacionLibre = 'obteniendo' | 'lista' | 'denegada' | 'no_disponible';
@@ -18,6 +18,8 @@ export type EstadoUbicacionLibre = 'obteniendo' | 'lista' | 'denegada' | 'no_dis
 export function useUbicacionLibre(activo: boolean) {
   const [estado, setEstado] = useState<EstadoUbicacionLibre>('obteniendo');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const estadoRef = useRef(estado);
+  estadoRef.current = estado;
 
   const intentar = useCallback(async () => {
     setEstado('obteniendo');
@@ -42,8 +44,14 @@ export function useUbicacionLibre(activo: boolean) {
     // Si el trabajador salió a Ajustes a conceder el permiso y vuelve, se
     // reintenta solo — sin esto quedaba trabado en 'denegada' hasta salir y
     // reentrar a la pantalla. Mismo patrón que useGeofence.
+    // Solo reintenta si antes falló: en Android, abrir el modal de firma al
+    // marcar salida dispara un 'active' espurio de AppState, y si ya había un
+    // fix bueno ('lista') esto lo botaba y volvía a mostrar "Obteniendo
+    // ubicación…" justo cuando el trabajador iba a cerrar el turno.
     const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active') intentar();
+      if (next === 'active' && (estadoRef.current === 'denegada' || estadoRef.current === 'no_disponible')) {
+        intentar();
+      }
     });
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
