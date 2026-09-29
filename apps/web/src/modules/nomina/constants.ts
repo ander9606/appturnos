@@ -12,6 +12,10 @@ export const TIPO_DIA_LABELS: Record<TipoDia, string> = {
 
 export const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario', 'descanso', 'compensatorio', 'incapacidad', 'vacacion', 'licencia', 'ausencia'];
 
+// 'ausencia' se maneja aparte (mensaje y color distinto) — estos son los
+// demás tipo_dia que tampoco requieren horario de entrada/salida.
+export const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'licencia'];
+
 export const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
   inasistencia: 'Inasistencia',
