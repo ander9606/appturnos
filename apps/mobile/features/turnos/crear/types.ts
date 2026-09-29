@@ -15,6 +15,8 @@ export type DestinatarioInput = {
 export type WizardData = {
   titulo: string;
   descripcion: string;
+  /** El trabajador SÍ las ve — solo evita que aparezcan en el contrato (usa `descripcion` para eso). */
+  notas_adicionales: string;
   fecha: Date | null;
   hora_inicio: Date | null;
   hora_fin: Date | null;
@@ -33,6 +35,7 @@ export type WizardData = {
 export const INITIAL: WizardData = {
   titulo: '',
   descripcion: '',
+  notas_adicionales: '',
   fecha: null,
   hora_inicio: null,
   hora_fin: null,

@@ -17,7 +17,7 @@ function minutosAHora(minutos) {
  * `ofertas_turno` solo lleva los datos generales del evento.
  */
 
-const COLUMNAS = `id, empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
+const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
   lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
@@ -90,6 +90,7 @@ const PUNTOS_JSON_ALIAS = PUNTOS_JSON.replace(
 const CAMPOS_EDITABLES = [
   'titulo',
   'descripcion',
+  'notas_adicionales',
   'fecha',
   'hora_inicio',
   'hora_fin_estimada',
@@ -382,14 +383,15 @@ const OfertasModel = {
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
-           (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
+           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
             lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono,
             estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresaId,
           datos.titulo,
           datos.descripcion ?? null,
+          datos.notas_adicionales ?? null,
           datos.fecha,
           datos.hora_inicio,
           datos.hora_fin_estimada ?? null,
@@ -581,11 +583,11 @@ const OfertasModel = {
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
-           (empresa_id, titulo, descripcion, fecha, hora_inicio, hora_fin_estimada,
+           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
             lugar, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
-          empresaId, original.titulo, original.descripcion, nuevaFecha,
+          empresaId, original.titulo, original.descripcion, original.notas_adicionales, nuevaFecha,
           horaInicio, horaFinEstimada,
           original.lugar, original.latitud, original.longitud, original.ubicacion_libre,
           original.para_quien, creadoPor,

@@ -84,6 +84,27 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         />
       </View>
 
+      <View className="gap-1.5">
+        <View className="flex-row items-center gap-1.5">
+          <Ionicons name="information-circle-outline" size={14} color="#64748B" />
+          <Text className="text-sm font-semibold text-foreground">Detalles adicionales</Text>
+        </View>
+        <Text className="text-xs text-muted-foreground">
+          El trabajador sí las verá — úsalas para info operativa (ej. "llevar ropa blanca"). Nunca aparecen en el contrato.
+        </Text>
+        <TextInput
+          className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
+          placeholder="Detalles adicionales para el trabajador (opcional)"
+          placeholderTextColor="#94A3B8"
+          value={data.notas_adicionales}
+          onChangeText={(t) => onChange({ notas_adicionales: t })}
+          multiline
+          numberOfLines={3}
+          textAlignVertical="top"
+          style={{ minHeight: 72 }}
+        />
+      </View>
+
       <View className="gap-2">
         <Text className="text-sm font-semibold text-foreground">Fecha *</Text>
         <TouchableOpacity

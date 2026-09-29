@@ -290,7 +290,7 @@ export default function TurnoDetailScreen() {
     );
   }
 
-  const { estado, oferta_titulo, oferta_descripcion, oferta_externo_notas,
+  const { estado, oferta_titulo, oferta_descripcion, oferta_notas_adicionales, oferta_externo_notas,
           hora_ingreso_real, hora_egreso_real,
           bono_monto, calificacion, calificacion_comentario,
           trabajador_telefono, trabajador_ranking, trabajador_total_calificaciones } = asignacion;
@@ -322,7 +322,11 @@ export default function TurnoDetailScreen() {
             onOpenMaps={openInMaps}
           />
 
-          <TurnoDescripcionCard descripcion={oferta_descripcion} notasExterno={oferta_externo_notas} />
+          <TurnoDescripcionCard
+            descripcion={oferta_descripcion}
+            notasAdicionales={oferta_notas_adicionales}
+            notasExterno={oferta_externo_notas}
+          />
 
           {/* ── Timeline ──────────────────────────────────────── */}
           <View

@@ -101,7 +101,7 @@ describe('calcularPresupuesto', () => {
 
 describe('validateStep1', () => {
   const valid: WizardData = {
-    titulo: 'Turno Corferias', descripcion: '',
+    titulo: 'Turno Corferias', descripcion: '', notas_adicionales: '',
     fecha: daysFromNow(30),
     hora_inicio: timeAt(7, 0),
     hora_fin: timeAt(15, 0),
