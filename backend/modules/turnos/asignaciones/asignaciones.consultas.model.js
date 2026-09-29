@@ -300,6 +300,7 @@ module.exports = {
     const [filas] = await pool.query(
       `SELECT a.*,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              o.notas_adicionales AS oferta_notas_adicionales,
               o.externo_notas AS oferta_externo_notas,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
               o.lugar, o.latitud, o.longitud, o.ubicacion_libre,

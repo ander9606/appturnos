@@ -457,6 +457,20 @@ export default function OfertaDetailScreen() {
             </View>
           )}
 
+          {/* ── Detalles adicionales — visible para todos, nunca sale en el contrato ── */}
+          {oferta.notas_adicionales && (
+            <View className="bg-card rounded-2xl px-5 py-4 gap-2"
+              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="information-circle-outline" size={14} color="#64748B" />
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Detalles adicionales
+                </Text>
+              </View>
+              <Text className="text-sm text-foreground leading-5">{oferta.notas_adicionales}</Text>
+            </View>
+          )}
+
           {/* ── Puestos / cargos ─────────────────────────────────── */}
           <View className="bg-card rounded-2xl px-5 py-4 gap-3"
             style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>

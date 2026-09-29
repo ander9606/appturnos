@@ -34,6 +34,8 @@ export interface Oferta {
   hora_inicio: string;
   hora_fin_estimada: string | null;
   descripcion: string | null;
+  // Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato.
+  notas_adicionales: string | null;
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
