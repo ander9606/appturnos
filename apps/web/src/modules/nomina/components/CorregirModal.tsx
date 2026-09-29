@@ -5,7 +5,7 @@ import { useCorregirRegistro } from '../hooks/useNomina';
 import type { Registro, TipoDia } from '../types';
 import { Modal } from '@/shared/components/Modal';
 import { fmtDiaSemana } from '@/shared/lib/format';
-import { TIPO_DIA_OPTIONS } from '../constants';
+import { TIPO_DIA_OPTIONS, TIPOS_DIA_SIN_HORARIO } from '../constants';
 
 export function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () => void }) {
   const corregir = useCorregirRegistro();
@@ -17,10 +17,10 @@ export function CorregirModal({ registro, onClose }: { registro: Registro; onClo
   });
 
   const esAusencia = form.tipo_dia === 'ausencia';
-  const sinHorario = esAusencia || form.tipo_dia === 'compensatorio';
+  const sinHorario = esAusencia || TIPOS_DIA_SIN_HORARIO.includes(form.tipo_dia);
 
   function onChangeTipoDia(tipo_dia: TipoDia) {
-    const sinHorarioNuevo = tipo_dia === 'ausencia' || tipo_dia === 'compensatorio';
+    const sinHorarioNuevo = tipo_dia === 'ausencia' || TIPOS_DIA_SIN_HORARIO.includes(tipo_dia);
     setForm(f => ({ ...f, tipo_dia, ...(sinHorarioNuevo ? { hora_entrada: '', hora_salida: '' } : {}) }));
   }
 
@@ -64,7 +64,7 @@ export function CorregirModal({ registro, onClose }: { registro: Registro; onClo
             <Info size={14} className="flex-shrink-0" />
             {esAusencia
               ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
-              : 'Los descansos compensatorios no requieren horario de entrada ni salida.'}
+              : 'Este tipo de día no requiere horario de entrada ni salida.'}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">

@@ -18,6 +18,9 @@ const CORREGIR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA];
 const MARCAR = [ROLES.TRABAJADOR_NOMINA];
 
 const TIPOS_DIA = ['ordinario', 'descanso', 'compensatorio', 'incapacidad', 'vacacion', 'licencia', 'ausencia'];
+// 'ausencia' se valida aparte más abajo (mensaje propio) — estos son los demás
+// tipo_dia que tampoco requieren hora_entrada al crear un registro manual.
+const TIPOS_DIA_SIN_HORARIO = ['ausencia', 'compensatorio', 'descanso', 'licencia'];
 const RE_HORA   = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const idParam   = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
@@ -54,9 +57,10 @@ router.post(
     body('periodo_id').isInt({ min: 1 }).withMessage('periodo_id es obligatorio'),
     body('fecha').isISO8601().withMessage('fecha inválida (YYYY-MM-DD)'),
     body('tipo_dia').optional().isIn(TIPOS_DIA).withMessage('tipo_dia inválido'),
-    // 'ausencia' (no se presentó) no tiene hora de entrada — el resto de tipos sí la requieren.
+    // 'ausencia', 'compensatorio', 'descanso' y 'licencia' no tienen hora de
+    // entrada — el resto de tipos (ordinario, incapacidad, vacación) sí la requieren.
     body('hora_entrada')
-      .if((_, { req }) => req.body.tipo_dia !== 'ausencia')
+      .if((_, { req }) => !TIPOS_DIA_SIN_HORARIO.includes(req.body.tipo_dia))
       .matches(RE_HORA).withMessage('hora_entrada inválida (HH:MM)'),
     body('hora_salida')
       .optional({ values: 'falsy' })

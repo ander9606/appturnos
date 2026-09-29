@@ -47,6 +47,10 @@ const TIPOS_DIA: { v: TipoDia; label: string; color: string }[] = [
   { v: 'ausencia',      label: 'Ausencia (no vino)', color: '#EF4444' },
 ];
 
+// 'ausencia' se maneja aparte (mensaje y color distinto) — estos son los
+// demás tipo_dia que tampoco requieren horario de entrada/salida.
+const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'licencia'];
+
 function TipoDiaChips({ value, onChange }: { value: TipoDia; onChange: (v: TipoDia) => void }) {
   return (
     <View className="flex-row flex-wrap gap-2">
@@ -100,7 +104,7 @@ function EditarRegistroModal({
   const [showSalida, setShowSalida] = useState(false);
 
   const esAusencia = tipoDia === 'ausencia';
-  const sinHorario = esAusencia || tipoDia === 'compensatorio';
+  const sinHorario = esAusencia || TIPOS_DIA_SIN_HORARIO.includes(tipoDia);
 
   React.useEffect(() => {
     if (registro) {
@@ -181,7 +185,7 @@ function EditarRegistroModal({
               <Text className={`text-xs flex-1 leading-relaxed ${esAusencia ? 'text-danger' : 'text-info'}`}>
                 {esAusencia
                   ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
-                  : 'Los descansos compensatorios no requieren horario de entrada ni salida.'}
+                  : 'Este tipo de día no requiere horario de entrada ni salida.'}
               </Text>
             </View>
           ) : (
@@ -383,7 +387,7 @@ function CrearRegistroModal({
   const [showSalida,  setShowSalida]  = useState(false);
 
   const esAusencia = tipoDia === 'ausencia';
-  const sinHorario = esAusencia || tipoDia === 'compensatorio';
+  const sinHorario = esAusencia || TIPOS_DIA_SIN_HORARIO.includes(tipoDia);
 
   // Reset al abrir para un trabajador distinto
   React.useEffect(() => {
@@ -500,7 +504,7 @@ function CrearRegistroModal({
             )}
           </View>
 
-          {/* Tipo de día — 'Ausencia' y 'Compensatorio' ocultan entrada/salida, no requieren hora. */}
+          {/* Tipo de día — 'Ausencia', 'Compensatorio', 'Descanso' y 'Licencia' ocultan entrada/salida, no requieren hora. */}
           <View className="gap-2">
             <Text className="text-sm font-semibold text-foreground">Tipo de día</Text>
             <TipoDiaChips value={tipoDia} onChange={setTipoDia} />
@@ -512,7 +516,7 @@ function CrearRegistroModal({
               <Text className={`text-xs flex-1 ${esAusencia ? 'text-danger' : 'text-info'}`}>
                 {esAusencia
                   ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
-                  : 'Los descansos compensatorios no requieren horario de entrada ni salida.'}
+                  : 'Este tipo de día no requiere horario de entrada ni salida.'}
               </Text>
             </View>
           ) : (
