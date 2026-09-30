@@ -28,6 +28,57 @@ import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurnoLinea } from '@api-client';
 
+type Vista = 'trabajador' | 'turno';
+
+interface TurnoGrupo {
+  oferta_id: number;
+  oferta_titulo: string;
+  oferta_fecha: string;
+  lugar: string | null;
+  hora_inicio: string;
+  hora_fin_estimada: string | null;
+  total_horas: number;
+  total_pago: number;
+  pendientes_firma: number;
+  lineas: (LiquidacionTurnoLinea & { trabajador_id: number; nombre: string; apellido: string })[];
+}
+
+/** Misma liquidación, reagrupada por turno en vez de por trabajador — útil
+ *  para ver de un vistazo cuánta gente cubrió un turno puntual y su costo total. */
+function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrupo[] {
+  const grupos = new Map<number, TurnoGrupo>();
+  for (const w of trabajadores) {
+    for (const t of w.turnos) {
+      let g = grupos.get(t.oferta_id);
+      if (!g) {
+        g = {
+          oferta_id: t.oferta_id,
+          oferta_titulo: t.oferta_titulo,
+          oferta_fecha: t.oferta_fecha,
+          lugar: t.lugar,
+          hora_inicio: t.hora_inicio,
+          hora_fin_estimada: t.hora_fin_estimada,
+          total_horas: 0,
+          total_pago: 0,
+          pendientes_firma: 0,
+          lineas: [],
+        };
+        grupos.set(t.oferta_id, g);
+      }
+      g.lineas.push({ ...t, trabajador_id: w.trabajador_id, nombre: w.nombre, apellido: w.apellido });
+      // Mismo criterio que el total por trabajador: un turno sin firmar no
+      // cuenta en el total a pagar todavía (ver asignaciones.liquidacion.model.js).
+      if (t.firmado_trabajador) {
+        g.total_horas += t.horas_trabajadas;
+        g.total_pago += t.pago_total;
+      } else {
+        g.pendientes_firma++;
+      }
+    }
+  }
+  return Array.from(grupos.values()).sort((a, b) => (a.oferta_fecha < b.oferta_fecha ? 1 : -1));
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -222,6 +273,88 @@ function TrabajadorCard({
   );
 }
 
+// ── TurnoGroupCard ────────────────────────────────────────────────────────
+
+function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }) {
+  const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <View
+      className="bg-card rounded-2xl overflow-hidden"
+      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+    >
+      <TouchableOpacity onPress={() => setExpanded((v) => !v)} activeOpacity={0.75} className="flex-row">
+        <View className="w-1.5" style={{ backgroundColor: primary }} />
+        <View className="flex-1 px-4 py-4 flex-row items-center gap-3">
+          <View className="flex-1 gap-1">
+            <Text className="text-base font-bold text-foreground" numberOfLines={1}>
+              {item.oferta_titulo}
+            </Text>
+            <View className="flex-row items-center gap-3 flex-wrap">
+              <Text className="text-xs text-muted-foreground">{fmtDate(item.oferta_fecha)}</Text>
+              {item.lugar && (
+                <Text className="text-xs text-muted-foreground" numberOfLines={1}>{item.lugar}</Text>
+              )}
+              <Text className="text-xs text-muted-foreground">
+                {item.lineas.length} trabajador{item.lineas.length !== 1 ? 'es' : ''} · {item.total_horas.toFixed(1)}h
+              </Text>
+            </View>
+            {item.pendientes_firma > 0 && (
+              <View className="bg-warning/10 self-start px-2 py-0.5 rounded-full mt-0.5 flex-row items-center gap-1">
+                <Ionicons name="alert-circle-outline" size={11} color="#D97706" />
+                <Text className="text-[10px] font-semibold text-warning">
+                  {item.pendientes_firma} sin firmar
+                </Text>
+              </View>
+            )}
+          </View>
+          <View className="items-end gap-0.5">
+            <Text className="text-lg font-bold" style={{ color: primary }}>{cop(item.total_pago)}</Text>
+            <View className="flex-row items-center gap-0.5">
+              <Text className="text-[10px] text-muted-foreground">Costo total</Text>
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color="#94A3B8" />
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {expanded && (
+        <View className="px-4 pb-4 border-t border-border">
+          <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-3 mb-1">
+            Trabajadores asignados
+          </Text>
+          {item.lineas.map((l) => (
+            <TouchableOpacity
+              key={l.asignacion_id}
+              onPress={() => router.push(`/turno/${l.asignacion_id}`)}
+              activeOpacity={0.7}
+              className="py-3 border-b border-border last:border-b-0 flex-row items-center justify-between gap-2"
+            >
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
+                  {l.nombre} {l.apellido}
+                </Text>
+                <View className="flex-row items-center gap-2 mt-0.5 flex-wrap">
+                  <Text className="text-xs text-muted-foreground">{l.cargo_nombre}</Text>
+                  <Text className="text-xs text-muted-foreground">{l.horas_trabajadas.toFixed(1)}h</Text>
+                  {!l.firmado_trabajador && (
+                    <View className="flex-row items-center gap-0.5">
+                      <Ionicons name="alert-circle-outline" size={11} color="#D97706" />
+                      <Text className="text-[10px] font-semibold text-warning">Sin firmar</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              <Text className="text-sm font-bold text-foreground">{cop(l.pago_total)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function LiquidacionTurnosScreen() {
@@ -248,6 +381,9 @@ export default function LiquidacionTurnosScreen() {
   );
 
   const trabajadores = data ?? [];
+  const [vista, setVista] = useState<Vista>('trabajador');
+  const turnosAgrupados = useMemo(() => agruparPorTurno(trabajadores), [trabajadores]);
+  const listData: (LiquidacionTurnosTrabajador | TurnoGrupo)[] = vista === 'trabajador' ? trabajadores : turnosAgrupados;
 
   const totalGeneral = useMemo(
     () => trabajadores.reduce((s, w) => s + w.pago_total, 0),
@@ -287,8 +423,8 @@ export default function LiquidacionTurnosScreen() {
           </View>
         ) : (
           <FlatList
-            data={trabajadores}
-            keyExtractor={(item) => String(item.trabajador_id)}
+            data={listData}
+            keyExtractor={(item) => ('trabajador_id' in item ? `t-${item.trabajador_id}` : `o-${item.oferta_id}`)}
             contentContainerStyle={{ padding: 20, gap: 12, paddingBottom: 32 }}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -312,6 +448,31 @@ export default function LiquidacionTurnosScreen() {
                       <TipoPeriodoBadge tipo={periodo.tipo} />
                     </View>
                   )}
+                </View>
+
+                {/* Vista: por trabajador (quién cobra cuánto) o por turno (qué costó cada evento) */}
+                <View className="flex-row gap-2">
+                  {([
+                    { v: 'trabajador' as const, label: 'Por trabajador' },
+                    { v: 'turno' as const, label: 'Por turno' },
+                  ]).map(({ v, label }) => {
+                    const active = vista === v;
+                    return (
+                      <TouchableOpacity
+                        key={v}
+                        onPress={() => setVista(v)}
+                        className="flex-1 h-9 rounded-xl items-center justify-center border"
+                        style={{
+                          backgroundColor: active ? theme.primary : 'transparent',
+                          borderColor: active ? theme.primary : '#E2E8F0',
+                        }}
+                      >
+                        <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-muted-foreground'}`}>
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
                 {/* Resumen global */}
@@ -341,7 +502,9 @@ export default function LiquidacionTurnosScreen() {
               </View>
             }
             renderItem={({ item }) => (
-              <TrabajadorCard item={item} primary={theme.primary} />
+              'trabajador_id' in item
+                ? <TrabajadorCard item={item} primary={theme.primary} />
+                : <TurnoGroupCard item={item} primary={theme.primary} />
             )}
             ItemSeparatorComponent={() => <View className="h-0" />}
             ListEmptyComponent={

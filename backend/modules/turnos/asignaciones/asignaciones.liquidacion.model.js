@@ -31,6 +31,7 @@ module.exports = {
          a.bono_motivo,
          a.hora_ingreso_real,
          a.hora_egreso_real,
+         o.id          AS oferta_id,
          o.titulo      AS oferta_titulo,
          o.fecha       AS oferta_fecha,
          o.hora_inicio,
@@ -100,6 +101,7 @@ module.exports = {
       }
       w.turnos.push({
         asignacion_id:   row.asignacion_id,
+        oferta_id:       row.oferta_id,
         oferta_titulo:   row.oferta_titulo,
         oferta_fecha:    row.oferta_fecha,
         hora_inicio:     row.hora_inicio,
