@@ -3,6 +3,7 @@
 const { pool } = require('../../../config/database');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { horaAMinutos } = require('../../../utils/laboralUtils');
+const { DIAS_GRACIA_ASIGNACIONES_COLGADAS } = require('../../../config/constants');
 
 const MIN_POR_DIA = 24 * 60;
 
@@ -86,6 +87,19 @@ const PUNTOS_JSON_ALIAS = PUNTOS_JSON.replace(
   'opm.oferta_id = o.id'
 );
 
+// Insumos para necesita_completar (ver parsearPuestos): cuántas asignaciones
+// reales tuvo el turno y cuántas siguen sin resolver. Sin esto no se puede
+// distinguir "nadie se postuló todavía" de "todos ya marcaron salida y
+// nadie le dio Completar" — ambos casos dejan la oferta en el mismo estado.
+const ASIGNACIONES_RESUMEN = `(
+    SELECT COUNT(*) FROM asignaciones_turno a
+    WHERE a.oferta_id = ofertas_turno.id AND a.estado <> 'cancelado'
+  ) AS asignaciones_activas,
+  (
+    SELECT COUNT(*) FROM asignaciones_turno a
+    WHERE a.oferta_id = ofertas_turno.id AND a.estado IN ('pendiente', 'confirmado', 'en_progreso')
+  ) AS asignaciones_sin_resolver`;
+
 // Allowlist de columnas modificables vía PUT (lista fija de código).
 const CAMPOS_EDITABLES = [
   'titulo',
@@ -106,7 +120,11 @@ const CAMPOS_EDITABLES = [
 /** Convierte las columnas `puestos_json`/`destinatarios_json`/`puntos_marcaje_json` (string) en arrays de objetos. */
 function parsearPuestos(fila) {
   if (!fila) return fila;
-  const { puestos_json, destinatarios_json, puntos_marcaje_json, ...resto } = fila;
+  const {
+    puestos_json, destinatarios_json, puntos_marcaje_json,
+    asignaciones_activas, asignaciones_sin_resolver,
+    ...resto
+  } = fila;
   let puestos = [];
   if (puestos_json) {
     puestos = typeof puestos_json === 'string' ? JSON.parse(puestos_json) : puestos_json;
@@ -119,7 +137,20 @@ function parsearPuestos(fila) {
   if (puntos_marcaje_json) {
     puntosMarcaje = typeof puntos_marcaje_json === 'string' ? JSON.parse(puntos_marcaje_json) : puntos_marcaje_json;
   }
-  return { ...resto, puestos, destinatarios, puntos_marcaje: puntosMarcaje };
+
+  // Turno ya terminado, con gente asignada, sin nadie pendiente/confirmado/en
+  // curso, pero todavía sin marcar como completada a mano — el gestor
+  // probablemente lo olvidó (asignaciones_activas/sin_resolver solo vienen en
+  // listar()/obtenerPorId(); en otras consultas quedan undefined y esto da false).
+  const necesitaCompletar = Boolean(
+    resto.estado &&
+    !['completada', 'cancelada', 'borrador'].includes(resto.estado) &&
+    Number(asignaciones_activas) > 0 &&
+    Number(asignaciones_sin_resolver) === 0 &&
+    `${resto.fecha} ${resto.hora_fin_estimada || '23:59:59'}` <= ahoraColombiaSQL()
+  );
+
+  return { ...resto, puestos, destinatarios, puntos_marcaje: puntosMarcaje, necesita_completar: necesitaCompletar };
 }
 
 const OfertasModel = {
@@ -148,7 +179,7 @@ const OfertasModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
        FROM ofertas_turno
        WHERE ${whereSql}
        ORDER BY fecha DESC, hora_inicio
@@ -283,7 +314,7 @@ const OfertasModel = {
       params.push(antiguedadMinMin);
     }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
        FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
       params
     );
@@ -353,15 +384,15 @@ const OfertasModel = {
    * (cerrarVencidas ya las protege con `fecha < hoy`; acá se espera 2 días más
    * antes de asumir que nadie las va a resolver a mano).
    */
-  async listarVencidasConPendientes(hoy) {
+  async listarVencidasConPendientes(hoy, diasGracia = DIAS_GRACIA_ASIGNACIONES_COLGADAS) {
     const [filas] = await pool.query(
       `SELECT DISTINCT o.id, o.empresa_id
        FROM ofertas_turno o
        JOIN asignaciones_turno a ON a.oferta_id = o.id
        WHERE o.estado IN ('abierta', 'publicada', 'en_proceso')
-         AND o.fecha <= DATE_SUB(?, INTERVAL 2 DAY)
+         AND o.fecha <= DATE_SUB(?, INTERVAL ? DAY)
          AND a.estado IN ('confirmado', 'en_progreso')`,
-      [hoy]
+      [hoy, diasGracia]
     );
     return filas;
   },

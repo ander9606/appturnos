@@ -111,6 +111,11 @@ export function OfertaDetailPage() {
   const { data: sospechososData } = useAsignaciones({ oferta_id: ofertaId, sospechoso: true, limit: 1 });
   const totalSospechosos = sospechososData?.data?.pagination?.total ?? 0;
 
+  // Independiente del filtro de la tabla — para saber si "Marcar completada" debe
+  // preguntar cómo capear las horas de quien quedó en_progreso sin marcar salida.
+  const { data: enProgresoData } = useAsignaciones({ oferta_id: ofertaId, estado: 'en_progreso', limit: 1 });
+  const hayEnProgreso = (enProgresoData?.data?.pagination?.total ?? 0) > 0;
+
   const eliminarPuesto = useEliminarPuesto();
   const publicar = usePublicarOferta();
   const completar = useCompletarOferta();
@@ -125,6 +130,8 @@ export function OfertaDetailPage() {
     : null;
 
   const canEditPuestos = oferta?.estado === 'borrador' || oferta?.estado === 'abierta';
+  // Completar antes de que el turno empiece no tiene sentido — recién ahí hay algo que cerrar.
+  const turnoIniciado = oferta ? new Date(`${oferta.fecha}T${oferta.hora_inicio}`) <= new Date() : false;
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-12 text-center">Cargando...</p>;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
@@ -139,6 +146,13 @@ export function OfertaDetailPage() {
       >
         <ArrowLeft size={16} /> Volver a Turnos
       </button>
+
+      {oferta.necesita_completar && (
+        <div className="flex items-center gap-2 bg-warning-light text-warning text-sm font-medium rounded-xl px-4 py-2.5 mb-3">
+          <AlertTriangle size={16} className="flex-shrink-0" />
+          Este turno ya terminó y todos quedaron resueltos, pero nadie lo marcó como completado.
+        </div>
+      )}
 
       <div className="bg-card border border-border rounded-2xl p-5 mb-5">
         <div className="flex items-start justify-between gap-4">
@@ -218,19 +232,37 @@ export function OfertaDetailPage() {
                 <Send size={14} /> {publicar.isPending ? 'Publicando...' : 'Publicar oferta'}
               </button>
             )}
-            {!['borrador', 'completada', 'cancelada'].includes(oferta.estado) && (
-              <button
-                onClick={() => confirm({
-                  title: 'Marcar como completada',
-                  detail: 'Úsalo cuando el turno ya terminó en la realidad, sin importar si todas las asignaciones están cerradas en el sistema.',
-                  confirmLabel: 'Marcar completada',
-                  onConfirm: () => { completar.mutate(ofertaId); close(); },
-                })}
-                disabled={completar.isPending}
-                className="flex items-center gap-1.5 bg-success hover:bg-success/90 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <CheckCircle2 size={14} /> {completar.isPending ? 'Marcando...' : 'Marcar completada'}
-              </button>
+            {turnoIniciado && !['borrador', 'completada', 'cancelada'].includes(oferta.estado) && (
+              <>
+                <button
+                  onClick={() => confirm({
+                    title: 'Marcar como completada',
+                    detail: hayEnProgreso
+                      ? 'A quien nunca marcó ingreso se le marcará como no presentado. A quien sigue en curso sin marcar salida se le cerrará con el horario estipulado del turno (si ya pasó el margen de gracia) sin pagarle de más por los días que quedó colgado.'
+                      : 'Úsalo cuando el turno ya terminó en la realidad. A quien nunca marcó ingreso se le marcará como no presentado.',
+                    confirmLabel: 'Marcar completada',
+                    onConfirm: () => { completar.mutate({ id: ofertaId, capearHoras: true }); close(); },
+                  })}
+                  disabled={completar.isPending}
+                  className="flex items-center gap-1.5 bg-success hover:bg-success/90 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <CheckCircle2 size={14} /> {completar.isPending ? 'Marcando...' : 'Marcar completada'}
+                </button>
+                {hayEnProgreso && (
+                  <button
+                    onClick={() => confirm({
+                      title: 'Cerrar con la hora actual',
+                      detail: 'En vez del horario estipulado del turno, a quien sigue en curso sin marcar salida se le cerrará contando las horas reales hasta ahora mismo. Solo aplica si ya pasó el margen de gracia para forzar el cierre.',
+                      confirmLabel: 'Cerrar con hora actual',
+                      onConfirm: () => { completar.mutate({ id: ofertaId, capearHoras: false }); close(); },
+                    })}
+                    disabled={completar.isPending}
+                    className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                  >
+                    Cerrar con hora actual en vez del horario estipulado
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

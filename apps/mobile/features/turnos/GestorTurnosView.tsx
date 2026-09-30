@@ -281,7 +281,8 @@ function GestorOfertaItem({
             </Text>
             <View className="flex-row items-center gap-2">
               {esCancelada && <Badge label="Cancelada" variant="danger" size="sm" />}
-              {!esCancelada && esPasado && <Badge label="Finalizado" variant="default" size="sm" />}
+              {oferta.necesita_completar && <Badge label="Falta completar" variant="warning" size="sm" />}
+              {!esCancelada && !oferta.necesita_completar && esPasado && <Badge label="Finalizado" variant="default" size="sm" />}
               <Text className="text-lg text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
             </View>
           </View>

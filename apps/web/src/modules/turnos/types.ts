@@ -60,6 +60,21 @@ export interface Oferta {
   /** Solo presente junto a `advertencias`: true si además ya está en el tope
    *  de trabajadores de su plan (invitar más gente rebotaría con 402). */
   cupo_lleno?: boolean;
+  /** true: el turno ya terminó, todas sus asignaciones están resueltas
+   *  (nadie pendiente/confirmado/en_progreso) y nadie le dio "Marcar completada"
+   *  todavía — probable olvido del gestor. */
+  necesita_completar?: boolean;
+  /** Solo presente en la respuesta de completar(): cuántos trabajadores
+   *  confirmados que nunca marcaron ingreso quedaron como no_presentado al completar. */
+  no_presentados_al_completar?: number;
+  /** Solo presente en la respuesta de completar(): cuántos trabajadores que
+   *  seguían en_progreso se cerraron a la fuerza — solo pasado el margen de
+   *  gracia del backend. Capea horas en hora_fin_estimada salvo que se pida
+   *  capearHoras: false ("cerrar ahora") al completar. */
+  forzados_al_completar?: number;
+  /** Solo presente junto a `forzados_al_completar`: true si ese cierre forzado
+   *  usó la hora real del cierre en vez de capear en hora_fin_estimada. */
+  forzados_con_hora_actual?: boolean;
 }
 
 export interface LiquidacionTurno {

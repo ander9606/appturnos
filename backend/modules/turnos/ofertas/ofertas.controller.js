@@ -50,8 +50,18 @@ async function publicar(req, res) {
 }
 
 async function completar(req, res) {
-  const data = await OfertasService.completar(req.empresa_id, Number(req.params.id));
-  res.json({ success: true, data, message: 'Oferta marcada como completada' });
+  const capearHoras = req.body?.capear_horas !== false;
+  const data = await OfertasService.completar(req.empresa_id, Number(req.params.id), { capearHoras });
+  const avisos = [];
+  const f = data.forzados_al_completar;
+  if (f > 0) {
+    const horario = data.forzados_con_hora_actual ? 'con la hora actual' : 'con el horario estipulado del turno';
+    avisos.push(`${f} trabajador${f > 1 ? 'es' : ''} que no había${f > 1 ? 'n' : ''} marcado salida se cerró${f > 1 ? 'aron' : ''} automáticamente ${horario}`);
+  }
+  const n = data.no_presentados_al_completar;
+  if (n > 0) avisos.push(`${n} trabajador${n > 1 ? 'es' : ''} sin ingreso quedó${n > 1 ? 'aron' : ''} como no presentado${n > 1 ? 's' : ''}`);
+  const extra = avisos.length > 0 ? ` (${avisos.join('; ')})` : '';
+  res.json({ success: true, data, message: `Oferta marcada como completada${extra}` });
 }
 
 async function cancelar(req, res) {

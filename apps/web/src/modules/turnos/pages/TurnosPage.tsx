@@ -175,6 +175,14 @@ export function TurnosPage() {
                             {pendientes} pendiente{pendientes !== 1 ? 's' : ''}
                           </span>
                         )}
+                        {o.necesita_completar && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning"
+                            title="El turno ya terminó y todos quedaron resueltos, pero nadie lo marcó como completado"
+                          >
+                            <AlertTriangle size={11} /> Falta completar
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3">

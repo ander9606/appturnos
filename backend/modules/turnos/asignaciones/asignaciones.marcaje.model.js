@@ -123,27 +123,31 @@ module.exports = {
 
   /**
    * Cierre masivo de jornada para una oferta.
-   * - en_progreso (sin excepción) → completado (horas capeadas por hora_fin_estimada)
+   * - en_progreso (sin excepción) → completado. Horas capeadas en
+   *   hora_fin_estimada por default (`capearHoras: true`); con `false` cuentan
+   *   las horas reales hasta el momento del cierre — elección del gestor al
+   *   forzar el cierre (ver OfertasService.completar).
    * - confirmado  (sin excepción) → no_presentado + devuelve plaza al puesto
    * - excepciones                 → intactos en cualquier estado
    * @returns {{ cerradas: number, noPresentados: number }}
    */
-  async cerrarMasivo(empresaId, ofertaId, excepcionesIds = []) {
+  async cerrarMasivo(empresaId, ofertaId, excepcionesIds = [], { capearHoras = true } = {}) {
     const excClause = excepcionesIds.length
       ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
       : '';
 
     // 1. en_progreso → completado
     const ahora = ahoraColombiaSQL();
+    const limiteSql = capearHoras
+      ? `LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))`
+      : `?`;
     const [resComp] = await pool.query(
       `UPDATE asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN oferta_puestos p ON p.id = a.puesto_id
        SET a.hora_egreso_real = ?,
            a.estado = 'completado',
-           a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-               LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
-           ) / 60,
+           a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, ${limiteSql}) / 60,
            a.pago_total = p.tarifa_dia + a.bono_monto
        WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
          AND a.hora_ingreso_real IS NOT NULL

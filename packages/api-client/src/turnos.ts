@@ -201,6 +201,22 @@ export interface Oferta {
   /** Solo presente junto a `advertencias`: true si además ya está en el tope
    *  de trabajadores de su plan (invitar más gente rebotaría con 402). */
   cupo_lleno?: boolean;
+  /** true: el turno ya terminó, todas sus asignaciones están resueltas
+   *  (nadie pendiente/confirmado/en_progreso) y nadie le dio "Marcar completada"
+   *  todavía — probable olvido del gestor. */
+  necesita_completar?: boolean;
+  /** Solo presente en la respuesta de completarOferta: cuántos trabajadores
+   *  confirmados que nunca marcaron ingreso quedaron como no_presentado al completar. */
+  no_presentados_al_completar?: number;
+  /** Solo presente en la respuesta de completarOferta: cuántos trabajadores
+   *  que seguían en_progreso (sin marcar salida) se cerraron a la fuerza —
+   *  solo ocurre pasado el margen de gracia (DIAS_GRACIA_ASIGNACIONES_COLGADAS
+   *  en el backend). Sus horas quedan capeadas en hora_fin_estimada salvo que
+   *  se pida `capearHoras: false` ("cerrar ahora") al completar. */
+  forzados_al_completar?: number;
+  /** Solo presente junto a `forzados_al_completar`: true si ese cierre forzado
+   *  usó la hora real del cierre en vez de capear en hora_fin_estimada. */
+  forzados_con_hora_actual?: boolean;
 }
 
 export interface CrearOfertaPayload {
@@ -383,8 +399,16 @@ export const turnosApi = {
   },
 
   /** Marca la oferta como completada a mano (el jefe/admin decide, sin depender de la fecha ni del estado de las asignaciones). */
-  completarOferta(ofertaId: number): Promise<Oferta> {
-    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/completar`, {});
+  /**
+   * `capearHoras` (default true): si al completar hay que forzar el cierre de
+   * alguien en_progreso colgado (pasado el margen de gracia), decide si sus
+   * horas quedan capeadas en hora_fin_estimada o cuentan hasta el momento real
+   * del cierre ("cerrar ahora"). Sin nadie colgado, no tiene efecto.
+   */
+  completarOferta(ofertaId: number, opts?: { capearHoras?: boolean }): Promise<Oferta> {
+    return api.post<Oferta>(`/api/turnos/ofertas/${ofertaId}/completar`, {
+      capear_horas: opts?.capearHoras ?? true,
+    });
   },
 
   /** Cancela una oferta completa (todos sus puestos) y notifica a los postulados/asignados. */

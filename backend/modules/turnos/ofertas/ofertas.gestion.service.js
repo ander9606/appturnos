@@ -3,6 +3,7 @@
 const { pool } = require('../../../config/database');
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
+const AsignacionesService = require('../asignaciones/asignaciones.service');
 const CargosModel = require('../../cargos/cargos.model');
 const TrabajadoresService = require('../../trabajadores/trabajadores.service');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
@@ -10,7 +11,7 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
-const { ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA } = require('../../../config/constants');
+const { ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
 
@@ -366,17 +367,28 @@ module.exports = {
 
   /**
    * Marca una oferta como completada a mano. El jefe/admin puede hacerlo en
-   * cualquier momento del turno (no depende de que la fecha haya pasado ni de
-   * que todas las asignaciones estén en estado terminal) — es una decisión
-   * humana, no un cálculo automático.
+   * cualquier momento del turno (no depende de que la fecha haya pasado) —
+   * es una decisión humana, no un cálculo automático. Sí valida el estado de
+   * las asignaciones para no perder datos de nómina:
+   *   - 'en_progreso' (marcó ingreso, nunca marcó salida) bloquea mientras el
+   *     turno esté "fresco" (menos de DIAS_GRACIA_ASIGNACIONES_COLGADAS desde
+   *     su fecha): cerrar acá tocaría horas_trabajadas/pago sin un dato real
+   *     de egreso, así que primero se le da tiempo al jefe de resolverlo a
+   *     mano (corregir egreso o "No vino"). Pasado ese margen sin que nadie lo
+   *     resuelva, se asume abandonado y se fuerza el cierre con el mismo
+   *     cerrarMasivo que ya usa turnos.worker.js para ofertas vencidas.
+   *     `capearHoras` (default true) decide cómo: capeadas en hora_fin_estimada
+   *     (recomendado — no paga de más por los días que quedó colgado) o con la
+   *     hora real del cierre si el jefe elige "cerrar ahora" a propósito.
+   *   - 'confirmado' sin ingreso (nunca llegó) nunca bloquea: se resuelve solo
+   *     como no_presentado de inmediato.
    *
-   * Si la oferta viene de logiq360 (external_ref) primero intenta el cierre
-   * normal vía CostoLaborService, para no perder la emisión de
-   * costo_labor.calculado cuando las condiciones ya se cumplen; si no se
-   * cumplen (turno cerrado antes de que todos terminen), igual se fuerza el
-   * estado — el jefe puede estar completando a propósito antes de tiempo.
+   * Si la oferta viene de logiq360 (external_ref) el cierre normal vía
+   * CostoLaborService emite costo_labor.calculado cuando las condiciones ya
+   * se cumplen; si no (turno cerrado antes de que todos terminen), igual se
+   * fuerza el estado — el jefe puede estar completando a propósito antes de tiempo.
    */
-  async completar(empresaId, id) {
+  async completar(empresaId, id, { capearHoras = true } = {}) {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     if (oferta.estado === 'cancelada') {
@@ -384,12 +396,44 @@ module.exports = {
     }
     if (oferta.estado === 'completada') return oferta;
 
+    const asignaciones = await AsignacionesModel.listarPorOferta(empresaId, id);
+    const enProgreso = asignaciones.filter((a) => a.estado === 'en_progreso');
+
+    const hoy = ahoraColombiaSQL().slice(0, 10);
+    const diasDesdeElTurno = Math.floor((Date.parse(hoy) - Date.parse(oferta.fecha)) / 86_400_000);
+    const puedeForzar = diasDesdeElTurno >= DIAS_GRACIA_ASIGNACIONES_COLGADAS;
+
+    let noPresentados = 0;
+    let forzados = 0;
+    if (enProgreso.length > 0 && !puedeForzar) {
+      const nombres = enProgreso.map((a) => `${a.trabajador_nombre} ${a.trabajador_apellido}`).join(', ');
+      throw new AppError(
+        `Antes de completar, resuelve la salida de: ${nombres}. Corrige su marcaje o márcalo como no presentado ` +
+        `(si nadie lo resuelve, podrás forzar el cierre pasados ${DIAS_GRACIA_ASIGNACIONES_COLGADAS} días).`,
+        409
+      );
+    } else if (enProgreso.length > 0) {
+      const resultado = await AsignacionesService.cerrarMasivo(empresaId, id, [], { capearHoras });
+      forzados = resultado.cerradas;
+      noPresentados = resultado.noPresentados;
+    } else {
+      const sinIngreso = asignaciones.filter((a) => a.estado === 'confirmado');
+      for (const a of sinIngreso) {
+        await AsignacionesModel.marcarNoPresentado(empresaId, a.id);
+      }
+      noPresentados = sinIngreso.length;
+    }
+
     await CostoLaborService.verificarYEmitir(empresaId, id);
     const actualizada = await OfertasModel.obtenerPorId(empresaId, id);
     if (actualizada.estado !== 'completada') {
       await OfertasModel.cambiarEstado(empresaId, id, 'completada');
     }
-    return OfertasModel.obtenerPorId(empresaId, id);
+    const final = await OfertasModel.obtenerPorId(empresaId, id);
+    final.no_presentados_al_completar = noPresentados;
+    final.forzados_al_completar = forzados;
+    final.forzados_con_hora_actual = forzados > 0 && !capearHoras;
+    return final;
   },
 
   /** Borra definitivamente una oferta cancelada que nunca tuvo postulantes (ej: se creó por error). */

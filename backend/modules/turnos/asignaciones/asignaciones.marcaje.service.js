@@ -432,8 +432,9 @@ module.exports = {
   /**
    * Cierre masivo de jornada: completa todos los turnos en_progreso de una oferta.
    * Los trabajador_id en `excepcionesIds` quedan en_progreso para cerrar solos (o en otro cierre).
+   * `capearHoras` (default true) pasa directo a AsignacionesModel.cerrarMasivo.
    */
-  async cerrarMasivo(empresaId, ofertaId, excepcionesIds = []) {
+  async cerrarMasivo(empresaId, ofertaId, excepcionesIds = [], { capearHoras = true } = {}) {
     // Verificar que la oferta pertenece a la empresa.
     const [[oferta]] = await pool.query(
       'SELECT id FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
@@ -460,7 +461,7 @@ module.exports = {
       [ofertaId, empresaId, ...excepcionesIds]
     );
 
-    const { cerradas, noPresentados } = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds);
+    const { cerradas, noPresentados } = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds, { capearHoras });
 
     // Genera el contrato diario de cada turno recién completado (best-effort)
     // — el cierre masivo lo completa sin que el trabajador abra la app antes,

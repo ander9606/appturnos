@@ -164,11 +164,13 @@ export function usePublicarOferta() {
 export function useCompletarOferta() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => turnosApi.completarOferta(id),
-    onSuccess: (_data, id) => {
+    mutationFn: ({ id, capearHoras = true }: { id: number; capearHoras?: boolean }) =>
+      turnosApi.completarOferta(id, capearHoras),
+    onSuccess: (data, { id }) => {
       qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
       qc.invalidateQueries({ queryKey: KEYS.oferta(id) });
-      toast.success('Oferta marcada como completada');
+      // El mensaje ya trae el aviso de cuántos quedaron como no presentados (ver ofertas.controller.js).
+      toast.success(data?.message ?? 'Oferta marcada como completada');
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });

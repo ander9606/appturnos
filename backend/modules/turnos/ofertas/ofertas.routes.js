@@ -136,8 +136,17 @@ router.put(
 // POST /api/turnos/ofertas/:id/publicar  — pasa una oferta de 'borrador' a 'publicada'
 router.post('/:id/publicar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.publicar);
 
-// POST /api/turnos/ofertas/:id/completar  — jefe/admin marca la oferta como completada a mano
-router.post('/:id/completar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.completar);
+// POST /api/turnos/ofertas/:id/completar  — jefe/admin marca la oferta como completada a mano.
+// body.capear_horas (default true): al forzar el cierre de alguien en_progreso colgado,
+// capea sus horas en hora_fin_estimada; con false usa la hora real del cierre.
+router.post(
+  '/:id/completar',
+  verificarRol(GESTIONAR),
+  verificarSuscripcion,
+  [idParam, body('capear_horas').optional().isBoolean().withMessage('capear_horas debe ser booleano')],
+  validar,
+  ctrl.completar
+);
 
 // DELETE /api/turnos/ofertas/:id  (cancelar)
 router.delete('/:id', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.cancelar);

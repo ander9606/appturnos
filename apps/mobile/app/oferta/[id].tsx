@@ -286,6 +286,28 @@ export default function OfertaDetailScreen() {
     }
   }
 
+  async function ejecutarCompletar(capearHoras: boolean) {
+    if (!oferta) return;
+    try {
+      const data = await completarOfertaM.mutateAsync({ ofertaId: oferta.id, capearHoras });
+      const n = data.no_presentados_al_completar ?? 0;
+      const f = data.forzados_al_completar ?? 0;
+      const avisos: string[] = [];
+      if (f > 0) {
+        const horario = data.forzados_con_hora_actual ? 'con la hora actual' : 'con el horario estipulado';
+        avisos.push(`${f} trabajador${f > 1 ? 'es' : ''} que no había${f > 1 ? 'n' : ''} marcado salida se cerró${f > 1 ? 'aron' : ''} ${horario}`);
+      }
+      if (n > 0) avisos.push(`${n} trabajador${n > 1 ? 'es' : ''} sin ingreso quedó${n > 1 ? 'aron' : ''} como no presentado${n > 1 ? 's' : ''}`);
+      showToast(
+        avisos.length > 0
+          ? `"${oferta.titulo}" completado. ${avisos.join('; ')}.`
+          : `"${oferta.titulo}" marcado como completado.`
+      );
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo completar la oferta.');
+    }
+  }
+
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
@@ -443,6 +465,16 @@ export default function OfertaDetailScreen() {
             </View>
           </View>
 
+          {/* ── Falta marcar completada: el turno ya terminó, todos resueltos, nadie le dio Completar ── */}
+          {isGestor && oferta.necesita_completar && (
+            <View className="bg-warning-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
+              <Ionicons name="warning-outline" size={20} color="#B45309" />
+              <Text className="flex-1 text-sm font-medium text-warning">
+                Este turno ya terminó y todos quedaron resueltos, pero nadie lo marcó como completado.
+              </Text>
+            </View>
+          )}
+
           {/* ── Descripción ─────────────────────────────────────── */}
           {oferta.descripcion && (
             <View className="bg-card rounded-2xl px-5 py-4 gap-2"
@@ -573,27 +605,39 @@ export default function OfertaDetailScreen() {
             </View>
           )}
 
-          {/* ── Marcar completada (gestores) — disponible en cualquier momento del turno ── */}
-          {isGestor && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador' && (
+          {/* ── Marcar completada (gestores) — solo tiene sentido una vez que el turno empezó.
+              El backend bloquea si queda alguien en_progreso (sin marcar salida) y resuelve
+              solo como no_presentado a quien nunca llegó. Pasado el margen de gracia, en vez
+              de bloquear pregunta cómo capear las horas de quien quedó colgado. */}
+          {isGestor && turnoIniciado && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador' && (
             <Button
               label={completarOfertaM.isPending ? 'Marcando…' : 'Marcar completada'}
               variant="success"
               fullWidth
               loading={completarOfertaM.isPending}
               onPress={async () => {
+                const hayEnProgreso = oferta.asignaciones.some((a) => a.estado === 'en_progreso');
+
+                if (hayEnProgreso) {
+                  Alert.alert(
+                    'Hay trabajadores sin marcar salida',
+                    'Si el turno ya lleva más de 2 días sin resolver, esto los cerrará automáticamente. ¿Cómo calculamos sus horas?',
+                    [
+                      { text: 'Cancelar', style: 'cancel' },
+                      { text: 'Horario estipulado', onPress: () => ejecutarCompletar(true) },
+                      { text: 'Cerrar ahora', onPress: () => ejecutarCompletar(false) },
+                    ]
+                  );
+                  return;
+                }
+
                 const ok = await confirm({
                   title: 'Marcar como completada',
-                  message: 'Úsalo cuando el turno ya terminó en la realidad, sin importar si todas las asignaciones están cerradas en el sistema.',
+                  message: 'Úsalo cuando el turno ya terminó en la realidad.',
                   cancelLabel: 'Volver',
                   confirmLabel: 'Marcar completada',
                 });
-                if (!ok) return;
-                try {
-                  await completarOfertaM.mutateAsync(oferta.id);
-                  showToast(`"${oferta.titulo}" marcado como completado.`);
-                } catch (err) {
-                  Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo completar la oferta.');
-                }
+                if (ok) ejecutarCompletar(true);
               }}
             />
           )}

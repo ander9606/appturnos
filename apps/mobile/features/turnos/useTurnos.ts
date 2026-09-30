@@ -364,8 +364,9 @@ export function useDuplicarOferta() {
 export function useCompletarOferta() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ofertaId: number) => turnosApi.completarOferta(ofertaId),
-    onSuccess: (_data, ofertaId) => {
+    mutationFn: ({ ofertaId, capearHoras }: { ofertaId: number; capearHoras?: boolean }) =>
+      turnosApi.completarOferta(ofertaId, { capearHoras }),
+    onSuccess: (_data, { ofertaId }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
     },

@@ -45,6 +45,15 @@ const ESTADOS_OFERTA = ['borrador', 'abierta', 'publicada', 'en_proceso', 'cerra
  */
 const MAX_OFERTAS_ACTIVAS_POR_EMPRESA = 500;
 
+/**
+ * Margen antes de asumir que una asignación 'confirmado'/'en_progreso' quedó
+ * colgada porque nadie la va a resolver a mano (trabajador que nunca marcó
+ * salida, oferta que nadie cerró). Usado por turnos.worker.js para el cierre
+ * automático de ofertas vencidas y por OfertasService.completar() para
+ * permitir forzar el cierre manual pasado ese plazo.
+ */
+const DIAS_GRACIA_ASIGNACIONES_COLGADAS = 2;
+
 // Fuente de verdad en TS: packages/api-client/src/turnos.ts → ESTADOS_ASIGNACION
 // Si añades un estado aquí, actualiza también ese array y el ESTADO_CONFIG
 // en apps/mobile/features/turnos/turnosUtils.ts.
@@ -207,6 +216,7 @@ module.exports = {
   GRUPOS_ROLES,
   ESTADOS_OFERTA,
   MAX_OFERTAS_ACTIVAS_POR_EMPRESA,
+  DIAS_GRACIA_ASIGNACIONES_COLGADAS,
   ESTADOS_ASIGNACION,
   ESTADOS_PERIODO,
   RECARGOS,
