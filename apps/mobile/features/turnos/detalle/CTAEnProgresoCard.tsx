@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { GeoFenceIndicator } from '../GeoFenceIndicator';
 import { UbicacionLibreIndicator } from '../UbicacionLibreIndicator';
+import { TrabajadorInfoGestor } from './TrabajadorInfoGestor';
 import type { EstadoUbicacionLibre } from '../useUbicacionLibre';
 import { fmtTime } from '../turnosUtils';
 import type { GeofenceStatus } from '@/lib/geo';
@@ -14,6 +15,7 @@ export function CTAEnProgresoCard({
   distanceM, geoStatus, canMark, permissionDenied, locationUnavailable,
   ubicacionLibre, onMarcarSalida, firmaGuardada, onMarcarSalidaConFirmaGuardada, marcandoSalida,
   isGestor, onCorregir,
+  trabajadorTelefono, trabajadorRanking, trabajadorTotalCalificaciones,
 }: {
   elapsedLabel: string | null;
   horaIngresoReal: string | null;
@@ -31,6 +33,9 @@ export function CTAEnProgresoCard({
   marcandoSalida?: boolean;
   isGestor: boolean;
   onCorregir: () => void;
+  trabajadorTelefono?: string | null;
+  trabajadorRanking?: number | null;
+  trabajadorTotalCalificaciones?: number;
 }) {
   return (
     <View
@@ -57,66 +62,79 @@ export function CTAEnProgresoCard({
         )}
       </View>
 
-      {isLibre ? (
-        <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
+      {/* El gestor no marca su propia salida — "Marcar Salida" y el GPS de
+          abajo son la acción del trabajador. Para el gestor, el tiempo
+          transcurrido de arriba ya es la info relevante; "Corregir
+          ingreso/egreso" cubre cualquier ajuste manual. */}
+      {isGestor ? (
+        <>
+          <TrabajadorInfoGestor
+            telefono={trabajadorTelefono}
+            ranking={trabajadorRanking}
+            totalCalificaciones={trabajadorTotalCalificaciones}
+          />
+          <TouchableOpacity
+            onPress={onCorregir}
+            className="flex-row items-center justify-center gap-1.5 py-2"
+          >
+            <Ionicons name="time-outline" size={14} color="#64748B" />
+            <Text className="text-xs font-semibold text-muted-foreground">Corregir ingreso/egreso</Text>
+          </TouchableOpacity>
+        </>
       ) : (
         <>
-          <GeoFenceIndicator
-            distanceM={distanceM}
-            status={geoStatus}
-            permissionDenied={permissionDenied}
-            locationUnavailable={locationUnavailable}
-          />
+          {isLibre ? (
+            <UbicacionLibreIndicator estado={ubicacionLibre.estado} onReintentar={ubicacionLibre.reintentar} />
+          ) : (
+            <>
+              <GeoFenceIndicator
+                distanceM={distanceM}
+                status={geoStatus}
+                permissionDenied={permissionDenied}
+                locationUnavailable={locationUnavailable}
+              />
 
-          {!canMark && distanceM !== null && (
-            <View className="flex-row items-start gap-2">
-              <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
-              <Text className="flex-1 text-xs text-muted-foreground">
-                Acércate al punto de trabajo para habilitar el marcaje de salida.
-              </Text>
-            </View>
+              {!canMark && distanceM !== null && (
+                <View className="flex-row items-start gap-2">
+                  <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
+                  <Text className="flex-1 text-xs text-muted-foreground">
+                    Acércate al punto de trabajo para habilitar el marcaje de salida.
+                  </Text>
+                </View>
+              )}
+            </>
           )}
+
+          {firmaGuardada && onMarcarSalidaConFirmaGuardada ? (
+            <View style={{ gap: 10 }}>
+              <Button
+                label="Marcar Salida"
+                variant="primary"
+                size="lg"
+                fullWidth
+                disabled={!canMark || marcandoSalida}
+                onPress={() => onMarcarSalidaConFirmaGuardada(firmaGuardada)}
+              />
+              <TouchableOpacity onPress={onMarcarSalida} className="items-center py-1">
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Firmar con una firma nueva
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Button
+              label="Marcar Salida"
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={!canMark}
+              onPress={onMarcarSalida}
+            />
+          )}
+          <Text className="text-xs text-center text-muted-foreground">
+            Se requiere firma digital para confirmar la salida.
+          </Text>
         </>
-      )}
-
-      {firmaGuardada && onMarcarSalidaConFirmaGuardada ? (
-        <View style={{ gap: 10 }}>
-          <Button
-            label="Marcar Salida"
-            variant="primary"
-            size="lg"
-            fullWidth
-            disabled={!canMark || marcandoSalida}
-            onPress={() => onMarcarSalidaConFirmaGuardada(firmaGuardada)}
-          />
-          <TouchableOpacity onPress={onMarcarSalida} className="items-center py-1">
-            <Text className="text-xs font-semibold text-muted-foreground">
-              Firmar con una firma nueva
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <Button
-          label="Marcar Salida"
-          variant="primary"
-          size="lg"
-          fullWidth
-          disabled={!canMark}
-          onPress={onMarcarSalida}
-        />
-      )}
-      <Text className="text-xs text-center text-muted-foreground">
-        Se requiere firma digital para confirmar la salida.
-      </Text>
-
-      {isGestor && (
-        <TouchableOpacity
-          onPress={onCorregir}
-          className="flex-row items-center justify-center gap-1.5 py-2"
-        >
-          <Ionicons name="time-outline" size={14} color="#64748B" />
-          <Text className="text-xs font-semibold text-muted-foreground">Corregir ingreso/egreso</Text>
-        </TouchableOpacity>
       )}
     </View>
   );

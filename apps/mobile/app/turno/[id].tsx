@@ -88,7 +88,11 @@ export default function TurnoDetailScreen() {
   // Activo durante 'confirmado' (para el ingreso) y 'en_progreso' (para el
   // egreso) — antes solo cubría 'confirmado', así que al llegar a en_progreso
   // el poll se apagaba y el egreso nunca tenía una ubicación fresca.
-  const activoParaGeofence = asignacion?.estado === 'confirmado' || asignacion?.estado === 'en_progreso';
+  // El gestor nunca marca su propia entrada/salida en el turno de otro
+  // trabajador — sondear su GPS aquí no serviría para nada y solo gasta
+  // batería/permiso de ubicación de su teléfono.
+  const activoParaGeofence = !isGestor
+    && (asignacion?.estado === 'confirmado' || asignacion?.estado === 'en_progreso');
   const isLibre = asignacion?.geofence_info?.tipo === 'libre';
   const isZonal = asignacion?.geofence_info?.tipo === 'zonal';
 
@@ -286,9 +290,10 @@ export default function TurnoDetailScreen() {
     );
   }
 
-  const { estado, oferta_titulo, oferta_descripcion, oferta_externo_notas,
+  const { estado, oferta_titulo, oferta_descripcion, oferta_notas_adicionales, oferta_externo_notas,
           hora_ingreso_real, hora_egreso_real,
-          bono_monto, calificacion, calificacion_comentario } = asignacion;
+          bono_monto, calificacion, calificacion_comentario,
+          trabajador_telefono, trabajador_ranking, trabajador_total_calificaciones } = asignacion;
 
   // ── Render ────────────────────────────────────────────────────────────
 
@@ -317,7 +322,11 @@ export default function TurnoDetailScreen() {
             onOpenMaps={openInMaps}
           />
 
-          <TurnoDescripcionCard descripcion={oferta_descripcion} notasExterno={oferta_externo_notas} />
+          <TurnoDescripcionCard
+            descripcion={oferta_descripcion}
+            notasAdicionales={oferta_notas_adicionales}
+            notasExterno={oferta_externo_notas}
+          />
 
           {/* ── Timeline ──────────────────────────────────────── */}
           <View
@@ -376,6 +385,10 @@ export default function TurnoDetailScreen() {
               ingresando={ingresoMutation.isPending}
               onIngreso={handleIngreso}
               onIngresoPronto={handleIngresoPronto}
+              isGestor={isGestor}
+              trabajadorTelefono={trabajador_telefono}
+              trabajadorRanking={trabajador_ranking}
+              trabajadorTotalCalificaciones={trabajador_total_calificaciones}
             />
           )}
 
@@ -397,6 +410,9 @@ export default function TurnoDetailScreen() {
               marcandoSalida={egresoMutation.isPending}
               isGestor={isGestor}
               onCorregir={() => setCorrigiendoIngreso(true)}
+              trabajadorTelefono={trabajador_telefono}
+              trabajadorRanking={trabajador_ranking}
+              trabajadorTotalCalificaciones={trabajador_total_calificaciones}
             />
           )}
 

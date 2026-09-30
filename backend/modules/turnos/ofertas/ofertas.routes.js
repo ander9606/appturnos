@@ -48,6 +48,7 @@ function reglasOferta({ parcial }) {
       .withMessage('hora_fin_estimada inválida (HH:MM)'),
     body('para_quien').optional().isIn(['turnos','nomina','ambos']).withMessage('para_quien inválido'),
     body('descripcion').optional({ values: 'falsy' }).isString(),
+    body('notas_adicionales').optional({ values: 'falsy' }).isString(),
     body('lugar').optional({ values: 'falsy' }).isString(),
     body('encargado_nombre').optional({ values: 'falsy' }).isString().trim().isLength({ max: 150 }),
     body('encargado_telefono').optional({ values: 'falsy' }).isString().trim().isLength({ max: 20 }),

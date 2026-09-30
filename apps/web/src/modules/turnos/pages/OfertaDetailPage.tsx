@@ -178,6 +178,12 @@ export function OfertaDetailPage() {
             {oferta.descripcion && (
               <p className="text-sm text-muted-foreground mt-1">{oferta.descripcion}</p>
             )}
+            {oferta.notas_adicionales && (
+              <p className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 mt-2">
+                <span className="font-medium">Detalles adicionales: </span>
+                {oferta.notas_adicionales}
+              </p>
+            )}
             {oferta.externo_notas && (
               <p className="text-sm text-foreground bg-muted rounded-lg px-3 py-2 mt-2">
                 <span className="font-medium">Instrucciones para el operario: </span>

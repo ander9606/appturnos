@@ -42,6 +42,7 @@ export default function NuevoTurnoScreen() {
     const payload = {
       titulo:            data.titulo.trim(),
       descripcion:       data.descripcion.trim() || undefined,
+      notas_adicionales: data.notas_adicionales.trim() || undefined,
       fecha:             buildFecha(data),
       hora_inicio:       buildTime(data.hora_inicio!),
       hora_fin_estimada: data.hora_fin ? buildTime(data.hora_fin) : undefined,

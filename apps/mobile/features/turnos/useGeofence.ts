@@ -187,8 +187,29 @@ export function useGeofence({
 
     // ponytail: no re-prompt on resume, just re-check silently — request*Async only shows
     // a system dialog when status is undetermined, so this is safe to call repeatedly.
+    // En Android, abrir el modal de firma (SignaturePad) al marcar salida dispara un
+    // 'inactive'/'background' espurio de AppState sin que la app realmente pase a
+    // segundo plano — cortar el polling ahí mismo reiniciaba el cálculo de ubicación
+    // en cada intento de cerrar turno (parpadeo + "Marcar Salida" deshabilitado a
+    // destiempo). Se espera BG_DEBOUNCE_MS antes de creer el "background": un regreso
+    // a 'active' dentro de ese margen cancela el corte y el polling nunca se detiene.
+    const BG_DEBOUNCE_MS = 1500;
+    let bgTimer: ReturnType<typeof setTimeout> | null = null;
+
     const sub = AppState.addEventListener('change', async (next) => {
-      if (next !== 'active' || cancelled) return;
+      if (cancelled) return;
+      if (next !== 'active') {
+        // App a segundo plano: nadie está mirando la pantalla — seguir sondeando
+        // GPS de alta precisión ahí solo gasta batería/CPU sin necesidad, y es
+        // justo el tipo de actividad en background que el watchdog del OS puede
+        // castigar matando la app. Se reanuda solo al volver a 'active'.
+        if (bgTimer) clearTimeout(bgTimer);
+        bgTimer = setTimeout(() => {
+          if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+        }, BG_DEBOUNCE_MS);
+        return;
+      }
+      if (bgTimer) { clearTimeout(bgTimer); bgTimer = null; }
       const { status } = await Location.getForegroundPermissionsAsync();
       if (cancelled) return;
       await startIfGranted(status);
@@ -197,6 +218,7 @@ export function useGeofence({
     return () => {
       cancelled = true;
       sub.remove();
+      if (bgTimer) clearTimeout(bgTimer);
       startedAtRef.current = null;
       if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
     };

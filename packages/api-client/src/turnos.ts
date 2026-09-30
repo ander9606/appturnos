@@ -65,6 +65,8 @@ export interface Asignacion {
   // Joined from ofertas_turno
   oferta_titulo: string;
   oferta_descripcion: string | null;
+  /** Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato. */
+  oferta_notas_adicionales?: string | null;
   oferta_externo_notas: string | null;
   oferta_fecha: string; // YYYY-MM-DD
   hora_inicio: string;  // HH:MM:SS
@@ -112,6 +114,9 @@ export interface Asignacion {
   trabajador_nombre?: string;
   trabajador_apellido?: string;
   trabajador_cargo?: string;
+  trabajador_telefono?: string | null;
+  trabajador_ranking?: number | null;
+  trabajador_total_calificaciones?: number;
   /** Avisos devueltos por el backend (ej: turno ya empezó). Presente solo cuando hay condiciones que avisar. */
   warnings?: string[];
 }
@@ -163,6 +168,8 @@ export interface Oferta {
   empresa_nombre?: string;
   titulo: string;
   descripcion: string | null;
+  /** Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato. */
+  notas_adicionales: string | null;
   fecha: string; // YYYY-MM-DD
   hora_inicio: string;
   hora_fin_estimada: string | null;
@@ -199,6 +206,8 @@ export interface Oferta {
 export interface CrearOfertaPayload {
   titulo: string;
   descripcion?: string;
+  /** Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato. */
+  notas_adicionales?: string;
   fecha: string;           // YYYY-MM-DD
   hora_inicio: string;     // HH:mm:ss
   hora_fin_estimada?: string;
@@ -233,6 +242,8 @@ export interface CrearOfertaPayload {
 export interface ActualizarOfertaPayload {
   titulo?: string;
   descripcion?: string;
+  /** Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato. */
+  notas_adicionales?: string;
   fecha?: string;
   hora_inicio?: string;
   hora_fin_estimada?: string;
