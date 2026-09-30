@@ -12,6 +12,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -305,14 +306,32 @@ export default function EgresoScreen() {
           </View>
 
           {/* ── CTA ─────────────────────────────────────────────── */}
-          <Button
-            label={t('egreso.marcar')}
-            variant="primary"
-            size="lg"
-            fullWidth
-            disabled={!canMark}
-            onPress={() => setSignatureVisible(true)}
-          />
+          {asignacion.trabajador_firma_guardada ? (
+            <View style={{ gap: 10 }}>
+              <Button
+                label={t('egreso.marcar')}
+                variant="primary"
+                size="lg"
+                fullWidth
+                disabled={!canMark || egresoMutation.isPending}
+                onPress={() => handleEgreso(asignacion.trabajador_firma_guardada!)}
+              />
+              <TouchableOpacity onPress={() => setSignatureVisible(true)} className="items-center py-1">
+                <Text className="text-xs font-semibold text-muted-foreground">
+                  Firmar con una firma nueva
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <Button
+              label={t('egreso.marcar')}
+              variant="primary"
+              size="lg"
+              fullWidth
+              disabled={!canMark}
+              onPress={() => setSignatureVisible(true)}
+            />
+          )}
 
           <Text className="text-xs text-center text-muted-foreground">
             Se requiere firma digital para confirmar la salida.

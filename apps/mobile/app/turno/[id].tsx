@@ -405,6 +405,9 @@ export default function TurnoDetailScreen() {
               locationUnavailable={locationUnavailable}
               ubicacionLibre={ubicacionLibre}
               onMarcarSalida={() => setSignatureVisible(true)}
+              firmaGuardada={asignacion.trabajador_firma_guardada}
+              onMarcarSalidaConFirmaGuardada={handleEgreso}
+              marcandoSalida={egresoMutation.isPending}
               isGestor={isGestor}
               onCorregir={() => setCorrigiendoIngreso(true)}
               trabajadorTelefono={trabajador_telefono}

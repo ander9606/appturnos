@@ -89,3 +89,23 @@ describe('AsignacionesModel — encargado/liquidacion/notas en listados "mis-tur
     expect(sql).toMatch(/emp\.tipo_liquidacion AS empresa_tipo_liquidacion/);
   });
 });
+
+// Mismo patrón otra vez: contrato/[id].tsx y cuenta-cobro/[id].tsx ya ofrecían
+// "firmar con mi firma guardada" (trabajador_firma_guardada), pero mis-turnos
+// no lo traía — el trabajador dibujaba su firma desde cero cada vez que marcaba
+// egreso en turno/[id].tsx o egreso/[id].tsx, aunque ya tuviera una guardada.
+describe('AsignacionesModel — firma_guardada en listados "mis-turnos"', () => {
+  test('listarPorTrabajador consulta trabajadores.firma_guardada', async () => {
+    pool.query.mockResolvedValue([[filaTipoLibre]]);
+    await AsignacionesModel.listarPorTrabajador(1, 1);
+    const sql = pool.query.mock.calls[0][0];
+    expect(sql).toMatch(/t\.firma_guardada AS trabajador_firma_guardada/);
+  });
+
+  test('listarPorUsuario consulta trabajadores.firma_guardada', async () => {
+    pool.query.mockResolvedValue([[filaTipoLibre]]);
+    await AsignacionesModel.listarPorUsuario(1);
+    const sql = pool.query.mock.calls[0][0];
+    expect(sql).toMatch(/t\.firma_guardada AS trabajador_firma_guardada/);
+  });
+});
