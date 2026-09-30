@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, UserX, UserPlus, Search } from 'lucide-react';
-import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador, useInvitarTrabajador } from '../hooks/useEquipo';
+import { Plus, UserX, UserPlus, Search, Users } from 'lucide-react';
+import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador, useInvitarTrabajador, useBancoTalento } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
@@ -11,7 +11,7 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { HORAS_MES_NOMINA } from '@/shared/laboral';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP as fmtCOPBase } from '@/shared/lib/format';
-import type { TipoTrabajador, Trabajador } from '../types';
+import type { TipoTrabajador, Trabajador, BancoTalentoWorker } from '../types';
 
 /** Mismo código de colores que el resto de la app: Turnos = naranja, Nómina = verde. "Ambos" es su propio color — no reusa el verde para no leerse como "solo nómina". */
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
@@ -56,6 +56,7 @@ export function EquipoPage() {
   const [tipoFiltro, setTipoFiltro] = useState<TipoTrabajador | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
   const [showInvitar, setShowInvitar] = useState(false);
+  const [showBanco, setShowBanco] = useState(false);
   const [page, setPage] = useState(1);
   const [busqueda, setBusqueda] = useState('');
 
@@ -97,6 +98,12 @@ export function EquipoPage() {
         <h1 className="text-2xl font-bold text-foreground">Equipo</h1>
         {isAdmin && (
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowBanco(true)}
+              className="flex items-center gap-1.5 border border-info text-info hover:bg-info-light text-sm font-medium px-3 py-2 rounded-lg transition-colors"
+            >
+              <Users size={16} /> Banco de talento
+            </button>
             <button
               onClick={() => setShowInvitar(true)}
               className="flex items-center gap-1.5 border border-primary text-primary hover:bg-primary-50 text-sm font-medium px-3 py-2 rounded-lg transition-colors"
@@ -204,7 +211,122 @@ export function EquipoPage() {
 
       {showCrear && <TrabajadorFormModal onClose={() => setShowCrear(false)} />}
       {showInvitar && <InvitarModal onClose={() => setShowInvitar(false)} />}
+      {showBanco && <BancoTalentoModal onClose={() => setShowBanco(false)} />}
     </div>
+  );
+}
+
+function getInicialesBanco(nombre: string, apellido: string) {
+  return `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
+}
+
+/** Igual formato que solicitudes.tsx (mobile) para la fecha corta de una experiencia. */
+function fmtFechaCorta(iso: string | null) {
+  if (!iso) return 'actualidad';
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { month: 'short', year: 'numeric' });
+}
+
+function BancoTalentoModal({ onClose }: { onClose: () => void }) {
+  const [busqueda, setBusqueda] = useState('');
+  const [q, setQ] = useState('');
+  const [invitados, setInvitados] = useState<Set<number>>(new Set());
+  const invitar = useInvitarTrabajador();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(busqueda), 400);
+    return () => clearTimeout(timer);
+  }, [busqueda]);
+
+  const { data, isLoading } = useBancoTalento(q);
+  const inner = (data as { data?: { data?: BancoTalentoWorker[] } } | undefined)?.data;
+  const trabajadores = inner?.data ?? [];
+
+  function handleInvitar(t: BancoTalentoWorker) {
+    invitar.mutate({ cedula: t.cedula, tipo: 'turnos' }, {
+      onSuccess: () => setInvitados(prev => new Set(prev).add(t.id)),
+    });
+  }
+
+  return (
+    <Modal onClose={onClose} size="lg" scrollable>
+      <h2 className="text-lg font-semibold text-foreground mb-1">Banco de talento</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        Trabajadores registrados en la plataforma que aún no pertenecen a ninguna empresa. Invítalos si te faltan
+        manos para cubrir turnos.
+      </p>
+      <div className="relative mb-4">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o cargo..."
+          className="w-full border border-border rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          autoFocus
+        />
+      </div>
+      {isLoading ? (
+        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+      ) : trabajadores.length === 0 ? (
+        <p className="text-muted-foreground text-sm py-8 text-center">
+          {q ? `Sin resultados para "${q}".` : 'No hay trabajadores libres registrados todavía.'}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
+          {trabajadores.map(t => {
+            const invitado = invitados.has(t.id);
+            const experienciasVisibles = t.experiencias.slice(0, 2);
+            const experienciasRestantes = t.experiencias.length - experienciasVisibles.length;
+            return (
+              <div key={t.id} className="flex items-start gap-3 border border-border rounded-xl px-3 py-2.5">
+                {t.foto_perfil ? (
+                  <img
+                    src={`data:image/jpeg;base64,${t.foto_perfil}`}
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 font-bold text-xs flex-shrink-0">
+                    {getInicialesBanco(t.nombre, t.apellido)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground truncate">{t.nombre} {t.apellido}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {t.cargo ?? 'Sin cargo'}
+                    {t.ranking != null ? ` · ★ ${t.ranking.toFixed(1)} (${t.total_calificaciones})` : ''}
+                  </p>
+                  {t.descripcion && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{t.descripcion}</p>
+                  )}
+                  {experienciasVisibles.map(exp => (
+                    <p key={exp.id} className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {exp.cargo} · {exp.empresa_nombre} ({fmtFechaCorta(exp.fecha_inicio)} – {fmtFechaCorta(exp.fecha_fin)})
+                    </p>
+                  ))}
+                  {experienciasRestantes > 0 && (
+                    <p className="text-xs text-muted-foreground italic">+{experienciasRestantes} más</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleInvitar(t)}
+                  disabled={invitado || invitar.isPending}
+                  className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                    invitado ? 'bg-success-light text-success' : 'bg-primary text-white hover:bg-primary-600 disabled:opacity-50'
+                  }`}
+                >
+                  {invitado ? 'Invitado' : 'Invitar'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <div className="flex justify-end pt-4">
+        <button onClick={onClose} className="border border-border hover:bg-muted text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+          Cerrar
+        </button>
+      </div>
+    </Modal>
   );
 }
 

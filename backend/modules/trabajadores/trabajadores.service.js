@@ -26,7 +26,29 @@ const TrabajadoresService = {
     if (!cedula) throw new AppError('cedula requerida', 400);
     const trabajador = await TrabajadoresModel.buscarPorCedula(cedula);
     if (!trabajador) throw new AppError('No se encontró un trabajador con esa cédula', 404);
-    return trabajador;
+    // mysql2 devuelve las columnas DECIMAL (ranking) como string.
+    return { ...trabajador, ranking: trabajador.ranking != null ? Number(trabajador.ranking) : null };
+  },
+
+  /**
+   * Banco de talento: página de trabajadores libres, opcionalmente filtrada
+   * por texto. Incluye su historial de experiencias (cargos que ha ocupado
+   * en otras empresas) para que quien invita vea más que el cargo actual.
+   */
+  async listarBancoTalento({ q, page, limit }) {
+    const offset = (page - 1) * limit;
+    const { data, total } = await TrabajadoresModel.listarBancoTalento({ q, limit, offset });
+    const experienciasPorTrabajador = await TrabajadoresModel.listarExperienciasPorTrabajadores(
+      data.map((t) => t.id)
+    );
+    return {
+      data: data.map((t) => ({
+        ...t,
+        ranking: t.ranking != null ? Number(t.ranking) : null,
+        experiencias: experienciasPorTrabajador.get(t.id) ?? [],
+      })),
+      pagination: { page, limit, total },
+    };
   },
 
   async actualizarMarcacion(empresaId, id, body) {
@@ -39,7 +61,14 @@ const TrabajadoresService = {
     return trabajador;
   },
 
-  async crear(empresaId, datos) {
+  /**
+   * Cupo de trabajadores del plan, sin lanzar — para decidir mensajes/CTAs
+   * (ej. advertenciasCapacidad de ofertas.gestion.service.js: si falta
+   * personal para un turno y encima ya no hay cupo, hay que ofrecer subir de
+   * plan en vez de mandar al banco de talento a invitar a alguien que igual
+   * va a rebotar con 402).
+   */
+  async obtenerCupoPlan(empresaId) {
     const [[empresa]] = await pool.query(
       'SELECT plan FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
       [empresaId]
@@ -48,18 +77,35 @@ const TrabajadoresService = {
 
     const planes = await PlanesModel.listar();
     const limite = planes.find((p) => p.codigo === empresa.plan)?.max_trabajadores ?? null;
-    if (limite !== null) {
-      const [[{ total }]] = await pool.query(
-        'SELECT COUNT(*) AS total FROM trabajadores WHERE empresa_id = ? AND activo = 1',
-        [empresaId]
+    if (limite === null) return { plan: empresa.plan, limite: null, total: null, alTope: false };
+
+    const [[{ total }]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM trabajadores WHERE empresa_id = ? AND activo = 1',
+      [empresaId]
+    );
+    return { plan: empresa.plan, limite, total, alTope: total >= limite };
+  },
+
+  /**
+   * Único punto de verdad del cupo de plan — lanza 402 si la empresa ya está
+   * en el tope de trabajadores activos. Debe llamarse antes de CUALQUIER
+   * camino que termine sumando un trabajador activo, no solo "Nuevo
+   * trabajador": invitar por cédula (trabajador-empresa.service.js invitar),
+   * aceptar una invitación (aceptar) y aprobar una solicitud (aprobar)
+   * también aumentan el conteo y antes se saltaban este chequeo.
+   */
+  async verificarCupoPlan(empresaId) {
+    const { plan, limite, alTope } = await TrabajadoresService.obtenerCupoPlan(empresaId);
+    if (alTope) {
+      throw new AppError(
+        `Tu plan ${plan} permite máximo ${limite} trabajadores activos. Amplía tu plan en Mi plan para agregar más.`,
+        402
       );
-      if (total >= limite) {
-        throw new AppError(
-          `Tu plan ${empresa.plan} permite máximo ${limite} trabajadores activos. Amplía tu plan en Mi plan para agregar más.`,
-          402
-        );
-      }
     }
+  },
+
+  async crear(empresaId, datos) {
+    await this.verificarCupoPlan(empresaId);
 
     try {
       const id = await TrabajadoresModel.crear(empresaId, datos);

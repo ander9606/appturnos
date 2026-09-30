@@ -110,6 +110,9 @@ export type {
   SexoTrabajador,
   TipoCuenta,
   DisponibilidadSlot,
+  BancoTalentoWorker,
+  BancoTalentoParams,
+  BancoTalentoResponse,
 } from './trabajadores';
 export { ausenciasApi } from './ausencias';
 export type { Ausencia, TipoAusencia, EstadoAusencia, CrearAusenciaPayload } from './ausencias';

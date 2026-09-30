@@ -4,12 +4,15 @@ const { pool } = require('../../../config/database');
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const CargosModel = require('../../cargos/cargos.model');
+const TrabajadoresService = require('../../trabajadores/trabajadores.service');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
+const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const { ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+const logger = require('../../../utils/logger');
 
 /** Valida que cada puesto del array tiene un cargo válido para la empresa. */
 async function validarPuestosParaEmpresa(empresaId, puestos) {
@@ -33,25 +36,56 @@ async function validarPuestosParaEmpresa(empresaId, puestos) {
 /**
  * Advierte (sin bloquear — el pool puede crecer o la oferta puede quedar
  * parcialmente cubierta) cuando un puesto pide más plazas que trabajadores
- * activos certificados para ese cargo hay en la empresa.
+ * activos certificados para ese cargo hay en la empresa. Si falta personal,
+ * suma la salida que corresponda: banco de talento si aún hay cupo en el
+ * plan, o subir de plan si ya está en el tope (invitar a alguien más ahí
+ * solo rebotaría con 402).
  */
 async function advertenciasCapacidad(empresaId, puestos) {
-  if (!Array.isArray(puestos) || puestos.length === 0) return [];
+  if (!Array.isArray(puestos) || puestos.length === 0) return { advertencias: [], cupoLleno: false };
   const advertencias = [];
+  let cupo = null;
   for (const p of puestos) {
     const cargoId = Number(p.cargo_id);
     const plazas = Number(p.plazas);
     if (!plazas) continue;
     const disponibles = await CargosModel.contarActivosPorEmpresa(cargoId, empresaId);
     if (plazas > disponibles) {
+      if (cupo === null) cupo = await TrabajadoresService.obtenerCupoPlan(empresaId);
       const cargo = await CargosModel.obtenerPorId(cargoId);
+      const sugerencia = cupo.alTope
+        ? `Ya estás en el tope de trabajadores de tu plan (${cupo.limite}) — amplíalo en Mi plan para poder vincular más gente.`
+        : 'Puedes invitar más gente desde el Banco de talento.';
       advertencias.push(
         `"${cargo?.nombre ?? 'Cargo ' + cargoId}" pide ${plazas} plaza(s), pero tu empresa solo tiene ` +
-        `${disponibles} trabajador(es) activo(s) certificado(s) para ese cargo.`
+        `${disponibles} trabajador(es) activo(s) certificado(s) para ese cargo. ${sugerencia}`
       );
     }
   }
-  return advertencias;
+  return { advertencias, cupoLleno: cupo?.alTope ?? false };
+}
+
+/** El desglose de Nominatim trae ciudad bajo distintas llaves según qué tan urbana es la zona. */
+function extraerCiudad(address) {
+  if (!address) return null;
+  return address.city || address.town || address.municipality || address.village || null;
+}
+
+/**
+ * Resuelve y guarda la ciudad real de la oferta a partir de sus coordenadas
+ * (best-effort, no bloquea la creación — mismo patrón que nombrarUbicacion en
+ * liquidacion.service.js). Alimenta el filtro por ciudad del directorio de
+ * empresas: una empresa con sede en una ciudad puede publicar turnos en otra,
+ * y empresas.ciudad (un solo valor autoreportado) no lo refleja.
+ */
+async function geocodificarCiudadOferta(ofertaId, lat, lng) {
+  try {
+    const data = await GeocodingService.reverse(lat, lng);
+    const ciudad = extraerCiudad(data?.address);
+    if (ciudad) await OfertasModel.actualizarCiudad(ofertaId, ciudad);
+  } catch (err) {
+    logger.warn(`[ofertas] no se pudo geocodificar la ciudad de la oferta ${ofertaId}: ${err.message}`);
+  }
 }
 
 /**
@@ -235,9 +269,17 @@ module.exports = {
     await notificarPoolPorPuestos(empresaId, oferta);
     await notificarCoGestores(empresaId, oferta, creadoPor);
 
+    // Fire-and-forget: la respuesta no espera a Nominatim (cola a ~1 req/s).
+    // ubicacion_libre no tiene coordenadas fijas que geocodificar.
+    if (!oferta.ubicacion_libre && oferta.latitud != null && oferta.longitud != null) {
+      geocodificarCiudadOferta(oferta.id, Number(oferta.latitud), Number(oferta.longitud));
+    }
+
     // No bloquea la creación — solo avisa al gestor si el catálogo de
     // trabajadores de la empresa no alcanza para cubrir lo pedido.
-    oferta.advertencias = await advertenciasCapacidad(empresaId, datos.puestos);
+    const { advertencias, cupoLleno } = await advertenciasCapacidad(empresaId, datos.puestos);
+    oferta.advertencias = advertencias;
+    oferta.cupo_lleno = cupoLleno;
 
     return oferta;
   },

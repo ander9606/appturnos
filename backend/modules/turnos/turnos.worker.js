@@ -3,6 +3,7 @@
 const OfertasModel = require('./ofertas/ofertas.model');
 const AsignacionesService = require('./asignaciones/asignaciones.service');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
+const TrabajadoresService = require('../trabajadores/trabajadores.service');
 const { ahoraColombiaSQL } = require('../../utils/fechaColombia');
 const logger = require('../../utils/logger');
 
@@ -42,11 +43,17 @@ async function verificarPersonalIncompleto() {
   const ofertas = await OfertasModel.listarProximasConPersonalIncompleto(HORAS_ANTES);
   for (const oferta of ofertas) {
     const faltantes = oferta.total_plazas - oferta.cubiertas;
+    // Misma disyuntiva que advertenciasCapacidad al crear el turno: si ya no
+    // hay cupo en el plan, invitar más gente solo rebotaría con 402.
+    const cupo = await TrabajadoresService.obtenerCupoPlan(oferta.empresa_id);
+    const sugerencia = cupo.alTope
+      ? `Ya estás en el tope de trabajadores de tu plan (${cupo.limite}) — amplíalo en Mi plan.`
+      : 'Invita más gente desde el Banco de talento.';
     await NotificacionesService.notificarVarios(oferta.gestor_ids, {
       empresaId: oferta.empresa_id,
       tipo:      'oferta.personal_incompleto',
       titulo:    'Personal incompleto en turno',
-      mensaje:   `"${oferta.titulo}" (${oferta.fecha} ${oferta.hora_inicio.slice(0, 5)}) — faltan ${faltantes} plaza${faltantes > 1 ? 's' : ''}.`,
+      mensaje:   `"${oferta.titulo}" (${oferta.fecha} ${oferta.hora_inicio.slice(0, 5)}) — faltan ${faltantes} plaza${faltantes > 1 ? 's' : ''}. ${sugerencia}`,
       data:      { oferta_id: oferta.id },
     });
     await OfertasModel.marcarAlertaEnviada(oferta.id);
@@ -79,4 +86,4 @@ function iniciarWorker() {
   return timer;
 }
 
-module.exports = { iniciarWorker, resolverAsignacionesVencidas };
+module.exports = { iniciarWorker, resolverAsignacionesVencidas, verificarPersonalIncompleto };

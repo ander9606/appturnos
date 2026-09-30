@@ -66,6 +66,15 @@ export function useBuscarPorCedula(cedula: string) {
   });
 }
 
+/** Banco de talento: trabajadores_turnos libres, navegables/buscables por nombre o cargo. */
+export function useBancoTalento(q: string) {
+  return useQuery({
+    queryKey: ['trabajadores', 'banco-talento', q.trim()] as const,
+    queryFn: () => trabajadoresApi.bancoTalento({ q: q.trim() || undefined, limit: 50 }),
+    staleTime: 30_000,
+  });
+}
+
 // ── Mutations ─────────────────────────────────────────────────────────────
 
 export function useCrearTrabajador() {

@@ -2,6 +2,7 @@
 
 const TrabajadorEmpresaModel = require('./trabajador-empresa.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
+const TrabajadoresService = require('../trabajadores/trabajadores.service');
 const EmpresasModel = require('../empresas/empresas.model');
 const CargosModel = require('../cargos/cargos.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
@@ -36,6 +37,11 @@ async function vincularTrabajador(usuarioId, empresaId) {
     [usuarioId, empresaId]
   );
   if (filas.length) return filas[0].id;
+
+  // A partir de acá SIEMPRE se suma un trabajador activo nuevo (reclamando
+  // la ficha personal o creando una) — mismo cupo de plan que "Nuevo
+  // trabajador", para que aceptar/aprobar no sea una puerta trasera al tope.
+  await TrabajadoresService.verificarCupoPlan(empresaId);
 
   // Ficha personal del registro libre (empresa_id IS NULL, ver
   // auth.service.js registrarLibre) — reclamarla en vez de crear una nueva
@@ -179,8 +185,11 @@ const TrabajadorEmpresaService = {
     let usuarioId = cuenta?.usuario_id || null;
     let trabajadorId = trabajadoresRows[0]?.id || null;
 
-    // Si no hay ficha en esta empresa, crearla.
+    // Si no hay ficha en esta empresa, crearla — mismo cupo de plan que
+    // "Nuevo trabajador": la ficha cuenta para el tope aunque la cuenta
+    // todavía no esté activada.
     if (!trabajadorId) {
+      await TrabajadoresService.verificarCupoPlan(empresaId);
       trabajadorId = await TrabajadoresModel.crear(empresaId, {
         nombre: cedula, // placeholder hasta que active cuenta
         apellido: '',

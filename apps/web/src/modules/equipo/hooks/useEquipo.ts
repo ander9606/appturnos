@@ -78,6 +78,16 @@ export function useDesactivarTrabajador() {
   });
 }
 
+/** Banco de talento: trabajadores_turnos libres, navegables/buscables por nombre o cargo. */
+export function useBancoTalento(q: string, enabled = true) {
+  return useQuery({
+    queryKey: ['trabajadores', 'banco-talento', q] as const,
+    queryFn: () => equipoApi.bancoTalento({ q: q.trim() || undefined, limit: 50 }),
+    staleTime: 30_000,
+    enabled,
+  });
+}
+
 export function useInvitarTrabajador() {
   const qc = useQueryClient();
   return useMutation({

@@ -92,6 +92,40 @@ const TrabajadoresModel = {
     return filas[0] || null;
   },
 
+  /**
+   * Banco de talento: trabajadores libres (sin empresa) navegables/buscables
+   * por nombre o cargo — mismo criterio de elegibilidad que buscarPorCedula,
+   * sin exigir conocer la cédula de antemano.
+   */
+  async listarBancoTalento({ q, limit, offset }) {
+    const where = [`u.rol = 'trabajador_turnos'`, 'u.activo = 1', 't.empresa_id IS NULL', 't.activo = 1'];
+    const params = [];
+    if (q) {
+      where.push('(t.nombre LIKE ? OR t.apellido LIKE ? OR t.cargo LIKE ?)');
+      const like = `%${q}%`;
+      params.push(like, like, like);
+    }
+    const whereSql = where.join(' AND ');
+
+    const [filas] = await pool.query(
+      `SELECT t.id, t.nombre, t.apellido, t.cedula, t.tipo_documento, t.cargo, t.descripcion,
+              t.ranking, t.total_calificaciones, u.foto_perfil
+       FROM trabajadores t
+       INNER JOIN usuarios u ON u.id = t.usuario_id
+       WHERE ${whereSql}
+       ORDER BY t.ranking DESC, t.nombre
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM trabajadores t
+       INNER JOIN usuarios u ON u.id = t.usuario_id
+       WHERE ${whereSql}`,
+      params
+    );
+    return { data: filas, total };
+  },
+
   async actualizarMarcacion(empresaId, id, { tipo_marcacion, punto_marcaje_id }) {
     const [result] = await pool.query(
       'UPDATE trabajadores SET tipo_marcacion = ?, punto_marcaje_id = ? WHERE id = ? AND empresa_id = ?',

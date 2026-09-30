@@ -30,6 +30,7 @@ import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAsignacionesHoy, useCargos } from '@/features/turnos/useTurnos';
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
+import { useMisEmpresas } from '@/features/empresas/useTrabajadorEmpresa';
 import { usePeriodos, useNominaPerfil } from '@/features/nomina/useNomina';
 import { useCountNoLeidas } from '@/features/notificaciones/useNotificaciones';
 import { bogotaToday, fmtTime, getEstadoConfig } from '@/features/turnos/turnosUtils';
@@ -39,6 +40,7 @@ import { Avatar }         from '@/components/ui/Avatar';
 import { ActiveShiftCard } from '@/features/dashboard/ActiveShiftCard';
 import { NextShiftCard }   from '@/features/dashboard/NextShiftCard';
 import { NoShiftCard }     from '@/features/dashboard/NoShiftCard';
+import { BuscarEmpresasCard } from '@/features/dashboard/BuscarEmpresasCard';
 import { SetupChecklist }  from '@/features/dashboard/SetupChecklist';
 import { fmtPeriodo, TIPO_PERIODO_LABEL } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { formatShortDate } from '@/lib/formatters';
@@ -101,6 +103,15 @@ export default function DashboardScreen() {
     isLoading: turnosLoading,
     refetch: refetchTurnos,
   } = useMisTurnos({ enabled: showShifts || necesitaExtrasHoy });
+
+  // Sin empresa todavía → "Ver turnos disponibles" de NoShiftCard siempre
+  // estaría vacío; se reemplaza por un CTA a buscar empresa (ver showShifts).
+  const { data: misEmpresas, isLoading: misEmpresasLoading } = useMisEmpresas({ enabled: showShifts });
+  const totalVinculos =
+    (misEmpresas?.activas.length ?? 0) +
+    (misEmpresas?.pendientes.length ?? 0) +
+    (misEmpresas?.invitaciones.length ?? 0);
+  const sinEmpresa = showShifts && !misEmpresasLoading && totalVinculos === 0;
 
   const {
     data: equipoData,
@@ -412,7 +423,9 @@ export default function DashboardScreen() {
 
         {/* ── Hero: turno activo / próximo / vacío (solo turnos) ─────── */}
         {showShifts && (
-          turnoActivo ? (
+          sinEmpresa ? (
+            <BuscarEmpresasCard />
+          ) : turnoActivo ? (
             <ActiveShiftCard
               turno={turnoActivo}
               primaryColor={theme.primary}

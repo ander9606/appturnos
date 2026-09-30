@@ -68,8 +68,11 @@ const GeocodingService = {
     // cercanos sin perder utilidad real de la dirección resuelta.
     const key = `r:${lat.toFixed(4)},${lon.toFixed(4)}`;
     if (cache.has(key)) return cache.get(key);
+    // addressdetails=1: además de display_name, trae el desglose (city/town/
+    // municipality...) que ofertas.gestion.service.js usa para derivar la
+    // ciudad real de un turno (directorio de empresas por ciudad).
     const data = await encolar(() =>
-      llamarNominatim(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
+      llamarNominatim(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`)
     );
     cachear(key, data);
     return data;

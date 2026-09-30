@@ -19,4 +19,7 @@ export const equipoApi = {
 
   invitar: (cedula: string, tipo: 'turnos' | 'nomina' = 'turnos') =>
     api.post('/trabajador-empresa/invitar', { cedula, tipo }).then(r => r.data),
+
+  bancoTalento: (params?: { q?: string; page?: number; limit?: number }) =>
+    api.get('/trabajadores/banco-talento', { params }).then(r => r.data),
 };

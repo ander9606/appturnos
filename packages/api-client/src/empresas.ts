@@ -39,6 +39,12 @@ export interface EmpresaDirectorio {
   acepta_postulaciones: boolean;
   /** Cargos activos en la empresa — informativo, la empresa decide cuál asignar al aprobar. */
   cargos: { id: number; nombre: string }[];
+  /** Promedio de turnos publicados por semana en las últimas 12 semanas. null si no ha publicado en ese lapso. */
+  turnos_promedio_semana: number | null;
+  /** Promedio de tarifa_dia ofrecida en esos turnos. null si no ha publicado en ese lapso. */
+  pago_promedio: number | null;
+  /** Hasta 5 cargos que más ha solicitado recientemente, de más a menos frecuente. */
+  cargos_frecuentes: { id: number; nombre: string; veces: number }[];
 }
 
 export type TipoLiquidacion = 'mensual' | 'quincenal' | 'semanal';

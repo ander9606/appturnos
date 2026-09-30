@@ -435,6 +435,16 @@ export default function EquipoScreen() {
               onPress={() => router.push('/solicitudes')}
             />
           )}
+          {/* Banco de talento — buscar trabajadores libres para invitar */}
+          {canInvitar && (
+            <Pressable
+              onPress={() => router.push('/banco-talento')}
+              className="flex-row items-center gap-1.5 bg-info/10 border border-info/30 rounded-full px-3 py-1.5"
+            >
+              <Ionicons name="search-outline" size={13} color={COLORS.info} />
+              <Text className="text-xs font-semibold text-info">Banco de talento</Text>
+            </Pressable>
+          )}
           {/* Ausencias pendientes badge — todos los gestores */}
           {canManage && ausenciasCount > 0 && (
             <Pressable

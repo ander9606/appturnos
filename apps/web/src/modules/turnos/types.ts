@@ -37,6 +37,8 @@ export interface Oferta {
   // Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato.
   notas_adicionales: string | null;
   lugar: string | null;
+  /** Resuelta por geocodificación a partir de latitud/longitud (best-effort, puede quedar null). */
+  ciudad: string | null;
   latitud: number | null;
   longitud: number | null;
   encargado_nombre: string | null;
@@ -52,6 +54,12 @@ export interface Oferta {
   externo_notas: string | null;
   puestos: Puesto[];
   created_at: string;
+  /** Solo presente justo después de crear: avisos de capacidad por puesto
+   *  (plazas pedidas > trabajadores certificados activos). No bloquea. */
+  advertencias?: string[];
+  /** Solo presente junto a `advertencias`: true si además ya está en el tope
+   *  de trabajadores de su plan (invitar más gente rebotaría con 402). */
+  cupo_lleno?: boolean;
 }
 
 export interface LiquidacionTurno {

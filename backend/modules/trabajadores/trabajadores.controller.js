@@ -90,6 +90,14 @@ async function buscarPorCedula(req, res) {
   res.json({ success: true, data: { id, nombre, apellido, cedula, tipo_documento, cargo, ranking } });
 }
 
+async function bancoTalento(req, res) {
+  const page = Math.min(10000, Math.max(1, parseInt(req.query.page, 10) || 1));
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
+  const q = req.query.q?.trim() || undefined;
+  const { data, pagination } = await TrabajadoresService.listarBancoTalento({ q, page, limit });
+  res.json({ success: true, data: { data, pagination } });
+}
+
 async function obtenerMe(req, res) {
   const data = await TrabajadoresService.me(req.usuario.sub);
   res.json({ success: true, data, message: 'Mi perfil laboral' });
@@ -157,7 +165,7 @@ async function guardarDisponibilidad(req, res) {
 }
 
 module.exports = {
-  listar, obtener, buscarPorCedula, crear, actualizar, eliminar, eliminarDefinitivo,
+  listar, obtener, buscarPorCedula, bancoTalento, crear, actualizar, eliminar, eliminarDefinitivo,
   listarCargos, asignarCargo, desasignarCargo,
   obtenerMe, actualizarMe, actualizarExtras,
   crearExperiencia, eliminarExperiencia,

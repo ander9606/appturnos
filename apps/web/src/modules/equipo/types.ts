@@ -32,3 +32,27 @@ export interface Trabajador {
   /** Promedio de `pago_total` de sus asignaciones completadas. null si es tipo nómina o si (tipo turnos) aún no completó ninguna. */
   promedio_pago_turno: number | null;
 }
+
+export interface Experiencia {
+  id: number;
+  empresa_nombre: string;
+  cargo: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+}
+
+/** Fila del banco de talento — trabajador_turnos libre (sin empresa), aún no vinculado a ninguna. */
+export interface BancoTalentoWorker {
+  id: number;
+  nombre: string;
+  apellido: string;
+  cedula: string;
+  tipo_documento: TipoDocumento | null;
+  cargo: string | null;
+  descripcion: string | null;
+  ranking: number | null;
+  total_calificaciones: number;
+  foto_perfil: string | null;
+  /** Historial de cargos en otras empresas. */
+  experiencias: Experiencia[];
+}

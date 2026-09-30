@@ -162,10 +162,48 @@ export interface TrabajadorPreview {
   ranking: number | null;
 }
 
+/** Fila del banco de talento — trabajador_turnos libre (sin empresa). */
+export interface BancoTalentoWorker {
+  id: number;
+  nombre: string;
+  apellido: string;
+  cedula: string;
+  tipo_documento: TipoDocumento | null;
+  cargo: string | null;
+  descripcion: string | null;
+  ranking: number | null;
+  total_calificaciones: number;
+  foto_perfil: string | null;
+  /** Historial de cargos en otras empresas — para decidir mejor a quién invitar. */
+  experiencias: Experiencia[];
+}
+
+export interface BancoTalentoParams {
+  /** Filtra por nombre, apellido o cargo (LIKE, insensible a mayúsculas en MySQL). */
+  q?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface BancoTalentoResponse {
+  data: BancoTalentoWorker[];
+  pagination: { page: number; limit: number; total: number };
+}
+
 export const trabajadoresApi = {
   /** Búsqueda cross-empresa por cédula — solo devuelve marketplace workers activos. */
   buscarPorCedula(cedula: string): Promise<TrabajadorPreview> {
     return api.get<TrabajadorPreview>(`/api/trabajadores/buscar?cedula=${encodeURIComponent(cedula)}`);
+  },
+
+  /** Banco de talento: trabajadores_turnos libres, navegables/buscables por nombre o cargo. */
+  bancoTalento(params: BancoTalentoParams = {}): Promise<BancoTalentoResponse> {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set('q', params.q);
+    if (params.page !== undefined) qs.set('page', String(params.page));
+    if (params.limit !== undefined) qs.set('limit', String(params.limit));
+    const suffix = qs.toString() ? `?${qs}` : '';
+    return api.get<BancoTalentoResponse>(`/api/trabajadores/banco-talento${suffix}`);
   },
 
   async listar(params: TrabajadoresListParams = {}): Promise<TrabajadoresListResponse> {

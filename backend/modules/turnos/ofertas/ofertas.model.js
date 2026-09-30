@@ -18,7 +18,7 @@ function minutosAHora(minutos) {
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
-  lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
+  lugar, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
@@ -546,6 +546,11 @@ const OfertasModel = {
       'UPDATE ofertas_turno SET alerta_personal_enviada = 1 WHERE id = ?',
       [id]
     );
+  },
+
+  /** Ciudad resuelta por geocodificación a partir de lat/lng (best-effort, ver geocodificarCiudadOferta). */
+  async actualizarCiudad(id, ciudad) {
+    await pool.query('UPDATE ofertas_turno SET ciudad = ? WHERE id = ?', [ciudad, id]);
   },
 
   async marcarCoberturaNotificada(empresaId, id) {

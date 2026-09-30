@@ -167,6 +167,20 @@ router.get(
   ctrl.buscarPorCedula
 );
 
+// GET /api/trabajadores/banco-talento?q=&page=&limit= — navega/busca trabajadores libres (banco de talento)
+// Debe ir ANTES de /:id
+router.get(
+  '/banco-talento',
+  verificarRol([ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS]),
+  [
+    query('q').optional().isString().trim(),
+    query('page').optional().isInt({ min: 1 }).withMessage('page inválido'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit inválido'),
+  ],
+  validar,
+  ctrl.bancoTalento
+);
+
 // GET /api/trabajadores
 router.get(
   '/',

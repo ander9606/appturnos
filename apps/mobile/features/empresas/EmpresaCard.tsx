@@ -40,6 +40,18 @@ export function EmpresaCard({ empresa, estadoVinculo, onSolicitar, solicitando }
         {empresa.descripcion ? (
           <Text className="text-muted-foreground text-xs mt-0.5" numberOfLines={1}>{empresa.descripcion}</Text>
         ) : null}
+        {(empresa.turnos_promedio_semana != null || empresa.pago_promedio != null) && (
+          <Text className="text-muted-foreground text-xs mt-0.5">
+            {empresa.turnos_promedio_semana != null ? `~${empresa.turnos_promedio_semana} turnos/sem` : ''}
+            {empresa.turnos_promedio_semana != null && empresa.pago_promedio != null ? ' · ' : ''}
+            {empresa.pago_promedio != null ? `$${Math.round(empresa.pago_promedio).toLocaleString('es-CO')}/turno` : ''}
+          </Text>
+        )}
+        {empresa.cargos_frecuentes.length > 0 && (
+          <Text className="text-muted-foreground text-xs mt-0.5" numberOfLines={1}>
+            Suele pedir: {empresa.cargos_frecuentes.slice(0, 3).map((c) => c.nombre).join(', ')}
+          </Text>
+        )}
       </View>
 
       {estadoVinculo === 'activo' ? (

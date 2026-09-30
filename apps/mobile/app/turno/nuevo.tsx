@@ -14,6 +14,7 @@ import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
 import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import type { WizardData } from '@/features/turnos/crear/types';
 
@@ -22,6 +23,7 @@ const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar']
 export default function NuevoTurnoScreen() {
   const router  = useRouter();
   const theme   = useTheme();
+  const { usuario } = useAuthStore();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [data, setData] = useState<WizardData>(INITIAL);
 
@@ -69,7 +71,18 @@ export default function NuevoTurnoScreen() {
         : 'Los trabajadores con los cargos seleccionados recibirán una notificación.';
       showAnuncioTurno(`¡"${payload.titulo}" publicado! ${aviso}`, 'publicado');
       if (oferta.advertencias && oferta.advertencias.length > 0) {
-        Alert.alert('Puede que falte personal', oferta.advertencias.join('\n\n'));
+        // El botón de acción depende del rol: banco de talento es admin/jefe_turnos,
+        // Mi plan es solo admin_empresa. jefe_nomina (también puede crear turnos) se
+        // queda con el texto solo — no tiene acceso a ninguna de las dos pantallas.
+        const botones: Parameters<typeof Alert.alert>[2] = [{ text: 'Más tarde', style: 'cancel' }];
+        if (oferta.cupo_lleno) {
+          if (usuario?.rol === 'admin_empresa') {
+            botones.push({ text: 'Ir a Mi plan', onPress: () => router.push('/mi-plan') });
+          }
+        } else if (usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos') {
+          botones.push({ text: 'Banco de talento', onPress: () => router.push('/banco-talento') });
+        }
+        Alert.alert('Puede que falte personal', oferta.advertencias.join('\n\n'), botones);
       }
       // No navega sola: el botón pasa a "Cerrar" para que quede claro que
       // ya se publicó, en vez de cerrar la pantalla de golpe tras la espera.

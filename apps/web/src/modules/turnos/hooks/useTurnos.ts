@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { turnosApi } from '../api/turnosApi';
-import type { EstadoOferta, EstadoAsignacion } from '../types';
+import type { EstadoOferta, EstadoAsignacion, Oferta } from '../types';
 
 const KEYS = {
   ofertas: (params?: object) => ['turnos', 'ofertas', params] as const,
@@ -128,9 +128,21 @@ export function useCrearOferta() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Record<string, unknown>) => turnosApi.crearOferta(data),
-    onSuccess: () => {
+    onSuccess: (res: { data?: Oferta }) => {
       qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
       toast.success('Oferta creada');
+      // No bloqueó la creación — solo avisa que el catálogo de trabajadores
+      // no alcanza para las plazas pedidas (ver advertenciasCapacidad en
+      // ofertas.gestion.service.js), con el siguiente paso según haya o no
+      // cupo en el plan.
+      const oferta = res.data;
+      if (oferta?.advertencias?.length) {
+        toast.warning(oferta.advertencias.join(' '), {
+          action: oferta.cupo_lleno
+            ? { label: 'Ir a Mi plan', onClick: () => window.location.assign('/configuracion?tab=plan') }
+            : { label: 'Banco de talento', onClick: () => window.location.assign('/equipo') },
+        });
+      }
     },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });

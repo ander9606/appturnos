@@ -89,6 +89,18 @@ function EmpresaCard({
             {emp.cargos.length > 3 ? ` +${emp.cargos.length - 3}` : ''}
           </Text>
         )}
+        {(emp.turnos_promedio_semana != null || emp.pago_promedio != null) && (
+          <Text className="text-xs text-muted-foreground mt-0.5">
+            {emp.turnos_promedio_semana != null ? `~${emp.turnos_promedio_semana} turnos/sem` : ''}
+            {emp.turnos_promedio_semana != null && emp.pago_promedio != null ? ' · ' : ''}
+            {emp.pago_promedio != null ? `$${Math.round(emp.pago_promedio).toLocaleString('es-CO')}/turno` : ''}
+          </Text>
+        )}
+        {emp.cargos_frecuentes?.length > 0 && (
+          <Text className="text-xs text-muted-foreground mt-0.5" numberOfLines={1}>
+            Suele pedir: {emp.cargos_frecuentes.slice(0, 3).map((c) => c.nombre).join(', ')}
+          </Text>
+        )}
       </View>
 
       {/* State pill */}
