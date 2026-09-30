@@ -651,7 +651,10 @@ function EditarOfertaModal({
       id: ofertaId,
       data: {
         titulo: form.titulo,
-        descripcion: form.descripcion || undefined,
+        // Se envían tal cual (no `|| undefined`): así vaciar el campo sí lo
+        // borra. `undefined` significa "no tocar" para el backend — con eso,
+        // borrar la descripción o el lugar no se guardaba nunca.
+        descripcion: form.descripcion,
         fecha: form.fecha,
         // Con segundos: el backend compara contra oferta.hora_inicio ("HH:MM:SS")
         // para decidir si el horario cambió — sin esto, todo edit se veía como
@@ -659,7 +662,7 @@ function EditarOfertaModal({
         // tocado el título o la descripción.
         hora_inicio: `${form.hora_inicio}:00`,
         hora_fin_estimada: form.hora_fin_estimada ? `${form.hora_fin_estimada}:00` : undefined,
-        lugar: lugar || undefined,
+        lugar,
         latitud: latitud ?? undefined,
         longitud: longitud ?? undefined,
       },

@@ -23,6 +23,7 @@ const { pool } = require('../config/database');
 const AsignacionesModel = require('../modules/turnos/asignaciones/asignaciones.model');
 const TrabajadoresModel = require('../modules/trabajadores/trabajadores.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
+const IntegracionService = require('../modules/integracion/integracion.service');
 const AsignacionesService = require('../modules/turnos/asignaciones/asignaciones.service');
 
 afterEach(() => jest.clearAllMocks());
@@ -82,6 +83,35 @@ describe('AsignacionesService.reconfirmar', () => {
     expect(AsignacionesModel.confirmar).toHaveBeenCalledWith(7, 500, ['por_reconfirmar']);
     expect(resultado).toEqual({ id: 500, empresa_id: 7, estado: 'confirmado' });
   });
+
+  test('acepta:true no reemite asignacion.confirmada a logiq360 (ya lo recibió en la confirmación original)', async () => {
+    AsignacionesModel.obtenerConDetalles.mockResolvedValue({ ...asigPorReconfirmar, oferta_external_ref: 'EXT-123' });
+    AsignacionesModel.obtenerPorId
+      .mockResolvedValueOnce({ id: 500, empresa_id: 7, trabajador_id: 99, estado: 'por_reconfirmar' })
+      .mockResolvedValueOnce({ id: 500, empresa_id: 7, estado: 'confirmado' });
+    TrabajadoresModel.obtenerUsuarioIdYRol.mockResolvedValue({ usuario_id: 42, rol: 'admin_empresa' });
+    TrabajadoresModel.obtenerUsuarioId.mockResolvedValue(42);
+    AsignacionesModel.confirmar.mockResolvedValue({ ok: true });
+
+    await AsignacionesService.reconfirmar(7, 500, 42, true);
+
+    expect(IntegracionService.emitir).not.toHaveBeenCalled();
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(
+      expect.objectContaining({ titulo: 'Participación reconfirmada' })
+    );
+  });
+
+  test('acepta:true fallido por carrera muestra un mensaje específico de reconfirmación, no el genérico de "pendiente"', async () => {
+    AsignacionesModel.obtenerConDetalles.mockResolvedValue(asigPorReconfirmar);
+    AsignacionesModel.obtenerPorId.mockResolvedValue({ id: 500, empresa_id: 7, trabajador_id: 99, estado: 'por_reconfirmar' });
+    TrabajadoresModel.obtenerUsuarioIdYRol.mockResolvedValue({ usuario_id: 42, rol: 'admin_empresa' });
+    AsignacionesModel.confirmar.mockResolvedValue({ ok: false, motivo: 'estado' });
+
+    await expect(AsignacionesService.reconfirmar(7, 500, 42, true)).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'Esta asignación ya no está esperando reconfirmación',
+    });
+  });
 });
 
 // Regresión: AsignacionesModel.confirmar() amplió su guard para aceptar
@@ -96,7 +126,10 @@ describe('AsignacionesService.confirmar (ruta de gestor) — no debe aceptar por
     TrabajadoresModel.obtenerUsuarioIdYRol.mockResolvedValue({ usuario_id: 42, rol: 'admin_empresa' });
     AsignacionesModel.confirmar.mockResolvedValue({ ok: false, motivo: 'estado' });
 
-    await expect(AsignacionesService.confirmar(7, 500)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(AsignacionesService.confirmar(7, 500)).rejects.toMatchObject({
+      statusCode: 409,
+      message: 'La asignación no está pendiente de confirmación',
+    });
 
     expect(AsignacionesModel.confirmar).toHaveBeenCalledWith(7, 500, ['pendiente']);
   });

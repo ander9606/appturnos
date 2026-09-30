@@ -575,7 +575,9 @@ export default function TurnosScreen() {
                   // Naranja sólido solo si ya está aceptado (confirmado/en curso/completado) —
                   // una postulación pendiente todavía no es un turno asegurado.
                   const aceptados  = mios.filter(a => a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado');
-                  const pendientes = mios.filter(a => a.estado === 'pendiente');
+                  // por_reconfirmar también necesita una acción tuya (como pendiente),
+                  // aunque ya haya estado aceptado antes de que cambiara el horario/lugar.
+                  const pendientes = mios.filter(a => a.estado === 'pendiente' || a.estado === 'por_reconfirmar');
                   const disponibles = (ofertasPorDiaMes.get(day.date) ?? []).filter(o => !aplicadosIds.has(o.id));
                   if (aceptados.length === 0 && pendientes.length === 0 && disponibles.length === 0) return null;
                   return (

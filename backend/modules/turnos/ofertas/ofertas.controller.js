@@ -60,6 +60,8 @@ async function completar(req, res) {
   }
   const n = data.no_presentados_al_completar;
   if (n > 0) avisos.push(`${n} trabajador${n > 1 ? 'es' : ''} sin ingreso quedó${n > 1 ? 'aron' : ''} como no presentado${n > 1 ? 's' : ''}`);
+  const d = data.auto_declinados_al_completar;
+  if (d > 0) avisos.push(`${d} trabajador${d > 1 ? 'es' : ''} que nunca respondió${d > 1 ? 'n' : ''} al cambio de horario/lugar quedó${d > 1 ? 'aron' : ''} sin ese turno`);
   const extra = avisos.length > 0 ? ` (${avisos.join('; ')})` : '';
   res.json({ success: true, data, message: `Oferta marcada como completada${extra}` });
 }

@@ -101,9 +101,16 @@ module.exports = {
 
     const res = await AsignacionesModel.confirmar(empresaId, id, estadosValidos);
     if (!res.ok) {
+      // El mensaje de 'estado' depende de desde dónde se intentó confirmar —
+      // el flujo de reconfirmar() (estadosValidos = ['por_reconfirmar']) no
+      // "no está pendiente", puede que ya haya sido resuelta por otra
+      // pestaña/tap concurrente o que el cupo se haya llenado mientras tanto.
+      const mensajeEstado = estadosValidos.includes('por_reconfirmar')
+        ? 'Esta asignación ya no está esperando reconfirmación'
+        : 'La asignación no está pendiente de confirmación';
       const errores = {
         no_existe: ['Asignación no encontrada', 404],
-        estado:    ['La asignación no está pendiente de confirmación', 409],
+        estado:    [mensajeEstado, 409],
         oferta:    ['La oferta ya no está disponible para confirmar', 409],
         vencida:   ['No se puede confirmar un turno cuya fecha ya pasó', 409],
         lleno:     ['La oferta ya no tiene plazas disponibles', 409],
@@ -120,6 +127,10 @@ module.exports = {
     const detalles  = await obtenerDetallesParaNotificar(empresaId, id);
     const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(asignacion.trabajador_id);
 
+    // Re-confirmar (estadosValidos incluye 'por_reconfirmar') no es una
+    // confirmación nueva: el trabajador y logiq360 ya la vieron una vez.
+    const esReconfirmacion = estadosValidos.includes('por_reconfirmar');
+
     if (detalles) {
       const fecha = fmtFechaCorta(detalles.oferta_fecha);
       const hora  = detalles.hora_inicio?.slice(0, 5) ?? '';
@@ -129,13 +140,18 @@ module.exports = {
         empresaId,
         usuarioId: trabajadorUsuarioId,
         tipo: 'postulacion.confirmada',
-        titulo: 'Turno confirmado',
-        mensaje: `Quedaste confirmado${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`,
+        titulo: esReconfirmacion ? 'Participación reconfirmada' : 'Turno confirmado',
+        mensaje: esReconfirmacion
+          ? `Reconfirmaste tu participación${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`
+          : `Quedaste confirmado${cargo} en "${detalles.oferta_titulo}" el ${fecha} a las ${hora}${lugar}. ¡Recuerda llegar a tiempo!`,
         data: { asignacion_id: id, oferta_id: asignacion.oferta_id },
       });
 
-      // Notifica a logiq360 que este trabajador confirmó participación en la orden.
-      if (detalles.oferta_external_ref) {
+      // Notifica a logiq360 que este trabajador confirmó participación en la
+      // orden — solo la primera vez. En una reconfirmación logiq360 ya recibió
+      // este evento para esta asignación; reemitirlo asume una idempotencia
+      // de su lado que no está garantizada.
+      if (detalles.oferta_external_ref && !esReconfirmacion) {
         await IntegracionService.emitir(empresaId, 'asignacion.confirmada', {
           external_ref:  detalles.oferta_external_ref,
           empleado_ref:  detalles.trabajador_external_ref || null,

@@ -97,7 +97,8 @@ const ASIGNACIONES_RESUMEN = `(
   ) AS asignaciones_activas,
   (
     SELECT COUNT(*) FROM asignaciones_turno a
-    WHERE a.oferta_id = ofertas_turno.id AND a.estado IN ('pendiente', 'confirmado', 'en_progreso')
+    WHERE a.oferta_id = ofertas_turno.id
+      AND a.estado IN ('pendiente', 'confirmado', 'en_progreso', 'por_reconfirmar')
   ) AS asignaciones_sin_resolver`;
 
 // Allowlist de columnas modificables vía PUT (lista fija de código).

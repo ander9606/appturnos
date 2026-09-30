@@ -325,9 +325,15 @@ module.exports = {
         );
       }
 
-      const inicioOriginal = `${oferta.fecha} ${oferta.hora_inicio}`;
+      // El nuevo inicio (fecha/hora_inicio que va a quedar guardado, no el
+      // viejo) es lo que le importa al trabajador para reaccionar a tiempo —
+      // comparar contra el horario original dejaría pasar sin bloqueo mover un
+      // turno de "en 5 días" a "en 20 minutos".
+      const fechaNueva = datos.fecha ?? oferta.fecha;
+      const horaInicioNueva = datos.hora_inicio ?? oferta.hora_inicio;
+      const inicioNuevo = `${fechaNueva} ${horaInicioNueva}`;
       const limiteEdicion = ahoraColombiaSQL(HORAS_CORTE_EDICION_OFERTA * 3_600_000);
-      if (inicioOriginal <= limiteEdicion) {
+      if (inicioNuevo <= limiteEdicion) {
         throw new AppError(
           `No puedes cambiar fecha, hora o lugar a menos de ${HORAS_CORTE_EDICION_OFERTA}h de que empiece el turno.`,
           409
@@ -428,6 +434,10 @@ module.exports = {
    *     hora real del cierre si el jefe elige "cerrar ahora" a propósito.
    *   - 'confirmado' sin ingreso (nunca llegó) nunca bloquea: se resuelve solo
    *     como no_presentado de inmediato.
+   *   - 'por_reconfirmar' (nadie respondió al cambio de fecha/hora/lugar antes
+   *     de completar) tampoco bloquea: se declina solo, sin penalizar ranking
+   *     — no es su culpa, nunca llegó a decidir. Sin esto quedaría huérfana
+   *     para siempre (la oferta ya no admite POST /confirmar una vez completada).
    *
    * Si la oferta viene de logiq360 (external_ref) el cierre normal vía
    * CostoLaborService emite costo_labor.calculado cuando las condiciones ya
@@ -444,6 +454,7 @@ module.exports = {
 
     const asignaciones = await AsignacionesModel.listarPorOferta(empresaId, id);
     const enProgreso = asignaciones.filter((a) => a.estado === 'en_progreso');
+    const porReconfirmar = asignaciones.filter((a) => a.estado === 'por_reconfirmar');
 
     const hoy = ahoraColombiaSQL().slice(0, 10);
     const diasDesdeElTurno = Math.floor((Date.parse(hoy) - Date.parse(oferta.fecha)) / 86_400_000);
@@ -470,6 +481,12 @@ module.exports = {
       noPresentados = sinIngreso.length;
     }
 
+    let autoDeclinados = 0;
+    for (const a of porReconfirmar) {
+      const res = await AsignacionesModel.declinarReconfirmacion(empresaId, a.id);
+      if (res.ok) autoDeclinados++;
+    }
+
     await CostoLaborService.verificarYEmitir(empresaId, id);
     const actualizada = await OfertasModel.obtenerPorId(empresaId, id);
     if (actualizada.estado !== 'completada') {
@@ -479,6 +496,7 @@ module.exports = {
     final.no_presentados_al_completar = noPresentados;
     final.forzados_al_completar = forzados;
     final.forzados_con_hora_actual = forzados > 0 && !capearHoras;
+    final.auto_declinados_al_completar = autoDeclinados;
     return final;
   },
 

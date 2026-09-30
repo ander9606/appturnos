@@ -51,6 +51,21 @@ describe('OfertasService.actualizar — reconfirmación al cambiar campos críti
     expect(OfertasModel.actualizar).not.toHaveBeenCalled();
   });
 
+  test('bloquea si la EDICIÓN mueve el turno a menos de X horas, aunque el horario original estuviera lejos', async () => {
+    // Regresión: el chequeo comparaba contra el horario VIEJO de la oferta en
+    // vez del nuevo que se está guardando — mover un turno de "en 3 días" a
+    // "en 30 minutos" pasaba sin bloqueo.
+    const ofertaLejana = { id: 5, empresa_id: 7, estado: 'abierta', titulo: 'Bodega', lugar: 'Bodega A', ...turnoEnHoras(72) };
+    OfertasModel.obtenerPorId.mockResolvedValue(ofertaLejana);
+    AsignacionesModel.listarPorOferta.mockResolvedValue([]);
+    const nuevoInicio = turnoEnHoras(0.5);
+
+    await expect(
+      OfertasService.actualizar(7, 5, { fecha: nuevoInicio.fecha, hora_inicio: nuevoInicio.hora_inicio })
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect(OfertasModel.actualizar).not.toHaveBeenCalled();
+  });
+
   test('con margen suficiente: pasa a los confirmados a por_reconfirmar y notifica', async () => {
     const oferta = { id: 3, empresa_id: 7, estado: 'abierta', titulo: 'Bodega', lugar: 'Bodega A', ...turnoEnHoras(HORAS_CORTE_EDICION_OFERTA + 1) };
     OfertasModel.obtenerPorId

@@ -949,11 +949,14 @@ function EditarOfertaModal({
       await actualizarM.mutateAsync({
         id: oferta.id,
         titulo,
-        descripcion: descripcion || undefined,
+        // Tal cual (no `|| undefined`): así vaciar el campo sí lo borra.
+        // `undefined` significa "no tocar" para el backend — con eso, borrar
+        // la descripción o el lugar nunca se guardaba.
+        descripcion,
         fecha: toISODate(fecha),
         hora_inicio: `${formatTimeObj(horaInicio)}:00`,
         hora_fin_estimada: horaFin ? `${formatTimeObj(horaFin)}:00` : undefined,
-        lugar: lugar || undefined,
+        lugar,
         latitud: latitud ?? undefined,
         longitud: longitud ?? undefined,
       });

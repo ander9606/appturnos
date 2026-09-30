@@ -122,4 +122,25 @@ describe('OfertasService.completar', () => {
     expect(AsignacionesService.cerrarMasivo).not.toHaveBeenCalled();
     expect(resultado.no_presentados_al_completar).toBe(0);
   });
+
+  test('declina solo (sin penalizar) a quien nunca respondió una reconfirmación pendiente', async () => {
+    // Regresión: sin esto, una asignación 'por_reconfirmar' quedaba huérfana
+    // para siempre — la oferta ya no admite POST /confirmar una vez completada.
+    const oferta = { id: 6, empresa_id: 7, estado: 'publicada', fecha: fechaHaceNDias(0) };
+    OfertasModel.obtenerPorId
+      .mockResolvedValueOnce(oferta)
+      .mockResolvedValueOnce(oferta)
+      .mockResolvedValueOnce({ ...oferta, estado: 'completada' });
+    AsignacionesModel.listarPorOferta.mockResolvedValue([
+      { id: 400, estado: 'por_reconfirmar', trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz' },
+      { id: 401, estado: 'completado', trabajador_nombre: 'Luis', trabajador_apellido: 'Paz' },
+    ]);
+    AsignacionesModel.declinarReconfirmacion.mockResolvedValue({ ok: true });
+    OfertasModel.cambiarEstado.mockResolvedValue(1);
+
+    const resultado = await OfertasService.completar(7, 6);
+
+    expect(AsignacionesModel.declinarReconfirmacion).toHaveBeenCalledWith(7, 400);
+    expect(resultado.auto_declinados_al_completar).toBe(1);
+  });
 });

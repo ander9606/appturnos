@@ -204,7 +204,7 @@ export default function DashboardScreen() {
 
   const proximoHoy = !turnoActivo
     ? (turnos
-        .filter((a) => a.oferta_fecha === today && a.estado === 'confirmado')
+        .filter((a) => a.oferta_fecha === today && (a.estado === 'confirmado' || a.estado === 'por_reconfirmar'))
         .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio))[0] ?? null)
     : null;
 
