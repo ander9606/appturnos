@@ -124,6 +124,8 @@ orden.publicada       ──────────────►  Publicar of
 orden.cancelada       ──────────────►  Cancelar oferta + contratos pendientes
 orden.fecha_cambiada  ──────────────►  Actualizar fecha en oferta_turno
 orden.completada      ──────────────►  Cerrar oferta_turno
+orden.cupos_actualizados  ──────────►  Crear/actualizar puesto gig o custodio
+orden.ubicacion_cambiada  ──────────►  Actualizar lugar en oferta_turno
 empleado.creado       ──────────────►  (opcional) Crear trabajador sync
 empleado.desactivado  ──────────────►  (opcional) Desactivar trabajador
 
@@ -266,6 +268,57 @@ logiq360 → App Turnos:
 1. Actualiza `fecha` en `oferta_turno` y en `contratos_dia` pendientes
 2. Notifica trabajadores que aceptaron: "Fecha cambiada a 26 Mayo"
 3. Trabajadores pueden confirmar nueva disponibilidad o retractarse
+
+> **Bug corregido (2026-09-30):** logiq360 emitía `nueva_fecha`/`nueva_hora_inicio`
+> en vez de `fecha_nueva` — el handler nunca las reconocía y la reprogramación
+> nunca se reflejaba en Zaturno. Ver changelog en `INTEGRACION-LOGIQ360-APP-TURNOS.md`.
+
+---
+
+### `orden.cupos_actualizados`
+
+```json
+{
+  "event_id": "...",
+  "event_type": "orden.cupos_actualizados",
+  "version": "1.0",
+  "data": {
+    "external_ref": "logiq360:orden:47",
+    "cupos_gig": 4,
+    "valor_dia_sugerido": 90000,
+    "cupos_custodio": 1,
+    "valor_dia_custodio": 150000
+  }
+}
+```
+
+**Qué hace App Turnos:** por cada cargo de sistema presente (auxiliar=gig,
+custodio), actualiza el puesto existente en la oferta o lo crea si no existía
+(ej. la orden se creó con `cupos_gig=0`).
+
+> Nuevo emisor 2026-09-30 en logiq360 (`OrdenTrabajoModel.actualizar()`). El
+> handler ya existía en App Turnos pero nunca se disparaba desde el otro lado.
+
+---
+
+### `orden.ubicacion_cambiada`
+
+```json
+{
+  "event_id": "...",
+  "event_type": "orden.ubicacion_cambiada",
+  "version": "1.0",
+  "data": {
+    "external_ref": "logiq360:orden:47",
+    "direccion": "Calle 10 # 5-20",
+    "ciudad": "Medellín"
+  }
+}
+```
+
+**Qué hace App Turnos:** arma `lugar` = "dirección, ciudad" en la oferta.
+Evento nuevo 2026-09-30 — antes no existía forma de propagar un cambio de
+dirección tras crear la orden.
 
 ---
 
@@ -710,3 +763,4 @@ Workaround actual: el `jefe_turnos` completa estos datos manualmente al recibir 
 | 2026-05-23 | **Actualización**: payloads completos de todos los eventos, mapa de conexiones, flujo end-to-end, datos faltantes documentados, `orden.publicada` y `costo_labor.calculado` agregados |
 | 2026-09-17 | **Corrección de fidelidad doc↔código**: todos los paths `/api/v1/...` → `/api/integracion/...` (nunca se implementaron con ese prefijo), auth real por dirección documentada (asimétrica: HMAC-solo de logiq360→App Turnos, X-API-Key+firma opcional de App Turnos→logiq360), reemplazado el `POST /configuracion` inventado por el handshake real de emparejamiento (`/emparejar` + `/emparejar/confirmar`), y marcados como huérfanos `public/ordenes/:id` y `public/ordenes/:id/productos` (existían en logiq360, nadie los llamaba). Ver también `docs/INTEGRACION-LOGIQ360-APP-TURNOS.md` para el detalle completo. |
 | 2026-09-17 (2) | **Eliminados** (no conectados) `public/ordenes/:id` y `public/ordenes/:id/productos` del lado de logiq360 — cero consumidores y el caso de uso ya cubierto por `productos_resumen` embebido en `orden.creada`. Cambio de código solo en `aprendizaje-inventario-carpas`; App Turnos no requiere ningún ajuste. |
+| 2026-09-30 | **Cierre de brecha "modificar en logiq360 debe modificar en Zaturno"**: corregido bug de `orden.fecha_cambiada` (claves invertidas, la reprogramación nunca llegaba), agregados los eventos `orden.cupos_actualizados` (ya existía el handler en App Turnos pero logiq360 nunca lo emitía — los cupos ni se persistían) y `orden.ubicacion_cambiada` (nuevo, no existía forma de propagar un cambio de dirección). Ver detalle en `docs/INTEGRACION-LOGIQ360-APP-TURNOS.md`. |

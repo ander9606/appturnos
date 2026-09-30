@@ -162,6 +162,34 @@ async function ordenCompletada(empresaId, data) {
   }
 }
 
+/**
+ * Crea o actualiza el puesto de un cargo de sistema (auxiliar/custodio) con
+ * las plazas/tarifa dadas. Antes solo hacía UPDATE, así que una orden creada
+ * con cupos_gig=0 (sin puesto auxiliar aún) nunca podía "activarse" luego con
+ * un orden.cupos_actualizados — el UPDATE afectaba 0 filas en silencio.
+ */
+async function upsertPuestoSistema(ofertaId, cargoId, plazas, tarifaDia) {
+  const [[existente]] = await pool.query(
+    'SELECT id FROM oferta_puestos WHERE oferta_id = ? AND cargo_id = ? ORDER BY id LIMIT 1',
+    [ofertaId, cargoId]
+  );
+  if (existente) {
+    const campos = ['plazas = ?'];
+    const valores = [plazas];
+    if (tarifaDia != null) {
+      campos.push('tarifa_dia = ?');
+      valores.push(tarifaDia);
+    }
+    valores.push(existente.id);
+    await pool.query(`UPDATE oferta_puestos SET ${campos.join(', ')} WHERE id = ?`, valores);
+  } else if (plazas > 0) {
+    await pool.query(
+      'INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia) VALUES (?, ?, ?, ?)',
+      [ofertaId, cargoId, plazas, tarifaDia || 0]
+    );
+  }
+}
+
 async function ordenCuposActualizados(empresaId, data) {
   const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
   if (!oferta) {
@@ -169,21 +197,30 @@ async function ordenCuposActualizados(empresaId, data) {
     return;
   }
   const cuposGig = data.cupos_gig ?? data.cupos_sugeridos;
-  if (cuposGig == null) return;
-  // Actualiza el primer puesto gig (cargo auxiliar) — ponytail: un puesto gig por oferta
-  await pool.query(
-    `UPDATE oferta_puestos SET plazas = ?
-     WHERE oferta_id = ? AND cargo_id = (SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo = 'auxiliar' LIMIT 1)
-     ORDER BY id LIMIT 1`,
-    [cuposGig, oferta.id]
-  );
-  if (data.valor_dia_sugerido != null) {
-    await pool.query(
-      `UPDATE oferta_puestos SET tarifa_dia = ?
-       WHERE oferta_id = ? AND cargo_id = (SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo = 'auxiliar' LIMIT 1)
-       ORDER BY id LIMIT 1`,
-      [data.valor_dia_sugerido, oferta.id]
-    );
+  if (cuposGig != null) {
+    await upsertPuestoSistema(oferta.id, await cargoAuxiliarId(), cuposGig, data.valor_dia_sugerido);
+  }
+  if (data.cupos_custodio != null) {
+    await upsertPuestoSistema(oferta.id, await cargoCustodioId(), data.cupos_custodio, data.valor_dia_custodio);
+  }
+}
+
+async function ordenUbicacionCambiada(empresaId, data) {
+  const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
+  if (!oferta) {
+    logger.warn(`[integracion] orden.ubicacion_cambiada: oferta externa no encontrada (${data.external_ref})`);
+    return;
+  }
+  const cambios = {};
+  if (data.direccion || data.ciudad) {
+    cambios.lugar = [data.direccion, data.ciudad].filter(Boolean).join(', ');
+  } else if (data.ubicacion) {
+    cambios.lugar = data.ubicacion;
+  }
+  if (data.latitud != null) cambios.latitud = data.latitud;
+  if (data.longitud != null) cambios.longitud = data.longitud;
+  if (Object.keys(cambios).length) {
+    await OfertasModel.actualizar(empresaId, oferta.id, cambios);
   }
 }
 
@@ -277,6 +314,7 @@ const HANDLERS = {
   'orden.fecha_cambiada':   ordenFechaCambiadaV2,
   'orden.completada':       ordenCompletada,
   'orden.cupos_actualizados': ordenCuposActualizados,
+  'orden.ubicacion_cambiada': ordenUbicacionCambiada,
   'empleado.creado':        empleadoCreado,
   'empleado.desactivado':   empleadoDesactivado,
   'integracion.activada':   integracionActivada,

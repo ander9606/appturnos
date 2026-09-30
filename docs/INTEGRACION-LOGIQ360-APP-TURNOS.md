@@ -44,6 +44,8 @@ orden.publicada       ──────────────►  Publicar of
 orden.cancelada       ──────────────►  Cancelar oferta_turno + contratos
 orden.fecha_cambiada  ──────────────►  Actualizar fecha en oferta_turno
 orden.completada      ──────────────►  Cerrar oferta_turno
+orden.cupos_actualizados  ──────────►  Crear/actualizar puesto gig o custodio en oferta_turno
+orden.ubicacion_cambiada  ──────────►  Actualizar lugar/latitud/longitud en oferta_turno
 empleado.creado       ──────────────►  (opcional) Crear trabajador
 empleado.desactivado  ──────────────►  (opcional) Desactivar trabajador
 integracion.activada     ───────────►  Sincroniza integracion_config.activo = 1
@@ -277,6 +279,86 @@ override propio, si no cae al default configurado en `integraciones_turnos`
 3. Notifica a trabajadores que habían aceptado: "Fecha cambiada a 26 Mayo"
 4. Los trabajadores pueden: confirmar disponibilidad nueva fecha | retractarse
 ```
+
+> **Bug corregido (2026-09-30):** `IntegracionTurnosService.payloadFechaCambiada()`
+> en logiq360 emitía `nueva_fecha`/`nueva_hora_inicio` — claves invertidas
+> respecto a lo documentado arriba y a lo que el handler de App Turnos
+> (`ordenFechaCambiadaV2`) realmente lee. El evento se encolaba y despachaba
+> sin error, pero `cambios` quedaba vacío y la oferta nunca se actualizaba
+> — una reprogramación en logiq360 no se reflejaba en Zaturno. Corregido
+> para emitir `fecha_anterior`/`fecha_nueva`/`motivo` tal como aquí.
+
+---
+
+### EVENTO: `orden.cupos_actualizados`
+
+**Cuándo se dispara:** Al editar `cupos_gig`, `valor_dia_sugerido`, `cupos_custodio`
+o `valor_dia_custodio` de una orden ya creada (`PUT /api/operaciones/ordenes/:id`)  
+**Código fuente logiq360:** `OrdenTrabajoModel.actualizar()`
+
+```json
+{
+  "event_id": "...",
+  "event_type": "orden.cupos_actualizados",
+  "version": "1.0",
+  "data": {
+    "external_ref": "logiq360:orden:47",
+    "cupos_gig": 4,
+    "valor_dia_sugerido": 90000,
+    "cupos_custodio": 1,
+    "valor_dia_custodio": 150000
+  }
+}
+```
+
+**Qué hace App Turnos:**
+```
+1. Busca oferta_turno donde external_ref = "logiq360:orden:47"
+2. Por cada cargo de sistema (auxiliar=gig, custodio) presente en el payload:
+   - Si ya existe un puesto de ese cargo en la oferta → actualiza plazas/tarifa_dia
+   - Si no existe (ej. la orden se creó con cupos_gig=0) → lo inserta
+```
+
+> Hasta el 2026-09-30 este evento nunca se emitía desde logiq360 — los valores
+> de personal solo se usaban una vez para armar `orden.creada` y se descartaban
+> (no había columnas en `ordenes_trabajo` donde guardarlos). App Turnos ya tenía
+> el handler implementado pero sin ningún emisor real que lo disparara.
+> Migración 82 (logiq360) persiste estos 4 campos en `ordenes_trabajo` para que
+> `actualizar()` pueda compararlos contra el valor anterior y reemitir solo
+> cuando cambian. Antes del fix, el handler de App Turnos solo hacía `UPDATE`
+> (nunca `INSERT`), así que una orden creada con `cupos_gig=0` no podía
+> "activar" personal gig después — quedaba en 0 filas afectadas en silencio.
+
+---
+
+### EVENTO: `orden.ubicacion_cambiada`
+
+**Cuándo se dispara:** Al editar `direccion_evento`/`ciudad_evento` de una orden
+ya creada (`PUT /api/operaciones/ordenes/:id`)  
+**Código fuente logiq360:** `OrdenTrabajoModel.actualizar()`
+
+```json
+{
+  "event_id": "...",
+  "event_type": "orden.ubicacion_cambiada",
+  "version": "1.0",
+  "data": {
+    "external_ref": "logiq360:orden:47",
+    "direccion": "Calle 10 # 5-20",
+    "ciudad": "Medellín"
+  }
+}
+```
+
+**Qué hace App Turnos:**
+```
+1. Busca oferta_turno donde external_ref = "logiq360:orden:47"
+2. Arma `lugar` = "direccion, ciudad" y actualiza latitud/longitud si vienen
+```
+
+> Nuevo 2026-09-30. Antes no existía ningún evento para propagar un cambio de
+> dirección post-creación — `direccion_evento`/`ciudad_evento` solo se
+> escribían una vez, al crear la orden (`crearDesdeAlquiler`).
 
 ---
 
@@ -1052,6 +1134,38 @@ App Turnos NUNCA envía a logiq360:
 ---
 
 ## CHANGELOG
+
+### 2026-09-30 — Cierre de brecha: modificar una orden en logiq360 también debe modificar el turno en Zaturno
+
+Auditoría pedida tras 12 días de desarrollo activo en ambos `main` sin mergear
+los PRs de esta integración. Confirmó que `orden.creada` seguía siendo válido
+(los cambios nuevos de Zaturno en ese período — `notas_adicionales`, puntos de
+marcaje zonales, notificación a co-gestores — son aditivos y con fallback
+retrocompatible), pero encontró que la propagación de **modificaciones**
+tenía dos brechas reales y un bug silencioso:
+
+1. **Bug:** `orden.fecha_cambiada` viajaba con las claves `nueva_fecha`/
+   `nueva_hora_inicio` en vez de `fecha_nueva` — el handler de App Turnos
+   nunca las reconocía, así que reprogramar una orden en logiq360 nunca
+   actualizaba la oferta en Zaturno. Corregido en
+   `IntegracionTurnosService.payloadFechaCambiada()`.
+2. **Brecha:** `cupos_gig`/`valor_dia_sugerido`/`cupos_custodio`/
+   `valor_dia_custodio` no se persistían en logiq360 tras crear la orden
+   (solo vivían en el payload de `orden.creada` y se perdían), así que no
+   había forma de editarlos ni de disparar `orden.cupos_actualizados` —
+   evento que App Turnos ya sabía manejar pero que nunca se emitía. Se
+   agregó migración 82, se persisten al crear, y `OrdenTrabajoModel.actualizar()`
+   ahora los acepta y reemite el evento cuando cambian. De paso se corrigió
+   el handler de App Turnos: solo hacía `UPDATE` (0 filas si el puesto no
+   existía aún porque la orden se creó con `cupos_gig=0`) y solo manejaba el
+   cargo auxiliar, nunca custodio.
+3. **Brecha:** no existía ningún evento para propagar un cambio de dirección/
+   ciudad del evento tras crear la orden. Se agregó `orden.ubicacion_cambiada`
+   (nuevo, ambos lados) y se extendió `OrdenTrabajoModel.actualizar()` para
+   emitirlo cuando `direccion_evento`/`ciudad_evento` cambian.
+
+Ver secciones `orden.fecha_cambiada`, `orden.cupos_actualizados` y
+`orden.ubicacion_cambiada` arriba para el detalle de payload y comportamiento.
 
 ### 2026-09-17 (2) — Eliminados los endpoints huérfanos `public/ordenes/:id` y `.../productos`
 
