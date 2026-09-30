@@ -42,6 +42,7 @@ const ESTADO_CONFIG: Record<EstadoAsignacion, { label: string; variant: BadgeVar
   completado:     { label: 'Completado',     variant: 'default' },
   no_presentado:  { label: 'No se presentó', variant: 'danger'  },
   cancelado:      { label: 'Cancelado',      variant: 'danger'  },
+  por_reconfirmar: { label: 'Por reconfirmar', variant: 'warning' },
 };
 
 // ── PostulanteRow ─────────────────────────────────────────────────────────
@@ -201,6 +202,14 @@ function PostulanteRow({
             <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
               <Ionicons name="time-outline" size={14} color="#3B82F6" />
               <Text className="text-xs font-semibold text-info">En turno</Text>
+            </View>
+          )}
+
+          {/* Por reconfirmar → solo el trabajador puede resolverlo, acá solo se avisa */}
+          {asignacion.estado === 'por_reconfirmar' && (
+            <View className="flex-row items-center gap-1 bg-warning-light px-3 py-1.5 rounded-xl self-start">
+              <Ionicons name="alert-circle-outline" size={14} color="#B45309" />
+              <Text className="text-xs font-semibold text-warning">Esperando que reconfirme</Text>
             </View>
           )}
         </>

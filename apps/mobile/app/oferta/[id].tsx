@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, ScrollView, TouchableOpacity, TextInput,
   ActivityIndicator, Alert, Linking, Platform, Switch,
   Modal, Pressable,
 } from 'react-native';
@@ -22,6 +22,7 @@ import {
   useActualizarOferta,
 } from '@/features/turnos/useTurnos';
 import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
+import { LugarInput } from '@/features/turnos/crear/LugarInput';
 import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
@@ -51,6 +52,7 @@ const ESTADO_CFG: Record<EstadoAsignacion, { label: string; variant: BadgeVarian
   completado:    { label: 'Completado',     variant: 'default' },
   no_presentado: { label: 'No se presentó', variant: 'danger'  },
   cancelado:     { label: 'Cancelado',      variant: 'danger'  },
+  por_reconfirmar: { label: 'Por reconfirmar', variant: 'warning' },
 };
 
 // ── PostulanteRow (gestores) ──────────────────────────────────────────────
@@ -74,6 +76,7 @@ function PostulanteRow({
   const isConf    = asignacion.estado === 'confirmado';
   const isEnProg  = asignacion.estado === 'en_progreso';
   const isCompletado = asignacion.estado === 'completado';
+  const isPorReconfirmar = asignacion.estado === 'por_reconfirmar';
   const isBusy    = confirmarM.isPending || rechazarM.isPending || cancelarM.isPending || noPresentadoM.isPending;
   const nombre    = `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido}`;
 
@@ -160,13 +163,19 @@ function PostulanteRow({
               <Text className="text-xs font-semibold text-info">En turno</Text>
             </View>
           )}
+          {isPorReconfirmar && (
+            <View className="flex-row items-center gap-1 bg-warning-light px-3 py-1.5 rounded-xl self-start">
+              <Ionicons name="alert-circle-outline" size={14} color="#B45309" />
+              <Text className="text-xs font-semibold text-warning">Esperando que reconfirme</Text>
+            </View>
+          )}
         </>
       )}
 
       {/* Ver detalle del turno — ahí se corrige ingreso/egreso y se agrega el
           bono, disponible incluso con esPasado (arreglar una salida que el
           trabajador olvidó marcar). */}
-      {(isConf || isEnProg || isCompletado) && (
+      {(isConf || isEnProg || isCompletado || isPorReconfirmar) && (
         <TouchableOpacity
           onPress={() => router.push(`/turno/${asignacion.id}`)}
           className="flex-row items-center gap-1 self-start"
@@ -216,6 +225,7 @@ export default function OfertaDetailScreen() {
   const ofertaEsEditable = oferta?.estado === 'abierta' || oferta?.estado === 'borrador';
 
   const [showDuplicarModal, setShowDuplicarModal] = useState(false);
+  const [showEditarOfertaModal, setShowEditarOfertaModal] = useState(false);
 
   const miAsignacion = isWorker
     ? (misTurnos ?? []).find((a) => a.oferta_id === id)
@@ -347,6 +357,13 @@ export default function OfertaDetailScreen() {
   const totalPlazas    = oferta.puestos.reduce((s, p) => s + p.plazas, 0);
   const plazasCubiertas = oferta.puestos.reduce((s, p) => s + p.plazas_cubiertas, 0);
 
+  // Condiciones de la barra de acciones fija (gestor) — mismas reglas de antes,
+  // solo que ahora deciden si esa barra se muestra en vez de un botón inline.
+  const mostrarCompletar = isGestor && turnoIniciado
+    && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador';
+  const mostrarCancelarOferta = puedeCancelarOferta
+    && oferta.estado !== 'cancelada' && oferta.estado !== 'completada';
+
   return (
     <>
       <Stack.Screen
@@ -354,20 +371,31 @@ export default function OfertaDetailScreen() {
           title: oferta.titulo,
           headerShown: true,
           headerRight: isGestor ? () => (
-            <TouchableOpacity
-              onPress={() => setShowDuplicarModal(true)}
-              hitSlop={10}
-              accessibilityLabel="Duplicar oferta"
-              style={{ marginRight: 4 }}
-            >
-              <Ionicons name="copy-outline" size={22} color="#FF5A3C" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              {ofertaEsEditable && (
+                <TouchableOpacity
+                  onPress={() => setShowEditarOfertaModal(true)}
+                  hitSlop={10}
+                  accessibilityLabel="Editar turno"
+                >
+                  <Ionicons name="create-outline" size={22} color="#FF5A3C" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                onPress={() => setShowDuplicarModal(true)}
+                hitSlop={10}
+                accessibilityLabel="Duplicar oferta"
+                style={{ marginRight: 4 }}
+              >
+                <Ionicons name="copy-outline" size={22} color="#FF5A3C" />
+              </TouchableOpacity>
+            </View>
           ) : undefined,
         }}
       />
 
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-        <ScrollView contentContainerClassName="px-5 py-5 gap-4 pb-12" showsVerticalScrollIndicator={false}>
+        <ScrollView className="flex-1" contentContainerClassName="px-5 py-5 gap-4 pb-12" showsVerticalScrollIndicator={false}>
 
           {/* ── Info principal ──────────────────────────────────── */}
           <View className="bg-card rounded-3xl overflow-hidden"
@@ -605,70 +633,6 @@ export default function OfertaDetailScreen() {
             </View>
           )}
 
-          {/* ── Marcar completada (gestores) — solo tiene sentido una vez que el turno empezó.
-              El backend bloquea si queda alguien en_progreso (sin marcar salida) y resuelve
-              solo como no_presentado a quien nunca llegó. Pasado el margen de gracia, en vez
-              de bloquear pregunta cómo capear las horas de quien quedó colgado. */}
-          {isGestor && turnoIniciado && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador' && (
-            <Button
-              label={completarOfertaM.isPending ? 'Marcando…' : 'Marcar completada'}
-              variant="success"
-              fullWidth
-              loading={completarOfertaM.isPending}
-              onPress={async () => {
-                const hayEnProgreso = oferta.asignaciones.some((a) => a.estado === 'en_progreso');
-
-                if (hayEnProgreso) {
-                  Alert.alert(
-                    'Hay trabajadores sin marcar salida',
-                    'Si el turno ya lleva más de 2 días sin resolver, esto los cerrará automáticamente. ¿Cómo calculamos sus horas?',
-                    [
-                      { text: 'Cancelar', style: 'cancel' },
-                      { text: 'Horario estipulado', onPress: () => ejecutarCompletar(true) },
-                      { text: 'Cerrar ahora', onPress: () => ejecutarCompletar(false) },
-                    ]
-                  );
-                  return;
-                }
-
-                const ok = await confirm({
-                  title: 'Marcar como completada',
-                  message: 'Úsalo cuando el turno ya terminó en la realidad.',
-                  cancelLabel: 'Volver',
-                  confirmLabel: 'Marcar completada',
-                });
-                if (ok) ejecutarCompletar(true);
-              }}
-            />
-          )}
-
-          {/* ── Cancelar oferta (admin_empresa / jefe_turnos) ────── */}
-          {puedeCancelarOferta && oferta.estado !== 'cancelada' && oferta.estado !== 'completada' && (
-            <Button
-              label={cancelarOfertaM.isPending ? 'Cancelando…' : 'Cancelar oferta'}
-              variant="danger"
-              fullWidth
-              loading={cancelarOfertaM.isPending}
-              onPress={async () => {
-                const ok = await confirm({
-                  title: 'Cancelar oferta',
-                  message: `Se cancelará "${oferta.titulo}" y se notificará a los trabajadores postulados o asignados. Esta acción no se puede deshacer.`,
-                  cancelLabel: 'Volver',
-                  confirmLabel: 'Cancelar oferta',
-                  destructive: true,
-                });
-                if (!ok) return;
-                try {
-                  await cancelarOfertaM.mutateAsync(oferta.id);
-                  showAnuncioTurno(`"${oferta.titulo}" cancelado.`, 'cancelado');
-                  router.back();
-                } catch (err) {
-                  Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
-                }
-              }}
-            />
-          )}
-
           {/* ── Postulantes (gestores) ───────────────────────────── */}
           {isGestor && (
             <View className="bg-card rounded-2xl px-5 py-4"
@@ -697,6 +661,71 @@ export default function OfertaDetailScreen() {
           )}
 
         </ScrollView>
+
+        {/* ── Barra de acciones fija (gestor) — siempre en la zona inferior, separada
+            del contenido scrolleable para que no se pierda entre el resto de cards. */}
+        {(mostrarCompletar || mostrarCancelarOferta) && (
+          <View className="px-5 pt-3 pb-3 gap-2 border-t border-border bg-background">
+            {mostrarCompletar && (
+              <Button
+                label={completarOfertaM.isPending ? 'Marcando…' : 'Marcar completada'}
+                variant="successOutline"
+                fullWidth
+                loading={completarOfertaM.isPending}
+                onPress={async () => {
+                  const hayEnProgreso = oferta.asignaciones.some((a) => a.estado === 'en_progreso');
+
+                  if (hayEnProgreso) {
+                    Alert.alert(
+                      'Hay trabajadores sin marcar salida',
+                      'Si el turno ya lleva más de 2 días sin resolver, esto los cerrará automáticamente. ¿Cómo calculamos sus horas?',
+                      [
+                        { text: 'Cancelar', style: 'cancel' },
+                        { text: 'Horario estipulado', onPress: () => ejecutarCompletar(true) },
+                        { text: 'Cerrar ahora', onPress: () => ejecutarCompletar(false) },
+                      ]
+                    );
+                    return;
+                  }
+
+                  const ok = await confirm({
+                    title: 'Marcar como completada',
+                    message: 'Úsalo cuando el turno ya terminó en la realidad.',
+                    cancelLabel: 'Volver',
+                    confirmLabel: 'Marcar completada',
+                  });
+                  if (ok) ejecutarCompletar(true);
+                }}
+              />
+            )}
+
+            {mostrarCancelarOferta && (
+              <Button
+                label={cancelarOfertaM.isPending ? 'Cancelando…' : 'Cancelar oferta'}
+                variant="danger"
+                fullWidth
+                loading={cancelarOfertaM.isPending}
+                onPress={async () => {
+                  const ok = await confirm({
+                    title: 'Cancelar oferta',
+                    message: `Se cancelará "${oferta.titulo}" y se notificará a los trabajadores postulados o asignados. Esta acción no se puede deshacer.`,
+                    cancelLabel: 'Volver',
+                    confirmLabel: 'Cancelar oferta',
+                    destructive: true,
+                  });
+                  if (!ok) return;
+                  try {
+                    await cancelarOfertaM.mutateAsync(oferta.id);
+                    showAnuncioTurno(`"${oferta.titulo}" cancelado.`, 'cancelado');
+                    router.back();
+                  } catch (err) {
+                    Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
+                  }
+                }}
+              />
+            )}
+          </View>
+        )}
       </SafeAreaView>
 
       <FuncionesCargoModal
@@ -710,6 +739,12 @@ export default function OfertaDetailScreen() {
         visible={showDuplicarModal}
         oferta={oferta}
         onClose={() => setShowDuplicarModal(false)}
+      />
+
+      <EditarOfertaModal
+        visible={showEditarOfertaModal}
+        oferta={oferta}
+        onClose={() => setShowEditarOfertaModal(false)}
       />
     </>
   );
@@ -836,6 +871,244 @@ function DuplicarOfertaModal({
             fullWidth
             loading={duplicarM.isPending}
             onPress={handleDuplicar}
+          />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Editar oferta (gestores) — título/descripción/fecha/hora/lugar. Si cambian
+// fecha/hora/lugar, el backend pasa a los confirmados a 'por_reconfirmar'. ──
+
+type OfertaEditable = {
+  id: number; titulo: string; descripcion: string | null;
+  fecha: string; hora_inicio: string; hora_fin_estimada: string | null;
+  lugar: string | null; latitud: number | null; longitud: number | null;
+};
+
+function EditarOfertaModal({
+  visible,
+  oferta,
+  onClose,
+}: {
+  visible: boolean;
+  oferta: OfertaEditable;
+  onClose: () => void;
+}) {
+  const actualizarM = useActualizarOferta();
+  const [titulo, setTitulo] = useState(oferta.titulo);
+  const [descripcion, setDescripcion] = useState(oferta.descripcion ?? '');
+  const [fecha, setFecha] = useState(new Date());
+  const [horaInicio, setHoraInicio] = useState(new Date());
+  const [horaFin, setHoraFin] = useState<Date | null>(null);
+  const [lugar, setLugar] = useState(oferta.lugar ?? '');
+  const [latitud, setLatitud] = useState<number | null>(oferta.latitud);
+  const [longitud, setLongitud] = useState<number | null>(oferta.longitud);
+  const [showFecha, setShowFecha] = useState(false);
+  const [showHoraInicio, setShowHoraInicio] = useState(false);
+  const [showHoraFin, setShowHoraFin] = useState(false);
+
+  React.useEffect(() => {
+    if (!visible) return;
+    setTitulo(oferta.titulo);
+    setDescripcion(oferta.descripcion ?? '');
+    const [ay, am, ad] = oferta.fecha.split('-').map(Number);
+    setFecha(new Date(ay, am - 1, ad));
+    const [hi, mi] = oferta.hora_inicio.split(':').map(Number);
+    const dInicio = new Date();
+    dInicio.setHours(hi, mi, 0, 0);
+    setHoraInicio(dInicio);
+    if (oferta.hora_fin_estimada) {
+      const [hf, mf] = oferta.hora_fin_estimada.split(':').map(Number);
+      const dFin = new Date();
+      dFin.setHours(hf, mf, 0, 0);
+      setHoraFin(dFin);
+    } else {
+      setHoraFin(null);
+    }
+    setLugar(oferta.lugar ?? '');
+    setLatitud(oferta.latitud);
+    setLongitud(oferta.longitud);
+    setShowFecha(false);
+    setShowHoraInicio(false);
+    setShowHoraFin(false);
+  }, [visible, oferta]);
+
+  const cambianCriticos = toISODate(fecha) !== oferta.fecha
+    || `${formatTimeObj(horaInicio)}:00` !== oferta.hora_inicio.slice(0, 5) + ':00'
+    || (horaFin ? `${formatTimeObj(horaFin)}:00` : null) !== oferta.hora_fin_estimada
+    || lugar !== (oferta.lugar ?? '');
+
+  async function handleGuardar() {
+    if (horaFin && formatTimeObj(horaFin) <= formatTimeObj(horaInicio)) {
+      Alert.alert('Error', 'La hora de fin debe ser posterior a la hora de inicio');
+      return;
+    }
+    try {
+      await actualizarM.mutateAsync({
+        id: oferta.id,
+        titulo,
+        descripcion: descripcion || undefined,
+        fecha: toISODate(fecha),
+        hora_inicio: `${formatTimeObj(horaInicio)}:00`,
+        hora_fin_estimada: horaFin ? `${formatTimeObj(horaFin)}:00` : undefined,
+        lugar: lugar || undefined,
+        latitud: latitud ?? undefined,
+        longitud: longitud ?? undefined,
+      });
+      onClose();
+      showToast('Turno actualizado.');
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar el turno.');
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View className="flex-1 justify-end bg-black/40">
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          className="bg-background rounded-t-3xl"
+          contentContainerClassName="px-6 pt-5 pb-10 gap-5"
+        >
+          <View className="flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-foreground">Editar turno</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color="#64748B" />
+            </Pressable>
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Título</Text>
+            <TextInput
+              value={titulo}
+              onChangeText={setTitulo}
+              className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
+            />
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Fecha</Text>
+            <TouchableOpacity
+              onPress={() => setShowFecha(true)}
+              className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+            >
+              <Ionicons name="calendar-outline" size={16} color="#64748B" />
+              <Text className="text-sm text-foreground">{fmtDate(toISODate(fecha))}</Text>
+            </TouchableOpacity>
+            {showFecha && (
+              <DateTimePicker
+                value={fecha}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={new Date()}
+                onChange={(_: DateTimePickerEvent, d?: Date) => {
+                  if (Platform.OS === 'android') setShowFecha(false);
+                  if (d) setFecha(d);
+                }}
+              />
+            )}
+            {showFecha && Platform.OS === 'ios' && (
+              <TouchableOpacity onPress={() => setShowFecha(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                <Text className="text-sm font-semibold text-primary">Listo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View className="flex-row gap-3">
+            <View className="flex-1 gap-1.5">
+              <Text className="text-sm font-semibold text-foreground">Hora inicio</Text>
+              <TouchableOpacity
+                onPress={() => setShowHoraInicio(true)}
+                className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+              >
+                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Text className="text-sm text-foreground">{formatTimeObj(horaInicio)}</Text>
+              </TouchableOpacity>
+              {showHoraInicio && (
+                <DateTimePicker
+                  value={horaInicio}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(_: DateTimePickerEvent, d?: Date) => {
+                    if (Platform.OS === 'android') setShowHoraInicio(false);
+                    if (d) setHoraInicio(d);
+                  }}
+                />
+              )}
+              {showHoraInicio && Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setShowHoraInicio(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                  <Text className="text-sm font-semibold text-primary">Listo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View className="flex-1 gap-1.5">
+              <Text className="text-sm font-semibold text-foreground">Hora fin</Text>
+              <TouchableOpacity
+                onPress={() => setShowHoraFin(true)}
+                className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+              >
+                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Text className="text-sm text-foreground">{horaFin ? formatTimeObj(horaFin) : 'Sin definir'}</Text>
+              </TouchableOpacity>
+              {showHoraFin && (
+                <DateTimePicker
+                  value={horaFin ?? horaInicio}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={(_: DateTimePickerEvent, d?: Date) => {
+                    if (Platform.OS === 'android') setShowHoraFin(false);
+                    if (d) setHoraFin(d);
+                  }}
+                />
+              )}
+              {showHoraFin && Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setShowHoraFin(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                  <Text className="text-sm font-semibold text-primary">Listo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Lugar</Text>
+            <LugarInput
+              value={lugar}
+              latitud={latitud}
+              longitud={longitud}
+              onChange={(l, lat, lng) => { setLugar(l); setLatitud(lat); setLongitud(lng); }}
+            />
+          </View>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Descripción</Text>
+            <TextInput
+              value={descripcion}
+              onChangeText={setDescripcion}
+              multiline
+              numberOfLines={3}
+              className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
+              style={{ minHeight: 72, textAlignVertical: 'top' }}
+            />
+          </View>
+
+          {cambianCriticos && (
+            <View className="flex-row items-center gap-2 bg-warning-light rounded-xl px-3 py-2.5">
+              <Ionicons name="warning-outline" size={16} color="#B45309" />
+              <Text className="flex-1 text-xs font-medium text-warning">
+                Quienes ya estén confirmados deberán reconfirmar su participación tras este cambio.
+              </Text>
+            </View>
+          )}
+
+          <Button
+            label={actualizarM.isPending ? 'Guardando…' : 'Guardar cambios'}
+            variant="primary"
+            fullWidth
+            loading={actualizarM.isPending}
+            onPress={handleGuardar}
           />
         </ScrollView>
       </View>

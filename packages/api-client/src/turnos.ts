@@ -3,13 +3,17 @@ import type { TipoLiquidacion } from './empresas';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
+// 'por_reconfirmar': estaba 'confirmado' pero el gestor cambió fecha/hora/lugar
+// de la oferta — deja de contar en plazas_cubiertas hasta que el trabajador
+// reconfirme (→ 'confirmado') o decline (→ 'cancelado'). Ver reconfirmarAsignacion.
 export type EstadoAsignacion =
   | 'pendiente'
   | 'confirmado'
   | 'en_progreso'
   | 'completado'
   | 'no_presentado'
-  | 'cancelado';
+  | 'cancelado'
+  | 'por_reconfirmar';
 
 // Fuente de verdad para validación en runtime. El backend (JS) debe
 // mantenerse en sync con este array; ver backend/config/constants.js.
@@ -20,6 +24,7 @@ export const ESTADOS_ASIGNACION = [
   'completado',
   'no_presentado',
   'cancelado',
+  'por_reconfirmar',
 ] as const satisfies EstadoAsignacion[];
 
 export type EstadoOferta =
@@ -474,6 +479,17 @@ export const turnosApi = {
       latitud,
       longitud,
     });
+  },
+
+  /**
+   * El trabajador responde a una asignación 'por_reconfirmar' (el gestor
+   * cambió fecha/hora/lugar mientras estaba 'confirmado'). `acepta: true`
+   * la re-confirma (re-chequea traslapes, puede fallar si el cupo ya se
+   * llenó mientras tanto); `acepta: false` la declina y libera el cupo
+   * para siempre.
+   */
+  reconfirmarAsignacion(id: number, acepta: boolean): Promise<Asignacion> {
+    return api.post<Asignacion>(`/api/turnos/asignaciones/${id}/reconfirmar`, { acepta });
   },
 
   /**

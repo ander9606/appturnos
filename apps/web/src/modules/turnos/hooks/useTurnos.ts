@@ -148,6 +148,20 @@ export function useCrearOferta() {
   });
 }
 
+export function useActualizarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Record<string, unknown> }) =>
+      turnosApi.actualizarOferta(id, data),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
+      qc.invalidateQueries({ queryKey: KEYS.oferta(id) });
+      toast.success('Turno actualizado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function usePublicarOferta() {
   const qc = useQueryClient();
   return useMutation({

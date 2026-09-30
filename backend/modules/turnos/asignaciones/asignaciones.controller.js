@@ -58,6 +58,17 @@ async function egreso(req, res) {
   res.json({ success: true, data, message: 'Egreso registrado' });
 }
 
+async function reconfirmar(req, res) {
+  const acepta = req.body.acepta === true;
+  const data = await AsignacionesService.reconfirmar(
+    req.empresa_id,
+    Number(req.params.id),
+    req.usuario.sub,
+    acepta
+  );
+  res.json({ success: true, data, message: acepta ? 'Participación reconfirmada' : 'Asignación declinada' });
+}
+
 async function misTurnos(req, res) {
   const data = await AsignacionesService.misTurnos(req.empresa_id, req.usuario.sub);
   res.json({ success: true, data, message: 'Mis turnos y postulaciones' });
@@ -116,6 +127,6 @@ async function descartarSospechoso(req, res) {
 }
 
 module.exports = {
-  listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, misTurnos, corregir,
+  listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, reconfirmar, misTurnos, corregir,
   noPresentado, calificar, liquidacion, descartarSospechoso, agregarBono,
 };

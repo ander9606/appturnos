@@ -1,11 +1,15 @@
 export type EstadoOferta = 'borrador' | 'abierta' | 'publicada' | 'en_proceso' | 'cerrada' | 'completada' | 'cancelada';
+// 'por_reconfirmar': estaba 'confirmado' pero el gestor cambió fecha/hora/lugar
+// de la oferta — deja de contar como cubierta hasta que el trabajador
+// reconfirme (mobile-only, web es admin/gestor sin login de trabajador).
 export type EstadoAsignacion =
   | 'pendiente'
   | 'confirmado'
   | 'en_progreso'
   | 'completado'
   | 'no_presentado'
-  | 'cancelado';
+  | 'cancelado'
+  | 'por_reconfirmar';
 
 export interface Puesto {
   id: number;

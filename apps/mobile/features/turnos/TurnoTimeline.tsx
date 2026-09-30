@@ -28,6 +28,7 @@ const ORDER: Record<EstadoAsignacion, number> = {
   completado:    3,
   no_presentado: -1,
   cancelado:     -1,
+  por_reconfirmar: -1,
 };
 
 interface TurnoTimelineProps {
@@ -47,6 +48,20 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
           <Text className="text-sm font-semibold text-danger">Turno cancelado</Text>
           <Text className="text-xs text-danger/70 mt-0.5">
             Este turno fue cancelado por la empresa.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (estado === 'por_reconfirmar') {
+    return (
+      <View className="bg-warning-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
+        <Ionicons name="alert-circle-outline" size={26} color="#D97706" />
+        <View>
+          <Text className="text-sm font-semibold text-amber-700">El turno cambió — reconfirma tu participación</Text>
+          <Text className="text-xs text-amber-600 mt-0.5">
+            La fecha, hora o lugar cambiaron. Debes reconfirmar o tu cupo quedará libre.
           </Text>
         </View>
       </View>

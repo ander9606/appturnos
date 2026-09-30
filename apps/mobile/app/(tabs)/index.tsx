@@ -219,7 +219,7 @@ export default function DashboardScreen() {
     .filter(
       (a) =>
         a.oferta_fecha > today &&
-        (a.estado === 'confirmado' || a.estado === 'pendiente'),
+        (a.estado === 'confirmado' || a.estado === 'pendiente' || a.estado === 'por_reconfirmar'),
     )
     .sort((a, b) => a.oferta_fecha.localeCompare(b.oferta_fecha))
     .slice(0, 3);

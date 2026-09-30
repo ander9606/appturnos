@@ -48,6 +48,7 @@ const ESTADO_CFG: Record<string, {
   cancelado:      { label: 'Cancelado',    color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
   rechazado:      { label: 'Rechazado',    color: '#EF4444', bg: '#FEE2E2', icon: 'ban-outline' },
   no_presentado:  { label: 'No presentado',color: '#94A3B8', bg: '#F1F5F9', icon: 'alert-circle-outline' },
+  por_reconfirmar: { label: 'Reconfirma', color: '#D97706', bg: '#FEF3C7', icon: 'alert-circle-outline' },
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -109,6 +110,7 @@ function PostulacionCard({
 // ── Screen ─────────────────────────────────────────────────────────────────
 
 const GROUPS: { key: EstadoAsignacion[]; label: string }[] = [
+  { key: ['por_reconfirmar'],                      label: 'Debes reconfirmar' },
   { key: ['pendiente'],                            label: 'Esperando confirmación' },
   { key: ['confirmado', 'en_progreso'],            label: 'Confirmadas' },
   { key: ['completado'],                           label: 'Completadas' },

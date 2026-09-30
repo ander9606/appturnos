@@ -9,6 +9,7 @@ import {
   useActualizarPuesto,
   useEliminarPuesto,
   usePublicarOferta,
+  useActualizarOferta,
   useCompletarOferta,
   useConfirmarAsignacion,
   useRechazarAsignacion,
@@ -27,8 +28,9 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
-import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto } from '../types';
-import { fmtDate, fmtCOP } from '@/shared/lib/format';
+import { LugarInput } from '../components/LugarInput';
+import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto, Oferta } from '../types';
+import { fmtDate, fmtCOP, bogotaToday } from '@/shared/lib/format';
 
 const ESTADO_OFERTA_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -52,17 +54,20 @@ const ESTADO_ASIG_BADGE: Record<EstadoAsignacion, string> = {
   completado: 'bg-success-light text-success',
   no_presentado: 'bg-danger-light text-danger',
   cancelado: 'bg-muted text-muted-foreground/60',
+  por_reconfirmar: 'bg-warning-light text-warning',
 };
 
 const ESTADO_ASIG_LABEL: Record<EstadoAsignacion, string> = {
   pendiente: 'Pendiente', confirmado: 'Confirmado', en_progreso: 'En progreso',
   completado: 'Completado', no_presentado: 'No presentado', cancelado: 'Cancelado',
+  por_reconfirmar: 'Por reconfirmar',
 };
 
 const FILTROS_ASIG: { label: string; value: EstadoAsignacion | undefined }[] = [
   { label: 'Todas', value: undefined },
   { label: 'Pendientes', value: 'pendiente' },
   { label: 'Confirmadas', value: 'confirmado' },
+  { label: 'Por reconfirmar', value: 'por_reconfirmar' },
   { label: 'Completadas', value: 'completado' },
   { label: 'No presentados', value: 'no_presentado' },
 ];
@@ -76,6 +81,7 @@ export function OfertaDetailPage() {
   const [soloSospechosos, setSoloSospechosos] = useState(false);
   const [puestoEditando, setPuestoEditando] = useState<Puesto | null>(null);
   const [showPuestoForm, setShowPuestoForm] = useState(false);
+  const [showEditarOferta, setShowEditarOferta] = useState(false);
   const [calificandoId, setCalificandoId] = useState<number | null>(null);
   const [corrigiendoAsig, setCorrigiendoAsig] = useState<Asignacion | null>(null);
   const [bonoAsig, setBonoAsig] = useState<Asignacion | null>(null);
@@ -162,6 +168,16 @@ export function OfertaDetailPage() {
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${ESTADO_OFERTA_BADGE[oferta.estado as EstadoOferta]}`}>
                 {ESTADO_OFERTA_LABEL[oferta.estado as EstadoOferta]}
               </span>
+              {canEditPuestos && (
+                <button
+                  onClick={() => setShowEditarOferta(true)}
+                  className="text-muted-foreground/60 hover:text-primary transition-colors p-1"
+                  title="Editar turno"
+                  aria-label="Editar turno"
+                >
+                  <Pencil size={14} />
+                </button>
+              )}
               {oferta.external_ref && (
                 <span
                   className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-600 flex-shrink-0"
@@ -205,65 +221,11 @@ export function OfertaDetailPage() {
               </p>
             )}
           </div>
-          <div className="flex-shrink-0 flex flex-col items-end gap-2">
-            <div className="text-right">
-              <p className="text-2xl font-bold text-foreground">
-                {puestos.reduce((s, p) => s + p.plazas_cubiertas, 0)}/{puestos.reduce((s, p) => s + p.plazas, 0)}
-              </p>
-              <p className="text-xs text-muted-foreground">asignados</p>
-            </div>
-            {oferta.estado === 'borrador' && (
-              <button
-                onClick={() => {
-                  if (puestos.length === 0) {
-                    toast.error('Agrega al menos un puesto antes de publicar.');
-                    return;
-                  }
-                  confirm({
-                    title: 'Publicar oferta',
-                    detail: 'Será visible para el pool de trabajadores que califican para sus puestos.',
-                    confirmLabel: 'Publicar',
-                    onConfirm: () => { publicar.mutate(ofertaId); close(); },
-                  });
-                }}
-                disabled={publicar.isPending}
-                className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <Send size={14} /> {publicar.isPending ? 'Publicando...' : 'Publicar oferta'}
-              </button>
-            )}
-            {turnoIniciado && !['borrador', 'completada', 'cancelada'].includes(oferta.estado) && (
-              <>
-                <button
-                  onClick={() => confirm({
-                    title: 'Marcar como completada',
-                    detail: hayEnProgreso
-                      ? 'A quien nunca marcó ingreso se le marcará como no presentado. A quien sigue en curso sin marcar salida se le cerrará con el horario estipulado del turno (si ya pasó el margen de gracia) sin pagarle de más por los días que quedó colgado.'
-                      : 'Úsalo cuando el turno ya terminó en la realidad. A quien nunca marcó ingreso se le marcará como no presentado.',
-                    confirmLabel: 'Marcar completada',
-                    onConfirm: () => { completar.mutate({ id: ofertaId, capearHoras: true }); close(); },
-                  })}
-                  disabled={completar.isPending}
-                  className="flex items-center gap-1.5 bg-success hover:bg-success/90 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
-                >
-                  <CheckCircle2 size={14} /> {completar.isPending ? 'Marcando...' : 'Marcar completada'}
-                </button>
-                {hayEnProgreso && (
-                  <button
-                    onClick={() => confirm({
-                      title: 'Cerrar con la hora actual',
-                      detail: 'En vez del horario estipulado del turno, a quien sigue en curso sin marcar salida se le cerrará contando las horas reales hasta ahora mismo. Solo aplica si ya pasó el margen de gracia para forzar el cierre.',
-                      confirmLabel: 'Cerrar con hora actual',
-                      onConfirm: () => { completar.mutate({ id: ofertaId, capearHoras: false }); close(); },
-                    })}
-                    disabled={completar.isPending}
-                    className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                  >
-                    Cerrar con hora actual en vez del horario estipulado
-                  </button>
-                )}
-              </>
-            )}
+          <div className="flex-shrink-0 text-right">
+            <p className="text-2xl font-bold text-foreground">
+              {puestos.reduce((s, p) => s + p.plazas_cubiertas, 0)}/{puestos.reduce((s, p) => s + p.plazas, 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">asignados</p>
           </div>
         </div>
       </div>
@@ -542,11 +504,81 @@ export function OfertaDetailPage() {
         </div>
       </div>
 
+      {/* ── Barra de acciones fija — siempre en la zona inferior, separada del
+          header para que no compita visualmente con el resto de la info. ── */}
+      {(oferta.estado === 'borrador'
+        || (turnoIniciado && !['borrador', 'completada', 'cancelada'].includes(oferta.estado))) && (
+        <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3 flex-wrap">
+          {oferta.estado === 'borrador' && (
+            <button
+              onClick={() => {
+                if (puestos.length === 0) {
+                  toast.error('Agrega al menos un puesto antes de publicar.');
+                  return;
+                }
+                confirm({
+                  title: 'Publicar oferta',
+                  detail: 'Será visible para el pool de trabajadores que califican para sus puestos.',
+                  confirmLabel: 'Publicar',
+                  onConfirm: () => { publicar.mutate(ofertaId); close(); },
+                });
+              }}
+              disabled={publicar.isPending}
+              className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <Send size={14} /> {publicar.isPending ? 'Publicando...' : 'Publicar oferta'}
+            </button>
+          )}
+          {turnoIniciado && !['borrador', 'completada', 'cancelada'].includes(oferta.estado) && (
+            <>
+              <button
+                onClick={() => confirm({
+                  title: 'Marcar como completada',
+                  detail: hayEnProgreso
+                    ? 'A quien nunca marcó ingreso se le marcará como no presentado. A quien sigue en curso sin marcar salida se le cerrará con el horario estipulado del turno (si ya pasó el margen de gracia) sin pagarle de más por los días que quedó colgado.'
+                    : 'Úsalo cuando el turno ya terminó en la realidad. A quien nunca marcó ingreso se le marcará como no presentado.',
+                  confirmLabel: 'Marcar completada',
+                  onConfirm: () => { completar.mutate({ id: ofertaId, capearHoras: true }); close(); },
+                })}
+                disabled={completar.isPending}
+                // Contorno, no relleno sólido: esto ya dispara consecuencias reales
+                // (pago, contratos, notificaciones) — no es un CTA festivo de "listo".
+                className="flex items-center gap-1.5 bg-success-light border border-success/30 hover:bg-success/20 disabled:opacity-50 text-success text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <CheckCircle2 size={14} /> {completar.isPending ? 'Marcando...' : 'Marcar completada'}
+              </button>
+              {hayEnProgreso && (
+                <button
+                  onClick={() => confirm({
+                    title: 'Cerrar con la hora actual',
+                    detail: 'En vez del horario estipulado del turno, a quien sigue en curso sin marcar salida se le cerrará contando las horas reales hasta ahora mismo. Solo aplica si ya pasó el margen de gracia para forzar el cierre.',
+                    confirmLabel: 'Cerrar con hora actual',
+                    onConfirm: () => { completar.mutate({ id: ofertaId, capearHoras: false }); close(); },
+                  })}
+                  disabled={completar.isPending}
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                >
+                  Cerrar con hora actual en vez del horario estipulado
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {showPuestoForm && (
         <PuestoFormModal
           ofertaId={ofertaId}
           puesto={puestoEditando}
           onClose={() => { setShowPuestoForm(false); setPuestoEditando(null); }}
+        />
+      )}
+
+      {showEditarOferta && (
+        <EditarOfertaModal
+          ofertaId={ofertaId}
+          oferta={oferta}
+          onClose={() => setShowEditarOferta(false)}
         />
       )}
 
@@ -581,6 +613,140 @@ export function OfertaDetailPage() {
         />
       )}
     </div>
+  );
+}
+
+/* ── Editar oferta (título/descripción/fecha/hora/lugar) ── */
+function EditarOfertaModal({
+  ofertaId, oferta, onClose,
+}: { ofertaId: number; oferta: Oferta; onClose: () => void }) {
+  const actualizar = useActualizarOferta();
+  const [form, setForm] = useState({
+    titulo: oferta.titulo,
+    descripcion: oferta.descripcion ?? '',
+    fecha: oferta.fecha,
+    hora_inicio: oferta.hora_inicio.slice(0, 5),
+    hora_fin_estimada: oferta.hora_fin_estimada?.slice(0, 5) ?? '',
+  });
+  const [lugar, setLugar] = useState(oferta.lugar ?? '');
+  const [latitud, setLatitud] = useState<number | null>(oferta.latitud);
+  const [longitud, setLongitud] = useState<number | null>(oferta.longitud);
+
+  const cambianCriticos = form.fecha !== oferta.fecha
+    || form.hora_inicio !== oferta.hora_inicio.slice(0, 5)
+    || form.hora_fin_estimada !== (oferta.hora_fin_estimada?.slice(0, 5) ?? '')
+    || lugar !== (oferta.lugar ?? '');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (form.fecha < bogotaToday()) {
+      toast.error('La fecha del turno no puede ser en el pasado');
+      return;
+    }
+    if (form.hora_fin_estimada && form.hora_fin_estimada <= form.hora_inicio) {
+      toast.error('La hora de fin debe ser posterior a la hora de inicio');
+      return;
+    }
+    await actualizar.mutateAsync({
+      id: ofertaId,
+      data: {
+        titulo: form.titulo,
+        descripcion: form.descripcion || undefined,
+        fecha: form.fecha,
+        // Con segundos: el backend compara contra oferta.hora_inicio ("HH:MM:SS")
+        // para decidir si el horario cambió — sin esto, todo edit se veía como
+        // cambio de horario y disparaba la reconfirmación aunque solo se haya
+        // tocado el título o la descripción.
+        hora_inicio: `${form.hora_inicio}:00`,
+        hora_fin_estimada: form.hora_fin_estimada ? `${form.hora_fin_estimada}:00` : undefined,
+        lugar: lugar || undefined,
+        latitud: latitud ?? undefined,
+        longitud: longitud ?? undefined,
+      },
+    });
+    onClose();
+  };
+
+  return (
+    <Modal onClose={onClose} size="lg">
+      <h2 className="text-lg font-semibold text-foreground mb-4">Editar turno</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Título *</label>
+          <input
+            required
+            type="text"
+            value={form.titulo}
+            onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
+            <input
+              required
+              type="date"
+              min={bogotaToday()}
+              value={form.fecha}
+              onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Hora inicio *</label>
+            <input
+              required
+              type="time"
+              value={form.hora_inicio}
+              onChange={e => setForm(f => ({ ...f, hora_inicio: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Hora fin estimada</label>
+            <input
+              type="time"
+              value={form.hora_fin_estimada}
+              onChange={e => setForm(f => ({ ...f, hora_fin_estimada: e.target.value }))}
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Lugar</label>
+          <LugarInput
+            value={lugar}
+            latitud={latitud}
+            longitud={longitud}
+            onChange={(l, lat, lng) => { setLugar(l); setLatitud(lat); setLongitud(lng); }}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>
+          <textarea
+            rows={2}
+            value={form.descripcion}
+            onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
+          />
+        </div>
+        {cambianCriticos && (
+          <div className="flex items-center gap-2 bg-warning-light text-warning text-xs font-medium rounded-lg px-3 py-2">
+            <AlertTriangle size={14} className="flex-shrink-0" />
+            Quienes ya estén confirmados en este turno deberán reconfirmar su participación tras este cambio.
+          </div>
+        )}
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit" disabled={actualizar.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 

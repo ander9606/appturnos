@@ -48,6 +48,7 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'oferta.creada':               'add-circle-outline',
   'oferta.nueva':                'megaphone-outline',
   'oferta.modificada':           'create-outline',
+  'asignacion.reconfirmacion_rechazada': 'alert-circle-outline',
   'oferta.cancelada':            'close-circle-outline',
   'oferta.personal_incompleto':  'people-outline',
   'novedad_turno':               'chatbubble-outline',

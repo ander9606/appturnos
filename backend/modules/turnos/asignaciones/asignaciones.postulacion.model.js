@@ -22,12 +22,21 @@ module.exports = {
   },
 
   /**
-   * Confirma una asignación pendiente y suma una plaza cubierta al PUESTO
-   * (no a la oferta — la oferta ya no lleva ese contador desde mig 013).
-   * Todo en una transacción con bloqueo de fila.
+   * Confirma una asignación y suma una plaza cubierta al PUESTO (no a la
+   * oferta — la oferta ya no lleva ese contador desde mig 013). Todo en una
+   * transacción con bloqueo de fila.
+   *
+   * `estadosValidos` (default `['pendiente']`, el flujo normal donde el
+   * GESTOR aprueba una postulación) acota desde qué estado se puede
+   * confirmar. `AsignacionesService.reconfirmar` pasa explícitamente
+   * `['por_reconfirmar']` para el caso donde el propio TRABAJADOR re-acepta
+   * tras un cambio de fecha/hora/lugar — nunca lo dejamos en el default,
+   * porque si no, la ruta de gestor POST /:id/confirmar (pensada solo para
+   * aprobar postulaciones pendientes) podría reconfirmar en nombre del
+   * trabajador una asignación que este nunca llegó a ver ni aceptar.
    * @returns {Promise<{ok:boolean, motivo?:string}>}
    */
-  async confirmar(empresaId, id) {
+  async confirmar(empresaId, id, estadosValidos = ['pendiente']) {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
@@ -40,7 +49,7 @@ module.exports = {
         await conn.rollback();
         return { ok: false, motivo: 'no_existe' };
       }
-      if (asig.estado !== 'pendiente') {
+      if (!estadosValidos.includes(asig.estado)) {
         await conn.rollback();
         return { ok: false, motivo: 'estado' };
       }
@@ -273,6 +282,78 @@ module.exports = {
     } finally {
       conn.release();
     }
+  },
+
+  /**
+   * Oferta editada (fecha/hora/lugar) con esta asignación 'confirmado':
+   * pasa a 'por_reconfirmar' y libera la plaza — deja de contar como cubierta
+   * hasta que el trabajador reconfirme o decline (ver
+   * AsignacionesService.reconfirmar). Llamada desde OfertasService.actualizar.
+   * @returns {Promise<{ok:boolean, motivo?:string}>}
+   */
+  async marcarPorReconfirmar(empresaId, id) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [[asig]] = await conn.query(
+        'SELECT * FROM asignaciones_turno WHERE id = ? AND empresa_id = ? FOR UPDATE',
+        [id, empresaId]
+      );
+      if (!asig) {
+        await conn.rollback();
+        return { ok: false, motivo: 'no_existe' };
+      }
+      if (asig.estado !== 'confirmado') {
+        await conn.rollback();
+        return { ok: false, motivo: 'estado' };
+      }
+
+      await conn.query(
+        "UPDATE asignaciones_turno SET estado = 'por_reconfirmar' WHERE id = ?",
+        [id]
+      );
+      await conn.query(
+        'UPDATE oferta_puestos SET plazas_cubiertas = GREATEST(0, plazas_cubiertas - 1) WHERE id = ?',
+        [asig.puesto_id]
+      );
+
+      await conn.commit();
+      return { ok: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
+  /**
+   * El trabajador declina una asignación 'por_reconfirmar' (no puede con el
+   * nuevo horario/lugar). No toca plazas_cubiertas: ya se liberó al entrar
+   * en 'por_reconfirmar' (marcarPorReconfirmar) — descontarla de nuevo acá
+   * dejaría el contador negativo/desfasado.
+   * @returns {Promise<{ok:boolean, motivo?:string, trabajador_id?:number, oferta_id?:number}>}
+   */
+  async declinarReconfirmacion(empresaId, id) {
+    const [[asig]] = await pool.query(
+      'SELECT trabajador_id, oferta_id FROM asignaciones_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
+      [id, empresaId]
+    );
+    if (!asig) return { ok: false, motivo: 'no_existe' };
+
+    // UPDATE...WHERE estado = 'por_reconfirmar' en vez de SELECT-then-UPDATE:
+    // atómico ante un doble tap/retry — solo una de dos llamadas concurrentes
+    // gana la fila (affectedRows = 0 en la otra), evitando notificar dos veces
+    // a los gestores por una sola declinación (mismo criterio que
+    // registrarIngreso/registrarEgreso en asignaciones.marcaje.model.js).
+    const [res] = await pool.query(
+      "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE id = ? AND empresa_id = ? AND estado = 'por_reconfirmar'",
+      [id, empresaId]
+    );
+    if (res.affectedRows === 0) return { ok: false, motivo: 'estado' };
+
+    return { ok: true, trabajador_id: asig.trabajador_id, oferta_id: asig.oferta_id };
   },
 
   /**

@@ -49,7 +49,13 @@ async function buscarSolapeOtraEmpresa(usuarioId, excluirAsignacionId, fecha, ho
  * asignaciones.service.js para el resto de AsignacionesService.
  */
 module.exports = {
-  async confirmar(empresaId, id) {
+  /**
+   * `estadosValidos` (default `['pendiente']`): ver el mismo parámetro en
+   * AsignacionesModel.confirmar — nunca lo amplíes en el default, la ruta de
+   * gestor POST /:id/confirmar depende de que solo acepte postulaciones
+   * pendientes.
+   */
+  async confirmar(empresaId, id, estadosValidos = ['pendiente']) {
     const asig = await AsignacionesModel.obtenerPorId(empresaId, id);
     if (asig) {
       const trabajador = await TrabajadoresModel.obtenerUsuarioIdYRol(asig.trabajador_id);
@@ -93,7 +99,7 @@ module.exports = {
       }
     }
 
-    const res = await AsignacionesModel.confirmar(empresaId, id);
+    const res = await AsignacionesModel.confirmar(empresaId, id, estadosValidos);
     if (!res.ok) {
       const errores = {
         no_existe: ['Asignación no encontrada', 404],
@@ -145,6 +151,60 @@ module.exports = {
     await CoberturaService.verificarYEmitir(empresaId, asignacion.oferta_id);
 
     return asignacion;
+  },
+
+  /**
+   * El propio trabajador responde a una asignación 'por_reconfirmar' (oferta
+   * editada mientras estaba confirmado): `acepta: true` la re-confirma con
+   * las mismas validaciones que una confirmación normal (el horario nuevo
+   * puede chocar con algo que aceptó mientras tanto); `acepta: false` la
+   * declina y libera el cupo para siempre. A diferencia de cancelar(), acá
+   * quien actúa es el trabajador dueño de la asignación, no un gestor.
+   */
+  async reconfirmar(empresaId, id, usuarioId, acepta) {
+    // obtenerConDetalles maneja empresaId null (trabajador_turnos multi-empresa);
+    // obtenerPorId no. Trae usuario_id ya resuelto para el chequeo de pertenencia.
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    if (asignacion.usuario_id !== usuarioId) {
+      throw new AppError('Esta asignación no te pertenece', 403);
+    }
+    if (asignacion.estado !== 'por_reconfirmar') {
+      throw new AppError('Esta asignación no está esperando reconfirmación', 409);
+    }
+
+    // JWT empresa_id es null/desactualizado para marketplace — usar el de la fila.
+    const dbEmpresaId = asignacion.empresa_id;
+
+    if (!acepta) {
+      const res = await AsignacionesModel.declinarReconfirmacion(dbEmpresaId, id);
+      if (!res.ok) throw new AppError('No se pudo declinar la asignación', 409);
+
+      // Best-effort: el cupo quedó libre, avisa a los gestores para que puedan
+      // cubrirlo (banco de talento / nueva postulación) antes del turno.
+      const [gestores] = await pool.query(
+        `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1`,
+        [dbEmpresaId]
+      );
+      if (gestores.length > 0) {
+        await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+          empresaId: dbEmpresaId,
+          tipo: 'asignacion.reconfirmacion_rechazada',
+          titulo: 'Un cupo quedó libre',
+          mensaje: `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} no puede seguir en "${asignacion.oferta_titulo}" tras el cambio de horario/lugar.`,
+          data: { oferta_id: asignacion.oferta_id },
+        });
+      }
+
+      return AsignacionesModel.obtenerPorId(dbEmpresaId, id);
+    }
+
+    // Reusa exactamente la lógica de confirmar() (traslape/lleno/oferta-vencida/
+    // contrato) — vía module.exports porque este archivo se agrega a
+    // AsignacionesService por spread, sin binding directo al método de arriba.
+    // estadosValidos explícito: solo desde 'por_reconfirmar', nunca 'pendiente'
+    // (esa sigue siendo exclusiva de la ruta de gestor POST /:id/confirmar).
+    return module.exports.confirmar(dbEmpresaId, id, ['por_reconfirmar']);
   },
 
   async cancelar(empresaId, id, gestorId) {

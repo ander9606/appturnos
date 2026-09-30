@@ -28,7 +28,8 @@ import { useTheme }            from '@/lib/theme';
 import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar } from '@/features/turnos/useTurnos';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useReconfirmarAsignacion } from '@/features/turnos/useTurnos';
+import { confirm } from '@/lib/confirmDialog';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
 import { useUbicacionLibre }   from '@/features/turnos/useUbicacionLibre';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
@@ -76,6 +77,7 @@ export default function TurnoDetailScreen() {
   const ingresoMutation    = useMarcarIngreso();
   const egresoMutation     = useMarcarEgreso();
   const calificarMutation  = useCalificar();
+  const reconfirmarMutation = useReconfirmarAsignacion();
 
   // ── Live timer: elapsed (en_progreso) + countdown (confirmado) ───────
   useEffect(() => {
@@ -215,6 +217,28 @@ export default function TurnoDetailScreen() {
       showToast('Salida registrada — ¡turno completado, buen trabajo!');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
+      Alert.alert('Error', msg);
+    }
+  };
+
+  const handleReconfirmar = async (acepta: boolean) => {
+    if (!asignacion) return;
+    if (!acepta) {
+      const ok = await confirm({
+        title: 'Declinar turno',
+        message: 'Ya no podrás participar en este turno con el nuevo horario/lugar. El cupo quedará libre para otra persona.',
+        cancelLabel: 'Volver',
+        confirmLabel: 'Declinar',
+        destructive: true,
+      });
+      if (!ok) return;
+    }
+    try {
+      await reconfirmarMutation.mutateAsync({ id: asignacion.id, acepta });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast(acepta ? 'Participación reconfirmada.' : 'Declinaste el turno.');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo procesar tu respuesta.';
       Alert.alert('Error', msg);
     }
   };
@@ -367,6 +391,35 @@ export default function TurnoDetailScreen() {
                 guardando={calificarMutation.isPending}
               />
             </>
+          )}
+
+          {/* ── CTA: Reconfirmar o declinar (estado: por_reconfirmar) — el gestor
+              cambió fecha/hora/lugar mientras estabas confirmado. Solo el propio
+              trabajador puede resolverlo; un gestor mirando esto solo ve el aviso
+              de TurnoTimeline, sin botones. ── */}
+          {estado === 'por_reconfirmar' && !isGestor && (
+            <View className="bg-card rounded-2xl px-5 py-4 gap-3"
+              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              <Text className="text-sm text-foreground">
+                ¿Sigues disponible para este turno con el nuevo horario/lugar?
+              </Text>
+              <View className="flex-row gap-2">
+                <Button
+                  label={reconfirmarMutation.isPending ? '…' : 'Ya no puedo'}
+                  variant="danger"
+                  size="sm"
+                  loading={reconfirmarMutation.isPending}
+                  onPress={() => handleReconfirmar(false)}
+                />
+                <Button
+                  label={reconfirmarMutation.isPending ? '…' : 'Sigo disponible'}
+                  variant="success"
+                  size="sm"
+                  loading={reconfirmarMutation.isPending}
+                  onPress={() => handleReconfirmar(true)}
+                />
+              </View>
+            </View>
           )}
 
           {/* ── CTA: Marcar Ingreso (estado: confirmado) ─────────────────── */}

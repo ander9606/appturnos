@@ -11,7 +11,9 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
-const { ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS } = require('../../../config/constants');
+const {
+  ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS, HORAS_CORTE_EDICION_OFERTA,
+} = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
 
@@ -285,6 +287,15 @@ module.exports = {
     return oferta;
   },
 
+  /**
+   * Editar fecha/hora_inicio/hora_fin_estimada/lugar (`camposCriticos`) con
+   * trabajadores ya 'confirmado' los pasa a 'por_reconfirmar' — dejan de
+   * contar en plazas_cubiertas hasta que el propio trabajador reconfirme o
+   * decline (ver AsignacionesService.reconfirmar). Por eso esos campos no se
+   * pueden tocar si ya hay alguien en_progreso/completado (el turno ya está
+   * pasando de verdad) ni a menos de HORAS_CORTE_EDICION_OFERTA de que
+   * empiece — no le queda tiempo real al trabajador para reaccionar.
+   */
   async actualizar(empresaId, id, datos) {
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
@@ -302,16 +313,51 @@ module.exports = {
       (k) => datos[k] !== undefined && String(datos[k] ?? '') !== String(oferta[k] ?? '')
     );
 
+    let confirmados = [];
+    if (hayCambioRelevante) {
+      const asignaciones = await AsignacionesModel.listarPorOferta(empresaId, id);
+
+      const yaIniciado = asignaciones.some((a) => ['en_progreso', 'completado'].includes(a.estado));
+      if (yaIniciado) {
+        throw new AppError(
+          'No puedes cambiar fecha, hora o lugar: ya hay alguien que marcó ingreso en este turno.',
+          409
+        );
+      }
+
+      const inicioOriginal = `${oferta.fecha} ${oferta.hora_inicio}`;
+      const limiteEdicion = ahoraColombiaSQL(HORAS_CORTE_EDICION_OFERTA * 3_600_000);
+      if (inicioOriginal <= limiteEdicion) {
+        throw new AppError(
+          `No puedes cambiar fecha, hora o lugar a menos de ${HORAS_CORTE_EDICION_OFERTA}h de que empiece el turno.`,
+          409
+        );
+      }
+
+      confirmados = asignaciones.filter((a) => a.estado === 'confirmado');
+    }
+
     await validarPuntosMarcaje(empresaId, datos.punto_marcaje_ids);
     await OfertasModel.actualizar(empresaId, id, datos);
 
     if (hayCambioRelevante) {
+      for (const a of confirmados) {
+        // motivo === 'estado' es esperable en una carrera puntual (el trabajador
+        // marcó ingreso justo entre el listarPorOferta de arriba y este await) —
+        // marcarPorReconfirmar ya protege no tocar a alguien en_progreso. Se
+        // registra para no perder de vista un cupo que quedó desincronizado.
+        const res = await AsignacionesModel.marcarPorReconfirmar(empresaId, a.id);
+        if (!res.ok) {
+          logger.warn(`[ofertas] no se pudo pasar a por_reconfirmar la asignación ${a.id} al editar la oferta ${id}: ${res.motivo}`);
+        }
+      }
+
       const destinatarios = await AsignacionesModel.listarUsuariosAsignados(empresaId, id);
       await NotificacionesService.notificarVarios(destinatarios, {
         empresaId,
         tipo: 'oferta.modificada',
-        titulo: 'Turno modificado',
-        mensaje: `"${oferta.titulo}" fue actualizado. Revisa los cambios y confirma tu participación o cancela.`,
+        titulo: 'Turno modificado — reconfirma tu participación',
+        mensaje: `"${oferta.titulo}" cambió de fecha, hora o lugar. Si ya estabas confirmado, debes reconfirmar o tu cupo quedará libre.`,
         data: { oferta_id: id },
       });
     }

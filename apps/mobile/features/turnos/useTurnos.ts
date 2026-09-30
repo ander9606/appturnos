@@ -267,6 +267,20 @@ export function useMarcarEgreso() {
   });
 }
 
+/** El trabajador responde a una asignación 'por_reconfirmar' (aceptar de nuevo o declinar). */
+export function useReconfirmarAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, acepta }: { id: number; acepta: boolean }) =>
+      turnosApi.reconfirmarAsignacion(id, acepta),
+    onSuccess: (_, { id }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+    },
+  });
+}
+
 /** Liquidación de turnos por trabajador (gestores/admin). */
 export function useLiquidacionTurnos(
   params?: { fecha_inicio?: string; fecha_fin?: string },

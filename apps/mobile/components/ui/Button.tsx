@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'successOutline';
 type Size    = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<TouchableOpacityProps, 'onPress'> {
@@ -23,11 +23,15 @@ interface ButtonProps extends Omit<TouchableOpacityProps, 'onPress'> {
 const BASE = 'flex-row items-center justify-center rounded-xl active:opacity-80';
 
 const VARIANT_STYLES: Record<Variant, { container: string; text: string }> = {
-  primary:   { container: 'bg-primary-500',         text: 'text-white font-semibold' },
-  secondary: { container: 'bg-primary-50 border border-primary-300', text: 'text-primary-600 font-semibold' },
-  ghost:     { container: 'bg-transparent',          text: 'text-primary-500 font-medium' },
-  danger:    { container: 'bg-danger',               text: 'text-white font-semibold' },
-  success:   { container: 'bg-success',              text: 'text-white font-semibold' },
+  primary:        { container: 'bg-primary-500',         text: 'text-white font-semibold' },
+  secondary:      { container: 'bg-primary-50 border border-primary-300', text: 'text-primary-600 font-semibold' },
+  ghost:          { container: 'bg-transparent',          text: 'text-primary-500 font-medium' },
+  danger:         { container: 'bg-danger',               text: 'text-white font-semibold' },
+  success:        { container: 'bg-success',              text: 'text-white font-semibold' },
+  // Mismo tono que 'success' pero en contorno — para acciones que cierran/resuelven
+  // algo real (con efectos en pago, contratos, notificaciones) y no deben leerse
+  // como un CTA festivo de "listo" a todo color, sin dejar de ser fáciles de encontrar.
+  successOutline: { container: 'bg-success-light border border-success/30', text: 'text-success font-semibold' },
 };
 
 const SIZE_STYLES: Record<Size, { container: string; text: string }> = {
@@ -95,7 +99,11 @@ export function Button({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' || variant === 'danger' || variant === 'success' ? '#fff' : '#FF5A3C'}
+          color={
+            variant === 'primary' || variant === 'danger' || variant === 'success' ? '#fff'
+            : variant === 'successOutline' ? '#059669'
+            : '#FF5A3C'
+          }
         />
       ) : (
         <Text className={[v.text, s.text].join(' ')}>{label}</Text>

@@ -100,6 +100,22 @@ router.post(
   ctrl.egreso
 );
 
+// POST /api/turnos/asignaciones/:id/reconfirmar  (trabajador responde a un cambio de
+// fecha/hora/lugar en su turno ya confirmado — body: { acepta: boolean }). Sin
+// verificarSuscripcion a propósito, mismo criterio que ingreso/egreso: es el
+// trabajador resolviendo su propia participación, no debe bloquearse por un
+// problema de facturación de su empleador.
+router.post(
+  '/:id/reconfirmar',
+  verificarRol(TRABAJADOR),
+  // toBoolean(): el controller hace `req.body.acepta === true` a propósito (acepta
+  // vs. declina no debe tener un default silencioso) — sin coercer, un cliente
+  // que mande "true" como string pasaría isBoolean() pero se leería como false.
+  [idParam, body('acepta').isBoolean().withMessage('acepta debe ser booleano').toBoolean()],
+  validar,
+  ctrl.reconfirmar
+);
+
 // PATCH /api/turnos/asignaciones/:id/corregir  (jefe/admin corrige ingreso/egreso manualmente)
 router.patch(
   '/:id/corregir',
