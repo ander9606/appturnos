@@ -222,6 +222,10 @@ export interface Oferta {
   /** Solo presente junto a `forzados_al_completar`: true si ese cierre forzado
    *  usó la hora real del cierre en vez de capear en hora_fin_estimada. */
   forzados_con_hora_actual?: boolean;
+  /** Solo presente en la respuesta de completarOferta: cuántos trabajadores
+   *  'por_reconfirmar' que nunca respondieron al cambio de horario/lugar
+   *  quedaron declinados (sin penalizar ranking) al completar la oferta. */
+  auto_declinados_al_completar?: number;
 }
 
 export interface CrearOfertaPayload {
@@ -300,6 +304,8 @@ export interface PaginatedResponse<T> {
 
 export interface LiquidacionTurnoLinea {
   asignacion_id: number;
+  /** Agrupa líneas del mismo turno entre distintos trabajadores — ver liquidacionPorTurno(). */
+  oferta_id: number;
   oferta_titulo: string;
   oferta_fecha: string;
   hora_inicio: string;
