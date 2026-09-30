@@ -106,6 +106,8 @@ export interface Asignacion {
   /** tipo del trabajador dueño de la asignación ('nomina' = turno eventual
    *  pagado como bono, sin contrato civil independiente). */
   trabajador_tipo?: 'nomina' | 'turnos' | 'ambos';
+  /** Última firma digital guardada del trabajador (mismo campo que en Contrato/CuentaCobro) — permite reusarla al marcar egreso en vez de dibujarla de nuevo. */
+  trabajador_firma_guardada?: string | null;
   // Joined from trabajadores (only in gestor detail view)
   trabajador_nombre?: string;
   trabajador_apellido?: string;
@@ -165,6 +167,10 @@ export interface Oferta {
   hora_inicio: string;
   hora_fin_estimada: string | null;
   lugar: string | null;
+  /** Resuelta por geocodificación a partir de latitud/longitud (best-effort, puede tardar unos segundos
+   *  tras crear la oferta o quedar null si no se pudo resolver). Alimenta el filtro por ciudad del
+   *  directorio de empresas — no se muestra en ninguna pantalla todavía. */
+  ciudad: string | null;
   latitud: number | null;
   longitud: number | null;
   /** Sin restricción de ubicación al marcar ingreso/egreso — gana sobre el tipo_geofence del cargo. */
@@ -185,6 +191,9 @@ export interface Oferta {
   /** Solo presente justo después de crear: avisos de capacidad por puesto
    *  (plazas pedidas > trabajadores certificados activos). No bloquea. */
   advertencias?: string[];
+  /** Solo presente junto a `advertencias`: true si además ya está en el tope
+   *  de trabajadores de su plan (invitar más gente rebotaría con 402). */
+  cupo_lleno?: boolean;
 }
 
 export interface CrearOfertaPayload {

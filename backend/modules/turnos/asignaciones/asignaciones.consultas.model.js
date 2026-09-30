@@ -229,7 +229,7 @@ module.exports = {
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
-              t.tipo AS trabajador_tipo,
+              t.tipo AS trabajador_tipo, t.firma_guardada AS trabajador_firma_guardada,
               ${SELECT_GEOFENCE_COLS}
               cal.calificacion, cal.comentario AS calificacion_comentario,
               COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado
@@ -271,7 +271,7 @@ module.exports = {
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
-              t.tipo AS trabajador_tipo,
+              t.tipo AS trabajador_tipo, t.firma_guardada AS trabajador_firma_guardada,
               ${SELECT_GEOFENCE_COLS}
               cal.calificacion, cal.comentario AS calificacion_comentario,
               COALESCE(cd.firmado_trabajador, 0) AS contrato_firmado

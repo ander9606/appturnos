@@ -12,7 +12,8 @@ import type { GeofenceStatus } from '@/lib/geo';
 export function CTAEnProgresoCard({
   elapsedLabel, horaIngresoReal, isLibre,
   distanceM, geoStatus, canMark, permissionDenied, locationUnavailable,
-  ubicacionLibre, onMarcarSalida, isGestor, onCorregir,
+  ubicacionLibre, onMarcarSalida, firmaGuardada, onMarcarSalidaConFirmaGuardada, marcandoSalida,
+  isGestor, onCorregir,
 }: {
   elapsedLabel: string | null;
   horaIngresoReal: string | null;
@@ -24,6 +25,10 @@ export function CTAEnProgresoCard({
   locationUnavailable: boolean;
   ubicacionLibre: { estado: EstadoUbicacionLibre; reintentar: () => void };
   onMarcarSalida: () => void;
+  /** Última firma guardada del trabajador — si existe, se ofrece reusarla en vez de dibujarla de nuevo. */
+  firmaGuardada?: string | null;
+  onMarcarSalidaConFirmaGuardada?: (firma: string) => void;
+  marcandoSalida?: boolean;
   isGestor: boolean;
   onCorregir: () => void;
 }) {
@@ -74,14 +79,32 @@ export function CTAEnProgresoCard({
         </>
       )}
 
-      <Button
-        label="Marcar Salida"
-        variant="primary"
-        size="lg"
-        fullWidth
-        disabled={!canMark}
-        onPress={onMarcarSalida}
-      />
+      {firmaGuardada && onMarcarSalidaConFirmaGuardada ? (
+        <View style={{ gap: 10 }}>
+          <Button
+            label="Marcar Salida"
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={!canMark || marcandoSalida}
+            onPress={() => onMarcarSalidaConFirmaGuardada(firmaGuardada)}
+          />
+          <TouchableOpacity onPress={onMarcarSalida} className="items-center py-1">
+            <Text className="text-xs font-semibold text-muted-foreground">
+              Firmar con una firma nueva
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <Button
+          label="Marcar Salida"
+          variant="primary"
+          size="lg"
+          fullWidth
+          disabled={!canMark}
+          onPress={onMarcarSalida}
+        />
+      )}
       <Text className="text-xs text-center text-muted-foreground">
         Se requiere firma digital para confirmar la salida.
       </Text>
