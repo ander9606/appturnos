@@ -1,6 +1,7 @@
 'use strict';
 
 const PDFDocument = require('pdfkit');
+const { dibujarFirma } = require('./firmaPdf');
 
 /**
  * Genera el PDF de una cuenta de cobro (agregado de turnos de un período) y
@@ -120,8 +121,7 @@ function generarCuentaCobroPdf(cuenta, stream) {
 
   if (cuenta.firmado_trabajador && cuenta.firma_b64) {
     try {
-      const base64 = String(cuenta.firma_b64).replace(/^data:image\/\w+;base64,/, '');
-      doc.image(Buffer.from(base64, 'base64'), { fit: [180, 80] });
+      dibujarFirma(doc, cuenta.firma_b64, { width: 180, height: 80 });
     } catch {
       doc.font('Helvetica-Oblique').fontSize(9).text('(firma digital no legible)');
     }
