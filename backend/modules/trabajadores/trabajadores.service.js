@@ -104,7 +104,25 @@ const TrabajadoresService = {
     }
   },
 
+  /**
+   * Una persona no puede ser gestor y trabajador de la misma empresa a la vez:
+   * si el email ya es de un gestor (admin/jefe/nómina), crear su ficha de
+   * trabajador le permitiría activar una segunda cuenta en la vista de turnos.
+   */
+  async verificarNoEsGestor(empresaId, email) {
+    if (!email) return;
+    const [filas] = await pool.query(
+      `SELECT 1 FROM usuarios
+       WHERE empresa_id = ? AND email = ? AND rol IN (?, ?, ?, ?) LIMIT 1`,
+      [empresaId, email.trim().toLowerCase(), ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA]
+    );
+    if (filas.length) {
+      throw new AppError('Ese email ya pertenece a un gestor de tu empresa; no puede ser también trabajador.', 409);
+    }
+  },
+
   async crear(empresaId, datos) {
+    await this.verificarNoEsGestor(empresaId, datos.email);
     await this.verificarCupoPlan(empresaId);
 
     try {
@@ -120,6 +138,7 @@ const TrabajadoresService = {
 
   async actualizar(empresaId, id, datos) {
     const actual = await this.obtener(empresaId, id); // 404 si no existe / no es de esta empresa
+    if (datos.email && datos.email !== actual.email) await this.verificarNoEsGestor(empresaId, datos.email);
     try {
       await TrabajadoresModel.actualizar(empresaId, id, datos);
     } catch (err) {

@@ -492,6 +492,9 @@ const AuthService = {
 
     const existente = await AuthModel.buscarUsuarioPorEmail(email);
     if (existente) throw new AppError('Ya existe un usuario con ese email', 409);
+    if (await AuthModel.existeTrabajadorConEmail(empresaId, email.trim().toLowerCase())) {
+      throw new AppError('Ese email ya pertenece a un trabajador de tu empresa; no puede ser también gestor.', 409);
+    }
 
     // Contraseña temporal: "Tmp" + 8 hex chars = 11 caracteres
     const passwordTemporal = 'Tmp' + crypto.randomBytes(4).toString('hex');
