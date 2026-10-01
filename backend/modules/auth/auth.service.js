@@ -174,7 +174,7 @@ const AuthService = {
 
     const emailEnUso = await AuthModel.buscarUsuarioPorEmail(email);
     if (emailEnUso) {
-      throw new AppError('El email ya está registrado', 409);
+      throw new AppError('Ese email ya tiene una cuenta. Si te creó un administrador, inicia sesión con la contraseña temporal que te dieron; no te registres de nuevo.', 409);
     }
 
     const rol = ROL_POR_TIPO[trabajador.tipo] || ROLES.TRABAJADOR_TURNOS;
@@ -381,7 +381,7 @@ const AuthService = {
   async registrarLibre({ nombre, apellido, email, telefono, password }) {
     const emailEnUso = await AuthModel.buscarUsuarioPorEmail(email);
     if (emailEnUso) {
-      throw new AppError('El email ya está registrado', 409);
+      throw new AppError('Ese email ya tiene una cuenta. Si te creó un administrador, inicia sesión con la contraseña temporal que te dieron; no te registres de nuevo.', 409);
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
