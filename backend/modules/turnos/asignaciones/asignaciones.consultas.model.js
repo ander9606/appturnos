@@ -315,7 +315,7 @@ module.exports = {
               pm.radio_metros AS punto_radio,
               t.id AS trabajador_id_entity, t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               t.cargo AS trabajador_cargo, t.external_ref AS trabajador_external_ref, t.usuario_id,
-              t.tipo AS trabajador_tipo,
+              t.tipo AS trabajador_tipo, t.cedula AS trabajador_cedula,
               t.telefono AS trabajador_telefono, t.ranking AS trabajador_ranking,
               t.total_calificaciones AS trabajador_total_calificaciones,
               cal.calificacion, cal.comentario AS calificacion_comentario,

@@ -45,6 +45,7 @@ describe('AsignacionesService.marcarEgreso', () => {
     usuario_id: 42,
     trabajador_nombre: 'Ana',
     trabajador_apellido: 'Ruiz',
+    trabajador_cedula: '1234567890',
     estado: 'en_progreso',
     oferta_id: 1,
     hora_ingreso_real: new Date(Date.now() - 5 * 60_000).toISOString(),
@@ -92,10 +93,46 @@ describe('AsignacionesService.marcarEgreso', () => {
   });
 });
 
+describe('AsignacionesService.marcarEgreso — cédula requerida (contrato sin documento = débil legalmente)', () => {
+  const sinCedula = {
+    id: 500, empresa_id: 7, trabajador_id: 99, usuario_id: 42,
+    trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', trabajador_cedula: null,
+    estado: 'en_progreso', oferta_id: 1,
+    hora_ingreso_real: new Date(Date.now() - 5 * 60_000).toISOString(),
+    geofence_info: { tipo: 'libre' },
+  };
+
+  beforeEach(() => {
+    AsignacionesModel.registrarEgreso.mockResolvedValue(undefined);
+    AsignacionesModel.obtenerPorId.mockResolvedValue({ id: 500, estado: 'completado' });
+    ContratosModel.obtenerPorAsignacion.mockResolvedValue(null);
+    ContratosService.generarParaAsignacion.mockResolvedValue(null);
+    TrabajadoresModel.guardarFirma.mockResolvedValue(undefined);
+  });
+
+  test('trabajador_turnos sin cédula: rechaza antes de registrar nada', async () => {
+    AsignacionesModel.obtenerConDetalles.mockResolvedValue({ ...sinCedula, trabajador_tipo: 'turnos' });
+
+    await expect(
+      AsignacionesService.marcarEgreso(7, 500, 42, { latitud: 1, longitud: 1, firma_b64: 'data:...' })
+    ).rejects.toMatchObject({ statusCode: 422 });
+    expect(AsignacionesModel.registrarEgreso).not.toHaveBeenCalled();
+    expect(ContratosService.generarParaAsignacion).not.toHaveBeenCalled();
+  });
+
+  test('trabajador_nomina sin cédula: no aplica — es bono, nunca genera contrato', async () => {
+    AsignacionesModel.obtenerConDetalles.mockResolvedValue({ ...sinCedula, trabajador_tipo: 'nomina' });
+
+    await AsignacionesService.marcarEgreso(7, 500, 42, { latitud: 1, longitud: 1, firma_b64: 'data:...' });
+
+    expect(AsignacionesModel.registrarEgreso).toHaveBeenCalled();
+  });
+});
+
 describe('AsignacionesService.marcarEgreso — geofence (mismo criterio que marcarIngreso)', () => {
   const base = {
     id: 500, empresa_id: 7, trabajador_id: 99, usuario_id: 42,
-    trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz',
+    trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', trabajador_cedula: '1234567890',
     estado: 'en_progreso', oferta_id: 1,
     hora_ingreso_real: new Date(Date.now() - 5 * 60_000).toISOString(),
   };

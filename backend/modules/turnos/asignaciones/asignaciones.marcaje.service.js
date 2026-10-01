@@ -168,6 +168,15 @@ module.exports = {
       throw new AppError('Debes marcar el ingreso antes de marcar la salida', 409);
     }
 
+    // Un contrato de prestación de servicios sin cédula es legalmente débil
+    // (sin documento de identidad no hay con quién hacerlo cumplir) — antes
+    // se generaba igual con el campo en blanco. No aplica a trabajador_tipo
+    // 'nomina': ese turno eventual se paga como bono sobre su salario ya
+    // existente, nunca genera contrato (ver más abajo).
+    if (asignacion.trabajador_tipo !== 'nomina' && !asignacion.trabajador_cedula) {
+      throw new AppError('Debes completar tu número de cédula en tu perfil antes de poder marcar la salida.', 422);
+    }
+
     // Validación de geofence según tipo_geofence del cargo — mismo criterio que
     // marcarIngreso más arriba, ahora también en la salida (antes solo pedía firma).
     // 'libre' no exige ubicación (ver marcarIngreso).
