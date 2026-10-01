@@ -52,3 +52,12 @@ test('empresa suspendida → 403 al entrar con Google (vínculo ya existente)', 
   await expect(OAuthService.loginConProvider('google', 'tok')).rejects.toMatchObject({ statusCode: 403 });
   expect(AuthModel.guardarRefreshToken).not.toHaveBeenCalled();
 });
+
+test('trabajador_turnos con empresa de origen suspendida SÍ puede entrar (es multi-empresa)', async () => {
+  AuthModel.buscarUsuarioPorEmail.mockResolvedValue({
+    id: 8, empresa_id: 1, empresa_activo: 0, rol: 'trabajador_turnos', activo: 1, nombre: 'Ana', email: 'jefe@x.com',
+  });
+  const r = await OAuthService.loginConProvider('google', 'tok');
+  expect(r.tipo).toBe('vinculacion');
+  expect(r.usuario.rol).toBe('trabajador_turnos');
+});
