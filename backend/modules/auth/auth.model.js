@@ -29,10 +29,13 @@ const AuthModel = {
   /** Perfil público del usuario por id (sin password_hash). */
   async buscarUsuarioPorId(id) {
     const [filas] = await pool.query(
-      `SELECT id, empresa_id, nombre, apellido, foto_perfil, email, telefono, rol, activo, created_at,
-              terminos_aceptados_at,
-              (oauth_only = 0) AS has_password
-       FROM usuarios WHERE id = ? LIMIT 1`,
+      `SELECT u.id, u.empresa_id, u.nombre, u.apellido, u.foto_perfil, u.email, u.telefono, u.rol, u.activo, u.created_at,
+              u.terminos_aceptados_at,
+              (u.oauth_only = 0) AS has_password,
+              e.activo AS empresa_activo
+       FROM usuarios u
+       LEFT JOIN empresas e ON e.id = u.empresa_id
+       WHERE u.id = ? LIMIT 1`,
       [id]
     );
     return filas[0] || null;

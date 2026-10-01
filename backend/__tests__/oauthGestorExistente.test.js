@@ -35,3 +35,20 @@ test('email de un gestor existente → vincula y entra como gestor, sin crear tr
   expect(r.usuario.rol).toBe('jefe_turnos');
   expect(AuthModel.registrarTrabajadorLibre).not.toHaveBeenCalled();
 });
+
+test('empresa suspendida → 403 al entrar con Google (email existente)', async () => {
+  AuthModel.buscarUsuarioPorEmail.mockResolvedValue({
+    id: 5, empresa_id: 1, empresa_activo: 0, rol: 'jefe_turnos', activo: 1, email: 'jefe@x.com',
+  });
+  await expect(OAuthService.loginConProvider('google', 'tok')).rejects.toMatchObject({ statusCode: 403 });
+  expect(OAuthModel.crearLink).not.toHaveBeenCalled();
+});
+
+test('empresa suspendida → 403 al entrar con Google (vínculo ya existente)', async () => {
+  OAuthModel.buscarLinkPorProvider.mockResolvedValue({ id: 9, usuario_id: 5 });
+  AuthModel.buscarUsuarioPorId.mockResolvedValue({
+    id: 5, empresa_id: 1, empresa_activo: 0, rol: 'jefe_turnos', activo: 1,
+  });
+  await expect(OAuthService.loginConProvider('google', 'tok')).rejects.toMatchObject({ statusCode: 403 });
+  expect(AuthModel.guardarRefreshToken).not.toHaveBeenCalled();
+});

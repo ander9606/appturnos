@@ -96,6 +96,9 @@ const OAuthService = {
       const usuario = await AuthModel.buscarUsuarioPorId(linkExistente.usuario_id);
       if (!usuario) throw new AppError('Cuenta vinculada no encontrada', 404);
       if (!usuario.activo) throw new AppError('Usuario inactivo', 403);
+      if (usuario.empresa_id && usuario.empresa_activo === 0) {
+        throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
+      }
 
       await OAuthModel.actualizarUltimaSesion(linkExistente.id);
       const tokens = await emitirTokens(usuario);
@@ -113,6 +116,9 @@ const OAuthService = {
           );
         }
         if (!usuarioExistente.activo) throw new AppError('Usuario inactivo', 403);
+        if (usuarioExistente.empresa_id && usuarioExistente.empresa_activo === 0) {
+          throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
+        }
 
         await OAuthModel.crearLink({
           usuarioId: usuarioExistente.id,
