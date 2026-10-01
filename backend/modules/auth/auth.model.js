@@ -287,6 +287,15 @@ const AuthModel = {
     return res.insertId;
   },
 
+  /** ¿Hay una ficha de trabajador de esta empresa con ese email? (un gestor no puede ser también trabajador) */
+  async existeTrabajadorConEmail(empresaId, email) {
+    const [filas] = await pool.query(
+      'SELECT 1 FROM trabajadores WHERE empresa_id = ? AND email = ? LIMIT 1',
+      [empresaId, email]
+    );
+    return filas.length > 0;
+  },
+
   /** Lista todos los gestores (admin_empresa, jefe_turnos, jefe_nomina, nomina) de la empresa. */
   async listarGestores(empresaId) {
     const [filas] = await pool.query(
