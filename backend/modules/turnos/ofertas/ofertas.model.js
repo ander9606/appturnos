@@ -4,6 +4,7 @@ const { pool } = require('../../../config/database');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { horaAMinutos } = require('../../../utils/laboralUtils');
 const { DIAS_GRACIA_ASIGNACIONES_COLGADAS } = require('../../../config/constants');
+const { DELAY_RANKING_SQL_CASE } = require('../../../utils/rankingUtils');
 
 const MIN_POR_DIA = 24 * 60;
 
@@ -241,14 +242,7 @@ const OfertasModel = {
       ))
       OR
       (o.visibilidad = 'abierta'
-        AND TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) >=
-          CASE
-            WHEN t.ranking IS NULL THEN 15
-            WHEN t.ranking >= 4.5  THEN 0
-            WHEN t.ranking >= 3.5  THEN 15
-            WHEN t.ranking >= 2.5  THEN 30
-            ELSE                        60
-          END
+        AND TIMESTAMPDIFF(MINUTE, o.created_at, NOW()) >= ${DELAY_RANKING_SQL_CASE}
         AND EXISTS (
           SELECT 1
           FROM oferta_puestos p
@@ -537,6 +531,34 @@ const OfertasModel = {
     } finally {
       conn.release();
     }
+  },
+
+  /**
+   * Ofertas 'abierta'/'publicada' de visibilidad abierta (no 'dirigida' — esas
+   * ya notifican completo e inmediato, sin delay de ranking), creadas en los
+   * últimos `minutosAtras` (default 180 — delay máximo de ranking de 60 min
+   * más margen para un par de corridas del worker, por si una notificación
+   * falla en el intento más cercano al borde de la ventana) y con cupo libre
+   * en algún puesto. Candidatas al barrido periódico que alcanza a notificar
+   * a quien su ranking retrasó al crear/publicar (ver
+   * OfertasService.notificarPoolPendiente, turnos.worker.js). NOW()/DATE_SUB
+   * en vez de ahoraColombiaSQL(): hay que comparar en el mismo huso que
+   * generó created_at (CURRENT_TIMESTAMP del propio MySQL), no en hora Colombia.
+   */
+  async listarAbiertasRecientesParaNotificar(minutosAtras = 180) {
+    const [filas] = await pool.query(
+      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}
+       FROM ofertas_turno
+       WHERE estado IN ('abierta', 'publicada')
+         AND visibilidad = 'abierta'
+         AND created_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
+         AND EXISTS (
+           SELECT 1 FROM oferta_puestos p
+           WHERE p.oferta_id = ofertas_turno.id AND p.plazas_cubiertas < p.plazas
+         )`,
+      [minutosAtras]
+    );
+    return filas.map(parsearPuestos);
   },
 
   /**

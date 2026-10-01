@@ -15,6 +15,7 @@ const {
   ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS, HORAS_CORTE_EDICION_OFERTA,
 } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+const { DELAY_RANKING_SQL_CASE } = require('../../../utils/rankingUtils');
 const logger = require('../../../utils/logger');
 
 /** Valida que cada puesto del array tiene un cargo válido para la empresa. */
@@ -139,27 +140,62 @@ function rolesParaAviso(paraQuien) {
   return [ROLES.TRABAJADOR_NOMINA, ROLES.TRABAJADOR_TURNOS]; // 'ambos'
 }
 
-/** Notifica a trabajadores con los cargos solicitados por la oferta (best-effort). */
+/**
+ * Candidatos a notificar sobre un puesto de una oferta abierta: certificados
+ * para el cargo, con vínculo activo, que YA cumplieron su delay de
+ * visibilidad por ranking (mismo CASE que OfertasModel.listarMultiEmpresa /
+ * delayPorRanking en rankingUtils.js — un trabajador de ranking bajo no debe
+ * enterarse de la oferta antes de poder postularse a ella) y que todavía no
+ * recibieron este aviso. El filtro NOT EXISTS es lo que permite llamar esta
+ * misma función dos veces para la misma oferta sin duplicar notificaciones:
+ * una vez al crear/publicar (solo alcanza a ranking ≥4.5, delay 0) y otra vez
+ * en el barrido periódico de turnos.worker.js (alcanza al resto cuando a
+ * cada quien le toca).
+ */
+async function listarPendientesDeNotificar(empresaId, oferta, puesto, roles) {
+  const [filas] = await pool.query(
+    `SELECT DISTINCT u.id AS usuario_id
+     FROM trabajador_cargos tc
+     JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
+     JOIN trabajadores t        ON t.id  = te.trabajador_id
+     JOIN usuarios u            ON u.id  = t.usuario_id
+     WHERE te.empresa_id = ?
+       AND tc.cargo_id   = ?
+       AND te.estado     = 'activo'
+       AND u.activo      = 1
+       AND u.rol IN (?)
+       AND (u.rol != ? OR t.acepta_extras = 1)
+       AND TIMESTAMPDIFF(MINUTE, ?, NOW()) >= ${DELAY_RANKING_SQL_CASE}
+       AND NOT EXISTS (
+         SELECT 1 FROM notificaciones n
+         WHERE n.usuario_id = u.id AND n.tipo = 'oferta.nueva'
+           AND CAST(n.data->>'$.oferta_id' AS UNSIGNED) = ?
+           AND CAST(n.data->>'$.puesto_id' AS UNSIGNED) = ?
+       )`,
+    [empresaId, puesto.cargo_id, roles, ROLES.TRABAJADOR_NOMINA, oferta.created_at, oferta.id, puesto.id]
+  );
+  return filas;
+}
+
+/**
+ * Notifica a trabajadores con los cargos solicitados por la oferta
+ * (best-effort) — solo a quienes ya les toca verla según su ranking. Se
+ * reusa tal cual desde turnos.worker.js para alcanzar después a quienes
+ * todavía no cumplían su delay en este primer llamado.
+ */
 async function notificarPoolPorPuestos(empresaId, oferta) {
   if (oferta.visibilidad === 'dirigida') {
     return notificarDestinatariosDirectos(empresaId, oferta);
   }
   const roles = rolesParaAviso(oferta.para_quien);
   for (const puesto of oferta.puestos || []) {
-    const [destinatarios] = await pool.query(
-      `SELECT DISTINCT u.id AS usuario_id
-       FROM trabajador_cargos tc
-       JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
-       JOIN trabajadores t        ON t.id  = te.trabajador_id
-       JOIN usuarios u            ON u.id  = t.usuario_id
-       WHERE te.empresa_id = ?
-         AND tc.cargo_id   = ?
-         AND te.estado     = 'activo'
-         AND u.activo      = 1
-         AND u.rol IN (?)
-         AND (u.rol != ? OR t.acepta_extras = 1)`,
-      [empresaId, puesto.cargo_id, roles, ROLES.TRABAJADOR_NOMINA]
-    );
+    // Si este puesto en concreto ya se llenó, no tiene caso avisarle a nadie
+    // más sobre él — en el llamado inmediato (recién creado) nunca pasa, pero
+    // en el barrido periódico (turnos.worker.js) una oferta con varios puestos
+    // puede tener uno lleno y otro no; sin este chequeo se seguía avisando
+    // del puesto lleno a quien recién le tocaba por ranking.
+    if (puesto.plazas_cubiertas >= puesto.plazas) continue;
+    const destinatarios = await listarPendientesDeNotificar(empresaId, oferta, puesto, roles);
     if (destinatarios.length > 0) {
       await NotificacionesService.notificarVarios(
         destinatarios.map((d) => d.usuario_id),
@@ -528,5 +564,17 @@ module.exports = {
     const oferta = await OfertasModel.obtenerPorId(empresaId, nuevaId);
     await notificarCoGestores(empresaId, oferta, creadoPor);
     return oferta;
+  },
+
+  /**
+   * Reintenta el aviso de "nueva oferta" al pool — pensado para el barrido
+   * periódico de turnos.worker.js, que llama esto para cada oferta abierta
+   * reciente. notificarPoolPorPuestos ya filtra por delay de ranking cumplido
+   * y por quién no fue notificado todavía, así que es seguro llamarlo muchas
+   * veces para la misma oferta: cada corrida solo alcanza a quien a quien
+   * justo le tocó verla desde el último intento.
+   */
+  async notificarPoolPendiente(empresaId, oferta) {
+    await notificarPoolPorPuestos(empresaId, oferta);
   },
 };

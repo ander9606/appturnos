@@ -16,6 +16,22 @@ function delayPorRanking(ranking) {
 }
 
 /**
+ * Mismos tiers que delayPorRanking() pero como fragmento SQL — para queries
+ * que filtran por ranking directo en la base (listarMultiEmpresa,
+ * notificarPoolPorPuestos) en vez de traer filas y filtrar en JS. Fuente
+ * única: si cambian los tiers, solo hay que tocar un lugar en vez de que las
+ * dos implementaciones (JS y SQL) se desincronicen en silencio. Asume que la
+ * tabla trabajadores está aliaseada como `t` en el query que lo use.
+ */
+const DELAY_RANKING_SQL_CASE = `CASE
+             WHEN t.ranking IS NULL THEN 15
+             WHEN t.ranking >= 4.5  THEN 0
+             WHEN t.ranking >= 3.5  THEN 15
+             WHEN t.ranking >= 2.5  THEN 30
+             ELSE                        60
+           END`;
+
+/**
  * Nivel cualitativo del ranking para mostrar al trabajador.
  * @returns {'nuevo'|'critico'|'bajo'|'medio'|'alto'|'elite'}
  */
@@ -62,4 +78,4 @@ async function recalcularRankingStandalone(empresaId, trabajadorId) {
   }
 }
 
-module.exports = { delayPorRanking, nivelRanking, recalcularRanking, recalcularRankingStandalone };
+module.exports = { delayPorRanking, DELAY_RANKING_SQL_CASE, nivelRanking, recalcularRanking, recalcularRankingStandalone };

@@ -1,6 +1,7 @@
 'use strict';
 
 const OfertasModel = require('./ofertas/ofertas.model');
+const OfertasService = require('./ofertas/ofertas.service');
 const AsignacionesService = require('./asignaciones/asignaciones.service');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const TrabajadoresService = require('../trabajadores/trabajadores.service');
@@ -61,6 +62,24 @@ async function verificarPersonalIncompleto() {
   }
 }
 
+/**
+ * El pool de una oferta 'abierta' se notifica por tandas: al crear/publicar
+ * solo alcanza a ranking ≥4.5 (delay 0 min); el resto se iba a enterar antes
+ * de que les tocara según su ranking, así que notificarPoolPorPuestos ya
+ * filtra por delay cumplido + no-notificado-todavía. Esta corrida periódica
+ * es la que efectivamente alcanza a cada quien cuando le toca.
+ */
+async function notificarPoolRetrasado() {
+  const ofertas = await OfertasModel.listarAbiertasRecientesParaNotificar();
+  for (const oferta of ofertas) {
+    try {
+      await OfertasService.notificarPoolPendiente(oferta.empresa_id, oferta);
+    } catch (err) {
+      logger.error(`[turnos-worker] no se pudo notificar al pool pendiente de la oferta ${oferta.id}:`, err.message);
+    }
+  }
+}
+
 function resolverYCerrarVencidas() {
   // Resolver primero: una vez que las asignaciones colgadas quedan en
   // completado/no_presentado, cerrarOfertasVencidas() ya puede cerrar la
@@ -74,11 +93,13 @@ function iniciarWorker() {
   // setInterval no dispara de inmediato — sin esto, ofertas vencidas quedarían
   // mostrando "abierta" hasta 30 min después de cada reinicio/deploy.
   resolverYCerrarVencidas();
+  notificarPoolRetrasado().catch((err) => logger.error('[turnos-worker]', err.message));
 
   const timer = setInterval(() => {
     verificarPersonalIncompleto().catch((err) =>
       logger.error('[turnos-worker]', err.message)
     );
+    notificarPoolRetrasado().catch((err) => logger.error('[turnos-worker]', err.message));
     resolverYCerrarVencidas();
   }, INTERVALO_MS);
   timer.unref();
@@ -86,4 +107,4 @@ function iniciarWorker() {
   return timer;
 }
 
-module.exports = { iniciarWorker, resolverAsignacionesVencidas, verificarPersonalIncompleto };
+module.exports = { iniciarWorker, resolverAsignacionesVencidas, verificarPersonalIncompleto, notificarPoolRetrasado };
