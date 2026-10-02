@@ -10,6 +10,7 @@ const AppError = require('../../utils/AppError');
 const { ROLES, ROL_POR_TIPO, LOGIN } = require('../../config/constants');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const logger = require('../../utils/logger');
+const { aplicarEmpresaSuspendida } = require('../../utils/empresaSuspendida');
 
 const BCRYPT_ROUNDS = 11;
 
@@ -67,9 +68,7 @@ const AuthService = {
     }
 
     if (!usuario.activo) throw new AppError('Usuario inactivo', 403);
-    if (usuario.empresa_id && usuario.empresa_activo === 0) {
-      throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
-    }
+    const sesion = aplicarEmpresaSuspendida(usuario);
 
     const passwordOk = await bcrypt.compare(password, usuario.password_hash);
     if (!passwordOk) {
@@ -81,8 +80,8 @@ const AuthService = {
     }
 
     await AuthModel.limpiarIntentos(usuario.id);
-    const tokens = await emitirTokens(usuario);
-    return { ...tokens, usuario: perfilPublico(usuario) };
+    const tokens = await emitirTokens(sesion);
+    return { ...tokens, usuario: perfilPublico(sesion) };
   },
 
   /**
@@ -101,14 +100,12 @@ const AuthService = {
     }
     if (fila.expirado) throw new AppError('Refresh token expirado', 401);
     if (!fila.usuario_activo) throw new AppError('Usuario inactivo', 403);
-    if (fila.empresa_id && fila.empresa_activo === 0) {
-      throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
-    }
+    const sesion = aplicarEmpresaSuspendida(fila);
 
     await AuthModel.revocarRefreshToken(refreshToken);
     const tokens = await emitirTokens({
       id: fila.usuario_id,
-      empresa_id: fila.empresa_id,
+      empresa_id: sesion.empresa_id,
       rol: fila.rol,
       nombre: fila.nombre,
     });

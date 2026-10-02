@@ -61,3 +61,11 @@ test('trabajador_turnos con empresa de origen suspendida SÍ puede entrar (es mu
   expect(r.tipo).toBe('vinculacion');
   expect(r.usuario.rol).toBe('trabajador_turnos');
 });
+
+test('trabajador_turnos con empresa de origen suspendida entra SIN empresa fija en el token', async () => {
+  AuthModel.buscarUsuarioPorEmail.mockResolvedValue({
+    id: 8, empresa_id: 1, empresa_activo: 0, rol: 'trabajador_turnos', activo: 1, nombre: 'Ana', email: 'jefe@x.com',
+  });
+  const r = await OAuthService.loginConProvider('google', 'tok');
+  expect(r.usuario.empresa_id).toBeNull();
+});
