@@ -40,11 +40,13 @@ export default function ActivarCuentaScreen() {
   const activarCuenta = useAuthStore((s) => s.activarCuenta);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [invitacionInfo, setInvitacionInfo] = React.useState<{ empresa_nombre: string; tipo: string } | null>(null);
+  const [cuentaExistente, setCuentaExistente] = React.useState(false);
 
   const checkCedula = async (cedula: string) => {
     if (cedula.length < 4) return;
     try {
       const res = await authApi.verificarCedula(cedula);
+      setCuentaExistente(!!res.tiene_cuenta);
       if (res.existe && res.invitacion) {
         setInvitacionInfo({ empresa_nombre: res.invitacion.empresa_nombre, tipo: res.tipo ?? '' });
       } else {
@@ -52,6 +54,7 @@ export default function ActivarCuentaScreen() {
       }
     } catch {
       setInvitacionInfo(null);
+      setCuentaExistente(false);
     }
   };
 
@@ -134,7 +137,7 @@ export default function ActivarCuentaScreen() {
                     onBlur={() => { onBlur(); checkCedula(value); }}
                     error={errors.cedula?.message}
                   />
-                  {invitacionInfo && (
+                  {invitacionInfo && !cuentaExistente && (
                     <View style={styles.invitacionBanner}>
                       <Ionicons name="business-outline" size={16} color="#0EA5E9" />
                       <Text style={styles.invitacionText}>
@@ -145,75 +148,102 @@ export default function ActivarCuentaScreen() {
                       </Text>
                     </View>
                   )}
+                  {cuentaExistente && (
+                    <View style={styles.invitacionBanner}>
+                      <Ionicons name="information-circle-outline" size={16} color="#0EA5E9" />
+                      <Text style={styles.invitacionText}>
+                        Esta cédula ya tiene una cuenta
+                        {invitacionInfo ? (
+                          <>
+                            {' '}con una invitación de <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
+                          </>
+                        ) : null}
+                        . Inicia sesión con tu correo y contraseña para continuar.
+                      </Text>
+                    </View>
+                  )}
                 </>
               )}
             />
 
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label={t('auth.activar.email')}
-                  placeholder={t('auth.activar.emailPlaceholder')}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  returnKeyType="next"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.email?.message}
+            {!cuentaExistente && (
+              <>
+                <Controller
+                  control={control}
+                  name="email"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      label={t('auth.activar.email')}
+                      placeholder={t('auth.activar.emailPlaceholder')}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete="email"
+                      returnKeyType="next"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      error={errors.email?.message}
+                    />
+                  )}
                 />
-              )}
-            />
 
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label={t('auth.activar.password')}
-                  placeholder={t('auth.activar.passwordPlaceholder')}
-                  isPassword
-                  hint="Mínimo 8 caracteres"
-                  returnKeyType="next"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.password?.message}
+                <Controller
+                  control={control}
+                  name="password"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      label={t('auth.activar.password')}
+                      placeholder={t('auth.activar.passwordPlaceholder')}
+                      isPassword
+                      hint="Mínimo 8 caracteres"
+                      returnKeyType="next"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      error={errors.password?.message}
+                    />
+                  )}
                 />
-              )}
-            />
 
-            <Controller
-              control={control}
-              name="confirmPassword"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label={t('auth.activar.confirmPassword')}
-                  placeholder={t('auth.activar.confirmPlaceholder')}
-                  isPassword
-                  returnKeyType="done"
-                  onSubmitEditing={handleSubmit(onSubmit)}
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.confirmPassword?.message}
+                <Controller
+                  control={control}
+                  name="confirmPassword"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <Input
+                      label={t('auth.activar.confirmPassword')}
+                      placeholder={t('auth.activar.confirmPlaceholder')}
+                      isPassword
+                      returnKeyType="done"
+                      onSubmitEditing={handleSubmit(onSubmit)}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      error={errors.confirmPassword?.message}
+                    />
+                  )}
                 />
-              )}
-            />
+              </>
+            )}
           </View>
 
           <View style={styles.submitWrap}>
-            <Button
-              label={isSubmitting ? t('auth.activar.submitting') : t('auth.activar.submit')}
-              onPress={handleSubmit(onSubmit)}
-              loading={isSubmitting}
-              fullWidth
-              size="lg"
-            />
+            {cuentaExistente ? (
+              <Button
+                label={t('auth.activar.loginLink')}
+                onPress={() => router.push('/(auth)/login')}
+                fullWidth
+                size="lg"
+              />
+            ) : (
+              <Button
+                label={isSubmitting ? t('auth.activar.submitting') : t('auth.activar.submit')}
+                onPress={handleSubmit(onSubmit)}
+                loading={isSubmitting}
+                fullWidth
+                size="lg"
+              />
+            )}
           </View>
 
           <View style={styles.footer}>
