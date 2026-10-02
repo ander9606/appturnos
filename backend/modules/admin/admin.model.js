@@ -2,6 +2,12 @@
 
 const { pool } = require('../../config/database');
 const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
+const { ROLES } = require('../../config/constants');
+
+// "Usuarios gestores" = quien administra una empresa, no quien trabaja para
+// ella — trabajador_turnos/trabajador_nomina ya se cuentan aparte en la
+// tarjeta "Trabajadores activos".
+const ROLES_GESTOR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
 
 // Monto real cobrado (COP) de un evento Wompi — cada plan tiene su precio, así
 // que los ingresos se suman desde el pago y no como meses × tarifa fija.
@@ -281,7 +287,8 @@ const AdminModel = {
     );
 
     const [[usuarios]] = await pool.query(
-      `SELECT COUNT(*) AS total_usuarios FROM usuarios WHERE rol != 'super_admin'`
+      `SELECT COUNT(*) AS total_usuarios FROM usuarios WHERE rol IN (?)`,
+      [ROLES_GESTOR]
     );
 
     const [[trabajadores]] = await pool.query(
