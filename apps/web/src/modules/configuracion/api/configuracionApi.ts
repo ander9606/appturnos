@@ -40,4 +40,5 @@ export const configuracionApi = {
     api.put<{ data: Gestor }>(`/auth/gestores/${id}`, data).then(r => r.data),
   toggleGestorActivo: (id: number, activo: boolean) =>
     api.patch(`/auth/gestores/${id}/activo`, { activo }).then(r => r.data),
+  deleteGestor: (id: number) => api.delete(`/auth/gestores/${id}`).then(r => r.data),
 };

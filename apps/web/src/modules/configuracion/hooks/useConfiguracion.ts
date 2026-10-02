@@ -120,3 +120,11 @@ export function useToggleGestor() {
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }
+export function useDeleteGestor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: configuracionApi.deleteGestor,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['config', 'gestores'] }); toast.success('Gestor eliminado'); },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}

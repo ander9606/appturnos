@@ -311,7 +311,21 @@ const AuthModel = {
     return filas;
   },
 
-  /** Edita solo los campos presentes (undefined = no tocar) de un gestor no-admin. */
+  /** Anonimiza un gestor (no borra la fila) — mismo criterio que eliminarCuenta. */
+  async anonimizarGestor(empresaId, gestorId, passwordHashInutil) {
+    const [res] = await pool.query(
+      `UPDATE usuarios
+       SET nombre = 'Usuario', apellido = 'eliminado',
+           email = CONCAT('eliminado_', id, '@zaturno.app'),
+           telefono = NULL, foto_perfil = NULL,
+           password_hash = ?, activo = 0
+       WHERE id = ? AND empresa_id = ? AND rol IN ('admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina')`,
+      [passwordHashInutil, gestorId, empresaId]
+    );
+    return res.affectedRows > 0;
+  },
+
+  /** Edita solo los campos presentes (undefined = no tocar) de un gestor. */
   async actualizarGestor(empresaId, gestorId, cambios) {
     const campos = [];
     const valores = [];
@@ -324,7 +338,7 @@ const AuthModel = {
     if (campos.length === 0) return true;
     const [res] = await pool.query(
       `UPDATE usuarios SET ${campos.join(', ')}
-       WHERE id = ? AND empresa_id = ? AND rol IN ('jefe_turnos', 'jefe_nomina', 'nomina')`,
+       WHERE id = ? AND empresa_id = ? AND rol IN ('admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina')`,
       [...valores, gestorId, empresaId]
     );
     return res.affectedRows > 0;

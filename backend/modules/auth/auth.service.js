@@ -478,18 +478,47 @@ const AuthService = {
   },
 
   /**
-   * Edita nombre/apellido/email/rol de un gestor ya creado. admin_empresa no
-   * es editable aquí (es único por empresa y edita su propio perfil vía /me);
-   * intentarlo sobre esa fila devuelve 404 igual que un id inexistente.
+   * Elimina un gestor — igual criterio que la auto-eliminación de cuenta
+   * (eliminarCuenta): nunca se borra la fila porque turnos/novedades/
+   * compensatorios pueden referenciar su id como quien los creó o aprobó;
+   * se anonimiza (nombre/email/foto/teléfono) y se desactiva en su lugar.
+   * Si es admin_empresa, no puede ser el único administrador activo.
+   */
+  async eliminarGestor(empresaId, gestorId) {
+    const ROLES_PERMITIDOS = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
+    const rolActual = await AuthModel.obtenerRolGestor(empresaId, gestorId);
+    if (!rolActual || !ROLES_PERMITIDOS.includes(rolActual)) {
+      throw new AppError('Gestor no encontrado', 404);
+    }
+    if (rolActual === ROLES.ADMIN_EMPRESA) {
+      const admins = await AuthModel.contarAdminsActivos(empresaId);
+      if (admins <= 1) {
+        throw new AppError('No puedes eliminar al único administrador de la empresa', 409);
+      }
+    }
+    const passwordHashInutil = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
+    await AuthModel.anonimizarGestor(empresaId, gestorId, passwordHashInutil);
+  },
+
+  /**
+   * Edita nombre/apellido/email/rol de un gestor ya creado, incluido admin_empresa
+   * (una empresa puede tener varios, p.ej. socios). Quitarle el rol de admin al
+   * único administrador activo está bloqueado, igual que desactivarlo o eliminarlo.
    */
   async actualizarGestor(empresaId, gestorId, { nombre, apellido, email, rol }) {
-    const ROLES_PERMITIDOS = [ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
+    const ROLES_PERMITIDOS = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
     const rolActual = await AuthModel.obtenerRolGestor(empresaId, gestorId);
     if (!rolActual || !ROLES_PERMITIDOS.includes(rolActual)) {
       throw new AppError('Gestor no encontrado', 404);
     }
     if (rol !== undefined && !ROLES_PERMITIDOS.includes(rol)) {
       throw new AppError(`Rol inválido. Usa: ${ROLES_PERMITIDOS.join(', ')}`, 400);
+    }
+    if (rolActual === ROLES.ADMIN_EMPRESA && rol !== undefined && rol !== ROLES.ADMIN_EMPRESA) {
+      const admins = await AuthModel.contarAdminsActivos(empresaId);
+      if (admins <= 1) {
+        throw new AppError('No puedes quitarle el rol de administrador al único administrador de la empresa', 409);
+      }
     }
 
     let emailNuevo;
@@ -513,11 +542,12 @@ const AuthService = {
   },
 
   /**
-   * Crea un usuario gestor (jefe_turnos, jefe_nomina, nomina) para la empresa del admin.
+   * Crea un usuario gestor para la empresa del admin — incluye admin_empresa
+   * (una empresa puede tener varios, p.ej. socios/co-dueños).
    * Genera una contraseña temporal que se devuelve una sola vez.
    */
   async crearGestor(empresaId, { nombre, apellido, email, rol }) {
-    const ROLES_PERMITIDOS = [ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
+    const ROLES_PERMITIDOS = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
     if (!ROLES_PERMITIDOS.includes(rol)) {
       throw new AppError(`Rol inválido. Usa: ${ROLES_PERMITIDOS.join(', ')}`, 400);
     }

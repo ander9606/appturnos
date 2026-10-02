@@ -103,6 +103,12 @@ async function actualizarGestor(req, res) {
   res.json({ success: true, data, message: 'Gestor actualizado' });
 }
 
+async function eliminarGestor(req, res) {
+  const gestorId = Number(req.params.id);
+  await AuthService.eliminarGestor(req.empresa_id, gestorId);
+  res.json({ success: true, data: null, message: 'Gestor eliminado' });
+}
+
 async function setActivoGestor(req, res) {
   const gestorId = Number(req.params.id);
   const { activo } = req.body;
@@ -137,4 +143,4 @@ async function resetPassword(req, res) {
 
 module.exports = { login, refresh, logout, me, verificarCedula, activarCuenta, registrar,
   registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, eliminarCuenta, crearGestor,
-  listarGestores, actualizarGestor, setActivoGestor, enviarOtp, verificarOtp, aceptarTerminos, resetPassword };
+  listarGestores, actualizarGestor, eliminarGestor, setActivoGestor, enviarOtp, verificarOtp, aceptarTerminos, resetPassword };

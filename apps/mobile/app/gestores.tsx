@@ -1,6 +1,6 @@
 /**
- * Gestores — lista de gestores (jefe_turnos, jefe_nomina, nomina) de la empresa.
- * Permite al admin_empresa activar/desactivar usuarios gestores.
+ * Gestores — lista de gestores (admin_empresa, jefe_turnos, jefe_nomina, nomina)
+ * de la empresa. Permite editar, activar/desactivar y eliminar usuarios gestores.
  */
 import React from 'react';
 import {
@@ -53,15 +53,21 @@ function useSetActivoGestor() {
   });
 }
 
+function useEliminarGestor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => authApi.eliminarGestor(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['gestores'] }),
+  });
+}
+
 // ── GestorCard ────────────────────────────────────────────────────────────
 
 function GestorCard({ gestor }: { gestor: Gestor }) {
   const router = useRouter();
   const toggleMutation = useSetActivoGestor();
+  const eliminarMutation = useEliminarGestor();
   const rolColor = ROL_COLORS[gestor.rol] ?? '#64748B';
-  // admin_empresa no es editable por este flujo (es único por empresa y edita
-  // su propio perfil desde Perfil) — ver AuthService.actualizarGestor.
-  const editable = gestor.rol !== 'admin_empresa';
 
   const handleToggle = async () => {
     const accion = gestor.activo ? 'desactivar' : 'activar';
@@ -77,6 +83,19 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
       { id: gestor.id, activo: !gestor.activo },
       { onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el estado.')) }
     );
+  };
+
+  const handleEliminar = async () => {
+    const ok = await confirm({
+      title: '¿Eliminar gestor?',
+      message: `${gestor.nombre}${gestor.apellido ? ` ${gestor.apellido}` : ''} pierde el acceso y sus datos personales se anonimizan — su historial de turnos/nómina ya registrado se conserva. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+    eliminarMutation.mutate(gestor.id, {
+      onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo eliminar el gestor.')),
+    });
   };
 
   return (
@@ -117,18 +136,26 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
             </Text>
           </View>
           <View className="flex-row gap-2">
-            {editable && (
+            <Pressable
+              onPress={() => router.push({
+                pathname: '/editar-gestor/[id]',
+                params: {
+                  id: String(gestor.id), nombre: gestor.nombre,
+                  apellido: gestor.apellido ?? '', email: gestor.email, rol: gestor.rol,
+                },
+              })}
+              className="px-2.5 py-1.5 rounded-lg border border-border active:opacity-60"
+            >
+              <Ionicons name="pencil-outline" size={14} color="#64748B" />
+            </Pressable>
+            {eliminarMutation.isPending ? (
+              <ActivityIndicator size="small" color="#64748B" />
+            ) : (
               <Pressable
-                onPress={() => router.push({
-                  pathname: '/editar-gestor/[id]',
-                  params: {
-                    id: String(gestor.id), nombre: gestor.nombre,
-                    apellido: gestor.apellido ?? '', email: gestor.email, rol: gestor.rol,
-                  },
-                })}
+                onPress={handleEliminar}
                 className="px-2.5 py-1.5 rounded-lg border border-border active:opacity-60"
               >
-                <Ionicons name="pencil-outline" size={14} color="#64748B" />
+                <Ionicons name="trash-outline" size={14} color="#EF4444" />
               </Pressable>
             )}
             {toggleMutation.isPending ? (

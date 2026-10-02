@@ -6,7 +6,7 @@ import {
   useEmpresa, useUpdateEmpresa,
   usePuntos, useCreatePunto, useUpdatePunto, useDeletePunto,
   useCargos, useCreateCargo, useUpdateCargo, useDeleteCargo,
-  useGestores, useCreateGestor, useUpdateGestor, useToggleGestor,
+  useGestores, useCreateGestor, useUpdateGestor, useToggleGestor, useDeleteGestor,
   useSuscripcion, usePagarSuscripcion,
 } from '../hooks/useConfiguracion';
 import { useAuthStore } from '@/modules/auth/authStore';
@@ -19,9 +19,10 @@ import type { PuntoMarcaje, AlcancePunto, Cargo, Gestor, GestorCreado, LinkPago,
 
 type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores' | 'plan';
 
-// admin_empresa es único por empresa y no se crea/edita desde aquí (ver
-// AuthService.crearGestor/actualizarGestor) — solo se crea en registrarEmpresa.
-const ROLES_GESTOR = ['jefe_turnos', 'jefe_nomina', 'nomina'];
+// admin_empresa puede repetirse (socios/co-dueños) — el backend ya valida que
+// nunca quede la empresa sin ningún admin activo (ver AuthService.eliminarGestor
+// / actualizarGestor / setActivoGestor).
+const ROLES_GESTOR = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
 
 const TABS_VALIDOS: Tab[] = ['empresa', 'puntos', 'cargos', 'gestores', 'plan'];
 
@@ -486,6 +487,8 @@ function GestoresTab() {
   const create = useCreateGestor();
   const update = useUpdateGestor();
   const toggle = useToggleGestor();
+  const del = useDeleteGestor();
+  const { confirmState, confirm, close } = useConfirm();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ nombre: '', apellido: '', email: '', rol: 'jefe_turnos' });
   const [creado, setCreado] = useState<GestorCreado | null>(null);
@@ -562,21 +565,31 @@ function GestoresTab() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      {g.rol !== 'admin_empresa' && (
-                        <button
-                          onClick={() => abrirEdicion(g)}
-                          className="text-muted-foreground/60 hover:text-primary transition-colors"
-                          title="Editar"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => abrirEdicion(g)}
+                        className="text-muted-foreground/60 hover:text-primary transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil size={16} />
+                      </button>
                       <button
                         onClick={() => toggle.mutate({ id: g.id, activo: !g.activo })}
                         className="text-muted-foreground/60 hover:text-primary transition-colors"
                         title={g.activo ? 'Desactivar' : 'Activar'}
                       >
                         {g.activo ? <ToggleRight size={18} className="text-green-500" /> : <ToggleLeft size={18} />}
+                      </button>
+                      <button
+                        onClick={() => confirm({
+                          title: 'Eliminar gestor',
+                          detail: `¿Eliminar a ${g.nombre} ${g.apellido}? Pierde el acceso y sus datos personales se anonimizan — su historial de turnos/nómina ya registrado se conserva. Esta acción no se puede deshacer.`,
+                          confirmLabel: 'Eliminar',
+                          onConfirm: () => { del.mutate(g.id); close(); },
+                        })}
+                        className="text-muted-foreground/60 hover:text-danger transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
@@ -692,6 +705,15 @@ function GestoresTab() {
             </div>
           </form>
         </Modal>
+      )}
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
       )}
     </div>
   );

@@ -1,7 +1,7 @@
 /**
- * Editar gestor — nombre/apellido/email/rol de un gestor ya creado.
- * admin_empresa no pasa por aquí (edita su perfil desde Perfil); gestores.tsx
- * ya oculta el botón de editar para esa fila.
+ * Editar gestor — nombre/apellido/email/rol de un gestor ya creado, incluido
+ * admin_empresa (una empresa puede tener varios, p.ej. socios). El backend
+ * bloquea quitarle el rol de admin al único administrador activo.
  */
 import React, { useState } from 'react';
 import {
@@ -20,9 +20,10 @@ import { useRoleGuard } from '@/components/RoleGuard';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 
 const ROL_OPTIONS: { value: NonNullable<ActualizarGestorPayload['rol']>; label: string }[] = [
-  { value: 'jefe_turnos', label: 'Jefe de Turnos' },
-  { value: 'jefe_nomina', label: 'Jefe de Nómina' },
-  { value: 'nomina',      label: 'Nómina' },
+  { value: 'jefe_turnos',   label: 'Jefe de Turnos' },
+  { value: 'jefe_nomina',   label: 'Jefe de Nómina' },
+  { value: 'nomina',        label: 'Nómina' },
+  { value: 'admin_empresa', label: 'Administrador (socio)' },
 ];
 
 export default function EditarGestorScreen() {

@@ -207,9 +207,9 @@ router.delete(
   ctrl.eliminarCuenta
 );
 
-// Solo estos tres roles se crean/editan por este flujo — admin_empresa es único
-// por empresa y se crea solo en registrarEmpresa (ver AuthService.crearGestor).
-const ROLES_GESTOR = ['jefe_turnos', 'jefe_nomina', 'nomina'];
+// admin_empresa puede repetirse (socios/co-dueños) — crear/editar/eliminar
+// aquí ya valida que nunca quede la empresa sin ningún admin activo.
+const ROLES_GESTOR = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
 const idGestorParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
 // POST /api/auth/crear-gestor — admin_empresa crea un usuario gestor en su empresa
@@ -246,6 +246,16 @@ router.put(
   ],
   validar,
   ctrl.actualizarGestor
+);
+
+// DELETE /api/auth/gestores/:id — elimina (anonimiza) un gestor, nunca borra la fila
+router.delete(
+  '/gestores/:id',
+  verificarToken,
+  verificarRol([ROLES.ADMIN_EMPRESA]),
+  [idGestorParam],
+  validar,
+  ctrl.eliminarGestor
 );
 
 // PATCH /api/auth/gestores/:id/activo — activar/desactivar un gestor
