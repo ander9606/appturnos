@@ -16,7 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 
-import { confirm } from '@/lib/confirmDialog';
 import { authApi } from '@api-client';
 import { COLORS } from '@/lib/designTokens';
 import type { CrearGestorPayload, CrearGestorResult, ApiError } from '@api-client';
@@ -42,12 +41,6 @@ const ROL_OPTIONS: { value: CrearGestorPayload['rol']; label: string; desc: stri
     label: 'Nómina',
     desc: 'Visualiza nómina y equipo',
     icon: 'document-text-outline',
-  },
-  {
-    value: 'admin_empresa',
-    label: 'Administrador (socio)',
-    desc: 'Acceso total, igual al tuyo — para un co-dueño',
-    icon: 'shield-checkmark-outline',
   },
 ];
 
@@ -87,23 +80,13 @@ export default function CrearGestorScreen() {
     );
   }
 
-  async function handleCrear() {
+  function handleCrear() {
     if (!nombre.trim()) {
       Alert.alert('Campo requerido', 'El nombre es obligatorio.');
       return;
     }
     if (!email.trim()) {
       Alert.alert('Campo requerido', 'El email es obligatorio.');
-      return;
-    }
-
-    if (rol === 'admin_empresa') {
-      const ok = await confirm({
-        title: '¿Dar acceso total?',
-        message: `${nombre.trim()} tendrá el mismo nivel de acceso que tú: podrá gestionar trabajadores, nómina, otros gestores y la configuración de la empresa. Úsalo solo para un socio de confianza.`,
-        confirmLabel: 'Confirmar',
-      });
-      if (ok) crear();
       return;
     }
 

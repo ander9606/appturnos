@@ -1,12 +1,12 @@
 import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Building2, Upload, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Building2, Upload, X, Copy, Check } from 'lucide-react';
 import {
   useEmpresa, useUpdateEmpresa,
   usePuntos, useCreatePunto, useUpdatePunto, useDeletePunto,
   useCargos, useCreateCargo, useUpdateCargo, useDeleteCargo,
-  useGestores, useCreateGestor, useToggleGestor,
+  useGestores, useCreateGestor, useUpdateGestor, useToggleGestor,
   useSuscripcion, usePagarSuscripcion,
 } from '../hooks/useConfiguracion';
 import { useAuthStore } from '@/modules/auth/authStore';
@@ -15,11 +15,13 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP } from '@/shared/lib/format';
-import type { PuntoMarcaje, AlcancePunto, Cargo, Gestor, LinkPago, PlanCodigo, PlanOpcion } from '../types';
+import type { PuntoMarcaje, AlcancePunto, Cargo, Gestor, GestorCreado, LinkPago, PlanCodigo, PlanOpcion } from '../types';
 
 type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores' | 'plan';
 
-const ROLES_GESTOR = ['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'];
+// admin_empresa es único por empresa y no se crea/edita desde aquí (ver
+// AuthService.crearGestor/actualizarGestor) — solo se crea en registrarEmpresa.
+const ROLES_GESTOR = ['jefe_turnos', 'jefe_nomina', 'nomina'];
 
 const TABS_VALIDOS: Tab[] = ['empresa', 'puntos', 'cargos', 'gestores', 'plan'];
 
@@ -482,15 +484,43 @@ function GestoresTab() {
   const { data, isLoading, isError, error, refetch } = useGestores();
   const gestores: Gestor[] = data?.data ?? [];
   const create = useCreateGestor();
+  const update = useUpdateGestor();
   const toggle = useToggleGestor();
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ nombre: '', apellido: '', email: '', rol: 'jefe_turnos', password: '' });
+  const [form, setForm] = useState({ nombre: '', apellido: '', email: '', rol: 'jefe_turnos' });
+  const [creado, setCreado] = useState<GestorCreado | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  const [editando, setEditando] = useState<Gestor | null>(null);
+  const [editForm, setEditForm] = useState({ nombre: '', apellido: '', email: '', rol: 'jefe_turnos' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await create.mutateAsync(form);
+    const res = await create.mutateAsync(form);
+    setCreado(res.data);
+    setForm({ nombre: '', apellido: '', email: '', rol: 'jefe_turnos' });
+  };
+
+  function cerrarModalCrear() {
     setShowForm(false);
-    setForm({ nombre: '', apellido: '', email: '', rol: 'jefe_turnos', password: '' });
+    setCreado(null);
+  }
+
+  async function copiarCredenciales() {
+    if (!creado) return;
+    await navigator.clipboard.writeText(`Email: ${creado.email}\nContraseña temporal: ${creado.password_temporal}`);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
+  function abrirEdicion(g: Gestor) {
+    setEditando(g);
+    setEditForm({ nombre: g.nombre, apellido: g.apellido, email: g.email, rol: g.rol });
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await update.mutateAsync({ id: editando!.id, ...editForm });
+    setEditando(null);
   };
 
   const ROL_LABEL: Record<string, string> = {
@@ -531,13 +561,24 @@ function GestoresTab() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => toggle.mutate({ id: g.id, activo: !g.activo })}
-                      className="text-muted-foreground/60 hover:text-primary transition-colors"
-                      title={g.activo ? 'Desactivar' : 'Activar'}
-                    >
-                      {g.activo ? <ToggleRight size={18} className="text-green-500" /> : <ToggleLeft size={18} />}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      {g.rol !== 'admin_empresa' && (
+                        <button
+                          onClick={() => abrirEdicion(g)}
+                          className="text-muted-foreground/60 hover:text-primary transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => toggle.mutate({ id: g.id, activo: !g.activo })}
+                        className="text-muted-foreground/60 hover:text-primary transition-colors"
+                        title={g.activo ? 'Desactivar' : 'Activar'}
+                      >
+                        {g.activo ? <ToggleRight size={18} className="text-green-500" /> : <ToggleLeft size={18} />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -546,37 +587,107 @@ function GestoresTab() {
         </div>
       )}
       {showForm && (
-        <Modal onClose={() => setShowForm(false)}>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo gestor</h2>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Modal onClose={cerrarModalCrear}>
+          {creado ? (
+            <>
+              <h2 className="text-lg font-semibold text-foreground mb-1">¡Gestor creado!</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                {creado.nombre} {creado.apellido ?? ''} fue registrado como {ROL_LABEL[creado.rol] ?? creado.rol}
+              </p>
+              <div className="bg-warning-light border border-warning/30 rounded-xl p-4">
+                <p className="text-xs font-semibold text-warning mb-2">Credenciales de acceso</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Email</p>
+                <p className="text-sm font-medium text-foreground mb-3 font-mono">{creado.email}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-0.5">Contraseña temporal</p>
+                <div className="bg-card border border-border rounded-lg px-3 py-2">
+                  <p className="text-lg font-bold text-foreground tracking-widest text-center font-mono">
+                    {creado.password_temporal}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copiarCredenciales}
+                  className="w-full flex items-center justify-center gap-1.5 mt-3 h-10 rounded-lg border border-warning/40 text-sm font-medium text-warning hover:bg-warning/10 transition-colors"
+                >
+                  {copiado ? <Check size={14} /> : <Copy size={14} />}
+                  {copiado ? 'Copiado' : 'Copiar email y contraseña'}
+                </button>
+                <p className="text-xs text-warning mt-3">
+                  Guarda esta contraseña — solo se muestra una vez. El usuario deberá cambiarla al iniciar sesión.
+                </p>
+              </div>
+              <div className="pt-4">
+                <button type="button" onClick={cerrarModalCrear} className="w-full bg-primary hover:bg-primary-600 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                  Listo
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-semibold text-foreground mb-4">Nuevo gestor</h2>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
+                    <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1">Apellido *</label>
+                    <input required type="text" value={form.apellido} onChange={e => setForm(f => ({ ...f, apellido: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Email *</label>
+                  <input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Rol *</label>
+                  <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                    {ROLES_GESTOR.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  El sistema genera una contraseña temporal — se mostrará al terminar para que se la compartas.
+                </p>
+                <div className="flex gap-2 pt-2">
+                  <button type="button" onClick={cerrarModalCrear} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+                  <button type="submit" disabled={create.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                    {create.isPending ? 'Creando...' : 'Crear gestor'}
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+        </Modal>
+      )}
+      {editando && (
+        <Modal onClose={() => setEditando(null)}>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Editar gestor</h2>
+          <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
-                <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                <input required type="text" value={editForm.nombre} onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Apellido *</label>
-                <input required type="text" value={form.apellido} onChange={e => setForm(f => ({ ...f, apellido: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+                <label className="block text-sm font-medium text-foreground mb-1">Apellido</label>
+                <input type="text" value={editForm.apellido} onChange={e => setEditForm(f => ({ ...f, apellido: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Email *</label>
-              <input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+              <input required type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Rol *</label>
-              <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+              <select value={editForm.rol} onChange={e => setEditForm(f => ({ ...f, rol: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
                 {ROLES_GESTOR.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Contraseña temporal *</label>
-              <input required type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-            </div>
             <div className="flex gap-2 pt-2">
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
-              <button type="submit" disabled={create.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
-                {create.isPending ? 'Creando...' : 'Crear gestor'}
+              <button type="button" onClick={() => setEditando(null)} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">Cancelar</button>
+              <button type="submit" disabled={update.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                {update.isPending ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </div>
           </form>

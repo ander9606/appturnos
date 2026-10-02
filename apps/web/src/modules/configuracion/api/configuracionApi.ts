@@ -1,5 +1,5 @@
 import { api } from '@/shared/api/axios';
-import type { Empresa, PuntoMarcaje, PuntoParaTurno, Cargo, Gestor, Suscripcion, LinkPago, PlanCodigo } from '../types';
+import type { Empresa, PuntoMarcaje, PuntoParaTurno, Cargo, Gestor, GestorCreado, Suscripcion, LinkPago, PlanCodigo } from '../types';
 
 export const configuracionApi = {
   // Empresa
@@ -32,8 +32,12 @@ export const configuracionApi = {
 
   // Gestores
   getGestores: () => api.get<{ data: Gestor[] }>('/auth/gestores').then(r => r.data),
-  createGestor: (data: { nombre: string; apellido: string; email: string; rol: string; password: string }) =>
-    api.post<{ data: Gestor }>('/auth/crear-gestor', data).then(r => r.data),
+  // El backend genera la contraseña temporal (nunca la recibe del cliente) y la
+  // devuelve una sola vez en la respuesta — ver GestoresTab para mostrarla.
+  createGestor: (data: { nombre: string; apellido: string; email: string; rol: string }) =>
+    api.post<{ data: GestorCreado }>('/auth/crear-gestor', data).then(r => r.data),
+  updateGestor: (id: number, data: { nombre?: string; apellido?: string; email?: string; rol?: string }) =>
+    api.put<{ data: Gestor }>(`/auth/gestores/${id}`, data).then(r => r.data),
   toggleGestorActivo: (id: number, activo: boolean) =>
     api.patch(`/auth/gestores/${id}/activo`, { activo }).then(r => r.data),
 };

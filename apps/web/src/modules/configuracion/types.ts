@@ -52,6 +52,16 @@ export interface Gestor {
   activo: number;
 }
 
+/** Respuesta de crear-gestor — el backend genera la contraseña, nunca la recibe del cliente. */
+export interface GestorCreado {
+  id: number;
+  nombre: string;
+  apellido: string | null;
+  email: string;
+  rol: string;
+  password_temporal: string;
+}
+
 export type PlanCodigo = 'basico' | 'profesional' | 'empresarial';
 
 /** Un plan tal como lo ve el admin_empresa, con el precio que pagaría hoy. */

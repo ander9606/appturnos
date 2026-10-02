@@ -96,6 +96,13 @@ async function listarGestores(req, res) {
   res.json({ success: true, data, message: 'Gestores de la empresa' });
 }
 
+async function actualizarGestor(req, res) {
+  const gestorId = Number(req.params.id);
+  const { nombre, apellido, email, rol } = req.body;
+  const data = await AuthService.actualizarGestor(req.empresa_id, gestorId, { nombre, apellido, email, rol });
+  res.json({ success: true, data, message: 'Gestor actualizado' });
+}
+
 async function setActivoGestor(req, res) {
   const gestorId = Number(req.params.id);
   const { activo } = req.body;
@@ -130,4 +137,4 @@ async function resetPassword(req, res) {
 
 module.exports = { login, refresh, logout, me, verificarCedula, activarCuenta, registrar,
   registrarEmpresa, actualizarPerfil, actualizarFoto, cambiarPassword, eliminarCuenta, crearGestor,
-  listarGestores, setActivoGestor, enviarOtp, verificarOtp, aceptarTerminos, resetPassword };
+  listarGestores, actualizarGestor, setActivoGestor, enviarOtp, verificarOtp, aceptarTerminos, resetPassword };

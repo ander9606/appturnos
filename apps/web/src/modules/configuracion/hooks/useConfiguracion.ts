@@ -103,6 +103,15 @@ export function useCreateGestor() {
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }
+export function useUpdateGestor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number } & Parameters<typeof configuracionApi.updateGestor>[1]) =>
+      configuracionApi.updateGestor(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['config', 'gestores'] }); toast.success('Gestor editado'); },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
 export function useToggleGestor() {
   const qc = useQueryClient();
   return useMutation({

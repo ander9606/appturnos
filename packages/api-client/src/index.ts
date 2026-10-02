@@ -11,7 +11,7 @@ export type { TokenStore } from './client';
 
 // API modules
 export { authApi } from './auth';
-export type { CrearGestorPayload, CrearGestorResult, Gestor } from './auth';
+export type { CrearGestorPayload, ActualizarGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
 export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato, Suscripcion, PlanOpcion } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';

@@ -56,8 +56,12 @@ function useSetActivoGestor() {
 // ── GestorCard ────────────────────────────────────────────────────────────
 
 function GestorCard({ gestor }: { gestor: Gestor }) {
+  const router = useRouter();
   const toggleMutation = useSetActivoGestor();
   const rolColor = ROL_COLORS[gestor.rol] ?? '#64748B';
+  // admin_empresa no es editable por este flujo (es único por empresa y edita
+  // su propio perfil desde Perfil) — ver AuthService.actualizarGestor.
+  const editable = gestor.rol !== 'admin_empresa';
 
   const handleToggle = async () => {
     const accion = gestor.activo ? 'desactivar' : 'activar';
@@ -112,20 +116,36 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
               {gestor.activo ? 'Activo' : 'Inactivo'}
             </Text>
           </View>
-          {toggleMutation.isPending ? (
-            <ActivityIndicator size="small" color="#64748B" />
-          ) : (
-            <Pressable
-              onPress={handleToggle}
-              className={`px-3 py-1.5 rounded-lg border active:opacity-60 ${
-                gestor.activo ? 'border-danger' : 'border-success'
-              }`}
-            >
-              <Text className={`text-xs font-semibold ${gestor.activo ? 'text-danger' : 'text-success'}`}>
-                {gestor.activo ? 'Desactivar' : 'Activar'}
-              </Text>
-            </Pressable>
-          )}
+          <View className="flex-row gap-2">
+            {editable && (
+              <Pressable
+                onPress={() => router.push({
+                  pathname: '/editar-gestor/[id]',
+                  params: {
+                    id: String(gestor.id), nombre: gestor.nombre,
+                    apellido: gestor.apellido ?? '', email: gestor.email, rol: gestor.rol,
+                  },
+                })}
+                className="px-2.5 py-1.5 rounded-lg border border-border active:opacity-60"
+              >
+                <Ionicons name="pencil-outline" size={14} color="#64748B" />
+              </Pressable>
+            )}
+            {toggleMutation.isPending ? (
+              <ActivityIndicator size="small" color="#64748B" />
+            ) : (
+              <Pressable
+                onPress={handleToggle}
+                className={`px-3 py-1.5 rounded-lg border active:opacity-60 ${
+                  gestor.activo ? 'border-danger' : 'border-success'
+                }`}
+              >
+                <Text className={`text-xs font-semibold ${gestor.activo ? 'text-danger' : 'text-success'}`}>
+                  {gestor.activo ? 'Desactivar' : 'Activar'}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
     </View>

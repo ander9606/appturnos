@@ -478,6 +478,41 @@ const AuthService = {
   },
 
   /**
+   * Edita nombre/apellido/email/rol de un gestor ya creado. admin_empresa no
+   * es editable aquí (es único por empresa y edita su propio perfil vía /me);
+   * intentarlo sobre esa fila devuelve 404 igual que un id inexistente.
+   */
+  async actualizarGestor(empresaId, gestorId, { nombre, apellido, email, rol }) {
+    const ROLES_PERMITIDOS = [ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
+    const rolActual = await AuthModel.obtenerRolGestor(empresaId, gestorId);
+    if (!rolActual || !ROLES_PERMITIDOS.includes(rolActual)) {
+      throw new AppError('Gestor no encontrado', 404);
+    }
+    if (rol !== undefined && !ROLES_PERMITIDOS.includes(rol)) {
+      throw new AppError(`Rol inválido. Usa: ${ROLES_PERMITIDOS.join(', ')}`, 400);
+    }
+
+    let emailNuevo;
+    if (email !== undefined) {
+      emailNuevo = email.trim().toLowerCase();
+      const existente = await AuthModel.buscarUsuarioPorEmail(emailNuevo);
+      if (existente && existente.id !== gestorId) throw new AppError('Ya existe un usuario con ese email', 409);
+      if (await AuthModel.existeTrabajadorConEmail(empresaId, emailNuevo)) {
+        throw new AppError('Ese email ya pertenece a un trabajador de tu empresa; no puede ser también gestor.', 409);
+      }
+    }
+
+    await AuthModel.actualizarGestor(empresaId, gestorId, {
+      nombre: nombre !== undefined ? nombre.trim() : undefined,
+      apellido: apellido !== undefined ? (apellido?.trim() || null) : undefined,
+      email: emailNuevo,
+      rol,
+    });
+
+    return AuthModel.obtenerGestorPorId(empresaId, gestorId);
+  },
+
+  /**
    * Crea un usuario gestor (jefe_turnos, jefe_nomina, nomina) para la empresa del admin.
    * Genera una contraseña temporal que se devuelve una sola vez.
    */

@@ -311,6 +311,35 @@ const AuthModel = {
     return filas;
   },
 
+  /** Edita solo los campos presentes (undefined = no tocar) de un gestor no-admin. */
+  async actualizarGestor(empresaId, gestorId, cambios) {
+    const campos = [];
+    const valores = [];
+    for (const campo of ['nombre', 'apellido', 'email', 'rol']) {
+      if (cambios[campo] !== undefined) {
+        campos.push(`${campo} = ?`);
+        valores.push(cambios[campo]);
+      }
+    }
+    if (campos.length === 0) return true;
+    const [res] = await pool.query(
+      `UPDATE usuarios SET ${campos.join(', ')}
+       WHERE id = ? AND empresa_id = ? AND rol IN ('jefe_turnos', 'jefe_nomina', 'nomina')`,
+      [...valores, gestorId, empresaId]
+    );
+    return res.affectedRows > 0;
+  },
+
+  /** Un gestor puntual con sus datos editables (sin password_hash). */
+  async obtenerGestorPorId(empresaId, gestorId) {
+    const [[fila]] = await pool.query(
+      `SELECT id, nombre, apellido, email, rol, activo, created_at
+       FROM usuarios WHERE id = ? AND empresa_id = ? LIMIT 1`,
+      [gestorId, empresaId]
+    );
+    return fila || null;
+  },
+
   /** Cuenta admin_empresa activos — usado para no dejar la empresa sin ningún admin. */
   async contarAdminsActivos(empresaId) {
     const [[{ total }]] = await pool.query(

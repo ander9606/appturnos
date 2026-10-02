@@ -14,7 +14,14 @@ export interface CrearGestorPayload {
   nombre: string;
   apellido?: string;
   email: string;
-  rol: 'admin_empresa' | 'jefe_turnos' | 'jefe_nomina' | 'nomina';
+  rol: 'jefe_turnos' | 'jefe_nomina' | 'nomina';
+}
+
+export interface ActualizarGestorPayload {
+  nombre?: string;
+  apellido?: string;
+  email?: string;
+  rol?: 'jefe_turnos' | 'jefe_nomina' | 'nomina';
 }
 
 export interface CrearGestorResult {
@@ -228,6 +235,11 @@ export const authApi = {
   /** Lista todos los gestores (jefe_turnos, jefe_nomina, nomina) de la empresa. */
   listarGestores(): Promise<Gestor[]> {
     return api.get<Gestor[]>('/api/auth/gestores');
+  },
+
+  /** Edita nombre/apellido/email/rol de un gestor ya creado (no admin_empresa). */
+  actualizarGestor(id: number, payload: ActualizarGestorPayload): Promise<Gestor> {
+    return api.put<Gestor>(`/api/auth/gestores/${id}`, payload);
   },
 
   /** Activa o desactiva un gestor de la empresa. */

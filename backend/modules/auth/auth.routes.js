@@ -3,7 +3,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = rateLimit;
-const { body } = require('express-validator');
+const { body, param } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
@@ -207,6 +207,11 @@ router.delete(
   ctrl.eliminarCuenta
 );
 
+// Solo estos tres roles se crean/editan por este flujo — admin_empresa es único
+// por empresa y se crea solo en registrarEmpresa (ver AuthService.crearGestor).
+const ROLES_GESTOR = ['jefe_turnos', 'jefe_nomina', 'nomina'];
+const idGestorParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
+
 // POST /api/auth/crear-gestor — admin_empresa crea un usuario gestor en su empresa
 router.post(
   '/crear-gestor',
@@ -217,8 +222,8 @@ router.post(
     body('apellido').optional().isString().trim(),
     emailSanitizado,
     body('rol')
-      .isIn(['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina'])
-      .withMessage('Rol inválido. Usa: admin_empresa, jefe_turnos, jefe_nomina o nomina'),
+      .isIn(ROLES_GESTOR)
+      .withMessage(`Rol inválido. Usa: ${ROLES_GESTOR.join(', ')}`),
   ],
   validar,
   ctrl.crearGestor
@@ -227,12 +232,28 @@ router.post(
 // GET /api/auth/gestores — lista gestores de la empresa
 router.get('/gestores', verificarToken, verificarRol([ROLES.ADMIN_EMPRESA]), ctrl.listarGestores);
 
+// PUT /api/auth/gestores/:id — editar nombre/apellido/email/rol de un gestor ya creado
+router.put(
+  '/gestores/:id',
+  verificarToken,
+  verificarRol([ROLES.ADMIN_EMPRESA]),
+  [
+    idGestorParam,
+    body('nombre').optional().isString().trim().notEmpty().withMessage('Nombre inválido'),
+    body('apellido').optional({ values: 'falsy' }).isString().trim(),
+    body('email').optional().isEmail().withMessage('Email inválido').bail().customSanitizer((v) => v.trim().toLowerCase()),
+    body('rol').optional().isIn(ROLES_GESTOR).withMessage(`Rol inválido. Usa: ${ROLES_GESTOR.join(', ')}`),
+  ],
+  validar,
+  ctrl.actualizarGestor
+);
+
 // PATCH /api/auth/gestores/:id/activo — activar/desactivar un gestor
 router.patch(
   '/gestores/:id/activo',
   verificarToken,
   verificarRol([ROLES.ADMIN_EMPRESA]),
-  [body('activo').isBoolean().withMessage('activo debe ser booleano')],
+  [idGestorParam, body('activo').isBoolean().withMessage('activo debe ser booleano')],
   validar,
   ctrl.setActivoGestor
 );
