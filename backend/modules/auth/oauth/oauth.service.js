@@ -10,17 +10,9 @@ const { generarAccessToken, generarRefreshToken, fechaExpiracionRefresh } = requ
 const AppError = require('../../../utils/AppError');
 const { ROLES } = require('../../../config/constants');
 const logger = require('../../../utils/logger');
+const { aplicarEmpresaSuspendida } = require('../../../utils/empresaSuspendida');
 
 const BCRYPT_ROUNDS = 12;
-
-/**
- * Empresa suspendida bloquea el login, salvo a trabajador_turnos: es
- * multi-empresa (su empresa_id es solo la de origen) y las rutas ya filtran
- * las empresas suspendidas por solicitud (resolverEmpresasActivas).
- */
-function empresaSuspendida(u) {
-  return !!u.empresa_id && u.empresa_activo === 0 && u.rol !== ROLES.TRABAJADOR_TURNOS;
-}
 
 /** Construye el par de tokens y persiste el refresh token (mismo patrón que auth.service). */
 async function emitirTokens(usuario) {
@@ -105,13 +97,11 @@ const OAuthService = {
       const usuario = await AuthModel.buscarUsuarioPorId(linkExistente.usuario_id);
       if (!usuario) throw new AppError('Cuenta vinculada no encontrada', 404);
       if (!usuario.activo) throw new AppError('Usuario inactivo', 403);
-      if (empresaSuspendida(usuario)) {
-        throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
-      }
+      const sesion = aplicarEmpresaSuspendida(usuario);
 
       await OAuthModel.actualizarUltimaSesion(linkExistente.id);
-      const tokens = await emitirTokens(usuario);
-      return { ...tokens, usuario: perfilPublico(usuario), tipo: 'login' };
+      const tokens = await emitirTokens(sesion);
+      return { ...tokens, usuario: perfilPublico(sesion), tipo: 'login' };
     }
 
     // 2. ¿Existe usuario con ese email? → auto-vincular si está verificado.
@@ -125,9 +115,7 @@ const OAuthService = {
           );
         }
         if (!usuarioExistente.activo) throw new AppError('Usuario inactivo', 403);
-        if (empresaSuspendida(usuarioExistente)) {
-          throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
-        }
+        const sesion = aplicarEmpresaSuspendida(usuarioExistente);
 
         await OAuthModel.crearLink({
           usuarioId: usuarioExistente.id,
@@ -137,10 +125,10 @@ const OAuthService = {
           emailVerified: info.email_verified,
           avatarUrl: info.avatar_url,
         });
-        const tokens = await emitirTokens(usuarioExistente);
+        const tokens = await emitirTokens(sesion);
         return {
           ...tokens,
-          usuario: perfilPublico(usuarioExistente),
+          usuario: perfilPublico(sesion),
           tipo: 'vinculacion',
         };
       }
