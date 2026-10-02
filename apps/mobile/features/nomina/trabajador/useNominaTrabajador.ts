@@ -4,7 +4,7 @@
  * geofence y mutaciones de marcaje.
  */
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Alert, AppState } from 'react-native';
 import { ApiError } from '@api-client';
 import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina, LineaLiquidacionEventual, PeriodoTurnoEventual } from '@api-client';
@@ -34,6 +34,17 @@ import {
 
 export type EstadoUbicacionLibre = 'obteniendo' | 'lista' | 'denegada' | 'no_disponible';
 
+// Mismo timeout/antigüedad que useGeofence.ts — ver comentarios ahí.
+const FIX_TIMEOUT_MS = 8_000;
+const LAST_KNOWN_TIMEOUT_MS = 3_000;
+const MAX_EDAD_UBICACION_MS = 2 * 60_000;
+
+const conTimeout = <T,>(promesa: Promise<T>, ms: number): Promise<T> =>
+  Promise.race([
+    promesa,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
+
 /**
  * Para trabajadores tipo_marcacion 'libre' no hay geofence que validar, pero
  * igual se exige un fix de GPS antes de dejar marcar — sin esto, un trabajador
@@ -45,6 +56,8 @@ export type EstadoUbicacionLibre = 'obteniendo' | 'lista' | 'denegada' | 'no_dis
 function useUbicacionParaLibre(activo: boolean) {
   const [estado, setEstado] = useState<EstadoUbicacionLibre>('obteniendo');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const estadoRef = useRef(estado);
+  estadoRef.current = estado;
 
   const intentar = useCallback(async () => {
     setEstado('obteniendo');
@@ -55,9 +68,29 @@ function useUbicacionParaLibre(activo: boolean) {
         setEstado('denegada');
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      setEstado('lista');
+      try {
+        // mayShowUserSettingsDialog (default true en Android) abre un diálogo del
+        // sistema pidiendo "ubicación mejorada" cuando el modo de ubicación no
+        // satisface accuracy High — ese diálogo pausa/reanuda la Activity, dispara
+        // el listener de AppState de abajo y reiniciaba este intentar() en bucle
+        // sin dejar nunca llegar a 'lista' (bug: "se reinicia el cálculo varias
+        // veces y nunca permite marcar"). Igual se le pone timeout porque
+        // getCurrentPositionAsync puede quedar colgado sin resolver en señal débil.
+        const loc = await conTimeout(
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High, mayShowUserSettingsDialog: false }),
+          FIX_TIMEOUT_MS
+        );
+        setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        setEstado('lista');
+      } catch {
+        const last = await conTimeout(
+          Location.getLastKnownPositionAsync({ maxAge: MAX_EDAD_UBICACION_MS }),
+          LAST_KNOWN_TIMEOUT_MS
+        );
+        if (!last) throw new Error('sin ultima ubicacion');
+        setCoords({ lat: last.coords.latitude, lng: last.coords.longitude });
+        setEstado('lista');
+      }
     } catch {
       setEstado('no_disponible');
     }
@@ -68,9 +101,13 @@ function useUbicacionParaLibre(activo: boolean) {
     intentar();
     // Si el trabajador salió a Ajustes a conceder el permiso y vuelve, se
     // reintenta solo — sin esto quedaba trabado en 'denegada' hasta salir y
-    // reentrar a la pantalla. Mismo patrón que useGeofence.
+    // reentrar a la pantalla. Mismo patrón que useGeofence. Solo reintenta si
+    // antes falló: un 'active' espurio (diálogo del sistema, modal de firma)
+    // no debe botar un fix bueno que ya estaba en 'lista'.
     const sub = AppState.addEventListener('change', (next) => {
-      if (next === 'active') intentar();
+      if (next === 'active' && (estadoRef.current === 'denegada' || estadoRef.current === 'no_disponible')) {
+        intentar();
+      }
     });
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
