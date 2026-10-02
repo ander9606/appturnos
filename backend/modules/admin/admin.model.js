@@ -8,6 +8,60 @@ const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
 const MONTO_COP_SQL =
   "CAST(JSON_EXTRACT(payload, '$.data.transaction.amount_in_cents') AS UNSIGNED) / 100";
 
+// Borrado completo de una empresa (multi-tenant: ~40 tablas cuelgan de
+// empresa_id). Orden topológico verificado contra el grafo real de FK de
+// information_schema — hijos antes que padres, `empresas` al final. No usa
+// FOREIGN_KEY_CHECKS=0: con los checks activos, cualquier FK que se nos haya
+// escapado corta la transacción con un error claro en vez de dejar huérfanos.
+const ORDEN_BORRADO_EMPRESA = [
+  // ronda 1: hojas
+  'DELETE FROM ausencias WHERE empresa_id = ?',
+  'DELETE FROM calificaciones_turno WHERE empresa_id = ?',
+  'DELETE FROM cargo_funciones WHERE empresa_id = ?',
+  'DELETE FROM contratos_acumulacion_auditoria WHERE empresa_id = ?',
+  'DELETE FROM contratos_diarios WHERE empresa_id = ?',
+  'DELETE FROM cuentas_cobro WHERE empresa_id = ?',
+  'DELETE FROM descansos_compensatorios WHERE empresa_id = ?',
+  'DELETE FROM descuentos_nomina WHERE empresa_id = ?',
+  'DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?',
+  'DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)',
+  'DELETE FROM integracion_config WHERE empresa_id = ?',
+  'DELETE FROM integration_events_in WHERE empresa_id = ?',
+  'DELETE FROM integration_events_out WHERE empresa_id = ?',
+  'DELETE FROM intentos_login WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)',
+  'DELETE FROM notificaciones WHERE empresa_id = ?',
+  'DELETE FROM novedades WHERE empresa_id = ?',
+  'DELETE FROM oferta_destinatarios WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?) OR trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)',
+  'DELETE FROM oferta_puntos_marcaje WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)',
+  'DELETE FROM periodos_turno_eventual WHERE empresa_id = ?',
+  'DELETE FROM push_subscriptions WHERE empresa_id = ?',
+  'DELETE FROM recordatorios_ingreso_enviados WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)',
+  'DELETE FROM refresh_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)',
+  'DELETE FROM solicitudes_reingreso WHERE empresa_id = ?',
+  'DELETE FROM trabajador_cargos WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?) OR asignado_por IN (SELECT id FROM usuarios WHERE empresa_id = ?)',
+  'DELETE FROM trabajador_diplomas WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)',
+  'DELETE FROM trabajador_experiencias WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)',
+  'DELETE FROM usuarios_oauth WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)',
+  'DELETE FROM wompi_eventos WHERE empresa_id = ?',
+  // ronda 2
+  'DELETE FROM asignaciones_turno WHERE empresa_id = ?',
+  'DELETE FROM registros_diarios WHERE empresa_id = ?',
+  'DELETE FROM trabajador_empresa WHERE empresa_id = ?',
+  // ronda 3
+  'DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)',
+  'DELETE FROM periodos_nomina WHERE empresa_id = ?',
+  'DELETE FROM periodos_turnos WHERE empresa_id = ?',
+  'DELETE FROM trabajadores WHERE empresa_id = ?',
+  // ronda 4
+  'DELETE FROM cargos WHERE empresa_id = ?',
+  'DELETE FROM ofertas_turno WHERE empresa_id = ?',
+  'DELETE FROM usuarios WHERE empresa_id = ?',
+  // ronda 5
+  'DELETE FROM puntos_marcaje WHERE empresa_id = ?',
+  // ronda 6: raíz
+  'DELETE FROM empresas WHERE id = ?',
+];
+
 /**
  * Acceso a datos del módulo admin (super_admin).
  * No filtra por empresa_id — opera a nivel de sistema.
@@ -160,6 +214,46 @@ const AdminModel = {
     if (sets.length === 0) return;
     vals.push(id);
     await pool.query(`UPDATE empresas SET ${sets.join(', ')} WHERE id = ?`, vals);
+  },
+
+  /** true si la empresa tiene algún período de nómina cerrado o liquidado (retención legal de 5 años). */
+  async tieneNominaLiquidada(empresaId) {
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM periodos_nomina
+       WHERE empresa_id = ? AND estado IN ('cerrado', 'liquidado')`,
+      [empresaId]
+    );
+    return total > 0;
+  },
+
+  /** true si algún trabajador de esta empresa también está vinculado (trabajador_empresa) a otra. */
+  async tieneTrabajadorCompartido(empresaId) {
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total
+       FROM trabajadores t
+       JOIN trabajador_empresa te ON te.trabajador_id = t.id
+       WHERE t.empresa_id = ? AND te.empresa_id != ?`,
+      [empresaId, empresaId]
+    );
+    return total > 0;
+  },
+
+  /** Borra la empresa y todo lo que cuelga de ella (ver ORDEN_BORRADO_EMPRESA). Irreversible. */
+  async eliminarEmpresaCompleta(empresaId) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      for (const sql of ORDEN_BORRADO_EMPRESA) {
+        const placeholders = (sql.match(/\?/g) || []).length;
+        await conn.query(sql, Array(placeholders).fill(empresaId));
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   },
 
   /** Verifica si un slug ya existe (para validar unicidad al crear). */

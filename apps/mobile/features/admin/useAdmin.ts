@@ -110,6 +110,17 @@ export function useCambiarEstadoEmpresa() {
   });
 }
 
+export function useEliminarEmpresa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => adminApi.eliminarEmpresa(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'empresas'] });
+      qc.invalidateQueries({ queryKey: ADMIN_KEYS.reportes });
+    },
+  });
+}
+
 export function useGenerarLinkPago(id: number) {
   return useMutation({
     mutationFn: (datos: { plan: PlanEmpresa; meses?: number }) => adminApi.generarLinkPago(id, datos),

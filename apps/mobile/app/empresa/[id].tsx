@@ -22,6 +22,7 @@ import {
   useAdminEmpresa,
   useActualizarEmpresa,
   useCambiarEstadoEmpresa,
+  useEliminarEmpresa,
   useGenerarLinkPago,
 } from '@/features/admin/useAdmin';
 import { formatCOP } from '@/lib/formatters';
@@ -98,6 +99,7 @@ export default function EmpresaDetailScreen() {
   const { data: empresa, isLoading, isError } = useAdminEmpresa(empresaId, isSuperAdmin);
   const { mutateAsync: actualizar, isPending: guardando } = useActualizarEmpresa(empresaId);
   const { mutateAsync: cambiarEstado, isPending: cambiandoEstado } = useCambiarEstadoEmpresa();
+  const { mutateAsync: eliminarEmpresa, isPending: eliminando } = useEliminarEmpresa();
   const { mutateAsync: generarLink, isPending: generandoLink } = useGenerarLinkPago(empresaId);
 
   const [mesesLink, setMesesLink] = useState(1);
@@ -162,6 +164,25 @@ export default function EmpresaDetailScreen() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error';
       Alert.alert('Error', msg);
+    }
+  };
+
+  const handleEliminar = async () => {
+    if (!empresa) return;
+    const ok = await confirm({
+      title: '¿Eliminar empresa permanentemente?',
+      message: `Se borrará "${empresa.nombre}" y todos sus datos (trabajadores, turnos, nómina, usuarios). Esta acción NO se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      await eliminarEmpresa(empresaId);
+      showToast('Empresa eliminada.');
+      router.replace('/(admin)/empresas');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error al eliminar';
+      Alert.alert('No se pudo eliminar', msg);
     }
   };
 
@@ -513,6 +534,19 @@ export default function EmpresaDetailScreen() {
               >
                 {isActiva ? '⛔ Desactivar empresa' : '✅ Activar empresa'}
               </Text>
+            )}
+          </Pressable>
+
+          <Pressable
+            onPress={handleEliminar}
+            disabled={eliminando}
+            className="h-11 rounded-xl items-center justify-center active:opacity-80"
+            style={{ backgroundColor: '#EF4444' }}
+          >
+            {eliminando ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text className="text-sm font-bold text-white">🗑️ Eliminar empresa permanentemente</Text>
             )}
           </Pressable>
         </View>

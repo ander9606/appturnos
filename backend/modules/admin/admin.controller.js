@@ -69,6 +69,16 @@ const AdminController = {
     }
   },
 
+  // DELETE /api/admin/empresas/:id
+  async eliminarEmpresa(req, res, next) {
+    try {
+      await AdminService.eliminarEmpresa(Number(req.params.id), req.usuario.sub);
+      res.json({ success: true, data: null, message: 'Empresa eliminada' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   // GET /api/admin/planes
   async listarPlanes(req, res, next) {
     try {

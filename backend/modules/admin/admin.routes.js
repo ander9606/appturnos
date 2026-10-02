@@ -172,6 +172,16 @@ router.patch(
   ctrl.cambiarEstadoEmpresa
 );
 
+// DELETE /api/admin/empresas/:id — borrado permanente, ver AdminService.eliminarEmpresa
+router.delete(
+  '/empresas/:id',
+  verificarToken,
+  verificarRol(SOLO_SUPER),
+  [param('id').isInt({ min: 1 }).toInt()],
+  validar,
+  ctrl.eliminarEmpresa
+);
+
 // ── Wompi eventos ─────────────────────────────────────────────────────────
 
 // GET /api/admin/wompi-eventos

@@ -143,6 +143,31 @@ const AdminService = {
     return AdminModel.obtenerEmpresa(id);
   },
 
+  /**
+   * Borrado permanente de una empresa y todos sus datos. Bloqueado si tiene
+   * nómina cerrada/liquidada (retención legal de 5 años — ver habeas data) o
+   * si algún trabajador suyo también está vinculado a otra empresa.
+   */
+  async eliminarEmpresa(id, usuarioId) {
+    const empresa = await AdminService.obtenerEmpresa(id); // throws 404 if not found
+
+    if (await AdminModel.tieneNominaLiquidada(id)) {
+      throw new AppError(
+        'No se puede eliminar: tiene períodos de nómina cerrados o liquidados, sujetos a retención legal',
+        409
+      );
+    }
+    if (await AdminModel.tieneTrabajadorCompartido(id)) {
+      throw new AppError(
+        'No se puede eliminar: tiene trabajadores vinculados también a otra empresa',
+        409
+      );
+    }
+
+    await AdminModel.eliminarEmpresaCompleta(id);
+    logger.info(`[admin] super_admin ${usuarioId} eliminó la empresa ${id} (${empresa.nombre})`);
+  },
+
   listarPlanes() {
     return PlanesModel.listar();
   },

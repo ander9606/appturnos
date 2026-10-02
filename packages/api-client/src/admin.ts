@@ -218,6 +218,11 @@ export const adminApi = {
     return api.patch<EmpresaAdmin>(`/api/admin/empresas/${id}/estado`, { activo });
   },
 
+  /** Borrado permanente. 409 si tiene nómina liquidada o trabajadores compartidos con otra empresa. */
+  async eliminarEmpresa(id: number): Promise<void> {
+    await api.delete(`/api/admin/empresas/${id}`);
+  },
+
   async generarLinkPago(id: number, datos: { plan: PlanEmpresa; meses?: number }): Promise<LinkPagoResponse> {
     return api.post<LinkPagoResponse>(`/api/admin/empresas/${id}/link-pago`, datos);
   },
