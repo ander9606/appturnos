@@ -13,6 +13,15 @@ const logger = require('../../../utils/logger');
 
 const BCRYPT_ROUNDS = 12;
 
+/**
+ * Empresa suspendida bloquea el login, salvo a trabajador_turnos: es
+ * multi-empresa (su empresa_id es solo la de origen) y las rutas ya filtran
+ * las empresas suspendidas por solicitud (resolverEmpresasActivas).
+ */
+function empresaSuspendida(u) {
+  return !!u.empresa_id && u.empresa_activo === 0 && u.rol !== ROLES.TRABAJADOR_TURNOS;
+}
+
 /** Construye el par de tokens y persiste el refresh token (mismo patrón que auth.service). */
 async function emitirTokens(usuario) {
   const accessToken = generarAccessToken(usuario);
@@ -96,6 +105,9 @@ const OAuthService = {
       const usuario = await AuthModel.buscarUsuarioPorId(linkExistente.usuario_id);
       if (!usuario) throw new AppError('Cuenta vinculada no encontrada', 404);
       if (!usuario.activo) throw new AppError('Usuario inactivo', 403);
+      if (empresaSuspendida(usuario)) {
+        throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
+      }
 
       await OAuthModel.actualizarUltimaSesion(linkExistente.id);
       const tokens = await emitirTokens(usuario);
@@ -113,6 +125,9 @@ const OAuthService = {
           );
         }
         if (!usuarioExistente.activo) throw new AppError('Usuario inactivo', 403);
+        if (empresaSuspendida(usuarioExistente)) {
+          throw new AppError('Empresa suspendida. Contacta al administrador del sistema.', 403);
+        }
 
         await OAuthModel.crearLink({
           usuarioId: usuarioExistente.id,
