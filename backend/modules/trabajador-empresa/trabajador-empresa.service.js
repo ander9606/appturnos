@@ -455,6 +455,26 @@ const TrabajadorEmpresaService = {
     return TrabajadorEmpresaModel.obtenerPorId(relacionId);
   },
 
+  /**
+   * La empresa deja de ofrecerle turnos a un trabajador: archiva el vínculo
+   * activo sin tocar su ficha — a diferencia de TrabajadoresService.eliminar()
+   * (soft-delete de toda la ficha, bloquea login), esto solo corta el matching
+   * de ofertas abiertas. El trabajador conserva su historial y puede volver a
+   * solicitar el vínculo si la empresa cambia de opinión (o viceversa).
+   */
+  async bloquearOfertas(empresaId, trabajadorId) {
+    const trabajador = await TrabajadoresService.obtener(empresaId, trabajadorId); // 404 si no es de esta empresa
+    if (!trabajador.usuario_id) {
+      throw new AppError('Este trabajador todavía no activó su cuenta', 409);
+    }
+    const relacion = await TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa(trabajador.usuario_id, empresaId);
+    if (!relacion || relacion.estado !== E.ACTIVO) {
+      throw new AppError('No hay un vínculo activo con este trabajador', 409);
+    }
+    await TrabajadorEmpresaModel.cambiarEstado(relacion.id, E.ARCHIVADO);
+    return TrabajadorEmpresaModel.obtenerPorId(relacion.id);
+  },
+
   /** Empresas del trabajador agrupadas por estado (para "Mis empresas"). */
   async misEmpresas(usuarioId) {
     const todas = await TrabajadorEmpresaModel.listarPorUsuario(usuarioId);

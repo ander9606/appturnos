@@ -85,6 +85,16 @@ router.post(
   ctrl.archivar
 );
 
+// POST /api/trabajador-empresa/trabajador/:trabajadorId/bloquear — la empresa deja de ofrecerle turnos
+router.post(
+  '/trabajador/:trabajadorId/bloquear',
+  verificarToken,
+  verificarRol(SOLO_JEFE),
+  [param('trabajadorId').isInt({ min: 1 }).toInt()],
+  validar,
+  ctrl.bloquearOfertas
+);
+
 // GET /api/trabajador-empresa/mis-empresas — el trabajador ve sus vínculos
 router.get(
   '/mis-empresas',

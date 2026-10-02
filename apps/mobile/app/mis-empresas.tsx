@@ -27,6 +27,7 @@ import {
   useMisEmpresas,
   useAceptar,
   useRechazarVinculo,
+  useArchivarVinculo,
   useSolicitar,
 } from '@/features/empresas/useTrabajadorEmpresa';
 import type { Vinculo } from '@api-client';
@@ -63,7 +64,13 @@ function StarRating({ value, total }: { value: number; total: number }) {
   );
 }
 
-function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
+function EmpresaActivaCard({
+  vinculo, onArchivar, archivando,
+}: {
+  vinculo: Vinculo;
+  onArchivar: (id: number, nombre: string) => void;
+  archivando: boolean;
+}) {
   const tieneRanking = vinculo.ranking != null && vinculo.total_calificaciones > 0;
   const nivel = nivelRanking(vinculo.ranking, vinculo.total_calificaciones);
   const color = rankingColor(nivel);
@@ -128,6 +135,20 @@ function EmpresaActivaCard({ vinculo }: { vinculo: Vinculo }) {
           )}
         </View>
       )}
+
+      <TouchableOpacity
+        onPress={() => onArchivar(vinculo.id, vinculo.empresa_nombre)}
+        disabled={archivando}
+        className="border-t border-border px-4 py-3 flex-row items-center justify-center gap-1.5 active:opacity-70"
+      >
+        {archivando
+          ? <ActivityIndicator size="small" color="#DC2626" />
+          : <>
+              <Ionicons name="exit-outline" size={14} color="#DC2626" />
+              <Text className="text-sm font-semibold text-danger">Dejar de recibir ofertas</Text>
+            </>
+        }
+      </TouchableOpacity>
     </View>
   );
 }
@@ -269,6 +290,7 @@ export default function MisEmpresasScreen() {
   const { data, isLoading, refetch } = useMisEmpresas();
   const aceptar    = useAceptar();
   const rechazar   = useRechazarVinculo();
+  const archivar   = useArchivarVinculo();
   const solicitar  = useSolicitar();
 
   const activas      = data?.activas      ?? [];
@@ -314,6 +336,24 @@ export default function MisEmpresasScreen() {
       await rechazar.mutateAsync({ id });
     } catch {
       Alert.alert('Error', esCancelar ? 'No se pudo cancelar' : 'No se pudo rechazar');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleArchivar = async (id: number, nombre: string) => {
+    const ok = await confirm({
+      title: 'Dejar de recibir ofertas',
+      message: `Ya no verás ofertas de ${nombre} ni podrás tomar turnos con ellos hasta que vuelvas a solicitar el vínculo. ¿Continuar?`,
+      confirmLabel: 'Dejar de recibir ofertas',
+      destructive: true,
+    });
+    if (!ok) return;
+    setActionLoadingId(id);
+    try {
+      await archivar.mutateAsync(id);
+    } catch {
+      Alert.alert('Error', 'No se pudo completar la acción');
     } finally {
       setActionLoadingId(null);
     }
@@ -394,7 +434,12 @@ export default function MisEmpresasScreen() {
           <View className="mb-2">
             <SectionHeader title="Empresas activas" count={activas.length} />
             {activas.map((v) => (
-              <EmpresaActivaCard key={v.id} vinculo={v} />
+              <EmpresaActivaCard
+                key={v.id}
+                vinculo={v}
+                onArchivar={handleArchivar}
+                archivando={actionLoadingId === v.id}
+              />
             ))}
           </View>
         )}

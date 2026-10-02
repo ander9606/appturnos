@@ -36,6 +36,8 @@ export interface EmpresaDirectorio {
   ciudad: string | null;
   logo_url: string | null;
   descripcion: string | null;
+  /** Rubro / a qué se dedica (ej. "Logística y transporte"). Texto libre que carga la empresa. */
+  actividad: string | null;
   acepta_postulaciones: boolean;
   /** Cargos activos en la empresa — informativo, la empresa decide cuál asignar al aprobar. */
   cargos: { id: number; nombre: string }[];
@@ -55,7 +57,6 @@ export type TipoContrato = 'laboral' | 'prestacion_servicios';
 /** Vista completa que solo ve el admin_empresa de esa empresa */
 export interface Empresa extends EmpresaDirectorio {
   nit: string | null;
-  actividad: string | null;
   plan: string;
   tipo_liquidacion: TipoLiquidacion;
   tipo_contrato: TipoContrato;

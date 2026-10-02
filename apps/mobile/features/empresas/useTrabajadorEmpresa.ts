@@ -48,6 +48,15 @@ export function useRechazarVinculo() {
   });
 }
 
+/** Trabajador: dejar de recibir ofertas de una empresa con la que tiene vínculo activo. */
+export function useArchivarVinculo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => trabajadorEmpresaApi.archivar(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: TE_KEYS.misEmpresas }),
+  });
+}
+
 // ── Admin hooks ───────────────────────────────────────────────────────────
 
 export function useSolicitudes(estado?: string, enabled = true) {
@@ -67,6 +76,15 @@ export function useInvitar() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trabajador-empresa', 'solicitudes'] });
     },
+  });
+}
+
+/** Admin/Jefe: dejar de ofrecerle turnos a un trabajador. */
+export function useBloquearOfertas() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (trabajadorId: number) => trabajadorEmpresaApi.bloquearOfertas(trabajadorId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
   });
 }
 

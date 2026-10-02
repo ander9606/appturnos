@@ -30,7 +30,7 @@ import {
   useDesactivarTrabajador,
   useEliminarTrabajadorDefinitivo,
 } from '@/features/equipo/useEquipo';
-import { useInvitar } from '@/features/empresas/useTrabajadorEmpresa';
+import { useInvitar, useBloquearOfertas } from '@/features/empresas/useTrabajadorEmpresa';
 import {
   useAsignacionesTrabajador,
   useCalificar,
@@ -129,6 +129,7 @@ export default function TrabajadorDetailScreen() {
   const invitar     = useInvitar();
   const desactivar  = useDesactivarTrabajador();
   const eliminarDefinitivo = useEliminarTrabajadorDefinitivo();
+  const bloquearOfertas = useBloquearOfertas();
   const calificar   = useCalificar();
 
   // Turnos recientes del trabajador (solo para roles que pueden ver asignaciones)
@@ -301,6 +302,25 @@ export default function TrabajadorDetailScreen() {
     desactivar.mutate(numId, {
       onSuccess: () => router.back(),
       onError: () => Alert.alert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
+    });
+  }
+
+  // ── Bloquear ofertas (admin_empresa + jefe_turnos) ────────────────────
+
+  async function confirmBloquearOfertas() {
+    const ok = await confirm({
+      title: '¿Dejar de ofrecerle turnos?',
+      message: `${t?.nombre} ${t?.apellido} ya no verá ofertas tuyas ni podrá tomar turnos contigo, hasta que vuelva a solicitar el vínculo. Su ficha y su historial no se tocan.`,
+      confirmLabel: 'Dejar de ofrecerle turnos',
+      destructive: true,
+    });
+    if (!ok) return;
+    bloquearOfertas.mutate(numId, {
+      onSuccess: () => showToast('Ya no se le ofrecerán turnos.'),
+      onError: (err: unknown) => {
+        const msg = err instanceof ApiError ? err.message : 'No se pudo completar la acción';
+        Alert.alert('Error', msg);
+      },
     });
   }
 
@@ -638,6 +658,23 @@ export default function TrabajadorDetailScreen() {
                 </View>
               );
             })}
+          </View>
+        )}
+
+        {/* Dejar de ofrecerle turnos — admin_empresa + jefe_turnos, solo tipo turnos/ambos */}
+        {canRate && t.activo && (t.tipo === 'turnos' || t.tipo === 'ambos') && (
+          <View className="mx-4 mt-6">
+            <Pressable
+              onPress={confirmBloquearOfertas}
+              disabled={bloquearOfertas.isPending}
+              className="h-12 rounded-xl items-center justify-center border border-warning active:bg-warning/10 disabled:opacity-50"
+            >
+              {bloquearOfertas.isPending ? (
+                <ActivityIndicator size="small" color="#D97706" />
+              ) : (
+                <Text className="text-warning font-semibold">Dejar de ofrecerle turnos</Text>
+              )}
+            </Pressable>
           </View>
         )}
 

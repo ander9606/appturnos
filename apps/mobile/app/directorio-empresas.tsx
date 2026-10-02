@@ -65,10 +65,10 @@ function EmpresaCard({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      className={`flex-row items-center gap-3 p-4 rounded-2xl border ${s.border} ${s.bg} ${disabled ? 'opacity-60' : 'active:opacity-70'}`}
+      className={`flex-row items-start gap-3 p-4 rounded-2xl border ${s.border} ${s.bg} ${disabled ? 'opacity-60' : 'active:opacity-70'}`}
     >
       {/* Icon */}
-      <View className="w-12 h-12 rounded-xl bg-muted items-center justify-center">
+      <View className="w-12 h-12 rounded-xl bg-muted items-center justify-center mt-0.5">
         <Ionicons name="business-outline" size={22} color="#64748B" />
       </View>
 
@@ -77,23 +77,39 @@ function EmpresaCard({
         <Text className="text-base font-bold text-foreground" numberOfLines={1}>
           {emp.nombre}
         </Text>
-        {emp.ciudad ? (
-          <View className="flex-row items-center gap-1 mt-0.5">
-            <Ionicons name="location-outline" size={12} color="#94A3B8" />
-            <Text className="text-xs text-muted-foreground">{emp.ciudad}</Text>
+
+        {(emp.actividad || emp.ciudad) && (
+          <View className="flex-row items-center gap-1.5 mt-0.5 flex-wrap">
+            {emp.actividad ? (
+              <Text className="text-xs text-muted-foreground" numberOfLines={1}>{emp.actividad}</Text>
+            ) : null}
+            {emp.actividad && emp.ciudad ? <Text className="text-xs text-muted-foreground">·</Text> : null}
+            {emp.ciudad ? (
+              <View className="flex-row items-center gap-1">
+                <Ionicons name="location-outline" size={12} color="#94A3B8" />
+                <Text className="text-xs text-muted-foreground">{emp.ciudad}</Text>
+              </View>
+            ) : null}
           </View>
-        ) : null}
+        )}
+
+        {/* Lo que más importa de un vistazo: cuánto paga y con qué frecuencia */}
+        {emp.pago_promedio != null && (
+          <View className="flex-row items-center gap-1 mt-1.5 bg-success/10 self-start rounded-lg px-2 py-1">
+            <Ionicons name="cash-outline" size={12} color="#059669" />
+            <Text className="text-xs font-bold text-success">
+              ${Math.round(emp.pago_promedio).toLocaleString('es-CO')}/turno
+            </Text>
+            {emp.turnos_promedio_semana != null && (
+              <Text className="text-xs text-success/80">· ~{emp.turnos_promedio_semana}/sem</Text>
+            )}
+          </View>
+        )}
+
         {emp.cargos?.length > 0 && (
-          <Text className="text-xs text-muted-foreground mt-0.5" numberOfLines={1}>
+          <Text className="text-xs text-muted-foreground mt-1" numberOfLines={1}>
             {emp.cargos.slice(0, 3).map((c) => c.nombre).join(' · ')}
             {emp.cargos.length > 3 ? ` +${emp.cargos.length - 3}` : ''}
-          </Text>
-        )}
-        {(emp.turnos_promedio_semana != null || emp.pago_promedio != null) && (
-          <Text className="text-xs text-muted-foreground mt-0.5">
-            {emp.turnos_promedio_semana != null ? `~${emp.turnos_promedio_semana} turnos/sem` : ''}
-            {emp.turnos_promedio_semana != null && emp.pago_promedio != null ? ' · ' : ''}
-            {emp.pago_promedio != null ? `$${Math.round(emp.pago_promedio).toLocaleString('es-CO')}/turno` : ''}
           </Text>
         )}
         {emp.cargos_frecuentes?.length > 0 && (
@@ -104,7 +120,7 @@ function EmpresaCard({
       </View>
 
       {/* State pill */}
-      <View className={`rounded-xl px-3 py-1.5 ${s.labelBg}`}>
+      <View className={`rounded-xl px-3 py-1.5 mt-0.5 ${s.labelBg}`}>
         {estado === 'disponible' || estado === 'archivada' ? (
           <Text className={`text-xs font-semibold ${s.labelColor}`}>{s.label}</Text>
         ) : estado === 'activa' ? (

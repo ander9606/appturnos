@@ -52,6 +52,14 @@ async function archivar(req, res) {
   res.json({ success: true, data, message: 'Relación archivada' });
 }
 
+async function bloquearOfertas(req, res) {
+  const data = await TrabajadorEmpresaService.bloquearOfertas(
+    req.empresa_id,
+    Number(req.params.trabajadorId)
+  );
+  res.json({ success: true, data, message: 'Ya no se le ofrecerán turnos a este trabajador' });
+}
+
 async function misEmpresas(req, res) {
   const data = await TrabajadorEmpresaService.misEmpresas(req.usuario.sub);
   res.json({ success: true, data, message: 'Mis empresas' });
@@ -64,4 +72,4 @@ async function solicitudes(req, res) {
   res.json({ success: true, data, message: 'Solicitudes de vinculación' });
 }
 
-module.exports = { solicitar, invitar, aprobar, aceptar, rechazar, archivar, misEmpresas, solicitudes };
+module.exports = { solicitar, invitar, aprobar, aceptar, rechazar, archivar, bloquearOfertas, misEmpresas, solicitudes };

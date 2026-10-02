@@ -10,7 +10,7 @@ const { pool } = require('../../config/database');
 const DIAS_VENTANA_ACTIVIDAD = 84;
 const SEMANAS_VENTANA_ACTIVIDAD = DIAS_VENTANA_ACTIVIDAD / 7;
 
-const COLUMNAS_PUBLICAS = `id, nombre, slug, ciudad, plan,
+const COLUMNAS_PUBLICAS = `id, nombre, slug, ciudad, plan, actividad,
   logo_url, descripcion, acepta_postulaciones, created_at`;
 
 const COLUMNAS_ADMIN = `id, nombre, slug, nit, ciudad, plan, actividad,

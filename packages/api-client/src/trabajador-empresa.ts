@@ -91,6 +91,16 @@ export const trabajadorEmpresaApi = {
     return api.post<Vinculo>(`/api/trabajador-empresa/${id}/rechazar`, { motivo });
   },
 
+  /** Trabajador: dejar de recibir ofertas de una empresa (vínculo activo) / Empresa: desvincular al trabajador */
+  archivar(id: number): Promise<Vinculo> {
+    return api.post<Vinculo>(`/api/trabajador-empresa/${id}/archivar`, {});
+  },
+
+  /** Admin/Jefe: dejar de ofrecerle turnos a un trabajador (archiva el vínculo, no toca su ficha) */
+  bloquearOfertas(trabajadorId: number): Promise<Vinculo> {
+    return api.post<Vinculo>(`/api/trabajador-empresa/trabajador/${trabajadorId}/bloquear`, {});
+  },
+
   /** Admin/Jefe: ver solicitudes pendientes de su empresa */
   solicitudes(estado?: string): Promise<SolicitudAdmin[]> {
     const suffix = estado ? `?estado=${encodeURIComponent(estado)}` : '';
