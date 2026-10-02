@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Building2, Upload, X } from 'lucide-react';
 import {
   useEmpresa, useUpdateEmpresa,
   usePuntos, useCreatePunto, useUpdatePunto, useDeletePunto,
@@ -71,18 +72,80 @@ const EMPRESA_FIELDS: { key: string; label: string; type?: string; full?: boolea
   { key: 'telefono',       label: 'Teléfono' },
   { key: 'email_empresa',  label: 'Email de la empresa', type: 'email' },
   { key: 'direccion',      label: 'Dirección', full: true },
-  { key: 'logo_url',       label: 'URL del logo', type: 'url', full: true },
 ];
+
+/** Redimensiona a 512px máx. y comprime a JPEG — mismo criterio que el picker de la app (quality 0.5-0.6), para no superar el límite de 1MB del body JSON del backend. */
+function fileToLogoDataUri(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onerror = () => reject(new Error('Archivo de imagen inválido'));
+      img.onload = () => {
+        const scale = Math.min(1, 512 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function LogoUploader({ logoUrl, uploading, onUpload, onRemove }: { logoUrl: string | null; uploading: boolean; onUpload: (dataUri: string) => void; onRemove: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Selecciona un archivo de imagen'); return; }
+    try {
+      onUpload(await fileToLogoDataUri(file));
+    } catch {
+      toast.error('No se pudo procesar la imagen');
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-4 mb-5 pb-5 border-b border-border">
+      <div className="w-20 h-20 rounded-2xl bg-muted border border-border flex items-center justify-center overflow-hidden shrink-0">
+        {logoUrl ? <img src={logoUrl} alt="Logo de la empresa" className="w-full h-full object-contain" /> : <Building2 size={28} className="text-muted-foreground/60" />}
+      </div>
+      <div className="flex flex-col gap-2">
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="flex items-center gap-1.5 text-sm border border-border rounded-lg px-3 py-1.5 hover:bg-muted disabled:opacity-50 w-fit">
+          <Upload size={14} /> {uploading ? 'Subiendo...' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
+        </button>
+        {logoUrl && (
+          <button type="button" onClick={onRemove} disabled={uploading} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-danger disabled:opacity-50 w-fit">
+            <X size={12} /> Quitar logo
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function EmpresaTab() {
   const { data, isLoading, isError, error, refetch } = useEmpresa();
   const update = useUpdateEmpresa();
   const empresa = data?.data;
   const [form, setForm] = useState<Record<string, string> | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!empresa) return null;
+
+  const withLogoUpload = async (logo_url: string) => {
+    setUploadingLogo(true);
+    try { await update.mutateAsync({ logo_url }); } finally { setUploadingLogo(false); }
+  };
 
   const editing = form !== null;
   const base: Record<string, string> = {};
@@ -112,6 +175,12 @@ function EmpresaTab() {
             </div>
         }
       </div>
+      <LogoUploader
+        logoUrl={empresa.logo_url}
+        uploading={uploadingLogo}
+        onUpload={dataUri => withLogoUpload(dataUri)}
+        onRemove={() => withLogoUpload('')}
+      />
       <div className="grid grid-cols-2 gap-4">
         {EMPRESA_FIELDS.map(({ key, label, type = 'text', full, textarea }) => (
           <div key={key} className={full ? 'col-span-2' : ''}>
