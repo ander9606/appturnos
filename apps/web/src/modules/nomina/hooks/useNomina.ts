@@ -145,6 +145,50 @@ export function useCrearRegistro() {
   });
 }
 
+function siguienteDia(fecha: string) {
+  const d = new Date(`${fecha}T00:00:00`);
+  d.setDate(d.getDate() + 1);
+  return d.toLocaleDateString('en-CA');
+}
+
+/** Crea el mismo tipo_dia (licencia/vacación) para cada día de un rango — un día con registro ya
+ * existente (409) se cuenta como "ya existía" en vez de abortar el resto del rango. */
+export function useCrearRegistroRango() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (datos: {
+      periodo_id: number; trabajador_id: number;
+      fecha_desde: string; fecha_hasta: string;
+      tipo_dia: TipoDia; novedad?: string;
+    }) => {
+      let creados = 0, existentes = 0, total = 0;
+      for (let fecha = datos.fecha_desde; fecha <= datos.fecha_hasta; fecha = siguienteDia(fecha)) {
+        total++;
+        try {
+          await nominaApi.crearRegistro({
+            periodo_id: datos.periodo_id, trabajador_id: datos.trabajador_id,
+            fecha, tipo_dia: datos.tipo_dia, novedad: datos.novedad,
+          });
+          creados++;
+        } catch (err) {
+          if (axios.isAxiosError(err) && err.response?.status === 409) { existentes++; continue; }
+          throw err;
+        }
+      }
+      return { creados, existentes, total };
+    },
+    onSuccess: ({ creados, existentes, total }) => {
+      qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });
+      toast.success(
+        existentes > 0
+          ? `${creados} de ${total} días creados (${existentes} ya tenían registro)`
+          : `${creados} día${creados === 1 ? '' : 's'} creado${creados === 1 ? '' : 's'}`
+      );
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useDescuentosPeriodo(periodoId: number | undefined) {
   return useQuery({
     queryKey: KEYS.descuentos(periodoId!),

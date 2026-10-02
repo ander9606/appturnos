@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/Button';
 import { UbicacionLink } from '@/components/ui/UbicacionLink';
 
 import {
-  useRegistros, useCorregirRegistro, useCrearRegistro,
+  useRegistros, useCorregirRegistro, useCrearRegistro, useCrearRegistroRango,
 } from '@/features/nomina/useNomina';
 import {
   useCompensatoriosTodos, useReasignarCompensatorio,
@@ -48,8 +48,13 @@ const TIPOS_DIA: { v: TipoDia; label: string; color: string }[] = [
 ];
 
 // 'ausencia' se maneja aparte (mensaje y color distinto) — estos son los
-// demás tipo_dia que tampoco requieren horario de entrada/salida.
-const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'licencia'];
+// demás tipo_dia que tampoco requieren horario de entrada/salida. 'vacacion'
+// se incluye para poder marcar un rango de varios días de una sola vez.
+const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'licencia', 'vacacion'];
+
+// 'licencia' y 'vacacion' se marcan por rango — a diferencia de los demás
+// tipos, que son un día puntual.
+const TIPOS_RANGO: TipoDia[] = ['licencia', 'vacacion'];
 
 function TipoDiaChips({ value, onChange }: { value: TipoDia; onChange: (v: TipoDia) => void }) {
   return (
@@ -371,33 +376,39 @@ function CrearRegistroModal({
   onClose: () => void;
 }) {
   const crear = useCrearRegistro();
+  const crearRango = useCrearRegistroRango();
 
   // El último día seleccionable del período: si ya terminó, es su fecha fin,
   // no "hoy" — un value posterior al maximumDate cuelga el picker nativo de Android.
   const fechaMaxPeriodo = fechaFin && fechaFin < bogotaToday() ? fechaFin : bogotaToday();
 
   const [fecha,       setFecha]       = useState(() => new Date(`${fechaMaxPeriodo}T00:00:00`));
+  const [fechaHasta,  setFechaHasta]  = useState(() => new Date(`${fechaMaxPeriodo}T00:00:00`));
   const [tipoDia,     setTipoDia]     = useState<TipoDia>('ordinario');
   const [horaEntrada, setHoraEntrada] = useState<Date | null>(null);
   const [horaSalida,  setHoraSalida]  = useState<Date | null>(null);
   const [novedad,     setNovedad]     = useState('');
 
-  const [showFecha,   setShowFecha]   = useState(false);
-  const [showEntrada, setShowEntrada] = useState(false);
-  const [showSalida,  setShowSalida]  = useState(false);
+  const [showFecha,      setShowFecha]      = useState(false);
+  const [showFechaHasta, setShowFechaHasta] = useState(false);
+  const [showEntrada,    setShowEntrada]    = useState(false);
+  const [showSalida,     setShowSalida]     = useState(false);
 
   const esAusencia = tipoDia === 'ausencia';
+  const esRango = TIPOS_RANGO.includes(tipoDia);
   const sinHorario = esAusencia || TIPOS_DIA_SIN_HORARIO.includes(tipoDia);
 
   // Reset al abrir para un trabajador distinto
   React.useEffect(() => {
     if (creando) {
       setFecha(new Date(`${fechaMaxPeriodo}T00:00:00`));
+      setFechaHasta(new Date(`${fechaMaxPeriodo}T00:00:00`));
       setTipoDia('ordinario');
       setHoraEntrada(null);
       setHoraSalida(null);
       setNovedad('');
       setShowFecha(false);
+      setShowFechaHasta(false);
       setShowEntrada(false);
       setShowSalida(false);
     }
@@ -407,7 +418,14 @@ function CrearRegistroModal({
 
   function onChangeFecha(_: DateTimePickerEvent, d?: Date) {
     if (Platform.OS === 'android') setShowFecha(false);
-    if (d) setFecha(d);
+    if (d) {
+      setFecha(d);
+      if (d > fechaHasta) setFechaHasta(d);
+    }
+  }
+  function onChangeFechaHasta(_: DateTimePickerEvent, d?: Date) {
+    if (Platform.OS === 'android') setShowFechaHasta(false);
+    if (d) setFechaHasta(d);
   }
   function onChangeEntrada(_: DateTimePickerEvent, d?: Date) {
     if (Platform.OS === 'android') setShowEntrada(false);
@@ -419,6 +437,41 @@ function CrearRegistroModal({
   }
 
   async function handleGuardar() {
+    if (esRango) {
+      const desdeISO = toISODate(fecha);
+      const hastaISO = toISODate(fechaHasta);
+      if (hastaISO < desdeISO) {
+        Alert.alert('"Hasta" no puede ser anterior a "Desde".');
+        return;
+      }
+      if (fechaInicio && fechaFin && !(desdeISO >= fechaInicio && hastaISO <= fechaFin)) {
+        Alert.alert('Fecha fuera del período', `El rango debe estar entre ${fechaInicio} y ${fechaFin}.`);
+        return;
+      }
+      if (hastaISO > bogotaToday()) {
+        Alert.alert('Fecha inválida', 'No puedes registrar un día que aún no ha ocurrido.');
+        return;
+      }
+      try {
+        const { creados, existentes, total } = await crearRango.mutateAsync({
+          periodo_id:    periodoId,
+          trabajador_id: creando!.trabajadorId,
+          fecha_desde:   desdeISO,
+          fecha_hasta:   hastaISO,
+          tipo_dia:      tipoDia,
+          novedad:       novedad.trim() || undefined,
+        });
+        Alert.alert('Listo', existentes > 0
+          ? `${creados} de ${total} días creados (${existentes} ya tenían registro).`
+          : `${creados} día${creados === 1 ? '' : 's'} creado${creados === 1 ? '' : 's'}.`);
+        onClose();
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'No se pudo crear el registro.';
+        Alert.alert('Error', msg);
+      }
+      return;
+    }
+
     if (!sinHorario && !horaEntrada) {
       Alert.alert('Falta la hora de entrada');
       return;
@@ -475,9 +528,9 @@ function CrearRegistroModal({
             </Pressable>
           </View>
 
-          {/* Fecha */}
+          {/* Fecha (o "Desde" cuando el tipo de día se marca por rango) */}
           <View className="gap-1.5">
-            <Text className="text-sm font-semibold text-foreground">Fecha</Text>
+            <Text className="text-sm font-semibold text-foreground">{esRango ? 'Desde' : 'Fecha'}</Text>
             <TouchableOpacity
               onPress={() => setShowFecha(true)}
               className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
@@ -504,7 +557,38 @@ function CrearRegistroModal({
             )}
           </View>
 
-          {/* Tipo de día — 'Ausencia', 'Compensatorio', 'Descanso' y 'Licencia' ocultan entrada/salida, no requieren hora. */}
+          {/* Hasta — solo para tipos de día que se marcan por rango (licencia/vacación) */}
+          {esRango && (
+            <View className="gap-1.5">
+              <Text className="text-sm font-semibold text-foreground">Hasta</Text>
+              <TouchableOpacity
+                onPress={() => setShowFechaHasta(true)}
+                className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
+              >
+                <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                <Text className="text-sm text-foreground">
+                  {fmtFechaCorta(toISODate(fechaHasta))}
+                </Text>
+              </TouchableOpacity>
+              {showFechaHasta && (
+                <DateTimePicker
+                  value={fechaHasta}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  minimumDate={fecha}
+                  maximumDate={new Date(`${fechaMaxPeriodo}T00:00:00`)}
+                  onChange={onChangeFechaHasta}
+                />
+              )}
+              {showFechaHasta && Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setShowFechaHasta(false)} className="bg-primary/10 rounded-xl py-2 items-center">
+                  <Text className="text-sm font-semibold text-primary">Listo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Tipo de día — 'Ausencia', 'Compensatorio', 'Descanso', 'Licencia' y 'Vacación' ocultan entrada/salida, no requieren hora. */}
           <View className="gap-2">
             <Text className="text-sm font-semibold text-foreground">Tipo de día</Text>
             <TipoDiaChips value={tipoDia} onChange={setTipoDia} />
@@ -516,7 +600,9 @@ function CrearRegistroModal({
               <Text className={`text-xs flex-1 ${esAusencia ? 'text-danger' : 'text-info'}`}>
                 {esAusencia
                   ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
-                  : 'Este tipo de día no requiere horario de entrada ni salida.'}
+                  : esRango
+                    ? 'Este tipo de día no requiere horario — se creará un registro igual para cada día del rango.'
+                    : 'Este tipo de día no requiere horario de entrada ni salida.'}
               </Text>
             </View>
           ) : (
@@ -606,12 +692,12 @@ function CrearRegistroModal({
 
           <TouchableOpacity
             onPress={handleGuardar}
-            disabled={crear.isPending}
+            disabled={crear.isPending || crearRango.isPending}
             className={`h-14 rounded-2xl items-center justify-center active:opacity-80 disabled:opacity-40 ${esAusencia ? 'bg-danger' : 'bg-foreground'}`}
           >
-            {crear.isPending
+            {crear.isPending || crearRango.isPending
               ? <ActivityIndicator color="#fff" />
-              : <Text className="text-base font-semibold text-white">{esAusencia ? 'Marcar ausencia' : 'Crear registro'}</Text>
+              : <Text className="text-base font-semibold text-white">{esAusencia ? 'Marcar ausencia' : esRango ? 'Crear registros' : 'Crear registro'}</Text>
             }
           </TouchableOpacity>
         </ScrollView>

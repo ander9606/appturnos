@@ -20,7 +20,9 @@ const MARCAR = [ROLES.TRABAJADOR_NOMINA];
 const TIPOS_DIA = ['ordinario', 'descanso', 'compensatorio', 'incapacidad', 'vacacion', 'licencia', 'ausencia'];
 // 'ausencia' se valida aparte más abajo (mensaje propio) — estos son los demás
 // tipo_dia que tampoco requieren hora_entrada al crear un registro manual.
-const TIPOS_DIA_SIN_HORARIO = ['ausencia', 'compensatorio', 'descanso', 'licencia'];
+// 'vacacion' se agregó aquí para permitir marcar un rango de varios días de
+// una vez sin tener que repetir la misma hora en cada día.
+const TIPOS_DIA_SIN_HORARIO = ['ausencia', 'compensatorio', 'descanso', 'licencia', 'vacacion'];
 const RE_HORA   = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 const idParam   = param('id').isInt({ min: 1 }).withMessage('id inválido');
 

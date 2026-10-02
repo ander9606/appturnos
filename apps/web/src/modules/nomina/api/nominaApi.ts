@@ -17,7 +17,7 @@ export const nominaApi = {
   listarRegistros: (params: { periodo_id?: number; trabajador_id?: number; fecha?: string; sospechoso?: boolean; page?: number; limit?: number }) =>
     api.get('/nomina/registros', { params: { ...params, sospechoso: params.sospechoso === undefined ? undefined : (params.sospechoso ? '1' : '0') } }).then(r => r.data),
 
-  crearRegistro: (data: { periodo_id: number; fecha: string; hora_entrada: string; hora_salida?: string; trabajador_id: number; novedad?: string }) =>
+  crearRegistro: (data: { periodo_id: number; fecha: string; hora_entrada?: string; hora_salida?: string; trabajador_id: number; novedad?: string; tipo_dia?: TipoDia }) =>
     api.post('/nomina/registros', data).then(r => r.data),
 
   corregirRegistro: (id: number, data: { hora_entrada?: string | null; hora_salida?: string | null; novedad?: string; tipo_dia?: TipoDia }) =>
