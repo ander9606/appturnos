@@ -69,6 +69,8 @@ export default function TurnoDetailScreen() {
 
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
+  // jefe_nomina ve el turno en solo lectura: no marca ingreso/egreso ni reconfirma.
+  const soloLectura = rol === 'jefe_nomina';
 
   // ── Data ──────────────────────────────────────────────────────────────
   const { data: asignacion, isLoading } = useAsignacion(id);
@@ -93,7 +95,7 @@ export default function TurnoDetailScreen() {
   // El gestor nunca marca su propia entrada/salida en el turno de otro
   // trabajador — sondear su GPS aquí no serviría para nada y solo gasta
   // batería/permiso de ubicación de su teléfono.
-  const activoParaGeofence = !isGestor
+  const activoParaGeofence = !isGestor && !soloLectura
     && (asignacion?.estado === 'confirmado' || asignacion?.estado === 'en_progreso');
   const isLibre = asignacion?.geofence_info?.tipo === 'libre';
   const isZonal = asignacion?.geofence_info?.tipo === 'zonal';
@@ -397,7 +399,7 @@ export default function TurnoDetailScreen() {
               cambió fecha/hora/lugar mientras estabas confirmado. Solo el propio
               trabajador puede resolverlo; un gestor mirando esto solo ve el aviso
               de TurnoTimeline, sin botones. ── */}
-          {estado === 'por_reconfirmar' && !isGestor && (
+          {estado === 'por_reconfirmar' && !isGestor && !soloLectura && (
             <View className="bg-card rounded-2xl px-5 py-4 gap-3"
               style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
               <Text className="text-sm text-foreground">
@@ -423,7 +425,7 @@ export default function TurnoDetailScreen() {
           )}
 
           {/* ── CTA: Marcar Ingreso (estado: confirmado) ─────────────────── */}
-          {estado === 'confirmado' && (
+          {estado === 'confirmado' && !soloLectura && (
             <CTAConfirmadoCard
               dentroVentana={dentroVentana}
               minutosParaIngreso={minutosParaIngreso}
@@ -446,7 +448,7 @@ export default function TurnoDetailScreen() {
           )}
 
           {/* ── CTA: En progreso → Marcar Egreso ────────────────────────── */}
-          {estado === 'en_progreso' && (
+          {estado === 'en_progreso' && !soloLectura && (
             <CTAEnProgresoCard
               elapsedLabel={elapsedLabel}
               horaIngresoReal={hora_ingreso_real}

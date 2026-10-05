@@ -54,6 +54,20 @@ import { Button } from '@/components/ui/Button';
 import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 
+// Lo que jefe_nomina puede editar de una ficha de nómina. Mismo criterio que el
+// backend (CAMPOS_JEFE_NOMINA en trabajadores.service.js): sin tipo ni datos de pago.
+const CAMPOS_JEFE = [
+  'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
+  'telefono', 'email', 'cargo', 'descripcion', 'eps', 'afp',
+  'contacto_emergencia_nombre', 'contacto_emergencia_tel',
+  'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'hora_entrada_esperada',
+  'tarifa_hora', 'salario_base',
+];
+
+function filtrarCampos<T extends object>(obj: T, campos: readonly string[]): Partial<T> {
+  return Object.fromEntries(Object.entries(obj).filter(([k]) => campos.includes(k))) as Partial<T>;
+}
+
 const TIPO_LABELS: Record<string, string> = {
   turnos: 'Turnos',
   nomina: 'Nómina',
@@ -143,7 +157,8 @@ export default function TrabajadorDetailScreen() {
   const bloquearOfertas = useBloquearOfertas();
   const calificar   = useCalificar();
   const actualizarSalario = useActualizarSalario(numId);
-  const historialSalario  = useHistorialSalario(numId, isAdmin);
+  const puedeVerSalario = isAdmin || usuario?.rol === 'jefe_nomina';
+  const historialSalario  = useHistorialSalario(numId, puedeVerSalario);
   const canEditSalario = isAdmin || usuario?.rol === 'jefe_nomina';
   const [salarioModal, setSalarioModal] = useState(false);
   const [tarifaInput,  setTarifaInput]  = useState('');
@@ -205,7 +220,8 @@ export default function TrabajadorDetailScreen() {
     setEditing((v) => !v);
   }
 
-  const headerRight = isAdmin && t && t.activo
+  const puedeEditarFicha = isAdmin || (usuario?.rol === 'jefe_nomina' && (t?.tipo === 'nomina' || t?.tipo === 'ambos'));
+  const headerRight = puedeEditarFicha && t && t.activo
     ? () => (
         <Pressable
           onPress={toggleEditing}
@@ -260,7 +276,7 @@ export default function TrabajadorDetailScreen() {
     }
 
     try {
-      await actualizar.mutateAsync({
+      const payload = {
         nombre:       data.nombre,
         apellido:     data.apellido,
         tipo:         data.tipo,
@@ -283,7 +299,8 @@ export default function TrabajadorDetailScreen() {
         numero_cuenta: data.numero_cuenta || undefined,
         ant_judiciales_fecha:     data.ant_judiciales_fecha     || undefined,
         ant_disciplinarios_fecha: data.ant_disciplinarios_fecha || undefined,
-      });
+      };
+      await actualizar.mutateAsync(isAdmin ? payload : filtrarCampos(payload, CAMPOS_JEFE));
       if (pasaANomina && rawData.cedula) {
         // Invitar DESPUÉS de guardar: invitar() busca la ficha por cédula en la
         // BD, y si la cédula nueva aún no está persistida crea una ficha fantasma.
@@ -451,6 +468,7 @@ export default function TrabajadorDetailScreen() {
           defaultValues={defaults}
           onSubmit={handleUpdate}
           submitLabel="Guardar cambios"
+          soloCampos={isAdmin ? undefined : CAMPOS_JEFE}
           submittingLabel="Guardando…"
           onDirtyChange={setFormDirty}
         />
@@ -758,7 +776,7 @@ export default function TrabajadorDetailScreen() {
             </Pressable>
           </View>
         )}
-        {isAdmin && (
+        {puedeVerSalario && (
           <View className="mx-4 mt-3 bg-card rounded-2xl border border-border p-4 gap-3">
             <View className="gap-0.5">
               <Text className="text-sm font-semibold text-foreground">Historial de sueldo</Text>

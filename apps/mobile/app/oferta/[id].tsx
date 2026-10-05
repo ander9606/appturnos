@@ -58,13 +58,14 @@ const ESTADO_CFG: Record<EstadoAsignacion, { label: string; variant: BadgeVarian
 // ── PostulanteRow (gestores) ──────────────────────────────────────────────
 
 function PostulanteRow({
-  asignacion, ofertaId, esPasado, turnoIniciado,
+  asignacion, ofertaId, esPasado, turnoIniciado, puedeGestionar,
   confirmarM, rechazarM, cancelarM, noPresentadoM,
 }: {
   asignacion:    AsignacionResumen;
   ofertaId:      number;
   esPasado:      boolean;
   turnoIniciado: boolean;
+  puedeGestionar: boolean;
   confirmarM:    ReturnType<typeof useConfirmar>;
   rechazarM:     ReturnType<typeof useRechazar>;
   cancelarM:     ReturnType<typeof useCancelar>;
@@ -96,7 +97,7 @@ function PostulanteRow({
         <Badge label={cfg.label} variant={cfg.variant} size="sm" />
       </View>
 
-      {esPasado ? (
+      {puedeGestionar && (esPasado ? (
         (isConf || isEnProg) ? (
           <Button label={noPresentadoM.isPending ? '…' : 'No vino'} variant="danger" size="sm"
             loading={noPresentadoM.isPending} disabled={isBusy}
@@ -170,7 +171,7 @@ function PostulanteRow({
             </View>
           )}
         </>
-      )}
+      ))}
 
       {/* Ver detalle del turno — ahí se corrige ingreso/egreso y se agrega el
           bono, disponible incluso con esPasado (arreglar una salida que el
@@ -200,6 +201,8 @@ export default function OfertaDetailScreen() {
 
   const isGestor = rol === 'admin_empresa' || rol === 'jefe_turnos' || rol === 'jefe_nomina';
   const isWorker = rol === 'trabajador_turnos' || rol === 'trabajador_nomina';
+  // jefe_nomina ve la oferta y sus postulantes, pero no la gestiona.
+  const puedeGestionar = rol === 'admin_empresa' || rol === 'jefe_turnos';
   // Backend restringe cancelar oferta a admin_empresa/jefe_turnos (no jefe_nomina).
   const puedeCancelarOferta = rol === 'admin_empresa' || rol === 'jefe_turnos';
 
@@ -359,7 +362,7 @@ export default function OfertaDetailScreen() {
 
   // Condiciones de la barra de acciones fija (gestor) — mismas reglas de antes,
   // solo que ahora deciden si esa barra se muestra en vez de un botón inline.
-  const mostrarCompletar = isGestor && turnoIniciado
+  const mostrarCompletar = puedeGestionar && turnoIniciado
     && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador';
   const mostrarCancelarOferta = puedeCancelarOferta
     && oferta.estado !== 'cancelada' && oferta.estado !== 'completada';
@@ -370,7 +373,7 @@ export default function OfertaDetailScreen() {
         options={{
           title: oferta.titulo,
           headerShown: true,
-          headerRight: isGestor ? () => (
+          headerRight: puedeGestionar ? () => (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               {ofertaEsEditable && (
                 <TouchableOpacity
@@ -460,7 +463,7 @@ export default function OfertaDetailScreen() {
 
               {/* Ubicación libre: gestor puede editarla mientras la oferta siga
                   abierta/borrador; el resto solo ve el aviso si está activa. */}
-              {isGestor && ofertaEsEditable ? (
+              {puedeGestionar && ofertaEsEditable ? (
                 <View className="flex-row items-center gap-3">
                   <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
                     <Ionicons name="navigate-circle-outline" size={16} color="#64748B" />
@@ -494,7 +497,7 @@ export default function OfertaDetailScreen() {
           </View>
 
           {/* ── Falta marcar completada: el turno ya terminó, todos resueltos, nadie le dio Completar ── */}
-          {isGestor && oferta.necesita_completar && (
+          {puedeGestionar && oferta.necesita_completar && (
             <View className="bg-warning-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
               <Ionicons name="warning-outline" size={20} color="#B45309" />
               <Text className="flex-1 text-sm font-medium text-warning">
@@ -650,6 +653,7 @@ export default function OfertaDetailScreen() {
                     ofertaId={oferta.id}
                     esPasado={esPasado}
                     turnoIniciado={turnoIniciado}
+                    puedeGestionar={puedeGestionar}
                     confirmarM={confirmarM}
                     rechazarM={rechazarM}
                     cancelarM={cancelarM}

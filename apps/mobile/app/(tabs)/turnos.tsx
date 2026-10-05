@@ -37,8 +37,8 @@ type ActiveTab = 'mis_turnos' | 'disponibles';
 
 export default function TurnosScreen() {
   const rol           = useAuthStore((s) => s.usuario?.rol);
-  const isGestor      = rol === 'jefe_turnos' || rol === 'admin_empresa' || rol === 'jefe_nomina';
-  const isJefeNomina  = rol === 'jefe_nomina';
+  const puedeGestionar = rol === 'jefe_turnos' || rol === 'admin_empresa';
+  const isGestor      = puedeGestionar || rol === 'jefe_nomina';
   const isNomina      = rol === 'trabajador_nomina';
   const theme    = useTheme();
   const today    = useMemo(() => bogotaToday(), []);
@@ -63,7 +63,6 @@ export default function TurnosScreen() {
       fecha_desde: mesWeeks[0][0].date,
       fecha_hasta: mesWeeks[mesWeeks.length - 1][6].date,
       limit: 200, // tope del backend (ofertas.routes.js) — pedir más hace que la validación rechace TODA la respuesta
-      para_quien: isJefeNomina ? 'nomina' : undefined,
       disponibles: isWorker ? true : undefined,
     },
     { enabled: (isGestor || isWorker) && viewMode === 'mes' },
@@ -92,7 +91,7 @@ export default function TurnosScreen() {
   } = useMisTurnos({ enabled: isWorker });
 
   // Backend restringe GET /asignaciones/postulaciones-pendientes a admin_empresa/jefe_turnos (no jefe_nomina).
-  const { data: pendientesResp } = usePostulacionesPendientes({ enabled: isGestor && !isJefeNomina });
+  const { data: pendientesResp } = usePostulacionesPendientes({ enabled: puedeGestionar });
   const { data: periodosEventual } = usePeriodosEventual(isNomina);
   const periodoEventual = periodosEventual?.nomina;
   const pendientesCount = pendientesResp?.data?.length ?? 0;
@@ -109,11 +108,11 @@ export default function TurnosScreen() {
   // Saldo a pagar del período abierto — solo para quien gestiona pagos de turnos.
   // Antes usaba un mes calendario fijo (día 1 → hoy), lo que mostraba "mensual"
   // aunque la empresa facture quincenal — el período real sale de periodos_nomina.
-  const { data: periodoAbiertoResp } = usePeriodos('abierto', isGestor && !isJefeNomina);
+  const { data: periodoAbiertoResp } = usePeriodos('abierto', puedeGestionar);
   const periodoAbierto = periodoAbiertoResp?.data?.[0];
   const { data: liquidacionPeriodo } = useLiquidacionTurnos(
     { fecha_inicio: periodoAbierto?.fecha_inicio ?? today, fecha_fin: today },
-    { enabled: isGestor && !isJefeNomina && periodoAbierto !== undefined },
+    { enabled: puedeGestionar && periodoAbierto !== undefined },
   );
   const totalAPagarPeriodo = (liquidacionPeriodo ?? []).reduce((s, w) => s + w.pago_total, 0);
 
@@ -373,7 +372,7 @@ export default function TurnosScreen() {
       <View className="bg-card px-6 pt-3 pb-2 border-b border-border">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-bold text-foreground">
-            {isJefeNomina ? 'Turnos Eventuales' : isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
+            {isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
           </Text>
           {(isGestor || isWorker) && (
             <TouchableOpacity
@@ -387,7 +386,7 @@ export default function TurnosScreen() {
         </View>
 
         {/* Saldo a pagar del mes + postulantes pendientes — igual patrón que Nómina */}
-        {isGestor && !isJefeNomina && (
+        {puedeGestionar && (
           <View className="flex-row gap-2 mt-2.5">
             <TouchableOpacity
               onPress={() => router.push('/liquidacion-turnos')}
@@ -500,11 +499,11 @@ export default function TurnosScreen() {
           ) : (
             <GestorTurnosView
               selectedDate={selectedDate}
-              filtroParaQuien={isJefeNomina ? 'nomina' : undefined}
             />
           )}
 
           {/* FAB — crear turno (única acción flotante; liquidación y postulaciones viven en el header) */}
+          {puedeGestionar && (
           <TouchableOpacity
             onPress={() => router.push('/turno/nuevo')}
             activeOpacity={0.85}
@@ -528,6 +527,7 @@ export default function TurnosScreen() {
           >
             <Ionicons name="add" size={28} color="#fff" />
           </TouchableOpacity>
+          )}
         </View>
       ) : (
         <>

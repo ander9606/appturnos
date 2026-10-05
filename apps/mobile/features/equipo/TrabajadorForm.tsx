@@ -132,6 +132,8 @@ interface TrabajadorFormProps {
   submittingLabel?: string;
   /** Avisa al padre si el formulario tiene cambios sin guardar (para confirmar antes de descartar). */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Si se pasa, solo se muestran estos campos; el resto queda oculto. */
+  soloCampos?: readonly string[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -142,7 +144,9 @@ export function TrabajadorForm({
   submitLabel = 'Guardar',
   submittingLabel = 'Guardando…',
   onDirtyChange,
+  soloCampos,
 }: TrabajadorFormProps) {
+  const visible = (campo: string) => !soloCampos || soloCampos.includes(campo);
   const {
     control,
     handleSubmit,
@@ -183,6 +187,7 @@ export function TrabajadorForm({
       >
         {/* Nombre */}
         <View className="mb-4">
+          {visible('nombre') && (
           <Controller
             control={control}
             name="nombre"
@@ -198,10 +203,12 @@ export function TrabajadorForm({
               />
             )}
           />
+          )}
         </View>
 
         {/* Apellido */}
         <View className="mb-4">
+          {visible('apellido') && (
           <Controller
             control={control}
             name="apellido"
@@ -217,11 +224,13 @@ export function TrabajadorForm({
               />
             )}
           />
+          )}
         </View>
 
         {/* Tipo (pill selector) */}
         <View className="mb-4">
           <Text className="text-sm font-semibold text-foreground mb-1">Tipo *</Text>
+          {visible('tipo') && (
           <Controller
             control={control}
             name="tipo"
@@ -259,6 +268,7 @@ export function TrabajadorForm({
               </>
             )}
           />
+          )}
           {errors.tipo && (
             <Text className="text-xs text-danger mt-1">{errors.tipo.message}</Text>
           )}
@@ -266,6 +276,7 @@ export function TrabajadorForm({
 
         {/* Cédula */}
         <View className="mb-4">
+          {visible('cedula') && (
           <Controller
             control={control}
             name="cedula"
@@ -282,10 +293,12 @@ export function TrabajadorForm({
               />
             )}
           />
+          )}
         </View>
 
         {/* Email */}
         <View className="mb-4">
+          {visible('email') && (
           <Controller
             control={control}
             name="email"
@@ -302,10 +315,12 @@ export function TrabajadorForm({
               />
             )}
           />
+          )}
         </View>
 
         {/* Teléfono */}
         <View className="mb-4">
+          {visible('telefono') && (
           <Controller
             control={control}
             name="telefono"
@@ -322,9 +337,11 @@ export function TrabajadorForm({
               />
             )}
           />
+          )}
         </View>
 
         {/* Tipo de documento + fecha de nacimiento + sexo */}
+        {visible('tipo_documento') && (
         <Controller
           control={control}
           name="tipo_documento"
@@ -338,7 +355,9 @@ export function TrabajadorForm({
             />
           )}
         />
+        )}
 
+        {visible('fecha_nacimiento') && (
         <Controller
           control={control}
           name="fecha_nacimiento"
@@ -352,7 +371,9 @@ export function TrabajadorForm({
             />
           )}
         />
+        )}
 
+        {visible('sexo') && (
         <Controller
           control={control}
           name="sexo"
@@ -366,9 +387,11 @@ export function TrabajadorForm({
             />
           )}
         />
+        )}
 
         {/* Contacto de emergencia */}
         <View className="mb-4">
+          {visible('contacto_emergencia_nombre') && (
           <Controller
             control={control}
             name="contacto_emergencia_nombre"
@@ -384,9 +407,11 @@ export function TrabajadorForm({
               />
             )}
           />
+          )}
         </View>
 
         <View className="mb-4">
+          {visible('contacto_emergencia_tel') && (
           <Controller
             control={control}
             name="contacto_emergencia_tel"
@@ -403,6 +428,7 @@ export function TrabajadorForm({
               />
             )}
           />
+          )}
         </View>
 
         {/* Cargo — select sobre el catálogo de la empresa; oculto en turnos, que
@@ -410,6 +436,7 @@ export function TrabajadorForm({
         {muestraCargo && (
         <View className="mb-4">
           <Text className="text-sm font-semibold text-foreground mb-1">Cargo</Text>
+          {visible('cargo') && (
           <Controller
             control={control}
             name="cargo"
@@ -488,6 +515,7 @@ export function TrabajadorForm({
               </>
             )}
           />
+          )}
           {errors.cargo && (
             <Text className="text-xs text-danger mt-1">{errors.cargo.message}</Text>
           )}
@@ -510,6 +538,7 @@ export function TrabajadorForm({
 
             {/* Tarifa hora */}
             <View className="mb-4">
+              {visible('tarifa_hora') && (
               <Controller
                 control={control}
                 name="tarifa_hora"
@@ -526,10 +555,12 @@ export function TrabajadorForm({
                   />
                 )}
               />
+              )}
             </View>
 
             {/* Salario base */}
             <View className="mb-4">
+              {visible('salario_base') && (
               <Controller
                 control={control}
                 name="salario_base"
@@ -547,11 +578,13 @@ export function TrabajadorForm({
                   />
                 )}
               />
+              )}
             </View>
 
             {/* Hora habitual de entrada — dispara el recordatorio "no olvides marcar tu turno" */}
             <View className="mb-4">
               <Text className="text-sm font-semibold text-foreground mb-1">Hora habitual de entrada</Text>
+              {visible('hora_entrada_esperada') && (
               <Controller
                 control={control}
                 name="hora_entrada_esperada"
@@ -592,6 +625,7 @@ export function TrabajadorForm({
                   </>
                 )}
               />
+              )}
               {errors.hora_entrada_esperada && (
                 <Text className="text-xs text-danger mt-1">{errors.hora_entrada_esperada.message}</Text>
               )}
@@ -612,6 +646,7 @@ export function TrabajadorForm({
             </View>
 
             <View className="mb-4">
+              {visible('eps') && (
               <Controller
                 control={control}
                 name="eps"
@@ -627,9 +662,11 @@ export function TrabajadorForm({
                   />
                 )}
               />
+              )}
             </View>
 
             <View className="mb-4">
+              {visible('afp') && (
               <Controller
                 control={control}
                 name="afp"
@@ -645,9 +682,11 @@ export function TrabajadorForm({
                   />
                 )}
               />
+              )}
             </View>
 
             <View className="mb-4">
+              {visible('banco') && (
               <Controller
                 control={control}
                 name="banco"
@@ -663,8 +702,10 @@ export function TrabajadorForm({
                   />
                 )}
               />
+              )}
             </View>
 
+            {visible('tipo_cuenta') && (
             <Controller
               control={control}
               name="tipo_cuenta"
@@ -678,8 +719,10 @@ export function TrabajadorForm({
                 />
               )}
             />
+            )}
 
             <View className="mb-4">
+              {visible('numero_cuenta') && (
               <Controller
                 control={control}
                 name="numero_cuenta"
@@ -696,6 +739,7 @@ export function TrabajadorForm({
                   />
                 )}
               />
+              )}
             </View>
 
             {/* Antecedentes */}
@@ -707,6 +751,7 @@ export function TrabajadorForm({
               </View>
             </View>
 
+            {visible('ant_judiciales_fecha') && (
             <Controller
               control={control}
               name="ant_judiciales_fecha"
@@ -720,7 +765,9 @@ export function TrabajadorForm({
                 />
               )}
             />
+            )}
 
+            {visible('ant_disciplinarios_fecha') && (
             <Controller
               control={control}
               name="ant_disciplinarios_fecha"
@@ -734,6 +781,7 @@ export function TrabajadorForm({
                 />
               )}
             />
+            )}
           </>
         )}
 
