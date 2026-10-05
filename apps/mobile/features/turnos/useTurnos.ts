@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { turnosApi, cargosApi } from '@api-client';
-import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, ActualizarOfertaPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
+import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, ActualizarOfertaPayload, CrearPuestoPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
 import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { bogotaToday } from '@/lib/formatters';
@@ -495,6 +495,19 @@ export function useActualizarOferta() {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(id) });
+    },
+  });
+}
+
+/** Agrega una vacante a una oferta existente; refresca la oferta para ver el puesto nuevo. */
+export function useCrearPuesto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, ...payload }: { ofertaId: number } & CrearPuestoPayload) =>
+      turnosApi.crearPuesto(ofertaId, payload),
+    onSuccess: (_data, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
     },
   });
 }

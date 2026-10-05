@@ -147,6 +147,14 @@ export interface OfertaPuesto {
   advertencia?: string | null;
 }
 
+/** Vacante nueva para una oferta ya creada (POST /ofertas/:id/puestos). */
+export interface CrearPuestoPayload {
+  cargo_id: number;
+  plazas?: number;
+  tarifa_dia: number;
+  notas?: string;
+}
+
 export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
 export type VisibilidadOferta = 'abierta' | 'dirigida';
 
@@ -398,6 +406,11 @@ export const turnosApi = {
    */
   actualizarOferta(ofertaId: number, payload: ActualizarOfertaPayload): Promise<Oferta> {
     return api.put<Oferta>(`/api/turnos/ofertas/${ofertaId}`, payload);
+  },
+
+  /** Agrega una vacante (puesto) a una oferta existente. Sin restricción de estado en el backend. */
+  crearPuesto(ofertaId: number, payload: CrearPuestoPayload): Promise<OfertaPuesto> {
+    return api.post<OfertaPuesto>(`/api/turnos/ofertas/${ofertaId}/puestos`, payload);
   },
 
   /**

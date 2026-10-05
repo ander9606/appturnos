@@ -19,15 +19,16 @@ import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,
   useCancelarOferta, useCompletarOferta,
-  useActualizarOferta,
+  useActualizarOferta, useCrearPuesto, useCargos,
 } from '@/features/turnos/useTurnos';
+import { parseTarifa } from '@/features/turnos/crear/utils';
 import { FuncionesCargoModal } from '@/features/turnos/FuncionesCargoModal';
 import { LugarInput } from '@/features/turnos/crear/LugarInput';
 import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
 import { formatTimeObj, toISODate } from '@/lib/formatters';
-import type { AsignacionResumen, EstadoAsignacion, OfertaPuesto } from '@api-client';
+import type { AsignacionResumen, Cargo, EstadoAsignacion, OfertaPuesto } from '@api-client';
 import { ApiError } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -889,6 +890,7 @@ type OfertaEditable = {
   id: number; titulo: string; descripcion: string | null;
   fecha: string; hora_inicio: string; hora_fin_estimada: string | null;
   lugar: string | null; latitud: number | null; longitud: number | null;
+  puestos: OfertaPuesto[];
 };
 
 function EditarOfertaModal({
@@ -913,7 +915,13 @@ function EditarOfertaModal({
   const [showFecha, setShowFecha] = useState(false);
   const [showHoraInicio, setShowHoraInicio] = useState(false);
   const [showHoraFin, setShowHoraFin] = useState(false);
+  const [agregandoVacante, setAgregandoVacante] = useState(false);
+  const [vacante, setVacante] = useState<{ cargo: Cargo | null; plazas: number; tarifa: string }>({ cargo: null, plazas: 1, tarifa: '' });
+  const crearPuestoM = useCrearPuesto();
+  const { data: cargos = [] } = useCargos(agregandoVacante);
+  const usedIds = new Set(oferta.puestos.map(p => p.cargo_id));
 
+  // Solo al abrir: un refetch de la oferta (p. ej. tras agregar una vacante) no debe pisar lo que el gestor ya escribió.
   React.useEffect(() => {
     if (!visible) return;
     setTitulo(oferta.titulo);
@@ -938,12 +946,28 @@ function EditarOfertaModal({
     setShowFecha(false);
     setShowHoraInicio(false);
     setShowHoraFin(false);
-  }, [visible, oferta]);
+    setAgregandoVacante(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   const cambianCriticos = toISODate(fecha) !== oferta.fecha
     || `${formatTimeObj(horaInicio)}:00` !== oferta.hora_inicio.slice(0, 5) + ':00'
     || (horaFin ? `${formatTimeObj(horaFin)}:00` : null) !== oferta.hora_fin_estimada
     || lugar !== (oferta.lugar ?? '');
+
+  async function handleAgregarVacante() {
+    if (!vacante.cargo) { Alert.alert('Datos incompletos', 'Elige un rol para la vacante.'); return; }
+    const tarifa = parseTarifa(vacante.tarifa);
+    if (tarifa <= 0) { Alert.alert('Datos incompletos', 'Ingresa la tarifa por turno.'); return; }
+    try {
+      await crearPuestoM.mutateAsync({ ofertaId: oferta.id, cargo_id: vacante.cargo.id, plazas: vacante.plazas, tarifa_dia: tarifa });
+      setAgregandoVacante(false);
+      setVacante({ cargo: null, plazas: 1, tarifa: '' });
+      showToast('Vacante agregada.');
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo agregar la vacante.');
+    }
+  }
 
   async function handleGuardar() {
     if (horaFin && formatTimeObj(horaFin) <= formatTimeObj(horaInicio)) {
@@ -1100,6 +1124,85 @@ function EditarOfertaModal({
               className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
               style={{ minHeight: 72, textAlignVertical: 'top' }}
             />
+          </View>
+
+          <View className="gap-2">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-sm font-semibold text-foreground">Vacantes</Text>
+              {!agregandoVacante && (
+                <TouchableOpacity onPress={() => setAgregandoVacante(true)} hitSlop={8} className="flex-row items-center gap-1">
+                  <Ionicons name="add-circle-outline" size={16} color="#FF5A3C" />
+                  <Text className="text-xs font-semibold text-primary">Agregar vacante</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {oferta.puestos.length === 0 && <Text className="text-sm text-muted-foreground">Sin vacantes</Text>}
+            {oferta.puestos.map(p => (
+              <Text key={p.id} className="text-sm text-muted-foreground">{p.cargo_nombre} · {p.plazas} plaza(s)</Text>
+            ))}
+            {agregandoVacante && (
+              <View className="bg-card border border-border rounded-xl p-3 gap-3">
+                {/* ponytail: chips sin buscador — CargoModal es otro Modal y RN no anida Modals bien en iOS. Upgrade path: buscador si el catálogo crece. */}
+                <View className="flex-row flex-wrap gap-2">
+                  {cargos.filter(c => !usedIds.has(c.id)).map(c => {
+                    const sel = vacante.cargo?.id === c.id;
+                    return (
+                      <TouchableOpacity
+                        key={c.id}
+                        onPress={() => setVacante(v => ({ ...v, cargo: c }))}
+                        className={`px-3 py-1.5 rounded-full border ${sel ? 'bg-primary border-primary' : 'border-border'}`}
+                      >
+                        <Text className={`text-xs font-semibold ${sel ? 'text-white' : 'text-foreground'}`}>{c.nombre}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <View className="flex-row gap-4">
+                  <View className="gap-1">
+                    <Text className="text-xs text-muted-foreground">Plazas</Text>
+                    <View className="flex-row items-center gap-2">
+                      <TouchableOpacity
+                        className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
+                        onPress={() => setVacante(v => ({ ...v, plazas: Math.max(1, v.plazas - 1) }))}
+                      >
+                        <Ionicons name="remove" size={16} color="#64748B" />
+                      </TouchableOpacity>
+                      <Text className="text-base font-bold text-foreground w-6 text-center">{vacante.plazas}</Text>
+                      <TouchableOpacity
+                        className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
+                        onPress={() => setVacante(v => ({ ...v, plazas: v.plazas + 1 }))}
+                      >
+                        <Ionicons name="add" size={16} color="#64748B" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View className="flex-1 gap-1">
+                    <Text className="text-xs text-muted-foreground">Tarifa por turno</Text>
+                    <View className="flex-row items-center bg-muted rounded-xl px-3 gap-1">
+                      <Text className="text-sm font-bold text-muted-foreground">$</Text>
+                      <TextInput
+                        className="flex-1 py-2 text-sm font-semibold text-foreground"
+                        placeholder="120.000"
+                        placeholderTextColor="#94A3B8"
+                        value={vacante.tarifa}
+                        onChangeText={t => setVacante(v => ({ ...v, tarifa: t.replace(/[^\d.,]/g, '') }))}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                </View>
+                <View className="flex-row gap-2">
+                  <Button label="Cancelar" variant="secondary" onPress={() => setAgregandoVacante(false)} style={{ flex: 1 }} />
+                  <Button
+                    label="Agregar"
+                    variant="primary"
+                    loading={crearPuestoM.isPending}
+                    onPress={handleAgregarVacante}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              </View>
+            )}
           </View>
 
           {cambianCriticos && (
