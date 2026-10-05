@@ -211,17 +211,7 @@ export default function TrabajadorDetailScreen() {
       });
       if (!ok) return;
 
-      try {
-        await invitar.mutateAsync({ cedula: rawData.cedula, tipo: 'nomina' });
-        invitacionEnviada = true;
-      } catch (err: unknown) {
-        // Seguimos igual al guardado de abajo para no perder el resto de
-        // campos editados en este mismo submit.
-        const msg = err instanceof ApiError ? err.message : 'No se pudo enviar la invitación.';
-        Alert.alert('Error', msg);
-      }
-      // El resto de campos editados en el mismo submit sí se guardan; tipo se
-      // manda sin cambios porque la conversión la resuelve la invitación
+      // tipo se manda sin cambios porque la conversión la resuelve la invitación
       // cuando el trabajador la acepte, no este formulario.
       data = { ...rawData, tipo: t.tipo };
     }
@@ -251,6 +241,17 @@ export default function TrabajadorDetailScreen() {
         ant_judiciales_fecha:     data.ant_judiciales_fecha     || undefined,
         ant_disciplinarios_fecha: data.ant_disciplinarios_fecha || undefined,
       });
+      if (pasaANomina && rawData.cedula) {
+        // Invitar DESPUÉS de guardar: invitar() busca la ficha por cédula en la
+        // BD, y si la cédula nueva aún no está persistida crea una ficha fantasma.
+        try {
+          await invitar.mutateAsync({ cedula: rawData.cedula, tipo: 'nomina' });
+          invitacionEnviada = true;
+        } catch (err: unknown) {
+          const msg = err instanceof ApiError ? err.message : 'No se pudo enviar la invitación.';
+          Alert.alert('Error', msg);
+        }
+      }
       setEditing(false);
       showToast(
         invitacionEnviada

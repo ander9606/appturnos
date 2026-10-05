@@ -134,16 +134,16 @@ export function TrabajadorDetailPage() {
         confirmLabel: 'Enviar solicitud',
         onConfirm: async () => {
           close();
+          // Guardar ANTES de invitar: invitar() busca la ficha por cédula en la
+          // BD, y si la cédula nueva aún no está persistida no la encuentra y
+          // crea una ficha fantasma. tipo se manda sin cambios porque la
+          // conversión la resuelve la invitación cuando el trabajador la acepte.
+          await guardar(trabajador.tipo);
           try {
             await invitar.mutateAsync({ cedula: form.cedula, tipo: 'nomina' });
           } catch {
-            // El toast de error ya lo muestra `useInvitarTrabajador`; seguimos
-            // igual al guardado de abajo para no perder el resto de campos.
+            // El toast de error ya lo muestra `useInvitarTrabajador`.
           }
-          // El resto de campos editados en el mismo submit sí se guardan;
-          // tipo se manda sin cambios porque la conversión la resuelve la
-          // invitación cuando el trabajador la acepte, no este formulario.
-          await guardar(trabajador.tipo);
         },
       });
       return;

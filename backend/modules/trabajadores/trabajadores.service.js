@@ -121,8 +121,42 @@ const TrabajadoresService = {
     }
   },
 
+  /**
+   * tipo='nomina'/'ambos' implica exclusividad (nómina ata la cuenta a una
+   * sola empresa) y requiere que el trabajador acepte explícitamente — ver
+   * trabajador-empresa.service.js invitar()/aceptar(). Si la cédula o el
+   * email ya tienen cuenta (ej. alguien que ya se registró libre como
+   * trabajador_turnos), crear la ficha aquí la deja huérfana (usuario_id
+   * nulo): la cuenta real sigue mostrando la interfaz vieja aunque la ficha
+   * ya diga "nómina". Mismo criterio que ya bloquea esto en actualizar()
+   * (PR #107) pero aplicado también a la creación directa.
+   */
+  async verificarIdentidadParaNomina(tipo, cedula, email) {
+    if (!tipo || tipo === 'turnos') return; // 'turnos' es el default de la columna si no se envía
+    if (!cedula && !email) return;
+    const condiciones = [];
+    const valores = [];
+    if (cedula) { condiciones.push('t.cedula = ?'); valores.push(cedula); }
+    if (email)  { condiciones.push('t.email = ?');  valores.push(email.trim().toLowerCase()); }
+    const [filas] = await pool.query(
+      `SELECT u.rol FROM usuarios u
+       INNER JOIN trabajadores t ON t.usuario_id = u.id
+       WHERE ${condiciones.join(' OR ')} LIMIT 1`,
+      valores
+    );
+    if (!filas.length) return;
+    if (filas[0].rol !== ROLES.TRABAJADOR_TURNOS) {
+      throw new AppError('Esta persona ya tiene una cuenta con otro rol en la plataforma (por ejemplo, nómina de otra empresa) y no puede crearse así.', 409);
+    }
+    throw new AppError(
+      'Esta persona ya tiene cuenta como trabajador de turnos. Para pasarla a nómina usa "Invitar por cédula" — así acepta el cambio y su cuenta queda sincronizada.',
+      409
+    );
+  },
+
   async crear(empresaId, datos) {
     await this.verificarNoEsGestor(empresaId, datos.email);
+    await this.verificarIdentidadParaNomina(datos.tipo, datos.cedula, datos.email);
     await this.verificarCupoPlan(empresaId);
 
     try {
