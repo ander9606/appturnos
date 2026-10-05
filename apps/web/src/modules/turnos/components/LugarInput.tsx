@@ -168,7 +168,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
         {buscando && <span className="text-xs text-muted-foreground">Buscando…</span>}
         {latitud != null && longitud != null && (
           <span className="flex items-center gap-1 text-xs text-success">
-            <CheckCircle2 size={13} /> {latitud.toFixed(5)}, {longitud.toFixed(5)}
+            <CheckCircle2 size={13} /> {Number(latitud).toFixed(5)}, {Number(longitud).toFixed(5)}
           </span>
         )}
       </div>
