@@ -204,6 +204,11 @@ const TIPOS_CONTRATO = {
 // Salario mínimo diario (SMMLV ÷ 30 días)
 const SALARIO_MINIMO_DIARIO_COP = Math.ceil(SMMLV_COP / 30);
 
+// Descuentos por turno: CST art. 113 — la multa no puede superar la quinta parte del
+// salario de un día. Aplicamos el tope al total de descuentos del turno (pendientes +
+// aceptados), que es la lectura conservadora. Tope = tarifa del puesto ÷ 5.
+const DESCUENTO_TURNO_TOPE_DIARIO_DIVISOR = 5;
+
 // Auditoría de acumulación: límite de contratos diarios por trabajador/año
 // Sentencia C-013-20: >50 contratos en 12 meses = riesgo de recalificación
 const CONTRATOS_ACUMULATIVOS_LIMITE = 50;
@@ -256,5 +261,6 @@ module.exports = {
   SALARIO_MINIMO_DIARIO_COP,
   CONTRATOS_ACUMULATIVOS_LIMITE,
   CONTRATOS_ACUMULATIVOS_ALERTA,
+  DESCUENTO_TURNO_TOPE_DIARIO_DIVISOR,
   CAMPOS_PERSONALES_TRABAJADOR,
 };

@@ -266,10 +266,10 @@ En la app, el trabajador también ve un **estimado diario** calculado en el celu
 
 ## 7. Turnos: tarifa por día, bonos, contratos y cuentas de cobro
 
-Un turno completado paga **la tarifa del día del puesto + el bono**, sin importar cuántas horas duró; los turnos no aplican recargos nocturnos, extras ni festivos.
+Un turno completado paga **la tarifa del día del puesto + el bono − los descuentos aceptados**, sin importar cuántas horas duró; los turnos no aplican recargos nocturnos, extras ni festivos.
 
 ```latex
-\text{pago del turno} = \text{tarifa del puesto} + \text{bono}
+\text{pago del turno} = \text{tarifa del puesto} + \text{bono} - \sum \text{descuentos aceptados}
 ```
 
 ### Cómo se recoge
@@ -286,11 +286,22 @@ Un turno completado paga **la tarifa del día del puesto + el bono**, sin import
 - Se suman al pago de inmediato si el turno ya está completado.
 - Si el contrato del turno ya estaba firmado, cambiar el bono **anula la firma** y el trabajador debe volver a firmar.
 
+### Descuentos
+
+- El gestor (`admin_empresa` o `jefe_turnos`) registra un descuento sobre un turno **completado**, con monto mayor a 0 y motivo obligatorio.
+- El trabajador recibe una notificación y **acepta o rechaza** el descuento. Solo los **aceptados** restan del pago; mientras esté pendiente no descuenta nada.
+- **Tope legal (CST art. 113):** la multa no puede superar la quinta parte del salario de un día. El sistema aplica el tope al **total de descuentos del turno** (pendientes + aceptados): `tope = tarifa del puesto ÷ 5`, redondeado hacia abajo. Un descuento que lo supera se rechaza, y el mensaje le explica al gestor la ley y cuánto le queda disponible.
+- **Firma:** aceptar un descuento, o eliminar uno ya aceptado, **anula la firma** del contrato del turno si estaba firmado, igual que con el bono. El trabajador debe firmar otra vez, y mientras tanto ese turno no entra en la liquidación ni en la cuenta de cobro.
+- El contrato solo lista los descuentos **aceptados**, porque son los que cambian el pago.
+- No se pueden registrar, aceptar, rechazar ni eliminar descuentos de un turno cuya cuenta de cobro ya fue firmada.
+- Los turnos eventuales de trabajadores de nómina no admiten descuentos aquí: se descuentan en nómina.
+
 ### Contratos diarios
 
 - Cada turno genera un contrato diario, laboral o de prestación de servicios según la empresa.
 - La tarifa del día debe ser al menos el **salario mínimo diario**: SMMLV ÷ 30, redondeado hacia arriba ($58.364 en 2026).
 - Tope de acumulación: con 40 contratos en 12 meses el sistema alerta; con **50** bloquea nuevos contratos para ese trabajador.
+- El contrato lista los descuentos **aceptados** del turno. Los pendientes y rechazados no aparecen.
 
 ### Cuándo y cómo se paga
 
@@ -304,7 +315,7 @@ La liquidación de turnos suma por trabajador los turnos **completados** del per
 ### Cuentas de cobro
 
 - Al cerrarse un período de nómina, se genera una cuenta de cobro por trabajador de turnos con los turnos completados **y con contrato firmado** en esas fechas.
-- Cada ítem muestra valor base, bono y total; el número es `CC-{período}-{trabajador}`.
+- Cada ítem muestra valor base, bono, descuentos aceptados y total neto; el número es `CC-{período}-{trabajador}`.
 - Se notifica al trabajador para que la firme. Mientras no esté firmada, se puede regenerar para incluir contratos firmados después del cierre.
 - Los turnos no descuentan salud ni pensión: se tratan como prestación de servicios.
 
@@ -419,4 +430,6 @@ Estas reglas hacen que el cálculo actual difiera de la práctica usual en Colom
 - [ ] ¿La hora dominical del asalariado se paga × 1,90 o solo el recargo del 90 %?
 - [ ] ¿La festiva nocturna debe sumar el 35 % nocturno (× 2,25 hoy)?
 - [ ] ¿Qué tope aplicamos a los descuentos manuales?
+- [x] Tope de descuentos por turno (art. 113 CST, quinta parte de la tarifa del día): implementado como tope del total por turno (lectura conservadora). Pendiente de confirmar: la ley habla de cada multa, no del total; si el contador acepta la lectura por multa, se cambia una línea.
+- [ ] ¿Un descuento por daños a equipo puede hacerse sin orden judicial? El art. 149 lo lista entre los conceptos restringidos.
 - [x] Regla "2 meses" para domingo habitual: confirmada por el contador como domingos seguidos trabajados durante 2 meses. Un domingo libre reinicia la cuenta.

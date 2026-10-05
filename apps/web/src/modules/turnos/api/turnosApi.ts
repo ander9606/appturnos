@@ -64,6 +64,15 @@ export const turnosApi = {
   descartarSospechoso: (id: number) =>
     api.put(`/turnos/asignaciones/${id}/sospechoso/descartar`).then(r => r.data),
 
+  listarDescuentosAsignacion: (asignacionId: number) =>
+    api.get(`/turnos/descuentos/asignacion/${asignacionId}`).then(r => r.data),
+
+  crearDescuento: (asignacionId: number, data: { monto: number; motivo: string }) =>
+    api.post(`/turnos/descuentos/asignacion/${asignacionId}`, data).then(r => r.data),
+
+  eliminarDescuento: (id: number) =>
+    api.delete(`/turnos/descuentos/${id}`).then(r => r.data),
+
   crearPuesto: (ofertaId: number, data: { cargo_id: number; plazas?: number; tarifa_dia: number; notas?: string }) =>
     api.post(`/turnos/ofertas/${ofertaId}/puestos`, data).then(r => r.data),
 

@@ -17,6 +17,7 @@ const router = express.Router();
 router.use('/ofertas', require('./ofertas/ofertas.routes'));
 router.use('/asignaciones', require('./asignaciones/asignaciones.routes'));
 router.use('/periodos', require('./periodos/periodos-turnos.routes'));
+router.use('/descuentos', require('./descuentos/descuentos-turno.routes'));
 
 // GET /api/turnos/mis-turnos
 router.get(

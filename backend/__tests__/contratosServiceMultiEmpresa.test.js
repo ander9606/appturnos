@@ -11,6 +11,7 @@
 jest.mock('../config/database', () => ({ pool: { query: jest.fn() } }));
 jest.mock('../modules/contratos/contratos.model');
 jest.mock('../modules/turnos/asignaciones/asignaciones.model');
+jest.mock('../modules/turnos/descuentos/descuentos-turno.model');
 
 const ContratosModel = require('../modules/contratos/contratos.model');
 const AsignacionesModel = require('../modules/turnos/asignaciones/asignaciones.model');

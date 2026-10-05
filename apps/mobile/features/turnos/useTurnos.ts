@@ -17,6 +17,7 @@ export const QUERY_KEYS = {
   liquidacion:  (params?: object) => ['liquidacion-turnos', params] as const,
   cargos:       ['cargos'] as const,
   funcionesCargo: (cargoId: number) => ['cargo-funciones', cargoId] as const,
+  descuentosAsignacion: (asignacionId: number) => ['descuentos-turno', asignacionId] as const,
 };
 
 // ── Queries ───────────────────────────────────────────────────────────────
@@ -495,6 +496,31 @@ export function useActualizarOferta() {
     onSuccess: (_data, { id }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(id) });
+    },
+  });
+}
+
+/** Descuentos del turno (pendientes, aceptados y rechazados). */
+export function useDescuentosAsignacion(asignacionId: number) {
+  return useQuery({
+    queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId),
+    queryFn:  () => turnosApi.listarDescuentosAsignacion(asignacionId),
+    staleTime: 30_000,
+  });
+}
+
+/** El trabajador acepta o rechaza un descuento; el aceptado cambia su liquidación. */
+export function useResponderDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, aceptar }: { id: number; aceptar: boolean; asignacionId: number }) =>
+      turnosApi.responderDescuento(id, aceptar),
+    onSuccess: (_data, { asignacionId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId) });
+      // Puede reiniciar la firma del contrato: la tarjeta del turno tiene que reflejarlo.
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: ['liquidacion-turnos'] });
     },
   });
 }

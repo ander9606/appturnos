@@ -88,12 +88,15 @@ function generarCuentaCobroPdf(cuenta, stream) {
 
     const extra = Number(item.pago_extra || 0);
     const bono = Number(item.bono_monto || 0);
-    if (extra > 0 || bono > 0) {
+    const descuento = Number(item.descuento_monto || 0);
+    if (extra > 0 || bono > 0 || descuento > 0) {
       const partes = [`Base $ ${Number(item.valor_base).toLocaleString('es-CO')}`];
       if (extra > 0) partes.push(`recargo $ ${extra.toLocaleString('es-CO')}`);
       if (bono > 0) partes.push(`bono $ ${bono.toLocaleString('es-CO')}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
+      let texto = partes.join(' + ');
+      if (descuento > 0) texto += ` − descuento $ ${descuento.toLocaleString('es-CO')}${item.descuento_motivo ? ` (${item.descuento_motivo})` : ''}`;
       doc.font('Helvetica-Oblique').fontSize(8).fillColor('#B45309')
-        .text(partes.join(' + '), col.desc, doc.y, { width: 240 });
+        .text(texto, col.desc, doc.y, { width: 240 });
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
     }
     doc.moveDown(0.4);

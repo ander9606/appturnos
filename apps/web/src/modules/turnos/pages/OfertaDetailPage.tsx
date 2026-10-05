@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, MinusCircle, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -17,6 +17,9 @@ import {
   useNoPresentado,
   useCorregirAsignacion,
   useAgregarBono,
+  useDescuentosAsignacion,
+  useCrearDescuento,
+  useEliminarDescuento,
   useCalificar,
   useDescartarSospechosoAsignacion,
 } from '../hooks/useTurnos';
@@ -30,7 +33,7 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
-import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto, Oferta } from '../types';
+import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto, Oferta, DescuentoTurno, DescuentosAsignacion } from '../types';
 import { fmtDate, fmtCOP, bogotaToday } from '@/shared/lib/format';
 
 const ESTADO_OFERTA_BADGE: Record<EstadoOferta, string> = {
@@ -90,6 +93,7 @@ export function OfertaDetailPage() {
   const [calificandoId, setCalificandoId] = useState<number | null>(null);
   const [corrigiendoAsig, setCorrigiendoAsig] = useState<Asignacion | null>(null);
   const [bonoAsig, setBonoAsig] = useState<Asignacion | null>(null);
+  const [descuentoAsig, setDescuentoAsig] = useState<Asignacion | null>(null);
   const [descargandoContratoId, setDescargandoContratoId] = useState<number | null>(null);
 
   async function handleDescargarContrato(asignacionId: number) {
@@ -487,6 +491,16 @@ export function OfertaDetailPage() {
                               <Gift size={13} />
                             </button>
                           )}
+                          {puedeGestionar && a.estado === 'completado' && (
+                            <button
+                              onClick={() => setDescuentoAsig(a)}
+                              className="text-muted-foreground/60 hover:text-danger transition-colors p-1"
+                              title="Registrar descuento"
+                              aria-label="Registrar descuento"
+                            >
+                              <MinusCircle size={13} />
+                            </button>
+                          )}
                           {puedeGestionar && a.sospechoso === 1 && (
                             <button
                               onClick={() => descartarSospechoso.mutate(a.id)}
@@ -606,6 +620,13 @@ export function OfertaDetailPage() {
         <BonoAsignacionModal
           asignacion={bonoAsig}
           onClose={() => setBonoAsig(null)}
+        />
+      )}
+
+      {descuentoAsig && (
+        <DescuentoAsignacionModal
+          asignacion={descuentoAsig}
+          onClose={() => setDescuentoAsig(null)}
         />
       )}
 
@@ -1036,6 +1057,119 @@ function BonoAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; 
           </button>
           <button type="submit" disabled={agregarBono.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
             {agregarBono.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ── Descuento por turno: el trabajador lo acepta o rechaza; hasta entonces no descuenta ── */
+const ESTADO_DESCUENTO_LABEL: Record<DescuentoTurno['estado'], string> = {
+  pendiente: 'Pendiente de aceptación',
+  aceptado: 'Aceptado',
+  rechazado: 'Rechazado',
+};
+
+function DescuentoAsignacionModal({ asignacion, onClose }: { asignacion: Asignacion; onClose: () => void }) {
+  const { data } = useDescuentosAsignacion(asignacion.id);
+  const resumen: DescuentosAsignacion | undefined = data?.data;
+  const descuentos = resumen?.descuentos ?? [];
+  const disponible = Math.max(0, (resumen?.tope_cop ?? 0) - (resumen?.comprometido_cop ?? 0));
+  const crear = useCrearDescuento();
+  const eliminar = useEliminarDescuento();
+  const [monto, setMonto] = useState('');
+  const [motivo, setMotivo] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const montoNum = Number(monto) || 0;
+    if (montoNum <= 0) {
+      toast.error('El monto del descuento debe ser mayor a 0.');
+      return;
+    }
+    if (montoNum > disponible) {
+      toast.error(`Supera el tope legal del turno (art. 113 CST: hasta la quinta parte de la tarifa del día). Disponible: ${fmtCOP(disponible)}.`);
+      return;
+    }
+    if (!motivo.trim()) {
+      toast.error('Escribe el motivo del descuento.');
+      return;
+    }
+    await crear.mutateAsync({ asignacionId: asignacion.id, monto: montoNum, motivo: motivo.trim() });
+    setMonto('');
+    setMotivo('');
+  };
+
+  return (
+    <Modal onClose={onClose} size="sm">
+      <h2 className="text-lg font-semibold text-foreground mb-1">Descuento</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        {asignacion.trabajador_nombre} {asignacion.trabajador_apellido} · {asignacion.cargo_nombre}
+      </p>
+
+      {resumen && (
+        <p className="text-xs text-muted-foreground bg-muted rounded-lg px-3 py-2 mb-4">
+          Tope legal de este turno (art. 113 CST, quinta parte de la tarifa del día {fmtCOP(resumen.tarifa_dia)}):
+          <span className="font-semibold text-foreground"> {fmtCOP(resumen.tope_cop)}</span>.
+          Disponible: <span className="font-semibold text-foreground">{fmtCOP(disponible)}</span>.
+        </p>
+      )}
+
+      {descuentos.length > 0 && (
+        <ul className="flex flex-col gap-2 mb-4">
+          {descuentos.map(d => (
+            <li key={d.id} className="flex items-center justify-between gap-2 border border-border rounded-lg px-3 py-2 text-sm">
+              <div className="min-w-0">
+                <p className="font-medium text-foreground truncate">{fmtCOP(d.monto)} · {d.motivo}</p>
+                <p className="text-xs text-muted-foreground">{ESTADO_DESCUENTO_LABEL[d.estado]}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => eliminar.mutate({ id: d.id, asignacionId: asignacion.id })}
+                disabled={eliminar.isPending}
+                className="text-muted-foreground/60 hover:text-danger transition-colors p-1 disabled:opacity-50 flex-shrink-0"
+                aria-label="Eliminar descuento"
+              >
+                <Trash2 size={13} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Monto (COP)</label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            value={monto}
+            onChange={e => setMonto(e.target.value)}
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Motivo</label>
+          <input
+            type="text"
+            maxLength={255}
+            value={motivo}
+            onChange={e => setMotivo(e.target.value)}
+            placeholder="Ej. llegada tarde sin aviso"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          El trabajador recibe una notificación y debe aceptarlo. Solo lo aceptado descuenta del pago y aparece en su contrato y cuenta de cobro. Si el contrato ya estaba firmado, el trabajador deberá firmarlo otra vez.
+        </p>
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Cerrar
+          </button>
+          <button type="submit" disabled={crear.isPending || (Number(monto) || 0) > disponible} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {crear.isPending ? 'Guardando...' : 'Registrar descuento'}
           </button>
         </div>
       </form>

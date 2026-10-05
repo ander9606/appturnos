@@ -30,7 +30,9 @@ const CuentasCobroService = {
    * regenerarParaPeriodo) para recoger firmas de contrato diario que lleguen
    * después del cierre del período.
    */
-  async generarParaPeriodo(empresaId, periodoId) {
+  // trabajadorId: refresca solo esa cuenta (p. ej. al aceptar un descuento) y con
+  // notificar=false no vuelve a avisarle a todos que su cuenta está lista.
+  async generarParaPeriodo(empresaId, periodoId, { trabajadorId = null, notificar = true } = {}) {
     const periodo = await PeriodosModel.obtenerPorId(empresaId, periodoId);
     if (!periodo) throw new AppError('Período no encontrado', 404);
 
@@ -41,6 +43,7 @@ const CuentasCobroService = {
 
     let generadas = 0;
     for (const w of trabajadores) {
+      if (trabajadorId != null && w.trabajador_id !== trabajadorId) continue;
       const items = w.turnos.filter((t) => t.firmado_trabajador);
       if (items.length === 0) continue;
 
@@ -65,16 +68,19 @@ const CuentasCobroService = {
           hora_inicio: t.hora_inicio,
           hora_fin: t.hora_fin_estimada,
           horas: t.horas_trabajadas,
-          valor_base: t.pago_total - (t.pago_extra ?? 0) - (t.bono_monto ?? 0),
+          // pago_total ya viene neto de descuentos aceptados (ver liquidación de turnos).
+          valor_base: t.pago_total + (t.descuento_monto ?? 0) - (t.pago_extra ?? 0) - (t.bono_monto ?? 0),
           pago_extra: t.pago_extra ?? 0,
           bono_monto: t.bono_monto ?? 0,
           bono_motivo: t.bono_motivo ?? null,
+          descuento_monto: t.descuento_monto ?? 0,
+          descuento_motivo: t.descuento_motivo ?? null,
           valor: t.pago_total,
         })),
       });
       generadas++;
 
-      if (w.usuario_id) {
+      if (notificar && w.usuario_id) {
         const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
           .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
         const fin = new Date(periodo.fecha_fin + 'T00:00:00')
