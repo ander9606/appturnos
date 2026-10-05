@@ -301,6 +301,18 @@ const OfertasModel = {
     return filas[0]?.empresa_id ?? null;
   },
 
+  /** Cargos que el usuario tiene certificados, por empresa activa: [{ empresa_id, cargo_id }]. */
+  async cargosCertificadosDeUsuario(usuarioId) {
+    const [filas] = await pool.query(
+      `SELECT te.empresa_id, tc.cargo_id
+       FROM trabajador_cargos tc
+       JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
+       WHERE te.usuario_id = ? AND te.estado = 'activo'`,
+      [usuarioId]
+    );
+    return filas;
+  },
+
   async obtenerPorId(empresaId, id, antiguedadMinMin = 0) {
     const params = [id, empresaId];
     let extra = '';

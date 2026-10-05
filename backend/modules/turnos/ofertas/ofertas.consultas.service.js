@@ -16,6 +16,19 @@ async function antiguedadMinima(empresaId, usuario) {
 }
 
 /**
+ * Un trabajador solo ve los puestos (cargo + tarifa) de cargos que tiene certificados
+ * en la empresa de la oferta. Las dirigidas no se filtran: el gestor lo invitó a mano
+ * y ese flujo no exige cargo certificado (ver ofertas.postulacion.service.js).
+ */
+function soloCargosCertificados(oferta, certificados) {
+  if (oferta.visibilidad !== 'abierta') return oferta;
+  const propios = new Set(
+    certificados.filter((c) => c.empresa_id === oferta.empresa_id).map((c) => c.cargo_id)
+  );
+  return { ...oferta, puestos: oferta.puestos.filter((p) => propios.has(p.cargo_id)) };
+}
+
+/**
  * Lecturas de ofertas: listado y detalle, con las reglas de visibilidad
  * (ranking, dirigidas, multi-empresa) según el rol del solicitante. Ver
  * ofertas.service.js para el resto de OfertasService.
@@ -40,7 +53,8 @@ module.exports = {
       const { data, total } = await OfertasModel.listarMultiEmpresa(usuario.sub, idsFiltered, {
         fecha, fechaDesde, fechaHasta, estado, disponibles, paraQuien, limit, offset,
       });
-      return { data, pagination: { page, limit, total } };
+      const certificados = await OfertasModel.cargosCertificadosDeUsuario(usuario.sub);
+      return { data: data.map((o) => soloCargosCertificados(o, certificados)), pagination: { page, limit, total } };
     }
 
     const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
@@ -90,8 +104,9 @@ module.exports = {
         }
       }
 
+      const certificados = await OfertasModel.cargosCertificadosDeUsuario(usuario.sub);
       const asignaciones = await AsignacionesModel.listarPorOferta(ofertaEmpresaId, id);
-      return { ...ofertaConDelay, asignaciones };
+      return { ...soloCargosCertificados(ofertaConDelay, certificados), asignaciones };
     }
 
     const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
