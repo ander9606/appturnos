@@ -137,6 +137,22 @@ function esDomingo(fecha) {
 }
 
 /**
+ * Domingo habitual (Art. 181 CST): lleva recargo dominical + compensatorio.
+ * regla 'ley' = 3.º domingo del mes calendario en adelante (`numeroDomingo`, incluye este).
+ * regla 'dos_meses' = desde 2 meses después del primer domingo trabajado (`primerDomingo`,
+ * 'YYYY-MM-DD' o null; si no hay otro, cuenta desde `fecha`).
+ * @returns {boolean}
+ */
+function esDomingoHabitual({ fecha, regla = 'ley', numeroDomingo, primerDomingo }) {
+  if (regla !== 'dos_meses') return numeroDomingo >= 3;
+  const base = primerDomingo && primerDomingo < fecha ? primerDomingo : fecha;
+  const d = new Date(`${base}T00:00:00Z`);
+  // ponytail: setUTCMonth desborda en días 29–31 (31-ene + 2 meses = 3-mar); upgrade path: clamp al último día del mes.
+  d.setUTCMonth(d.getUTCMonth() + 2);
+  return fecha >= aISODate(d);
+}
+
+/**
  * Indica si una fecha es festivo o domingo (ambos llevan recargo dominical/festivo).
  * @param {string|Date} fecha  'YYYY-MM-DD' o Date.
  * @returns {boolean}
@@ -265,10 +281,14 @@ function calcularMinutosAlmuerzo(inicio, fin, jornadaContinua, horaInicioNoct = 
  *   pero no el recargo en dinero para esas horas. `es_festivo` en el
  *   resultado no cambia — sigue marcando que el día fue domingo/festivo
  *   (dispara el compensatorio) independientemente de este parámetro.
+ * @param {boolean} [params.sumarNocturnasFestivo=true]
+ *   Opción de la empresa. En falso no hay nocturnas ni festivo: todas las horas
+ *   cuentan como diurnas, ordinarias hasta 42 h a la semana y extra diurna después.
+ *   `es_festivo` no cambia (el compensatorio sigue).
  */
 function calcularHoras({
   horaEntrada, horaSalida, fecha, esFestivo, horasOrdinariasAcumuladas = 0, jornadaContinua = false,
-  recargoFestivo = true,
+  recargoFestivo = true, sumarNocturnasFestivo = true,
 } = {}) {
   const vacio = {
     horas_ordinarias: 0,
@@ -309,9 +329,10 @@ function calcularHoras({
   for (let m = inicio; m < fin; m++) {
     if (esAlmuerzo.has(m)) continue;
     const esOrdinario = minutosContados < minOrdinarioRestante;
-    const nocturno = esMinutoNocturno(m, horaInicioNoct);
+    // Sin recargos no se distingue noche ni festivo: ordinaria hasta 42 h, después extra diurna.
+    const nocturno = sumarNocturnasFestivo && esMinutoNocturno(m, horaInicioNoct);
 
-    if (festivo && recargoFestivo) {
+    if (sumarNocturnasFestivo && festivo && recargoFestivo) {
       festivoMin++;
     } else if (esOrdinario) {
       if (nocturno) ordinariasNocturnas++;
@@ -507,6 +528,7 @@ module.exports = {
   festivosDeAnio,
   esDiaFestivo,
   esDomingo,
+  esDomingoHabitual,
   calcularHoras,
   calcularMinutosAlmuerzo,
   horaAMinutos,

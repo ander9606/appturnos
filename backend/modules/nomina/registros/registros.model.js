@@ -235,14 +235,28 @@ const RegistrosModel = {
     return row.total;
   },
 
+  /** Primer domingo trabajado por el trabajador (antes de `fecha`), 'YYYY-MM-DD' o null. */
+  async primerDomingoTrabajado(empresaId, trabajadorId, fecha) {
+    const [[row]] = await pool.query(
+      `SELECT MIN(fecha) AS primero FROM registros_diarios
+       WHERE empresa_id = ? AND trabajador_id = ? AND fecha < ?
+         AND DAYOFWEEK(fecha) = 1
+         AND hora_salida IS NOT NULL
+         AND (horas_ordinarias + horas_extra_diurnas + horas_extra_nocturnas + horas_nocturnas + horas_festivo) > 0`,
+      [empresaId, trabajadorId, fecha]
+    );
+    return row.primero;
+  },
+
   /** Jornadas activas (con entrada, sin salida) que aún no dispararon la alerta de horas extra. Cross-tenant — usado por el worker. */
   async listarActivosSinAlertaExtra() {
     const [filas] = await pool.query(
       `SELECT r.id, r.empresa_id, r.trabajador_id, r.fecha, r.hora_entrada,
               r.horas_ordinarias, r.horas_nocturnas, r.sesiones,
-              t.nombre, t.apellido, t.usuario_id
+              t.nombre, t.apellido, t.usuario_id, e.sumar_nocturnas_festivo
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
+       JOIN empresas e ON e.id = r.empresa_id
        WHERE r.hora_entrada IS NOT NULL AND r.hora_salida IS NULL AND r.alerta_extra_enviada = 0`
     );
     return filas;

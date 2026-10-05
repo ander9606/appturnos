@@ -10,7 +10,7 @@ const EmpresasModel             = require('../../empresas/empresas.model');
 const CompensatoriosService     = require('../compensatorios/compensatorios.service');
 const NotificacionesService     = require('../../notificaciones/notificaciones.service');
 const { pool }                  = require('../../../config/database');
-const { calcularHoras, esDomingo } = require('../../../utils/laboralUtils');
+const { calcularHoras, esDomingo, esDomingoHabitual } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
 const { haversineMetros }       = require('../../../utils/geoUtils');
 const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
@@ -27,13 +27,18 @@ const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
  * recargo + compensatorio). Festivos entre semana siempre son 'habitual':
  * siempre llevan recargo, la distinción del CST no aplica a ellos.
  */
-async function clasificarDiaFestivo(empresaId, trabajadorId, fecha) {
+async function clasificarDiaFestivo(empresaId, trabajadorId, fecha, regla) {
   const domingo = esDomingo(fecha);
   if (!domingo) return { domingo, clasificacion: 'habitual', recargoFestivo: true, numeroDomingo: null };
-  const previos = await RegistrosModel.contarDomingosTrabajadosEnMes(empresaId, trabajadorId, fecha);
-  const numeroDomingo = previos + 1;
-  const clasificacion = numeroDomingo >= 3 ? 'habitual' : 'ocasional';
-  return { domingo, clasificacion, recargoFestivo: clasificacion === 'habitual', numeroDomingo };
+  // 'dos_meses' no cuenta domingos del mes: el número del mes no aplica, así que va null.
+  const numeroDomingo = regla === 'dos_meses'
+    ? null
+    : await RegistrosModel.contarDomingosTrabajadosEnMes(empresaId, trabajadorId, fecha) + 1;
+  const primerDomingo = regla === 'dos_meses'
+    ? await RegistrosModel.primerDomingoTrabajado(empresaId, trabajadorId, fecha)
+    : null;
+  const habitual = esDomingoHabitual({ fecha, regla, numeroDomingo, primerDomingo });
+  return { domingo, clasificacion: habitual ? 'habitual' : 'ocasional', recargoFestivo: habitual, numeroDomingo };
 }
 
 async function resolverTrabajadorPropio(empresaId, usuarioId) {
@@ -211,8 +216,9 @@ const RegistrosService = {
       await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunesCrear, datos.fecha);
 
     const jornadaContinua = Boolean(datos.jornada_continua);
+    const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
     const { clasificacion, recargoFestivo, numeroDomingo } =
-      await clasificarDiaFestivo(empresaId, trabajadorId, datos.fecha);
+      await clasificarDiaFestivo(empresaId, trabajadorId, datos.fecha, reglaDomingoHabitual);
     const horas = calcularHoras({
       horaEntrada: datos.hora_entrada,
       horaSalida: datos.hora_salida,
@@ -220,6 +226,7 @@ const RegistrosService = {
       horasOrdinariasAcumuladas: ordinariasAcumCrear,
       jornadaContinua,
       recargoFestivo,
+      sumarNocturnasFestivo,
     });
 
     const id = await RegistrosModel.crear(empresaId, {
@@ -250,6 +257,7 @@ const RegistrosService = {
       registroId: id,
       clasificacion,
       numeroDomingo,
+      sumarNocturnasFestivo,
     });
 
     return RegistrosModel.obtenerPorId(empresaId, id);
@@ -292,11 +300,12 @@ const RegistrosService = {
       ? Boolean(datos.jornada_continua)
       : Boolean(registro.jornada_continua);
 
+    const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
     const { clasificacion, recargoFestivo, numeroDomingo } =
-      await clasificarDiaFestivo(empresaId, registro.trabajador_id, registro.fecha);
+      await clasificarDiaFestivo(empresaId, registro.trabajador_id, registro.fecha, reglaDomingoHabitual);
     const horas = calcularHoras({
       horaEntrada, horaSalida, fecha: registro.fecha, horasOrdinariasAcumuladas: ordinariasAcumCorregir,
-      jornadaContinua, recargoFestivo,
+      jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
     });
 
     await RegistrosModel.actualizar(empresaId, id, {
@@ -327,6 +336,7 @@ const RegistrosService = {
       registroId: id,
       clasificacion,
       numeroDomingo,
+      sumarNocturnasFestivo,
     });
 
     const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(registro.trabajador_id);
@@ -487,8 +497,9 @@ const RegistrosService = {
         ? Number(registro.horas_ordinarias) + Number(registro.horas_nocturnas)
         : 0);
 
+    const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
     const { clasificacion, recargoFestivo, numeroDomingo } =
-      await clasificarDiaFestivo(empresaId, trabajadorId, registro.fecha);
+      await clasificarDiaFestivo(empresaId, trabajadorId, registro.fecha, reglaDomingoHabitual);
     const horasSesion = calcularHoras({
       horaEntrada: registro.hora_entrada,
       horaSalida,
@@ -496,6 +507,7 @@ const RegistrosService = {
       horasOrdinariasAcumuladas: ordinariasBase,
       jornadaContinua: Boolean(jornadaContinua),
       recargoFestivo,
+      sumarNocturnasFestivo,
     });
 
     // Totales del día = sesiones previas + esta sesión.
@@ -547,6 +559,7 @@ const RegistrosService = {
       registroId,
       clasificacion,
       numeroDomingo,
+      sumarNocturnasFestivo,
     });
 
     const registroFinal = await RegistrosModel.obtenerPorId(empresaId, registroId);

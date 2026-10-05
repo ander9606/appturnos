@@ -56,7 +56,7 @@ const CompensatoriosService = {
    * manualmente desde la sección de compensatorios (ver rango()). También
    * avisa a trabajador y, cuando aplica recargo, a los gestores.
    */
-  async crearSiCorresponde(empresaId, { trabajadorId, periodoId, fecha, esFestivo, registroId, clasificacion = 'habitual', numeroDomingo }) {
+  async crearSiCorresponde(empresaId, { trabajadorId, periodoId, fecha, esFestivo, registroId, clasificacion = 'habitual', numeroDomingo, sumarNocturnasFestivo = true }) {
     const domingo = esDomingo(fecha);
     if (!esFestivo && !domingo) return null;
 
@@ -72,7 +72,7 @@ const CompensatoriosService = {
     // Best-effort: un fallo notificando no debe tumbar la respuesta de
     // marcar-salida — el registro del día ya se guardó.
     try {
-      await this._avisar(empresaId, { trabajadorId, fecha, domingo, clasificacion, numeroDomingo });
+      await this._avisar(empresaId, { trabajadorId, fecha, domingo, clasificacion, numeroDomingo, sumarNocturnasFestivo });
     } catch (err) {
       logger.error('[compensatorios] fallo notificando festivo/domingo', err.message);
     }
@@ -89,27 +89,33 @@ const CompensatoriosService = {
    * - Habitual (3º+ domingo, Art. 181) o festivo entre semana: a ambos —
    *   implica recargo en la liquidación, los gestores deben saberlo.
    */
-  async _avisar(empresaId, { trabajadorId, fecha, domingo, clasificacion, numeroDomingo }) {
+  async _avisar(empresaId, { trabajadorId, fecha, domingo, clasificacion, numeroDomingo, sumarNocturnasFestivo }) {
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
     const nombreCompleto = trabajador ? `${trabajador.nombre} ${trabajador.apellido}` : 'Un trabajador';
 
     if (domingo && clasificacion === 'ocasional') {
       if (trabajador?.usuario_id) {
+        const detalle = numeroDomingo ? `es tu domingo Nº${numeroDomingo} del mes, así que ` : '';
         await NotificacionesService.notificar({
           empresaId,
           usuarioId: trabajador.usuario_id,
           tipo: 'nomina.domingo_ocasional',
           titulo: 'Domingo sin recargo',
-          mensaje: `Trabajaste el domingo ${fechaLarga(fecha)} — es tu domingo Nº${numeroDomingo} del mes, así que no lleva recargo dominical, pero se te asignará un día de descanso compensatorio.`,
+          mensaje: `Trabajaste el domingo ${fechaLarga(fecha)} — ${detalle}no lleva recargo dominical, pero se te asignará un día de descanso compensatorio.`,
           data: { fecha },
         });
       }
       return;
     }
 
+    // Sin recargos (empresa que no los suma) el día solo genera compensatorio: nada que aplicar en nómina.
+    const etiqueta = numeroDomingo ? `tu domingo Nº${numeroDomingo} del mes` : 'tu domingo habitual';
+    const cierre = sumarNocturnasFestivo ? 'tendrás recargo dominical' : '';
     const mensajeTrabajador = domingo
-      ? `Trabajaste tu domingo Nº${numeroDomingo} del mes (${fechaLarga(fecha)}) — tendrás recargo dominical y se te asignará un día de descanso compensatorio.`
-      : `Trabajaste el día festivo ${fechaLarga(fecha)} — tendrás un recargo en tus horas.`;
+      ? `Trabajaste ${etiqueta} (${fechaLarga(fecha)}) — ${cierre ? cierre + ' y ' : ''}se te asignará un día de descanso compensatorio.`
+      : sumarNocturnasFestivo
+        ? `Trabajaste el día festivo ${fechaLarga(fecha)} — tendrás un recargo en tus horas.`
+        : `Trabajaste el día festivo ${fechaLarga(fecha)} — se te asignará un día de descanso compensatorio.`;
 
     if (trabajador?.usuario_id) {
       await NotificacionesService.notificar({
@@ -121,6 +127,8 @@ const CompensatoriosService = {
         data: { fecha },
       });
     }
+
+    if (!sumarNocturnasFestivo) return;
 
     const [gestores] = await pool.query(
       `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,

@@ -40,7 +40,8 @@ md = md.replace(/\nArriba, el circuito de nómina[^\n]*\n/, '\n'); // describía
 // Detalle de seguridad interno: no publicar cómo se salta la validación de GPS.
 md = md.replace(' La app móvil exige enviar GPS; el backend no lo exige.', ' Debe enviar su ubicación GPS.');
 
-const cuerpo = execFileSync('npx', ['-y', 'marked@15', '--gfm'], { input: md, encoding: 'utf8' });
+// En Windows npx es npx.cmd: sin shell, execFileSync no lo encuentra.
+const cuerpo = execFileSync('npx', ['-y', 'marked@15', '--gfm'], { input: md, encoding: 'utf8', shell: process.platform === 'win32' });
 
 const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>Zaturno — Reglas de cálculo de pagos</title>

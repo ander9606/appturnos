@@ -41,6 +41,11 @@ const EmpresasService = {
     await EmpresasModel.actualizarPorAdmin(empresaId, datos);
     const empresa = await EmpresasModel.obtenerParaAdmin(empresaId);
 
+    // Pasar a 'sin recargos' queda registrado: quién lo hizo y cuándo (evidencia del aviso aceptado).
+    if (datos.sumar_nocturnas_festivo === 0 && antes && Number(antes.sumar_nocturnas_festivo) === 1) {
+      await EmpresasModel.registrarAvisoRecargos(empresaId, usuarioId);
+    }
+
     // El ciclo (tipo_liquidacion) es lo que determina los límites de cada
     // período — si cambia, un período ya abierto con las fechas del ciclo
     // viejo queda desactualizado. Se cierra con lo acumulado a la fecha

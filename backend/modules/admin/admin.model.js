@@ -77,7 +77,7 @@ const AdminModel = {
   // ── Empresas ──────────────────────────────────────────────────────────────
 
   /** Lista todas las empresas con conteo de trabajadores, usuarios e ingresos históricos. */
-  async listarEmpresas({ busqueda, activo, plan, limit, offset }) {
+  async listarEmpresas({ busqueda, activo, plan, sumarRecargos, limit, offset }) {
     const where = ['1=1'];
     const params = [];
 
@@ -93,6 +93,10 @@ const AdminModel = {
       where.push('e.plan = ?');
       params.push(plan);
     }
+    if (sumarRecargos !== undefined) {
+      where.push('e.sumar_nocturnas_festivo = ?');
+      params.push(sumarRecargos ? 1 : 0);
+    }
 
     const whereSql = where.join(' AND ');
 
@@ -101,6 +105,7 @@ const AdminModel = {
          e.id, e.nombre, e.slug, e.nit, e.ciudad, e.activo, e.plan,
          e.suscripcion_vigente_hasta, e.suscripcion_origen,
          e.acepta_postulaciones, e.logo_url, e.descripcion, e.created_at,
+         e.sumar_nocturnas_festivo, e.regla_domingo_habitual,
          COUNT(DISTINCT t.id)  AS total_trabajadores,
          COUNT(DISTINCT u.id)  AS total_usuarios,
          COUNT(DISTINCT CASE WHEN t.tipo = 'turnos' THEN t.id END) AS trabajadores_turnos,
@@ -126,6 +131,7 @@ const AdminModel = {
     );
     filas.forEach((f) => {
       f.logiq360_conectado = Boolean(f.logiq360_conectado);
+      f.sumar_nocturnas_festivo = Boolean(f.sumar_nocturnas_festivo);
       f.ingresos_totales_cop = Number(f.ingresos_totales_cop);
     });
 
@@ -149,6 +155,7 @@ const AdminModel = {
          e.id, e.nombre, e.slug, e.nit, e.ciudad, e.activo, e.plan,
          e.suscripcion_vigente_hasta, e.suscripcion_origen,
          e.acepta_postulaciones, e.logo_url, e.descripcion, e.created_at,
+         e.sumar_nocturnas_festivo, e.regla_domingo_habitual,
          COUNT(DISTINCT t.id)  AS total_trabajadores,
          COUNT(DISTINCT u.id)  AS total_usuarios,
          COUNT(DISTINCT ot.id) AS total_ofertas,
@@ -169,7 +176,10 @@ const AdminModel = {
       [id]
     );
     const fila = filas[0];
-    if (fila) fila.logiq360_conectado = Boolean(fila.logiq360_conectado);
+    if (fila) {
+      fila.logiq360_conectado = Boolean(fila.logiq360_conectado);
+      fila.sumar_nocturnas_festivo = Boolean(fila.sumar_nocturnas_festivo);
+    }
     return fila || null;
   },
 

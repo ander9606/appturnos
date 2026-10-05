@@ -39,12 +39,13 @@ function credencialesHtml({ nombre, empresa, email, password }) {
 const AdminService = {
   // ── Empresas ──────────────────────────────────────────────────────────────
 
-  async listarEmpresas({ busqueda, activo, plan, page = 1, limit = DEFAULT_PAGE_SIZE } = {}) {
+  async listarEmpresas({ busqueda, activo, plan, sumarRecargos, page = 1, limit = DEFAULT_PAGE_SIZE } = {}) {
     const offset = (page - 1) * limit;
     const { data, total } = await AdminModel.listarEmpresas({
       busqueda: busqueda?.trim() || undefined,
       activo,
       plan,
+      sumarRecargos,
       limit,
       offset,
     });

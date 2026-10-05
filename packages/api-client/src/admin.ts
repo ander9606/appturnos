@@ -48,6 +48,9 @@ export interface EmpresaAdmin {
   acepta_postulaciones: number;
   logo_url: string | null;
   descripcion: string | null;
+  /** false = la empresa no suma recargos nocturnos/festivos automáticamente. */
+  sumar_nocturnas_festivo: boolean;
+  regla_domingo_habitual: 'ley' | 'dos_meses';
   total_trabajadores: number;
   total_usuarios: number;
   trabajadores_turnos: number;
@@ -80,6 +83,8 @@ export interface EmpresasListParams {
   busqueda?: string;
   activo?: boolean;
   plan?: PlanEmpresa;
+  /** true = solo empresas que suman recargos; false = solo las que no. */
+  sumarRecargos?: boolean;
   page?: number;
   limit?: number;
 }
@@ -195,6 +200,7 @@ export const adminApi = {
     if (params.busqueda) qs.set('busqueda', params.busqueda);
     if (params.activo !== undefined) qs.set('activo', String(params.activo));
     if (params.plan) qs.set('plan', params.plan);
+    if (params.sumarRecargos !== undefined) qs.set('sumar_recargos', String(params.sumarRecargos));
     if (params.page) qs.set('page', String(params.page));
     if (params.limit) qs.set('limit', String(params.limit));
 

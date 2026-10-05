@@ -2,6 +2,7 @@
 
 const AsignacionesModel = require('./asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
+const EmpresasModel = require('../../empresas/empresas.model');
 const AppError = require('../../../utils/AppError');
 const { calcularHoras } = require('../../../utils/laboralUtils');
 const { ROLES } = require('../../../config/constants');
@@ -65,6 +66,12 @@ module.exports = {
       return s.slice(11, 19); // 'HH:MM:SS'
     };
 
+    // Cada turno sigue la opción de recargos de su empresa (en multi-empresa son varias).
+    const configPorEmpresa = new Map();
+    for (const id of new Set(asignaciones.map((a) => a.empresa_id))) {
+      configPorEmpresa.set(id, await EmpresasModel.obtenerConfigRecargos(id));
+    }
+
     return asignaciones.map((a) => {
       if (a.estado !== 'completado' || !a.hora_ingreso_real || !a.hora_egreso_real) {
         return a;
@@ -73,6 +80,7 @@ module.exports = {
         horaEntrada: extractTime(a.hora_ingreso_real),
         horaSalida:  extractTime(a.hora_egreso_real),
         fecha:       a.oferta_fecha,
+        sumarNocturnasFestivo: configPorEmpresa.get(a.empresa_id)?.sumarNocturnasFestivo ?? true,
       });
       return { ...a, ...desglose };
     });

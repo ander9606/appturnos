@@ -60,6 +60,9 @@ export interface Empresa extends EmpresaDirectorio {
   plan: string;
   tipo_liquidacion: TipoLiquidacion;
   tipo_contrato: TipoContrato;
+  /** false = no se suman recargos nocturnos/festivos (solo se acumulan horas y se avisa al pasar 42 h). */
+  sumar_nocturnas_festivo: boolean;
+  regla_domingo_habitual: 'ley' | 'dos_meses';
   created_at: string;
 }
 
@@ -73,6 +76,8 @@ export interface ActualizarMiEmpresaPayload {
   acepta_postulaciones?: boolean;
   tipo_liquidacion?: TipoLiquidacion;
   tipo_contrato?: TipoContrato;
+  sumar_nocturnas_festivo?: boolean;
+  regla_domingo_habitual?: 'ley' | 'dos_meses';
 }
 
 export interface DirectorioResponse {

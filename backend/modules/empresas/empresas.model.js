@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
+const { ahoraColombiaSQL } = require('../../utils/fechaColombia');
 
 // Ventana de referencia para "actividad reciente" del directorio — se mide
 // sobre created_at (cuándo se publicó la oferta), no la fecha del turno:
@@ -15,7 +16,7 @@ const COLUMNAS_PUBLICAS = `id, nombre, slug, ciudad, plan, actividad,
 
 const COLUMNAS_ADMIN = `id, nombre, slug, nit, ciudad, plan, actividad,
   logo_url, descripcion, telefono, email_empresa, direccion, acepta_postulaciones,
-  tipo_liquidacion, tipo_contrato, created_at`;
+  tipo_liquidacion, tipo_contrato, sumar_nocturnas_festivo, regla_domingo_habitual, created_at`;
 
 const EmpresasModel = {
   async listarDirectorio({ busqueda, ciudad, limit, offset }) {
@@ -139,7 +140,7 @@ const EmpresasModel = {
   },
 
   async actualizarPorAdmin(empresaId, datos) {
-    const CAMPOS = ['nombre', 'nit', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato'];
+    const CAMPOS = ['nombre', 'nit', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual'];
     const sets = [];
     const params = [];
     for (const campo of CAMPOS) {
@@ -163,6 +164,26 @@ const EmpresasModel = {
       [empresaId]
     );
     return filas[0]?.tipo_contrato || 'laboral';
+  },
+
+  /** Guarda quién confirmó el aviso al pasar a 'sin recargos' y cuándo (evidencia para Zaturno). */
+  async registrarAvisoRecargos(empresaId, usuarioId) {
+    await pool.query(
+      'UPDATE empresas SET aviso_recargos_aceptado_por = ?, aviso_recargos_aceptado_at = ? WHERE id = ?',
+      [usuarioId, ahoraColombiaSQL(), empresaId]
+    );
+  },
+
+  /** Opciones de la empresa que cambian cómo se clasifica y se paga un día trabajado. */
+  async obtenerConfigRecargos(empresaId) {
+    const [filas] = await pool.query(
+      'SELECT sumar_nocturnas_festivo, regla_domingo_habitual FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return {
+      sumarNocturnasFestivo: filas[0]?.sumar_nocturnas_festivo !== 0,
+      reglaDomingoHabitual: filas[0]?.regla_domingo_habitual ?? 'ley',
+    };
   },
 
   async obtenerParaPago(empresaId) {

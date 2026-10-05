@@ -20,6 +20,7 @@ export function SuperAdminPage() {
   const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState('');
   const [activoFiltro, setActivoFiltro] = useState<boolean | undefined>(undefined);
+  const [recargosFiltro, setRecargosFiltro] = useState<boolean | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
 
   const { data: reportesData } = useReportesGlobales();
@@ -28,6 +29,7 @@ export function SuperAdminPage() {
   const { data: empresasData, isLoading, isError, error, refetch } = useEmpresas({
     busqueda: busqueda || undefined,
     activo: activoFiltro,
+    sumar_recargos: recargosFiltro,
   });
   const empresas: EmpresaAdmin[] = empresasData?.data?.data ?? [];
   const total: number = empresasData?.data?.pagination?.total ?? 0;
@@ -147,6 +149,15 @@ export function SuperAdminPage() {
             <option value="true">Activas</option>
             <option value="false">Inactivas</option>
           </select>
+          <select
+            value={recargosFiltro === undefined ? '' : String(recargosFiltro)}
+            onChange={e => setRecargosFiltro(e.target.value === '' ? undefined : e.target.value === 'true')}
+            className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="">Recargos: todas</option>
+            <option value="true">Con recargos</option>
+            <option value="false">Sin recargos</option>
+          </select>
           <button
             onClick={() => setShowCrear(true)}
             className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors whitespace-nowrap"
@@ -173,6 +184,7 @@ export function SuperAdminPage() {
                   <th className="text-right px-4 py-3 font-medium">Trabajadores</th>
                   <th className="text-right px-4 py-3 font-medium">Usuarios</th>
                   <th className="text-left px-4 py-3 font-medium">Alta</th>
+                  <th className="text-left px-4 py-3 font-medium">Recargos</th>
                   <th className="text-left px-4 py-3 font-medium">Estado</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -200,6 +212,16 @@ export function SuperAdminPage() {
                     <td className="px-4 py-3 text-right text-muted-foreground">{e.total_trabajadores}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{e.total_usuarios}</td>
                     <td className="px-4 py-3 text-muted-foreground">{fmtDate(e.created_at)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                        e.sumar_nocturnas_festivo ? 'bg-success-light text-success' : 'bg-warning-light text-warning'
+                      }`}>
+                        {e.sumar_nocturnas_festivo ? 'Con recargos' : 'Sin recargos'}
+                      </span>
+                      {e.sumar_nocturnas_festivo && e.regla_domingo_habitual === 'dos_meses' && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Domingo habitual: 2 meses</p>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                         e.activo ? 'bg-success-light text-success' : 'bg-muted text-muted-foreground'
