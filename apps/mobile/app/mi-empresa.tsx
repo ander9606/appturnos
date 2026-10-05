@@ -38,6 +38,16 @@ const TIPO_CONTRATO_OPTIONS: { value: TipoContrato; label: string; sub: string }
   { value: 'prestacion_servicios', label: 'Prestación de servicios', sub: 'El independiente se autoliquida' },
 ];
 
+const RECARGOS_OPTIONS: { value: boolean; label: string; sub: string }[] = [
+  { value: true,  label: 'Con recargos', sub: 'Recargo nocturno y festivo según la ley' },
+  { value: false, label: 'Sin recargos', sub: 'Normales hasta 42 h; después, extra diurna' },
+];
+
+const DOMINGO_HABITUAL_OPTIONS: { value: 'ley' | 'dos_meses'; label: string }[] = [
+  { value: 'ley',       label: '3 o más domingos en el mes (ley)' },
+  { value: 'dos_meses', label: '2 meses después del primer domingo' },
+];
+
 const schema = z.object({
   nombre:               z.string().trim().min(1, 'Razón social requerida'),
   nit:                  z.string().trim().optional(),
@@ -49,6 +59,8 @@ const schema = z.object({
   acepta_postulaciones: z.boolean(),
   tipo_liquidacion:     z.enum(['mensual', 'quincenal', 'semanal']),
   tipo_contrato:        z.enum(['laboral', 'prestacion_servicios']),
+  sumar_nocturnas_festivo: z.boolean(),
+  regla_domingo_habitual:  z.enum(['ley', 'dos_meses']),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -104,11 +116,15 @@ export default function MiEmpresaScreen() {
       acepta_postulaciones: true,
       tipo_liquidacion:     'mensual' as TipoLiquidacion,
       tipo_contrato:        'laboral' as TipoContrato,
+      sumar_nocturnas_festivo: true,
+      regla_domingo_habitual:  'ley',
     },
   });
 
   const logoUrl = watch('logo_url');
+  const sumar = watch('sumar_nocturnas_festivo');
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [verAviso, setVerAviso] = useState(false);
 
   // ── Logo — mismo flujo de cámara/galería que la foto de perfil de usuario ──
 
@@ -163,6 +179,8 @@ export default function MiEmpresaScreen() {
         acepta_postulaciones: Boolean(empresa.acepta_postulaciones),
         tipo_liquidacion:     (empresa.tipo_liquidacion ?? 'mensual') as TipoLiquidacion,
         tipo_contrato:        (empresa.tipo_contrato ?? 'laboral') as TipoContrato,
+        sumar_nocturnas_festivo: Boolean(empresa.sumar_nocturnas_festivo ?? true),
+        regla_domingo_habitual:  empresa.regla_domingo_habitual ?? 'ley',
       });
     }
   }, [empresa, reset]);
@@ -179,6 +197,8 @@ export default function MiEmpresaScreen() {
         acepta_postulaciones: data.acepta_postulaciones,
         tipo_liquidacion:     data.tipo_liquidacion,
         tipo_contrato:        data.tipo_contrato,
+        sumar_nocturnas_festivo: data.sumar_nocturnas_festivo,
+        regla_domingo_habitual:  data.regla_domingo_habitual,
       });
       showToast('Datos de la empresa actualizados.');
     } catch {
@@ -412,6 +432,105 @@ export default function MiEmpresaScreen() {
                 </View>
               )}
             />
+          </View>
+
+          {/* ── Cálculo de recargos ───────────────────────────────── */}
+          <View className="gap-3">
+            <View className="gap-1">
+              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                Cálculo de recargos
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                Define si Zaturno calcula los recargos nocturnos y festivos al liquidar.
+              </Text>
+            </View>
+            <Controller
+              control={control}
+              name="sumar_nocturnas_festivo"
+              render={({ field: { onChange, value } }) => (
+                <View className="flex-row gap-2" accessibilityRole="radiogroup">
+                  {RECARGOS_OPTIONS.map((opt) => {
+                    const active = value === opt.value;
+                    const elegir = () => {
+                      if (opt.value || !value) return onChange(opt.value);
+                      Alert.alert(
+                        'Dejar de sumar recargos',
+                        'Zaturno dejará de calcular el recargo nocturno y festivo. Las horas son normales hasta 42 h a la semana y, después, extra diurna. La empresa calcula esos recargos y responde por la liquidación. ¿Confirmas?',
+                        [
+                          { text: 'Cancelar', style: 'cancel' },
+                          { text: 'Sí, dejar de sumar', style: 'destructive', onPress: () => onChange(false) },
+                        ],
+                      );
+                    };
+                    return (
+                      <Pressable
+                        key={String(opt.value)}
+                        onPress={elegir}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: active }}
+                        className={`flex-1 rounded-2xl border py-3 px-2 items-center gap-0.5 active:opacity-70 ${
+                          active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
+                        }`}
+                      >
+                        <Text className={`text-sm font-bold ${active ? 'text-primary-500' : 'text-foreground'}`}>
+                          {opt.label}
+                        </Text>
+                        <Text className="text-[10px] text-muted-foreground text-center">{opt.sub}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            />
+
+            {!sumar && (
+              <View className="gap-2">
+                <Pressable onPress={() => setVerAviso((v) => !v)} accessibilityRole="button" className="self-start">
+                  <Text className="text-xs font-semibold text-primary-500">
+                    {verAviso ? 'Ocultar aviso' : 'Aviso sobre el cálculo'}
+                  </Text>
+                </Pressable>
+                {verAviso && (
+                  <Text className="text-xs text-muted-foreground">
+                    Zaturno registra las horas trabajadas. Si la empresa no suma recargos automáticamente, el cálculo de recargos y horas extra lo hace la empresa con la información que toma de Zaturno, y la empresa es la responsable de revisarlo y de la liquidación que paga. Zaturno no responde por los montos que se liquiden con esta opción.
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {sumar && (
+              <View className="gap-2">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                  Cuándo un domingo es habitual
+                </Text>
+                <Controller
+                  control={control}
+                  name="regla_domingo_habitual"
+                  render={({ field: { onChange, value } }) => (
+                    <View className="gap-2" accessibilityRole="radiogroup">
+                      {DOMINGO_HABITUAL_OPTIONS.map((opt) => {
+                        const active = value === opt.value;
+                        return (
+                          <Pressable
+                            key={opt.value}
+                            onPress={() => onChange(opt.value)}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: active }}
+                            className={`rounded-2xl border px-4 py-3 active:opacity-70 ${
+                              active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
+                            }`}
+                          >
+                            <Text className={`text-sm font-semibold ${active ? 'text-primary-500' : 'text-foreground'}`}>
+                              {opt.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
+                />
+              </View>
+            )}
           </View>
 
           {/* Acepta postulaciones */}

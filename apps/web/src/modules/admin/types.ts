@@ -35,6 +35,9 @@ export interface EmpresaAdmin {
   acepta_postulaciones: boolean | number;
   logo_url: string | null;
   descripcion: string | null;
+  /** false = la empresa no suma recargos nocturnos/festivos automáticamente. */
+  sumar_nocturnas_festivo: boolean;
+  regla_domingo_habitual: 'ley' | 'dos_meses';
   created_at: string;
   total_trabajadores: number;
   total_usuarios: number;

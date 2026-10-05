@@ -7,6 +7,10 @@ const AdminController = {
   async listarEmpresas(req, res, next) {
     try {
       const { busqueda, plan, page, limit } = req.query;
+      const sumarRecargos =
+        req.query.sumar_recargos === 'true' ? true
+        : req.query.sumar_recargos === 'false' ? false
+        : undefined;
       const activo =
         req.query.activo === 'true' ? true
         : req.query.activo === 'false' ? false
@@ -16,6 +20,7 @@ const AdminController = {
         busqueda,
         activo,
         plan,
+        sumarRecargos,
         page: Number(page) || 1,
         limit: Math.min(Number(limit) || 20, 100),
       });

@@ -10,6 +10,10 @@ export interface Empresa {
   logo_url: string | null;
   /** Determina si la liquidación de nómina calcula descuentos de ley (salud/pensión). */
   tipo_contrato: TipoContrato;
+  /** false = no se suman recargos nocturnos/festivos; solo se acumulan horas y se avisa al pasar 42 h. */
+  sumar_nocturnas_festivo: boolean;
+  /** 'ley' = habitual desde el 3.º domingo del mes; 'dos_meses' = desde 2 meses después del primer domingo trabajado. */
+  regla_domingo_habitual: 'ley' | 'dos_meses';
 }
 
 export type AlcancePunto = 'todos' | 'nomina';

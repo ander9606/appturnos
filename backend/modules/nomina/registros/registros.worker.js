@@ -6,12 +6,14 @@ const { pool } = require('../../../config/database');
 const { calcularHoras } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
+const { JORNADA_SEMANAL_HORAS } = require('../../../config/constants');
 
 /**
  * Detecta cuándo un trabajador de nómina, todavía en jornada activa, empieza
  * a acumular horas extra (i.e. superó su jornada ordinaria) — avisa al propio
  * trabajador para que no olvide marcar salida, y a los gestores, una sola vez
- * (alerta_extra_enviada).
+ * (alerta_extra_enviada). En empresas sin recargos no hay extras: el aviso
+ * salta al pasar JORNADA_SEMANAL_HORAS en la semana.
  */
 
 const INTERVALO_MS = 15 * 60_000; // 15 min
@@ -38,22 +40,23 @@ async function verificarHorasExtra() {
     const ordinariasBase = ordinariasAcum +
       (r.sesiones > 1 ? Number(r.horas_ordinarias) + Number(r.horas_nocturnas) : 0);
 
+    const sumarNocturnasFestivo = r.sumar_nocturnas_festivo !== 0;
     const horas = calcularHoras({
       horaEntrada: r.hora_entrada,
       horaSalida: ahoraHHMMSS(),
       fecha: r.fecha,
       horasOrdinariasAcumuladas: ordinariasBase,
+      sumarNocturnasFestivo,
     });
 
-    const enExtra = (horas.horas_extra_diurnas + horas.horas_extra_nocturnas) > 0;
-    if (!enExtra) continue;
+    if ((horas.horas_extra_diurnas + horas.horas_extra_nocturnas) === 0) continue;
 
     if (r.usuario_id) {
       await NotificacionesService.notificar({
         empresaId: r.empresa_id,
         usuarioId: r.usuario_id,
         tipo: 'nomina.recordatorio_salida',
-        titulo: 'Llevas 8 horas trabajando',
+        titulo: sumarNocturnasFestivo ? 'Llevas 8 horas trabajando' : `Llevas ${JORNADA_SEMANAL_HORAS} horas esta semana`,
         mensaje: 'Ya cumpliste tu jornada ordinaria. No olvides marcar tu salida cuando termines.',
         data: { registro_id: r.id },
       });
@@ -68,7 +71,9 @@ async function verificarHorasExtra() {
         empresaId: r.empresa_id,
         tipo: 'nomina.horas_extra_iniciadas',
         titulo: 'Horas extra en curso',
-        mensaje: `${r.nombre} ${r.apellido} empezó a trabajar horas extra hoy.`,
+        mensaje: sumarNocturnasFestivo
+          ? `${r.nombre} ${r.apellido} empezó a trabajar horas extra hoy.`
+          : `${r.nombre} ${r.apellido} superó las ${JORNADA_SEMANAL_HORAS} h de jornada esta semana.`,
         data: { registro_id: r.id, trabajador_id: r.trabajador_id },
       });
     }

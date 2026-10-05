@@ -30,6 +30,7 @@ async function actualizarMiEmpresa(req, res) {
   const {
     nombre, nit, ciudad, descripcion, actividad, logo_url,
     telefono, email_empresa, direccion, acepta_postulaciones, tipo_liquidacion, tipo_contrato,
+    sumar_nocturnas_festivo, regla_domingo_habitual,
   } = req.body;
   const datos = {};
   if (nombre               !== undefined) datos.nombre               = nombre;
@@ -44,6 +45,9 @@ async function actualizarMiEmpresa(req, res) {
   if (acepta_postulaciones !== undefined) datos.acepta_postulaciones = acepta_postulaciones ? 1 : 0;
   if (tipo_liquidacion     !== undefined) datos.tipo_liquidacion     = tipo_liquidacion;
   if (tipo_contrato        !== undefined) datos.tipo_contrato        = tipo_contrato;
+  // El web manda '1'/'0' (form de strings): '0' es truthy, por eso se compara explícito.
+  if (sumar_nocturnas_festivo !== undefined) datos.sumar_nocturnas_festivo = ['1', 'true', 1, true].includes(sumar_nocturnas_festivo) ? 1 : 0;
+  if (regla_domingo_habitual  !== undefined) datos.regla_domingo_habitual  = regla_domingo_habitual;
 
   const data = await EmpresasService.actualizarMiEmpresa(req.empresa_id, datos, req.usuario.sub);
   res.json({ success: true, data, message: 'Empresa actualizada' });

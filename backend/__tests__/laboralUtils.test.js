@@ -15,6 +15,7 @@ const {
   diasPagoPeriodo,
   horaInicioNocturno,
   recargoFestivo,
+  esDomingoHabitual,
 } = require('../utils/laboralUtils');
 
 // ── calcularPascua ────────────────────────────────────────────────────────────
@@ -571,6 +572,56 @@ describe('recargo nocturno según tipo de pago', () => {
   test('las extra nocturnas no cambian: ×1.75 también para el asalariado', () => {
     const d = desglosarPagoNomina({ horas_extra_nocturnas: 1 }, VH, undefined, { salarioFijo: true });
     expect(d.pago_extra_nocturno).toBeCloseTo(17_500, 5);
+  });
+});
+
+describe('esDomingoHabitual', () => {
+  test("regla 'ley': habitual desde el 3.º domingo del mes", () => {
+    expect(esDomingoHabitual({ fecha: '2026-09-27', numeroDomingo: 2 })).toBe(false);
+    expect(esDomingoHabitual({ fecha: '2026-09-27', numeroDomingo: 3 })).toBe(true);
+  });
+
+  test("regla 'dos_meses': ocasional antes de 2 meses desde el primer domingo, habitual después", () => {
+    const primerDomingo = '2026-01-04';
+    expect(esDomingoHabitual({ fecha: '2026-03-01', regla: 'dos_meses', primerDomingo })).toBe(false);
+    expect(esDomingoHabitual({ fecha: '2026-03-04', regla: 'dos_meses', primerDomingo })).toBe(true);
+    // Sin domingo previo, cuenta desde la propia fecha → ocasional.
+    expect(esDomingoHabitual({ fecha: '2026-03-04', regla: 'dos_meses', primerDomingo: null })).toBe(false);
+  });
+});
+
+describe('sumarNocturnasFestivo: false (empresa sin recargos)', () => {
+  test('noche y festivo cuentan como ordinarias, sin nocturnas ni extras', () => {
+    const r = calcularHoras({
+      horaEntrada: '18:00', horaSalida: '23:00', fecha: '2025-12-25', jornadaContinua: true,
+      sumarNocturnasFestivo: false,
+    });
+    expect(r.horas_ordinarias).toBe(5);
+    expect(r.horas_nocturnas).toBe(0);
+    expect(r.horas_festivo).toBe(0);
+    expect(r.horas_extra_diurnas + r.horas_extra_nocturnas).toBe(0);
+    expect(r.es_festivo).toBe(1); // el compensatorio sigue
+  });
+
+  test('después de 42 h semanales todo es extra diurna, aunque sea de noche o festivo', () => {
+    const r = calcularHoras({
+      horaEntrada: '20:00', horaSalida: '23:00', fecha: '2025-12-25', horasOrdinariasAcumuladas: 42, jornadaContinua: true,
+      sumarNocturnasFestivo: false,
+    });
+    expect(r.horas_ordinarias).toBe(0);
+    expect(r.horas_extra_diurnas).toBe(3);
+    expect(r.horas_extra_nocturnas).toBe(0);
+    expect(r.horas_nocturnas).toBe(0);
+    expect(r.horas_festivo).toBe(0);
+  });
+
+  test('el tope de 42 h parte el turno: lo que alcanza es ordinario, el resto extra diurna', () => {
+    const r = calcularHoras({
+      horaEntrada: '07:00', horaSalida: '17:00', horasOrdinariasAcumuladas: 40, jornadaContinua: true,
+      sumarNocturnasFestivo: false,
+    });
+    expect(r.horas_ordinarias).toBe(2);
+    expect(r.horas_extra_diurnas).toBe(8);
   });
 });
 

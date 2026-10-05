@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, Building2, Upload, X, Copy, Check } from 'lucide-react';
@@ -154,6 +154,8 @@ function EmpresaTab() {
   const base: Record<string, string> = {};
   for (const { key } of EMPRESA_FIELDS) base[key] = ((empresa as unknown as Record<string, unknown>)[key] as string) ?? '';
   base.tipo_contrato = empresa.tipo_contrato ?? 'laboral';
+  base.sumar_nocturnas_festivo = (empresa.sumar_nocturnas_festivo ?? true) ? '1' : '0';
+  base.regla_domingo_habitual = empresa.regla_domingo_habitual ?? 'ley';
   const val = editing ? form : base;
 
   const handleSave = async () => {
@@ -224,6 +226,92 @@ function EmpresaTab() {
           </p>
         </div>
       </div>
+      <RecargosSection editing={editing} val={val} setForm={setForm} />
+    </div>
+  );
+}
+
+/* ── Cálculo de recargos: se guarda con el botón Guardar de los datos de la empresa ── */
+const OPCIONES_DOMINGO: { valor: 'ley' | 'dos_meses'; titulo: string }[] = [
+  { valor: 'ley', titulo: '3 o más domingos en el mes (ley)' },
+  { valor: 'dos_meses', titulo: '2 meses después del primer domingo trabajado' },
+];
+
+const BOTON_RECARGO = (activo: boolean) =>
+  `text-left rounded-xl border p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${activo ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted'}`;
+
+function RecargosSection({ editing, val, setForm }: {
+  editing: boolean;
+  val: Record<string, string>;
+  setForm: Dispatch<SetStateAction<Record<string, string> | null>>;
+}) {
+  const { confirmState, confirm, close } = useConfirm();
+  const sumar = val.sumar_nocturnas_festivo !== '0';
+  const regla = val.regla_domingo_habitual ?? 'ley';
+
+  const elegirSumar = (valor: boolean) => {
+    if (!editing || valor === sumar) return;
+    const aplicar = () => { setForm(f => ({ ...f!, sumar_nocturnas_festivo: valor ? '1' : '0' })); close(); };
+    if (valor) return aplicar();
+    confirm({
+      title: 'Dejar de sumar recargos',
+      detail: 'Zaturno dejará de calcular el recargo nocturno y festivo. Las horas son normales hasta 42 h a la semana y, después, extra diurna. La empresa calcula esos recargos y responde por la liquidación. ¿Confirmas?',
+      confirmLabel: 'Sí, dejar de sumar',
+      onConfirm: aplicar,
+    });
+  };
+
+  return (
+    <div className="mt-6 pt-6 border-t border-border">
+      <h3 className="text-sm font-semibold text-foreground">Cálculo de recargos</h3>
+      <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+        Define si Zaturno calcula los recargos nocturnos y festivos al liquidar. {editing ? 'Se guarda con el botón Guardar.' : 'Edita los datos para cambiarlo.'}
+      </p>
+
+      <div role="radiogroup" aria-label="Cálculo de recargos" className="grid grid-cols-2 gap-3">
+        <button type="button" role="radio" aria-checked={sumar} disabled={!editing} onClick={() => elegirSumar(true)} className={BOTON_RECARGO(sumar)}>
+          <span className={`block text-sm font-semibold ${sumar ? 'text-primary' : 'text-foreground'}`}>Con recargos</span>
+          <span className="block text-xs text-muted-foreground mt-0.5">Recargo nocturno y festivo según la ley. Lo que pase de 42 h a la semana es extra.</span>
+        </button>
+        <button type="button" role="radio" aria-checked={!sumar} disabled={!editing} onClick={() => elegirSumar(false)} className={BOTON_RECARGO(!sumar)}>
+          <span className={`block text-sm font-semibold ${!sumar ? 'text-primary' : 'text-foreground'}`}>Sin recargos</span>
+          <span className="block text-xs text-muted-foreground mt-0.5">Normales hasta 42 h a la semana y, después, extra diurna, sea de noche, festivo o no.</span>
+        </button>
+      </div>
+
+      {!sumar && (
+        <details className="text-xs text-muted-foreground mt-3">
+          <summary className="cursor-pointer text-primary hover:text-primary-600 w-fit">Aviso sobre el cálculo</summary>
+          <p className="mt-1">
+            Zaturno registra las horas trabajadas. Si la empresa no suma recargos automáticamente, el cálculo de recargos y horas extra lo hace la empresa con la información que toma de Zaturno, y la empresa es la responsable de revisarlo y de la liquidación que paga. Zaturno no responde por los montos que se liquiden con esta opción.
+          </p>
+        </details>
+      )}
+
+      {sumar && (
+        <div className="mt-5">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase mb-2">Cuándo un domingo es habitual</h4>
+          <div role="radiogroup" aria-label="Cuándo un domingo es habitual" className="grid grid-cols-2 gap-3">
+            {OPCIONES_DOMINGO.map(o => (
+              <button key={o.valor} type="button" role="radio" aria-checked={regla === o.valor} disabled={!editing}
+                onClick={() => editing && setForm(f => ({ ...f!, regla_domingo_habitual: o.valor }))}
+                className={BOTON_RECARGO(regla === o.valor)}>
+                <span className={`block text-sm font-semibold ${regla === o.valor ? 'text-primary' : 'text-foreground'}`}>{o.titulo}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {confirmState && (
+        <ConfirmModal
+          title={confirmState.title}
+          detail={confirmState.detail}
+          confirmLabel={confirmState.confirmLabel ?? 'Confirmar'}
+          onConfirm={confirmState.onConfirm}
+          onCancel={close}
+        />
+      )}
     </div>
   );
 }

@@ -54,12 +54,14 @@ function FilterChip({
 // ── Screen ────────────────────────────────────────────────────────────────
 
 type FiltroEstado = 'todas' | 'activas' | 'inactivas';
+type FiltroRecargos = 'todas' | 'con' | 'sin';
 
 export default function EmpresasScreen() {
   const router = useRouter();
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('todas');
+  const [filtroRecargos, setFiltroRecargos] = useState<FiltroRecargos>('todas');
   const [refreshing, setRefreshing] = useState(false);
 
   const params = {
@@ -67,6 +69,10 @@ export default function EmpresasScreen() {
     activo:
       filtroEstado === 'activas' ? true
       : filtroEstado === 'inactivas' ? false
+      : undefined,
+    sumarRecargos:
+      filtroRecargos === 'con' ? true
+      : filtroRecargos === 'sin' ? false
       : undefined,
     limit: 50,
   };
@@ -123,6 +129,20 @@ export default function EmpresasScreen() {
                 active={filtroEstado === f}
                 onPress={() => setFiltroEstado(f)}
                 color={f === 'activas' ? '#22C55E' : f === 'inactivas' ? '#EF4444' : '#6366F1'}
+              />
+            ))}
+          </View>
+        </ScrollView>
+        {/* Recargos automáticos */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <View className="flex-row gap-2">
+            {(['todas', 'con', 'sin'] as FiltroRecargos[]).map((f) => (
+              <FilterChip
+                key={f}
+                label={f === 'todas' ? 'Recargos: todas' : f === 'con' ? 'Con recargos' : 'Sin recargos'}
+                active={filtroRecargos === f}
+                onPress={() => setFiltroRecargos(f)}
+                color={f === 'sin' ? '#F59E0B' : '#6366F1'}
               />
             ))}
           </View>
@@ -197,6 +217,18 @@ export default function EmpresasScreen() {
                         style={{ color: isActiva ? '#16A34A' : '#DC2626' }}
                       >
                         {isActiva ? 'ACTIVA' : 'INACTIVA'}
+                      </Text>
+                    </View>
+                    {/* Recargos automáticos */}
+                    <View
+                      className="rounded-full px-2 py-0.5"
+                      style={{ backgroundColor: empresa.sumar_nocturnas_festivo ? '#6366F120' : '#F59E0B20' }}
+                    >
+                      <Text
+                        className="text-[10px] font-bold"
+                        style={{ color: empresa.sumar_nocturnas_festivo ? '#4F46E5' : '#B45309' }}
+                      >
+                        {empresa.sumar_nocturnas_festivo ? 'CON RECARGOS' : 'SIN RECARGOS'}
                       </Text>
                     </View>
                   </View>

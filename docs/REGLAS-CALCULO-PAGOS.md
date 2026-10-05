@@ -113,8 +113,21 @@ Si la jornada supera **6 h** y el trabajador no marcó jornada continua, se desc
 
 - **Festivos** reconocidos: domingos; fijos (1 ene, 1 may, 20 jul, 7 ago, 8 dic, 25 dic); los de Ley Emiliani trasladados al lunes (6 ene, 19 mar, 29 jun, 15 ago, 12 oct, 1 nov, 11 nov); y los de Semana Santa (jueves y viernes santo; Ascensión, Corpus Christi y Sagrado Corazón trasladados al lunes). Se calculan para cualquier año.
 - **Festivo entre semana**: siempre lleva recargo.
-- **Domingo ocasional** (Art. 180 CST): el 1.º y 2.º domingo trabajado del mes calendario **no** llevan recargo en dinero; sus horas se clasifican como un día normal (ordinarias, nocturnas o extra) y generan descanso compensatorio.
-- **Domingo habitual**: del 3.º domingo trabajado del mes en adelante, todas sus horas van a festivo con recargo.
+- **Domingo ocasional** (Art. 180 CST): mientras no sea habitual, el domingo **no** lleva recargo en dinero; sus horas se clasifican como un día normal (ordinarias, nocturnas o extra) y genera descanso compensatorio.
+- **Domingo habitual** (Art. 181 CST): todas sus horas van a festivo con recargo y genera descanso compensatorio. Cada empresa elige cuándo se vuelve habitual:
+  - **Ley (default):** desde el 3.º domingo trabajado del mes calendario.
+  - **2 meses:** desde 2 meses después del primer domingo trabajado por el trabajador. Antes de eso el domingo es ocasional.
+- Todo festivo genera descanso compensatorio, sin importar la regla de domingo.
+
+### Empresa que no suma recargos
+
+Cada empresa elige en Configuración → Datos de la empresa si suma los recargos nocturno y festivo (por defecto, sí, como arriba). Si la empresa elige **no sumar**:
+
+- No hay recargo nocturno ni festivo. Todas las horas cuentan como **diurnas**, sea de noche, festivo o no. Tampoco hay recargo dominical, así que la regla de domingo habitual no cambia el pago.
+- Las horas cuentan como **ordinarias** hasta llegar a 42 h en la semana, incluidas las de festivos. Lo que pase de 42 h es **extra diurna** (×1,25), también si fue de noche o festivo.
+- Se avisa al trabajador y a los gestores cuando empiezan las horas extra, igual que en las empresas que suman recargos.
+- El descanso compensatorio por domingo o festivo se sigue generando (es un derecho aparte del recargo).
+- El cambio aplica a los registros que se creen o corrijan desde ese momento; no recalcula registros existentes ni períodos cerrados.
 
 ## 4. Valor de la hora, salario y períodos
 
@@ -406,3 +419,4 @@ Estas reglas hacen que el cálculo actual difiera de la práctica usual en Colom
 - [ ] ¿La hora dominical del asalariado se paga × 1,90 o solo el recargo del 90 %?
 - [ ] ¿La festiva nocturna debe sumar el 35 % nocturno (× 2,25 hoy)?
 - [ ] ¿Qué tope aplicamos a los descuentos manuales?
+- [ ] La regla "2 meses" para domingo habitual (opción de empresa) es más tardía que la del Art. 181 CST (3 o más domingos en el mes). ¿Es válida para liquidar o solo para empresas que lo pidan por escrito?

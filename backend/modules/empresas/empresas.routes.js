@@ -89,6 +89,8 @@ router.patch(
     body('acepta_postulaciones').optional().isBoolean().withMessage('acepta_postulaciones debe ser booleano'),
     body('tipo_liquidacion').optional().isIn(['mensual', 'quincenal', 'semanal']).withMessage('tipo_liquidacion inválido'),
     body('tipo_contrato').optional().isIn(['laboral', 'prestacion_servicios']).withMessage('tipo_contrato inválido'),
+    body('sumar_nocturnas_festivo').optional().isBoolean().withMessage('sumar_nocturnas_festivo debe ser booleano'),
+    body('regla_domingo_habitual').optional().isIn(['ley', 'dos_meses']).withMessage('regla_domingo_habitual inválida'),
   ],
   validar,
   ctrl.actualizarMiEmpresa
