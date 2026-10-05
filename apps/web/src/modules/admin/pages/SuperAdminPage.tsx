@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Building2, Users, Briefcase, Calendar, DollarSign, TrendingUp,
-  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook, Link2, Tag,
+  Plus, Search, ToggleLeft, ToggleRight, ChevronRight, Webhook, Link2, Tag, Percent,
 } from 'lucide-react';
 import { useReportesGlobales, useEmpresas, useCrearEmpresa, useCambiarEstadoEmpresa } from '../hooks/useAdmin';
 import type { EmpresaAdmin, MrrMes, RenovacionRiesgo } from '../types';
@@ -69,6 +69,13 @@ export function SuperAdminPage() {
               value={reportes.empresas.activas}
               sub={`${reportes.empresas.total} en total · ${reportes.empresas.inactivas} inactivas`}
               color="primary"
+            />
+            <KpiCard
+              icon={Percent}
+              label="Sin recargos automáticos"
+              value={reportes.empresas.sin_recargos}
+              sub="Empresas activas que calculan sus recargos por fuera"
+              color="default"
             />
             <KpiCard
               icon={Users}

@@ -293,7 +293,8 @@ const AdminModel = {
       `SELECT
          COUNT(*)              AS total_empresas,
          SUM(activo = 1)       AS empresas_activas,
-         SUM(activo = 0)       AS empresas_inactivas
+         SUM(activo = 0)       AS empresas_inactivas,
+         SUM(activo = 1 AND sumar_nocturnas_festivo = 0) AS empresas_sin_recargos
        FROM empresas`
     );
 
@@ -414,6 +415,7 @@ const AdminModel = {
         total: Number(empresas.total_empresas),
         activas: Number(empresas.empresas_activas),
         inactivas: Number(empresas.empresas_inactivas),
+        sin_recargos: Number(empresas.empresas_sin_recargos) || 0,
       },
       usuarios: {
         total: Number(usuarios.total_usuarios),

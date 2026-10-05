@@ -82,7 +82,7 @@ export interface RenovacionRiesgo {
 }
 
 export interface ReportesGlobales {
-  empresas: { total: number; activas: number; inactivas: number };
+  empresas: { total: number; activas: number; inactivas: number; sin_recargos: number };
   usuarios: { total: number };
   trabajadores: { total: number; activos: number };
   turnos: { ultimo_mes: number };

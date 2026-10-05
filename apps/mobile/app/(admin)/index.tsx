@@ -132,7 +132,7 @@ export default function AdminDashboard() {
                 icon="🏢"
                 value={data.empresas.total}
                 label="Total empresas"
-                sub={`${data.empresas.activas} activas · ${data.empresas.inactivas} inactivas`}
+                sub={`${data.empresas.activas} activas · ${data.empresas.inactivas} inactivas · ${data.empresas.sin_recargos} sin recargos`}
               />
               <MetricCard
                 icon="👥"

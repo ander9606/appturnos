@@ -116,6 +116,8 @@ export interface ReportesGlobales {
     total: number;
     activas: number;
     inactivas: number;
+    /** Empresas activas que no suman recargos automáticos. */
+    sin_recargos: number;
   };
   usuarios: {
     total: number;
