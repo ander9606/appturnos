@@ -69,6 +69,7 @@ const LiquidacionService = {
     }
 
     const tipoContrato = await EmpresasModel.obtenerTipoContrato(empresaId);
+    const { sumarNocturnasFestivo } = await EmpresasModel.obtenerConfigRecargos(empresaId);
     const filas = await LiquidacionModel.resumenPorPeriodo(empresaId, periodoId, trabajadorId);
 
     // Descuentos manuales ya aceptados por el trabajador (préstamos, inasistencias, etc.)
@@ -173,6 +174,7 @@ const LiquidacionService = {
     return {
       periodo,
       tipo_contrato: tipoContrato,
+      recargos_automaticos: sumarNocturnasFestivo,
       lineas,
       totales: {
         trabajadores: lineas.length,
