@@ -26,7 +26,6 @@ import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
 import { TipoPeriodoBadge }       from '@/features/nomina/TipoPeriodoBadge';
 import { PeriodoSelector }        from '@/features/nomina/PeriodoSelector';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
-import { Badge }                  from '@/components/ui/Badge';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
 import { MonthCalendar }          from '@/components/ui/MonthCalendar';
@@ -420,9 +419,7 @@ function NominaGestorView() {
                       <Text className="text-sm font-medium text-foreground">Reingresos pendientes</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                      {reingresosPendientes.length > 0 && (
-                        <Badge label={String(reingresosPendientes.length)} variant="warning" size="sm" />
-                      )}
+                      {reingresosPendientes.length > 0 && <ConteoPendientes n={reingresosPendientes.length} />}
                       <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                     </View>
                   </TouchableOpacity>
@@ -436,9 +433,7 @@ function NominaGestorView() {
                       <Text className="text-sm font-medium text-foreground">Descansos compensatorios</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                      {compPendientes > 0 && (
-                        <Badge label={String(compPendientes)} variant="warning" size="sm" />
-                      )}
+                      {compPendientes > 0 && <ConteoPendientes n={compPendientes} />}
                       <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                     </View>
                   </TouchableOpacity>
@@ -502,6 +497,14 @@ function NominaGestorView() {
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
     </SafeAreaView>
+  );
+}
+
+function ConteoPendientes({ n }: { n: number }) {
+  return (
+    <View className="bg-warning rounded-full min-w-[24px] h-[24px] items-center justify-center px-1.5">
+      <Text className="text-white text-xs font-bold">{n}</Text>
+    </View>
   );
 }
 
