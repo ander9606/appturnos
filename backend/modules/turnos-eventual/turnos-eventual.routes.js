@@ -13,7 +13,8 @@ const router = express.Router();
 const GESTORES = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA];
 // trabajador_nomina también puede ver — el service filtra a su propia línea únicamente
 // (mismo criterio que backend/modules/nomina/liquidacion/liquidacion.routes.js).
-const VER      = [...GESTORES, ROLES.TRABAJADOR_NOMINA];
+// nomina (solo lectura) ve la liquidación de turnos extra igual que el resto de la nómina.
+const VER      = [...GESTORES, ROLES.NOMINA, ROLES.TRABAJADOR_NOMINA];
 const idParam  = param('id').isInt({ min: 1 }).toInt().withMessage('id inválido');
 
 router.get('/periodo-activo', verificarToken, verificarRol(VER), ctrl.periodoActivo);
