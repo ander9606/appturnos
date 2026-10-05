@@ -59,6 +59,7 @@ export type {
   CalificacionResponse,
   CrearOfertaPayload,
   ActualizarOfertaPayload,
+  CrearPuestoPayload,
   Oferta,
   OfertaDetalle,
   OfertaPuesto,

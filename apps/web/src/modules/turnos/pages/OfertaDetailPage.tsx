@@ -583,6 +583,7 @@ export function OfertaDetailPage() {
         <EditarOfertaModal
           ofertaId={ofertaId}
           oferta={oferta}
+          puestos={puestos}
           onClose={() => setShowEditarOferta(false)}
         />
       )}
@@ -623,9 +624,10 @@ export function OfertaDetailPage() {
 
 /* ── Editar oferta (título/descripción/fecha/hora/lugar) ── */
 function EditarOfertaModal({
-  ofertaId, oferta, onClose,
-}: { ofertaId: number; oferta: Oferta; onClose: () => void }) {
+  ofertaId, oferta, puestos, onClose,
+}: { ofertaId: number; oferta: Oferta; puestos: Puesto[]; onClose: () => void }) {
   const actualizar = useActualizarOferta();
+  const [agregandoPuesto, setAgregandoPuesto] = useState(false);
   const [form, setForm] = useState({
     titulo: oferta.titulo,
     descripcion: oferta.descripcion ?? '',
@@ -740,6 +742,27 @@ function EditarOfertaModal({
             className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"
           />
         </div>
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-medium text-foreground">Vacantes</span>
+            <button
+              type="button"
+              onClick={() => setAgregandoPuesto(true)}
+              className="flex items-center gap-1 text-xs text-primary hover:text-primary-600 font-medium transition-colors"
+            >
+              <Plus size={13} /> Agregar vacante
+            </button>
+          </div>
+          {puestos.length > 0 ? (
+            <ul className="text-sm text-muted-foreground flex flex-col gap-0.5">
+              {puestos.map(p => (
+                <li key={p.id}>{p.cargo_nombre} · {p.plazas} plaza(s)</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">Sin vacantes</p>
+          )}
+        </div>
         {cambianCriticos && (
           <div className="flex items-center gap-2 bg-warning-light text-warning text-xs font-medium rounded-lg px-3 py-2">
             <AlertTriangle size={14} className="flex-shrink-0" />
@@ -755,6 +778,14 @@ function EditarOfertaModal({
           </button>
         </div>
       </form>
+      {/* Fuera del <form>: el de puesto es otro form y los forms no pueden anidarse. */}
+      {agregandoPuesto && (
+        <PuestoFormModal
+          ofertaId={ofertaId}
+          puesto={null}
+          onClose={() => setAgregandoPuesto(false)}
+        />
+      )}
     </Modal>
   );
 }
