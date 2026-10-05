@@ -58,9 +58,11 @@ export default function App() {
               <Route path="equipo" element={<EquipoPage />} />
               <Route path="equipo/:id" element={<TrabajadorDetailPage />} />
             </Route>
-            <Route element={<RoleRoute roles={['admin_empresa', 'jefe_turnos']} />}>
+            <Route element={<RoleRoute roles={['admin_empresa', 'jefe_turnos', 'jefe_nomina']} />}>
               <Route path="turnos" element={<TurnosPage />} />
               <Route path="turnos/:id" element={<OfertaDetailPage />} />
+            </Route>
+            <Route element={<RoleRoute roles={['admin_empresa', 'jefe_turnos']} />}>
               <Route path="configuracion" element={<ConfiguracionPage />} />
             </Route>
             <Route element={<RoleRoute roles={['admin_empresa']} />}>

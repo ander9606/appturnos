@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { useTrabajador, useActualizarTrabajador, useActualizarSalario, useHistorialSalario, useInvitarTrabajador } from '../hooks/useEquipo';
+import { useTrabajador, useActualizarTrabajador, useHistorialSalario, useInvitarTrabajador } from '../hooks/useEquipo';
 import { fmtCOP } from '@/shared/lib/format';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
@@ -17,6 +17,13 @@ const TIPO_BADGE: Record<TipoTrabajador, string> = {
   nomina: 'bg-success-light text-success',
   ambos: 'bg-info-light text-info',
 };
+
+// Lo que jefe_nomina puede editar de una ficha de nómina. Tipo y datos de pago
+// (banco, cuenta) quedan solo para admin_empresa.
+const CAMPOS_JEFE = [
+  'nombre', 'apellido', 'cedula', 'tipo_documento', 'email', 'telefono', 'sexo', 'fecha_nacimiento',
+  'cargo', 'tarifa_hora', 'salario_base', 'hora_entrada_esperada', 'eps', 'afp',
+];
 
 function getInitials(nombre: string, apellido: string) {
   return `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
@@ -59,13 +66,14 @@ export function TrabajadorDetailPage() {
   const navigate = useNavigate();
   const { usuario } = useAuthStore();
   const isAdmin = usuario?.rol === 'admin_empresa';
-  const puedeEditarSalario = isAdmin || usuario?.rol === 'jefe_nomina';
+  const puedeVerSalario = isAdmin || usuario?.rol === 'jefe_nomina';
 
   const { data, isLoading, isError, error, refetch } = useTrabajador(trabajadorId);
   const trabajador: Trabajador | null = data?.data ?? null;
+  const jefeEdita = usuario?.rol === 'jefe_nomina' && (trabajador?.tipo === 'nomina' || trabajador?.tipo === 'ambos');
+  const puedeEditarFicha = isAdmin || jefeEdita;
   const actualizar = useActualizarTrabajador();
-  const actualizarSalario = useActualizarSalario();
-  const historialSalario = useHistorialSalario(trabajadorId, isAdmin);
+  const historialSalario = useHistorialSalario(trabajadorId, puedeVerSalario);
   const invitar = useInvitarTrabajador();
   const { confirmState, confirm, close } = useConfirm();
 
@@ -119,12 +127,24 @@ export function TrabajadorDetailPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // jefe_nomina solo puede tocar el sueldo: el backend rechaza el resto de la ficha.
+    // jefe_nomina: solo los campos de CAMPOS_JEFE; el sueldo también se audita en el PUT.
     if (!isAdmin) {
-      await actualizarSalario.mutateAsync({
+      await actualizar.mutateAsync({
         id: trabajadorId,
+        nombre: form.nombre,
+        apellido: form.apellido,
+        cedula: form.cedula || undefined,
+        tipo_documento: form.tipo_documento,
+        email: form.email || undefined,
+        telefono: form.telefono || undefined,
+        sexo: form.sexo || undefined,
+        fecha_nacimiento: form.fecha_nacimiento || undefined,
+        cargo: form.cargo || undefined,
         tarifa_hora: form.tarifa_hora ? Number(form.tarifa_hora) : null,
         salario_base: form.salario_base ? Number(form.salario_base) : null,
+        hora_entrada_esperada: form.hora_entrada_esperada || undefined,
+        eps: form.eps || undefined,
+        afp: form.afp || undefined,
       });
       return;
     }
@@ -166,11 +186,12 @@ export function TrabajadorDetailPage() {
     await guardar(form.tipo);
   };
 
-  const inp = (key: keyof FormState, editable = isAdmin) => ({
+  const editable = (key: keyof FormState) => isAdmin || (jefeEdita && CAMPOS_JEFE.includes(key));
+  const inp = (key: keyof FormState) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value })),
-    disabled: !editable,
+    disabled: !editable(key),
     className:
       'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground',
   });
@@ -271,11 +292,11 @@ export function TrabajadorDetailPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Tarifa/hora (COP)</label>
-              <input type="number" min="0" step="any" {...inp('tarifa_hora', puedeEditarSalario)} />
+              <input type="number" min="0" step="any" {...inp('tarifa_hora')} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Salario base (COP)</label>
-              <input type="number" min="0" step="any" {...inp('salario_base', puedeEditarSalario)} />
+              <input type="number" min="0" step="any" {...inp('salario_base')} />
             </div>
             {form.tipo !== 'turnos' && (
               <div>
@@ -315,20 +336,20 @@ export function TrabajadorDetailPage() {
           </div>
         </section>
 
-        {puedeEditarSalario && (
+        {puedeEditarFicha && (
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={actualizar.isPending || actualizarSalario.isPending}
+              disabled={actualizar.isPending}
               className="bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
             >
-              {actualizar.isPending || actualizarSalario.isPending ? 'Guardando...' : isAdmin ? 'Guardar cambios' : 'Guardar sueldo'}
+              {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </div>
         )}
       </form>
 
-      {isAdmin && (
+      {puedeVerSalario && (
         <section className="bg-card border border-border rounded-2xl p-5 mt-6">
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Historial de sueldo</h2>
           <p className="text-xs text-muted-foreground mb-4">Registro de auditoría: quién cambió tarifa o salario y cuándo. No se puede editar ni borrar.</p>

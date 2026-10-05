@@ -21,6 +21,7 @@ import {
   useDescartarSospechosoAsignacion,
 } from '../hooks/useTurnos';
 import { useCargos } from '@/modules/configuracion/hooks/useConfiguracion';
+import { useAuthStore } from '@/modules/auth/authStore';
 import { turnosApi } from '../api/turnosApi';
 import { descargarBlob } from '@/shared/lib/download';
 import { toast } from 'sonner';
@@ -73,6 +74,8 @@ const FILTROS_ASIG: { label: string; value: EstadoAsignacion | undefined }[] = [
 ];
 
 export function OfertaDetailPage() {
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  const puedeGestionar = rol === 'admin_empresa' || rol === 'jefe_turnos';
   const { id } = useParams<{ id: string }>();
   const ofertaId = Number(id);
   const navigate = useNavigate();
@@ -135,7 +138,7 @@ export function OfertaDetailPage() {
     ? asignaciones.find(a => a.id === calificandoId) ?? null
     : null;
 
-  const canEditPuestos = oferta?.estado === 'borrador' || oferta?.estado === 'abierta';
+  const canEditPuestos = puedeGestionar && (oferta?.estado === 'borrador' || oferta?.estado === 'abierta');
   // Completar antes de que el turno empiece no tiene sentido — recién ahí hay algo que cerrar.
   const turnoIniciado = oferta ? new Date(`${oferta.fecha}T${oferta.hora_inicio}`) <= new Date() : false;
 
@@ -394,7 +397,7 @@ export function OfertaDetailPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 justify-end">
-                          {a.estado === 'pendiente' && (
+                          {puedeGestionar && a.estado === 'pendiente' && (
                             <>
                               <button
                                 onClick={() => confirmar.mutate(a.id)}
@@ -415,7 +418,7 @@ export function OfertaDetailPage() {
                               </button>
                             </>
                           )}
-                          {a.estado === 'confirmado' && (
+                          {puedeGestionar && a.estado === 'confirmado' && (
                             <button
                               onClick={() => confirm({
                                 title: 'Cancelar asignación',
@@ -428,7 +431,7 @@ export function OfertaDetailPage() {
                               Cancelar
                             </button>
                           )}
-                          {(a.estado === 'confirmado' || a.estado === 'en_progreso') && (
+                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso') && (
                             <button
                               onClick={() => confirm({
                                 title: 'Marcar como no presentado',
@@ -441,7 +444,7 @@ export function OfertaDetailPage() {
                               NP
                             </button>
                           )}
-                          {a.estado === 'completado' && a.calificacion == null && (
+                          {puedeGestionar && a.estado === 'completado' && a.calificacion == null && (
                             <button
                               onClick={() => setCalificandoId(a.id)}
                               className="flex items-center gap-1 text-xs text-warning hover:bg-warning-light px-2 py-1 rounded transition-colors"
@@ -462,7 +465,7 @@ export function OfertaDetailPage() {
                                 : <Download size={13} />}
                             </button>
                           )}
-                          {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
+                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
                             <button
                               onClick={() => setCorrigiendoAsig(a)}
                               className="text-muted-foreground/60 hover:text-info transition-colors p-1"
@@ -472,7 +475,7 @@ export function OfertaDetailPage() {
                               <Clock size={13} />
                             </button>
                           )}
-                          {(a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
+                          {puedeGestionar && (a.estado === 'confirmado' || a.estado === 'en_progreso' || a.estado === 'completado') && (
                             <button
                               onClick={() => setBonoAsig(a)}
                               className={`transition-colors p-1 ${(a.bono_monto ?? 0) > 0 ? 'text-warning' : 'text-muted-foreground/60 hover:text-warning'}`}
@@ -482,7 +485,7 @@ export function OfertaDetailPage() {
                               <Gift size={13} />
                             </button>
                           )}
-                          {a.sospechoso === 1 && (
+                          {puedeGestionar && a.sospechoso === 1 && (
                             <button
                               onClick={() => descartarSospechoso.mutate(a.id)}
                               disabled={descartarSospechoso.isPending}
@@ -506,7 +509,7 @@ export function OfertaDetailPage() {
 
       {/* ── Barra de acciones fija — siempre en la zona inferior, separada del
           header para que no compita visualmente con el resto de la info. ── */}
-      {(oferta.estado === 'borrador'
+      {puedeGestionar && (oferta.estado === 'borrador'
         || (turnoIniciado && !['borrador', 'completada', 'cancelada'].includes(oferta.estado))) && (
         <div className="sticky bottom-0 -mx-6 px-6 py-3 mt-4 border-t border-border bg-background flex items-center gap-3 flex-wrap">
           {oferta.estado === 'borrador' && (

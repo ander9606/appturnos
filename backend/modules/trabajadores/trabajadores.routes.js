@@ -203,7 +203,7 @@ router.post('/', verificarRol(SOLO_ADMIN), verificarSuscripcion, reglasTrabajado
 // PUT /api/trabajadores/:id
 router.put(
   '/:id',
-  verificarRol(SOLO_ADMIN),
+  verificarRol([ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA]),
   verificarSuscripcion,
   [idParam, ...reglasTrabajador({ parcial: true })],
   validar,
@@ -241,7 +241,7 @@ router.patch(
 );
 
 // GET /api/trabajadores/:id/historial-salario  (solo admin_empresa — auditoría legal de sueldos)
-router.get('/:id/historial-salario', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.historialSalario);
+router.get('/:id/historial-salario', verificarRol([ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA]), [idParam], validar, ctrl.historialSalario);
 
 // DELETE /api/trabajadores/:id  (soft delete)
 router.delete('/:id', verificarRol(SOLO_ADMIN), verificarSuscripcion, [idParam], validar, ctrl.eliminar);

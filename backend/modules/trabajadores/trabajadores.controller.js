@@ -43,7 +43,13 @@ async function actualizar(req, res) {
   const data = await TrabajadoresService.actualizar(
     req.empresa_id,
     Number(req.params.id),
-    req.body
+    req.body,
+    {
+      usuario_id: req.usuario.sub,
+      usuario_nombre: req.usuario.nombre,
+      usuario_rol: req.usuario.rol,
+      ip: req.ip,
+    }
   );
   res.json({ success: true, data, message: 'Trabajador actualizado' });
 }

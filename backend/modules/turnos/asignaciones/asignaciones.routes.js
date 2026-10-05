@@ -13,6 +13,7 @@ const router = express.Router();
 
 // Permisos según la matriz de 06-AUTH.md.
 const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
+const VER = [...GESTIONAR, ROLES.JEFE_NOMINA];
 // trabajador_nomina puede tomar turnos eventuales (extra) — marca ingreso/egreso
 // igual que trabajador_turnos, pero su turno se paga como bono, no como
 // contrato civil independiente (ver asignaciones.service.js#marcarEgreso).
@@ -36,7 +37,7 @@ router.use(verificarToken);
 // Debe ir antes de /:id para que Express no trate "liquidacion" como ID.
 router.get(
   '/liquidacion',
-  verificarRol(GESTIONAR),
+  verificarRol(VER),
   [
     query('fecha_inicio').optional().isISO8601().withMessage('fecha_inicio inválida'),
     query('fecha_fin').optional().isISO8601().withMessage('fecha_fin inválida'),
@@ -48,7 +49,7 @@ router.get(
 // GET /api/turnos/asignaciones
 router.get(
   '/',
-  verificarRol(GESTIONAR),
+  verificarRol(VER),
   [
     query('fecha').optional().isISO8601().withMessage('fecha inválida'),
     query('oferta_id').optional().isInt({ min: 1 }).withMessage('oferta_id inválido'),
@@ -68,7 +69,7 @@ router.get(
 );
 
 // GET /api/turnos/asignaciones/:id  (gestores ven cualquiera; trabajador solo las propias)
-router.get('/:id', verificarRol([...GESTIONAR, ...TRABAJADOR]), [idParam], validar, ctrl.obtener);
+router.get('/:id', verificarRol([...VER, ...TRABAJADOR]), [idParam], validar, ctrl.obtener);
 
 // POST /api/turnos/asignaciones/:id/confirmar
 router.post('/:id/confirmar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.confirmar);

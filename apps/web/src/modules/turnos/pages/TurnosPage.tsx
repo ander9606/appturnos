@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/modules/auth/authStore';
 import { useOfertas, useCrearOferta, useCancelarOferta, usePostulacionesPendientes, useLiquidacionTurnos } from '../hooks/useTurnos';
 import type { EstadoOferta, Oferta, VisibilidadOferta, ParaQuienOferta, LiquidacionTurnosTrabajador } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -43,6 +44,8 @@ const FILTER_LABELS: Record<string, string> = {
 };
 
 export function TurnosPage() {
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  const puedeGestionar = rol === 'admin_empresa' || rol === 'jefe_turnos';
   const navigate = useNavigate();
   const [vista, setVista] = useState<'ofertas' | 'pagos'>('ofertas');
   const [estado, setEstado] = useState<EstadoOferta | undefined>(undefined);
@@ -68,7 +71,7 @@ export function TurnosPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-foreground">Turnos</h1>
-        {vista === 'ofertas' && (
+        {puedeGestionar && vista === 'ofertas' && (
           <button
             onClick={() => setShowCrear(true)}
             className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
@@ -187,7 +190,7 @@ export function TurnosPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
-                        {(o.estado !== 'completada' && o.estado !== 'cancelada') && (
+                        {puedeGestionar && (o.estado !== 'completada' && o.estado !== 'cancelada') && (
                           <button
                             onClick={() => confirm({
                               title: 'Cancelar oferta',

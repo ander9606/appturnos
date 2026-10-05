@@ -17,7 +17,7 @@ const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS];
 router.use(verificarToken);
 
 // GET /api/turnos/ofertas/:id/puestos
-router.get('/', verificarRol(GESTIONAR), ctrl.listar);
+router.get('/', verificarRol([...GESTIONAR, ROLES.JEFE_NOMINA]), ctrl.listar);
 
 // POST /api/turnos/ofertas/:id/puestos
 router.post(

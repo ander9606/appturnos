@@ -7,6 +7,18 @@ const { ROLES, ROL_POR_TIPO } = require('../../config/constants');
 const { PlanesModel } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 
+const TIPOS_NOMINA = ['nomina', 'ambos'];
+// Lo que jefe_nomina puede editar de la ficha. Fuera de la lista: tipo (pasa por
+// invitación), activo, y datos de pago (banco, cuenta) — cambiar la cuenta
+// donde se paga es un vector de desvío de nómina sin revisión.
+const CAMPOS_JEFE_NOMINA = [
+  'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
+  'telefono', 'email', 'cargo', 'descripcion', 'eps', 'afp',
+  'contacto_emergencia_nombre', 'contacto_emergencia_tel',
+  'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'hora_entrada_esperada',
+  'tarifa_hora', 'salario_base',
+];
+
 /**
  * Lógica de negocio de trabajadores. Recibe siempre el empresaId del
  * usuario autenticado para garantizar el aislamiento entre tenants.
@@ -217,16 +229,30 @@ const TrabajadoresService = {
     }
   },
 
-  async actualizar(empresaId, id, datos) {
+  async actualizar(empresaId, id, datos, actor) {
     const actual = await this.obtener(empresaId, id); // 404 si no existe / no es de esta empresa
+    if (actor?.usuario_rol === ROLES.JEFE_NOMINA) {
+      if (!TIPOS_NOMINA.includes(actual.tipo)) {
+        throw new AppError('Solo puedes editar trabajadores de nómina', 403);
+      }
+      const noPermitidos = Object.keys(datos).filter((c) => !CAMPOS_JEFE_NOMINA.includes(c));
+      if (noPermitidos.length) {
+        throw new AppError(`No tienes permiso para editar: ${noPermitidos.join(', ')}`, 403);
+      }
+    }
     if (datos.email && datos.email !== actual.email) await this.verificarNoEsGestor(empresaId, datos.email);
+    const { tarifa_hora, salario_base, ...resto } = datos;
     try {
-      await TrabajadoresModel.actualizar(empresaId, id, datos);
+      await TrabajadoresModel.actualizar(empresaId, id, resto);
     } catch (err) {
       if (err.code === 'ER_DUP_ENTRY') {
         throw new AppError('Ya existe un trabajador con esa cédula en tu empresa', 409);
       }
       throw err;
+    }
+    // El sueldo nunca se escribe fuera de actualizarSalario: ahí va la auditoría y la alerta.
+    if (tarifa_hora !== undefined || salario_base !== undefined) {
+      await this.actualizarSalario(empresaId, id, { tarifa_hora, salario_base }, actor);
     }
 
     // El rol de la cuenta (qué interfaz ve el trabajador: turnos o nómina) se

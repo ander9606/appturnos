@@ -29,6 +29,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
   jefe_nomina: [
     { label: 'Inicio',      to: '/dashboard',   icon: LayoutDashboard },
     { label: 'Calendario',  to: '/calendario',  icon: CalendarDays },
+    { label: 'Turnos',      to: '/turnos',      icon: Calendar },
     { label: 'Nómina',      to: '/nomina',      icon: DollarSign, accent: 'success' },
     { label: 'Equipo',      to: '/equipo',      icon: Users },
   ],
