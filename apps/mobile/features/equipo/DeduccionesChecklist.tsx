@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useWatch, type Control } from 'react-hook-form';
 import { empresasApi, calcularDeducciones, HORAS_MES_NOMINA } from '@api-client';
 import { formatCOP } from '@/lib/formatters';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import type { TrabajadorFormValues } from './schemas';
 
 interface Props {
@@ -24,9 +25,12 @@ export function DeduccionesChecklist({ control }: Props) {
   const salarioBase = useWatch({ control, name: 'salario_base' });
 
   // Comparte cache con la pantalla "Mi empresa" (mismo queryKey) — no dispara un fetch extra si ya está cargada.
+  // GET /empresas/me es solo de admin_empresa; el resto no debe pedirlo.
+  const esAdmin = useAuthStore((s) => s.usuario?.rol) === 'admin_empresa';
   const { data: empresa } = useQuery({
     queryKey: ['mi-empresa'],
     queryFn: () => empresasApi.obtenerMiEmpresa(),
+    enabled: esAdmin,
     staleTime: 300_000,
   });
 

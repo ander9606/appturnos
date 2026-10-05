@@ -5,6 +5,7 @@
  */
 import { CheckCircle2, Circle } from 'lucide-react';
 import { useEmpresa } from '@/modules/configuracion/hooks/useConfiguracion';
+import { useAuthStore } from '@/modules/auth/authStore';
 import { calcularDeducciones, HORAS_MES_NOMINA } from '../laboral';
 import { fmtCOP } from '../lib/format';
 
@@ -14,7 +15,9 @@ interface Props {
 }
 
 export function DeduccionesChecklist({ tarifaHora, salarioBase }: Props) {
-  const { data } = useEmpresa();
+  // GET /empresas/me es solo de admin_empresa; para otros roles el checklist no aplica y no debe pedirlo.
+  const esAdmin = useAuthStore((s) => s.usuario?.rol) === 'admin_empresa';
+  const { data } = useEmpresa(esAdmin);
   const empresa = data?.data;
 
   if (empresa?.tipo_contrato !== 'laboral') return null;

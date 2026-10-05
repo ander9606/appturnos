@@ -9,8 +9,8 @@ function getErrMsg(err: unknown) {
     : 'Error inesperado';
 }
 
-export function useEmpresa() {
-  return useQuery({ queryKey: ['config', 'empresa'], queryFn: configuracionApi.getEmpresa, staleTime: 60_000 });
+export function useEmpresa(enabled = true) {
+  return useQuery({ queryKey: ['config', 'empresa'], queryFn: configuracionApi.getEmpresa, staleTime: 60_000, enabled });
 }
 export function useUpdateEmpresa() {
   const qc = useQueryClient();
