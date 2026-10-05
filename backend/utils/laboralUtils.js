@@ -228,8 +228,9 @@ function esMinutoNocturno(minutoDelDia, horaInicio = horaInicioNocturno()) {
   return h >= horaInicio || h < HORA_FIN_NOCTURNO;
 }
 
-function redondear(horas) {
-  return Math.round(horas * 100) / 100;
+/** Horas a la media hora más cercana, como pide el contador: 8.1 → 8, 8.3 → 8.5. */
+function redondearMediaHora(horas) {
+  return Math.round(horas * 2) / 2;
 }
 
 /**
@@ -365,16 +366,24 @@ function calcularHoras({
     minutosContados++;
   }
 
+  // Cada balde se redondea a media hora; el total es la suma de los baldes
+  // redondeados para que el desglose cuadre con el total.
+  const horas_ordinarias = redondearMediaHora(ordinariasDiurnas / 60);
+  const horas_extra_diurnas = redondearMediaHora(extraDiurnas / 60);
+  const horas_extra_nocturnas = redondearMediaHora(extraNocturnas / 60);
+  const horas_nocturnas = redondearMediaHora(ordinariasNocturnas / 60);
+  const horas_festivo = redondearMediaHora(festivoMin / 60);
+
   return {
     // Las ordinarias nocturnas siguen siendo ordinarias para el conteo de jornada,
     // pero se reportan aparte porque devengan el recargo nocturno (+35 %).
-    horas_ordinarias: redondear(ordinariasDiurnas / 60),
-    horas_extra_diurnas: redondear(extraDiurnas / 60),
-    horas_extra_nocturnas: redondear(extraNocturnas / 60),
-    horas_nocturnas: redondear(ordinariasNocturnas / 60),
-    horas_festivo: redondear(festivoMin / 60),
+    horas_ordinarias,
+    horas_extra_diurnas,
+    horas_extra_nocturnas,
+    horas_nocturnas,
+    horas_festivo,
     es_festivo: festivo ? 1 : 0,
-    total_horas: redondear((totalMin - esAlmuerzo.size) / 60),
+    total_horas: horas_ordinarias + horas_extra_diurnas + horas_extra_nocturnas + horas_nocturnas + horas_festivo,
   };
 }
 

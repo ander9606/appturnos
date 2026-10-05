@@ -667,3 +667,10 @@ describe('mes comercial de 30 días', () => {
     expect(quincena('2026-01-16', '2026-01-31')).toBeCloseTo(875_452.5, 2);
   });
 });
+
+describe('calcularHoras: redondeo a media hora', () => {
+  test('8h10 de jornada queda en 8 y 8h20 en 8,5 (media hora más cercana)', () => {
+    expect(calcularHoras({ horaEntrada: '08:00', horaSalida: '16:10', jornadaContinua: true }).total_horas).toBe(8);
+    expect(calcularHoras({ horaEntrada: '08:00', horaSalida: '16:20', jornadaContinua: true }).total_horas).toBe(8.5);
+  });
+});

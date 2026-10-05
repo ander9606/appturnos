@@ -77,7 +77,7 @@ Después de marcar salida, el trabajador puede pedir reingreso con un motivo. Si
 
 ## 3. Clasificación de cada minuto
 
-`calcularHoras()` recorre la jornada **minuto a minuto** y pone cada minuto en uno de cinco baldes; al final los convierte a horas con dos decimales. Los minutos de almuerzo se saltan.
+`calcularHoras()` recorre la jornada **minuto a minuto** y pone cada minuto en uno de cinco baldes; al final cada balde se redondea a la **media hora más cercana** (8,1 h → 8; 8,3 h → 8,5 h). El total es la suma de los baldes ya redondeados. Los minutos de almuerzo se saltan.
 
 | Balde | Cuándo cae un minuto aquí | Campo del registro |
 | --- | --- | --- |
