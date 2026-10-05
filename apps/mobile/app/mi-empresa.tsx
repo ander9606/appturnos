@@ -45,7 +45,7 @@ const RECARGOS_OPTIONS: { value: boolean; label: string; sub: string }[] = [
 
 const DOMINGO_HABITUAL_OPTIONS: { value: 'ley' | 'dos_meses'; label: string }[] = [
   { value: 'ley',       label: '3 o más domingos en el mes (ley)' },
-  { value: 'dos_meses', label: '2 meses después del primer domingo' },
+  { value: 'dos_meses', label: '2 meses seguidos trabajando domingos' },
 ];
 
 const schema = z.object({

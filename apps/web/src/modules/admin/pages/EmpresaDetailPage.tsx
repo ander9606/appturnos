@@ -178,7 +178,7 @@ export function EmpresaDetailPage() {
             <InfoRow label="Acepta postulaciones" value={empresa.acepta_postulaciones ? 'Sí' : 'No'} />
             <InfoRow label="Recargos automáticos" value={empresa.sumar_nocturnas_festivo ? 'Sí' : 'No (sin recargos)'} />
             {empresa.sumar_nocturnas_festivo && (
-              <InfoRow label="Domingo habitual" value={empresa.regla_domingo_habitual === 'dos_meses' ? '2 meses desde el primer domingo' : '3 o más en el mes (ley)'} />
+              <InfoRow label="Domingo habitual" value={empresa.regla_domingo_habitual === 'dos_meses' ? '2 meses seguidos trabajando domingos' : '3 o más en el mes (ley)'} />
             )}
           </dl>
         </div>

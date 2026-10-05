@@ -323,7 +323,7 @@ export default function EmpresaDetailScreen() {
           <InfoRow label="Usuarios con acceso" value={empresa.total_usuarios} />
           <InfoRow label="Recargos automáticos" value={empresa.sumar_nocturnas_festivo ? 'Sí' : 'No (sin recargos)'} />
           {empresa.sumar_nocturnas_festivo && (
-            <InfoRow label="Domingo habitual" value={empresa.regla_domingo_habitual === 'dos_meses' ? '2 meses desde el primer domingo' : '3 o más en el mes (ley)'} />
+            <InfoRow label="Domingo habitual" value={empresa.regla_domingo_habitual === 'dos_meses' ? '2 meses seguidos trabajando domingos' : '3 o más en el mes (ley)'} />
           )}
           {empresa.total_ofertas !== undefined && (
             <InfoRow label="Ofertas de turno" value={empresa.total_ofertas} />

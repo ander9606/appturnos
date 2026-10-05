@@ -16,6 +16,7 @@ const {
   horaInicioNocturno,
   recargoFestivo,
   esDomingoHabitual,
+  ventanaRachaDomingos,
 } = require('../utils/laboralUtils');
 
 // ── calcularPascua ────────────────────────────────────────────────────────────
@@ -581,12 +582,19 @@ describe('esDomingoHabitual', () => {
     expect(esDomingoHabitual({ fecha: '2026-09-27', numeroDomingo: 3 })).toBe(true);
   });
 
-  test("regla 'dos_meses': ocasional antes de 2 meses desde el primer domingo, habitual después", () => {
-    const primerDomingo = '2026-01-04';
-    expect(esDomingoHabitual({ fecha: '2026-03-01', regla: 'dos_meses', primerDomingo })).toBe(false);
-    expect(esDomingoHabitual({ fecha: '2026-03-04', regla: 'dos_meses', primerDomingo })).toBe(true);
-    // Sin domingo previo, cuenta desde la propia fecha → ocasional.
-    expect(esDomingoHabitual({ fecha: '2026-03-04', regla: 'dos_meses', primerDomingo: null })).toBe(false);
+  test("regla 'dos_meses': ventana de 2 meses de domingos seguidos", () => {
+    // 2026-03-08 → desde 2026-01-04 hasta 2026-03-01: 9 domingos.
+    expect(ventanaRachaDomingos('2026-03-08')).toEqual({ desde: '2026-01-04', hasta: '2026-03-01', cantidad: 9 });
+  });
+
+  test("regla 'dos_meses': habitual solo si trabajó todos los domingos de la ventana", () => {
+    expect(esDomingoHabitual({ fecha: '2026-03-08', regla: 'dos_meses', domingosTrabajadosEnVentana: 9 })).toBe(true);
+    // Un domingo libre dentro de la racha la reinicia.
+    expect(esDomingoHabitual({ fecha: '2026-03-08', regla: 'dos_meses', domingosTrabajadosEnVentana: 8 })).toBe(false);
+  });
+
+  test("regla 'dos_meses': el mes se resta sin desbordar (30-abr − 2 meses = 22-feb)", () => {
+    expect(ventanaRachaDomingos('2026-04-30').desde).toBe('2026-02-22');
   });
 });
 

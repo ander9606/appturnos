@@ -116,7 +116,7 @@ Si la jornada supera **6 h** y el trabajador no marcó jornada continua, se desc
 - **Domingo ocasional** (Art. 180 CST): mientras no sea habitual, el domingo **no** lleva recargo en dinero; sus horas se clasifican como un día normal (ordinarias, nocturnas o extra) y genera descanso compensatorio.
 - **Domingo habitual** (Art. 181 CST): todas sus horas van a festivo con recargo y genera descanso compensatorio. Cada empresa elige cuándo se vuelve habitual:
   - **Ley (default):** desde el 3.º domingo trabajado del mes calendario.
-  - **2 meses:** desde 2 meses después del primer domingo trabajado por el trabajador. Antes de eso el domingo es ocasional.
+  - **2 meses:** habitual cuando el trabajador lleva 2 meses trabajando domingos seguidos. Cada domingo de esos 2 meses debe estar trabajado; un domingo libre reinicia la cuenta. Antes de eso el domingo es ocasional.
 - Todo festivo genera descanso compensatorio, sin importar la regla de domingo.
 
 ### Empresa que no suma recargos
@@ -419,4 +419,4 @@ Estas reglas hacen que el cálculo actual difiera de la práctica usual en Colom
 - [ ] ¿La hora dominical del asalariado se paga × 1,90 o solo el recargo del 90 %?
 - [ ] ¿La festiva nocturna debe sumar el 35 % nocturno (× 2,25 hoy)?
 - [ ] ¿Qué tope aplicamos a los descuentos manuales?
-- [ ] La regla "2 meses" para domingo habitual (opción de empresa) es más tardía que la del Art. 181 CST (3 o más domingos en el mes). ¿Es válida para liquidar o solo para empresas que lo pidan por escrito?
+- [x] Regla "2 meses" para domingo habitual: confirmada por el contador como domingos seguidos trabajados durante 2 meses. Un domingo libre reinicia la cuenta.

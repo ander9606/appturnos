@@ -234,7 +234,7 @@ function EmpresaTab() {
 /* ── Cálculo de recargos: se guarda con el botón Guardar de los datos de la empresa ── */
 const OPCIONES_DOMINGO: { valor: 'ley' | 'dos_meses'; titulo: string }[] = [
   { valor: 'ley', titulo: '3 o más domingos en el mes (ley)' },
-  { valor: 'dos_meses', titulo: '2 meses después del primer domingo trabajado' },
+  { valor: 'dos_meses', titulo: '2 meses seguidos trabajando domingos' },
 ];
 
 const BOTON_RECARGO = (activo: boolean) =>
