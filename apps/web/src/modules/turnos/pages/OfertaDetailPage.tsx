@@ -76,6 +76,8 @@ const FILTROS_ASIG: { label: string; value: EstadoAsignacion | undefined }[] = [
 export function OfertaDetailPage() {
   const rol = useAuthStore((s) => s.usuario?.rol);
   const puedeGestionar = rol === 'admin_empresa' || rol === 'jefe_turnos';
+  // Los contratos son de turnos: el backend no deja verlos a jefe_nomina.
+  const puedeVerContratos = puedeGestionar;
   const { id } = useParams<{ id: string }>();
   const ofertaId = Number(id);
   const navigate = useNavigate();
@@ -452,7 +454,7 @@ export function OfertaDetailPage() {
                               <Star size={11} /> Calificar
                             </button>
                           )}
-                          {a.estado === 'completado' && (
+                          {puedeVerContratos && a.estado === 'completado' && (
                             <button
                               onClick={() => handleDescargarContrato(a.id)}
                               disabled={descargandoContratoId === a.id}

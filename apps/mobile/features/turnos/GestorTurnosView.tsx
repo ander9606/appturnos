@@ -52,6 +52,7 @@ function PostulanteRow({
   ofertaId,
   esPasado,
   turnoIniciado,
+  puedeGestionar,
   confirmarMutation,
   rechazarMutation,
   cancelarMutation,
@@ -61,6 +62,7 @@ function PostulanteRow({
   ofertaId: number;
   esPasado: boolean;
   turnoIniciado: boolean;
+  puedeGestionar: boolean;
   confirmarMutation:     ReturnType<typeof useConfirmar>;
   rechazarMutation:      ReturnType<typeof useRechazar>;
   cancelarMutation:      ReturnType<typeof useCancelar>;
@@ -161,7 +163,7 @@ function PostulanteRow({
       </View>
 
       {/* Evento pasado: solo "No vino" si aplica; sin confirmar/rechazar/cancelar */}
-      {esPasado ? (
+      {puedeGestionar && (esPasado ? (
         (isConfirmed || isEnProgreso) ? (
           <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
             loading={isMarkingNP} disabled={isBusy} onPress={handleNoPresentado} />
@@ -213,7 +215,7 @@ function PostulanteRow({
             </View>
           )}
         </>
-      )}
+      ))}
     </View>
   );
 }
@@ -227,9 +229,11 @@ function GestorOfertaItem({
   rechazarMutation,
   cancelarMutation,
   noPresentadoMutation,
+  puedeGestionar,
 }: {
   oferta: Oferta;
   esPasado: boolean;
+  puedeGestionar: boolean;
   confirmarMutation:    ReturnType<typeof useConfirmar>;
   rechazarMutation:     ReturnType<typeof useRechazar>;
   cancelarMutation:     ReturnType<typeof useCancelar>;
@@ -361,6 +365,7 @@ function GestorOfertaItem({
                 ofertaId={oferta.id}
                 esPasado={esPasado}
                 turnoIniciado={turnoIniciado}
+                puedeGestionar={puedeGestionar}
                 confirmarMutation={confirmarMutation}
                 rechazarMutation={rechazarMutation}
                 cancelarMutation={cancelarMutation}
@@ -369,7 +374,7 @@ function GestorOfertaItem({
             ))
           )}
 
-          {esCancelada && (
+          {puedeGestionar && esCancelada && (
             <View className="mt-3">
               <Button
                 label={eliminarMutation.isPending ? 'Eliminando…' : 'Eliminar oferta'}
@@ -391,9 +396,10 @@ function GestorOfertaItem({
 interface Props {
   selectedDate: string;
   filtroParaQuien?: 'turnos' | 'nomina' | 'ambos';
+  puedeGestionar: boolean;
 }
 
-export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
+export function GestorTurnosView({ selectedDate, filtroParaQuien, puedeGestionar }: Props) {
   const today      = useMemo(() => bogotaToday(), []);
   const esPasado   = selectedDate < today;
 
@@ -441,6 +447,7 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien }: Props) {
         <GestorOfertaItem
           oferta={item}
           esPasado={esPasado}
+          puedeGestionar={puedeGestionar}
           confirmarMutation={confirmarMutation}
           rechazarMutation={rechazarMutation}
           cancelarMutation={cancelarMutation}

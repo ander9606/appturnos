@@ -140,7 +140,7 @@ export function TurnosPage() {
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : ofertas.length === 0 ? (
-        <EmptyState message="No hay ofertas" action={{ label: '+ Crear la primera', onClick: () => setShowCrear(true) }} />
+        <EmptyState message="No hay ofertas" action={puedeGestionar ? { label: '+ Crear la primera', onClick: () => setShowCrear(true) } : undefined} />
       ) : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">

@@ -499,6 +499,7 @@ export default function TurnosScreen() {
           ) : (
             <GestorTurnosView
               selectedDate={selectedDate}
+              puedeGestionar={puedeGestionar}
             />
           )}
 
