@@ -11,6 +11,7 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { StatCard } from '@/shared/components/StatCard';
 import { fmtDate, fmtPeriodo, fmtCOP, bogotaToday } from '@/shared/lib/format';
 import { LiquidacionEventualView } from '../components/LiquidacionEventualView';
+import { CompensatoriosTab } from '../components/CompensatoriosTab';
 
 const ESTADO_BADGE: Record<EstadoPeriodo, string> = {
   abierto: 'bg-success-light text-success',
@@ -26,7 +27,7 @@ const TIPO_LABEL: Record<TipoPeriodo, string> = {
 
 export function NominaPage() {
   const navigate = useNavigate();
-  const [vista, setVista] = useState<'periodos' | 'eventual'>('periodos');
+  const [vista, setVista] = useState<'periodos' | 'eventual' | 'compensatorios'>('periodos');
   const [filtroEstado, setFiltroEstado] = useState<EstadoPeriodo | undefined>(undefined);
   const [showModal, setShowModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ type: 'cerrar' | 'liquidar'; periodo: Periodo } | null>(null);
@@ -64,7 +65,11 @@ export function NominaPage() {
       </div>
 
       <div className="flex gap-1 mb-4 border-b border-border">
-        {([{ value: 'periodos' as const, label: 'Períodos' }, { value: 'eventual' as const, label: 'Turnos extra' }]).map(t => (
+        {([
+          { value: 'periodos' as const, label: 'Períodos' },
+          { value: 'eventual' as const, label: 'Turnos extra' },
+          ...(puedeGestionarNomina() ? [{ value: 'compensatorios' as const, label: 'Compensatorios' }] : []),
+        ]).map(t => (
           <button
             key={t.value}
             onClick={() => setVista(t.value)}
@@ -81,6 +86,8 @@ export function NominaPage() {
 
       {vista === 'eventual' ? (
         <LiquidacionEventualView />
+      ) : vista === 'compensatorios' ? (
+        <CompensatoriosTab />
       ) : (
       <>
       <div className="flex gap-1 mb-4 border-b border-border">
