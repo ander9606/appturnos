@@ -291,7 +291,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <Modal onClose={onClose} size="lg">
+    <Modal onClose={onClose} size="lg" scrollable>
       <h2 className="text-lg font-semibold text-foreground mb-4">Nueva oferta de turno</h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
