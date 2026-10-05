@@ -136,20 +136,40 @@ function esDomingo(fecha) {
   return new Date(`${iso}T00:00:00Z`).getUTCDay() === 0;
 }
 
+/** Resta meses a una fecha 'YYYY-MM-DD' sin desbordar: 30-abr − 2 meses = 28/29-feb. */
+function restarMeses(fecha, meses) {
+  const [y, m, dia] = fecha.split('-').map(Number);
+  const total = y * 12 + (m - 1) - meses;
+  const anio = Math.floor(total / 12);
+  const mes = total % 12;
+  const ultimoDia = new Date(Date.UTC(anio, mes + 1, 0)).getUTCDate();
+  return aISODate(new Date(Date.UTC(anio, mes, Math.min(dia, ultimoDia))));
+}
+
 /**
- * Domingo habitual (Art. 181 CST): lleva recargo dominical + compensatorio.
- * regla 'ley' = 3.º domingo del mes calendario en adelante (`numeroDomingo`, incluye este).
- * regla 'dos_meses' = desde 2 meses después del primer domingo trabajado (`primerDomingo`,
- * 'YYYY-MM-DD' o null; si no hay otro, cuenta desde `fecha`).
+ * Racha que decide si `fecha` es domingo habitual con la regla de 2 meses seguidos:
+ * cada domingo desde el de hace 2 meses (o el anterior) hasta el domingo previo a
+ * `fecha` debe estar trabajado; un domingo libre la reinicia. Devuelve esa ventana
+ * y cuántos domingos tiene.
+ */
+function ventanaRachaDomingos(fecha) {
+  const d = new Date(`${restarMeses(fecha, 2)}T00:00:00Z`);
+  while (d.getUTCDay() !== 0) d.setUTCDate(d.getUTCDate() - 1);
+  const desde = aISODate(d);
+  const hasta = aISODate(sumarDias(new Date(`${fecha}T00:00:00Z`), -7));
+  const cantidad = Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / (7 * 864e5)) + 1;
+  return { desde, hasta, cantidad };
+}
+
+/**
+ * Domingo habitual (Art. 181 CST). regla 'ley' = 3.º domingo del mes calendario en
+ * adelante (`numeroDomingo`, incluye este). regla 'dos_meses' = habitual solo si
+ * trabajó todos los domingos de ventanaRachaDomingos(fecha) (`domingosTrabajadosEnVentana`).
  * @returns {boolean}
  */
-function esDomingoHabitual({ fecha, regla = 'ley', numeroDomingo, primerDomingo }) {
+function esDomingoHabitual({ fecha, regla = 'ley', numeroDomingo, domingosTrabajadosEnVentana = 0 }) {
   if (regla !== 'dos_meses') return numeroDomingo >= 3;
-  const base = primerDomingo && primerDomingo < fecha ? primerDomingo : fecha;
-  const d = new Date(`${base}T00:00:00Z`);
-  // ponytail: setUTCMonth desborda en días 29–31 (31-ene + 2 meses = 3-mar); upgrade path: clamp al último día del mes.
-  d.setUTCMonth(d.getUTCMonth() + 2);
-  return fecha >= aISODate(d);
+  return domingosTrabajadosEnVentana === ventanaRachaDomingos(fecha).cantidad;
 }
 
 /**
@@ -529,6 +549,7 @@ module.exports = {
   esDiaFestivo,
   esDomingo,
   esDomingoHabitual,
+  ventanaRachaDomingos,
   calcularHoras,
   calcularMinutosAlmuerzo,
   horaAMinutos,

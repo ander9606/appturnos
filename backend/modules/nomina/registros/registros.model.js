@@ -235,17 +235,17 @@ const RegistrosModel = {
     return row.total;
   },
 
-  /** Primer domingo trabajado por el trabajador (antes de `fecha`), 'YYYY-MM-DD' o null. */
-  async primerDomingoTrabajado(empresaId, trabajadorId, fecha) {
+  /** Domingos distintos trabajados entre desde y hasta (incluidos). */
+  async contarDomingosTrabajadosEntre(empresaId, trabajadorId, desde, hasta) {
     const [[row]] = await pool.query(
-      `SELECT MIN(fecha) AS primero FROM registros_diarios
-       WHERE empresa_id = ? AND trabajador_id = ? AND fecha < ?
+      `SELECT COUNT(DISTINCT fecha) AS total FROM registros_diarios
+       WHERE empresa_id = ? AND trabajador_id = ? AND fecha BETWEEN ? AND ?
          AND DAYOFWEEK(fecha) = 1
          AND hora_salida IS NOT NULL
          AND (horas_ordinarias + horas_extra_diurnas + horas_extra_nocturnas + horas_nocturnas + horas_festivo) > 0`,
-      [empresaId, trabajadorId, fecha]
+      [empresaId, trabajadorId, desde, hasta]
     );
-    return row.primero;
+    return Number(row.total);
   },
 
   /** Jornadas activas (con entrada, sin salida) que aún no dispararon la alerta de horas extra. Cross-tenant — usado por el worker. */

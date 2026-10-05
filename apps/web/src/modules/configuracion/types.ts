@@ -12,7 +12,7 @@ export interface Empresa {
   tipo_contrato: TipoContrato;
   /** false = no se suman recargos nocturnos/festivos; solo se acumulan horas y se avisa al pasar 42 h. */
   sumar_nocturnas_festivo: boolean;
-  /** 'ley' = habitual desde el 3.º domingo del mes; 'dos_meses' = desde 2 meses después del primer domingo trabajado. */
+  /** 'ley' = habitual desde el 3.º domingo del mes; 'dos_meses' = domingos seguidos trabajados durante 2 meses. */
   regla_domingo_habitual: 'ley' | 'dos_meses';
 }
 

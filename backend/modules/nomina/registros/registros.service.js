@@ -10,7 +10,7 @@ const EmpresasModel             = require('../../empresas/empresas.model');
 const CompensatoriosService     = require('../compensatorios/compensatorios.service');
 const NotificacionesService     = require('../../notificaciones/notificaciones.service');
 const { pool }                  = require('../../../config/database');
-const { calcularHoras, esDomingo, esDomingoHabitual } = require('../../../utils/laboralUtils');
+const { calcularHoras, esDomingo, esDomingoHabitual, ventanaRachaDomingos } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
 const { haversineMetros }       = require('../../../utils/geoUtils');
 const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
@@ -34,10 +34,13 @@ async function clasificarDiaFestivo(empresaId, trabajadorId, fecha, regla) {
   const numeroDomingo = regla === 'dos_meses'
     ? null
     : await RegistrosModel.contarDomingosTrabajadosEnMes(empresaId, trabajadorId, fecha) + 1;
-  const primerDomingo = regla === 'dos_meses'
-    ? await RegistrosModel.primerDomingoTrabajado(empresaId, trabajadorId, fecha)
-    : null;
-  const habitual = esDomingoHabitual({ fecha, regla, numeroDomingo, primerDomingo });
+  // 'dos_meses': cuántos domingos de la racha de 2 meses trabajó (ver ventanaRachaDomingos).
+  let domingosTrabajadosEnVentana = 0;
+  if (regla === 'dos_meses') {
+    const { desde, hasta } = ventanaRachaDomingos(fecha);
+    domingosTrabajadosEnVentana = await RegistrosModel.contarDomingosTrabajadosEntre(empresaId, trabajadorId, desde, hasta);
+  }
+  const habitual = esDomingoHabitual({ fecha, regla, numeroDomingo, domingosTrabajadosEnVentana });
   return { domingo, clasificacion: habitual ? 'habitual' : 'ocasional', recargoFestivo: habitual, numeroDomingo };
 }
 
