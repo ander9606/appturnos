@@ -18,12 +18,13 @@ function transport() {
   return _transport;
 }
 
-async function enviarEmail({ to, subject, html }) {
+async function enviarEmail({ to, subject, html, attachments }) {
   await transport().sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to,
     subject,
     html,
+    attachments,
   });
 }
 
