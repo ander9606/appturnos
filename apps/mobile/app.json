@@ -52,6 +52,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withMonitoringTool",
       "expo-router",
       "expo-secure-store",
       [
