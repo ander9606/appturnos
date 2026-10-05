@@ -5,6 +5,7 @@ const AppError = require('../../utils/AppError');
 const { pool } = require('../../config/database');
 const { ROLES, ROL_POR_TIPO } = require('../../config/constants');
 const { PlanesModel } = require('../suscripciones/planes.model');
+const NotificacionesService = require('../notificaciones/notificaciones.service');
 
 /**
  * Lógica de negocio de trabajadores. Recibe siempre el empresaId del
@@ -53,6 +54,52 @@ const TrabajadoresService = {
 
   async actualizarMarcacion(empresaId, id, body) {
     return TrabajadoresModel.actualizarMarcacion(empresaId, id, body);
+  },
+
+  async actualizarSalario(empresaId, id, { tarifa_hora, salario_base }, auditoria) {
+    const resultado = await TrabajadoresModel.actualizarSalarioConAuditoria(
+      empresaId, id, { tarifa_hora, salario_base }, auditoria
+    );
+    if (!resultado) throw new AppError('Trabajador no encontrado', 404);
+    if (resultado.cambio) await this.notificarCambioSalario(empresaId, resultado, auditoria);
+    return this.obtener(empresaId, id);
+  },
+
+  async historialSalario(empresaId, id) {
+    await this.obtener(empresaId, id); // 404 si la ficha no es de esta empresa
+    const num = (v) => (v == null ? null : Number(v));
+    const filas = await TrabajadoresModel.listarHistorialSalario(empresaId, id);
+    return filas.map((f) => ({
+      ...f,
+      tarifa_hora_anterior: num(f.tarifa_hora_anterior),
+      tarifa_hora_nueva: num(f.tarifa_hora_nueva),
+      salario_base_anterior: num(f.salario_base_anterior),
+      salario_base_nueva: num(f.salario_base_nueva),
+    }));
+  },
+
+  async notificarCambioSalario(empresaId, { trabajadorId, usuarioId, nombre }, actor) {
+    if (actor.usuario_rol !== ROLES.ADMIN_EMPRESA) {
+      const [admins] = await pool.query(
+        'SELECT id FROM usuarios WHERE empresa_id = ? AND rol = ? AND activo = 1',
+        [empresaId, ROLES.ADMIN_EMPRESA]
+      );
+      await NotificacionesService.notificarVarios(admins.map((a) => a.id), {
+        empresaId,
+        tipo: 'nomina.salario_modificado',
+        titulo: 'Sueldo modificado',
+        mensaje: `${actor.usuario_nombre} modificó el sueldo de ${nombre}.`,
+        data: { trabajador_id: trabajadorId },
+      });
+    }
+    await NotificacionesService.notificar({
+      empresaId,
+      usuarioId,
+      tipo: 'nomina.salario_modificado',
+      titulo: 'Tu sueldo fue modificado',
+      mensaje: 'La empresa actualizó tu tarifa o salario. Revisa tu perfil de nómina.',
+      data: { trabajador_id: trabajadorId },
+    });
   },
 
   async obtener(empresaId, id) {

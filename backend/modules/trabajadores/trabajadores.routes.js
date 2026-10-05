@@ -226,6 +226,23 @@ router.patch(
   ctrl.actualizarMarcacion
 );
 
+// PATCH /api/trabajadores/:id/salario  (admin_empresa + jefe_nomina) — avisa a admins y al trabajador si cambia
+router.patch(
+  '/:id/salario',
+  verificarRol([ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA]),
+  verificarSuscripcion,
+  [
+    idParam,
+    body('tarifa_hora').optional({ values: 'null' }).isFloat({ min: 0 }).withMessage('tarifa_hora inválida'),
+    body('salario_base').optional({ values: 'null' }).isFloat({ min: 0 }).withMessage('salario_base inválido'),
+  ],
+  validar,
+  ctrl.actualizarSalario
+);
+
+// GET /api/trabajadores/:id/historial-salario  (solo admin_empresa — auditoría legal de sueldos)
+router.get('/:id/historial-salario', verificarRol(SOLO_ADMIN), [idParam], validar, ctrl.historialSalario);
+
 // DELETE /api/trabajadores/:id  (soft delete)
 router.delete('/:id', verificarRol(SOLO_ADMIN), verificarSuscripcion, [idParam], validar, ctrl.eliminar);
 

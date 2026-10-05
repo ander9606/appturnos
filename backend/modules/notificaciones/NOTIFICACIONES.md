@@ -36,6 +36,7 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `nomina.descuento_pendiente` | Tienes un descuento por aceptar | Gestor registra un descuento de nómina | `descuentos.service.js:27` |
 | `nomina.ciclo_cambiado` | Cambió el ciclo de nómina | Cambia `empresas.tipo_liquidacion`; también llega a gestores | `periodos.service.js:171` |
 | `trabajador_empresa.bienvenida_nomina` | Ya eres parte de la nómina de {empresa} | Acepta una invitación de nómina (conversión turnos → nómina) | `trabajador-empresa.service.js:322` |
+| `nomina.salario_modificado` | Tu sueldo fue modificado | Cambia `tarifa_hora` o `salario_base` de su ficha (lo haga quien lo haga) | `trabajadores.service.js:notificarCambioSalario` |
 
 ## Gestor (`admin_empresa` / `jefe_turnos`, por empresa)
 
@@ -63,6 +64,7 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 
 | Tipo | Título | Cuándo se dispara | Código |
 |---|---|---|---|
+| `nomina.salario_modificado` | Sueldo modificado | Un `jefe_nomina` cambia `tarifa_hora` o `salario_base` de un trabajador | `trabajadores.service.js:notificarCambioSalario` |
 | `integracion.activada` | Conectados de nuevo con logiq360 | logiq360 reconecta la integración | `entrantes.handlers.js:244` |
 | `integracion.desactivada` | Se desconectó tu integración con logiq360 | logiq360 desconecta la integración | `entrantes.handlers.js:257` |
 | `suscripcion.pago_rechazado` | Pago rechazado | Wompi rechaza un intento de pago | `wompi.service.js:81` |

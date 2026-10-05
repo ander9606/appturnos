@@ -143,6 +143,26 @@ async function actualizarMarcacion(req, res) {
   res.json({ success: true, data });
 }
 
+async function actualizarSalario(req, res) {
+  const data = await TrabajadoresService.actualizarSalario(
+    req.empresa_id,
+    Number(req.params.id),
+    req.body,
+    {
+      usuario_id: req.usuario.sub,
+      usuario_nombre: req.usuario.nombre,
+      usuario_rol: req.usuario.rol,
+      ip: req.ip,
+    }
+  );
+  res.json({ success: true, data });
+}
+
+async function historialSalario(req, res) {
+  const data = await TrabajadoresService.historialSalario(req.empresa_id, Number(req.params.id));
+  res.json({ success: true, data });
+}
+
 async function obtenerDisponibilidad(req, res) {
   let trabajadorId = req.params.id ? Number(req.params.id) : null;
   let empresaId = req.empresa_id;
@@ -170,6 +190,6 @@ module.exports = {
   obtenerMe, actualizarMe, actualizarExtras,
   crearExperiencia, eliminarExperiencia,
   crearDiploma, eliminarDiploma,
-  actualizarMarcacion,
+  actualizarMarcacion, actualizarSalario, historialSalario,
   obtenerDisponibilidad, guardarDisponibilidad,
 };

@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { useTrabajador, useActualizarTrabajador, useInvitarTrabajador } from '../hooks/useEquipo';
+import { useTrabajador, useActualizarTrabajador, useActualizarSalario, useHistorialSalario, useInvitarTrabajador } from '../hooks/useEquipo';
+import { fmtCOP } from '@/shared/lib/format';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
-import type { TipoTrabajador, TipoDocumento, Sexo, TipoCuenta, Trabajador } from '../types';
+import type { TipoTrabajador, TipoDocumento, Sexo, TipoCuenta, Trabajador, CambioSalario } from '../types';
 
 /** Mismo código de colores que el resto de la app: Turnos = naranja, Nómina = verde, Ambos = azul. */
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
@@ -58,10 +59,13 @@ export function TrabajadorDetailPage() {
   const navigate = useNavigate();
   const { usuario } = useAuthStore();
   const isAdmin = usuario?.rol === 'admin_empresa';
+  const puedeEditarSalario = isAdmin || usuario?.rol === 'jefe_nomina';
 
   const { data, isLoading, isError, error, refetch } = useTrabajador(trabajadorId);
   const trabajador: Trabajador | null = data?.data ?? null;
   const actualizar = useActualizarTrabajador();
+  const actualizarSalario = useActualizarSalario();
+  const historialSalario = useHistorialSalario(trabajadorId, isAdmin);
   const invitar = useInvitarTrabajador();
   const { confirmState, confirm, close } = useConfirm();
 
@@ -115,6 +119,16 @@ export function TrabajadorDetailPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // jefe_nomina solo puede tocar el sueldo: el backend rechaza el resto de la ficha.
+    if (!isAdmin) {
+      await actualizarSalario.mutateAsync({
+        id: trabajadorId,
+        tarifa_hora: form.tarifa_hora ? Number(form.tarifa_hora) : null,
+        salario_base: form.salario_base ? Number(form.salario_base) : null,
+      });
+      return;
+    }
+
     // turnos/ambos → nómina no se guarda directo: nómina ata la cuenta a esta
     // empresa en exclusiva, así que el trabajador debe aceptar o rechazar
     // (igual que "Invitar por cédula"). Enviamos la invitación con la cédula
@@ -152,11 +166,11 @@ export function TrabajadorDetailPage() {
     await guardar(form.tipo);
   };
 
-  const inp = (key: keyof FormState) => ({
+  const inp = (key: keyof FormState, editable = isAdmin) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value })),
-    disabled: !isAdmin,
+    disabled: !editable,
     className:
       'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground',
   });
@@ -257,11 +271,11 @@ export function TrabajadorDetailPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Tarifa/hora (COP)</label>
-              <input type="number" min="0" step="any" {...inp('tarifa_hora')} />
+              <input type="number" min="0" step="any" {...inp('tarifa_hora', puedeEditarSalario)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Salario base (COP)</label>
-              <input type="number" min="0" step="any" {...inp('salario_base')} />
+              <input type="number" min="0" step="any" {...inp('salario_base', puedeEditarSalario)} />
             </div>
             {form.tipo !== 'turnos' && (
               <div>
@@ -301,18 +315,51 @@ export function TrabajadorDetailPage() {
           </div>
         </section>
 
-        {isAdmin && (
+        {puedeEditarSalario && (
           <div className="flex justify-end">
             <button
               type="submit"
-              disabled={actualizar.isPending}
+              disabled={actualizar.isPending || actualizarSalario.isPending}
               className="bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-lg transition-colors"
             >
-              {actualizar.isPending ? 'Guardando...' : 'Guardar cambios'}
+              {actualizar.isPending || actualizarSalario.isPending ? 'Guardando...' : isAdmin ? 'Guardar cambios' : 'Guardar sueldo'}
             </button>
           </div>
         )}
       </form>
+
+      {isAdmin && (
+        <section className="bg-card border border-border rounded-2xl p-5 mt-6">
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Historial de sueldo</h2>
+          <p className="text-xs text-muted-foreground mb-4">Registro de auditoría: quién cambió tarifa o salario y cuándo. No se puede editar ni borrar.</p>
+          {historialSalario.isLoading ? (
+            <p className="text-muted-foreground text-sm">Cargando...</p>
+          ) : (historialSalario.data?.data ?? []).length === 0 ? (
+            <p className="text-muted-foreground text-sm">Sin cambios registrados.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-muted-foreground text-xs uppercase">
+                  <th className="text-left py-2 font-medium">Fecha</th>
+                  <th className="text-left py-2 font-medium">Quién</th>
+                  <th className="text-right py-2 font-medium">Tarifa/hora</th>
+                  <th className="text-right py-2 font-medium">Salario base</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(historialSalario.data?.data as CambioSalario[]).map(c => (
+                  <tr key={c.id} className="border-t border-border/60">
+                    <td className="py-2 text-muted-foreground">{new Intl.DateTimeFormat('es-CO', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(c.created_at))}</td>
+                    <td className="py-2 text-foreground">{c.usuario_nombre} <span className="text-xs text-muted-foreground">({c.usuario_rol})</span></td>
+                    <td className="py-2 text-right text-muted-foreground">{c.tarifa_hora_anterior != null ? fmtCOP(c.tarifa_hora_anterior) : '—'} → <span className="text-foreground">{c.tarifa_hora_nueva != null ? fmtCOP(c.tarifa_hora_nueva) : '—'}</span></td>
+                    <td className="py-2 text-right text-muted-foreground">{c.salario_base_anterior != null ? fmtCOP(c.salario_base_anterior) : '—'} → <span className="text-foreground">{c.salario_base_nueva != null ? fmtCOP(c.salario_base_nueva) : '—'}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </section>
+      )}
 
       {confirmState && (
         <ConfirmModal

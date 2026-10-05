@@ -143,6 +143,72 @@ const TrabajadoresModel = {
   },
 
   /**
+   * Cambia tarifa/salario y su registro de auditoría en UNA transacción: si no
+   * se puede dejar el rastro, el sueldo tampoco cambia.
+   * @returns {Promise<null|{cambio: boolean, trabajadorId?, usuarioId?, nombre?}>} null si no existe.
+   */
+  async actualizarSalarioConAuditoria(empresaId, id, { tarifa_hora, salario_base }, auditoria) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [[actual]] = await conn.query(
+        'SELECT usuario_id, nombre, apellido, tarifa_hora, salario_base FROM trabajadores WHERE id = ? AND empresa_id = ? FOR UPDATE',
+        [id, empresaId]
+      );
+      if (!actual) {
+        await conn.rollback();
+        return null;
+      }
+
+      const nuevaTarifa = tarifa_hora === undefined ? actual.tarifa_hora : tarifa_hora;
+      const nuevoSalario = salario_base === undefined ? actual.salario_base : salario_base;
+      const num = (v) => (v == null ? null : Number(v));
+      const cambio =
+        num(actual.tarifa_hora) !== num(nuevaTarifa) || num(actual.salario_base) !== num(nuevoSalario);
+      const nombre = `${actual.nombre} ${actual.apellido}`.trim();
+      if (!cambio) {
+        await conn.commit();
+        return { cambio: false };
+      }
+
+      await conn.query(
+        'UPDATE trabajadores SET tarifa_hora = ?, salario_base = ? WHERE id = ? AND empresa_id = ?',
+        [nuevaTarifa, nuevoSalario, id, empresaId]
+      );
+      await conn.query(
+        `INSERT INTO trabajadores_salario_auditoria
+           (empresa_id, trabajador_id, trabajador_nombre, tarifa_hora_anterior, tarifa_hora_nueva,
+            salario_base_anterior, salario_base_nueva, usuario_id, usuario_nombre, usuario_rol, ip)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          empresaId, id, nombre,
+          actual.tarifa_hora, nuevaTarifa, actual.salario_base, nuevoSalario,
+          auditoria.usuario_id, auditoria.usuario_nombre, auditoria.usuario_rol, auditoria.ip ?? null,
+        ]
+      );
+      await conn.commit();
+      return { cambio: true, trabajadorId: id, usuarioId: actual.usuario_id, nombre };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async listarHistorialSalario(empresaId, id) {
+    const [filas] = await pool.query(
+      `SELECT id, tarifa_hora_anterior, tarifa_hora_nueva, salario_base_anterior, salario_base_nueva,
+              usuario_nombre, usuario_rol, ip, created_at
+       FROM trabajadores_salario_auditoria
+       WHERE empresa_id = ? AND trabajador_id = ?
+       ORDER BY created_at DESC, id DESC`,
+      [empresaId, id]
+    );
+    return filas;
+  },
+
+  /**
    * Trabajadores de nómina con horario fijo que todavía no marcaron ingreso
    * hoy, no están de ausencia aprobada, y no se les avisó ya en el día —
    * candidatos para recordatorioIngreso.worker.js (el filtro de ventana de

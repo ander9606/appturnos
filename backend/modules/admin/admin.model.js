@@ -47,6 +47,7 @@ const ORDEN_BORRADO_EMPRESA = [
   'DELETE FROM trabajador_cargos WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?) OR asignado_por IN (SELECT id FROM usuarios WHERE empresa_id = ?)',
   'DELETE FROM trabajador_diplomas WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)',
   'DELETE FROM trabajador_experiencias WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)',
+  'DELETE FROM trabajadores_salario_auditoria WHERE empresa_id = ?',
   'DELETE FROM usuarios_oauth WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)',
   'DELETE FROM wompi_eventos WHERE empresa_id = ?',
   // ronda 2

@@ -56,3 +56,16 @@ export interface BancoTalentoWorker {
   /** Historial de cargos en otras empresas. */
   experiencias: Experiencia[];
 }
+
+/** Un cambio de tarifa/salario registrado para auditoría legal. Solo lo ve admin_empresa. */
+export interface CambioSalario {
+  id: number;
+  tarifa_hora_anterior: number | null;
+  tarifa_hora_nueva: number | null;
+  salario_base_anterior: number | null;
+  salario_base_nueva: number | null;
+  usuario_nombre: string;
+  usuario_rol: string;
+  ip: string | null;
+  created_at: string;
+}

@@ -14,6 +14,12 @@ export const equipoApi = {
   actualizar: (id: number, data: Record<string, unknown>) =>
     api.put(`/trabajadores/${id}`, data).then(r => r.data),
 
+  actualizarSalario: (id: number, data: { tarifa_hora: number | null; salario_base: number | null }) =>
+    api.patch(`/trabajadores/${id}/salario`, data).then(r => r.data),
+
+  historialSalario: (id: number) =>
+    api.get(`/trabajadores/${id}/historial-salario`).then(r => r.data),
+
   desactivar: (id: number) =>
     api.delete(`/trabajadores/${id}`).then(r => r.data),
 

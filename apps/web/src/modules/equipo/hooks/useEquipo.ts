@@ -66,6 +66,28 @@ export function useActualizarTrabajador() {
   });
 }
 
+export function useHistorialSalario(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: [...KEYS.detalle(id), 'historial-salario'],
+    queryFn: () => equipoApi.historialSalario(id),
+    enabled,
+    staleTime: 0,
+  });
+}
+
+export function useActualizarSalario() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; tarifa_hora: number | null; salario_base: number | null }) =>
+      equipoApi.actualizarSalario(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trabajadores'] });
+      toast.success('Sueldo actualizado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useDesactivarTrabajador() {
   const qc = useQueryClient();
   return useMutation({
