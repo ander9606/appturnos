@@ -1,3 +1,4 @@
+import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Download, Plus, Pencil, CalendarClock, BedDouble, ChevronDown, X, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap } from 'lucide-react';
 import { useCorregirRegistro, useDescartarSospechoso } from '../hooks/useNomina';
@@ -226,7 +227,7 @@ export function LiquidacionTab({
                                     {TIPO_DIA_LABELS[r.tipo_dia]}
                                   </span>
                                 )}
-                                {r.sospechoso === 1 && (
+                                {puedeGestionarNomina() && r.sospechoso === 1 && (
                                   <button
                                     onClick={() => descartarSospechoso.mutate(r.id)}
                                     disabled={descartarSospechoso.isPending}
@@ -267,6 +268,7 @@ export function LiquidacionTab({
                               <span className="text-xs text-muted-foreground/60 flex-shrink-0">Sin marcaje</span>
                             )}
                             <div className="flex items-center gap-2 flex-shrink-0">
+                              {puedeGestionarNomina() && (
                               <button
                                 onClick={() => onCorregir(r.id)}
                                 className="text-muted-foreground/60 hover:text-success transition-colors"
@@ -274,7 +276,8 @@ export function LiquidacionTab({
                               >
                                 <Pencil size={14} />
                               </button>
-                              {compensatorioDe(r) && (
+                              )}
+                              {puedeGestionarNomina() && compensatorioDe(r) && (
                                 <button
                                   onClick={() => onReasignar(compensatorioDe(r)!)}
                                   className="text-muted-foreground/60 hover:text-info transition-colors"
@@ -284,7 +287,7 @@ export function LiquidacionTab({
                                   <CalendarClock size={14} />
                                 </button>
                               )}
-                              {r.tipo_dia !== 'compensatorio' && (
+                              {puedeGestionarNomina() && r.tipo_dia !== 'compensatorio' && (
                                 <button
                                   onClick={() => marcarCompensatorio(r)}
                                   disabled={corregirTipoDia.isPending}

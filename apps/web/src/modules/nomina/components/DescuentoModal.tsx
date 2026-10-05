@@ -1,3 +1,4 @@
+import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { useCrearDescuento, useEliminarDescuento } from '../hooks/useNomina';
@@ -58,6 +59,7 @@ export function DescuentoModal({
                 <p className="text-xs text-muted-foreground">{d.motivo}</p>
                 <p className="text-sm font-semibold text-danger mt-1">-{fmtCOP(d.monto)}</p>
               </div>
+              {puedeGestionarNomina() && (
               <button
                 onClick={() => confirm({
                   title: 'Eliminar descuento',
@@ -69,6 +71,7 @@ export function DescuentoModal({
               >
                 <Trash2 size={14} />
               </button>
+              )}
             </div>
           ))}
         </div>
@@ -123,14 +126,14 @@ export function DescuentoModal({
             </button>
           </div>
         </form>
-      ) : (
+      ) : puedeGestionarNomina() ? (
         <button
           onClick={() => setShowForm(true)}
           className="w-full flex items-center justify-center gap-1.5 border border-dashed border-border hover:bg-muted text-sm font-medium text-muted-foreground py-2.5 rounded-lg transition-colors"
         >
           <Plus size={14} /> Agregar otro descuento
         </button>
-      )}
+      ) : null}
 
       {confirmState && (
         <ConfirmModal

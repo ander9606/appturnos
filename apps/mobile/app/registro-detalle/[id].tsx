@@ -5,6 +5,7 @@
  * de los registros de nómina de los trabajadores.
  */
 
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import React, { useState } from 'react';
 import {
   View,
@@ -74,6 +75,9 @@ export default function RegistroDetalleScreen() {
 
   // Solo gestores pueden acceder
   const denied = useRoleGuard(['admin_empresa', 'jefe_nomina', 'nomina'] as const);
+  // Corregir y descartar sospechosos: admin_empresa y jefe_nomina (el rol nomina solo consulta).
+  const rol = useAuthStore((s) => s.usuario?.rol);
+  const puedeCorregir = rol === 'admin_empresa' || rol === 'jefe_nomina';
 
   const { data: registro, isLoading } = useRegistroDetalle(registroId);
   const { mutateAsync: corregir, isPending: isCorrigiendo } = useCorregirRegistro();
@@ -167,7 +171,7 @@ export default function RegistroDetalleScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Sospechoso — mismo dispositivo y ubicación que otro trabajador (posible buddy punching) */}
-          {registro.sospechoso === 1 && (
+          {puedeCorregir && registro.sospechoso === 1 && (
             <View className="flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3">
               <Ionicons name="warning-outline" size={20} color="#d97706" />
               <Text className="flex-1 text-warning text-xs">
@@ -337,7 +341,7 @@ export default function RegistroDetalleScreen() {
           )}
 
           {/* Botón de corrección — bloqueado en el backend para registros con reingreso */}
-          {registro.sesiones > 1 ? (
+          {!puedeCorregir ? null : registro.sesiones > 1 ? (
             <View className="bg-muted rounded-2xl px-4 py-3">
               <Text className="text-xs text-muted-foreground text-center">
                 Este registro tiene reingresos y no se puede corregir aquí. Contacta al administrador del sistema.

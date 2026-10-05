@@ -1,3 +1,4 @@
+import { puedeGestionarNomina } from '../permisos';
 import { CalendarClock } from 'lucide-react';
 import type { DescansoCompensatorio } from '../types';
 import { fmtDiaSemana } from '@/shared/lib/format';
@@ -35,12 +36,14 @@ export function PendientesCompensatoriosBanner({
                 {CLASIFICACION_LABEL[c.clasificacion]}
               </span>
             </div>
+            {puedeGestionarNomina() && (
             <button
               onClick={() => onAsignar(c)}
               className="shrink-0 bg-success hover:bg-success-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
             >
               Asignar fecha
             </button>
+            )}
           </div>
         ))}
       </div>

@@ -1,3 +1,4 @@
+import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Plus, Pencil, CalendarClock, MapPin, ChevronDown, X, AlertTriangle } from 'lucide-react';
 import { useDescartarSospechoso } from '../hooks/useNomina';
@@ -176,13 +177,15 @@ export function RegistrosTab({
                           <td className="px-3 py-2.5 text-muted-foreground max-w-32 truncate">{r.novedad ?? ''}</td>
                           <td className="px-3 py-2.5">
                             <div className="flex items-center gap-2">
+                              {puedeGestionarNomina() && (
                               <button
                                 onClick={() => onCorregir(r.id)}
                                 className="text-muted-foreground/60 hover:text-success transition-colors"
                               >
                                 <Pencil size={14} />
                               </button>
-                              {compensatorioDe(r) && (
+                              )}
+                              {puedeGestionarNomina() && compensatorioDe(r) && (
                                 <button
                                   onClick={() => onReasignar(compensatorioDe(r)!)}
                                   className="text-muted-foreground/60 hover:text-info transition-colors"
@@ -200,7 +203,7 @@ export function RegistrosTab({
                                   <MapPin size={14} />
                                 </button>
                               )}
-                              {r.sospechoso === 1 && (
+                              {puedeGestionarNomina() && r.sospechoso === 1 && (
                                 <button
                                   onClick={() => descartarSospechoso.mutate(r.id)}
                                   disabled={descartarSospechoso.isPending}

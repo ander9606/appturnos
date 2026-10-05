@@ -1,3 +1,4 @@
+import { puedeGestionarNomina } from '../permisos';
 import { DollarSign, Calendar, Clock, Gift } from 'lucide-react';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
@@ -44,7 +45,7 @@ export function LiquidacionEventualView() {
             </span>
           </p>
         </div>
-        {puedeLiquidar && (
+        {puedeLiquidar && puedeGestionarNomina() && (
           <button
             onClick={() => confirm({
               title: 'Liquidar período',

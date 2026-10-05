@@ -1,3 +1,4 @@
+import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, DollarSign, Users, AlertTriangle } from 'lucide-react';
@@ -52,7 +53,7 @@ export function NominaPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Nómina</h1>
-        {vista === 'periodos' && (
+        {puedeGestionarNomina() && vista === 'periodos' && (
           <button
             onClick={() => setShowModal(true)}
             className="flex items-center gap-1.5 bg-success hover:bg-success-600 text-white text-sm font-medium px-3 py-2 rounded-lg transition-colors"
@@ -115,7 +116,7 @@ export function NominaPage() {
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : periodos.length === 0 ? (
-        <EmptyState message="No hay períodos" action={{ label: '+ Crear el primero', onClick: () => setShowModal(true) }} />
+        <EmptyState message="No hay períodos" action={puedeGestionarNomina() ? { label: '+ Crear el primero', onClick: () => setShowModal(true) } : undefined} />
       ) : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
@@ -161,7 +162,7 @@ export function NominaPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 justify-end">
-                      {p.estado === 'abierto' && (
+                      {puedeGestionarNomina() && p.estado === 'abierto' && (
                         <button
                           onClick={() => setConfirmAction({ type: 'cerrar', periodo: p })}
                           disabled={cerrar.isPending}
@@ -170,7 +171,7 @@ export function NominaPage() {
                           Cerrar
                         </button>
                       )}
-                      {p.estado === 'cerrado' && (
+                      {puedeGestionarNomina() && p.estado === 'cerrado' && (
                         <button
                           onClick={() => setConfirmAction({ type: 'liquidar', periodo: p })}
                           disabled={liquidar.isPending}
