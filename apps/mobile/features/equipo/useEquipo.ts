@@ -94,6 +94,24 @@ export function useActualizarTrabajador(id: number) {
   });
 }
 
+export function useActualizarSalario(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: { tarifa_hora: number | null; salario_base: number | null }) =>
+      trabajadoresApi.actualizarSalario(id, payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['trabajadores'] }),
+  });
+}
+
+export function useHistorialSalario(id: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['trabajadores', id, 'historial-salario'],
+    queryFn: () => trabajadoresApi.historialSalario(id),
+    enabled,
+    staleTime: 0,
+  });
+}
+
 export function useActualizarMarcacion() {
   const qc = useQueryClient();
   return useMutation({

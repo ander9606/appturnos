@@ -152,6 +152,19 @@ export interface UpdateMePayload {
 
 // ── API ───────────────────────────────────────────────────────────────────
 
+/** Un cambio de tarifa/salario de la auditoría legal. Solo lo ve admin_empresa. */
+export interface CambioSalario {
+  id: number;
+  tarifa_hora_anterior: number | null;
+  tarifa_hora_nueva: number | null;
+  salario_base_anterior: number | null;
+  salario_base_nueva: number | null;
+  usuario_nombre: string;
+  usuario_rol: string;
+  ip: string | null;
+  created_at: string;
+}
+
 export interface TrabajadorPreview {
   id: number;
   nombre: string;
@@ -258,6 +271,17 @@ export const trabajadoresApi = {
     data: { tipo_marcacion: 'libre' | 'fijo' | 'zonal'; punto_marcaje_id?: number | null }
   ): Promise<Trabajador> =>
     api.patch<Trabajador>(`/api/trabajadores/${id}/marcacion`, data),
+
+  /** admin/jefe_nomina: cambiar tarifa/salario. Avisa a admins (si lo hace jefe_nomina) y al trabajador. */
+  actualizarSalario: (
+    id: number,
+    data: { tarifa_hora: number | null; salario_base: number | null }
+  ): Promise<Trabajador> =>
+    api.patch<Trabajador>(`/api/trabajadores/${id}/salario`, data),
+
+  /** admin_empresa: auditoría legal de cambios de sueldo. */
+  historialSalario: (id: number): Promise<CambioSalario[]> =>
+    api.get<CambioSalario[]>(`/api/trabajadores/${id}/historial-salario`),
 
   /** trabajador_nomina: activar/desactivar opción de turnos extra. */
   actualizarExtras: (acepta_extras: boolean): Promise<Trabajador> =>

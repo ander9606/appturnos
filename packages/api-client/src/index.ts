@@ -112,6 +112,7 @@ export type {
   DisponibilidadSlot,
   BancoTalentoWorker,
   BancoTalentoParams,
+  CambioSalario,
   BancoTalentoResponse,
 } from './trabajadores';
 export { ausenciasApi } from './ausencias';

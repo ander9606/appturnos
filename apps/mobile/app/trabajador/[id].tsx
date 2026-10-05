@@ -4,7 +4,8 @@
  * Roles:
  *   admin_empresa → puede editar, desactivar y calificar turnos
  *   jefe_turnos   → puede calificar turnos (solo lectura para datos del trabajador)
- *   jefe_nomina / nomina → solo lectura
+ *   jefe_nomina   → puede editar el sueldo (tarifa/salario), no el resto de la ficha
+ *   nomina        → solo lectura
  */
 import React, { useState } from 'react';
 import {
@@ -16,6 +17,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +31,8 @@ import {
   useActualizarTrabajador,
   useDesactivarTrabajador,
   useEliminarTrabajadorDefinitivo,
+  useActualizarSalario,
+  useHistorialSalario,
 } from '@/features/equipo/useEquipo';
 import { useInvitar, useBloquearOfertas } from '@/features/empresas/useTrabajadorEmpresa';
 import {
@@ -45,6 +49,9 @@ import { ApiError } from '@api-client';
 import type { Asignacion } from '@api-client';
 import { COLORS } from '@/lib/designTokens';
 import { Avatar } from '@/components/ui/Avatar';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 
 const TIPO_LABELS: Record<string, string> = {
@@ -75,6 +82,10 @@ function fmtFechaCorta(iso: string | null | undefined) {
   return new Date(iso.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
+}
+
+function fmtCopOpt(v: number | null) {
+  return v == null ? '—' : formatCOP(v);
 }
 
 function InfoRow({
@@ -131,6 +142,13 @@ export default function TrabajadorDetailScreen() {
   const eliminarDefinitivo = useEliminarTrabajadorDefinitivo();
   const bloquearOfertas = useBloquearOfertas();
   const calificar   = useCalificar();
+  const actualizarSalario = useActualizarSalario(numId);
+  const historialSalario  = useHistorialSalario(numId, isAdmin);
+  const canEditSalario = isAdmin || usuario?.rol === 'jefe_nomina';
+  const [salarioModal, setSalarioModal] = useState(false);
+  const [tarifaInput,  setTarifaInput]  = useState('');
+  const [salarioInput, setSalarioInput] = useState('');
+  const [salarioError, setSalarioError] = useState<string | null>(null);
 
   // Turnos recientes del trabajador (solo para roles que pueden ver asignaciones)
   const showTurnos = canRate || isAdmin;
@@ -144,6 +162,31 @@ export default function TrabajadorDetailScreen() {
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina']);
   if (denied) return denied;
+
+  function abrirSalario() {
+    setTarifaInput(t?.tarifa_hora != null ? String(t.tarifa_hora) : '');
+    setSalarioInput(t?.salario_base != null ? String(t.salario_base) : '');
+    setSalarioError(null);
+    setSalarioModal(true);
+  }
+
+  async function guardarSalario() {
+    const parse = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
+    const tarifa = parse(tarifaInput);
+    const salario = parse(salarioInput);
+    const invalido = (n: number | null) => n !== null && (!Number.isFinite(n) || n < 0);
+    if (invalido(tarifa) || invalido(salario)) {
+      setSalarioError('Ingresa valores numéricos mayores o iguales a 0.');
+      return;
+    }
+    try {
+      await actualizarSalario.mutateAsync({ tarifa_hora: tarifa, salario_base: salario });
+      setSalarioModal(false);
+      showToast('Sueldo actualizado.');
+    } catch (err: unknown) {
+      setSalarioError(err instanceof ApiError ? err.message : 'No se pudo guardar el sueldo.');
+    }
+  }
 
   // ── Header right button (edit toggle) ────────────────────────────────
 
@@ -510,6 +553,16 @@ export default function TrabajadorDetailScreen() {
           />
         </View>
 
+        {/* Sueldo — jefe_nomina y admin pueden cambiarlo */}
+        {canEditSalario && t.activo && (
+          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4 py-3 flex-row items-center justify-between">
+            <Text className="text-sm text-muted-foreground">Sueldo</Text>
+            <Pressable onPress={abrirSalario} hitSlop={8} accessibilityRole="button" className="active:opacity-70">
+              <Text className="text-sm font-semibold text-primary">Editar sueldo</Text>
+            </Pressable>
+          </View>
+        )}
+
         {/* Contacto de emergencia */}
         {(t.contacto_emergencia_nombre || t.contacto_emergencia_tel) && (
           <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4">
@@ -705,7 +758,67 @@ export default function TrabajadorDetailScreen() {
             </Pressable>
           </View>
         )}
+        {isAdmin && (
+          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border p-4 gap-3">
+            <View className="gap-0.5">
+              <Text className="text-sm font-semibold text-foreground">Historial de sueldo</Text>
+              <Text className="text-xs text-muted-foreground">Registro de auditoría. No se puede editar ni borrar.</Text>
+            </View>
+            {historialSalario.isLoading ? (
+              <ActivityIndicator />
+            ) : (historialSalario.data ?? []).length === 0 ? (
+              <Text className="text-sm text-muted-foreground">Sin cambios registrados.</Text>
+            ) : (
+              (historialSalario.data ?? []).map((c) => (
+                <View key={c.id} className="border-t border-border/60 pt-2 gap-0.5">
+                  <Text className="text-xs text-muted-foreground">
+                    {new Date(c.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {' '}{new Date(c.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                    {' · '}{c.usuario_nombre} ({c.usuario_rol})
+                  </Text>
+                  <Text className="text-sm text-foreground">Tarifa/h: {fmtCopOpt(c.tarifa_hora_anterior)} → {fmtCopOpt(c.tarifa_hora_nueva)}</Text>
+                  <Text className="text-sm text-foreground">Salario: {fmtCopOpt(c.salario_base_anterior)} → {fmtCopOpt(c.salario_base_nueva)}</Text>
+                </View>
+              ))
+            )}
+          </View>
+        )}
       </ScrollView>
+
+      <Modal visible={salarioModal} transparent animationType="fade" onRequestClose={() => setSalarioModal(false)}>
+        <View className="flex-1 bg-black/40 items-center justify-center px-6">
+          <View className="w-full bg-card rounded-2xl p-5 gap-4">
+            <Text className="text-base font-semibold text-foreground">Editar sueldo</Text>
+            <Input
+              label="Tarifa por hora (COP)"
+              keyboardType="decimal-pad"
+              value={tarifaInput}
+              onChangeText={setTarifaInput}
+            />
+            <Input
+              label="Salario base mensual (COP)"
+              keyboardType="decimal-pad"
+              value={salarioInput}
+              onChangeText={setSalarioInput}
+              error={salarioError ?? undefined}
+            />
+            <Text className="text-xs text-muted-foreground">
+              Deja vacío para quitar el valor. Los períodos de nómina ya cerrados no cambian.
+            </Text>
+            <View className="flex-row gap-3">
+              <Pressable
+                onPress={() => setSalarioModal(false)}
+                className="flex-1 h-12 rounded-xl items-center justify-center border border-border active:opacity-70"
+              >
+                <Text className="text-foreground font-semibold">Cancelar</Text>
+              </Pressable>
+              <View className="flex-1">
+                <Button label="Guardar" onPress={guardarSalario} loading={actualizarSalario.isPending} fullWidth />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
