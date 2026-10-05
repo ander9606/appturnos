@@ -182,3 +182,22 @@ export interface Asignacion {
   bono_monto?: number;
   bono_motivo?: string | null;
 }
+
+/** Descuentos de un turno con el tope legal (art. 113 CST: 1/5 de la tarifa del día). */
+export interface DescuentosAsignacion {
+  descuentos: DescuentoTurno[];
+  tarifa_dia: number;
+  tope_cop: number;
+  /** Pendientes + aceptados: lo que ya ocupa el tope. */
+  comprometido_cop: number;
+}
+
+/** Descuento sobre un turno completado. Solo los 'aceptado' restan del pago. */
+export interface DescuentoTurno {
+  id: number;
+  monto: number;
+  motivo: string;
+  estado: 'pendiente' | 'aceptado' | 'rechazado';
+  respondido_at: string | null;
+  created_at: string;
+}

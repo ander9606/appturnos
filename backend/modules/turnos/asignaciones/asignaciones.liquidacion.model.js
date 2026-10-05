@@ -29,6 +29,10 @@ module.exports = {
          COALESCE(a.pago_extra, 0)   AS pago_extra,
          COALESCE(a.bono_monto, 0)   AS bono_monto,
          a.bono_motivo,
+         COALESCE((SELECT SUM(d.monto) FROM descuentos_turno d
+                   WHERE d.asignacion_id = a.id AND d.estado = 'aceptado'), 0) AS descuento_monto,
+         (SELECT GROUP_CONCAT(d.motivo SEPARATOR ' · ') FROM descuentos_turno d
+          WHERE d.asignacion_id = a.id AND d.estado = 'aceptado') AS descuento_motivo,
          a.hora_ingreso_real,
          a.hora_egreso_real,
          o.id          AS oferta_id,
@@ -76,6 +80,7 @@ module.exports = {
           pago_base:          0,
           pago_extra:         0,
           bono_monto:         0,
+          descuento_monto:    0,
           pago_total:         0,
           // Turnos completados cuyo contrato aún no firma el trabajador — su pago
           // no se suma a los totales de arriba hasta que exista la firma.
@@ -88,14 +93,18 @@ module.exports = {
       const extra  = Number(row.pago_extra ?? 0);
       const bono   = Number(row.bono_monto ?? 0);
       const total  = Number(row.pago_total ?? 0);
+      // pago_total es bruto (tarifa + bono); lo que se paga descuenta los aceptados.
+      const descuento = Number(row.descuento_monto ?? 0);
+      const neto   = total - descuento;
       const horas  = Number(row.horas_trabajadas ?? 0);
       w.total_turnos++;
       if (firmado) {
         w.total_horas  = parseFloat((w.total_horas + horas).toFixed(4));
         w.pago_extra   += extra;
         w.bono_monto   += bono;
+        w.descuento_monto += descuento;
         w.pago_base    += total - extra - bono;
-        w.pago_total   += total;
+        w.pago_total   += neto;
       } else {
         w.turnos_pendientes_firma++;
       }
@@ -115,7 +124,9 @@ module.exports = {
         pago_extra:      extra,
         bono_monto:      bono,
         bono_motivo:     row.bono_motivo || null,
-        pago_total:      total,
+        descuento_monto: descuento,
+        descuento_motivo: row.descuento_motivo || null,
+        pago_total:      neto,
         calificacion:    row.calificacion,
         firmado_trabajador: firmado,
       });

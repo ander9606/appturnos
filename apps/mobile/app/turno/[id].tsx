@@ -48,6 +48,7 @@ import { CalificacionCard }     from '@/features/turnos/detalle/CalificacionCard
 import { CTAConfirmadoCard }    from '@/features/turnos/detalle/CTAConfirmadoCard';
 import { CTAEnProgresoCard }    from '@/features/turnos/detalle/CTAEnProgresoCard';
 import { NovedadesCard }        from '@/features/turnos/detalle/NovedadesCard';
+import { DescuentosCard }       from '@/features/turnos/detalle/DescuentosCard';
 import { CorregirIngresoEgresoModal } from '@/features/turnos/detalle/CorregirIngresoEgresoModal';
 import { BonoModal }            from '@/features/turnos/detalle/BonoModal';
 
@@ -515,6 +516,8 @@ export default function TurnoDetailScreen() {
               onPress={() => setEditandoBono(true)}
             />
           )}
+
+          {id != null && <DescuentosCard asignacionId={id} puedeResponder={!isGestor && !soloLectura} />}
 
           <NovedadesCard novedades={novedades} onReportar={() => setNovedadModalVisible(true)} />
         </ScrollView>

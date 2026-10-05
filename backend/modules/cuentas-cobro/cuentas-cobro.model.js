@@ -68,6 +68,20 @@ const CuentasCobroModel = {
     return row || null;
   },
 
+  /** Cuenta del trabajador cuyo período cubre la fecha de la oferta (si ya existe). */
+  async obtenerPorOfertaYTrabajador(empresaId, ofertaId, trabajadorId) {
+    const [filas] = await pool.query(
+      `SELECT cc.id, cc.periodo_id, cc.firmado_trabajador
+       FROM cuentas_cobro cc
+       JOIN ofertas_turno o ON o.id = ?
+       WHERE cc.empresa_id = ? AND cc.trabajador_id = ?
+         AND o.fecha BETWEEN cc.fecha_inicio AND cc.fecha_fin
+       LIMIT 1`,
+      [ofertaId, empresaId, trabajadorId]
+    );
+    return filas[0] || null;
+  },
+
   /** Todas las cuentas de cobro del usuario, a través de todas sus empresas activas. */
   async listarPorUsuario(usuarioId) {
     const [filas] = await pool.query(

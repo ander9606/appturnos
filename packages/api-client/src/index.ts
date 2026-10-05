@@ -60,6 +60,8 @@ export type {
   CrearOfertaPayload,
   ActualizarOfertaPayload,
   CrearPuestoPayload,
+  DescuentoTurno,
+  DescuentosAsignacion,
   Oferta,
   OfertaDetalle,
   OfertaPuesto,

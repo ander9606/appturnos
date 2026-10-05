@@ -281,6 +281,42 @@ export function useAgregarBono() {
   });
 }
 
+export function useDescuentosAsignacion(asignacionId: number | null) {
+  return useQuery({
+    queryKey: ['turnos', 'descuentos', asignacionId],
+    queryFn: () => turnosApi.listarDescuentosAsignacion(asignacionId!),
+    enabled: asignacionId !== null,
+    staleTime: 30_000,
+  });
+}
+
+export function useCrearDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId, ...data }: { asignacionId: number; monto: number; motivo: string }) =>
+      turnosApi.crearDescuento(asignacionId, data),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'descuentos', vars.asignacionId] });
+      qc.invalidateQueries({ queryKey: ['turnos', 'liquidacion'] });
+      toast.success('Descuento registrado. El trabajador debe aceptarlo.');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
+export function useEliminarDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: number; asignacionId: number }) => turnosApi.eliminarDescuento(id),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'descuentos', vars.asignacionId] });
+      qc.invalidateQueries({ queryKey: ['turnos', 'liquidacion'] });
+      toast.success('Descuento eliminado');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useDescartarSospechosoAsignacion() {
   const qc = useQueryClient();
   return useMutation({

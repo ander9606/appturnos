@@ -155,6 +155,25 @@ export interface CrearPuestoPayload {
   notas?: string;
 }
 
+/** Descuento sobre un turno completado. Solo los 'aceptado' restan del pago. */
+export interface DescuentoTurno {
+  id: number;
+  monto: number;
+  motivo: string;
+  estado: 'pendiente' | 'aceptado' | 'rechazado';
+  respondido_at: string | null;
+  created_at: string;
+}
+
+/** Descuentos de un turno con el tope legal (art. 113 CST: 1/5 de la tarifa del día). */
+export interface DescuentosAsignacion {
+  descuentos: DescuentoTurno[];
+  tarifa_dia: number;
+  tope_cop: number;
+  /** Pendientes + aceptados: lo que ya ocupa el tope. */
+  comprometido_cop: number;
+}
+
 export type ParaQuienOferta = 'turnos' | 'nomina' | 'ambos';
 export type VisibilidadOferta = 'abierta' | 'dirigida';
 
@@ -406,6 +425,16 @@ export const turnosApi = {
    */
   actualizarOferta(ofertaId: number, payload: ActualizarOfertaPayload): Promise<Oferta> {
     return api.put<Oferta>(`/api/turnos/ofertas/${ofertaId}`, payload);
+  },
+
+  /** Descuentos de un turno. Lo ve el gestor o el trabajador dueño del turno. */
+  listarDescuentosAsignacion(asignacionId: number): Promise<DescuentosAsignacion> {
+    return api.get<DescuentosAsignacion>(`/api/turnos/descuentos/asignacion/${asignacionId}`);
+  },
+
+  /** El trabajador dueño del turno acepta o rechaza un descuento pendiente. */
+  responderDescuento(id: number, aceptar: boolean): Promise<DescuentoTurno & { requiere_nueva_firma: boolean }> {
+    return api.post<DescuentoTurno & { requiere_nueva_firma: boolean }>(`/api/turnos/descuentos/${id}/responder`, { aceptar });
   },
 
   /** Agrega una vacante (puesto) a una oferta existente. Sin restricción de estado en el backend. */

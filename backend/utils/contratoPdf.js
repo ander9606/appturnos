@@ -50,6 +50,10 @@ function generarContratoPdf(contrato, stream) {
   if (Number(contrato.bono_monto) > 0) {
     linea('Bono extra', `$ ${Number(contrato.bono_monto).toLocaleString('es-CO')}${contrato.bono_motivo ? ` (${contrato.bono_motivo})` : ''}`);
   }
+  // Descuentos aceptados por el trabajador (ver descuentos-turno).
+  for (const d of contrato.descuentos ?? []) {
+    linea('Descuento aceptado', `$ ${Number(d.monto).toLocaleString('es-CO')} (${d.motivo})`);
+  }
   doc.moveDown(1);
 
   doc

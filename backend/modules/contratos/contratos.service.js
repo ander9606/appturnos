@@ -3,7 +3,16 @@
 const ContratosModel = require('./contratos.model');
 const IntegracionService = require('../integracion/integracion.service');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
+const DescuentosTurnoModel = require('../turnos/descuentos/descuentos-turno.model');
 const AppError = require('../../utils/AppError');
+
+/** Solo los descuentos aceptados van en el contrato: son los que cambian el pago pactado. */
+async function adjuntarDescuentos(contrato) {
+  contrato.descuentos = await DescuentosTurnoModel.listarPorAsignacion(
+    contrato.empresa_id, contrato.asignacion_id, { estado: 'aceptado' }
+  );
+  return contrato;
+}
 const {
   ROLES,
   SALARIO_MINIMO_DIARIO_COP,
@@ -131,14 +140,14 @@ const ContratosService = {
     const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     verificarAcceso(contrato, usuario);
-    return contrato;
+    return adjuntarDescuentos(contrato);
   },
 
   async obtener(empresaId, id, usuario) {
     const contrato = await ContratosModel.obtenerPorId(empresaId, id);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     verificarAcceso(contrato, usuario);
-    return contrato;
+    return adjuntarDescuentos(contrato);
   },
 
   async firmar(empresaId, id, usuario, firmaB64) {
