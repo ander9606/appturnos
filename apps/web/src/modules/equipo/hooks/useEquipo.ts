@@ -15,6 +15,17 @@ function getErrMsg(err: unknown) {
     : 'Error inesperado';
 }
 
+// 402 = tope de trabajadores del plan (trabajadores.service.js) — lleva a ampliarlo.
+function toastError(err: unknown) {
+  if (axios.isAxiosError(err) && err.response?.status === 402) {
+    toast.error(getErrMsg(err), {
+      action: { label: 'Ampliar plan', onClick: () => window.location.assign('/configuracion?tab=plan') },
+    });
+    return;
+  }
+  toast.error(getErrMsg(err));
+}
+
 export function useTrabajadores(params?: { tipo?: TipoTrabajador; activo?: boolean; page?: number; limit?: number }) {
   return useQuery({
     queryKey: KEYS.lista(params),
@@ -40,16 +51,7 @@ export function useCrearTrabajador() {
       qc.invalidateQueries({ queryKey: ['trabajadores'] });
       toast.success('Trabajador creado');
     },
-    onError: (err: unknown) => {
-      // 402 = tope de trabajadores del plan (trabajadores.service.js) — lleva a ampliarlo.
-      if (axios.isAxiosError(err) && err.response?.status === 402) {
-        toast.error(getErrMsg(err), {
-          action: { label: 'Ampliar plan', onClick: () => window.location.assign('/configuracion?tab=plan') },
-        });
-        return;
-      }
-      toast.error(getErrMsg(err));
-    },
+    onError: toastError,
   });
 }
 
@@ -106,6 +108,6 @@ export function useInvitarTrabajador() {
       qc.invalidateQueries({ queryKey: ['trabajadores'] });
       toast.success('Invitación enviada');
     },
-    onError: (err: unknown) => toast.error(getErrMsg(err)),
+    onError: toastError,
   });
 }

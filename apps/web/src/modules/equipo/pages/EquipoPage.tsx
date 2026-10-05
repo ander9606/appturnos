@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { Plus, UserX, UserPlus, Search, Users } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
+import { Plus, UserX, UserPlus, Search, Users, AlertTriangle } from 'lucide-react';
 import { useTrabajadores, useCrearTrabajador, useDesactivarTrabajador, useInvitarTrabajador, useBancoTalento } from '../hooks/useEquipo';
 import { useAuthStore } from '@/modules/auth/authStore';
+import { useSuscripcion } from '@/modules/configuracion/hooks/useConfiguracion';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { DeduccionesChecklist } from '@/shared/components/DeduccionesChecklist';
@@ -231,6 +232,10 @@ function BancoTalentoModal({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState('');
   const [invitados, setInvitados] = useState<Set<number>>(new Set());
   const invitar = useInvitarTrabajador();
+  const esAdmin = useAuthStore(s => s.usuario?.rol) === 'admin_empresa';
+  const { data: suscData } = useSuscripcion();
+  const susc = suscData?.data;
+  const alTope = susc?.max_trabajadores != null && susc.trabajadores_activos >= susc.max_trabajadores;
 
   useEffect(() => {
     const timer = setTimeout(() => setQ(busqueda), 400);
@@ -242,6 +247,7 @@ function BancoTalentoModal({ onClose }: { onClose: () => void }) {
   const trabajadores = inner?.data ?? [];
 
   function handleInvitar(t: BancoTalentoWorker) {
+    if (!t.cedula) return;
     invitar.mutate({ cedula: t.cedula, tipo: 'turnos' }, {
       onSuccess: () => setInvitados(prev => new Set(prev).add(t.id)),
     });
@@ -254,6 +260,18 @@ function BancoTalentoModal({ onClose }: { onClose: () => void }) {
         Trabajadores registrados en la plataforma que aún no pertenecen a ninguna empresa. Invítalos si te faltan
         manos para cubrir turnos.
       </p>
+      {alTope && (
+        <div className="flex items-start gap-2 bg-warning-light text-warning text-sm rounded-lg px-3 py-2 mb-4">
+          <AlertTriangle size={16} className="flex-shrink-0 mt-0.5" />
+          <span className="flex-1">
+            Tu plan {susc.plan} llegó al tope de {susc.max_trabajadores} trabajadores activos. Invitar a alguien más
+            requiere cambiar de plan{esAdmin ? '' : ' (lo puede hacer el administrador de la empresa)'}.
+            {esAdmin && (
+              <> <Link to="/configuracion?tab=plan" className="font-semibold underline hover:no-underline">Cambiar plan</Link></>
+            )}
+          </span>
+        </div>
+      )}
       <div className="relative mb-4">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -307,15 +325,21 @@ function BancoTalentoModal({ onClose }: { onClose: () => void }) {
                     <p className="text-xs text-muted-foreground italic">+{experienciasRestantes} más</p>
                   )}
                 </div>
-                <button
-                  onClick={() => handleInvitar(t)}
-                  disabled={invitado || invitar.isPending}
-                  className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
-                    invitado ? 'bg-success-light text-success' : 'bg-primary text-white hover:bg-primary-600 disabled:opacity-50'
-                  }`}
-                >
-                  {invitado ? 'Invitado' : 'Invitar'}
-                </button>
+                {t.cedula ? (
+                  <button
+                    onClick={() => handleInvitar(t)}
+                    disabled={invitado || invitar.isPending || alTope}
+                    className={`shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                      invitado ? 'bg-success-light text-success' : 'bg-primary text-white hover:bg-primary-600 disabled:opacity-50'
+                    }`}
+                  >
+                    {invitado ? 'Invitado' : 'Invitar'}
+                  </button>
+                ) : (
+                  <span className="shrink-0 text-xs text-muted-foreground" title="El trabajador debe registrar su cédula para poder ser invitado">
+                    Sin cédula
+                  </span>
+                )}
               </div>
             );
           })}

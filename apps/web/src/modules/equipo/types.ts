@@ -46,7 +46,8 @@ export interface BancoTalentoWorker {
   id: number;
   nombre: string;
   apellido: string;
-  cedula: string;
+  /** null si el trabajador nunca registró su cédula — la invitación se hace por cédula, así que no se puede invitar. */
+  cedula: string | null;
   tipo_documento: TipoDocumento | null;
   cargo: string | null;
   descripcion: string | null;
