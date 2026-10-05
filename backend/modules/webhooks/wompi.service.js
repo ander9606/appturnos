@@ -5,6 +5,8 @@ const { pool } = require('../../config/database');
 const logger   = require('../../utils/logger');
 const { PlanesModel, precioPlanCop, planParaTrabajadores } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
+const { enviarEmail } = require('../../utils/mailer');
+const { generarFacturaPdf } = require('../../utils/facturaPdf');
 
 const ESTADOS_RECHAZO = ['DECLINED', 'VOIDED', 'ERROR'];
 
@@ -37,7 +39,7 @@ function parsearReferencia(ref) {
 }
 
 /** Activa la suscripción y marca el evento como procesado. Lanza si el UPDATE falla. */
-async function activarSuscripcion(eventoId, { empresaId, plan, meses }) {
+async function activarSuscripcion(eventoId, { empresaId, plan, meses }, montoCop) {
   await pool.query(
     `UPDATE empresas
         SET plan                      = ?,
@@ -56,7 +58,49 @@ async function activarSuscripcion(eventoId, { empresaId, plan, meses }) {
     [eventoId]
   );
   logger.info(`Wompi: empresa ${empresaId} +${meses}m -> ${plan}`);
+  await enviarFactura(eventoId, { empresaId, plan, meses }, montoCop);
   return { ok: true, empresaId, plan, meses };
+}
+
+/**
+ * Envía el comprobante de pago (PDF) al correo de la empresa. Best-effort: si falla
+ * (SMTP caído, sin correo) se loguea y la suscripción ya quedó activa.
+ * ponytail: número = id del evento, con huecos — upgrade path: tabla `facturas` con consecutivo propio.
+ */
+async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
+  try {
+    const [[emp]] = await pool.query(
+      `SELECT e.nombre, e.nit, COALESCE(e.email_empresa, u.email) AS email
+         FROM empresas e
+         LEFT JOIN usuarios u ON u.empresa_id = e.id AND u.rol = 'admin_empresa' AND u.activo = 1
+        WHERE e.id = ? ORDER BY u.id LIMIT 1`,
+      [empresaId]
+    );
+    if (!emp?.email) return logger.warn(`Wompi: empresa ${empresaId} sin correo — factura no enviada`);
+
+    const numero = `ZT-${String(eventoId).padStart(6, '0')}`;
+    const concepto = `Suscripción Zaturno plan ${plan} — ${meses} mes${meses !== 1 ? 'es' : ''}`;
+    const pdf = await generarFacturaPdf({
+      numero,
+      fecha: new Date().toLocaleDateString('es-CO', { timeZone: 'America/Bogota' }),
+      emisor: {
+        nombre: process.env.FACTURA_EMISOR_NOMBRE,
+        documento: process.env.FACTURA_EMISOR_DOCUMENTO,
+        email: process.env.FACTURA_EMISOR_EMAIL,
+      },
+      cliente: { nombre: emp.nombre, nit: emp.nit, email: emp.email },
+      concepto,
+      montoCop,
+    });
+    await enviarEmail({
+      to: emp.email,
+      subject: `Comprobante de pago ${numero} — Zaturno`,
+      html: `<p>Gracias por tu pago. Adjuntamos el comprobante de: ${concepto}.</p>`,
+      attachments: [{ filename: `${numero}.pdf`, content: pdf }],
+    });
+  } catch (err) {
+    logger.error(`Wompi: no se pudo enviar factura (empresa ${empresaId}):`, err.message);
+  }
 }
 
 /** Marca el evento como error y loguea. */
@@ -98,6 +142,11 @@ async function notificarPagoRechazado({ empresaId, plan, meses }, wompiStatus) {
   }
 }
 
+function montoDeEvento(ev) {
+  const p = typeof ev.payload === 'string' ? JSON.parse(ev.payload) : ev.payload;
+  return (p?.data?.transaction?.amount_in_cents ?? 0) / 100;
+}
+
 const WompiService = {
   /**
    * Procesa un evento entrante de Wompi.
@@ -135,7 +184,7 @@ const WompiService = {
 
     if (esActualizacion && tx.status === 'APPROVED' && parsed) {
       try {
-        return await activarSuscripcion(eventoId, parsed);
+        return await activarSuscripcion(eventoId, parsed, tx.amount_in_cents / 100);
       } catch (err) {
         await marcarError(eventoId, err);
         return { ok: false, razon: 'error_db' };
@@ -156,14 +205,14 @@ const WompiService = {
   /** Reintenta un evento en estado 'error' (llamado por el worker o el admin). */
   async reintentarEvento(eventoId) {
     const [[ev]] = await pool.query(
-      `SELECT id, empresa_id, plan, meses FROM wompi_eventos WHERE id = ? AND estado = 'error' LIMIT 1`,
+      `SELECT id, empresa_id, plan, meses, payload FROM wompi_eventos WHERE id = ? AND estado = 'error' LIMIT 1`,
       [eventoId]
     );
     if (!ev) throw new Error('Evento no encontrado o no esta en estado error');
     if (!ev.empresa_id) throw new Error('Evento sin empresa_id — usa reconciliacion manual');
 
     try {
-      return await activarSuscripcion(ev.id, { empresaId: ev.empresa_id, plan: ev.plan, meses: ev.meses });
+      return await activarSuscripcion(ev.id, { empresaId: ev.empresa_id, plan: ev.plan, meses: ev.meses }, montoDeEvento(ev));
     } catch (err) {
       await marcarError(ev.id, err);
       throw err;
@@ -173,13 +222,13 @@ const WompiService = {
   /** Procesa todos los eventos en error con menos de 3 intentos (para el worker). */
   async procesarPendientes() {
     const [eventos] = await pool.query(
-      `SELECT id, empresa_id, plan, meses FROM wompi_eventos
+      `SELECT id, empresa_id, plan, meses, payload FROM wompi_eventos
         WHERE estado = 'error' AND intentos < 3 AND empresa_id IS NOT NULL`
     );
     let ok = 0;
     for (const ev of eventos) {
       try {
-        await activarSuscripcion(ev.id, { empresaId: ev.empresa_id, plan: ev.plan, meses: ev.meses });
+        await activarSuscripcion(ev.id, { empresaId: ev.empresa_id, plan: ev.plan, meses: ev.meses }, montoDeEvento(ev));
         ok++;
       } catch (err) {
         await marcarError(ev.id, err);
