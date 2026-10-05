@@ -221,10 +221,11 @@ export function useSolicitarReingreso() {
   });
 }
 
-export function useReingresosPendientes() {
+export function useReingresosPendientes(enabled = true) {
   return useQuery({
     queryKey: ['reingresos-pendientes'] as const,
     queryFn: () => nominaApi.listarReingresosPendientes(),
+    enabled,
     staleTime: 15_000,
     refetchInterval: 15_000,
   });

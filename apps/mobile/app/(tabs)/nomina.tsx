@@ -26,6 +26,7 @@ import { PeriodoBadge }           from '@/features/nomina/PeriodoBadge';
 import { TipoPeriodoBadge }       from '@/features/nomina/TipoPeriodoBadge';
 import { PeriodoSelector }        from '@/features/nomina/PeriodoSelector';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
+import { Badge }                  from '@/components/ui/Badge';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
 import { MonthCalendar }          from '@/components/ui/MonthCalendar';
@@ -35,7 +36,7 @@ import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { bogotaToday } from '@/lib/formatters';
 import {
   usePeriodos, useLiquidacion,
-  useLiquidarPeriodo,
+  useLiquidarPeriodo, useReingresosPendientes,
 } from '@/features/nomina/useNomina';
 import { useCompensatoriosTodos } from '@/features/nomina/compensatorios/useCompensatorios';
 import { useDescuentosPeriodo } from '@/features/nomina/descuentos/useDescuentos';
@@ -109,6 +110,9 @@ function NominaGestorView() {
 
   // ponytail: carga todos los compensatorios de la empresa, filtra client-side por periodo+trabajador
   const { data: allComp } = useCompensatoriosTodos();
+  const compPendientes = (allComp ?? []).filter((c) => c.estado === 'pendiente').length;
+  // Solo admin/jefe_nomina pueden listar reingresos (CORREGIR en registros.routes.js); 'nomina' no ve la sección.
+  const { data: reingresosPendientes = [] } = useReingresosPendientes(rol !== 'nomina');
   const { data: descuentosPeriodo } = useDescuentosPeriodo(activePeriodoId);
 
   const onRefresh = useCallback(() => {
@@ -415,7 +419,12 @@ function NominaGestorView() {
                       <Ionicons name="enter-outline" size={16} color="#64748B" />
                       <Text className="text-sm font-medium text-foreground">Reingresos pendientes</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    <View className="flex-row items-center gap-2">
+                      {reingresosPendientes.length > 0 && (
+                        <Badge label={String(reingresosPendientes.length)} variant="warning" size="sm" />
+                      )}
+                      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -426,7 +435,12 @@ function NominaGestorView() {
                       <Ionicons name="calendar-outline" size={16} color="#64748B" />
                       <Text className="text-sm font-medium text-foreground">Descansos compensatorios</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    <View className="flex-row items-center gap-2">
+                      {compPendientes > 0 && (
+                        <Badge label={String(compPendientes)} variant="warning" size="sm" />
+                      )}
+                      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    </View>
                   </TouchableOpacity>
 
                   <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Configuración</Text>
