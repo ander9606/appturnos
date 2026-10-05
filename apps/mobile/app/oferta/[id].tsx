@@ -907,8 +907,9 @@ function EditarOfertaModal({
   const [horaInicio, setHoraInicio] = useState(new Date());
   const [horaFin, setHoraFin] = useState<Date | null>(null);
   const [lugar, setLugar] = useState(oferta.lugar ?? '');
-  const [latitud, setLatitud] = useState<number | null>(oferta.latitud);
-  const [longitud, setLongitud] = useState<number | null>(oferta.longitud);
+  // mysql2 devuelve DECIMAL como string: se convierte para que LugarInput pueda usar toFixed.
+  const [latitud, setLatitud] = useState<number | null>(oferta.latitud == null ? null : Number(oferta.latitud));
+  const [longitud, setLongitud] = useState<number | null>(oferta.longitud == null ? null : Number(oferta.longitud));
   const [showFecha, setShowFecha] = useState(false);
   const [showHoraInicio, setShowHoraInicio] = useState(false);
   const [showHoraFin, setShowHoraFin] = useState(false);
@@ -932,8 +933,8 @@ function EditarOfertaModal({
       setHoraFin(null);
     }
     setLugar(oferta.lugar ?? '');
-    setLatitud(oferta.latitud);
-    setLongitud(oferta.longitud);
+    setLatitud(oferta.latitud == null ? null : Number(oferta.latitud));
+    setLongitud(oferta.longitud == null ? null : Number(oferta.longitud));
     setShowFecha(false);
     setShowHoraInicio(false);
     setShowHoraFin(false);
