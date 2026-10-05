@@ -51,4 +51,17 @@ describe('OfertasService.obtener — puestos según cargos certificados', () => 
 
     expect(result.puestos.map((p) => p.id)).toEqual([10, 11]);
   });
+
+  test('trabajador: solo recibe sus propias asignaciones, no las de otros', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue({ id: 1, empresa_id: 7, visibilidad: 'abierta', puestos: PUESTOS });
+    OfertasModel.cargosCertificadosDeUsuario.mockResolvedValue([{ empresa_id: 7, cargo_id: 1 }]);
+    AsignacionesModel.listarPorOferta.mockResolvedValue([
+      { id: 1, trabajador_id: 5, pago_total: 100000 },
+      { id: 2, trabajador_id: 9, pago_total: 999999 },
+    ]);
+
+    const result = await OfertasService.obtener(null, 1, usuario, [7]);
+
+    expect(result.asignaciones.map((a) => a.id)).toEqual([1]);
+  });
 });

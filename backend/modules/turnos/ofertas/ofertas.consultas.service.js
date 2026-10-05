@@ -105,8 +105,10 @@ module.exports = {
       }
 
       const certificados = await OfertasModel.cargosCertificadosDeUsuario(usuario.sub);
+      // Solo las propias: el resto (nombres, cargos, pagos de otros) es para gestores.
       const asignaciones = await AsignacionesModel.listarPorOferta(ofertaEmpresaId, id);
-      return { ...soloCargosCertificados(ofertaConDelay, certificados), asignaciones };
+      const propias = asignaciones.filter((a) => a.trabajador_id === trabajador?.id);
+      return { ...soloCargosCertificados(ofertaConDelay, certificados), asignaciones: propias };
     }
 
     const antiguedadMinMin = await antiguedadMinima(empresaId, usuario);
