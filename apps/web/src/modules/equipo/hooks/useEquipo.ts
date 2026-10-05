@@ -10,9 +10,11 @@ const KEYS = {
 };
 
 function getErrMsg(err: unknown) {
-  return axios.isAxiosError(err)
-    ? (err.response?.data?.message as string | undefined) ?? 'Error'
-    : 'Error inesperado';
+  if (!axios.isAxiosError(err)) return 'Error inesperado';
+  const msg = (err.response?.data?.message as string | undefined) ?? 'Error';
+  // 422 (validar()) trae detalles por campo: el primero dice qué corregir.
+  const detalle = err.response?.data?.detalles?.[0]?.mensaje as string | undefined;
+  return detalle ? `${msg}: ${detalle}` : msg;
 }
 
 // 402 = tope de trabajadores del plan (trabajadores.service.js) — lleva a ampliarlo.

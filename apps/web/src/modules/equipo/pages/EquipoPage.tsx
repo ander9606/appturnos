@@ -272,6 +272,11 @@ function BancoTalentoModal({ onClose }: { onClose: () => void }) {
           </span>
         </div>
       )}
+      {susc?.max_trabajadores != null && !alTope && (
+        <p className="text-xs text-muted-foreground mb-4">
+          Trabajadores activos: {susc.trabajadores_activos} de {susc.max_trabajadores} en tu plan {susc.plan}.
+        </p>
+      )}
       <div className="relative mb-4">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
