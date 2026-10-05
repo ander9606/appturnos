@@ -278,6 +278,7 @@ export default function DashboardScreen() {
         { icon: 'people-outline',        label: 'Asistencia',    onPress: () => router.push('/dashboard-asistencia') },
         { icon: 'briefcase-outline',     label: 'Trim. eventual',onPress: () => router.push('/liquidacion-eventual') },
         { icon: 'calendar-outline',      label: 'Registros',     onPress: () => router.push('/registros-periodo') },
+        { icon: 'time-outline',          label: 'Compensatorios', onPress: () => router.push('/gestor-compensatorios') },
       ]
     : [
         { icon: 'calendar-outline',      label: 'Turnos',      onPress: () => router.push('/(tabs)/turnos') },
