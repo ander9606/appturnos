@@ -634,8 +634,9 @@ function EditarOfertaModal({
     hora_fin_estimada: oferta.hora_fin_estimada?.slice(0, 5) ?? '',
   });
   const [lugar, setLugar] = useState(oferta.lugar ?? '');
-  const [latitud, setLatitud] = useState<number | null>(oferta.latitud);
-  const [longitud, setLongitud] = useState<number | null>(oferta.longitud);
+  // mysql2 devuelve DECIMAL como string: se convierte para que el tipo sea número de verdad.
+  const [latitud, setLatitud] = useState<number | null>(oferta.latitud == null ? null : Number(oferta.latitud));
+  const [longitud, setLongitud] = useState<number | null>(oferta.longitud == null ? null : Number(oferta.longitud));
 
   const cambianCriticos = form.fecha !== oferta.fecha
     || form.hora_inicio !== oferta.hora_inicio.slice(0, 5)
