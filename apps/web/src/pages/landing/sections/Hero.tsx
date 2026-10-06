@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { Reveal } from '../Reveal';
 import { Phone } from '../simulator/PhoneChrome';
 import { DashboardScreen } from '../simulator/TrabajadorScreens';
+import { StoreBadges } from './StoreBadges';
 
 export function Hero() {
   return (
@@ -35,6 +36,9 @@ export function Hero() {
             >
               Ver la app
             </a>
+          </div>
+          <div className="mt-6">
+            <StoreBadges />
           </div>
         </Reveal>
 

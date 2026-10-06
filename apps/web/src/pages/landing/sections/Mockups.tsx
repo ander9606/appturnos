@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Apple, PlayCircle } from 'lucide-react';
 
 import { Reveal } from '../Reveal';
 import { PhoneSimulator, RolePills } from '../simulator/PhoneSimulator';
 import type { Role } from '../simulator/types';
+import { StoreBadges } from './StoreBadges';
 
 export function Mockups() {
   const [role, setRole] = useState<Role>('trabajador');
@@ -33,46 +33,10 @@ export function Mockups() {
         <PhoneSimulator role={role} />
       </Reveal>
 
-      <Reveal delay={250}>
+      <Reveal delay={250} className="mx-auto mt-16 flex max-w-6xl flex-col items-center gap-4">
+        <p className="text-sm font-semibold text-muted-foreground">Disponible ya para descargar</p>
         <StoreBadges />
       </Reveal>
     </section>
-  );
-}
-
-function StoreBadges() {
-  return (
-    <div className="mx-auto mt-16 flex max-w-6xl flex-col items-center gap-4">
-      <p className="text-sm font-semibold text-muted-foreground">
-        Muy pronto disponible para descargar
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <StoreBadge icon={Apple} eyebrow="Próximamente en" store="App Store" />
-        <StoreBadge icon={PlayCircle} eyebrow="Próximamente en" store="Google Play" />
-      </div>
-    </div>
-  );
-}
-
-function StoreBadge({
-  icon: Icon,
-  eyebrow,
-  store,
-}: {
-  icon: typeof Apple;
-  eyebrow: string;
-  store: string;
-}) {
-  return (
-    <div
-      className="flex cursor-default items-center gap-2.5 rounded-xl border border-border bg-foreground px-4 py-2.5 opacity-90"
-      aria-label={`${store}: ${eyebrow.toLowerCase()}`}
-    >
-      <Icon size={22} className="text-white" />
-      <div className="text-left leading-tight">
-        <div className="text-[9px] font-medium uppercase tracking-wide text-white/60">{eyebrow}</div>
-        <div className="text-sm font-bold text-white">{store}</div>
-      </div>
-    </div>
   );
 }
