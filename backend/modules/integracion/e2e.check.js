@@ -166,6 +166,60 @@ console.log('3. orden.creada ...');
   console.log('   ✓ orden duplicada ignorada (idempotente)');
 }
 
+// ── 3b. Eventos entrantes: orden.cupos_actualizados / orden.ubicacion_cambiada ─
+// Antes rotos/no usados: cupos_actualizados solo hacía UPDATE (0 filas si la
+// orden se creó con cupos_gig=0), y ubicacion_cambiada ni existía como evento.
+
+console.log('3b. orden.cupos_actualizados / orden.ubicacion_cambiada ...');
+{
+  const OfertasModel = require('../turnos/ofertas/ofertas.model');
+  const { pool } = require('../../config/database');
+  const { procesar } = require('./entrantes.handlers');
+
+  OfertasModel.obtenerPorExternalRef = async () => ({ id: 700 });
+  OfertasModel.actualizar = async (_eid, _id, cambios) => { OfertasModel._ultimoActualizar = cambios; };
+
+  const puestos = []; // simula filas de oferta_puestos
+  const CARGO_IDS = { auxiliar: 10, custodio: 20 };
+  pool.query = async (sql, params) => {
+    if (sql.startsWith('SELECT id FROM cargos')) {
+      return [[{ id: CARGO_IDS[params[0]] }]];
+    }
+    if (sql.startsWith('SELECT id FROM oferta_puestos')) {
+      const [ofertaId, cargoId] = params;
+      const fila = puestos.find((p) => p.oferta_id === ofertaId && p.cargo_id === cargoId);
+      return [[fila ? { id: fila.id } : undefined].filter(Boolean)];
+    }
+    if (sql.startsWith('INSERT INTO oferta_puestos')) {
+      const [ofertaId, cargoId, plazas, tarifa] = params;
+      puestos.push({ id: puestos.length + 1, oferta_id: ofertaId, cargo_id: cargoId, plazas, tarifa_dia: tarifa });
+      return [{}];
+    }
+    if (sql.startsWith('UPDATE oferta_puestos')) {
+      return [{}]; // no necesitamos verificar el UPDATE en sí, solo que se llegue a insertar cuando no existe
+    }
+    return [[]];
+  };
+
+  // Orden creada con cupos_gig=0 (sin puesto aún) → luego sube a 3: debe INSERTAR, no solo UPDATE
+  await procesar('orden.cupos_actualizados', 1, { external_ref: 'logiq360:orden:700', cupos_gig: 3, valor_dia_sugerido: 90000 });
+  assert.strictEqual(puestos.length, 1, 'debe insertar el puesto auxiliar que no existía');
+  assert.strictEqual(puestos[0].plazas, 3);
+
+  // cupos_custodio también se propaga (el bug original solo manejaba 'auxiliar')
+  await procesar('orden.cupos_actualizados', 1, { external_ref: 'logiq360:orden:700', cupos_custodio: 1, valor_dia_custodio: 150000 });
+  assert.strictEqual(puestos.length, 2, 'debe insertar también el puesto custodio');
+
+  // orden.ubicacion_cambiada: arma `lugar` a partir de direccion+ciudad
+  await procesar('orden.ubicacion_cambiada', 1, { external_ref: 'logiq360:orden:700', direccion: 'Calle 10 # 5-20', ciudad: 'Medellín', latitud: 6.25, longitud: -75.56 });
+  assert.strictEqual(OfertasModel._ultimoActualizar.lugar, 'Calle 10 # 5-20, Medellín');
+  assert.strictEqual(OfertasModel._ultimoActualizar.latitud, 6.25);
+
+  console.log('   ✓ cupos_gig=0→N inserta el puesto auxiliar (antes solo hacía UPDATE)');
+  console.log('   ✓ cupos_custodio también se propaga');
+  console.log('   ✓ ubicacion_cambiada arma `lugar` y actualiza lat/long');
+}
+
 // ── 4. Evento entrante: empleado.creado ─────────────────────────────────────
 
 console.log('4. empleado.creado ...');
