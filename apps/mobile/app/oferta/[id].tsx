@@ -235,6 +235,11 @@ export default function OfertaDetailScreen() {
     ? (misTurnos ?? []).find((a) => a.oferta_id === id)
     : undefined;
   const yaAplicado = !!miAsignacion;
+  // Mientras sigue 'pendiente', el puesto puede llenarse con otros postulantes
+  // antes de que el gestor te confirme — igual se mantiene tu postulación por
+  // si alguien cancela o el gestor amplía las plazas.
+  const miPuesto = oferta?.puestos.find((p) => p.id === miAsignacion?.puesto_id);
+  const miCupoLleno = !!miPuesto && miPuesto.plazas_cubiertas >= miPuesto.plazas;
 
   async function handleRetirar() {
     if (!miAsignacion?.puesto_id || !id) return;
@@ -600,12 +605,21 @@ export default function OfertaDetailScreen() {
                 </View>
               ) : yaAplicado ? (
                 <View className="gap-3">
-                  <View className="bg-info/10 rounded-2xl px-5 py-4 flex-row items-center gap-3">
-                    <Ionicons name="checkmark-circle-outline" size={22} color="#3B82F6" />
-                    <Text className="text-sm font-semibold text-info">
-                      {miAsignacion?.estado === 'pendiente' ? 'Ya estás postulado a este turno' : 'Ya estás confirmado en este turno'}
-                    </Text>
-                  </View>
+                  {miAsignacion?.estado === 'pendiente' && miCupoLleno ? (
+                    <View className="bg-warning-light rounded-2xl px-5 py-4 flex-row items-center gap-3">
+                      <Ionicons name="alert-circle-outline" size={22} color="#D97706" />
+                      <Text className="text-sm font-semibold text-amber-700 flex-1">
+                        Cupo lleno — tu postulación se mantiene. Te avisaremos si se libera un cupo o se amplía la oferta.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View className="bg-info/10 rounded-2xl px-5 py-4 flex-row items-center gap-3">
+                      <Ionicons name="checkmark-circle-outline" size={22} color="#3B82F6" />
+                      <Text className="text-sm font-semibold text-info">
+                        {miAsignacion?.estado === 'pendiente' ? 'Ya estás postulado a este turno' : 'Ya estás confirmado en este turno'}
+                      </Text>
+                    </View>
+                  )}
                   {miAsignacion?.estado === 'pendiente' && (
                     <Button
                       label={retirarM.isPending ? 'Retirando…' : 'Retirar postulación'}
