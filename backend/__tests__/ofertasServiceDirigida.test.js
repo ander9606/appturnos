@@ -3,9 +3,9 @@
 // Turnos dirigidos: un gestor elige a mano los destinatarios de una oferta en
 // vez de abrirla al pool completo por cargo certificado. Estas pruebas fijan
 // el contrato: crear() exige al menos un destinatario y notifica solo a
-// esos usuarios; aplicar() deja postularse a un destinatario directo aunque
-// no tenga el cargo certificado (mismo criterio que asignarDirecto), y
-// rechaza a cualquiera que no esté en la lista.
+// esos usuarios; aplicar() deja que un destinatario directo se postule sin
+// esperar su turno de ranking, pero igual exige el cargo certificado (igual
+// que asignarDirecto), y rechaza a cualquiera que no esté en la lista.
 jest.mock('../config/database', () => ({
   pool: { query: jest.fn().mockResolvedValue([[]]) },
 }));

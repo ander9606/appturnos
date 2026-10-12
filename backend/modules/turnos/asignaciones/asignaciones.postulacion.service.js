@@ -293,6 +293,9 @@ module.exports = {
   /**
    * Asignación directa por gestor/admin: crea la asignación confirmada sin que el
    * trabajador tenga que postularse primero. Útil para cuadrar equipos rápido.
+   * El gestor elige a la persona, pero el cargo del puesto sigue exigiéndose
+   * (AsignacionesModel.asignarDirecto devuelve motivo 'cargo' si no está
+   * certificado) — mismo criterio que la postulación normal.
    */
   async asignarDirecto(empresaId, ofertaId, { puesto_id, trabajador_id }) {
     const trabajadorPrevio = await TrabajadoresModel.obtenerPorId(empresaId, trabajador_id);
@@ -326,6 +329,7 @@ module.exports = {
         oferta:    ['La oferta no está disponible para asignaciones', 409],
         puesto:    ['El puesto no pertenece a esta oferta', 400],
         lleno:     ['El puesto ya no tiene plazas disponibles', 409],
+        cargo:     ['El trabajador no tiene este cargo certificado por la empresa', 403],
         traslape:  ['El trabajador ya tiene un turno confirmado en ese horario', 409],
         duplicado: ['El trabajador ya está asignado a este puesto', 409],
       };

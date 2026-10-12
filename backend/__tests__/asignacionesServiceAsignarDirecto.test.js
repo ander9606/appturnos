@@ -28,6 +28,15 @@ describe('AsignacionesService.asignarDirecto', () => {
     expect(AsignacionesModel.asignarDirecto).not.toHaveBeenCalled();
   });
 
+  test('rechaza un trabajador sin el cargo certificado (motivo "cargo" del model → 403)', async () => {
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 61, empresa_id: 3, usuario_id: null });
+    AsignacionesModel.asignarDirecto.mockResolvedValue({ ok: false, motivo: 'cargo' });
+
+    await expect(
+      AsignacionesService.asignarDirecto(3, 100, { puesto_id: 1, trabajador_id: 61 })
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
   test('trabajador_id válido de la empresa sigue funcionando', async () => {
     TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 61, empresa_id: 3, usuario_id: null });
     TrabajadoresModel.obtenerUsuarioId.mockResolvedValue(null);
