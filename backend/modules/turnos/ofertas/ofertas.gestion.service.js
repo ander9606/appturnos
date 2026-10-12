@@ -69,6 +69,32 @@ async function advertenciasCapacidad(empresaId, puestos) {
   return { advertencias, cupoLleno: cupo?.alTope ?? false };
 }
 
+/**
+ * Advierte (sin bloquear) qué invitados de un turno dirigido no tienen ninguno de
+ * los cargos de sus puestos: al abrir el turno no verán puestos a los que postularse
+ * (ver soloCargosCertificados), así que la invitación no les sirve.
+ */
+async function advertenciasDestinatarios(empresaId, visibilidad, trabajadorIds, puestos) {
+  const ids = [...new Set((trabajadorIds || []).map(Number))];
+  const cargoIds = [...new Set((puestos || []).map((p) => Number(p.cargo_id)))];
+  if (visibilidad !== 'dirigida' || ids.length === 0 || cargoIds.length === 0) return [];
+  const [filas] = await pool.query(
+    `SELECT t.nombre, t.apellido FROM trabajadores t
+     WHERE t.id IN (?) AND NOT EXISTS (
+       SELECT 1 FROM trabajador_empresa te
+       JOIN trabajador_cargos tc ON tc.trabajador_empresa_id = te.id
+       WHERE te.trabajador_id = t.id AND te.empresa_id = ? AND tc.cargo_id IN (?)
+     )`,
+    [ids, empresaId, cargoIds]
+  );
+  if (filas.length === 0) return [];
+  const nombres = filas.map((f) => `${f.nombre} ${f.apellido}`).join(', ');
+  return [
+    `${filas.length === 1 ? 'Esta persona no tiene' : 'Estas personas no tienen'} ningún cargo de los puestos del turno ` +
+    `y no podrán postularse: ${nombres}. Certifícales el cargo o invita a otras personas.`,
+  ];
+}
+
 /** El desglose de Nominatim trae ciudad bajo distintas llaves según qué tan urbana es la zona. */
 function extraerCiudad(address) {
   if (!address) return null;
@@ -94,9 +120,9 @@ async function geocodificarCiudadOferta(ofertaId, lat, lng) {
 
 /**
  * Valida los destinatarios elegidos a mano para un turno dirigido: debe haber
- * al menos uno y todos deben tener vínculo activo con la empresa. A propósito
- * NO se exige cargo certificado — el gestor eligiendo a la persona reemplaza
- * ese filtro (mismo criterio que asignarDirecto).
+ * al menos uno y todos deben tener vínculo activo con la empresa. El cargo no
+ * bloquea la creación, pero sí se avisa (advertenciasDestinatarios) y se exige
+ * al postular.
  */
 async function validarDestinatarios(empresaId, visibilidad, trabajadorIds) {
   if (visibilidad !== 'dirigida') return;
@@ -317,7 +343,10 @@ module.exports = {
     // No bloquea la creación — solo avisa al gestor si el catálogo de
     // trabajadores de la empresa no alcanza para cubrir lo pedido.
     const { advertencias, cupoLleno } = await advertenciasCapacidad(empresaId, datos.puestos);
-    oferta.advertencias = advertencias;
+    oferta.advertencias = [
+      ...advertencias,
+      ...await advertenciasDestinatarios(empresaId, datos.visibilidad, datos.trabajador_ids, datos.puestos),
+    ];
     oferta.cupo_lleno = cupoLleno;
 
     return oferta;

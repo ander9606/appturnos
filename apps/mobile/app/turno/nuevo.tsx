@@ -82,7 +82,7 @@ export default function NuevoTurnoScreen() {
         } else if (usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos') {
           botones.push({ text: 'Banco de talento', onPress: () => router.push('/banco-talento') });
         }
-        Alert.alert('Puede que falte personal', oferta.advertencias.join('\n\n'), botones);
+        Alert.alert('Revisa tu turno', oferta.advertencias.join('\n\n'), botones);
       }
       // No navega sola: el botón pasa a "Cerrar" para que quede claro que
       // ya se publicó, en vez de cerrar la pantalla de golpe tras la espera.
