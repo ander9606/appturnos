@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Alert,
+  View, Text, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Switch,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,11 +9,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCorregirAsignacion } from '../useTurnos';
 import { Button } from '@/components/ui/Button';
 import { formatDateObj, formatTimeObj, toISODateTime } from '@/lib/formatters';
+import { useTheme } from '@/lib/theme';
 import { ApiError, type Asignacion } from '@api-client';
 import { showToast } from '@/lib/toast';
 
 function fmtDateTime(d: Date): string {
   return `${formatDateObj(d)} ${formatTimeObj(d)}`;
+}
+
+function esMismoDia(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 export function CorregirIngresoEgresoModal({
@@ -27,32 +32,33 @@ export function CorregirIngresoEgresoModal({
 }) {
   const corregir = useCorregirAsignacion();
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const [ingreso, setIngreso] = useState<Date | null>(null);
   const [egreso, setEgreso] = useState<Date | null>(null);
+  const [egresoSiguienteDia, setEgresoSiguienteDia] = useState(false);
   const [showIngreso, setShowIngreso] = useState(false);
   const [showEgreso, setShowEgreso] = useState(false);
 
   useEffect(() => {
     if (asignacion) {
-      // Inicializa con la fecha del turno + la hora actual (o la hora guardada si existe)
+      // Inicializa con la fecha del turno (hora actual si no hay valor guardado).
       const fechaBase = new Date(`${asignacion.oferta_fecha}T00:00:00`);
 
       if (asignacion.hora_ingreso_real) {
-        const ingresoParsed = new Date(asignacion.hora_ingreso_real.replace(' ', 'T'));
-        const ingresoCompleto = new Date(fechaBase);
-        ingresoCompleto.setHours(ingresoParsed.getHours(), ingresoParsed.getMinutes(), 0, 0);
-        setIngreso(ingresoCompleto);
+        // Respeta la fecha guardada tal cual — nunca se recorta a oferta_fecha,
+        // que ya pisaba el día real de un ingreso guardado al corregir dos veces.
+        setIngreso(new Date(asignacion.hora_ingreso_real.replace(' ', 'T')));
       } else {
         setIngreso(null);
       }
 
       if (asignacion.hora_egreso_real) {
         const egresoParsed = new Date(asignacion.hora_egreso_real.replace(' ', 'T'));
-        const agresoCompleto = new Date(fechaBase);
-        agresoCompleto.setHours(egresoParsed.getHours(), egresoParsed.getMinutes(), 0, 0);
-        setEgreso(agresoCompleto);
+        setEgreso(egresoParsed);
+        setEgresoSiguienteDia(!esMismoDia(egresoParsed, fechaBase));
       } else {
         setEgreso(null);
+        setEgresoSiguienteDia(false);
       }
 
       setShowIngreso(false);
@@ -71,24 +77,39 @@ export function CorregirIngresoEgresoModal({
     }
   }
 
+  // Fecha base del egreso: la del turno, +1 día si quedó marcado como "día siguiente".
+  function fechaBaseEgreso(): Date {
+    const f = new Date(`${asignacion!.oferta_fecha}T00:00:00`);
+    if (egresoSiguienteDia) f.setDate(f.getDate() + 1);
+    return f;
+  }
+
   function onChangeEgreso(_: DateTimePickerEvent, d?: Date) {
     if (d && asignacion) {
-      // Asegura que siempre usa la fecha del turno, solo cambia la hora
-      const fechaBase = new Date(`${asignacion.oferta_fecha}T00:00:00`);
-      fechaBase.setHours(d.getHours(), d.getMinutes(), 0, 0);
-      setEgreso(fechaBase);
+      const fecha = fechaBaseEgreso();
+      fecha.setHours(d.getHours(), d.getMinutes(), 0, 0);
+      setEgreso(fecha);
     }
   }
 
-  // En Android, abre solo un selector de hora (la fecha viene del turno).
-  function abrirHoraAndroid(valorActual: Date | null, onResultado: (d: Date) => void) {
+  function toggleEgresoSiguienteDia(valor: boolean) {
+    setEgresoSiguienteDia(valor);
+    if (egreso && asignacion) {
+      const fecha = new Date(`${asignacion.oferta_fecha}T00:00:00`);
+      if (valor) fecha.setDate(fecha.getDate() + 1);
+      fecha.setHours(egreso.getHours(), egreso.getMinutes(), 0, 0);
+      setEgreso(fecha);
+    }
+  }
+
+  // En Android, abre solo un selector de hora (la fecha viene de fechaBase).
+  function abrirHoraAndroid(valorActual: Date | null, fechaBase: Date, onResultado: (d: Date) => void) {
     DateTimePickerAndroid.open({
       value: valorActual ?? new Date(),
       mode: 'time',
       onChange: (_, hora) => {
         if (!hora) return;
-        // Combina la fecha del turno con la hora seleccionada
-        const fecha = new Date(`${asignacion!.oferta_fecha}T00:00:00`);
+        const fecha = new Date(fechaBase);
         fecha.setHours(hora.getHours(), hora.getMinutes(), 0, 0);
         onResultado(fecha);
       },
@@ -96,8 +117,9 @@ export function CorregirIngresoEgresoModal({
   }
 
   function abrirIngreso() {
+    const fechaBase = new Date(`${asignacion!.oferta_fecha}T00:00:00`);
     if (Platform.OS === 'android') {
-      abrirHoraAndroid(ingreso, setIngreso);
+      abrirHoraAndroid(ingreso, fechaBase, setIngreso);
     } else {
       setShowIngreso(true);
     }
@@ -105,7 +127,7 @@ export function CorregirIngresoEgresoModal({
 
   function abrirEgreso() {
     if (Platform.OS === 'android') {
-      abrirHoraAndroid(egreso, setEgreso);
+      abrirHoraAndroid(egreso, fechaBaseEgreso(), setEgreso);
     } else {
       setShowEgreso(true);
     }
@@ -209,6 +231,17 @@ export function CorregirIngresoEgresoModal({
                       <Text className="text-sm font-semibold text-primary">Listo</Text>
                     </TouchableOpacity>
                   )}
+                  <View className="flex-row items-center justify-between bg-muted rounded-xl px-3 py-2.5 mt-1">
+                    <Text className="text-sm text-foreground flex-1 mr-2">
+                      El turno terminó al día siguiente
+                    </Text>
+                    <Switch
+                      value={egresoSiguienteDia}
+                      onValueChange={toggleEgresoSiguienteDia}
+                      trackColor={{ true: theme.primary }}
+                      thumbColor="#fff"
+                    />
+                  </View>
                 </View>
               </View>
             </ScrollView>

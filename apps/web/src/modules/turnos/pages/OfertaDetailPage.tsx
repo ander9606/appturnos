@@ -940,18 +940,14 @@ function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignaci
       return;
     }
 
-    // Asegura que la fecha sea siempre la del turno, solo cambia la hora
-    const fechaTurno = asignacion.oferta_fecha;
-    const ensureDate = (datetime: string): string | undefined => {
-      if (!datetime) return undefined;
-      const hora = datetime.slice(11, 16); // Extrae "HH:MM"
-      return `${fechaTurno}T${hora}:00`;
-    };
+    // Toma fecha Y hora del input — un turno nocturno puede terminar al día
+    // siguiente, así que ya no se fuerza a la fecha del turno (oferta_fecha).
+    const toSql = (datetime: string): string | undefined => (datetime ? `${datetime}:00` : undefined);
 
     await corregir.mutateAsync({
       id: asignacion.id,
-      hora_ingreso_real: ensureDate(ingreso),
-      hora_egreso_real: ensureDate(egreso),
+      hora_ingreso_real: toSql(ingreso),
+      hora_egreso_real: toSql(egreso),
     });
     onClose();
   };
@@ -982,7 +978,7 @@ function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignaci
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          Solo se modifica la hora (la fecha siempre será {asignacion.oferta_fecha}). Dejar un campo vacío no lo modifica. Con ambos definidos, el turno se marca completado y recalcula el pago.
+          Si el turno terminó al día siguiente, ajusta también la fecha del egreso. Dejar un campo vacío no lo modifica. Con ambos definidos, el turno se marca completado y recalcula el pago.
         </p>
         <div className="flex gap-2 pt-2">
           <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
