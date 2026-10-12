@@ -88,14 +88,24 @@ describe('OfertasService.aplicar — turno dirigido', () => {
     pool.query.mockResolvedValue([[]]); // gestores a notificar: ninguno, simplifica el caso feliz
   });
 
-  test('destinatario directo sin cargo certificado puede postularse (bypass confirmado)', async () => {
+  test('destinatario directo con el cargo certificado puede postularse', async () => {
     OfertasModel.esDestinatario.mockResolvedValue(true);
+    CargosModel.tieneAsignacion.mockResolvedValue(true);
 
     const resultado = await OfertasService.aplicar(7, 9, 20, 501, [], { rol: 'trabajador_turnos' });
 
-    expect(CargosModel.tieneAsignacion).not.toHaveBeenCalled();
     expect(AsignacionesModel.crear).toHaveBeenCalledWith(7, 9, 20, 99);
     expect(resultado).toEqual({ id: 500 });
+  });
+
+  test('destinatario directo SIN el cargo certificado → 403 (la invitación no salta el cargo)', async () => {
+    OfertasModel.esDestinatario.mockResolvedValue(true);
+    CargosModel.tieneAsignacion.mockResolvedValue(false);
+
+    await expect(
+      OfertasService.aplicar(7, 9, 20, 501, [], { rol: 'trabajador_turnos' })
+    ).rejects.toMatchObject({ statusCode: 403 });
+    expect(AsignacionesModel.crear).not.toHaveBeenCalled();
   });
 
   test('trabajador que no está en la lista de destinatarios → 404', async () => {

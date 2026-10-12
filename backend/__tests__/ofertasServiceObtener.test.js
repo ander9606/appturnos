@@ -21,7 +21,8 @@ const OfertasService         = require('../modules/turnos/ofertas/ofertas.servic
 describe('OfertasService.obtener — trabajador multi-empresa (empresaId null)', () => {
   test('resuelve la oferta cuando pertenece a una empresa activa del trabajador', async () => {
     OfertasModel.obtenerEmpresaId.mockResolvedValue(7);
-    OfertasModel.obtenerPorId.mockResolvedValue({ id: 1, empresa_id: 7, titulo: 'Evento' });
+    OfertasModel.obtenerPorId.mockResolvedValue({ id: 1, empresa_id: 7, titulo: 'Evento', puestos: [] });
+    OfertasModel.cargosCertificadosDeUsuario.mockResolvedValue([]);
     TrabajadoresModel.obtenerPorUsuarioId.mockResolvedValue({ ranking: 3 });
     AsignacionesModel.listarPorOferta.mockResolvedValue([]);
 

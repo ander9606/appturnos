@@ -17,11 +17,10 @@ async function antiguedadMinima(empresaId, usuario) {
 
 /**
  * Un trabajador solo ve los puestos (cargo + tarifa) de cargos que tiene certificados
- * en la empresa de la oferta. Las dirigidas no se filtran: el gestor lo invitó a mano
- * y ese flujo no exige cargo certificado (ver ofertas.postulacion.service.js).
+ * en la empresa de la oferta, sea abierta o dirigida: la invitación directa salta el
+ * ranking, no el cargo (ver ofertas.postulacion.service.js).
  */
 function soloCargosCertificados(oferta, certificados) {
-  if (oferta.visibilidad !== 'abierta') return oferta;
   const propios = new Set(
     certificados.filter((c) => c.empresa_id === oferta.empresa_id).map((c) => c.cargo_id)
   );

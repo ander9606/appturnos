@@ -49,7 +49,7 @@ export interface Oferta {
   encargado_telefono: string | null;
   estado: EstadoOferta;
   para_quien: ParaQuienOferta;
-  // 'dirigida': solo `destinatarios` la ven/reciben notificación, sin filtro de cargo ni ranking.
+  // 'dirigida': solo `destinatarios` la ven/reciben notificación, sin filtro de ranking (el cargo sí se exige).
   visibilidad: VisibilidadOferta;
   destinatarios: OfertaDestinatario[];
   // Presentes solo si la oferta se originó desde logiq360 (evento orden.creada).

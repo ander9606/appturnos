@@ -1,7 +1,7 @@
 'use strict';
 
 // Regresión: el trabajador solo ve los puestos de cargos que tiene certificados en la
-// empresa de la oferta. Las dirigidas (invitación manual) no se filtran.
+// empresa de la oferta. También las dirigidas (la invitación salta el ranking, no el cargo).
 jest.mock('../config/database', () => ({
   pool: { query: jest.fn().mockResolvedValue([[]]) },
 }));
@@ -42,14 +42,14 @@ describe('OfertasService.obtener — puestos según cargos certificados', () => 
     expect(result.puestos.map((p) => p.id)).toEqual([10]);
   });
 
-  test('oferta dirigida: no filtra puestos aunque no tenga el cargo certificado', async () => {
+  test('oferta dirigida: también filtra puestos por cargo certificado', async () => {
     OfertasModel.obtenerPorId.mockResolvedValue({ id: 1, empresa_id: 7, visibilidad: 'dirigida', puestos: PUESTOS });
     OfertasModel.esDestinatario.mockResolvedValue(true);
-    OfertasModel.cargosCertificadosDeUsuario.mockResolvedValue([]);
+    OfertasModel.cargosCertificadosDeUsuario.mockResolvedValue([{ empresa_id: 7, cargo_id: 2 }]);
 
     const result = await OfertasService.obtener(null, 1, usuario, [7]);
 
-    expect(result.puestos.map((p) => p.id)).toEqual([10, 11]);
+    expect(result.puestos.map((p) => p.id)).toEqual([11]);
   });
 
   test('trabajador: solo recibe sus propias asignaciones, no las de otros', async () => {
