@@ -33,4 +33,21 @@ describe('AsignacionesModel.listar — filtro estado', () => {
       expect.arrayContaining(['confirmado', 'en_progreso', 'completado', 'no_presentado'])
     );
   });
+
+  // El inbox de postulaciones pendientes (y su badge en el dashboard/TurnosPage)
+  // no debe seguir mostrando turnos ya pasados — nadie va a confirmarlos, solo
+  // quedan colgados hasta que un gestor los rechace a mano desde la oferta.
+  test("estado 'pendiente' → excluye ofertas cuya fecha ya pasó", async () => {
+    await AsignacionesModel.listar(1, { estado: 'pendiente', limit: 20, offset: 0 });
+    const [sql, params] = pool.query.mock.calls[0];
+    expect(sql).toMatch(/a\.estado = \?/);
+    expect(sql).toMatch(/o\.fecha >= \?/);
+    expect(params).toContain('pendiente');
+  });
+
+  test("otros estados no agregan el filtro de fecha vigente", async () => {
+    await AsignacionesModel.listar(1, { estado: 'cancelado', limit: 20, offset: 0 });
+    const [sql] = pool.query.mock.calls[0];
+    expect(sql).not.toMatch(/o\.fecha >= \?/);
+  });
 });

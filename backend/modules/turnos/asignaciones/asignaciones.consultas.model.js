@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../../config/database');
+const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 
 /**
  * Construye geofence_info según tipo_geofence del cargo — misma regla para
@@ -178,6 +179,15 @@ module.exports = {
       } else {
         where.push('a.estado = ?');
         params.push(estado);
+        // El inbox de "pendientes" (usePostulacionesPendientes / badge del
+        // dashboard) es para turnos que todavía se pueden cubrir — una
+        // postulación 'pendiente' de un turno cuya fecha ya pasó no necesita
+        // revisión (confirmar ya no aplica), solo queda ahí hasta que un
+        // gestor la rechace a mano desde el detalle de la oferta.
+        if (estado === 'pendiente') {
+          where.push('o.fecha >= ?');
+          params.push(ahoraColombiaSQL().slice(0, 10));
+        }
       }
     }
     if (sospechoso != null) {
@@ -307,7 +317,7 @@ module.exports = {
               o.encargado_nombre, o.encargado_telefono,
               o.external_ref AS oferta_external_ref,
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
-              p.tarifa_dia, p.cargo_id,
+              p.tarifa_dia, p.cargo_id, p.plazas, p.plazas_cubiertas,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre,
               carg.tipo_geofence,
               pm.id   AS punto_id,      pm.nombre AS punto_nombre,

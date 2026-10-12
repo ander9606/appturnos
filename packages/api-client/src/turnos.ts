@@ -88,6 +88,9 @@ export interface Asignacion {
   cargo_codigo?: string;
   cargo_nombre?: string;
   tipo_geofence?: TipoGeofence;
+  /** Capacidad del puesto al momento de la consulta — solo en obtenerConDetalles (detalle de una asignación). */
+  plazas?: number;
+  plazas_cubiertas?: number;
   // Constructed by model — obtenerConDetalles, listarPorTrabajador, listarPorUsuario
   geofence_info?: GeofenceInfo;
   // Hour breakdown (computed on-the-fly for completado shifts — all optional)

@@ -162,6 +162,10 @@ export default function TurnoDetailScreen() {
     [asignacion?.estado],
   );
 
+  const cupoLleno = asignacion?.plazas != null
+    && asignacion.plazas_cubiertas != null
+    && asignacion.plazas_cubiertas >= asignacion.plazas;
+
   const elapsedLabel = useMemo(() => {
     if (!asignacion?.hora_ingreso_real) return null;
     const ingreso = new Date(asignacion.hora_ingreso_real).getTime();
@@ -472,16 +476,22 @@ export default function TurnoDetailScreen() {
             />
           )}
 
-          {/* ── Pendiente: informativo ───────────────────────────── */}
+          {/* ── Pendiente: informativo ───────────────────────────────────
+              Si el puesto ya se llenó con otros postulantes, confirmar ya no
+              es posible hasta que se libere un cupo (alguien cancela) o el
+              gestor amplíe las plazas — se avisa para que no quede esperando
+              una confirmación que no va a llegar así como está. ── */}
           {estado === 'pendiente' && (
             <View className="bg-warning-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
               <Ionicons name="hourglass-outline" size={26} color="#D97706" />
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-amber-700">
-                  Esperando confirmación
+                  {cupoLleno ? 'Cupo lleno' : 'Esperando confirmación'}
                 </Text>
                 <Text className="text-xs text-amber-600 mt-0.5">
-                  El responsable de turnos debe confirmar tu postulación.
+                  {cupoLleno
+                    ? 'Ya se completaron las plazas de este puesto. Tu postulación se mantiene — te avisaremos si se libera un cupo o se amplía la oferta.'
+                    : 'El responsable de turnos debe confirmar tu postulación.'}
                 </Text>
               </View>
             </View>
