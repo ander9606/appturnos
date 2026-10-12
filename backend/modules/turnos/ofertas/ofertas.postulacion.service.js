@@ -115,16 +115,14 @@ module.exports = {
     if (!vinculo || vinculo.estado !== 'activo') {
       throw new AppError('No tienes vínculo activo con esta empresa', 403);
     }
-    // Si fue invitado a mano (destinatario directo) no se exige el cargo certificado —
-    // el gestor eligiéndolo ya reemplaza ese filtro (mismo criterio que asignarDirecto).
-    if (!esDestinatarioDirecto) {
-      const tieneCargo = await CargosModel.tieneAsignacion(vinculo.id, puesto.cargo_id);
-      if (!tieneCargo) {
-        throw new AppError(
-          `No tienes el cargo "${puesto.cargo_nombre}" certificado por esta empresa`,
-          403
-        );
-      }
+    // El cargo se exige siempre, también a quien fue invitado a mano: la invitación
+    // solo salta el ranking. Si no, podía postularse (y cobrar) a un puesto ajeno.
+    const tieneCargo = await CargosModel.tieneAsignacion(vinculo.id, puesto.cargo_id);
+    if (!tieneCargo) {
+      throw new AppError(
+        `No tienes el cargo "${puesto.cargo_nombre}" certificado por esta empresa`,
+        403
+      );
     }
 
     // Duplicado de postulación al MISMO puesto.
