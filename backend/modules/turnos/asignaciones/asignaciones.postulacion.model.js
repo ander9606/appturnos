@@ -388,6 +388,24 @@ module.exports = {
         return { ok: false, motivo: 'lleno' };
       }
 
+      // El gestor elige a la persona, pero no al cargo: exigir certificación
+      // también aquí, igual que en la postulación (ver ofertas.postulacion.service.js)
+      // — si no, asignarDirecto era la puerta de atrás para saltarse el cargo.
+      const [[vinculo]] = await conn.query(
+        'SELECT id FROM trabajador_empresa WHERE trabajador_id = ? AND empresa_id = ? LIMIT 1',
+        [trabajadorId, empresaId]
+      );
+      const [[certificado]] = vinculo
+        ? await conn.query(
+            'SELECT id FROM trabajador_cargos WHERE trabajador_empresa_id = ? AND cargo_id = ? LIMIT 1',
+            [vinculo.id, puesto.cargo_id]
+          )
+        : [[]];
+      if (!certificado) {
+        await conn.rollback();
+        return { ok: false, motivo: 'cargo' };
+      }
+
       const finNuevo = oferta.hora_fin_estimada ?? '23:59:59';
       const [[traslape]] = await conn.query(
         `SELECT a.id FROM asignaciones_turno a
