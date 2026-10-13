@@ -9,6 +9,7 @@ const TrabajadoresService = require('../../trabajadores/trabajadores.service');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
+const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const {
@@ -480,6 +481,66 @@ module.exports = {
       mensaje: `El turno "${oferta.titulo}" del ${oferta.fecha} fue cancelado.`,
       data: { oferta_id: id },
     });
+  },
+
+  /**
+   * Cancelación por fuerza mayor: quien ya marcó ingreso ('en_progreso')
+   * recibe una compensación (pago_total) en vez de perder el turno sin
+   * nada — por default la tarifa_dia completa de su puesto, o el monto que
+   * el gestor digite en `compensaciones` para esa asignación puntual. El
+   * resto de asignaciones no terminales se cancela como siempre, sin pago.
+   * @param compensaciones — override opcional `[{ asignacion_id, monto }]`.
+   */
+  async marcarFallida(empresaId, usuarioId, id, { motivo, compensaciones } = {}) {
+    const oferta = await OfertasModel.obtenerPorId(empresaId, id);
+    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    if (oferta.estado === 'cancelada') return;
+    if (oferta.estado === 'completada') {
+      throw new AppError('No se puede marcar como fallida una oferta completada', 409);
+    }
+
+    const activas = await AsignacionesModel.listarActivasConTarifa(empresaId, id);
+    const enProgreso = activas.filter((a) => a.estado === 'en_progreso');
+    const motivoFinal = (motivo || '').trim() || 'Fuerza mayor';
+
+    const overrides = new Map((compensaciones || []).map((c) => [Number(c.asignacion_id), Number(c.monto)]));
+    const montos = enProgreso.map((a) => ({
+      asignacionId: a.id,
+      monto: overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia),
+    }));
+
+    await OfertasModel.marcarFallida(empresaId, id, montos, motivoFinal, usuarioId);
+
+    const montoPorAsignacion = new Map(montos.map((m) => [m.asignacionId, m.monto]));
+    await Promise.all(enProgreso.map((a) => {
+      if (!a.usuario_id) return null;
+      const monto = montoPorAsignacion.get(a.id);
+      return NotificacionesService.notificar({
+        empresaId,
+        usuarioId: a.usuario_id,
+        tipo: 'asignacion.fallido',
+        titulo: 'Turno fallido',
+        mensaje: `Este turno fue fallido por motivos de fuerza mayor, por lo tanto no se podrá realizar. Recibirás una compensación por tu tiempo de $${monto.toLocaleString('es-CO')}.`,
+        data: { oferta_id: id, asignacion_id: a.id },
+      });
+    }));
+
+    const otros = activas.filter((a) => a.estado !== 'en_progreso');
+    const destinatariosOtros = otros.map((a) => a.usuario_id).filter(Boolean);
+    if (destinatariosOtros.length) {
+      await NotificacionesService.notificarVarios(destinatariosOtros, {
+        empresaId,
+        tipo: 'oferta.cancelada',
+        titulo: 'Turno cancelado',
+        mensaje: `El turno "${oferta.titulo}" del ${oferta.fecha} fue cancelado.`,
+        data: { oferta_id: id },
+      });
+    }
+
+    // Igual que al cerrar un turno normal: la compensación es un costo de
+    // mano de obra (logiq360) y debe caer dentro de un período de turnos.
+    await CostoLaborService.verificarYEmitir(empresaId, id).catch(() => {});
+    await PeriodosTurnosService.autoCrear(empresaId).catch(() => {});
   },
 
   /**

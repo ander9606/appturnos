@@ -2,6 +2,9 @@ export type EstadoOferta = 'borrador' | 'abierta' | 'publicada' | 'en_proceso' |
 // 'por_reconfirmar': estaba 'confirmado' pero el gestor cambió fecha/hora/lugar
 // de la oferta — deja de contar como cubierta hasta que el trabajador
 // reconfirme (mobile-only, web es admin/gestor sin login de trabajador).
+// 'fallido': cancelación de la oferta por fuerza mayor mientras ya estaba
+// 'en_progreso' — a diferencia de 'cancelado', conlleva una compensación
+// (ver marcarOfertaFallida / OfertaDetailPage).
 export type EstadoAsignacion =
   | 'pendiente'
   | 'confirmado'
@@ -9,7 +12,8 @@ export type EstadoAsignacion =
   | 'completado'
   | 'no_presentado'
   | 'cancelado'
-  | 'por_reconfirmar';
+  | 'por_reconfirmar'
+  | 'fallido';
 
 export interface Puesto {
   id: number;
@@ -181,6 +185,9 @@ export interface Asignacion {
   /** Bono extra (ej. propina) asignado al turno — ya sumado dentro de `pago_total`. */
   bono_monto?: number;
   bono_motivo?: string | null;
+  /** Solo presente cuando estado === 'fallido' — monto de la compensación y por qué. */
+  pago_total?: number | null;
+  compensacion_motivo?: string | null;
 }
 
 /** Descuentos de un turno con el tope legal (art. 113 CST: 1/5 de la tarifa del día). */

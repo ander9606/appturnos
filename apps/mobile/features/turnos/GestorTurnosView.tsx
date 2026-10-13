@@ -43,6 +43,7 @@ const ESTADO_CONFIG: Record<EstadoAsignacion, { label: string; variant: BadgeVar
   no_presentado:  { label: 'No se presentó', variant: 'danger'  },
   cancelado:      { label: 'Cancelado',      variant: 'danger'  },
   por_reconfirmar: { label: 'Por reconfirmar', variant: 'warning' },
+  fallido:        { label: 'Turno fallido',  variant: 'warning' },
 };
 
 // ── PostulanteRow ─────────────────────────────────────────────────────────
@@ -71,7 +72,9 @@ function PostulanteRow({
   const isPending     = asignacion.estado === 'pendiente';
   const isConfirmed   = asignacion.estado === 'confirmado';
   const isEnProgreso  = asignacion.estado === 'en_progreso';
-  const cfg           = ESTADO_CONFIG[asignacion.estado];
+  // Fallback a 'pendiente' — un bundle viejo durante un rollout OTA gradual
+  // puede ver un estado que todavía no conoce (ej. 'fallido' recién agregado).
+  const cfg           = ESTADO_CONFIG[asignacion.estado] ?? ESTADO_CONFIG.pendiente;
 
   const isConfirming =
     confirmarMutation.isPending &&

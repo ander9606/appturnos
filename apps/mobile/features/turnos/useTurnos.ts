@@ -400,6 +400,26 @@ export function useCancelarOferta() {
   });
 }
 
+/**
+ * Cancelar la oferta por fuerza mayor — quien ya marcó ingreso recibe una
+ * compensación en vez de perder el turno sin nada; el resto queda cancelado
+ * sin pago, igual que useCancelarOferta.
+ */
+export function useMarcarOfertaFallida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, motivo, compensaciones }: {
+      ofertaId: number;
+      motivo?: string;
+      compensaciones?: { asignacion_id: number; monto: number }[];
+    }) => turnosApi.marcarOfertaFallida(ofertaId, { motivo, compensaciones }),
+    onSuccess: (_data, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+    },
+  });
+}
+
 /** Borrar definitivamente una oferta ya cancelada que nunca tuvo postulantes (creada por error). */
 export function useEliminarOfertaDefinitivo() {
   const qc = useQueryClient();

@@ -322,7 +322,7 @@ export default function TurnoDetailScreen() {
   }
 
   const { estado, oferta_titulo, oferta_descripcion, oferta_notas_adicionales, oferta_externo_notas,
-          hora_ingreso_real, hora_egreso_real,
+          hora_ingreso_real, hora_egreso_real, pago_total, compensacion_motivo,
           bono_monto, calificacion, calificacion_comentario,
           trabajador_telefono, trabajador_ranking, trabajador_total_calificaciones } = asignacion;
 
@@ -398,6 +398,22 @@ export default function TurnoDetailScreen() {
                 guardando={calificarMutation.isPending}
               />
             </>
+          )}
+
+          {/* ── Fallido: resumen de la compensación ──────────────────── */}
+          {estado === 'fallido' && (
+            <View className="bg-card rounded-2xl px-5 py-4 gap-1.5"
+              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              <Text className="text-sm font-semibold text-foreground">
+                Este turno fue fallido por {(compensacion_motivo || 'fuerza mayor').toLowerCase()}, no se pudo realizar.
+              </Text>
+              {pago_total != null && (
+                <Text className="text-sm text-success">
+                  Recibirás una compensación por tu tiempo de{' '}
+                  {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(pago_total)}.
+                </Text>
+              )}
+            </View>
           )}
 
           {/* ── CTA: Reconfirmar o declinar (estado: por_reconfirmar) — el gestor

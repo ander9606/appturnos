@@ -49,6 +49,7 @@ const ESTADO_CFG: Record<string, {
   rechazado:      { label: 'Rechazado',    color: '#EF4444', bg: '#FEE2E2', icon: 'ban-outline' },
   no_presentado:  { label: 'No presentado',color: '#94A3B8', bg: '#F1F5F9', icon: 'alert-circle-outline' },
   por_reconfirmar: { label: 'Reconfirma', color: '#D97706', bg: '#FEF3C7', icon: 'alert-circle-outline' },
+  fallido:        { label: 'Turno fallido', color: '#D97706', bg: '#FEF3C7', icon: 'warning-outline' },
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -96,7 +97,7 @@ function PostulacionCard({
               {cfg.label}
             </Text>
           </View>
-          {asignacion.estado === 'completado' && asignacion.pago_total != null && (
+          {(asignacion.estado === 'completado' || asignacion.estado === 'fallido') && asignacion.pago_total != null && (
             <Text className="text-xs font-bold text-success">
               {fmtPago(asignacion.pago_total)}
             </Text>
@@ -114,6 +115,7 @@ const GROUPS: { key: EstadoAsignacion[]; label: string }[] = [
   { key: ['pendiente'],                            label: 'Esperando confirmación' },
   { key: ['confirmado', 'en_progreso'],            label: 'Confirmadas' },
   { key: ['completado'],                           label: 'Completadas' },
+  { key: ['fallido'],                               label: 'Turnos fallidos (con compensación)' },
   { key: ['cancelado', 'no_presentado'],               label: 'Canceladas / No presentadas' },
 ];
 

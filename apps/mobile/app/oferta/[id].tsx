@@ -18,7 +18,7 @@ import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
 import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,
-  useCancelarOferta, useCompletarOferta,
+  useCancelarOferta, useMarcarOfertaFallida, useCompletarOferta,
   useActualizarOferta, useCrearPuesto, useCargos,
 } from '@/features/turnos/useTurnos';
 import { parseTarifa } from '@/features/turnos/crear/utils';
@@ -28,7 +28,7 @@ import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
 import { formatTimeObj, toISODate } from '@/lib/formatters';
-import type { AsignacionResumen, Cargo, EstadoAsignacion, OfertaPuesto } from '@api-client';
+import type { AsignacionResumen, Cargo, EstadoAsignacion, OfertaDetalle, OfertaPuesto } from '@api-client';
 import { ApiError } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -54,6 +54,7 @@ const ESTADO_CFG: Record<EstadoAsignacion, { label: string; variant: BadgeVarian
   no_presentado: { label: 'No se presentó', variant: 'danger'  },
   cancelado:     { label: 'Cancelado',      variant: 'danger'  },
   por_reconfirmar: { label: 'Por reconfirmar', variant: 'warning' },
+  fallido:       { label: 'Turno fallido',  variant: 'warning' },
 };
 
 // ── PostulanteRow (gestores) ──────────────────────────────────────────────
@@ -73,7 +74,9 @@ function PostulanteRow({
   noPresentadoM: ReturnType<typeof useNoPresentado>;
 }) {
   const router    = useRouter();
-  const cfg       = ESTADO_CFG[asignacion.estado];
+  // Fallback a 'pendiente' — un bundle viejo durante un rollout OTA gradual
+  // puede ver un estado que todavía no conoce (ej. 'fallido' recién agregado).
+  const cfg       = ESTADO_CFG[asignacion.estado] ?? ESTADO_CFG.pendiente;
   const isPending = asignacion.estado === 'pendiente';
   const isConf    = asignacion.estado === 'confirmado';
   const isEnProg  = asignacion.estado === 'en_progreso';
@@ -223,6 +226,7 @@ export default function OfertaDetailScreen() {
   const cancelarM      = useCancelar();
   const noPresentadoM  = useNoPresentado();
   const cancelarOfertaM = useCancelarOferta();
+  const marcarFallidaM = useMarcarOfertaFallida();
   const completarOfertaM = useCompletarOferta();
   const actualizarOfertaM = useActualizarOferta();
   // El backend solo permite editar mientras la oferta sigue 'abierta' o 'borrador'.
@@ -230,6 +234,7 @@ export default function OfertaDetailScreen() {
 
   const [showDuplicarModal, setShowDuplicarModal] = useState(false);
   const [showEditarOfertaModal, setShowEditarOfertaModal] = useState(false);
+  const [showFallidoModal, setShowFallidoModal] = useState(false);
 
   const miAsignacion = isWorker
     ? (misTurnos ?? []).find((a) => a.oferta_id === id)
@@ -372,6 +377,10 @@ export default function OfertaDetailScreen() {
     && oferta.estado !== 'completada' && oferta.estado !== 'cancelada' && oferta.estado !== 'borrador';
   const mostrarCancelarOferta = puedeCancelarOferta
     && oferta.estado !== 'cancelada' && oferta.estado !== 'completada';
+  const hayEnProgreso = oferta.asignaciones.some((a) => a.estado === 'en_progreso');
+  // Turno fallido solo tiene sentido si hay alguien ya marcó ingreso para
+  // compensar — sin eso es exactamente "Cancelar oferta".
+  const mostrarTurnoFallido = mostrarCancelarOferta && hayEnProgreso;
 
   return (
     <>
@@ -683,7 +692,7 @@ export default function OfertaDetailScreen() {
 
         {/* ── Barra de acciones fija (gestor) — siempre en la zona inferior, separada
             del contenido scrolleable para que no se pierda entre el resto de cards. */}
-        {(mostrarCompletar || mostrarCancelarOferta) && (
+        {(mostrarCompletar || mostrarCancelarOferta || mostrarTurnoFallido) && (
           <View className="px-5 pt-3 pb-3 gap-2 border-t border-border bg-background">
             {mostrarCompletar && (
               <Button
@@ -743,6 +752,15 @@ export default function OfertaDetailScreen() {
                 }}
               />
             )}
+
+            {mostrarTurnoFallido && (
+              <Button
+                label="Turno fallido (fuerza mayor)"
+                variant="secondary"
+                fullWidth
+                onPress={() => setShowFallidoModal(true)}
+              />
+            )}
           </View>
         )}
       </SafeAreaView>
@@ -764,6 +782,18 @@ export default function OfertaDetailScreen() {
         visible={showEditarOfertaModal}
         oferta={oferta}
         onClose={() => setShowEditarOfertaModal(false)}
+      />
+
+      <TurnoFallidoModal
+        visible={showFallidoModal}
+        oferta={oferta}
+        marcarFallidaM={marcarFallidaM}
+        onClose={() => setShowFallidoModal(false)}
+        onDone={() => {
+          setShowFallidoModal(false);
+          showAnuncioTurno(`"${oferta.titulo}" marcado como fallido.`, 'cancelado');
+          router.back();
+        }}
       />
     </>
   );
@@ -1235,6 +1265,142 @@ function EditarOfertaModal({
             loading={actualizarM.isPending}
             onPress={handleGuardar}
           />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Turno fallido (gestores) — fuerza mayor: quien ya marcó ingreso recibe
+// una compensación en vez de perder el turno sin nada. ─────────────────────
+
+function TurnoFallidoModal({
+  visible,
+  oferta,
+  marcarFallidaM,
+  onClose,
+  onDone,
+}: {
+  visible: boolean;
+  oferta: OfertaDetalle;
+  marcarFallidaM: ReturnType<typeof useMarcarOfertaFallida>;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const enProgreso = oferta.asignaciones.filter((a) => a.estado === 'en_progreso');
+  const otros = oferta.asignaciones.filter((a) =>
+    a.estado !== 'en_progreso' && a.estado !== 'completado' && a.estado !== 'cancelado'
+  );
+
+  const [motivo, setMotivo] = useState('Fuerza mayor');
+  const [montos, setMontos] = useState<Record<number, string>>({});
+
+  React.useEffect(() => {
+    if (!visible) return;
+    setMotivo('Fuerza mayor');
+    setMontos(Object.fromEntries(enProgreso.map((a) => {
+      const tarifa = oferta.puestos.find((p) => p.id === a.puesto_id)?.tarifa_dia ?? 0;
+      return [a.id, String(tarifa)];
+    })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, oferta.id]);
+
+  if (!visible) return null;
+
+  async function handleConfirmar() {
+    if (!motivo.trim()) {
+      Alert.alert('Falta el motivo', 'Escribe por qué este turno es fuerza mayor.');
+      return;
+    }
+    const compensaciones = enProgreso.map((a) => ({
+      asignacion_id: a.id,
+      monto: parseTarifa(montos[a.id] ?? '0'),
+    }));
+    try {
+      await marcarFallidaM.mutateAsync({ ofertaId: oferta.id, motivo: motivo.trim(), compensaciones });
+      onDone();
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo marcar el turno como fallido.');
+    }
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View className="flex-1 justify-end bg-black/40">
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          className="bg-background rounded-t-3xl"
+          contentContainerClassName="px-6 pt-5 pb-10 gap-5"
+          style={{ maxHeight: '85%' }}
+        >
+          <View className="flex-row items-center justify-between">
+            <Text className="text-lg font-bold text-foreground">Turno fallido</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color="#64748B" />
+            </Pressable>
+          </View>
+
+          <Text className="text-sm text-muted-foreground">
+            El turno se cancelará por fuerza mayor. Quienes ya marcaron ingreso recibirán la compensación
+            que definas abajo; el resto queda cancelado sin pago, como siempre.
+          </Text>
+
+          <View className="gap-1.5">
+            <Text className="text-sm font-semibold text-foreground">Motivo</Text>
+            <TextInput
+              value={motivo}
+              onChangeText={setMotivo}
+              placeholder="Ej. fuerza mayor"
+              placeholderTextColor="#94A3B8"
+              maxLength={255}
+              className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
+            />
+          </View>
+
+          <View className="gap-3">
+            <Text className="text-sm font-semibold text-foreground">
+              Compensación ({enProgreso.length} ya en turno)
+            </Text>
+            {enProgreso.map((a) => (
+              <View key={a.id} className="gap-1.5">
+                <Text className="text-xs text-muted-foreground">
+                  {a.trabajador_nombre} {a.trabajador_apellido} · {a.cargo_nombre}
+                </Text>
+                <View className="flex-row items-center bg-card border border-border rounded-xl px-3 gap-1">
+                  <Text className="text-sm font-bold text-muted-foreground">$</Text>
+                  <TextInput
+                    className="flex-1 py-3 text-sm font-semibold text-foreground"
+                    value={montos[a.id] ?? ''}
+                    onChangeText={(t) => setMontos((m) => ({ ...m, [a.id]: t.replace(/[^\d.,]/g, '') }))}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {otros.length > 0 && (
+            <Text className="text-xs text-muted-foreground">
+              {otros.length} trabajador{otros.length > 1 ? 'es' : ''} más que aún no había
+              {otros.length > 1 ? 'n' : ''} empezado quedará{otros.length > 1 ? 'n' : ''} cancelado
+              {otros.length > 1 ? 's' : ''} sin compensación.
+            </Text>
+          )}
+
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <Button label="Volver" variant="secondary" fullWidth disabled={marcarFallidaM.isPending} onPress={onClose} />
+            </View>
+            <View className="flex-1">
+              <Button
+                label={marcarFallidaM.isPending ? 'Confirmando…' : 'Confirmar turno fallido'}
+                variant="danger"
+                fullWidth
+                loading={marcarFallidaM.isPending}
+                onPress={handleConfirmar}
+              />
+            </View>
+          </View>
         </ScrollView>
       </View>
     </Modal>

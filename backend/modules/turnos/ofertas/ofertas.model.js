@@ -705,6 +705,59 @@ const OfertasModel = {
     }
   },
 
+  /**
+   * Fuerza mayor: asignaciones 'en_progreso' quedan 'fallido' con la
+   * compensación indicada en `compensaciones` (pago_total), igual criterio
+   * de horas que registrarEgreso (capeadas en hora_fin_estimada). El resto
+   * de asignaciones no terminales quedan 'cancelado' sin compensación, y la
+   * oferta pasa a 'cancelada' — mismo estado final que cancelar().
+   */
+  async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const ahora = ahoraColombiaSQL();
+
+      for (const { asignacionId, monto } of compensaciones) {
+        await conn.query(
+          `UPDATE asignaciones_turno a
+           JOIN oferta_puestos p ON p.id = a.puesto_id
+           JOIN ofertas_turno o  ON o.id = a.oferta_id
+           SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?),
+               a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
+                   LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+               ) / 60,
+               a.estado = 'fallido',
+               a.pago_total = ?,
+               a.compensacion_motivo = ?,
+               a.fallido_por = ?,
+               a.fallido_at = ?
+           WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'`,
+          [ahora, ahora, monto, motivo, usuarioId, ahora, asignacionId, empresaId, id]
+        );
+      }
+
+      await conn.query(
+        `UPDATE asignaciones_turno SET estado = 'cancelado'
+         WHERE oferta_id = ? AND empresa_id = ?
+           AND estado NOT IN ('completado', 'cancelado', 'fallido')`,
+        [id, empresaId]
+      );
+
+      await conn.query(
+        "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+        [id, empresaId]
+      );
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
   async eliminarDefinitivo(empresaId, id) {
     await pool.query(
       'DELETE FROM ofertas_turno WHERE id = ? AND empresa_id = ?',
