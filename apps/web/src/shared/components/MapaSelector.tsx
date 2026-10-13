@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from 'react-leaflet';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Search } from 'lucide-react';
 import { Modal } from './Modal';
 
 // Vite no resuelve los íconos por default de Leaflet (rutas relativas al CSS)
@@ -29,12 +29,28 @@ interface Props {
   onClose: () => void;
 }
 
+interface Sugerencia {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
 function ClickHandler({ onMove }: { onMove: (lat: number, lng: number) => void }) {
   useMapEvents({
     click(e) {
       onMove(e.latlng.lat, e.latlng.lng);
     },
   });
+  return null;
+}
+
+/** Re-centra el mapa solo cuando se elige una sugerencia de búsqueda (Leaflet no sigue el prop `center` tras el montaje) — click/drag ya dejan el pin visible donde el usuario lo puso, no deben recentrar. */
+function RecenterMap({ position }: { position: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (position) map.setView(position, map.getZoom());
+  }, [position, map]);
   return null;
 }
 
@@ -47,6 +63,48 @@ function ClickHandler({ onMove }: { onMove: (lat: number, lng: number) => void }
 export function MapaSelector({ initialLat, initialLng, radiusM, onConfirm, onClose }: Props) {
   const [pin, setPin] = useState<[number, number]>(FALLBACK_CENTER);
   const [loading, setLoading] = useState(initialLat == null || initialLng == null);
+  const [query, setQuery] = useState('');
+  const [sugerencias, setSugerencias] = useState<Sugerencia[]>([]);
+  const [buscando, setBuscando] = useState(false);
+  const [centerTarget, setCenterTarget] = useState<[number, number] | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Descarta respuestas de búsquedas viejas que lleguen después de una más nueva (red lenta + tipeo rápido).
+  const searchTokenRef = useRef(0);
+
+  const buscar = useCallback(async (q: string) => {
+    if (q.trim().length < 3) {
+      setSugerencias([]);
+      return;
+    }
+    const token = ++searchTokenRef.current;
+    setBuscando(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&countrycodes=co`,
+        { headers: { 'Accept-Language': 'es' } },
+      );
+      const data = await res.json();
+      if (token === searchTokenRef.current) setSugerencias(data);
+    } catch {
+      if (token === searchTokenRef.current) setSugerencias([]);
+    } finally {
+      if (token === searchTokenRef.current) setBuscando(false);
+    }
+  }, []);
+
+  const handleChangeText = (text: string) => {
+    setQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => buscar(text), 400);
+  };
+
+  const handleSelect = (s: Sugerencia) => {
+    const coords: [number, number] = [parseFloat(s.lat), parseFloat(s.lon)];
+    setPin(coords);
+    setCenterTarget(coords);
+    setQuery(s.display_name);
+    setSugerencias([]);
+  };
 
   useEffect(() => {
     if (initialLat != null && initialLng != null) {
@@ -78,6 +136,34 @@ export function MapaSelector({ initialLat, initialLng, radiusM, onConfirm, onClo
         </button>
       </div>
 
+      <div className="px-5 py-2.5 border-b border-border flex-shrink-0 relative">
+        <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-primary/40">
+          <Search size={14} className="text-muted-foreground flex-shrink-0" />
+          <input
+            type="text"
+            value={query}
+            onChange={e => handleChangeText(e.target.value)}
+            placeholder="Buscar dirección o lugar…"
+            className="flex-1 text-sm focus:outline-none"
+          />
+          {buscando && <Loader2 size={14} className="animate-spin text-muted-foreground flex-shrink-0" />}
+        </div>
+        {sugerencias.length > 0 && (
+          <div className="absolute z-20 left-5 right-5 mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+            {sugerencias.map(s => (
+              <button
+                type="button"
+                key={s.place_id}
+                onMouseDown={() => handleSelect(s)}
+                className="w-full text-left px-3 py-2 text-xs text-foreground hover:bg-muted border-b border-border last:border-0"
+              >
+                {s.display_name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div style={{ height: 360 }} className="flex-shrink-0 bg-muted">
         {loading ? (
           <div className="h-full flex items-center justify-center">
@@ -103,6 +189,7 @@ export function MapaSelector({ initialLat, initialLng, radiusM, onConfirm, onClo
               <Circle center={pin} radius={radiusM} pathOptions={{ color: '#3B82F6', fillColor: '#3B82F6', fillOpacity: 0.12 }} />
             )}
             <ClickHandler onMove={(lat, lng) => setPin([lat, lng])} />
+            <RecenterMap position={centerTarget} />
           </MapContainer>
         )}
       </div>
