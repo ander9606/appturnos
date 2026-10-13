@@ -10,6 +10,7 @@ import {
   useSuscripcion, usePagarSuscripcion,
 } from '../hooks/useConfiguracion';
 import { useAuthStore } from '@/modules/auth/authStore';
+import { LugarInput } from '@/modules/turnos/components/LugarInput';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
@@ -330,16 +331,24 @@ function PuntosTab() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<PuntoMarcaje | null>(null);
   const [form, setForm] = useState<PuntoForm>(emptyPunto);
+  const [direccionBusqueda, setDireccionBusqueda] = useState('');
 
-  const openCreate = () => { setEditing(null); setForm(emptyPunto); setShowForm(true); };
+  const openCreate = () => { setEditing(null); setForm(emptyPunto); setDireccionBusqueda(''); setShowForm(true); };
   const openEdit = (p: PuntoMarcaje) => {
     setEditing(p);
     setForm({ nombre: p.nombre, latitud: String(p.latitud), longitud: String(p.longitud), radio_metros: String(p.radio_metros), alcance: p.alcance });
+    setDireccionBusqueda('');
     setShowForm(true);
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { nombre: form.nombre, latitud: Number(form.latitud), longitud: Number(form.longitud), radio_metros: Number(form.radio_metros), alcance: form.alcance };
+    const lat = Number(form.latitud);
+    const lng = Number(form.longitud);
+    if (!form.latitud || !form.longitud || Number.isNaN(lat) || Number.isNaN(lng)) {
+      toast.error('Buscá la dirección o ajustá el pin en el mapa para fijar la ubicación.');
+      return;
+    }
+    const payload = { nombre: form.nombre, latitud: lat, longitud: lng, radio_metros: Number(form.radio_metros), alcance: form.alcance };
     if (editing) await update.mutateAsync({ id: editing.id, ...payload });
     else await create.mutateAsync(payload);
     setShowForm(false);
@@ -414,15 +423,21 @@ function PuntosTab() {
               <label className="block text-sm font-medium text-foreground mb-1">Nombre *</label>
               <input required type="text" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Latitud *</label>
-                <input required type="number" step="any" value={form.latitud} onChange={e => setForm(f => ({ ...f, latitud: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Longitud *</label>
-                <input required type="number" step="any" value={form.longitud} onChange={e => setForm(f => ({ ...f, longitud: e.target.value }))} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Ubicación *</label>
+              <LugarInput
+                value={direccionBusqueda}
+                latitud={form.latitud ? Number(form.latitud) : null}
+                longitud={form.longitud ? Number(form.longitud) : null}
+                onChange={(lugar, lat, lng) => {
+                  setDireccionBusqueda(lugar);
+                  setForm(f => ({
+                    ...f,
+                    latitud: lat != null ? String(lat) : f.latitud,
+                    longitud: lng != null ? String(lng) : f.longitud,
+                  }));
+                }}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Radio (metros) *</label>
