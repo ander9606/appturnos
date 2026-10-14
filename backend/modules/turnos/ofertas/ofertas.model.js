@@ -707,19 +707,26 @@ const OfertasModel = {
 
   /**
    * Fuerza mayor: asignaciones 'en_progreso' quedan 'fallido' con la
-   * compensación indicada en `compensaciones` (pago_total), igual criterio
-   * de horas que registrarEgreso (capeadas en hora_fin_estimada). El resto
-   * de asignaciones no terminales quedan 'cancelado' sin compensación, y la
-   * oferta pasa a 'cancelada' — mismo estado final que cancelar().
+   * compensación indicada en `compensaciones` sumada al bono ya otorgado
+   * (pago_total = monto + bono_monto, igual criterio que registrarEgreso) y
+   * las mismas horas capeadas en hora_fin_estimada. El resto de asignaciones
+   * no terminales quedan 'cancelado' sin compensación, y la oferta pasa a
+   * 'cancelada' — mismo estado final que cancelar().
+   *
+   * Devuelve los `asignacionId` que de verdad quedaron 'fallido' — si el
+   * trabajador marcó egreso justo en la ventana entre leer la lista y este
+   * UPDATE, su fila ya no está 'en_progreso' y el WHERE no la toca; el
+   * caller no debe notificarle una compensación que nunca se aplicó.
    */
   async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId) {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
       const ahora = ahoraColombiaSQL();
+      const actualizados = [];
 
       for (const { asignacionId, monto } of compensaciones) {
-        await conn.query(
+        const [res] = await conn.query(
           `UPDATE asignaciones_turno a
            JOIN oferta_puestos p ON p.id = a.puesto_id
            JOIN ofertas_turno o  ON o.id = a.oferta_id
@@ -728,13 +735,14 @@ const OfertasModel = {
                    LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
                ) / 60,
                a.estado = 'fallido',
-               a.pago_total = ?,
+               a.pago_total = ? + a.bono_monto,
                a.compensacion_motivo = ?,
                a.fallido_por = ?,
                a.fallido_at = ?
            WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'`,
           [ahora, ahora, monto, motivo, usuarioId, ahora, asignacionId, empresaId, id]
         );
+        if (res.affectedRows > 0) actualizados.push(asignacionId);
       }
 
       await conn.query(
@@ -750,6 +758,7 @@ const OfertasModel = {
       );
 
       await conn.commit();
+      return actualizados;
     } catch (err) {
       await conn.rollback();
       throw err;

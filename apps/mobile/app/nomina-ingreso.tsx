@@ -46,6 +46,7 @@ export default function NominaIngresoScreen() {
   const {
     estadoHoy,
     registroHoy,
+    todayISO,
     periodoActivo,
     isMutating,
     handleEntrada,
@@ -178,7 +179,7 @@ export default function NominaIngresoScreen() {
                   <Text className="text-xs text-muted-foreground mt-1">transcurrido</Text>
                 </View>
                 <Text className="text-sm text-muted-foreground">
-                  Entrada: {fmtHora(registroHoy?.hora_entrada)}
+                  Entrada: {fmtHora(registroHoy?.hora_entrada)}{registroHoy && registroHoy.fecha !== todayISO ? ' (ayer)' : ''}
                 </Text>
               </>
             ) : estadoHoy === 'jornada_completa' ? (
