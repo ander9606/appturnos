@@ -54,7 +54,9 @@ const TIPOS_DIA: { v: TipoDia; label: string; color: string }[] = [
 // 'ausencia' se maneja aparte (mensaje y color distinto) — estos son los
 // demás tipo_dia que tampoco requieren horario de entrada/salida. 'vacacion'
 // se incluye para poder marcar un rango de varios días de una sola vez.
-const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'licencia', 'vacacion'];
+// 'incapacidad' sin hora_entrada además descuenta el auxilio de transporte
+// de esa quincena (ver liquidacion.model.js, dias_sin_subsidio).
+const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'incapacidad', 'licencia', 'vacacion'];
 
 // 'licencia' y 'vacacion' se marcan por rango — a diferencia de los demás
 // tipos, que son un día puntual.
