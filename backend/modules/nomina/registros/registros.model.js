@@ -214,24 +214,27 @@ const RegistrosModel = {
   },
 
   /**
-   * Cuenta domingos YA trabajados ANTES de `fecha`, dentro de su mismo mes
-   * calendario, para clasificar ocasional/habitual (Art. 180/181 CST). Por
-   * DAYOFWEEK, no por es_festivo — un domingo "ocasional" no lleva
-   * es_festivo/horas_festivo (ver calcularHoras `recargoFestivo`), pero sigue
-   * siendo domingo trabajado para efectos del conteo.
+   * Cuenta domingos Y festivos de calendario YA trabajados ANTES de `fecha`,
+   * dentro de su mismo mes calendario — domingo y festivo entre semana cuentan
+   * para el MISMO umbral (regla 'ley', decisión de producto: el 3er día
+   * domingo/festivo trabajado en el mes ya es habitual, sea cual sea el tipo).
+   * Por `es_festivo` (no DAYOFWEEK): esa columna ya marca domingo U holiday de
+   * calendario por fila (calcularHoras la fija así sin importar si recibió
+   * recargo o no — ver `recargoFestivo`), y evita reimplementar el cálculo de
+   * festivos (Ley Emiliani, Semana Santa) en SQL.
    *
    * `fecha < ?` (estrictamente anterior), no `fecha != ?`: con `!=` también
-   * contaba los domingos POSTERIORES del mes que ya tuvieran salida registrada
-   * (p. ej. al reprocesar un mes completo), inflando numeroDomingo y marcando
-   * como habitual el 1er o 2º domingo solo porque el 3º/4º ya estaban cerrados.
+   * contaba los días POSTERIORES del mes que ya tuvieran salida registrada
+   * (p. ej. al reprocesar un mes completo), inflando el conteo y marcando
+   * como habitual el 1er o 2º día solo porque el 3º/4º ya estaban cerrados.
    */
-  async contarDomingosTrabajadosEnMes(empresaId, trabajadorId, fecha) {
+  async contarFestivosTrabajadosEnMes(empresaId, trabajadorId, fecha) {
     const [[row]] = await pool.query(
       `SELECT COUNT(*) AS total FROM registros_diarios
        WHERE empresa_id = ? AND trabajador_id = ?
          AND fecha >= DATE_FORMAT(?, '%Y-%m-01')
          AND fecha <  ?
-         AND DAYOFWEEK(fecha) = 1
+         AND es_festivo = 1
          AND hora_salida IS NOT NULL
          AND (horas_ordinarias + horas_extra_diurnas + horas_extra_nocturnas + horas_nocturnas + horas_festivo) > 0`,
       [empresaId, trabajadorId, fecha, fecha]

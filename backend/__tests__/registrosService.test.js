@@ -168,8 +168,12 @@ describe('RegistrosService.crear', () => {
     ).rejects.toMatchObject({ statusCode: 422 });
   });
 
-  // Clasificación ocasional/habitual (Art. 180/181 CST) — 2026-06-07 es domingo.
-  describe('domingo trabajado — clasificación ocasional/habitual', () => {
+  // Clasificación ocasional/habitual (Art. 180/181 CST, extendida por decisión de
+  // producto a festivos entre semana — domingo y festivo cuentan para el MISMO
+  // umbral mensual). 2026-06-07 es domingo; 2026-10-12 es festivo (Ley Emiliani,
+  // cae lunes ese año) — ninguna de las dos fechas depende de un mock de calendario,
+  // son las funciones reales de laboralUtils.
+  describe('domingo/festivo trabajado — clasificación ocasional/habitual', () => {
     beforeEach(() => {
       PeriodosModel.obtenerPorId.mockResolvedValue({
         id: 1, estado: 'abierto', fecha_inicio: '2026-06-01', fecha_fin: '2026-06-30',
@@ -180,14 +184,14 @@ describe('RegistrosService.crear', () => {
     });
 
     test('1º domingo del mes (ocasional) → horas van a ordinarias, sin recargo', async () => {
-      RegistrosModel.contarDomingosTrabajadosEnMes.mockResolvedValue(0); // ningún domingo previo este mes
+      RegistrosModel.contarFestivosTrabajadosEnMes.mockResolvedValue(0); // ningún domingo/festivo previo este mes
 
       await RegistrosService.crear(1, GESTOR, {
         trabajador_id: 5, periodo_id: 1, fecha: '2026-06-07',
         hora_entrada: '08:00', hora_salida: '16:00',
       });
 
-      expect(RegistrosModel.contarDomingosTrabajadosEnMes).toHaveBeenCalledWith(1, 5, '2026-06-07');
+      expect(RegistrosModel.contarFestivosTrabajadosEnMes).toHaveBeenCalledWith(1, 5, '2026-06-07');
       expect(RegistrosModel.crear).toHaveBeenCalledWith(
         1,
         expect.objectContaining({ horas_ordinarias: 7, horas_festivo: 0, es_festivo: 1 })
@@ -195,7 +199,7 @@ describe('RegistrosService.crear', () => {
     });
 
     test('3er domingo del mes (habitual) → horas van a horas_festivo, con recargo', async () => {
-      RegistrosModel.contarDomingosTrabajadosEnMes.mockResolvedValue(2); // ya trabajó 2 domingos antes este mes
+      RegistrosModel.contarFestivosTrabajadosEnMes.mockResolvedValue(2); // ya trabajó 2 domingos/festivos antes este mes
 
       await RegistrosService.crear(1, GESTOR, {
         trabajador_id: 5, periodo_id: 1, fecha: '2026-06-07',
@@ -208,13 +212,47 @@ describe('RegistrosService.crear', () => {
       );
     });
 
-    test('martes normal → nunca cuenta domingos ni toca la clasificación', async () => {
+    test('1er festivo entre semana del mes (sin domingos previos) → ocasional, sin recargo', async () => {
+      PeriodosModel.obtenerPorId.mockResolvedValue({
+        id: 1, estado: 'abierto', fecha_inicio: '2026-10-01', fecha_fin: '2026-10-31',
+      });
+      RegistrosModel.contarFestivosTrabajadosEnMes.mockResolvedValue(0);
+
+      await RegistrosService.crear(1, GESTOR, {
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-10-12', // lunes festivo (Ley Emiliani)
+        hora_entrada: '08:00', hora_salida: '16:00',
+      });
+
+      expect(RegistrosModel.crear).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ horas_ordinarias: 7, horas_festivo: 0, es_festivo: 1 })
+      );
+    });
+
+    test('festivo entre semana que ya es el 3er día festivo/domingo del mes (2 domingos ya trabajados) → con recargo', async () => {
+      PeriodosModel.obtenerPorId.mockResolvedValue({
+        id: 1, estado: 'abierto', fecha_inicio: '2026-10-01', fecha_fin: '2026-10-31',
+      });
+      RegistrosModel.contarFestivosTrabajadosEnMes.mockResolvedValue(2); // 2 domingos ya trabajados este mes
+
+      await RegistrosService.crear(1, GESTOR, {
+        trabajador_id: 5, periodo_id: 1, fecha: '2026-10-12', // este festivo ya es el 3º del mes
+        hora_entrada: '08:00', hora_salida: '16:00',
+      });
+
+      expect(RegistrosModel.crear).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ horas_ordinarias: 0, horas_festivo: 7, es_festivo: 1 })
+      );
+    });
+
+    test('martes normal → nunca cuenta domingos/festivos ni toca la clasificación', async () => {
       await RegistrosService.crear(1, GESTOR, {
         trabajador_id: 5, periodo_id: 1, fecha: '2026-06-09', // martes
         hora_entrada: '08:00', hora_salida: '16:00',
       });
 
-      expect(RegistrosModel.contarDomingosTrabajadosEnMes).not.toHaveBeenCalled();
+      expect(RegistrosModel.contarFestivosTrabajadosEnMes).not.toHaveBeenCalled();
       expect(RegistrosModel.crear).toHaveBeenCalledWith(
         1,
         expect.objectContaining({ horas_ordinarias: 7, horas_festivo: 0, es_festivo: 0 })
