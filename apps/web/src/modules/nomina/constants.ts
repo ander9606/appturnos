@@ -15,7 +15,9 @@ export const TIPO_DIA_OPTIONS: TipoDia[] = ['ordinario', 'descanso', 'compensato
 // 'ausencia' se maneja aparte (mensaje y color distinto) — estos son los
 // demás tipo_dia que tampoco requieren horario de entrada/salida. 'vacacion'
 // se incluye para poder marcar un rango de varios días de una sola vez.
-export const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'licencia', 'vacacion'];
+// 'incapacidad' sin hora_entrada además descuenta el auxilio de transporte
+// de esa quincena (ver liquidacion.model.js, dias_sin_subsidio).
+export const TIPOS_DIA_SIN_HORARIO: TipoDia[] = ['compensatorio', 'descanso', 'incapacidad', 'licencia', 'vacacion'];
 
 export const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',

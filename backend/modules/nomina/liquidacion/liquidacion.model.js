@@ -23,8 +23,15 @@ const LiquidacionModel = {
               MAX(r.valor_hora_snapshot)    AS valor_hora_snapshot,
               MAX(r.salario_base_snapshot)  AS salario_base_snapshot,
               COUNT(*)                   AS dias_registrados,
-              -- Días sin auxilio de transporte: no hubo desplazamiento al trabajo ese día.
-              SUM(CASE WHEN r.tipo_dia IN ('ausencia', 'incapacidad', 'licencia', 'vacacion') THEN 1 ELSE 0 END) AS dias_sin_subsidio,
+              -- Días sin auxilio de transporte: no hubo desplazamiento al trabajo ese
+              -- día. Si además tiene hora_entrada (p. ej. una incapacidad de medio día
+              -- en que sí fue a trabajar antes de retirarse), sí hubo desplazamiento y
+              -- no se descuenta.
+              SUM(CASE
+                    WHEN r.tipo_dia IN ('ausencia', 'incapacidad', 'licencia', 'vacacion')
+                         AND r.hora_entrada IS NULL
+                    THEN 1 ELSE 0
+                  END) AS dias_sin_subsidio,
               SUM(r.horas_ordinarias)      AS horas_ordinarias,
               SUM(r.horas_extra_diurnas)   AS horas_extra_diurnas,
               SUM(r.horas_extra_nocturnas) AS horas_extra_nocturnas,
