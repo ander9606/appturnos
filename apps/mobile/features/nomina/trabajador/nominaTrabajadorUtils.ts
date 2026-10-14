@@ -113,7 +113,7 @@ export interface ResumenSemana {
 
 // ── Helpers internos ───────────────────────────────────────────────────────
 
-interface SesionSimple {
+export interface SesionSimple {
   hora_entrada: string | null;
   hora_salida: string | null;
 }
@@ -133,7 +133,7 @@ function spanMinutosSesion(s: SesionSimple): number | null {
  * vigente (hora_entrada/hora_salida) — mismo criterio que usa
  * registro-detalle/[id].tsx para reconstruir un día con reingreso.
  */
-function sesionesDelRegistro(r: RegistroDiario): SesionSimple[] {
+export function sesionesDelRegistro(r: RegistroDiario): SesionSimple[] {
   return [...(r.sesiones_detalle ?? []), { hora_entrada: r.hora_entrada, hora_salida: r.hora_salida }];
 }
 

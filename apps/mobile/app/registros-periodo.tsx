@@ -28,7 +28,7 @@ import { RangoFechasCompensatorio } from '@/features/nomina/compensatorios/Rango
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useRoleGuard } from '@/components/RoleGuard';
 import {
-  TIPO_DIA_LABEL, fmtHora, fmtFechaCorta, calcularResumenPeriodo,
+  TIPO_DIA_LABEL, fmtHora, fmtFechaCorta, calcularResumenPeriodo, sesionesDelRegistro,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { SemanaRow } from '@/features/nomina/trabajador/components/ResumenCards';
 import { useTheme } from '@/lib/theme';
@@ -111,6 +111,8 @@ function EditarRegistroModal({
 
   const esAusencia = tipoDia === 'ausencia';
   const sinHorario = esAusencia || TIPOS_DIA_SIN_HORARIO.includes(tipoDia);
+  // El backend rechaza (422) corregir un día con reingreso — se muestran sus sesiones en solo lectura.
+  const multiSesion = (registro?.sesiones ?? 1) > 1;
 
   React.useEffect(() => {
     if (registro) {
@@ -180,6 +182,31 @@ function EditarRegistroModal({
             </Pressable>
           </View>
 
+          {multiSesion ? (
+            <>
+              <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-2">
+                <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">
+                  Sesiones del día ({registro.sesiones})
+                </Text>
+                {sesionesDelRegistro(registro).map((s, i) => (
+                  <View key={i} className="flex-row items-center justify-between">
+                    <Text className="text-xs text-muted-foreground">Sesión {i + 1}</Text>
+                    <Text className="text-lg font-bold text-foreground">
+                      {fmtHora(s.hora_entrada)} → {fmtHora(s.hora_salida)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <View className="rounded-xl px-4 py-3 flex-row items-center gap-2 bg-info-light">
+                <Ionicons name="information-circle-outline" size={16} color="#3B82F6" />
+                <Text className="text-xs flex-1 leading-relaxed text-info">
+                  Este día tiene reingreso (varias sesiones) y no se puede corregir manualmente.
+                </Text>
+              </View>
+              <Button label="Cerrar" variant="secondary" onPress={onClose} />
+            </>
+          ) : (
+          <>
           <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
             <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Tipo de día</Text>
             <TipoDiaChips value={tipoDia} onChange={setTipoDia} />
@@ -280,6 +307,8 @@ function EditarRegistroModal({
               onPress={handleGuardar}
             />
           </View>
+          </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
@@ -793,9 +822,12 @@ function RegistroRow({
       </View>
 
       <View className="flex-1 gap-0.5">
-        <Text className="text-sm font-medium text-foreground">
-          {fmtHora(registro.hora_entrada)} → {fmtHora(registro.hora_salida)}
-        </Text>
+        {/* Un día con reingreso tiene varias sesiones: las cerradas viven en sesiones_detalle */}
+        {sesionesDelRegistro(registro).map((s, i) => (
+          <Text key={i} className="text-sm font-medium text-foreground">
+            {fmtHora(s.hora_entrada)} → {fmtHora(s.hora_salida)}
+          </Text>
+        ))}
         {tipoDef && tipoDef.v !== 'ordinario' && (
           <View className="self-start px-2 py-0.5 rounded-full" style={{ backgroundColor: `${tipoDef.color}20` }}>
             <Text className="text-[10px] font-semibold" style={{ color: tipoDef.color }}>
