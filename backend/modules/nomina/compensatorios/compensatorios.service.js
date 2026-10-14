@@ -56,7 +56,7 @@ const CompensatoriosService = {
    * manualmente desde la sección de compensatorios (ver rango()). También
    * avisa a trabajador y, cuando aplica recargo, a los gestores.
    */
-  async crearSiCorresponde(empresaId, { trabajadorId, periodoId, fecha, esFestivo, registroId, clasificacion = 'habitual', numeroDomingo, sumarNocturnasFestivo = true }) {
+  async crearSiCorresponde(empresaId, { trabajadorId, periodoId, fecha, esFestivo, registroId, clasificacion = 'habitual', numeroDiaFestivo, sumarNocturnasFestivo = true }) {
     const domingo = esDomingo(fecha);
     if (!esFestivo && !domingo) return null;
 
@@ -72,7 +72,7 @@ const CompensatoriosService = {
     // Best-effort: un fallo notificando no debe tumbar la respuesta de
     // marcar-salida — el registro del día ya se guardó.
     try {
-      await this._avisar(empresaId, { trabajadorId, fecha, domingo, clasificacion, numeroDomingo, sumarNocturnasFestivo });
+      await this._avisar(empresaId, { trabajadorId, fecha, domingo, clasificacion, numeroDiaFestivo, sumarNocturnasFestivo });
     } catch (err) {
       logger.error('[compensatorios] fallo notificando festivo/domingo', err.message);
     }
@@ -81,41 +81,43 @@ const CompensatoriosService = {
   },
 
   /**
-   * Avisa al trabajador y, cuando el día lleva recargo (domingo habitual o
-   * festivo entre semana), también a los gestores de nómina.
-   * - Ocasional (1º/2º domingo del mes, Art. 180 CST): solo al trabajador —
-   *   no requiere ninguna acción de los gestores más allá de la asignación
-   *   normal de fecha, que ya ven listada en su sección de compensatorios.
-   * - Habitual (3º+ domingo, Art. 181) o festivo entre semana: a ambos —
-   *   implica recargo en la liquidación, los gestores deben saberlo.
+   * Avisa al trabajador y, cuando el día lleva recargo, también a los
+   * gestores de nómina. Domingo y festivo entre semana comparten el mismo
+   * umbral ocasional/habitual (decisión de producto, ver clasificarDiaFestivo
+   * en registros.service.js): el 1º/2º día festivo o domingo del mes es
+   * ocasional (solo compensatorio); el 3º en adelante es habitual (recargo +
+   * compensatorio) — sin importar si ese 3º es domingo o festivo entre semana.
+   * - Ocasional: solo avisa al trabajador — no requiere ninguna acción de los
+   *   gestores más allá de la asignación normal de fecha, que ya ven listada
+   *   en su sección de compensatorios.
+   * - Habitual: avisa a ambos — implica recargo en la liquidación.
    */
-  async _avisar(empresaId, { trabajadorId, fecha, domingo, clasificacion, numeroDomingo, sumarNocturnasFestivo }) {
+  async _avisar(empresaId, { trabajadorId, fecha, domingo, clasificacion, numeroDiaFestivo, sumarNocturnasFestivo }) {
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
     const nombreCompleto = trabajador ? `${trabajador.nombre} ${trabajador.apellido}` : 'Un trabajador';
+    const tipoDia = domingo ? 'domingo' : 'festivo';
 
-    if (domingo && clasificacion === 'ocasional') {
+    if (clasificacion === 'ocasional') {
       if (trabajador?.usuario_id) {
-        const detalle = numeroDomingo ? `es tu domingo Nº${numeroDomingo} del mes, así que ` : '';
+        const detalle = numeroDiaFestivo ? `es tu ${tipoDia} Nº${numeroDiaFestivo} del mes, así que ` : '';
         await NotificacionesService.notificar({
           empresaId,
           usuarioId: trabajador.usuario_id,
-          tipo: 'nomina.domingo_ocasional',
-          titulo: 'Domingo sin recargo',
-          mensaje: `Trabajaste el domingo ${fechaLarga(fecha)} — ${detalle}no lleva recargo dominical, pero se te asignará un día de descanso compensatorio.`,
+          tipo: domingo ? 'nomina.domingo_ocasional' : 'nomina.festivo_ocasional',
+          titulo: domingo ? 'Domingo sin recargo' : 'Festivo sin recargo',
+          mensaje: `Trabajaste el ${tipoDia} ${fechaLarga(fecha)} — ${detalle}no lleva recargo, pero se te asignará un día de descanso compensatorio.`,
           data: { fecha },
         });
       }
       return;
     }
 
-    // Sin recargos (empresa que no los suma) el día solo genera compensatorio: nada que aplicar en nómina.
-    const etiqueta = numeroDomingo ? `tu domingo Nº${numeroDomingo} del mes` : 'tu domingo habitual';
-    const cierre = sumarNocturnasFestivo ? 'tendrás recargo dominical' : '';
-    const mensajeTrabajador = domingo
-      ? `Trabajaste ${etiqueta} (${fechaLarga(fecha)}) — ${cierre ? cierre + ' y ' : ''}se te asignará un día de descanso compensatorio.`
-      : sumarNocturnasFestivo
-        ? `Trabajaste el día festivo ${fechaLarga(fecha)} — tendrás un recargo en tus horas.`
-        : `Trabajaste el día festivo ${fechaLarga(fecha)} — se te asignará un día de descanso compensatorio.`;
+    // Habitual: domingo 3º+ del mes, o festivo entre semana que ya es el 3º+
+    // día festivo/domingo combinado (o festivo bajo la regla 'dos_meses',
+    // que siempre lleva recargo — ver clasificarDiaFestivo).
+    const etiqueta = numeroDiaFestivo ? `tu ${tipoDia} Nº${numeroDiaFestivo} del mes` : `tu ${tipoDia} habitual`;
+    const cierre = sumarNocturnasFestivo ? `tendrás recargo ${domingo ? 'dominical' : 'festivo'}` : '';
+    const mensajeTrabajador = `Trabajaste ${etiqueta} (${fechaLarga(fecha)}) — ${cierre ? cierre + ' y ' : ''}se te asignará un día de descanso compensatorio.`;
 
     if (trabajador?.usuario_id) {
       await NotificacionesService.notificar({
@@ -139,9 +141,7 @@ const CompensatoriosService = {
         empresaId,
         tipo: domingo ? 'nomina.domingo_habitual_gestor' : 'nomina.festivo_trabajado_gestor',
         titulo: 'Aplica recargo festivo',
-        mensaje: domingo
-          ? `${nombreCompleto} trabajó su domingo Nº${numeroDomingo} del mes (${fechaLarga(fecha)}) — recargo dominical + compensatorio.`
-          : `${nombreCompleto} trabajó el festivo ${fechaLarga(fecha)} — aplica recargo.`,
+        mensaje: `${nombreCompleto} trabajó ${etiqueta} (${fechaLarga(fecha)}) — recargo + compensatorio.`,
         data: { fecha, trabajador_id: trabajadorId },
       });
     }

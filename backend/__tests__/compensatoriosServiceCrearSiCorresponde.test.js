@@ -122,6 +122,49 @@ describe('CompensatoriosService.crearSiCorresponde', () => {
     );
   });
 
+  // Domingo y festivo entre semana cuentan para el MISMO umbral mensual
+  // (decisión de producto, clasificarDiaFestivo en registros.service.js): un
+  // festivo entre semana puede ser 'ocasional' si todavía no es el 3er día
+  // festivo/domingo del mes para ese trabajador.
+  test('festivo entre semana ocasional (1º/2º día festivo/domingo combinado del mes) → solo avisa al trabajador, sin recargo', async () => {
+    esDomingo.mockReturnValue(false);
+    CompensatoriosModel.crear.mockResolvedValue(6);
+
+    const id = await CompensatoriosService.crearSiCorresponde(EMPRESA_ID, {
+      trabajadorId: TRABAJADOR_ID, periodoId: 5, fecha: '2026-10-12', esFestivo: true, registroId: 14,
+      clasificacion: 'ocasional', numeroDiaFestivo: 1,
+    });
+
+    expect(id).toBe(6);
+    expect(CompensatoriosModel.crear).toHaveBeenCalledWith(
+      EMPRESA_ID,
+      expect.objectContaining({ clasificacion: 'ocasional' })
+    );
+    expect(NotificacionesService.notificar).toHaveBeenCalledTimes(1);
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(
+      expect.objectContaining({ usuarioId: 74, tipo: 'nomina.festivo_ocasional' })
+    );
+    expect(NotificacionesService.notificarVarios).not.toHaveBeenCalled();
+  });
+
+  test('festivo entre semana que ya es el 3er día del mes → habitual, avisa a trabajador y gestores', async () => {
+    esDomingo.mockReturnValue(false);
+    CompensatoriosModel.crear.mockResolvedValue(7);
+
+    await CompensatoriosService.crearSiCorresponde(EMPRESA_ID, {
+      trabajadorId: TRABAJADOR_ID, periodoId: 5, fecha: '2026-10-12', esFestivo: true, registroId: 15,
+      clasificacion: 'habitual', numeroDiaFestivo: 3,
+    });
+
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(
+      expect.objectContaining({ usuarioId: 74, tipo: 'nomina.festivo_trabajado' })
+    );
+    expect(NotificacionesService.notificarVarios).toHaveBeenCalledWith(
+      [20, 33],
+      expect.objectContaining({ tipo: 'nomina.festivo_trabajado_gestor' })
+    );
+  });
+
   test('un fallo notificando no revienta la creación (best-effort)', async () => {
     esDomingo.mockReturnValue(true);
     CompensatoriosModel.crear.mockResolvedValue(4);

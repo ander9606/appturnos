@@ -113,12 +113,13 @@ Si la jornada supera **6 h** y el trabajador no marcó jornada continua, se desc
 ### Domingos y festivos
 
 - **Festivos** reconocidos: domingos; fijos (1 ene, 1 may, 20 jul, 7 ago, 8 dic, 25 dic); los de Ley Emiliani trasladados al lunes (6 ene, 19 mar, 29 jun, 15 ago, 12 oct, 1 nov, 11 nov); y los de Semana Santa (jueves y viernes santo; Ascensión, Corpus Christi y Sagrado Corazón trasladados al lunes). Se calculan para cualquier año.
-- **Festivo entre semana**: siempre lleva recargo.
-- **Domingo ocasional** (Art. 180 CST): mientras no sea habitual, el domingo **no** lleva recargo en dinero; sus horas se clasifican como un día normal (ordinarias, nocturnas o extra) y genera descanso compensatorio.
-- **Domingo habitual** (Art. 181 CST): todas sus horas van a festivo con recargo y genera descanso compensatorio. Cada empresa elige cuándo se vuelve habitual:
-  - **Ley (default):** desde el 3.º domingo trabajado del mes calendario.
-  - **2 meses:** habitual cuando el trabajador lleva 2 meses trabajando domingos seguidos. Cada domingo de esos 2 meses debe estar trabajado; un domingo libre reinicia la cuenta. Antes de eso el domingo es ocasional.
-- Todo festivo genera descanso compensatorio, sin importar la regla de domingo.
+- **Ocasional** (≤2.º día festivo/domingo del mes, Art. 180 CST): **no** lleva recargo en dinero; sus horas se clasifican como un día normal (ordinarias, nocturnas o extra) y genera descanso compensatorio.
+- **Habitual** (3.º en adelante, Art. 181 CST): todas sus horas van a festivo con recargo y genera descanso compensatorio.
+- **Domingo y festivo entre semana cuentan para el MISMO umbral mensual** (decisión de producto — el CST solo nombra la distinción ocasional/habitual para domingos, pero acá se extiende a festivos entre semana): si el trabajador ya trabajó 2 domingos este mes, el siguiente festivo entre semana ya es su 3.º día festivo/domingo del mes y lleva recargo, aunque sea el primer festivo propiamente dicho. Al revés también: un domingo que llega después de 2 festivos entre semana ya trabajados ese mes es el 3.º y lleva recargo.
+- Cada empresa elige cuándo se vuelve habitual (Configuración → Datos de la empresa):
+  - **Ley (default):** desde el 3.er día festivo o domingo trabajado del mes calendario (domingo + festivo entre semana, contados juntos).
+  - **2 meses:** habitual cuando el trabajador lleva 2 meses trabajando domingos **seguidos**. Cada domingo de esos 2 meses debe estar trabajado; un domingo libre reinicia la cuenta. Esta regla sigue siendo solo de domingos — un festivo entre semana bajo "2 meses" siempre lleva recargo, igual que antes, porque no hay una racha definida para festivos sueltos entre semana.
+- Todo festivo o domingo trabajado genera descanso compensatorio, sea ocasional o habitual.
 
 ### Empresa que no suma recargos
 
@@ -329,12 +330,12 @@ La liquidación de turnos suma por trabajador los turnos **completados** (o **fa
 
 ## 8. Descansos compensatorios
 
-Cada domingo o festivo trabajado genera **un día de descanso compensatorio**, que el gestor debe ubicar dentro de los **28 días** siguientes. El descanso no se paga aparte: ese día ya se pagó en las horas festivas (o en las ordinarias, si fue un domingo ocasional).
+Cada domingo o festivo trabajado genera **un día de descanso compensatorio**, que el gestor debe ubicar dentro de los **28 días** siguientes. El descanso no se paga aparte: ese día ya se pagó en las horas festivas (o en las ordinarias, si fue ocasional).
 
 | Clasificación | Cuándo | Recargo en dinero | Compensatorio |
 | --- | --- | --- | --- |
-| Ocasional (Art. 180 CST) | 1.º o 2.º domingo trabajado del mes | No | Sí |
-| Habitual (Art. 181 CST) | Del 3.º domingo del mes en adelante, o festivo entre semana | Sí | Sí |
+| Ocasional (Art. 180 CST) | 1.º o 2.º día festivo o domingo trabajado del mes (domingo y festivo entre semana cuentan juntos) | No | Sí |
+| Habitual (Art. 181 CST) | Del 3.º día festivo/domingo del mes en adelante — o festivo entre semana bajo la regla "2 meses" (siempre habitual) | Sí | Sí |
 
 ```mermaid
 stateDiagram-v2
@@ -444,3 +445,4 @@ Estas reglas hacen que el cálculo actual difiera de la práctica usual en Colom
 - [ ] ¿La incapacidad debe pagarse al 66,67 % (días 1-2 empleador, 3-90 EPS) en vez del 100 % del salario? Y si es así, ¿la app debe registrar el recobro a la EPS o eso sigue siendo un trámite externo de contabilidad? Esto corrige el punto 12.
 - [ ] ¿Un descuento por daños a equipo puede hacerse sin orden judicial? El art. 149 lo lista entre los conceptos restringidos.
 - [x] Regla "2 meses" para domingo habitual: confirmada por el contador como domingos seguidos trabajados durante 2 meses. Un domingo libre reinicia la cuenta.
+- [ ] Domingo y festivo entre semana contando juntos para el umbral de 3.º del mes (regla "ley"): decisión de producto, no una lectura literal del Art. 180/181 CST (que solo nombra domingos) — pendiente de confirmar con el contador/abogado laboral si esta extensión a festivos es correcta.

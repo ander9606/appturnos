@@ -10,7 +10,7 @@ const EmpresasModel             = require('../../empresas/empresas.model');
 const CompensatoriosService     = require('../compensatorios/compensatorios.service');
 const NotificacionesService     = require('../../notificaciones/notificaciones.service');
 const { pool }                  = require('../../../config/database');
-const { calcularHoras, esDomingo, esDomingoHabitual, ventanaRachaDomingos } = require('../../../utils/laboralUtils');
+const { calcularHoras, esDomingo, esDiaFestivo, esDomingoHabitual, ventanaRachaDomingos } = require('../../../utils/laboralUtils');
 const { validarSesiones, calcularHorasSesiones } = require('../../../utils/sesionesUtils');
 const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
 const { haversineMetros }       = require('../../../utils/geoUtils');
@@ -25,26 +25,38 @@ const MS_POR_DIA = 24 * 3_600_000;
  * su trabajador y se ignora cualquier trabajador_id que venga en la petición.
  */
 /**
- * Clasifica un domingo trabajado como ocasional (≤2 en el mes calendario,
- * Art. 180 CST — solo compensatorio, sin recargo) o habitual (3+, Art. 181 —
- * recargo + compensatorio). Festivos entre semana siempre son 'habitual':
- * siempre llevan recargo, la distinción del CST no aplica a ellos.
+ * Clasifica un domingo O festivo entre semana trabajado como ocasional (solo
+ * compensatorio, sin recargo) o habitual (recargo + compensatorio).
+ *
+ * Decisión de producto: domingo y festivo entre semana cuentan PARA EL MISMO
+ * umbral — si el trabajador ya trabajó 2 domingos este mes, el siguiente
+ * festivo entre semana ya es el 3º día festivo/domingo del mes y lleva
+ * recargo, aunque sea el primer festivo propiamente dicho. El CST solo
+ * nombra esta distinción para domingos (Art. 180/181), pero aquí se extiende
+ * a festivos por decisión explícita de negocio, no por lectura literal de la
+ * ley — ver docs/REGLAS-CALCULO-PAGOS.md.
+ *
+ * Regla 'dos_meses' es la excepción: solo mira una racha de domingos
+ * consecutivos (ventanaRachaDomingos no tiene definición para festivos
+ * sueltos entre semana), así que un festivo bajo esa regla sigue siendo
+ * siempre 'habitual', igual que antes de este cambio.
  */
 async function clasificarDiaFestivo(empresaId, trabajadorId, fecha, regla) {
   const domingo = esDomingo(fecha);
-  if (!domingo) return { domingo, clasificacion: 'habitual', recargoFestivo: true, numeroDomingo: null };
-  // 'dos_meses' no cuenta domingos del mes: el número del mes no aplica, así que va null.
-  const numeroDomingo = regla === 'dos_meses'
-    ? null
-    : await RegistrosModel.contarDomingosTrabajadosEnMes(empresaId, trabajadorId, fecha) + 1;
-  // 'dos_meses': cuántos domingos de la racha de 2 meses trabajó (ver ventanaRachaDomingos).
-  let domingosTrabajadosEnVentana = 0;
+  const esFestivoCalendario = esDiaFestivo(fecha); // domingo o festivo — ya incluye el domingo
+  if (!esFestivoCalendario) return { domingo, clasificacion: 'habitual', recargoFestivo: true, numeroDiaFestivo: null };
+
   if (regla === 'dos_meses') {
+    if (!domingo) return { domingo, clasificacion: 'habitual', recargoFestivo: true, numeroDiaFestivo: null };
     const { desde, hasta } = ventanaRachaDomingos(fecha);
-    domingosTrabajadosEnVentana = await RegistrosModel.contarDomingosTrabajadosEntre(empresaId, trabajadorId, desde, hasta);
+    const domingosTrabajadosEnVentana = await RegistrosModel.contarDomingosTrabajadosEntre(empresaId, trabajadorId, desde, hasta);
+    const habitual = esDomingoHabitual({ fecha, regla, domingosTrabajadosEnVentana });
+    return { domingo, clasificacion: habitual ? 'habitual' : 'ocasional', recargoFestivo: habitual, numeroDiaFestivo: null };
   }
-  const habitual = esDomingoHabitual({ fecha, regla, numeroDomingo, domingosTrabajadosEnVentana });
-  return { domingo, clasificacion: habitual ? 'habitual' : 'ocasional', recargoFestivo: habitual, numeroDomingo };
+
+  const numeroDiaFestivo = await RegistrosModel.contarFestivosTrabajadosEnMes(empresaId, trabajadorId, fecha) + 1;
+  const habitual = esDomingoHabitual({ fecha, regla, numeroDomingo: numeroDiaFestivo });
+  return { domingo, clasificacion: habitual ? 'habitual' : 'ocasional', recargoFestivo: habitual, numeroDiaFestivo };
 }
 
 async function resolverTrabajadorPropio(empresaId, usuarioId) {
@@ -280,7 +292,7 @@ const RegistrosService = {
 
     const jornadaContinua = Boolean(datos.jornada_continua);
     const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
-    const { clasificacion, recargoFestivo, numeroDomingo } =
+    const { clasificacion, recargoFestivo, numeroDiaFestivo } =
       await clasificarDiaFestivo(empresaId, trabajadorId, datos.fecha, reglaDomingoHabitual);
     const horas = calcularHoras({
       horaEntrada: datos.hora_entrada,
@@ -319,7 +331,7 @@ const RegistrosService = {
       esFestivo: Boolean(horas.es_festivo),
       registroId: id,
       clasificacion,
-      numeroDomingo,
+      numeroDiaFestivo,
       sumarNocturnasFestivo,
     });
 
@@ -383,7 +395,7 @@ const RegistrosService = {
       : Boolean(registro.jornada_continua);
 
     const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
-    const { clasificacion, recargoFestivo, numeroDomingo } =
+    const { clasificacion, recargoFestivo, numeroDiaFestivo } =
       await clasificarDiaFestivo(empresaId, registro.trabajador_id, registro.fecha, reglaDomingoHabitual);
     const horas = porSesiones
       ? calcularHorasSesiones({
@@ -423,7 +435,7 @@ const RegistrosService = {
       esFestivo: Boolean(horas.es_festivo),
       registroId: id,
       clasificacion,
-      numeroDomingo,
+      numeroDiaFestivo,
       sumarNocturnasFestivo,
     });
 
@@ -669,7 +681,7 @@ const RegistrosService = {
         : 0);
 
     const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
-    const { clasificacion, recargoFestivo, numeroDomingo } =
+    const { clasificacion, recargoFestivo, numeroDiaFestivo } =
       await clasificarDiaFestivo(empresaId, trabajadorId, registro.fecha, reglaDomingoHabitual);
     const horasSesion = calcularHoras({
       horaEntrada: registro.hora_entrada,
@@ -729,7 +741,7 @@ const RegistrosService = {
       esFestivo: Boolean(horas.es_festivo),
       registroId,
       clasificacion,
-      numeroDomingo,
+      numeroDiaFestivo,
       sumarNocturnasFestivo,
     });
 
