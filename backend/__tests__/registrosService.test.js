@@ -398,6 +398,27 @@ describe('RegistrosService.corregir — día con reingreso', () => {
     );
   });
 
+  test('reingreso sin salida (olvidó marcar): el gestor le pone la salida y se calculan sus horas', async () => {
+    // El caso real: sesión 2 entró 22:53 y nunca marcó salida.
+    RegistrosModel.obtenerPorId.mockResolvedValue(
+      registroConReingreso({ hora_entrada: '22:53:00', hora_salida: null, sesiones_detalle: [s('08:00:00', '12:00:00')] }),
+    );
+
+    await RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('08:00', '12:00'), s('22:53', '01:10')] });
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      1, 99,
+      expect.objectContaining({
+        hora_entrada: '22:53:00',
+        hora_salida: '01:10:00', // el registro queda cerrado
+        sesiones_detalle: [s('08:00:00', '12:00:00')],
+        // 4 h ordinarias de la sesión 1 + 137 min nocturnos de la 2 (2.5 h con el redondeo a media hora).
+        horas_ordinarias: 4,
+        horas_nocturnas: 2.5,
+      })
+    );
+  });
+
   test('un día de una sola sesión sigue corrigiéndose como siempre y no acepta "sesiones"', async () => {
     RegistrosModel.obtenerPorId.mockResolvedValue({
       id: 98, trabajador_id: 5, periodo_id: 1, fecha: '2026-06-09', hora_entrada: '08:00', hora_salida: '12:00', sesiones: 1,

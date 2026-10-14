@@ -314,7 +314,8 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
     sesionesDelRegistro(registro).map((s) => ({ entrada: horaAFecha(s.hora_entrada), salida: horaAFecha(s.hora_salida) })),
   );
   const [picker, setPicker] = useState<PickerAbierto>(null);
-  const ultimaAbierta = !registro.hora_salida; // el reingreso sigue en curso: su salida no se edita
+  // Si el reingreso quedó sin salida (el trabajador no marcó), el gestor puede ponérsela o dejarlo en curso.
+  const ultimaAbierta = !registro.hora_salida;
   const d = new Date(`${registro.fecha}T00:00:00`);
 
   function onChangeHora(_: DateTimePickerEvent, hora?: Date) {
@@ -335,7 +336,8 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
         id: registro.id,
         sesiones: sesiones.map((s, i) => ({
           hora_entrada: fmtTime(s.entrada),
-          hora_salida: ultimaAbierta && i === sesiones.length - 1 ? null : fmtTime(s.salida),
+          // La última, si seguía abierta y no se le puso salida, sigue en curso.
+          hora_salida: s.salida ? fmtTime(s.salida) : null,
         })),
       });
       onClose();
@@ -366,7 +368,7 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
           </View>
 
           {sesiones.map((s, i) => {
-            const salidaFija = ultimaAbierta && i === sesiones.length - 1;
+            const enCurso = ultimaAbierta && i === sesiones.length - 1 && !s.salida;
             return (
               <View key={i} className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
                 <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Sesión {i + 1}</Text>
@@ -377,12 +379,11 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
                   </TouchableOpacity>
                   <Ionicons name="arrow-forward" size={16} color="#94A3B8" />
                   <TouchableOpacity
-                    disabled={salidaFija}
                     onPress={() => setPicker({ i, campo: 'salida' })}
                     className="flex-1 bg-muted rounded-xl px-4 py-3"
                   >
                     <Text className="text-xs text-muted-foreground mb-1">Salida</Text>
-                    <Text className="text-2xl font-bold text-foreground">{salidaFija ? 'En curso' : fmtTime(s.salida)}</Text>
+                    <Text className="text-2xl font-bold text-foreground">{enCurso ? 'En curso' : fmtTime(s.salida)}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -410,6 +411,7 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
             <Ionicons name="information-circle-outline" size={16} color="#3B82F6" />
             <Text className="text-xs flex-1 leading-relaxed text-info">
               Al guardar se recalculan las horas de todo el día. Las sesiones deben ir en orden y sin solaparse.
+              {ultimaAbierta ? ' Si la última quedó sin salida, ponle la hora para cerrarla.' : ''}
             </Text>
           </View>
 

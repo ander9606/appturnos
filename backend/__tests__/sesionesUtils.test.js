@@ -52,13 +52,26 @@ describe('validarSesiones', () => {
       .toThrow(/24 h/);
   });
 
-  test('última sesión abierta: permitida solo si ya estaba abierta, y sin salida', () => {
+  test('última sesión abierta: puede seguir abierta si ya lo estaba', () => {
     expect(validarSesiones([s('08:00', '12:00'), { hora_entrada: '14:00', hora_salida: null }], { cantidad: 2, ultimaAbierta: true }))
       .toEqual([s('08:00:00', '12:00:00'), { hora_entrada: '14:00:00', hora_salida: null }]);
-    // Estaba abierta y ahora le ponen salida → no es una corrección de horas.
-    expect(() => validarSesiones([s('08:00', '12:00'), s('14:00', '18:00')], { cantidad: 2, ultimaAbierta: true }))
-      .toThrow(/sigue abierta/);
-    // Estaba cerrada y se intenta dejar abierta.
+  });
+
+  test('última sesión abierta: se le puede poner la salida (salida olvidada)', () => {
+    expect(validarSesiones([s('08:00', '12:00'), s('14:00', '18:00')], { cantidad: 2, ultimaAbierta: true }))
+      .toEqual([s('08:00:00', '12:00:00'), s('14:00:00', '18:00:00')]);
+  });
+
+  test('salida olvidada de un turno nocturno: entró 22:53 y sale 01:10 del día siguiente', () => {
+    expect(() => validarSesiones([s('08:00', '12:00'), s('22:53', '01:10')], { cantidad: 2, ultimaAbierta: true })).not.toThrow();
+  });
+
+  test('una sesión que no es la última nunca puede quedar abierta', () => {
+    expect(() => validarSesiones([{ hora_entrada: '08:00', hora_salida: null }, s('14:00', '18:00')], { cantidad: 2, ultimaAbierta: true }))
+      .toThrow(/Sesión 1: hora de salida inválida/);
+  });
+
+  test('si el registro estaba cerrado, no se puede dejar la última abierta', () => {
     expect(() => validarSesiones([s('08:00', '12:00'), { hora_entrada: '14:00' }], { cantidad: 2 }))
       .toThrow(/hora de salida inválida/);
   });

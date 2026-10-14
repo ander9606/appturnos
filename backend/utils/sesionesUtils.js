@@ -29,7 +29,9 @@ const aHHMMSS = (hora) => (hora.length === 5 ? `${hora}:00` : hora);
  *   la anterior. Una entrada "menor" se lee como después de medianoche, y por eso todo el
  *   día debe caber en 24 h: así un error de tipeo (07:00 en vez de 17:00) no se acepta
  *   como si fuera el día siguiente.
- * - Solo la última sesión puede estar abierta (sin salida), y únicamente si ya lo estaba.
+ * - Solo la última sesión puede estar abierta (sin salida), y únicamente si ya lo estaba. Si
+ *   estaba abierta también se le puede poner la salida: es el caso de una salida olvidada, que
+ *   el gestor tiene que poder cerrar (igual que en un día de una sola sesión).
  */
 function validarSesiones(sesiones, { cantidad, ultimaAbierta = false }) {
   if (!Array.isArray(sesiones) || sesiones.length !== cantidad) {
@@ -44,14 +46,13 @@ function validarSesiones(sesiones, { cantidad, ultimaAbierta = false }) {
   const normalizadas = sesiones.map((s, i) => {
     const n = i + 1;
     const esUltima = i === sesiones.length - 1;
-    const abierta = esUltima && ultimaAbierta;
+    // La última, si el registro sigue abierto, puede cerrarse (con salida) o seguir abierta (sin ella).
+    const abierta = esUltima && ultimaAbierta && !s?.hora_salida;
 
     if (typeof s?.hora_entrada !== 'string' || !RE_HORA.test(s.hora_entrada)) {
       throw new AppError(`Sesión ${n}: hora de entrada inválida`, 422);
     }
-    if (abierta) {
-      if (s.hora_salida) throw new AppError(`Sesión ${n}: sigue abierta, no puede tener salida`, 422);
-    } else if (typeof s.hora_salida !== 'string' || !RE_HORA.test(s.hora_salida)) {
+    if (!abierta && (typeof s.hora_salida !== 'string' || !RE_HORA.test(s.hora_salida))) {
       throw new AppError(`Sesión ${n}: hora de salida inválida`, 422);
     }
 
