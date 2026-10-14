@@ -49,6 +49,39 @@ describe('CompensatoriosService.crearSiCorresponde', () => {
     expect(NotificacionesService.notificar).not.toHaveBeenCalled();
   });
 
+  // Un domingo/festivo que no se trabajó (descanso, vacación, licencia,
+  // incapacidad, ausencia) no genera compensatorio — el compensatorio es la
+  // contrapartida de TRABAJAR el día de descanso obligatorio, no de
+  // descansar en él. Bug real: un domingo marcado 'descanso' generaba uno.
+  test.each(['descanso', 'vacacion', 'licencia', 'incapacidad', 'ausencia'])(
+    'domingo marcado "%s" (no trabajado) → no crea compensatorio aunque sea festivo',
+    async (tipoDia) => {
+      esDomingo.mockReturnValue(true);
+
+      const id = await CompensatoriosService.crearSiCorresponde(EMPRESA_ID, {
+        trabajadorId: TRABAJADOR_ID, periodoId: 5, fecha: '2026-06-07', esFestivo: true, registroId: 1,
+        clasificacion: 'habitual', numeroDiaFestivo: 3, tipoDia,
+      });
+
+      expect(id).toBeNull();
+      expect(CompensatoriosModel.crear).not.toHaveBeenCalled();
+      expect(NotificacionesService.notificar).not.toHaveBeenCalled();
+    }
+  );
+
+  test('tipoDia por default es "ordinario" (compatibilidad con llamadas que no lo mandan)', async () => {
+    esDomingo.mockReturnValue(true);
+    CompensatoriosModel.crear.mockResolvedValue(9);
+
+    const id = await CompensatoriosService.crearSiCorresponde(EMPRESA_ID, {
+      trabajadorId: TRABAJADOR_ID, periodoId: 5, fecha: '2026-06-07', esFestivo: true, registroId: 1,
+      clasificacion: 'ocasional', numeroDiaFestivo: 1,
+    });
+
+    expect(id).toBe(9);
+    expect(CompensatoriosModel.crear).toHaveBeenCalled();
+  });
+
   test('ya existía (INSERT IGNORE devuelve null) → no notifica', async () => {
     esDomingo.mockReturnValue(true);
     CompensatoriosModel.crear.mockResolvedValue(null);

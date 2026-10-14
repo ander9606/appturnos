@@ -333,6 +333,7 @@ const RegistrosService = {
       clasificacion,
       numeroDiaFestivo,
       sumarNocturnasFestivo,
+      tipoDia: datos.tipo_dia || 'ordinario',
     });
 
     return RegistrosModel.obtenerPorId(empresaId, id);
@@ -407,6 +408,8 @@ const RegistrosService = {
           jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
         });
 
+    const tipoDiaEfectivo = datos.tipo_dia !== undefined ? datos.tipo_dia : registro.tipo_dia;
+
     await RegistrosModel.actualizar(empresaId, id, {
       ...camposSesiones,
       hora_entrada: horaEntrada || null,
@@ -418,16 +421,17 @@ const RegistrosService = {
       horas_festivo: horas.horas_festivo,
       es_festivo: horas.es_festivo,
       novedad: datos.novedad !== undefined ? datos.novedad : registro.novedad,
-      tipo_dia: datos.tipo_dia !== undefined ? datos.tipo_dia : registro.tipo_dia,
+      tipo_dia: tipoDiaEfectivo,
       aprobado_por: usuario.sub,
       jornada_continua: jornadaContinua,
       horas_acumuladas_semana: ordinariasAcumCorregir,
     });
 
-    // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que crear()/
-    // marcarSalida(). Cubre el caso de completar acá (corrección manual) una salida que
-    // el trabajador olvidó marcar: crearSiCorresponde() es idempotente (INSERT IGNORE
-    // sobre origen_registro_id), así que no duplica el compensatorio si ya existía.
+    // Compensatorio si es festivo o domingo Y se trabajó (Art. 179 CST) — misma
+    // regla que crear()/marcarSalida(). Cubre el caso de completar acá (corrección
+    // manual) una salida que el trabajador olvidó marcar: crearSiCorresponde() es
+    // idempotente (INSERT IGNORE sobre origen_registro_id), así que no duplica el
+    // compensatorio si ya existía.
     await CompensatoriosService.crearSiCorresponde(empresaId, {
       trabajadorId: registro.trabajador_id,
       periodoId: registro.periodo_id,
@@ -437,6 +441,7 @@ const RegistrosService = {
       clasificacion,
       numeroDiaFestivo,
       sumarNocturnasFestivo,
+      tipoDia: tipoDiaEfectivo,
     });
 
     if (notificar) {
@@ -743,6 +748,7 @@ const RegistrosService = {
       clasificacion,
       numeroDiaFestivo,
       sumarNocturnasFestivo,
+      tipoDia: 'ordinario', // marcarSalida() es siempre un día efectivamente trabajado
     });
 
     const registroFinal = await RegistrosModel.obtenerPorId(empresaId, registroId);
