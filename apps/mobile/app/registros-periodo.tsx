@@ -920,8 +920,9 @@ export default function RegistrosPeriodoScreen() {
     next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
     return next;
   });
-  const [replegados, setReplegados] = useState<Set<number>>(new Set());
-  const toggleReplegado = (trabajadorId: number) => setReplegados((prev) => {
+  // Arrancan replegados (puede haber muchos trabajadores); en la vista de un solo trabajador arranca desplegado.
+  const [desplegados, setDesplegados] = useState<Set<number>>(() => new Set(numTrabId ? [numTrabId] : []));
+  const toggleReplegado = (trabajadorId: number) => setDesplegados((prev) => {
     const next = new Set(prev);
     next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
     return next;
@@ -962,9 +963,9 @@ export default function RegistrosPeriodoScreen() {
         title: g.nombre,
         trabajadorId: g.trabajadorId,
         todos: g.registros,
-        data: replegados.has(g.trabajadorId) ? [] : g.registros,
+        data: desplegados.has(g.trabajadorId) ? g.registros : [],
       }));
-  }, [registros, replegados]);
+  }, [registros, desplegados]);
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_nomina', 'nomina']);
   if (denied) return denied;
@@ -1031,7 +1032,7 @@ export default function RegistrosPeriodoScreen() {
           )}
           renderSectionHeader={({ section }) => {
             const resumen = calcularResumenPeriodo(section.todos, 0);
-            const replegado = replegados.has(section.trabajadorId);
+            const replegado = !desplegados.has(section.trabajadorId);
             const abiertas = !replegado && semanasAbiertas.has(section.trabajadorId);
             // La semana más reciente con registros = "hasta ahora" en la semana.
             const semanaActual = resumen.semanas[resumen.semanas.length - 1];
