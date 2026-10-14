@@ -1,4 +1,4 @@
-import { calcularElapsedLabel, calcularElapsedMinutes, getJornadaLegalSemanal } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { calcularElapsedLabel, calcularElapsedMinutes, etiquetaPeriodo, getJornadaLegalSemanal } from '../features/nomina/trabajador/nominaTrabajadorUtils';
 
 describe('getJornadaLegalSemanal', () => {
   it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
@@ -40,5 +40,19 @@ describe('calcularElapsedMinutes / calcularElapsedLabel', () => {
     Date.now = () => Date.UTC(2026, 0, 15, 5, 0, 0); // 00:00 Bogotá
     // entrada 23:00 Bogotá de la noche anterior → 1h transcurrida
     expect(calcularElapsedMinutes('23:00:00')).toBe(60);
+  });
+});
+
+describe('etiquetaPeriodo', () => {
+  it('clasifica por duración del período', () => {
+    expect(etiquetaPeriodo('2026-01-05', '2026-01-11')).toBe('Semana');
+    expect(etiquetaPeriodo('2026-01-01', '2026-01-15')).toBe('Quincena');
+    expect(etiquetaPeriodo('2026-01-16', '2026-01-31')).toBe('Quincena');
+    expect(etiquetaPeriodo('2026-02-01', '2026-02-28')).toBe('Mes');
+  });
+
+  it('sin fechas → "Período"', () => {
+    expect(etiquetaPeriodo()).toBe('Período');
+    expect(etiquetaPeriodo('2026-01-01')).toBe('Período');
   });
 });

@@ -7,13 +7,15 @@ import {
   validateStep2,
 } from '../features/turnos/crear/utils';
 import type { WizardData, PuestoInput } from '../features/turnos/crear/types';
+import { bogotaToday } from '../lib/formatters';
 
 // Fechas relativas a "hoy" — evita que el test se pudra cuando pase el tiempo
-// (validateStep1 rechaza fechas pasadas).
+// (validateStep1 rechaza fechas pasadas). "Hoy" es el de Bogotá, igual que en
+// validateStep1: con el reloj local, entre 19:00 y 24:00 Bogotá en un entorno UTC
+// (CI) "ayer" caía en el mismo día que el "hoy" de Bogotá y el test fallaba.
 function daysFromNow(n: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d;
+  const [y, m, d] = bogotaToday().split('-').map(Number);
+  return new Date(y, m - 1, d + n);
 }
 
 function timeAt(hour: number, minute: number): Date {

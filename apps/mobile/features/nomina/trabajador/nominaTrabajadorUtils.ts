@@ -113,13 +113,13 @@ export interface ResumenSemana {
 
 // ── Helpers internos ───────────────────────────────────────────────────────
 
-interface SesionSimple {
+export interface SesionSimple {
   hora_entrada: string | null;
   hora_salida: string | null;
 }
 
 /** Minutos entre entrada y salida de UNA sesión (cruza medianoche si sale < entra). */
-function spanMinutosSesion(s: SesionSimple): number | null {
+export function spanMinutosSesion(s: SesionSimple): number | null {
   if (!s.hora_entrada || !s.hora_salida) return null;
   const [hE, mE] = s.hora_entrada.split(':').map(Number);
   const [hS, mS] = s.hora_salida.split(':').map(Number);
@@ -133,7 +133,7 @@ function spanMinutosSesion(s: SesionSimple): number | null {
  * vigente (hora_entrada/hora_salida) — mismo criterio que usa
  * registro-detalle/[id].tsx para reconstruir un día con reingreso.
  */
-function sesionesDelRegistro(r: RegistroDiario): SesionSimple[] {
+export function sesionesDelRegistro(r: RegistroDiario): SesionSimple[] {
   return [...(r.sesiones_detalle ?? []), { hora_entrada: r.hora_entrada, hora_salida: r.hora_salida }];
 }
 
@@ -294,6 +294,13 @@ function minutosTranscurridosDesde(horaEntrada: string): number {
   if (diffMs < 0) diffMs += 24 * 3_600_000;
   if (diffMs >= 24 * 3_600_000) diffMs -= 24 * 3_600_000;
   return Math.floor(diffMs / 60_000);
+}
+
+/** Nombre del período según su duración (semana / quincena / mes); "Período" si faltan las fechas. */
+export function etiquetaPeriodo(fechaInicio?: string, fechaFin?: string): string {
+  if (!fechaInicio || !fechaFin) return 'Período';
+  const dias = (Date.parse(fechaFin) - Date.parse(fechaInicio)) / 86_400_000 + 1;
+  return dias <= 7 ? 'Semana' : dias <= 16 ? 'Quincena' : 'Mes';
 }
 
 /** Formatea minutos totales como "1h 23m" / "45m" / "2h". */
