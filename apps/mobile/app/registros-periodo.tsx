@@ -1051,7 +1051,7 @@ export default function RegistrosPeriodoScreen() {
             return (
               // Fondo sólido + borde propios (no solo texto sobre la página) para que
               // se note dónde termina un trabajador y empieza el siguiente.
-              <View className="bg-primary-50 border border-primary-100 rounded-2xl mt-5 mb-2 overflow-hidden">
+              <View className="bg-success-light border border-success/20 rounded-2xl mt-5 mb-2 overflow-hidden">
                 <View className="flex-row items-center gap-2 px-3.5 py-2.5">
                   {/* Toca el nombre para replegar / desplegar los registros del trabajador */}
                   <TouchableOpacity
@@ -1061,18 +1061,18 @@ export default function RegistrosPeriodoScreen() {
                     accessibilityState={{ expanded: !replegado }}
                     accessibilityLabel={`${replegado ? 'Desplegar' : 'Replegar'} registros de ${section.title}`}
                   >
-                    <View className="w-7 h-7 rounded-full bg-primary-100 items-center justify-center">
-                      <Ionicons name="person-outline" size={14} color="#E83E1F" />
+                    <View className="w-7 h-7 rounded-full bg-success/20 items-center justify-center">
+                      <Ionicons name="person-outline" size={14} color="#059669" />
                     </View>
                     <View className="flex-1">
-                      <Text className="text-sm font-bold text-primary-700" numberOfLines={1}>{section.title}</Text>
-                      <Text className="text-[11px] text-primary-600">
+                      <Text className="text-sm font-bold text-emerald-800" numberOfLines={1}>{section.title}</Text>
+                      <Text className="text-[11px] text-emerald-700">
                         {semanaActual && etiqueta !== 'Semana' ? `Semana: ${semanaActual.horasTotales.toFixed(1)}h · ` : ''}
                         {etiqueta}: {resumen.totalHoras.toFixed(1)}h
                       </Text>
                     </View>
-                    <Text className="text-xs text-primary-600">· {section.totalDias} días</Text>
-                    <Ionicons name={replegado ? 'chevron-down' : 'chevron-up'} size={16} color="#E83E1F" />
+                    <Text className="text-xs text-emerald-700">· {section.totalDias} días</Text>
+                    <Ionicons name={replegado ? 'chevron-down' : 'chevron-up'} size={16} color="#059669" />
                   </TouchableOpacity>
                   {canEdit && (
                     <TouchableOpacity
@@ -1080,7 +1080,7 @@ export default function RegistrosPeriodoScreen() {
                       hitSlop={8}
                       className="w-7 h-7 rounded-full bg-white items-center justify-center"
                     >
-                      <Ionicons name="add" size={16} color="#E83E1F" />
+                      <Ionicons name="add" size={16} color="#059669" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1089,10 +1089,10 @@ export default function RegistrosPeriodoScreen() {
                 {!replegado && (
                   <TouchableOpacity
                     onPress={() => toggleSemanas(section.trabajadorId)}
-                    className="flex-row items-center justify-end gap-1 px-3.5 py-2 border-t border-primary-100/70"
+                    className="flex-row items-center justify-end gap-1 px-3.5 py-2 border-t border-success/20"
                   >
-                    <Text className="text-[11px] text-primary-600">Por semana (cuenta para extra)</Text>
-                    <Ionicons name={abiertas ? 'chevron-up' : 'chevron-down'} size={14} color="#E83E1F" />
+                    <Text className="text-[11px] text-emerald-700">Por semana (cuenta para extra)</Text>
+                    <Ionicons name={abiertas ? 'chevron-up' : 'chevron-down'} size={14} color="#059669" />
                   </TouchableOpacity>
                 )}
                 {abiertas && (
