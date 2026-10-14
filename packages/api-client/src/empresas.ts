@@ -118,4 +118,9 @@ export const empresasApi = {
   generarLinkPago(payload: { meses?: number; plan?: PlanEmpresa } = {}): Promise<{ url: string; referencia: string; plan: PlanEmpresa; monto_cop: number; expira_at: string }> {
     return api.post('/api/empresas/suscripcion/pagar', payload);
   },
+
+  /** Reclasifica (horas nocturnas/festivo/extra) los días ya registrados del período abierto con la config de recargos actual. */
+  reprocesarRecargos(): Promise<{ periodo_id: number; registros_actualizados: number }> {
+    return api.post('/api/empresas/reprocesar-recargos');
+  },
 };

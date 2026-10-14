@@ -3,9 +3,9 @@
  * Campos: logo, razón social, NIT, ciudad, actividad, descripción,
  *         acepta_postulaciones (visible en directorio marketplace).
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, Switch, Alert, Pressable,
+  View, Text, ScrollView, Switch, Alert, Pressable, Animated,
   KeyboardAvoidingView, Platform, Image, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -91,12 +91,47 @@ function useActualizarEmpresa() {
   });
 }
 
+/** Reclasifica los días ya registrados del período abierto con la config de recargos actual. */
+function useReprocesarRecargos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => empresasApi.reprocesarRecargos(),
+    onSuccess: ({ registros_actualizados }) => {
+      qc.invalidateQueries({ queryKey: ['registros'] });
+      qc.invalidateQueries({ queryKey: ['periodos'] });
+      showToast(
+        registros_actualizados > 0
+          ? `${registros_actualizados} registro(s) recalculados.`
+          : 'No había registros por recalcular en el período abierto.',
+      );
+    },
+    onError: () => Alert.alert('Error', 'No se pudo reprocesar el período. Intenta de nuevo.'),
+  });
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function MiEmpresaScreen() {
   const theme  = useTheme();
   const { data: empresa, isLoading } = useMiEmpresa();
   const actualizar = useActualizarEmpresa();
+  const reprocesar = useReprocesarRecargos();
+  // Mantener presionado "Con recargos" reprocesa el período abierto con la
+  // regla actual — deliberadamente prolongado (no un long-press corto) para
+  // que no se dispare sin querer: recalcula horas ya registradas del equipo.
+  const HOLD_MS = 1800;
+  const holdAnim = useRef(new Animated.Value(0)).current;
+  const holdRunning = useRef<Animated.CompositeAnimation | null>(null);
+  const iniciarHold = (activo: boolean) => {
+    if (!activo || reprocesar.isPending) return;
+    holdAnim.setValue(0);
+    holdRunning.current = Animated.timing(holdAnim, { toValue: 1, duration: HOLD_MS, useNativeDriver: false });
+    holdRunning.current.start(({ finished }) => { if (finished) reprocesar.mutate(); });
+  };
+  const cancelarHold = () => {
+    holdRunning.current?.stop();
+    holdAnim.setValue(0);
+  };
 
   const {
     control,
@@ -466,16 +501,33 @@ export default function MiEmpresaScreen() {
                       <Pressable
                         key={String(opt.value)}
                         onPress={elegir}
+                        onPressIn={() => iniciarHold(opt.value && active)}
+                        onPressOut={cancelarHold}
                         accessibilityRole="radio"
                         accessibilityState={{ checked: active }}
-                        className={`flex-1 rounded-2xl border py-3 px-2 items-center gap-0.5 active:opacity-70 ${
+                        className={`flex-1 overflow-hidden rounded-2xl border py-3 px-2 items-center gap-0.5 active:opacity-70 ${
                           active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
                         }`}
                       >
+                        {opt.value && active && (
+                          <Animated.View
+                            pointerEvents="none"
+                            style={{
+                              position: 'absolute', left: 0, top: 0, bottom: 0,
+                              width: holdAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                              backgroundColor: theme.primaryLight,
+                            }}
+                          />
+                        )}
                         <Text className={`text-sm font-bold ${active ? 'text-primary-500' : 'text-foreground'}`}>
                           {opt.label}
                         </Text>
                         <Text className="text-[10px] text-muted-foreground text-center">{opt.sub}</Text>
+                        {opt.value && active && (
+                          <Text className="text-[9px] text-muted-foreground/70 text-center mt-0.5">
+                            Mantén presionado para reprocesar el período
+                          </Text>
+                        )}
                       </Pressable>
                     );
                   })}
