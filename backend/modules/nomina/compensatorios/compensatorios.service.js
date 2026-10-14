@@ -51,12 +51,19 @@ async function validarFechaDescanso(empresaId, comp, fechaAsignada) {
 const CompensatoriosService = {
   /**
    * Llamado internamente después de marcar-salida (o crear/corregir un
-   * registro). Si el día es festivo o domingo, crea el descanso compensatorio
-   * — siempre 'pendiente', sin fecha: la asigna el jefe_nomina/admin
-   * manualmente desde la sección de compensatorios (ver rango()). También
-   * avisa a trabajador y, cuando aplica recargo, a los gestores.
+   * registro). Si el día es festivo o domingo Y se trabajó (tipo_dia
+   * 'ordinario'), crea el descanso compensatorio — siempre 'pendiente', sin
+   * fecha: la asigna el jefe_nomina/admin manualmente desde la sección de
+   * compensatorios (ver rango()). También avisa a trabajador y, cuando aplica
+   * recargo, a los gestores.
+   *
+   * Un domingo/festivo marcado como descanso, vacación, licencia, incapacidad
+   * o ausencia NO genera compensatorio: esos tipo_dia ya son días sin
+   * trabajar — el compensatorio es la contrapartida de TRABAJAR el día de
+   * descanso obligatorio, no de descansar en él.
    */
-  async crearSiCorresponde(empresaId, { trabajadorId, periodoId, fecha, esFestivo, registroId, clasificacion = 'habitual', numeroDiaFestivo, sumarNocturnasFestivo = true }) {
+  async crearSiCorresponde(empresaId, { trabajadorId, periodoId, fecha, esFestivo, registroId, clasificacion = 'habitual', numeroDiaFestivo, sumarNocturnasFestivo = true, tipoDia = 'ordinario' }) {
+    if (tipoDia !== 'ordinario') return null;
     const domingo = esDomingo(fecha);
     if (!esFestivo && !domingo) return null;
 
