@@ -276,7 +276,10 @@ function RecargosSection({ editing, val, setForm }: {
     setHoldProgress(0);
   };
   const iniciarHold = () => {
-    if (!editing || !sumar || reprocesar.isPending) return;
+    // Independiente del modo edición: reprocesar no cambia ni guarda el
+    // formulario, así que no debe depender de haber tocado "Editar" primero
+    // (y el atributo disabled del botón en modo vista bloqueaba el gesto).
+    if (!sumar || reprocesar.isPending) return;
     const inicio = performance.now();
     const tick = () => {
       const p = Math.min(1, (performance.now() - inicio) / HOLD_MS);
@@ -296,18 +299,18 @@ function RecargosSection({ editing, val, setForm }: {
 
       <div role="radiogroup" aria-label="Cálculo de recargos" className="grid grid-cols-2 gap-3">
         <button
-          type="button" role="radio" aria-checked={sumar} disabled={!editing}
+          type="button" role="radio" aria-checked={sumar}
           onClick={() => elegirSumar(true)}
           onPointerDown={iniciarHold} onPointerUp={cancelarHold} onPointerLeave={cancelarHold} onPointerCancel={cancelarHold}
-          title={editing && sumar ? 'Mantén presionado para reprocesar el período abierto con esta regla' : undefined}
-          className={`relative overflow-hidden ${BOTON_RECARGO(sumar)}`}
+          title={sumar ? 'Mantén presionado para reprocesar el período abierto con esta regla' : undefined}
+          className={`relative overflow-hidden ${BOTON_RECARGO(sumar)} ${!editing ? 'cursor-default' : ''}`}
         >
           {holdProgress > 0 && (
             <span className="absolute inset-y-0 left-0 bg-primary/25 pointer-events-none" style={{ width: `${holdProgress * 100}%` }} />
           )}
           <span className={`relative block text-sm font-semibold ${sumar ? 'text-primary' : 'text-foreground'}`}>Con recargos</span>
           <span className="relative block text-xs text-muted-foreground mt-0.5">Recargo nocturno y festivo según la ley. Lo que pase de 42 h a la semana es extra.</span>
-          {editing && sumar && (
+          {sumar && (
             <span className="relative block text-[11px] text-muted-foreground/70 mt-1.5">Mantén presionado para reprocesar el período abierto con esta regla</span>
           )}
         </button>
