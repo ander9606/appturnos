@@ -54,6 +54,15 @@ const RegistrosModel = {
     return row || null;
   },
 
+  /** Pares (trabajador_id, fecha) que YA tienen registro en el período — para detectar huecos al cerrarlo. */
+  async listarFechasConRegistro(empresaId, periodoId) {
+    const [filas] = await pool.query(
+      'SELECT DISTINCT trabajador_id, fecha FROM registros_diarios WHERE empresa_id = ? AND periodo_id = ?',
+      [empresaId, periodoId]
+    );
+    return filas;
+  },
+
   async obtenerPorFecha(empresaId, trabajadorId, fecha) {
     const [filas] = await pool.query(
       `SELECT r.*, sr.estado AS reingreso_estado

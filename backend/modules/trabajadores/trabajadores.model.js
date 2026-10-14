@@ -77,6 +77,15 @@ const TrabajadoresModel = {
     return { data: filas, total };
   },
 
+  /** IDs de trabajadores activos que marcan jornada (nomina o ambos) — para rellenar huecos al cerrar un período. */
+  async listarActivosNomina(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id FROM trabajadores WHERE empresa_id = ? AND activo = 1 AND tipo IN ('nomina', 'ambos')`,
+      [empresaId]
+    );
+    return filas.map((f) => f.id);
+  },
+
   async buscarPorCedula(cedula) {
     const [filas] = await pool.query(
       `SELECT t.id, t.nombre, t.apellido, t.cedula, t.tipo_documento, t.cargo, t.ranking

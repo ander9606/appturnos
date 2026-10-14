@@ -822,3 +822,66 @@ describe('RegistrosService.reprocesarPeriodoAbierto', () => {
     expect(RegistrosModel.actualizar).not.toHaveBeenCalled();
   });
 });
+
+// ── rellenarDiasVaciosComoDescanso ────────────────────────────────────────────
+
+describe('RegistrosService.rellenarDiasVaciosComoDescanso', () => {
+  const PERIODO = { id: 1, fecha_inicio: '2026-06-01', fecha_fin: '2026-06-03' };
+
+  beforeEach(() => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-07-01T05:00:00Z')); // muy después del período
+    RegistrosModel.crear.mockResolvedValue(999);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  test('sin trabajadores activos de nómina → no crea nada', async () => {
+    TrabajadoresModel.listarActivosNomina.mockResolvedValue([]);
+
+    const res = await RegistrosService.rellenarDiasVaciosComoDescanso(1, PERIODO);
+
+    expect(res).toEqual({ creados: 0 });
+    expect(RegistrosModel.listarFechasConRegistro).not.toHaveBeenCalled();
+    expect(RegistrosModel.crear).not.toHaveBeenCalled();
+  });
+
+  test('rellena solo los días sin registro, como "descanso" sin horario', async () => {
+    TrabajadoresModel.listarActivosNomina.mockResolvedValue([5]);
+    // El trabajador 5 ya tiene registro el día 2 — debe saltarlo.
+    RegistrosModel.listarFechasConRegistro.mockResolvedValue([{ trabajador_id: 5, fecha: '2026-06-02' }]);
+
+    const res = await RegistrosService.rellenarDiasVaciosComoDescanso(1, PERIODO);
+
+    expect(res).toEqual({ creados: 2 }); // días 1 y 3 (el 2 ya tenía registro)
+    expect(RegistrosModel.crear).toHaveBeenCalledTimes(2);
+    expect(RegistrosModel.crear).toHaveBeenCalledWith(1, expect.objectContaining({
+      trabajador_id: 5, periodo_id: 1, fecha: '2026-06-01',
+      tipo_dia: 'descanso', hora_entrada: null, hora_salida: null, horas_ordinarias: 0,
+    }));
+    expect(RegistrosModel.crear).toHaveBeenCalledWith(1, expect.objectContaining({ fecha: '2026-06-03' }));
+    expect(RegistrosModel.crear).not.toHaveBeenCalledWith(1, expect.objectContaining({ fecha: '2026-06-02' }));
+  });
+
+  test('nunca rellena un día futuro (período cerrado antes de fecha_fin)', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-06-02T05:00:00Z')); // "hoy" = 2026-06-02
+    TrabajadoresModel.listarActivosNomina.mockResolvedValue([5]);
+    RegistrosModel.listarFechasConRegistro.mockResolvedValue([]);
+
+    const res = await RegistrosService.rellenarDiasVaciosComoDescanso(1, PERIODO);
+
+    expect(res).toEqual({ creados: 2 }); // solo 1 y 2 — el 3 todavía no ha ocurrido
+    expect(RegistrosModel.crear).not.toHaveBeenCalledWith(1, expect.objectContaining({ fecha: '2026-06-03' }));
+  });
+
+  test('un fallo en un día puntual no detiene el resto (best-effort)', async () => {
+    TrabajadoresModel.listarActivosNomina.mockResolvedValue([5]);
+    RegistrosModel.listarFechasConRegistro.mockResolvedValue([]);
+    RegistrosModel.crear
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValue(999);
+
+    const res = await RegistrosService.rellenarDiasVaciosComoDescanso(1, PERIODO);
+
+    expect(res).toEqual({ creados: 2 }); // 3 días intentados, 1 falló, 2 se cuentan
+    expect(RegistrosModel.crear).toHaveBeenCalledTimes(3);
+  });
+});
