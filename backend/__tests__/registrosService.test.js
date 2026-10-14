@@ -285,6 +285,134 @@ describe('RegistrosService.corregir', () => {
   });
 });
 
+// ── corregir: día con reingreso (por sesiones) ───────────────────────────────
+
+describe('RegistrosService.corregir — día con reingreso', () => {
+  // Martes 2026-06-09: sesión 1 08–12, sesión 2 14–16 (hoy ya cerrada).
+  const registroConReingreso = (extra = {}) => ({
+    id: 99, trabajador_id: 5, periodo_id: 1, fecha: '2026-06-09',
+    hora_entrada: '14:00:00', hora_salida: '16:00:00',
+    sesiones: 2, sesiones_detalle: [{ hora_entrada: '08:00:00', hora_salida: '12:00:00' }],
+    jornada_continua: 0, novedad: null, tipo_dia: 'ordinario',
+    ...extra,
+  });
+  const s = (hora_entrada, hora_salida) => ({ hora_entrada, hora_salida });
+
+  beforeEach(() => {
+    RegistrosModel.obtenerPorId.mockResolvedValue(registroConReingreso());
+    PeriodosModel.obtenerPorId.mockResolvedValue({ id: 1, estado: 'abierto' });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+    RegistrosModel.actualizar.mockResolvedValue(1);
+  });
+
+  test('corrige la sesión 1 (08–12 → 07–12): recalcula el día completo y reescribe las sesiones', async () => {
+    await RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('07:00', '12:00'), s('14:00', '16:00')] });
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      1, 99,
+      expect.objectContaining({
+        // La sesión vigente (la última) sigue en hora_entrada/hora_salida; las cerradas, en el detalle.
+        hora_entrada: '14:00:00',
+        hora_salida: '16:00:00',
+        sesiones_detalle: [s('07:00:00', '12:00:00')],
+        hora_entrada_inicial: '07:00:00',
+        // 5 h + 2 h = 7 h ordinarias (el almuerzo solo se descuenta en una sesión de más de 6 h).
+        horas_ordinarias: 7,
+        aprobado_por: GESTOR.sub,
+      })
+    );
+  });
+
+  test('corrige la sesión vigente (la última): se refleja en hora_entrada/hora_salida', async () => {
+    await RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('08:00', '12:00'), s('14:00', '18:00')] });
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      1, 99,
+      expect.objectContaining({
+        hora_salida: '18:00:00',
+        sesiones_detalle: [s('08:00:00', '12:00:00')],
+        horas_ordinarias: 8,
+      })
+    );
+  });
+
+  test('el tope semanal se reparte entre sesiones al recalcular', async () => {
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 40, extras: 0 });
+
+    await RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('08:00', '12:00'), s('14:00', '16:00')] });
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      1, 99,
+      expect.objectContaining({ horas_ordinarias: 2, horas_extra_diurnas: 4, horas_acumuladas_semana: 40 })
+    );
+  });
+
+  test('conserva la novedad ya guardada si no se envía', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue(registroConReingreso({ novedad: 'Reingreso aprobado' }));
+
+    await RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('08:00', '12:00'), s('14:00', '16:00')] });
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(1, 99, expect.objectContaining({ novedad: 'Reingreso aprobado' }));
+  });
+
+  test('sin "sesiones" → 422 y no modifica nada', async () => {
+    await expect(RegistrosService.corregir(1, GESTOR, 99, { novedad: 'x' }))
+      .rejects.toMatchObject({ statusCode: 422, message: expect.stringContaining('todas sus sesiones') });
+    expect(RegistrosModel.actualizar).not.toHaveBeenCalled();
+  });
+
+  test('con hora_entrada/hora_salida sueltas → 422 (se perderían las otras sesiones)', async () => {
+    await expect(RegistrosService.corregir(1, GESTOR, 99, { hora_salida: '18:00', sesiones: [s('08:00', '12:00'), s('14:00', '16:00')] }))
+      .rejects.toMatchObject({ statusCode: 422 });
+    expect(RegistrosModel.actualizar).not.toHaveBeenCalled();
+  });
+
+  test('cantidad de sesiones distinta → 422', async () => {
+    await expect(RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('08:00', '16:00')] }))
+      .rejects.toMatchObject({ statusCode: 422 });
+    expect(RegistrosModel.actualizar).not.toHaveBeenCalled();
+  });
+
+  test('sesiones solapadas → 422', async () => {
+    await expect(RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('08:00', '12:00'), s('07:00', '09:00')] }))
+      .rejects.toMatchObject({ statusCode: 422 });
+    expect(RegistrosModel.actualizar).not.toHaveBeenCalled();
+  });
+
+  test('período cerrado → 409', async () => {
+    PeriodosModel.obtenerPorId.mockResolvedValue({ id: 1, estado: 'cerrado' });
+
+    await expect(RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('08:00', '12:00'), s('14:00', '16:00')] }))
+      .rejects.toMatchObject({ statusCode: 409 });
+    expect(RegistrosModel.actualizar).not.toHaveBeenCalled();
+  });
+
+  test('reingreso todavía abierto: corrige la sesión cerrada y deja la vigente abierta', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue(registroConReingreso({ hora_salida: null }));
+
+    await RegistrosService.corregir(1, GESTOR, 99, { sesiones: [s('07:00', '12:00'), { hora_entrada: '14:00', hora_salida: null }] });
+
+    expect(RegistrosModel.actualizar).toHaveBeenCalledWith(
+      1, 99,
+      expect.objectContaining({ hora_salida: null, sesiones_detalle: [s('07:00:00', '12:00:00')], horas_ordinarias: 5 })
+    );
+  });
+
+  test('un día de una sola sesión sigue corrigiéndose como siempre y no acepta "sesiones"', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue({
+      id: 98, trabajador_id: 5, periodo_id: 1, fecha: '2026-06-09', hora_entrada: '08:00', hora_salida: '12:00', sesiones: 1,
+    });
+
+    await expect(RegistrosService.corregir(1, GESTOR, 98, { sesiones: [s('08:00', '12:00'), s('14:00', '16:00')] }))
+      .rejects.toMatchObject({ statusCode: 422 });
+
+    await RegistrosService.corregir(1, GESTOR, 98, { hora_salida: '13:00' });
+    const campos = RegistrosModel.actualizar.mock.calls[0][2];
+    expect(campos).not.toHaveProperty('sesiones_detalle');
+    expect(campos.hora_salida).toBe('13:00');
+  });
+});
+
 // ── marcarSalida ──────────────────────────────────────────────────────────────
 
 describe('RegistrosService.marcarSalida', () => {

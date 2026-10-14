@@ -340,13 +340,17 @@ export default function RegistroDetalleScreen() {
             </View>
           )}
 
-          {/* Botón de corrección — bloqueado en el backend para registros con reingreso */}
+          {/* Un día con reingreso se corrige por sesiones, en Registros del equipo (filtrado a este trabajador). */}
           {!puedeCorregir ? null : registro.sesiones > 1 ? (
-            <View className="bg-muted rounded-2xl px-4 py-3">
-              <Text className="text-xs text-muted-foreground text-center">
-                Este registro tiene reingresos y no se puede corregir aquí. Contacta al administrador del sistema.
-              </Text>
-            </View>
+            <Button
+              label="Corregir sesiones"
+              variant="success"
+              size="lg"
+              fullWidth
+              onPress={() =>
+                router.push(`/registros-periodo?periodoId=${registro.periodo_id}&trabajadorId=${registro.trabajador_id}`)
+              }
+            />
           ) : (
             <Button
               label="Corregir Tiempos"

@@ -35,6 +35,7 @@ import { SemanaRow } from '@/features/nomina/trabajador/components/ResumenCards'
 import { useTheme } from '@/lib/theme';
 import { toISODate, bogotaToday } from '@/lib/formatters';
 import { isChronological } from '@/lib/dateValidation';
+import { ApiError } from '@api-client';
 import type { ResumenPeriodoNomina } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import type { RegistroDiario, TipoDia, DescansoCompensatorio } from '@api-client';
 
@@ -133,8 +134,8 @@ function EditarRegistroModal({
   }, [registro]);
 
   if (!registro) return null;
-  // El backend rechaza (422) corregir un día con reingreso — se muestran sus sesiones en solo lectura.
-  if (registro.sesiones > 1) return <SesionesRegistroModal registro={registro} onClose={onClose} />;
+  // Un día con reingreso se corrige por sesiones (el backend exige la lista completa).
+  if (registro.sesiones > 1) return <EditarSesionesModal key={registro.id} registro={registro} onClose={onClose} />;
 
   function onChangeEntrada(_: DateTimePickerEvent, d?: Date) {
     if (Platform.OS === 'android') setShowEntrada(false);
@@ -297,17 +298,64 @@ function EditarRegistroModal({
   );
 }
 
-// ── Modal: sesiones de un día con reingreso (solo lectura) ───────────────
+// ── Modal: corregir las sesiones de un día con reingreso ─────────────────
 
-function SesionesRegistroModal({ registro, onClose }: { registro: RegistroDiario; onClose: () => void }) {
+type SesionEdit = { entrada: Date | null; salida: Date | null };
+type PickerAbierto = { i: number; campo: 'entrada' | 'salida' } | null;
+
+/**
+ * Un día con reingreso guarda varias sesiones y sus horas son la suma de todas, así que no se
+ * edita "un par de horas": se corrigen las sesiones y el backend recalcula el día completo
+ * (mismo reparto del tope semanal que al marcar). No se agregan ni se quitan sesiones.
+ */
+function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; onClose: () => void }) {
+  const corregir = useCorregirRegistro();
+  const [sesiones, setSesiones] = useState<SesionEdit[]>(() =>
+    sesionesDelRegistro(registro).map((s) => ({ entrada: horaAFecha(s.hora_entrada), salida: horaAFecha(s.hora_salida) })),
+  );
+  const [picker, setPicker] = useState<PickerAbierto>(null);
+  const ultimaAbierta = !registro.hora_salida; // el reingreso sigue en curso: su salida no se edita
   const d = new Date(`${registro.fecha}T00:00:00`);
+
+  function onChangeHora(_: DateTimePickerEvent, hora?: Date) {
+    const actual = picker;
+    if (Platform.OS === 'android') setPicker(null);
+    if (!hora || !actual) return;
+    setSesiones((prev) => prev.map((s, i) => (i === actual.i ? { ...s, [actual.campo]: hora } : s)));
+  }
+
+  async function handleGuardar() {
+    const incompleta = sesiones.some((s, i) => !s.entrada || (!(ultimaAbierta && i === sesiones.length - 1) && !s.salida));
+    if (incompleta) {
+      Alert.alert('Completa todas las horas');
+      return;
+    }
+    try {
+      await corregir.mutateAsync({
+        id: registro.id,
+        sesiones: sesiones.map((s, i) => ({
+          hora_entrada: fmtTime(s.entrada),
+          hora_salida: ultimaAbierta && i === sesiones.length - 1 ? null : fmtTime(s.salida),
+        })),
+      });
+      onClose();
+    } catch (e) {
+      // El backend explica qué falló (sesiones solapadas, período cerrado, etc.).
+      Alert.alert('No se pudo guardar', e instanceof ApiError ? e.message : 'Intenta de nuevo.');
+    }
+  }
+
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/40">
-        <View className="bg-background rounded-t-3xl px-6 pt-5 pb-10 gap-5">
+      <KeyboardAvoidingView behavior="height" className="flex-1 justify-end bg-black/40">
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          className="bg-background rounded-t-3xl"
+          contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40, gap: 16 }}
+        >
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="text-lg font-bold text-foreground">Sesiones del día ({registro.sesiones})</Text>
+              <Text className="text-lg font-bold text-foreground">Corregir sesiones ({sesiones.length})</Text>
               <Text className="text-sm text-muted-foreground">
                 {SHORT_DAYS[d.getDay()]} {fmtFechaCorta(registro.fecha)} · {registro.trabajador_nombre} {registro.trabajador_apellido}
               </Text>
@@ -317,26 +365,66 @@ function SesionesRegistroModal({ registro, onClose }: { registro: RegistroDiario
             </Pressable>
           </View>
 
-          <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-2">
-            {sesionesDelRegistro(registro).map((s, i) => (
-              <View key={i} className="flex-row items-center justify-between">
-                <Text className="text-xs text-muted-foreground">Sesión {i + 1}</Text>
-                <Text className="text-lg font-bold text-foreground">
-                  {fmtHora(s.hora_entrada)} → {fmtHora(s.hora_salida)}
-                </Text>
+          {sesiones.map((s, i) => {
+            const salidaFija = ultimaAbierta && i === sesiones.length - 1;
+            return (
+              <View key={i} className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
+                <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold">Sesión {i + 1}</Text>
+                <View className="flex-row items-center gap-3">
+                  <TouchableOpacity onPress={() => setPicker({ i, campo: 'entrada' })} className="flex-1 bg-muted rounded-xl px-4 py-3">
+                    <Text className="text-xs text-muted-foreground mb-1">Entrada</Text>
+                    <Text className="text-2xl font-bold text-foreground">{fmtTime(s.entrada)}</Text>
+                  </TouchableOpacity>
+                  <Ionicons name="arrow-forward" size={16} color="#94A3B8" />
+                  <TouchableOpacity
+                    disabled={salidaFija}
+                    onPress={() => setPicker({ i, campo: 'salida' })}
+                    className="flex-1 bg-muted rounded-xl px-4 py-3"
+                  >
+                    <Text className="text-xs text-muted-foreground mb-1">Salida</Text>
+                    <Text className="text-2xl font-bold text-foreground">{salidaFija ? 'En curso' : fmtTime(s.salida)}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            ))}
-          </View>
+            );
+          })}
+
+          {picker && (
+            <View className="gap-1.5">
+              <DateTimePicker
+                value={sesiones[picker.i][picker.campo] ?? new Date()}
+                mode="time"
+                display="spinner"
+                onChange={onChangeHora}
+                style={{ width: '100%' }}
+              />
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity onPress={() => setPicker(null)} className="bg-primary/10 rounded-xl py-1.5 items-center">
+                  <Text className="text-xs font-semibold text-primary">Listo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           <View className="rounded-xl px-4 py-3 flex-row items-center gap-2 bg-info-light">
             <Ionicons name="information-circle-outline" size={16} color="#3B82F6" />
             <Text className="text-xs flex-1 leading-relaxed text-info">
-              Este día tiene reingreso (varias sesiones) y no se puede corregir manualmente.
+              Al guardar se recalculan las horas de todo el día. Las sesiones deben ir en orden y sin solaparse.
             </Text>
           </View>
-          <Button label="Cerrar" variant="secondary" onPress={onClose} />
-        </View>
-      </View>
+
+          <View className="flex-row gap-2">
+            <Button label="Cancelar" variant="secondary" style={{ flex: 1 }} onPress={onClose} />
+            <Button
+              label="Guardar cambios"
+              variant="success"
+              style={{ flex: 1 }}
+              loading={corregir.isPending}
+              onPress={handleGuardar}
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

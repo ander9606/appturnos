@@ -137,7 +137,7 @@ export function useCrearRegistroRango() {
 export function useCorregirRegistro() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...datos }: { id: number; tipo_dia?: TipoDia; novedad?: string; hora_entrada?: string | null; hora_salida?: string | null }) =>
+    mutationFn: ({ id, ...datos }: Parameters<typeof nominaApi.corregirRegistro>[1] & { id: number }) =>
       nominaApi.corregirRegistro(id, datos),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
   });
