@@ -20,7 +20,14 @@ export const nominaApi = {
   crearRegistro: (data: { periodo_id: number; fecha: string; hora_entrada?: string; hora_salida?: string; trabajador_id: number; novedad?: string; tipo_dia?: TipoDia }) =>
     api.post('/nomina/registros', data).then(r => r.data),
 
-  corregirRegistro: (id: number, data: { hora_entrada?: string | null; hora_salida?: string | null; novedad?: string; tipo_dia?: TipoDia }) =>
+  corregirRegistro: (id: number, data: {
+    hora_entrada?: string | null;
+    hora_salida?: string | null;
+    novedad?: string;
+    tipo_dia?: TipoDia;
+    /** Día con reingreso (Registro.sesiones > 1): la lista COMPLETA de sesiones, en orden; reemplaza a hora_entrada/hora_salida. */
+    sesiones?: { hora_entrada: string; hora_salida?: string | null }[];
+  }) =>
     api.put(`/nomina/registros/${id}`, data).then(r => r.data),
 
   descartarSospechoso: (id: number) =>

@@ -291,7 +291,7 @@ export function useDescartarSospechoso() {
 export function useCorregirRegistro() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...data }: { id: number; hora_entrada?: string | null; hora_salida?: string | null; novedad?: string; tipo_dia?: TipoDia }) =>
+    mutationFn: ({ id, ...data }: { id: number } & Parameters<typeof nominaApi.corregirRegistro>[1]) =>
       nominaApi.corregirRegistro(id, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['nomina', 'registros'] });

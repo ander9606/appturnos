@@ -6,8 +6,16 @@ import type { Registro, TipoDia } from '../types';
 import { Modal } from '@/shared/components/Modal';
 import { fmtDiaSemana } from '@/shared/lib/format';
 import { TIPO_DIA_OPTIONS, TIPOS_DIA_SIN_HORARIO } from '../constants';
+import { CorregirSesionesModal } from './CorregirSesionesModal';
 
-export function CorregirModal({ registro, onClose }: { registro: Registro; onClose: () => void }) {
+type Props = { registro: Registro; onClose: () => void };
+
+/** Un día con reingreso se corrige por sesiones (el backend exige la lista completa); el resto, como siempre. */
+export function CorregirModal(props: Props) {
+  return props.registro.sesiones > 1 ? <CorregirSesionesModal {...props} /> : <CorregirRegistroModal {...props} />;
+}
+
+function CorregirRegistroModal({ registro, onClose }: Props) {
   const corregir = useCorregirRegistro();
   const [form, setForm] = useState({
     hora_entrada: registro.hora_entrada ?? '',
