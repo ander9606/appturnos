@@ -296,6 +296,13 @@ function minutosTranscurridosDesde(horaEntrada: string): number {
   return Math.floor(diffMs / 60_000);
 }
 
+/** Nombre del período según su duración (semana / quincena / mes); "Período" si faltan las fechas. */
+export function etiquetaPeriodo(fechaInicio?: string, fechaFin?: string): string {
+  if (!fechaInicio || !fechaFin) return 'Período';
+  const dias = (Date.parse(fechaFin) - Date.parse(fechaInicio)) / 86_400_000 + 1;
+  return dias <= 7 ? 'Semana' : dias <= 16 ? 'Quincena' : 'Mes';
+}
+
 /** Formatea minutos totales como "1h 23m" / "45m" / "2h". */
 export function fmtDuracionMin(totalMin: number): string {
   const h = Math.floor(totalMin / 60);
