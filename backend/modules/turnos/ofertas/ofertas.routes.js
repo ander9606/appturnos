@@ -152,6 +152,24 @@ router.post(
 // DELETE /api/turnos/ofertas/:id  (cancelar)
 router.delete('/:id', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.cancelar);
 
+// POST /api/turnos/ofertas/:id/fallido  — cancelar por fuerza mayor: quien ya
+// marcó ingreso queda 'fallido' con compensación (body.compensaciones opcional,
+// por default la tarifa_dia de su puesto); el resto queda cancelado sin pago.
+router.post(
+  '/:id/fallido',
+  verificarRol(GESTIONAR),
+  verificarSuscripcion,
+  [
+    idParam,
+    body('motivo').optional({ values: 'falsy' }).isString().trim().isLength({ max: 255 }).withMessage('motivo inválido (máx. 255 caracteres)'),
+    body('compensaciones').optional().isArray().withMessage('compensaciones debe ser un array'),
+    body('compensaciones.*.asignacion_id').isInt({ min: 1 }).withMessage('asignacion_id requerido'),
+    body('compensaciones.*.monto').isFloat({ min: 0 }).withMessage('monto debe ser un número mayor o igual a 0'),
+  ],
+  validar,
+  ctrl.marcarFallida
+);
+
 // DELETE /api/turnos/ofertas/:id/definitivo  (borrar oferta cancelada sin postulantes)
 router.delete('/:id/definitivo', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.eliminarDefinitivo);
 

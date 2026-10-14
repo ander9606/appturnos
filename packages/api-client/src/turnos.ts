@@ -6,6 +6,9 @@ import type { TipoLiquidacion } from './empresas';
 // 'por_reconfirmar': estaba 'confirmado' pero el gestor cambió fecha/hora/lugar
 // de la oferta — deja de contar en plazas_cubiertas hasta que el trabajador
 // reconfirme (→ 'confirmado') o decline (→ 'cancelado'). Ver reconfirmarAsignacion.
+// 'fallido': cancelación de la oferta por fuerza mayor (ver marcarOfertaFallida)
+// mientras ya estaba 'en_progreso' — a diferencia de 'cancelado', conlleva una
+// compensación (pago_total queda fijado al monto de la compensación).
 export type EstadoAsignacion =
   | 'pendiente'
   | 'confirmado'
@@ -13,7 +16,8 @@ export type EstadoAsignacion =
   | 'completado'
   | 'no_presentado'
   | 'cancelado'
-  | 'por_reconfirmar';
+  | 'por_reconfirmar'
+  | 'fallido';
 
 // Fuente de verdad para validación en runtime. El backend (JS) debe
 // mantenerse en sync con este array; ver backend/config/constants.js.
@@ -25,6 +29,7 @@ export const ESTADOS_ASIGNACION = [
   'no_presentado',
   'cancelado',
   'por_reconfirmar',
+  'fallido',
 ] as const satisfies EstadoAsignacion[];
 
 export type EstadoOferta =
@@ -105,6 +110,10 @@ export interface Asignacion {
   rechazado_at: string | null;
   cancelado_por: number | null;
   cancelado_at: string | null;
+  /** Solo presente cuando estado === 'fallido' — por qué se canceló por fuerza mayor (ej. "Fuerza mayor"). */
+  compensacion_motivo?: string | null;
+  fallido_por?: number | null;
+  fallido_at?: string | null;
   // Joined from calificaciones_turno (LEFT JOIN — null if not yet rated)
   calificacion: number | null;
   calificacion_comentario: string | null;
@@ -470,6 +479,19 @@ export const turnosApi = {
   /** Cancela una oferta completa (todos sus puestos) y notifica a los postulados/asignados. */
   cancelarOferta(ofertaId: number): Promise<null> {
     return api.delete<null>(`/api/turnos/ofertas/${ofertaId}`);
+  },
+
+  /**
+   * Cancela la oferta por fuerza mayor: quien ya marcó ingreso recibe una
+   * compensación (por default la tarifa_dia de su puesto, o el monto que se
+   * indique en `compensaciones` para esa asignación) en vez de perder el
+   * turno sin nada; el resto queda cancelado como siempre, sin pago.
+   */
+  marcarOfertaFallida(
+    ofertaId: number,
+    datos?: { motivo?: string; compensaciones?: Array<{ asignacion_id: number; monto: number }> }
+  ): Promise<null> {
+    return api.post<null>(`/api/turnos/ofertas/${ofertaId}/fallido`, datos ?? {});
   },
 
   /** Borra definitivamente una oferta cancelada que nunca tuvo postulantes. */

@@ -29,6 +29,7 @@ const ORDER: Record<EstadoAsignacion, number> = {
   no_presentado: -1,
   cancelado:     -1,
   por_reconfirmar: -1,
+  fallido:       -1,
 };
 
 interface TurnoTimelineProps {

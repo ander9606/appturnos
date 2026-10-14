@@ -11,6 +11,7 @@ import {
   usePublicarOferta,
   useActualizarOferta,
   useCompletarOferta,
+  useMarcarOfertaFallida,
   useConfirmarAsignacion,
   useRechazarAsignacion,
   useCancelarAsignacion,
@@ -59,12 +60,13 @@ const ESTADO_ASIG_BADGE: Record<EstadoAsignacion, string> = {
   no_presentado: 'bg-danger-light text-danger',
   cancelado: 'bg-muted text-muted-foreground/60',
   por_reconfirmar: 'bg-warning-light text-warning',
+  fallido: 'bg-warning-light text-warning',
 };
 
 const ESTADO_ASIG_LABEL: Record<EstadoAsignacion, string> = {
   pendiente: 'Pendiente', confirmado: 'Confirmado', en_progreso: 'En progreso',
   completado: 'Completado', no_presentado: 'No presentado', cancelado: 'Cancelado',
-  por_reconfirmar: 'Por reconfirmar',
+  por_reconfirmar: 'Por reconfirmar', fallido: 'Turno fallido',
 };
 
 const FILTROS_ASIG: { label: string; value: EstadoAsignacion | undefined }[] = [
@@ -74,6 +76,7 @@ const FILTROS_ASIG: { label: string; value: EstadoAsignacion | undefined }[] = [
   { label: 'Por reconfirmar', value: 'por_reconfirmar' },
   { label: 'Completadas', value: 'completado' },
   { label: 'No presentados', value: 'no_presentado' },
+  { label: 'Turno fallido', value: 'fallido' },
 ];
 
 export function OfertaDetailPage() {
@@ -127,13 +130,17 @@ export function OfertaDetailPage() {
   const totalSospechosos = sospechososData?.data?.pagination?.total ?? 0;
 
   // Independiente del filtro de la tabla — para saber si "Marcar completada" debe
-  // preguntar cómo capear las horas de quien quedó en_progreso sin marcar salida.
-  const { data: enProgresoData } = useAsignaciones({ oferta_id: ofertaId, estado: 'en_progreso', limit: 1 });
-  const hayEnProgreso = (enProgresoData?.data?.pagination?.total ?? 0) > 0;
+  // preguntar cómo capear las horas de quien quedó en_progreso sin marcar salida,
+  // y para ofrecer "Turno fallido" con la lista de a quién compensar.
+  const { data: enProgresoData } = useAsignaciones({ oferta_id: ofertaId, estado: 'en_progreso' });
+  const enProgreso: Asignacion[] = enProgresoData?.data?.data ?? [];
+  const hayEnProgreso = enProgreso.length > 0;
+  const [showFallidoModal, setShowFallidoModal] = useState(false);
 
   const eliminarPuesto = useEliminarPuesto();
   const publicar = usePublicarOferta();
   const completar = useCompletarOferta();
+  const marcarFallida = useMarcarOfertaFallida();
   const confirmar = useConfirmarAsignacion();
   const rechazar = useRechazarAsignacion();
   const cancelarAsig = useCancelarAsignacion();
@@ -568,6 +575,15 @@ export function OfertaDetailPage() {
               </button>
               {hayEnProgreso && (
                 <button
+                  onClick={() => setShowFallidoModal(true)}
+                  className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-1.5 rounded-lg transition-colors text-foreground"
+                  title="Cancelar por fuerza mayor, compensando a quien ya marcó ingreso"
+                >
+                  <AlertTriangle size={14} /> Turno fallido
+                </button>
+              )}
+              {hayEnProgreso && (
+                <button
                   onClick={() => confirm({
                     title: 'Cerrar con la hora actual',
                     detail: 'En vez del horario estipulado del turno, a quien sigue en curso sin marcar salida se le cerrará contando las horas reales hasta ahora mismo. Solo aplica si ya pasó el margen de gracia para forzar el cierre.',
@@ -627,6 +643,17 @@ export function OfertaDetailPage() {
         <DescuentoAsignacionModal
           asignacion={descuentoAsig}
           onClose={() => setDescuentoAsig(null)}
+        />
+      )}
+
+      {showFallidoModal && oferta && (
+        <TurnoFallidoModal
+          oferta={oferta}
+          enProgreso={enProgreso}
+          puestos={puestos}
+          marcarFallida={marcarFallida}
+          onClose={() => setShowFallidoModal(false)}
+          onDone={() => { setShowFallidoModal(false); navigate('/turnos'); }}
         />
       )}
 
@@ -986,6 +1013,92 @@ function CorregirAsignacionModal({ asignacion, onClose }: { asignacion: Asignaci
           </button>
           <button type="submit" disabled={corregir.isPending} className="flex-1 bg-primary hover:bg-primary-600 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
             {corregir.isPending ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ── Turno fallido: fuerza mayor — quien ya marcó ingreso recibe una
+   compensación en vez de perder el turno sin nada; el resto queda cancelado
+   sin pago, como con "Marcar completada" / cancelar normal. ── */
+function TurnoFallidoModal({
+  oferta, enProgreso, puestos, marcarFallida, onClose, onDone,
+}: {
+  oferta: Oferta;
+  enProgreso: Asignacion[];
+  puestos: Puesto[];
+  marcarFallida: ReturnType<typeof useMarcarOfertaFallida>;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [motivo, setMotivo] = useState('Fuerza mayor');
+  const [montos, setMontos] = useState<Record<number, string>>(() =>
+    Object.fromEntries(enProgreso.map(a => [a.id, String(puestos.find(p => p.id === a.puesto_id)?.tarifa_dia ?? 0)]))
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!motivo.trim()) {
+      toast.error('Escribe por qué este turno es fuerza mayor.');
+      return;
+    }
+    const compensaciones = enProgreso.map(a => ({
+      asignacion_id: a.id,
+      monto: Number(montos[a.id]) || 0,
+    }));
+    await marcarFallida.mutateAsync({ id: oferta.id, motivo: motivo.trim(), compensaciones });
+    onDone();
+  };
+
+  return (
+    <Modal onClose={onClose} scrollable>
+      <h2 className="text-lg font-semibold text-foreground mb-1">Turno fallido</h2>
+      <p className="text-sm text-muted-foreground mb-4">
+        El turno se cancelará por fuerza mayor. Quienes ya marcaron ingreso recibirán la compensación
+        que definas abajo; el resto queda cancelado sin pago, como siempre.
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Motivo</label>
+          <input
+            type="text"
+            maxLength={255}
+            value={motivo}
+            onChange={e => setMotivo(e.target.value)}
+            placeholder="Ej. fuerza mayor"
+            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <label className="block text-sm font-medium text-foreground">
+            Compensación ({enProgreso.length} ya en turno)
+          </label>
+          {enProgreso.map(a => (
+            <div key={a.id} className="flex items-center gap-3">
+              <span className="flex-1 text-sm text-muted-foreground truncate">
+                {a.trabajador_nombre} {a.trabajador_apellido} · {a.cargo_nombre}
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={montos[a.id] ?? ''}
+                onChange={e => setMontos(m => ({ ...m, [a.id]: e.target.value }))}
+                className="w-32 border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <button type="button" onClick={onClose} className="flex-1 border border-border hover:bg-muted text-sm font-medium py-2 rounded-lg transition-colors">
+            Volver
+          </button>
+          <button type="submit" disabled={marcarFallida.isPending} className="flex-1 bg-danger hover:opacity-90 disabled:opacity-50 text-white text-sm font-medium py-2 rounded-lg transition-colors">
+            {marcarFallida.isPending ? 'Confirmando...' : 'Confirmar turno fallido'}
           </button>
         </div>
       </form>

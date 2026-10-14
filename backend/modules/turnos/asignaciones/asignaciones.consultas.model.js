@@ -122,6 +122,27 @@ module.exports = {
     return filas;
   },
 
+  /**
+   * Asignaciones no terminales de una oferta con la tarifa de su puesto —
+   * usado por OfertasService.marcarFallida para calcular la compensación
+   * default (tarifa_dia) de quien ya marcó ingreso y para notificar a todos
+   * los afectados (en_progreso y los que aún no habían empezado).
+   */
+  async listarActivasConTarifa(empresaId, ofertaId) {
+    const [filas] = await pool.query(
+      `SELECT a.id, a.estado, a.trabajador_id, t.usuario_id,
+              t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
+              p.tarifa_dia
+       FROM asignaciones_turno a
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       JOIN oferta_puestos p ON p.id = a.puesto_id
+       WHERE a.empresa_id = ? AND a.oferta_id = ?
+         AND a.estado NOT IN ('completado', 'cancelado')`,
+      [empresaId, ofertaId]
+    );
+    return filas;
+  },
+
   async eliminar(empresaId, id) {
     const [res] = await pool.query(
       'DELETE FROM asignaciones_turno WHERE id = ? AND empresa_id = ?',

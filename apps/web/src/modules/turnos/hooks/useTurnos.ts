@@ -202,6 +202,27 @@ export function useCancelarOferta() {
   });
 }
 
+/**
+ * Cancela la oferta por fuerza mayor — quien ya marcó ingreso recibe una
+ * compensación en vez de perder el turno sin nada; el resto queda cancelado
+ * sin pago, igual que useCancelarOferta.
+ */
+export function useMarcarOfertaFallida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, motivo, compensaciones }: {
+      id: number; motivo?: string; compensaciones?: { asignacion_id: number; monto: number }[];
+    }) => turnosApi.marcarOfertaFallida(id, { motivo, compensaciones }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
+      qc.invalidateQueries({ queryKey: KEYS.oferta(id) });
+      qc.invalidateQueries({ queryKey: ['turnos', 'asignaciones'] });
+      toast.success('Turno marcado como fallido');
+    },
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useConfirmarAsignacion() {
   const qc = useQueryClient();
   return useMutation({

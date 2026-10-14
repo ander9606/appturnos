@@ -76,6 +76,7 @@ const ESTADOS_ASIGNACION = [
   'no_presentado',
   'cancelado',
   'por_reconfirmar',
+  'fallido',
 ];
 
 const ESTADOS_PERIODO = ['abierto', 'cerrado', 'liquidado'];
@@ -217,8 +218,10 @@ const CONTRATOS_ACUMULATIVOS_ALERTA = 40;
 // Datos de la PERSONA, no del vínculo laboral — deben ser iguales sin importar
 // con cuántas empresas trabaje. Cada vínculo (trabajador_empresa) tiene su
 // propia fila en `trabajadores` (una por empresa) para poder tener cargo/tarifa
-// distintos, pero estos campos puntuales se copian al crear una fila nueva y
-// se propagan a las demás filas activas del mismo usuario_id cuando cambian.
+// distintos, pero estos campos puntuales se copian al crear una fila nueva.
+// Cambiarlos: un gestor los edita y se copian a las demás filas activas del
+// trabajador. La cédula es la excepción: un gestor no la cambia si el trabajador
+// tiene otra fila activa; la cambia él desde su perfil (PATCH /me).
 const CAMPOS_PERSONALES_TRABAJADOR = [
   'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
   'contacto_emergencia_nombre', 'contacto_emergencia_tel',

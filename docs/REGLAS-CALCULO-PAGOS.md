@@ -296,6 +296,13 @@ Un turno completado paga **la tarifa del día del puesto + el bono − los descu
 - No se pueden registrar, aceptar, rechazar ni eliminar descuentos de un turno cuya cuenta de cobro ya fue firmada.
 - Los turnos eventuales de trabajadores de nómina no admiten descuentos aquí: se descuentan en nómina.
 
+### Turno fallido (fuerza mayor)
+
+- `admin_empresa` o `jefe_turnos` pueden cancelar una oferta completa por fuerza mayor (corte de luz, emergencia, etc.) cuando ya hay alguien marcado como ingresado.
+- Quien ya marcó ingreso (en curso) queda **fallido** en vez de cancelado, y recibe una **compensación** por su tiempo: por default, la tarifa completa de su puesto; el gestor puede digitar otro monto para esa persona puntual. Quien aún no había llegado queda cancelado, sin pago, como con cualquier otra cancelación.
+- No se genera contrato diario — no es un turno trabajado, es una compensación — pero sí entra a la liquidación y a la cuenta de cobro igual que un turno completado (no necesita la firma del contrato porque no existe).
+- El trabajador recibe un aviso explicando el motivo y el monto de la compensación.
+
 ### Contratos diarios
 
 - Cada turno genera un contrato diario, laboral o de prestación de servicios según la empresa.
@@ -310,11 +317,11 @@ Un turno completado paga **la tarifa del día del puesto + el bono − los descu
 | Trabajador `turnos` o `ambos` | Turnos eventuales, segmento `turnos` | Ciclo de la empresa (mensual, quincenal o semanal) |
 | Trabajador `nomina` | Turnos eventuales, segmento `nomina` | Trimestral |
 
-La liquidación de turnos suma por trabajador los turnos **completados** del período: horas y pago total. El trabajador de nómina solo ve su propia línea.
+La liquidación de turnos suma por trabajador los turnos **completados** (o **fallidos** por fuerza mayor, con su compensación) del período: horas y pago total. El trabajador de nómina solo ve su propia línea.
 
 ### Cuentas de cobro
 
-- Al cerrarse un período de nómina, se genera una cuenta de cobro por trabajador de turnos con los turnos completados **y con contrato firmado** en esas fechas.
+- Al cerrarse un período de nómina, se genera una cuenta de cobro por trabajador de turnos con los turnos completados **y con contrato firmado** en esas fechas (un turno fallido por fuerza mayor entra igual, sin necesitar firma — no tiene contrato).
 - Cada ítem muestra valor base, bono, descuentos aceptados y total neto; el número es `CC-{período}-{trabajador}`.
 - Se notifica al trabajador para que la firme. Mientras no esté firmada, se puede regenerar para incluir contratos firmados después del cierre.
 - Los turnos no descuentan salud ni pensión: se tratan como prestación de servicios.

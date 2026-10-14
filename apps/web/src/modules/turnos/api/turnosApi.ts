@@ -24,6 +24,15 @@ export const turnosApi = {
   cancelarOferta: (id: number) =>
     api.delete(`/turnos/ofertas/${id}`).then(r => r.data),
 
+  /**
+   * Cancela la oferta por fuerza mayor: quien ya marcó ingreso recibe una
+   * compensación (por default la tarifa_dia de su puesto, o el monto de
+   * `compensaciones` para esa asignación) en vez de perder el turno sin
+   * nada; el resto queda cancelado sin pago, igual que cancelarOferta.
+   */
+  marcarOfertaFallida: (id: number, data?: { motivo?: string; compensaciones?: { asignacion_id: number; monto: number }[] }) =>
+    api.post(`/turnos/ofertas/${id}/fallido`, data ?? {}).then(r => r.data),
+
   // Puestos
   listarPuestos: (ofertaId: number) =>
     api.get(`/turnos/ofertas/${ofertaId}/puestos`).then(r => r.data),

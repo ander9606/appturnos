@@ -71,6 +71,14 @@ async function cancelar(req, res) {
   res.json({ success: true, data: null, message: 'Oferta cancelada' });
 }
 
+async function marcarFallida(req, res) {
+  await OfertasService.marcarFallida(req.empresa_id, req.usuario.sub, Number(req.params.id), {
+    motivo: req.body.motivo,
+    compensaciones: req.body.compensaciones,
+  });
+  res.json({ success: true, data: null, message: 'Turno marcado como fallido' });
+}
+
 async function eliminarDefinitivo(req, res) {
   await OfertasService.eliminarDefinitivo(req.empresa_id, Number(req.params.id));
   res.json({ success: true, data: null, message: 'Oferta eliminada' });
@@ -129,4 +137,4 @@ async function duplicar(req, res) {
   res.status(201).json({ success: true, data, message: 'Oferta duplicada' });
 }
 
-module.exports = { listar, obtener, crear, actualizar, publicar, completar, cancelar, eliminarDefinitivo, aplicar, retirar, asignar, cerrar, duplicar };
+module.exports = { listar, obtener, crear, actualizar, publicar, completar, cancelar, marcarFallida, eliminarDefinitivo, aplicar, retirar, asignar, cerrar, duplicar };

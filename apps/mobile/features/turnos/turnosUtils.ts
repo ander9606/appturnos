@@ -99,6 +99,7 @@ const ESTADO_CONFIG: Record<EstadoAsignacion, EstadoConfig> = {
   no_presentado:  { label: 'No presentado',badgeVariant: 'danger',  accentColor: '#EF4444' },
   cancelado:      { label: 'Cancelado',    badgeVariant: 'danger',  accentColor: '#EF4444' },
   por_reconfirmar: { label: 'Por reconfirmar', badgeVariant: 'warning', accentColor: '#F59E0B' },
+  fallido:        { label: 'Turno fallido', badgeVariant: 'warning', accentColor: '#F59E0B' },
 };
 
 export function getEstadoConfig(estado: EstadoAsignacion): EstadoConfig {
