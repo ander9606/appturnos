@@ -44,7 +44,7 @@ Cada día trabajado es un **registro diario** con hora de entrada y salida; al m
 ### Marcaje por el trabajador
 
 1. **Entrada** (solo rol `trabajador_nomina`): la hora la pone el servidor (hora de Colombia), no el celular. Si no hay período abierto para hoy, se crea automáticamente según `tipo_liquidacion`. Un solo registro por trabajador y día.
-2. **Salida**: exige entrada previa y período abierto. Puede cruzar medianoche (turno nocturno). Aquí se calculan las horas (sección 3).
+2. **Salida**: exige entrada previa y período abierto. Puede cruzar medianoche (turno nocturno): el registro queda con la fecha de la **entrada** y la app, pasadas las 00:00, sigue ofreciendo "Marcar salida" de ese turno. Mientras el turno de ayer siga abierto (menos de 24 h), no se puede marcar una entrada nueva; si lleva más de 24 h abierto se considera una salida olvidada y el gestor la corrige. Aquí se calculan las horas (sección 3).
 3. **Jornada continua**: al cerrar, el trabajador indica si NO tomó almuerzo. Si la jornada supera 6 h y sí lo tomó, se descuentan 60 min.
 
 ### Validación de ubicación (`tipo_marcacion`)

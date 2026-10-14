@@ -17,8 +17,12 @@ function formatearHoras(horasDecimal) {
   return `${h}h ${String(m).padStart(2, '0')}min`;
 }
 
-// Estados que se consideran "cerrados" para efectos del cálculo.
-const TERMINALES = new Set(['completado', 'cancelado', 'no_presentado']);
+// Estados que se consideran "cerrados" para efectos del cálculo. 'fallido'
+// (compensación por fuerza mayor — ver OfertasService.marcarFallida) cuenta
+// como cerrado y como costo real, igual que 'completado'.
+const TERMINALES = new Set(['completado', 'cancelado', 'no_presentado', 'fallido']);
+// Estados con un pago real a reportar — 'fallido' se paga igual que 'completado'.
+const PAGADOS = new Set(['completado', 'fallido']);
 
 const CostoLaborService = {
   /**
@@ -56,7 +60,7 @@ const CostoLaborService = {
       const todosTerminales = relevantes.every((a) => TERMINALES.has(a.estado));
       if (!todosTerminales) return;
 
-      const completados = relevantes.filter((a) => a.estado === 'completado');
+      const completados = relevantes.filter((a) => PAGADOS.has(a.estado));
       if (!completados.length) return;
 
       const resumen = completados.map((a) => ({
@@ -83,7 +87,12 @@ const CostoLaborService = {
       });
 
       // Marca la oferta como completada — actúa también como flag de idempotencia.
-      await OfertasModel.cambiarEstado(empresaId, ofertaId, 'completada');
+      // Si ya quedó 'cancelada' (turno fallido por fuerza mayor — ver
+      // OfertasService.marcarFallida), eso ES el estado real: no lo
+      // sobreescribimos a 'completada', que mentiría sobre qué pasó.
+      if (oferta.estado !== 'cancelada') {
+        await OfertasModel.cambiarEstado(empresaId, ofertaId, 'completada');
+      }
 
       logger.info(
         `[costo_labor] emitido para oferta ${ofertaId} (${completados.length} trabajadores, $${totalPagado})`
