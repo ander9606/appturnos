@@ -6,6 +6,7 @@ const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const LiquidacionService = require('../liquidacion/liquidacion.service');
 const CuentasCobroService = require('../../cuentas-cobro/cuentas-cobro.service');
+const RegistrosService = require('../registros/registros.service');
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
@@ -17,6 +18,20 @@ async function generarCuentasDeCobroSiAplica(empresaId, periodoId) {
     await CuentasCobroService.generarParaPeriodo(empresaId, periodoId);
   } catch (err) {
     logger.error(`[periodos] no se pudieron generar cuentas de cobro (período ${periodoId}):`, err.message);
+  }
+}
+
+/**
+ * Best-effort: rellena como 'descanso' los días sin ningún registro, ANTES
+ * del snapshot de cierre (para que esos registros nuevos también congelen
+ * su valor_hora_snapshot) — un fallo acá nunca debe impedir cerrar el período.
+ * Recibe el período ya cargado por el llamador (evita una consulta extra).
+ */
+async function rellenarDescansoSiAplica(empresaId, periodo) {
+  try {
+    await RegistrosService.rellenarDiasVaciosComoDescanso(empresaId, periodo);
+  } catch (err) {
+    logger.error(`[periodos] no se pudieron rellenar días vacíos (período ${periodo.id}):`, err.message);
   }
 }
 
@@ -132,6 +147,7 @@ const PeriodosService = {
     const vencidos = await PeriodosModel.listarAbiertosVencidos(empresaId, hoy);
     for (const v of vencidos) {
       try {
+        await rellenarDescansoSiAplica(empresaId, v);
         await PeriodosModel.cerrarConSnapshot(empresaId, v.id, null);
         await generarCuentasDeCobroSiAplica(empresaId, v.id);
       } catch (err) {
@@ -158,6 +174,7 @@ const PeriodosService = {
     const hoy = ahoraColombiaSQL().slice(0, 10);
     const abierto = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
     if (abierto) {
+      await rellenarDescansoSiAplica(empresaId, abierto);
       await PeriodosModel.cerrarConSnapshot(empresaId, abierto.id, usuarioId ?? null);
       await generarCuentasDeCobroSiAplica(empresaId, abierto.id);
     }
@@ -190,6 +207,9 @@ const PeriodosService = {
     if (periodo.estado !== 'abierto') {
       throw new AppError('Solo se puede cerrar un período abierto', 409);
     }
+    // Antes del snapshot: así los registros 'descanso' nuevos también
+    // congelan su valor_hora_snapshot junto con el resto del período.
+    await rellenarDescansoSiAplica(empresaId, periodo);
     // cerrarConSnapshot es atómico: cambia estado + congela valor_hora
     // en un solo commit, evitando que modificaciones de sueldo posteriores
     // afecten la liquidación de este período.

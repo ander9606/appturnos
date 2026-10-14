@@ -16,6 +16,7 @@ const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
 const { haversineMetros }       = require('../../../utils/geoUtils');
 const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
 const AppError                  = require('../../../utils/AppError');
+const logger                    = require('../../../utils/logger');
 const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
 
 const MS_POR_DIA = 24 * 3_600_000;
@@ -197,6 +198,13 @@ function hoyISO() {
   return ahoraColombiaSQL().slice(0, 10);
 }
 
+/** 'YYYY-MM-DD' del día siguiente a `fecha`. */
+function diaSiguiente(fecha) {
+  const d = new Date(`${fecha}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Returns yesterday's date as 'YYYY-MM-DD' in Colombia time. */
 function ayerISO() {
   return ahoraColombiaSQL(-MS_POR_DIA).slice(0, 10);
@@ -337,6 +345,54 @@ const RegistrosService = {
     });
 
     return RegistrosModel.obtenerPorId(empresaId, id);
+  },
+
+  /**
+   * Al cerrar un período: cada día del rango sin NINGÚN registro, para un
+   * trabajador que marca jornada (tipo nomina/ambos), se rellena como
+   * 'descanso' — sin horario, sin novedad. Así ningún día queda sin
+   * clasificar, y un domingo/festivo vacío no se confunde después con un día
+   * "pendiente de revisar" ni dispara nada por accidente (crearSiCorresponde
+   * ya no genera compensatorio para tipo_dia != 'ordinario').
+   *
+   * No afecta el pago: el salario fijo se paga completo por días del
+   * período (no por registros), y tarifa_hora no suma horas de un día sin
+   * marcar — 'descanso' tampoco está en la lista que descuenta el auxilio
+   * de transporte (ver dias_sin_subsidio en liquidacion.model.js).
+   *
+   * Best-effort: un fallo rellenando un día no debe impedir cerrar el
+   * período — el resto del cierre (snapshot, cuentas de cobro) ya se guardó
+   * o se guarda aparte.
+   */
+  async rellenarDiasVaciosComoDescanso(empresaId, periodo) {
+    const trabajadorIds = await TrabajadoresModel.listarActivosNomina(empresaId);
+    if (trabajadorIds.length === 0) return { creados: 0 };
+
+    const existentes = await RegistrosModel.listarFechasConRegistro(empresaId, periodo.id);
+    const cubiertos = new Set(existentes.map((r) => `${r.trabajador_id}|${r.fecha}`));
+
+    // Nunca un día que todavía no ha ocurrido (cerrar un período antes de su fecha_fin).
+    const hasta = periodo.fecha_fin < hoyISO() ? periodo.fecha_fin : hoyISO();
+
+    let creados = 0;
+    for (const trabajadorId of trabajadorIds) {
+      for (let fecha = periodo.fecha_inicio; fecha <= hasta; fecha = diaSiguiente(fecha)) {
+        if (cubiertos.has(`${trabajadorId}|${fecha}`)) continue;
+        try {
+          await RegistrosModel.crear(empresaId, {
+            trabajador_id: trabajadorId, periodo_id: periodo.id, fecha,
+            hora_entrada: null, hora_salida: null,
+            horas_ordinarias: 0, horas_extra_diurnas: 0, horas_extra_nocturnas: 0,
+            horas_nocturnas: 0, horas_festivo: 0, es_festivo: 0,
+            novedad: null, tipo_dia: 'descanso', jornada_continua: false, horas_acumuladas_semana: 0,
+          });
+          creados++;
+        } catch (err) {
+          logger.error(`[registros] no se pudo rellenar descanso (trabajador ${trabajadorId}, ${fecha}):`, err.message);
+        }
+      }
+    }
+    return { creados };
   },
 
   /** Corrección de un registro. Recalcula las horas y registra el aprobador. */
