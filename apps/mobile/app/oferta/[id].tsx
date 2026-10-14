@@ -14,7 +14,8 @@ import { confirm }     from '@/lib/confirmDialog';
 import { showToast }   from '@/lib/toast';
 import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
+import { turnoYaInicio } from '@/features/turnos/turnosUtils';
+import { bogotaToday } from '@/lib/formatters';
 import {
   useOferta, useMisTurnos, useAplicar, useRetirar,
   useConfirmar, useRechazar, useCancelar, useNoPresentado, useDuplicarOferta,

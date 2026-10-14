@@ -4,7 +4,7 @@
  */
 import React, { useRef, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { bogotaToday } from './turnosUtils';
+import { bogotaToday } from '@/lib/formatters';
 import type { WeekDay } from './turnosUtils';
 
 const ITEM_W  = 52; // ancho fijo por día (px) — necesario para scrollTo exacto

@@ -1,4 +1,5 @@
 import type { EstadoAsignacion } from '@api-client';
+import { bogotaToday, BOGOTA_OFFSET_MS } from '@/lib/formatters';
 
 // ── Week helpers ──────────────────────────────────────────────────────────
 
@@ -54,14 +55,6 @@ export function getWeekDays(ref: Date = new Date()): WeekDay[] {
       isToday: iso === today,
     };
   });
-}
-
-const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000; // UTC-5, sin DST
-
-/** Fecha de HOY en Bogotá — independiente del timezone del dispositivo */
-export function bogotaToday(): string {
-  const t = new Date(Date.now() - BOGOTA_OFFSET_MS);
-  return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
 }
 
 /** Date → "YYYY-MM-DD" usando partes de fecha locales del dispositivo */
