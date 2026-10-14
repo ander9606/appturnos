@@ -27,7 +27,7 @@ function spanMinutosSesion(s: SesionSimple): number | null {
  * vigente (hora_entrada/hora_salida) — mismo criterio que usa el detalle de
  * registro en mobile para reconstruir un día con reingreso.
  */
-function sesionesDelRegistro(r: Registro): SesionSimple[] {
+export function sesionesDelRegistro(r: Registro): SesionSimple[] {
   return [...(r.sesiones_detalle ?? []), { hora_entrada: r.hora_entrada, hora_salida: r.hora_salida }];
 }
 
