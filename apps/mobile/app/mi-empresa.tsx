@@ -99,6 +99,8 @@ function useReprocesarRecargos() {
     onSuccess: ({ registros_actualizados }) => {
       qc.invalidateQueries({ queryKey: ['registros'] });
       qc.invalidateQueries({ queryKey: ['periodos'] });
+      qc.invalidateQueries({ queryKey: ['liquidacion'] });
+      qc.invalidateQueries({ queryKey: ['compensatorios'] });
       showToast(
         registros_actualizados > 0
           ? `${registros_actualizados} registro(s) recalculados.`

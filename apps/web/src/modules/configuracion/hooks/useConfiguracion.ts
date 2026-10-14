@@ -22,13 +22,21 @@ export function useUpdateEmpresa() {
 }
 
 export function useReprocesarRecargos() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: configuracionApi.reprocesarRecargos,
-    onSuccess: (res) => toast.success(
-      res.data.registros_actualizados > 0
-        ? `${res.data.registros_actualizados} registro(s) recalculados`
-        : 'No había registros por recalcular en el período abierto'
-    ),
+    onSuccess: (res) => {
+      // Reclasifica horas, pago y compensatorios de registros ya cargados en
+      // caché (periodos/registros/liquidacion/compensatorios) — sin esto, el
+      // período reprocesado seguía mostrando los valores de antes hasta que
+      // el staleTime (60 s) expirara o se recargara la página a mano.
+      qc.invalidateQueries({ queryKey: ['nomina'] });
+      toast.success(
+        res.data.registros_actualizados > 0
+          ? `${res.data.registros_actualizados} registro(s) recalculados`
+          : 'No había registros por recalcular en el período abierto'
+      );
+    },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
 }
