@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,12 @@ import * as Location from 'expo-location';
 import { geocodingApi, type SugerenciaLugar } from '@api-client';
 
 import { MapaSelector } from '@/components/ui/MapaSelector';
+import { SugerenciasDropdown } from '@/components/ui/SugerenciasDropdown';
+import { useGeocodingSearch } from '@/lib/useGeocodingSearch';
 import { DEFAULT_GEOFENCE_RADIUS } from '@/lib/geo';
 import { usePuntosParaTurnos } from '@/features/turnos/usePuntosMarcaje';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
-type Sugerencia = SugerenciaLugar;
 
 type Props = {
   value: string;
@@ -29,13 +29,10 @@ type Props = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function LugarInput({ value, latitud, longitud, onChange }: Props) {
-  const [sugerencias, setSugerencias]   = useState<Sugerencia[]>([]);
-  const [buscando, setBuscando]         = useState(false);
+  const { sugerencias, buscando, searched, buscarDebounced, limpiar } = useGeocodingSearch();
   const [locLoading, setLocLoading]     = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mapaVisible, setMapaVisible]   = useState(false);
   const [bibliotecaAbierta, setBibliotecaAbierta] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { data: puntos = [] } = usePuntosParaTurnos();
 
   const handleSelectPunto = (p: { nombre: string; latitud: number; longitud: number }) => {
@@ -45,36 +42,15 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
 
   // ── Forward geocoding (texto → sugerencias) ──────────────────────────────
 
-  const buscar = useCallback(async (q: string) => {
-    if (q.trim().length < 3) {
-      setSugerencias([]);
-      setDropdownOpen(false);
-      return;
-    }
-    setBuscando(true);
-    try {
-      const data = await geocodingApi.buscar(q);
-      setSugerencias(data);
-      setDropdownOpen(data.length > 0);
-    } catch {
-      setSugerencias([]);
-      setDropdownOpen(false);
-    } finally {
-      setBuscando(false);
-    }
-  }, []);
-
   const handleChangeText = (text: string) => {
     // Limpiar coords si el usuario edita el texto manualmente
     onChange(text, null, null);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => buscar(text), 400);
+    buscarDebounced(text);
   };
 
-  const handleSelect = (s: Sugerencia) => {
+  const handleSelect = (s: SugerenciaLugar) => {
     onChange(s.display_name, parseFloat(s.lat), parseFloat(s.lon));
-    setSugerencias([]);
-    setDropdownOpen(false);
+    limpiar();
   };
 
   // ── Reverse geocoding (GPS → dirección) ──────────────────────────────────
@@ -118,13 +94,12 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
           placeholderTextColor="#94A3B8"
           value={value}
           onChangeText={handleChangeText}
-          onFocus={() => sugerencias.length > 0 && setDropdownOpen(true)}
           returnKeyType="search"
         />
         {buscando && <ActivityIndicator size="small" color="#94A3B8" />}
         {value.length > 0 && !buscando && (
           <TouchableOpacity
-            onPress={() => { onChange('', null, null); setSugerencias([]); setDropdownOpen(false); }}
+            onPress={() => { onChange('', null, null); limpiar(); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Ionicons name="close-circle" size={16} color="#94A3B8" />
@@ -132,28 +107,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
         )}
       </View>
 
-      {/* Dropdown de sugerencias */}
-      {dropdownOpen && sugerencias.length > 0 && (
-        <View
-          className="bg-card rounded-2xl overflow-hidden border border-border"
-          style={{ elevation: 6, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}
-        >
-          {sugerencias.map((s, i) => (
-            <TouchableOpacity
-              key={s.place_id}
-              className={`px-4 py-3 flex-row items-start gap-2.5 ${
-                i < sugerencias.length - 1 ? 'border-b border-border' : ''
-              }`}
-              onPress={() => handleSelect(s)}
-            >
-              <Ionicons name="location-outline" size={15} color="#64748B" style={{ marginTop: 2 }} />
-              <Text className="flex-1 text-sm text-foreground" numberOfLines={2}>
-                {s.display_name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+      <SugerenciasDropdown sugerencias={sugerencias} searched={searched} onSelect={handleSelect} />
 
       {/* Biblioteca de ubicaciones guardadas */}
       {puntos.length > 0 && (

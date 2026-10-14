@@ -34,8 +34,8 @@ export function usePagarSuscripcion() {
 export function usePuntos() {
   return useQuery({ queryKey: ['config', 'puntos'], queryFn: configuracionApi.getPuntos, staleTime: 60_000 });
 }
-export function usePuntosParaTurnos() {
-  return useQuery({ queryKey: ['config', 'puntos', 'para-turnos'], queryFn: configuracionApi.getPuntosParaTurnos, staleTime: 60_000 });
+export function usePuntosParaTurnos(enabled = true) {
+  return useQuery({ queryKey: ['config', 'puntos', 'para-turnos'], queryFn: configuracionApi.getPuntosParaTurnos, staleTime: 60_000, enabled });
 }
 export function useCreatePunto() {
   const qc = useQueryClient();

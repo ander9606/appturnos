@@ -3,15 +3,17 @@
  * Usado tanto al crear turnos (LugarInput) como al crear puntos de marcaje
  * de nómina (puntos-marcaje.tsx) — mismo componente, dos puntos de entrada.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, Modal, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Circle, type LatLng } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import { geocodingApi, type SugerenciaLugar } from '@api-client';
+import type { SugerenciaLugar } from '@api-client';
 
 import { Button } from './Button';
+import { SugerenciasDropdown } from './SugerenciasDropdown';
+import { useGeocodingSearch } from '@/lib/useGeocodingSearch';
 import { COLORS } from '@/lib/designTokens';
 
 // Bogotá — centro de referencia cuando no hay coords ni GPS disponible.
@@ -31,47 +33,26 @@ export function MapaSelector({ visible, initialLat, initialLng, radiusM, onConfi
   const [pin, setPin] = useState<LatLng>(FALLBACK_CENTER);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
-  const [sugerencias, setSugerencias] = useState<SugerenciaLugar[]>([]);
-  const [buscando, setBuscando] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Descarta respuestas de búsquedas viejas que lleguen después de una más nueva (red lenta + tipeo rápido).
-  const searchTokenRef = useRef(0);
+  const { sugerencias, buscando, searched, buscarDebounced, limpiar } = useGeocodingSearch();
 
   // Al cerrar, limpiar la búsqueda para la próxima apertura.
   useEffect(() => {
     if (!visible) {
       setQuery('');
-      setSugerencias([]);
+      limpiar();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
-
-  const buscar = useCallback(async (q: string) => {
-    if (q.trim().length < 3) {
-      setSugerencias([]);
-      return;
-    }
-    const token = ++searchTokenRef.current;
-    setBuscando(true);
-    try {
-      const data = await geocodingApi.buscar(q);
-      if (token === searchTokenRef.current) setSugerencias(data);
-    } catch {
-      if (token === searchTokenRef.current) setSugerencias([]);
-    } finally {
-      if (token === searchTokenRef.current) setBuscando(false);
-    }
-  }, []);
 
   const handleChangeText = (text: string) => {
     setQuery(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => buscar(text), 400);
+    buscarDebounced(text);
   };
 
   const handleSelect = (s: SugerenciaLugar) => {
     setPin({ latitude: parseFloat(s.lat), longitude: parseFloat(s.lon) });
     setQuery(s.display_name);
-    setSugerencias([]);
+    limpiar();
   };
 
   // Al abrir: usar coords ya elegidas, o GPS, o el fallback.
@@ -128,27 +109,9 @@ export function MapaSelector({ visible, initialLat, initialLng, radiusM, onConfi
             />
             {buscando && <ActivityIndicator size="small" color="#94A3B8" />}
           </View>
-          {sugerencias.length > 0 && (
-            <View
-              className="bg-card rounded-2xl overflow-hidden border border-border mt-1"
-              style={{ elevation: 6, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}
-            >
-              {sugerencias.map((s, i) => (
-                <Pressable
-                  key={s.place_id}
-                  className={`px-4 py-3 flex-row items-start gap-2.5 ${
-                    i < sugerencias.length - 1 ? 'border-b border-border' : ''
-                  }`}
-                  onPress={() => handleSelect(s)}
-                >
-                  <Ionicons name="location-outline" size={15} color="#64748B" style={{ marginTop: 2 }} />
-                  <Text className="flex-1 text-sm text-foreground" numberOfLines={2}>
-                    {s.display_name}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+          <View className="mt-1">
+            <SugerenciasDropdown sugerencias={sugerencias} searched={searched} onSelect={handleSelect} />
+          </View>
         </View>
 
         {/* Mapa */}
