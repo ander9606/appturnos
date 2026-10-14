@@ -96,6 +96,16 @@ router.patch(
   ctrl.actualizarMiEmpresa
 );
 
+// POST /api/empresas/reprocesar-recargos — reclasifica el período abierto con
+// la config de recargos actual (ver RegistrosService.reprocesarPeriodoAbierto).
+router.post(
+  '/reprocesar-recargos',
+  verificarToken,
+  verificarRol(SOLO_ADMIN),
+  verificarSuscripcion,
+  ctrl.reprocesarRecargos
+);
+
 // GET /api/empresas/:id — detalle público
 router.get(
   '/:id',

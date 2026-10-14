@@ -7,7 +7,7 @@ import {
   usePuntos, useCreatePunto, useUpdatePunto, useDeletePunto,
   useCargos, useCreateCargo, useUpdateCargo, useDeleteCargo,
   useGestores, useCreateGestor, useUpdateGestor, useToggleGestor, useDeleteGestor,
-  useSuscripcion, usePagarSuscripcion,
+  useSuscripcion, usePagarSuscripcion, useReprocesarRecargos,
 } from '../hooks/useConfiguracion';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { LugarInput } from '@/modules/turnos/components/LugarInput';
@@ -241,14 +241,22 @@ const OPCIONES_DOMINGO: { valor: 'ley' | 'dos_meses'; titulo: string }[] = [
 const BOTON_RECARGO = (activo: boolean) =>
   `text-left rounded-xl border p-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${activo ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted'}`;
 
+// Mantener presionado "Con recargos" reprocesa el período abierto con la regla
+// actual — deliberadamente prolongado (no un simple long-press) para que no
+// se dispare por accidente: recalcula horas ya registradas de todo el equipo.
+const HOLD_MS = 1800;
+
 function RecargosSection({ editing, val, setForm }: {
   editing: boolean;
   val: Record<string, string>;
   setForm: Dispatch<SetStateAction<Record<string, string> | null>>;
 }) {
   const { confirmState, confirm, close } = useConfirm();
+  const reprocesar = useReprocesarRecargos();
   const sumar = val.sumar_nocturnas_festivo !== '0';
   const regla = val.regla_domingo_habitual ?? 'ley';
+  const [holdProgress, setHoldProgress] = useState(0);
+  const holdRaf = useRef<number | null>(null);
 
   const elegirSumar = (valor: boolean) => {
     if (!editing || valor === sumar) return;
@@ -262,6 +270,23 @@ function RecargosSection({ editing, val, setForm }: {
     });
   };
 
+  const cancelarHold = () => {
+    if (holdRaf.current != null) cancelAnimationFrame(holdRaf.current);
+    holdRaf.current = null;
+    setHoldProgress(0);
+  };
+  const iniciarHold = () => {
+    if (!editing || !sumar || reprocesar.isPending) return;
+    const inicio = performance.now();
+    const tick = () => {
+      const p = Math.min(1, (performance.now() - inicio) / HOLD_MS);
+      setHoldProgress(p);
+      if (p >= 1) { reprocesar.mutate(); cancelarHold(); return; }
+      holdRaf.current = requestAnimationFrame(tick);
+    };
+    holdRaf.current = requestAnimationFrame(tick);
+  };
+
   return (
     <div className="mt-6 pt-6 border-t border-border">
       <h3 className="text-sm font-semibold text-foreground">Cálculo de recargos</h3>
@@ -270,9 +295,21 @@ function RecargosSection({ editing, val, setForm }: {
       </p>
 
       <div role="radiogroup" aria-label="Cálculo de recargos" className="grid grid-cols-2 gap-3">
-        <button type="button" role="radio" aria-checked={sumar} disabled={!editing} onClick={() => elegirSumar(true)} className={BOTON_RECARGO(sumar)}>
-          <span className={`block text-sm font-semibold ${sumar ? 'text-primary' : 'text-foreground'}`}>Con recargos</span>
-          <span className="block text-xs text-muted-foreground mt-0.5">Recargo nocturno y festivo según la ley. Lo que pase de 42 h a la semana es extra.</span>
+        <button
+          type="button" role="radio" aria-checked={sumar} disabled={!editing}
+          onClick={() => elegirSumar(true)}
+          onPointerDown={iniciarHold} onPointerUp={cancelarHold} onPointerLeave={cancelarHold} onPointerCancel={cancelarHold}
+          title={editing && sumar ? 'Mantén presionado para reprocesar el período abierto con esta regla' : undefined}
+          className={`relative overflow-hidden ${BOTON_RECARGO(sumar)}`}
+        >
+          {holdProgress > 0 && (
+            <span className="absolute inset-y-0 left-0 bg-primary/25 pointer-events-none" style={{ width: `${holdProgress * 100}%` }} />
+          )}
+          <span className={`relative block text-sm font-semibold ${sumar ? 'text-primary' : 'text-foreground'}`}>Con recargos</span>
+          <span className="relative block text-xs text-muted-foreground mt-0.5">Recargo nocturno y festivo según la ley. Lo que pase de 42 h a la semana es extra.</span>
+          {editing && sumar && (
+            <span className="relative block text-[11px] text-muted-foreground/70 mt-1.5">Mantén presionado para reprocesar el período abierto con esta regla</span>
+          )}
         </button>
         <button type="button" role="radio" aria-checked={!sumar} disabled={!editing} onClick={() => elegirSumar(false)} className={BOTON_RECARGO(!sumar)}>
           <span className={`block text-sm font-semibold ${!sumar ? 'text-primary' : 'text-foreground'}`}>Sin recargos</span>

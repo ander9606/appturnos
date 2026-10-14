@@ -21,6 +21,18 @@ export function useUpdateEmpresa() {
   });
 }
 
+export function useReprocesarRecargos() {
+  return useMutation({
+    mutationFn: configuracionApi.reprocesarRecargos,
+    onSuccess: (res) => toast.success(
+      res.data.registros_actualizados > 0
+        ? `${res.data.registros_actualizados} registro(s) recalculados`
+        : 'No había registros por recalcular en el período abierto'
+    ),
+    onError: (err: unknown) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useSuscripcion(enabled = true) {
   return useQuery({ queryKey: ['config', 'suscripcion'], queryFn: configuracionApi.getSuscripcion, staleTime: 60_000, enabled });
 }

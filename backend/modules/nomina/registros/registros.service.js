@@ -327,7 +327,7 @@ const RegistrosService = {
   },
 
   /** Corrección de un registro. Recalcula las horas y registra el aprobador. */
-  async corregir(empresaId, usuario, id, datos) {
+  async corregir(empresaId, usuario, id, datos, { notificar = true } = {}) {
     const registro = await RegistrosModel.obtenerPorId(empresaId, id);
     if (!registro) throw new AppError('Registro no encontrado', 404);
 
@@ -427,19 +427,84 @@ const RegistrosService = {
       sumarNocturnasFestivo,
     });
 
-    const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(registro.trabajador_id);
-    if (trabajadorUsuarioId) {
-      await NotificacionesService.notificar({
-        empresaId,
-        usuarioId: trabajadorUsuarioId,
-        tipo: 'nomina.correccion',
-        titulo: 'Tu horario fue modificado',
-        mensaje: `Tu horario del ${registro.fecha} fue modificado por ${usuario.nombre || 'tu gestor'}.`,
-        data: { registro_id: id },
-      }).catch(() => {});
+    if (notificar) {
+      const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(registro.trabajador_id);
+      if (trabajadorUsuarioId) {
+        await NotificacionesService.notificar({
+          empresaId,
+          usuarioId: trabajadorUsuarioId,
+          tipo: 'nomina.correccion',
+          titulo: 'Tu horario fue modificado',
+          mensaje: `Tu horario del ${registro.fecha} fue modificado por ${usuario.nombre || 'tu gestor'}.`,
+          data: { registro_id: id },
+        }).catch(() => {});
+      }
     }
 
     return RegistrosModel.obtenerPorId(empresaId, id);
+  },
+
+  /**
+   * Reprocesa todos los registros del período abierto con la configuración de
+   * recargos ACTUAL de la empresa. Reutiliza corregir() día por día (no un
+   * cálculo paralelo) para que la reclasificación sea idéntica, byte a byte, a
+   * una corrección manual — incluida la creación idempotente de compensatorios.
+   *
+   * Pensado para cuando la empresa prende "Con recargos" (o cambia la regla de
+   * domingo habitual) y quiere que los días YA registrados en el período
+   * abierto también queden clasificados con la regla nueva — por defecto
+   * corregir() no los toca (ver docs/REGLAS-CALCULO-PAGOS.md § Empresa que no
+   * suma recargos). Períodos cerrados nunca se tocan (fuera del alcance:
+   * obtenerAbiertoPorFecha solo encuentra el abierto).
+   *
+   * Un registro sin salida (jornada en curso, sesiones = 1) se salta: no hay
+   * nada cerrado que reclasificar todavía. Un día con reingreso sí se procesa
+   * aunque su última sesión siga abierta (la sesión cerrada anterior sí tiene
+   * horas que reclasificar); se reconstruye `sesiones` igual que lo hace la
+   * web/mobile al editar (sesiones_detalle + la vigente).
+   *
+   * Un solo aviso por trabajador al final, no uno por día tocado.
+   */
+  async reprocesarPeriodoAbierto(empresaId, usuario) {
+    const periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoyISO());
+    if (!periodo) throw new AppError('No hay un período abierto para reprocesar', 404);
+
+    const { data: registros } = await RegistrosModel.listar(empresaId, {
+      periodoId: periodo.id, limit: 5000, offset: 0,
+    });
+    // El acumulador semanal de corregir() depende de los días ya corregidos
+    // antes en la misma semana: hay que procesar en orden cronológico por
+    // trabajador, no en el orden de listar() (fecha DESC).
+    registros.sort((a, b) => a.trabajador_id - b.trabajador_id || a.fecha.localeCompare(b.fecha));
+
+    let actualizados = 0;
+    const trabajadoresAfectados = new Set();
+    for (const r of registros) {
+      if (!r.hora_entrada) continue;                 // tipo_dia sin horario (descanso, vacación, ...)
+      if (r.sesiones === 1 && !r.hora_salida) continue; // jornada en curso: nada cerrado que reclasificar aún
+
+      const datos = r.sesiones > 1
+        ? { sesiones: [...(r.sesiones_detalle ?? []), { hora_entrada: r.hora_entrada, hora_salida: r.hora_salida }] }
+        : {};
+      await RegistrosService.corregir(empresaId, usuario, r.id, datos, { notificar: false });
+      actualizados++;
+      trabajadoresAfectados.add(r.trabajador_id);
+    }
+
+    for (const trabajadorId of trabajadoresAfectados) {
+      const usuarioId = await TrabajadoresModel.obtenerUsuarioId(trabajadorId);
+      if (usuarioId) {
+        await NotificacionesService.notificar({
+          empresaId,
+          usuarioId,
+          tipo: 'nomina.correccion',
+          titulo: 'Tu horario fue recalculado',
+          mensaje: 'La empresa actualizó cómo se calculan los recargos; tus horas de este período se recalcularon.',
+        }).catch(() => {});
+      }
+    }
+
+    return { periodo_id: periodo.id, registros_actualizados: actualizados };
   },
 
   // ── Marcaje en tiempo real ───────────────────────────────────────────────
