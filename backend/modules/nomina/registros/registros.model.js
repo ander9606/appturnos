@@ -214,23 +214,27 @@ const RegistrosModel = {
   },
 
   /**
-   * Cuenta domingos ya trabajados por el trabajador en el mes calendario de
-   * `fecha` (excluyéndola), para clasificar ocasional/habitual (Art. 180/181
-   * CST). Por DAYOFWEEK, no por es_festivo — un domingo "ocasional" no lleva
+   * Cuenta domingos YA trabajados ANTES de `fecha`, dentro de su mismo mes
+   * calendario, para clasificar ocasional/habitual (Art. 180/181 CST). Por
+   * DAYOFWEEK, no por es_festivo — un domingo "ocasional" no lleva
    * es_festivo/horas_festivo (ver calcularHoras `recargoFestivo`), pero sigue
    * siendo domingo trabajado para efectos del conteo.
+   *
+   * `fecha < ?` (estrictamente anterior), no `fecha != ?`: con `!=` también
+   * contaba los domingos POSTERIORES del mes que ya tuvieran salida registrada
+   * (p. ej. al reprocesar un mes completo), inflando numeroDomingo y marcando
+   * como habitual el 1er o 2º domingo solo porque el 3º/4º ya estaban cerrados.
    */
   async contarDomingosTrabajadosEnMes(empresaId, trabajadorId, fecha) {
     const [[row]] = await pool.query(
       `SELECT COUNT(*) AS total FROM registros_diarios
        WHERE empresa_id = ? AND trabajador_id = ?
-         AND fecha != ?
          AND fecha >= DATE_FORMAT(?, '%Y-%m-01')
-         AND fecha <  DATE_FORMAT(DATE_ADD(?, INTERVAL 1 MONTH), '%Y-%m-01')
+         AND fecha <  ?
          AND DAYOFWEEK(fecha) = 1
          AND hora_salida IS NOT NULL
          AND (horas_ordinarias + horas_extra_diurnas + horas_extra_nocturnas + horas_nocturnas + horas_festivo) > 0`,
-      [empresaId, trabajadorId, fecha, fecha, fecha]
+      [empresaId, trabajadorId, fecha, fecha]
     );
     return row.total;
   },
