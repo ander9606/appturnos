@@ -158,7 +158,9 @@ const PeriodosTurnosModel = {
 
     const { fecha_inicio, fecha_fin } = periodo[0];
 
-    // Marcar asignaciones completadas en el rango como vinculadas a este período
+    // Marcar asignaciones completadas (o fallidas por fuerza mayor — su
+    // compensación se paga igual que un turno completado, ver
+    // OfertasService.marcarFallida) en el rango como vinculadas a este período.
     // Si es extra_nomina, solo turnos de trabajador_nomina; si no, solo otros
     const tipoTrabajador = esExtraNomina ? 'nomina' : 'no_nomina';
     const [resultado] = await pool.query(
@@ -167,7 +169,7 @@ const PeriodosTurnosModel = {
        JOIN trabajadores t ON t.id = a.trabajador_id
        SET a.periodo_pago_id = ?
        WHERE a.empresa_id = ?
-         AND a.estado = 'completado'
+         AND a.estado IN ('completado', 'fallido')
          AND o.fecha >= ? AND o.fecha <= ?
          AND ${esExtraNomina ? "t.tipo = 'nomina'" : "t.tipo != 'nomina'"}
          AND a.periodo_pago_id IS NULL`,

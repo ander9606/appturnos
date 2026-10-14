@@ -343,6 +343,10 @@ export interface PaginatedResponse<T> {
 
 export interface LiquidacionTurnoLinea {
   asignacion_id: number;
+  /** 'fallido': compensación por fuerza mayor, no un turno trabajado — se paga igual que 'completado'. */
+  estado?: EstadoAsignacion;
+  /** Solo presente cuando estado === 'fallido'. */
+  compensacion_motivo?: string | null;
   /** Agrupa líneas del mismo turno entre distintos trabajadores — ver liquidacionPorTurno(). */
   oferta_id: number;
   oferta_titulo: string;
