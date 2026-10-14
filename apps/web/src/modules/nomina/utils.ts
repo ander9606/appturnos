@@ -79,6 +79,55 @@ export function fmtDuracionMin(totalMin: number): string {
   return `${h}h ${m}m`;
 }
 
+export interface ResumenSemana {
+  /** ISO del lunes de la semana. */
+  inicioSemana: string;
+  horasTotales: number;
+  limiteHoras: number;
+  horasExtra: number;
+}
+
+/** ISO del lunes de la semana a la que pertenece `fecha`. */
+function lunesDeSemana(fecha: string): string {
+  const d = new Date(`${fecha}T00:00:00`);
+  const dia = d.getDay(); // 0=dom
+  const diff = dia === 0 ? -6 : 1 - dia;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Agrupa los registros de un trabajador por semana (lunes-domingo) para que
+ * el gestor vea claramente qué cuenta para las horas extra (tope semanal,
+ * Ley 2101) frente al total del período de facturación (semanal/quincenal/
+ * mensual), que puede abarcar varias semanas. Mismo criterio de agrupación
+ * que `calcularResumenPeriodo` en mobile (nominaTrabajadorUtils.ts).
+ * ponytail: límite fijo en 42h (ya vigente desde jul-2026) en vez de la
+ * tabla escalonada por año que usa mobile — solo afecta la etiqueta
+ * informativa de períodos históricos anteriores a 2026, no el pago real
+ * (ya congelado por calcularHoras en el backend) — upgrade path: portar
+ * getJornadaLegalSemanal() si hace falta exactitud histórica aquí también.
+ */
+export function agruparPorSemana(registros: Registro[]): ResumenSemana[] {
+  const horasPorSemana = new Map<string, number>();
+  for (const r of registros) {
+    const total = [
+      r.horas_ordinarias, r.horas_extra_diurnas, r.horas_extra_nocturnas,
+      r.horas_nocturnas, r.horas_festivo,
+    ].reduce((a, b) => a + Number(b), 0);
+    const lunes = lunesDeSemana(r.fecha);
+    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + total);
+  }
+  return Array.from(horasPorSemana.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([inicioSemana, horasTotales]) => ({
+      inicioSemana,
+      horasTotales,
+      limiteHoras: JORNADA_SEMANAL_HORAS,
+      horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
+    }));
+}
+
 export interface ExplicacionHorasExtra {
   /** Horas ordinarias+nocturnas que ya llevaba esta semana antes de hoy. */
   acumuladoSemana: number;

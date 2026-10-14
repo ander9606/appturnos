@@ -78,6 +78,7 @@ export function useDashboardAsistencia() {
         queryKey: ['registros', 'semana', lunes],
         queryFn: () => nominaApi.listarRegistros({ fecha_desde: lunes, fecha_hasta: domingo, limit: 500 }),
         staleTime: 60_000,
+        refetchInterval: 60_000, // incluye el turno de hoy en curso — igual que queryHoy
       },
     ],
   });
