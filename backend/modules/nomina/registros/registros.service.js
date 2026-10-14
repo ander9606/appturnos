@@ -17,6 +17,8 @@ const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../uti
 const AppError                  = require('../../../utils/AppError');
 const { ROLES, HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
 
+const MS_POR_DIA = 24 * 3_600_000;
+
 /**
  * El trabajador_nomina solo opera sobre sus propios registros: se resuelve
  * su trabajador y se ignora cualquier trabajador_id que venga en la petición.
@@ -180,6 +182,11 @@ function getLunesDeSemana(isoDate) {
 /** Returns today's date as 'YYYY-MM-DD' in Colombia time (UTC-5, no DST). */
 function hoyISO() {
   return ahoraColombiaSQL().slice(0, 10);
+}
+
+/** Returns yesterday's date as 'YYYY-MM-DD' in Colombia time. */
+function ayerISO() {
+  return ahoraColombiaSQL(-MS_POR_DIA).slice(0, 10);
 }
 
 /** Returns current time as 'HH:MM:SS' in Colombia time (UTC-5), independiente del TZ del proceso. */
@@ -453,6 +460,24 @@ const RegistrosService = {
 
     const hoy = hoyISO();
     const horaEntrada = ahoraHHMMSS();
+
+    // Turno que cruza la medianoche: si el de ayer sigue abierto (entrada sin salida) y empezó
+    // hace menos de 24 h, el trabajador todavía está en ese turno. Crear un registro nuevo para
+    // hoy dejaría el de ayer sin salida para siempre — hay que cerrarlo primero. Más de 24 h
+    // abierto es una salida olvidada: no se bloquea el nuevo ingreso, el gestor la corrige.
+    // Las dos fechas son texto 'YYYY-MM-DD HH:MM:SS', así que se comparan como texto.
+    const ayer = ayerISO();
+    const abiertoAyer = await RegistrosModel.obtenerPorFecha(empresaId, trabajadorId, ayer);
+    if (
+      abiertoAyer?.hora_entrada && !abiertoAyer.hora_salida &&
+      `${ayer} ${abiertoAyer.hora_entrada}` > ahoraColombiaSQL(-MS_POR_DIA)
+    ) {
+      throw new AppError(
+        `Tienes una jornada abierta desde ayer a las ${abiertoAyer.hora_entrada.slice(0, 5)}. Marca su salida antes de ingresar.`,
+        409
+      );
+    }
+
     let periodo = await PeriodosModel.obtenerAbiertoPorFecha(empresaId, hoy);
     // Si no hay período abierto, auto-crear según tipo_liquidacion de la empresa.
     if (!periodo) periodo = await PeriodosService.autoCrear(empresaId);

@@ -472,3 +472,88 @@ describe('Validación de geofence en marcaje', () => {
     ).rejects.toMatchObject({ statusCode: 422 });
   });
 });
+
+// ── marcarEntrada: turno que cruza la medianoche ──────────────────────────────
+
+describe('RegistrosService.marcarEntrada — turno que cruza la medianoche', () => {
+  const TRABAJADOR_USUARIO = { sub: 20, rol: ROLES.TRABAJADOR_NOMINA };
+
+  // Date.now() es UTC; Colombia es UTC-5. 05:30Z → 00:30 del 14-oct en Bogotá.
+  const ahoraBogota = (iso) => jest.spyOn(Date, 'now').mockReturnValue(Date.parse(iso));
+
+  beforeEach(() => {
+    TrabajadoresModel.obtenerPorUsuarioId.mockResolvedValue({ id: 5, usuario_id: 20 });
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, usuario_id: 20, nombre: 'Ana', apellido: 'P', tipo_marcacion: 'libre' });
+    PeriodosModel.obtenerAbiertoPorFecha.mockResolvedValue({ id: 3, estado: 'abierto' });
+    RegistrosModel.crearConEntrada.mockResolvedValue(77);
+    RegistrosModel.obtenerPorId.mockResolvedValue({ id: 77 });
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  // obtenerPorFecha se llama primero por AYER (el guard) y luego por HOY.
+  const registrosPorFecha = ({ ayer = null, hoy = null }) =>
+    RegistrosModel.obtenerPorFecha.mockImplementation(async (_e, _t, fecha) => (fecha === '2026-10-13' ? ayer : hoy));
+
+  test('el turno de ayer sigue abierto (entró 22:53, ahora 00:30) → 409 y no crea registro nuevo', async () => {
+    ahoraBogota('2026-10-14T05:30:00Z');
+    registrosPorFecha({ ayer: { id: 9, hora_entrada: '22:53:00', hora_salida: null } });
+
+    await expect(RegistrosService.marcarEntrada(1, TRABAJADOR_USUARIO, {}))
+      .rejects.toMatchObject({ statusCode: 409, message: expect.stringContaining('22:53') });
+    expect(RegistrosModel.crearConEntrada).not.toHaveBeenCalled();
+  });
+
+  test('el turno de ayer ya tiene salida → deja ingresar', async () => {
+    ahoraBogota('2026-10-14T05:30:00Z');
+    registrosPorFecha({ ayer: { id: 9, hora_entrada: '14:00:00', hora_salida: '22:00:00' } });
+
+    await RegistrosService.marcarEntrada(1, TRABAJADOR_USUARIO, {});
+
+    expect(RegistrosModel.crearConEntrada).toHaveBeenCalledTimes(1);
+  });
+
+  test('salida olvidada (abierto hace más de 24 h) → no bloquea el nuevo ingreso', async () => {
+    // Entró ayer 08:00 y ahora son las 14:00 de hoy: 30 h abierto.
+    ahoraBogota('2026-10-14T19:00:00Z');
+    registrosPorFecha({ ayer: { id: 9, hora_entrada: '08:00:00', hora_salida: null } });
+
+    await RegistrosService.marcarEntrada(1, TRABAJADOR_USUARIO, {});
+
+    expect(RegistrosModel.crearConEntrada).toHaveBeenCalledTimes(1);
+  });
+
+  test('ayer sin registro → ingreso normal', async () => {
+    ahoraBogota('2026-10-14T13:00:00Z');
+    registrosPorFecha({});
+
+    await RegistrosService.marcarEntrada(1, TRABAJADOR_USUARIO, {});
+
+    expect(RegistrosModel.crearConEntrada).toHaveBeenCalledWith(1, expect.objectContaining({ fecha: '2026-10-14' }));
+  });
+});
+
+// ── marcarSalida: el turno de ayer se cierra pasada la medianoche ─────────────
+
+describe('RegistrosService.marcarSalida — turno que cruza la medianoche', () => {
+  test('entró 22:53 el 13 y sale 01:10 del 14 → 2 h 17 min (2.5 h con el redondeo a media hora), en el registro del 13', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-14T06:10:00Z')); // 01:10 Bogotá
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, usuario_id: 20, tipo_marcacion: 'libre' });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+    RegistrosModel.obtenerPorId
+      .mockResolvedValueOnce({ id: 9, trabajador_id: 5, hora_entrada: '22:53:00', hora_salida: null, periodo_id: 3, fecha: '2026-10-13', sesiones: 1 })
+      .mockResolvedValueOnce({ id: 9 });
+    PeriodosModel.obtenerPorId.mockResolvedValue({ id: 3, estado: 'abierto' });
+    RegistrosModel.actualizarSalida.mockResolvedValue(1);
+
+    await RegistrosService.marcarSalida(1, { sub: 20, rol: ROLES.TRABAJADOR_NOMINA }, 9, {});
+
+    const horas = RegistrosModel.actualizarSalida.mock.calls[0][2];
+    expect(horas.hora_salida).toBe('01:10:00');
+    const total = horas.horas_ordinarias + horas.horas_extra_diurnas + horas.horas_extra_nocturnas + horas.horas_nocturnas + horas.horas_festivo;
+    // 137 min, todos nocturnos; cada tipo de hora se redondea a la media hora (redondearMediaHora).
+    expect(total).toBe(2.5);
+    expect(horas.horas_nocturnas).toBe(2.5);
+    jest.restoreAllMocks();
+  });
+});
