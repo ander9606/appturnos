@@ -119,7 +119,7 @@ export interface SesionSimple {
 }
 
 /** Minutos entre entrada y salida de UNA sesión (cruza medianoche si sale < entra). */
-function spanMinutosSesion(s: SesionSimple): number | null {
+export function spanMinutosSesion(s: SesionSimple): number | null {
   if (!s.hora_entrada || !s.hora_salida) return null;
   const [hE, mE] = s.hora_entrada.split(':').map(Number);
   const [hS, mS] = s.hora_salida.split(':').map(Number);

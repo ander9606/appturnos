@@ -28,7 +28,7 @@ import { RangoFechasCompensatorio } from '@/features/nomina/compensatorios/Rango
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useRoleGuard } from '@/components/RoleGuard';
 import {
-  TIPO_DIA_LABEL, fmtHora, fmtFechaCorta, calcularResumenPeriodo, sesionesDelRegistro,
+  TIPO_DIA_LABEL, fmtHora, fmtFechaCorta, calcularResumenPeriodo, sesionesDelRegistro, spanMinutosSesion,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { SemanaRow } from '@/features/nomina/trabajador/components/ResumenCards';
 import { useTheme } from '@/lib/theme';
@@ -77,6 +77,20 @@ function TipoDiaChips({ value, onChange }: { value: TipoDia; onChange: (v: TipoD
 }
 
 const SHORT_DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+/** 270 → "4h 30m" */
+function fmtDuracion(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}h${m ? ` ${m}m` : ''}` : `${m}m`;
+}
+
+/** Nombre del período según su duración (semana / quincena / mes); "Período" si no hay fechas. */
+function etiquetaPeriodo(fechaInicio?: string, fechaFin?: string): string {
+  if (!fechaInicio || !fechaFin) return 'Período';
+  const dias = (Date.parse(fechaFin) - Date.parse(fechaInicio)) / 86_400_000 + 1;
+  return dias <= 7 ? 'Semana' : dias <= 16 ? 'Quincena' : 'Mes';
+}
 
 function fmtTime(d: Date | null): string {
   if (!d) return '—';
@@ -823,11 +837,15 @@ function RegistroRow({
 
       <View className="flex-1 gap-0.5">
         {/* Un día con reingreso tiene varias sesiones: las cerradas viven en sesiones_detalle */}
-        {sesionesDelRegistro(registro).map((s, i) => (
-          <Text key={i} className="text-sm font-medium text-foreground">
-            {fmtHora(s.hora_entrada)} → {fmtHora(s.hora_salida)}
-          </Text>
-        ))}
+        {sesionesDelRegistro(registro).map((s, i) => {
+          const min = spanMinutosSesion(s);
+          return (
+            <Text key={i} className="text-sm font-medium text-foreground">
+              {fmtHora(s.hora_entrada)} → {fmtHora(s.hora_salida)}
+              {min != null && <Text className="text-xs text-muted-foreground">  · {fmtDuracion(min)}</Text>}
+            </Text>
+          );
+        })}
         {tipoDef && tipoDef.v !== 'ordinario' && (
           <View className="self-start px-2 py-0.5 rounded-full" style={{ backgroundColor: `${tipoDef.color}20` }}>
             <Text className="text-[10px] font-semibold" style={{ color: tipoDef.color }}>
@@ -874,6 +892,8 @@ function RegistroRow({
 type Seccion = {
   title:        string;
   trabajadorId: number;
+  /** Todos los registros del trabajador (para el resumen); `data` queda vacío si la sección está replegada. */
+  todos:        RegistroDiario[];
   data:         RegistroDiario[];
 };
 
@@ -896,6 +916,12 @@ export default function RegistrosPeriodoScreen() {
   const [creando,  setCreando]  = useState<CreandoState>(null);
   const [semanasAbiertas, setSemanasAbiertas] = useState<Set<number>>(new Set());
   const toggleSemanas = (trabajadorId: number) => setSemanasAbiertas((prev) => {
+    const next = new Set(prev);
+    next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
+    return next;
+  });
+  const [replegados, setReplegados] = useState<Set<number>>(new Set());
+  const toggleReplegado = (trabajadorId: number) => setReplegados((prev) => {
     const next = new Set(prev);
     next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
     return next;
@@ -932,8 +958,13 @@ export default function RegistrosPeriodoScreen() {
     }
     return Array.from(map.values())
       .sort((a, b) => a.nombre.localeCompare(b.nombre))
-      .map((g) => ({ title: g.nombre, trabajadorId: g.trabajadorId, data: g.registros }));
-  }, [registros]);
+      .map((g) => ({
+        title: g.nombre,
+        trabajadorId: g.trabajadorId,
+        todos: g.registros,
+        data: replegados.has(g.trabajadorId) ? [] : g.registros,
+      }));
+  }, [registros, replegados]);
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_nomina', 'nomina']);
   if (denied) return denied;
@@ -999,18 +1030,38 @@ export default function RegistrosPeriodoScreen() {
             />
           )}
           renderSectionHeader={({ section }) => {
-            const resumen = calcularResumenPeriodo(section.data, 0);
-            const abiertas = semanasAbiertas.has(section.trabajadorId);
+            const resumen = calcularResumenPeriodo(section.todos, 0);
+            const replegado = replegados.has(section.trabajadorId);
+            const abiertas = !replegado && semanasAbiertas.has(section.trabajadorId);
+            // La semana más reciente con registros = "hasta ahora" en la semana.
+            const semanaActual = resumen.semanas[resumen.semanas.length - 1];
+            const etiqueta = etiquetaPeriodo(fechaInicio, fechaFin);
             return (
               // Fondo sólido + borde propios (no solo texto sobre la página) para que
               // se note dónde termina un trabajador y empieza el siguiente.
               <View className="bg-primary-50 border border-primary-100 rounded-2xl mt-5 mb-2 overflow-hidden">
                 <View className="flex-row items-center gap-2 px-3.5 py-2.5">
-                  <View className="w-7 h-7 rounded-full bg-primary-100 items-center justify-center">
-                    <Ionicons name="person-outline" size={14} color="#E83E1F" />
-                  </View>
-                  <Text className="text-sm font-bold text-primary-700 flex-1">{section.title}</Text>
-                  <Text className="text-xs text-primary-600">· {section.data.length} días</Text>
+                  {/* Toca el nombre para replegar / desplegar los registros del trabajador */}
+                  <TouchableOpacity
+                    onPress={() => toggleReplegado(section.trabajadorId)}
+                    className="flex-1 flex-row items-center gap-2"
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: !replegado }}
+                    accessibilityLabel={`${replegado ? 'Desplegar' : 'Replegar'} registros de ${section.title}`}
+                  >
+                    <View className="w-7 h-7 rounded-full bg-primary-100 items-center justify-center">
+                      <Ionicons name="person-outline" size={14} color="#E83E1F" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-primary-700" numberOfLines={1}>{section.title}</Text>
+                      <Text className="text-[11px] text-primary-600">
+                        {semanaActual ? `Semana: ${semanaActual.horasTotales.toFixed(1)}h · ` : ''}
+                        {etiqueta}: {resumen.totalHoras.toFixed(1)}h
+                      </Text>
+                    </View>
+                    <Text className="text-xs text-primary-600">· {section.todos.length} días</Text>
+                    <Ionicons name={replegado ? 'chevron-down' : 'chevron-up'} size={16} color="#E83E1F" />
+                  </TouchableOpacity>
                   {canEdit && (
                     <TouchableOpacity
                       onPress={() => setCreando({ trabajadorId: section.trabajadorId, nombre: section.title })}
@@ -1022,19 +1073,16 @@ export default function RegistrosPeriodoScreen() {
                   )}
                 </View>
 
-                {/* Total del período de facturación vs. desglose semanal (lo que cuenta para extra) */}
+                {/* Desglose semanal (lo que cuenta para extra) */}
+                {!replegado && (
                 <TouchableOpacity
                   onPress={() => toggleSemanas(section.trabajadorId)}
-                  className="flex-row items-center justify-between px-3.5 py-2 border-t border-primary-100/70"
+                  className="flex-row items-center justify-end gap-1 px-3.5 py-2 border-t border-primary-100/70"
                 >
-                  <Text className="text-xs text-primary-700">
-                    Período: <Text className="font-semibold">{resumen.totalHoras.toFixed(1)}h</Text>
-                  </Text>
-                  <View className="flex-row items-center gap-1">
-                    <Text className="text-[11px] text-primary-600">Por semana (cuenta para extra)</Text>
-                    <Ionicons name={abiertas ? 'chevron-up' : 'chevron-down'} size={14} color="#E83E1F" />
-                  </View>
+                  <Text className="text-[11px] text-primary-600">Por semana (cuenta para extra)</Text>
+                  <Ionicons name={abiertas ? 'chevron-up' : 'chevron-down'} size={14} color="#E83E1F" />
                 </TouchableOpacity>
+                )}
                 {abiertas && (
                   <View className="px-3.5 pb-2.5">
                     {resumen.semanas.map((s) => (
