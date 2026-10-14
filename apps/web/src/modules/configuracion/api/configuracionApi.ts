@@ -7,6 +7,10 @@ export const configuracionApi = {
   updateEmpresa: (data: Partial<Empresa>) => api.patch<{ data: Empresa }>('/empresas/me', data).then(r => r.data),
 
   // Suscripción
+  /** Reclasifica (horas nocturnas/festivo/extra) los días ya registrados del período abierto con la config de recargos actual. */
+  reprocesarRecargos: () =>
+    api.post<{ data: { periodo_id: number; registros_actualizados: number } }>('/empresas/reprocesar-recargos').then(r => r.data),
+
   getSuscripcion: () => api.get<{ data: Suscripcion }>('/empresas/suscripcion').then(r => r.data),
   /** PDF de reglas de cálculo de pagos — solo admin_empresa (backend lo exige también). */
   getReglasPago: () => api.get('/empresas/reglas-pago', { responseType: 'blob' }),

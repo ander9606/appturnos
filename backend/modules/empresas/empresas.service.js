@@ -3,6 +3,7 @@
 const EmpresasModel = require('./empresas.model');
 const IntegracionModel = require('../integracion/integracion.model');
 const PeriodosService = require('../nomina/periodos/periodos.service');
+const RegistrosService = require('../nomina/registros/registros.service');
 const AppError = require('../../utils/AppError');
 const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
 const logger = require('../../utils/logger');
@@ -62,6 +63,11 @@ const EmpresasService = {
     }
 
     return empresa;
+  },
+
+  /** Reprocesa el período abierto con la configuración de recargos actual — ver RegistrosService.reprocesarPeriodoAbierto. */
+  async reprocesarRecargos(empresaId, usuario) {
+    return RegistrosService.reprocesarPeriodoAbierto(empresaId, usuario);
   },
 
   /**

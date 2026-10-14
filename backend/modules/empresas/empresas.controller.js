@@ -26,6 +26,11 @@ async function miEmpresa(req, res) {
   res.json({ success: true, data, message: 'Mi empresa' });
 }
 
+async function reprocesarRecargos(req, res) {
+  const data = await EmpresasService.reprocesarRecargos(req.empresa_id, req.usuario);
+  res.json({ success: true, data, message: `${data.registros_actualizados} registros recalculados` });
+}
+
 async function actualizarMiEmpresa(req, res) {
   const {
     nombre, nit, ciudad, descripcion, actividad, logo_url,
@@ -77,5 +82,5 @@ function reglasPago(req, res) {
 }
 
 module.exports = {
-  directorio, detalle, miEmpresa, actualizarMiEmpresa, generarLinkPago, obtenerSuscripcion, reglasPago,
+  directorio, detalle, miEmpresa, actualizarMiEmpresa, reprocesarRecargos, generarLinkPago, obtenerSuscripcion, reglasPago,
 };

@@ -706,3 +706,81 @@ describe('RegistrosService.marcarSalida — turno que cruza la medianoche', () =
     jest.restoreAllMocks();
   });
 });
+
+// ── reprocesarPeriodoAbierto ───────────────────────────────────────────────────
+
+describe('RegistrosService.reprocesarPeriodoAbierto', () => {
+  const ADMIN = { sub: 1, rol: ROLES.ADMIN_EMPRESA };
+
+  // Lunes, cerrado, una sola sesión: se reprocesa.
+  const REG_T5_LUNES = {
+    id: 101, trabajador_id: 5, periodo_id: 1, fecha: '2026-06-08',
+    hora_entrada: '08:00:00', hora_salida: '17:00:00', sesiones: 1,
+    tipo_dia: 'ordinario', novedad: null, jornada_continua: 0,
+  };
+  // Martes, en curso (sin salida): nada cerrado que reclasificar todavía — se salta.
+  const REG_T5_MARTES_ABIERTO = {
+    id: 102, trabajador_id: 5, periodo_id: 1, fecha: '2026-06-09',
+    hora_entrada: '08:00:00', hora_salida: null, sesiones: 1,
+    tipo_dia: 'ordinario', novedad: null, jornada_continua: 0,
+  };
+  // Reingreso cerrado: se reconstruye `sesiones` (detalle + la vigente).
+  const REG_T7_REINGRESO = {
+    id: 103, trabajador_id: 7, periodo_id: 1, fecha: '2026-06-08',
+    hora_entrada: '14:00:00', hora_salida: '16:00:00', sesiones: 2,
+    sesiones_detalle: [{ hora_entrada: '08:00:00', hora_salida: '12:00:00' }],
+    tipo_dia: 'ordinario', novedad: null, jornada_continua: 0,
+  };
+  // Descanso sin horario: nada que clasificar — se salta.
+  const REG_T7_DESCANSO = {
+    id: 104, trabajador_id: 7, periodo_id: 1, fecha: '2026-06-10',
+    hora_entrada: null, hora_salida: null, sesiones: 1,
+    tipo_dia: 'descanso', novedad: null, jornada_continua: 0,
+  };
+
+  beforeEach(() => {
+    PeriodosModel.obtenerAbiertoPorFecha.mockResolvedValue({ id: 1, estado: 'abierto' });
+    PeriodosModel.obtenerPorId.mockResolvedValue({ id: 1, estado: 'abierto' });
+    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
+    RegistrosModel.actualizar.mockResolvedValue(1);
+    // listar() devuelve en orden "fecha DESC" a propósito — prueba que se reordena cronológicamente.
+    RegistrosModel.listar.mockResolvedValue({
+      data: [REG_T7_DESCANSO, REG_T7_REINGRESO, REG_T5_MARTES_ABIERTO, REG_T5_LUNES],
+      total: 4,
+    });
+    const porId = { 101: REG_T5_LUNES, 102: REG_T5_MARTES_ABIERTO, 103: REG_T7_REINGRESO, 104: REG_T7_DESCANSO };
+    RegistrosModel.obtenerPorId.mockImplementation(async (_empresaId, id) => porId[id]);
+  });
+
+  test('reprocesa los días cerrados con horario; salta el que está en curso y el que no tiene horario', async () => {
+    const res = await RegistrosService.reprocesarPeriodoAbierto(1, ADMIN);
+
+    expect(res).toEqual({ periodo_id: 1, registros_actualizados: 2 });
+    const idsCorregidos = RegistrosModel.actualizar.mock.calls.map(([, id]) => id).sort();
+    expect(idsCorregidos).toEqual([101, 103]);
+  });
+
+  test('reconstruye "sesiones" para un día con reingreso (sesiones_detalle + la vigente)', async () => {
+    await RegistrosService.reprocesarPeriodoAbierto(1, ADMIN);
+
+    const llamadaT7 = RegistrosModel.actualizar.mock.calls.find(([, id]) => id === 103);
+    expect(llamadaT7[2].sesiones_detalle).toEqual([{ hora_entrada: '08:00:00', hora_salida: '12:00:00' }]);
+    expect(llamadaT7[2].hora_entrada).toBe('14:00:00');
+    expect(llamadaT7[2].hora_salida).toBe('16:00:00');
+  });
+
+  test('un aviso por trabajador afectado, no uno por día tocado', async () => {
+    await RegistrosService.reprocesarPeriodoAbierto(1, ADMIN);
+
+    expect(TrabajadoresModel.obtenerUsuarioId).toHaveBeenCalledTimes(2);
+    expect(TrabajadoresModel.obtenerUsuarioId).toHaveBeenCalledWith(5);
+    expect(TrabajadoresModel.obtenerUsuarioId).toHaveBeenCalledWith(7);
+  });
+
+  test('sin período abierto → 404 y no toca nada', async () => {
+    PeriodosModel.obtenerAbiertoPorFecha.mockResolvedValue(null);
+
+    await expect(RegistrosService.reprocesarPeriodoAbierto(1, ADMIN)).rejects.toMatchObject({ statusCode: 404 });
+    expect(RegistrosModel.actualizar).not.toHaveBeenCalled();
+  });
+});
