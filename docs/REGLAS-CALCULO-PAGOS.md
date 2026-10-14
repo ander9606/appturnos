@@ -233,7 +233,7 @@ flowchart TD
     - Pensión: 4 % + Fondo de Solidaridad Pensional si el bruto es de 4 SMMLV o más.
     - ARL y caja de compensación no se descuentan: los paga el empleador.
 3. **Descuentos manuales**: solo los que el trabajador **aceptó** (ver abajo).
-4. **Auxilio de transporte** (solo `laboral`): $249.095 al mes, proporcional a los días comerciales del período (÷ 30 × días) **menos los días de ausencia, incapacidad, licencia o vacación** (no hubo desplazamiento al trabajo esos días), si el salario mensual equivalente (valor hora × 210) no supera 2 SMMLV ($3.501.810). No es base de descuentos.
+4. **Auxilio de transporte** (solo `laboral`): $249.095 al mes, proporcional a los días comerciales del período (÷ 30 × días), si el salario mensual equivalente (valor hora × 210) no supera 2 SMMLV ($3.501.810). No es base de descuentos.
 5. **Neto** = bruto − descuentos de ley − descuentos manuales + auxilio.
 
 ### Fondo de Solidaridad Pensional
@@ -296,6 +296,13 @@ Un turno completado paga **la tarifa del día del puesto + el bono − los descu
 - No se pueden registrar, aceptar, rechazar ni eliminar descuentos de un turno cuya cuenta de cobro ya fue firmada.
 - Los turnos eventuales de trabajadores de nómina no admiten descuentos aquí: se descuentan en nómina.
 
+### Turno fallido (fuerza mayor)
+
+- `admin_empresa` o `jefe_turnos` pueden cancelar una oferta completa por fuerza mayor (corte de luz, emergencia, etc.) cuando ya hay alguien marcado como ingresado.
+- Quien ya marcó ingreso (en curso) queda **fallido** en vez de cancelado, y recibe una **compensación** por su tiempo: por default, la tarifa completa de su puesto; el gestor puede digitar otro monto para esa persona puntual. Quien aún no había llegado queda cancelado, sin pago, como con cualquier otra cancelación.
+- No se genera contrato diario — no es un turno trabajado, es una compensación — pero sí entra a la liquidación y a la cuenta de cobro igual que un turno completado (no necesita la firma del contrato porque no existe).
+- El trabajador recibe un aviso explicando el motivo y el monto de la compensación.
+
 ### Contratos diarios
 
 - Cada turno genera un contrato diario, laboral o de prestación de servicios según la empresa.
@@ -310,11 +317,11 @@ Un turno completado paga **la tarifa del día del puesto + el bono − los descu
 | Trabajador `turnos` o `ambos` | Turnos eventuales, segmento `turnos` | Ciclo de la empresa (mensual, quincenal o semanal) |
 | Trabajador `nomina` | Turnos eventuales, segmento `nomina` | Trimestral |
 
-La liquidación de turnos suma por trabajador los turnos **completados** del período: horas y pago total. El trabajador de nómina solo ve su propia línea.
+La liquidación de turnos suma por trabajador los turnos **completados** (o **fallidos** por fuerza mayor, con su compensación) del período: horas y pago total. El trabajador de nómina solo ve su propia línea.
 
 ### Cuentas de cobro
 
-- Al cerrarse un período de nómina, se genera una cuenta de cobro por trabajador de turnos con los turnos completados **y con contrato firmado** en esas fechas.
+- Al cerrarse un período de nómina, se genera una cuenta de cobro por trabajador de turnos con los turnos completados **y con contrato firmado** en esas fechas (un turno fallido por fuerza mayor entra igual, sin necesitar firma — no tiene contrato).
 - Cada ítem muestra valor base, bono, descuentos aceptados y total neto; el número es `CC-{período}-{trabajador}`.
 - Se notifica al trabajador para que la firme. Mientras no esté firmada, se puede regenerar para incluir contratos firmados después del cierre.
 - Los turnos no descuentan salud ni pensión: se tratan como prestación de servicios.
@@ -365,7 +372,6 @@ Notas del ejemplo:
 - El asalariado cobra sus 15 días de sueldo aunque solo registró 66 h diurnas: el salario no depende de las horas marcadas.
 - Ninguno llega a 4 SMMLV, así que no hay aporte al Fondo de Solidaridad.
 - Ambos reciben auxilio: el de tarifa hora tiene un mensual equivalente de 10.000 × 210 = $2.100.000, por debajo de 2 SMMLV.
-- En este ejemplo nadie tuvo ausencia, incapacidad ni licencia, así que el auxilio toma los 15 días completos. Si el asalariado hubiera tenido, por ejemplo, 3 días de incapacidad, el auxilio se habría prorrateado solo a 12 días: $249.095 ÷ 30 × 12 = $99.638.
 
 ## 10. Constantes y dónde vive cada regla
 
@@ -413,7 +419,7 @@ Estas reglas hacen que el cálculo actual difiera de la práctica usual en Colom
 | --- | --- | --- | --- |
 | 1 | ~~El salario se prorrateaba por días calendario~~ — corregido: mes comercial de 30 días | Quincena = 15 días y mes = 30, sin importar el calendario | Resuelto |
 | 2 | El Fondo de Solidaridad compara el **bruto del período** con 4 SMMLV mensuales | En quincenas o semanas, alguien que gana más de 4 SMMLV al mes no aporta | Alto para salarios altos |
-| 3 | ~~El auxilio de transporte se pagaba por días del período sin descontar ausencias~~ — corregido: se resta ausencia/incapacidad/licencia/vacación antes de prorratear | Ya no se paga auxilio en días sin desplazamiento al trabajo | Resuelto |
+| 3 | El auxilio de transporte se paga por **días del período**, no por días trabajados; para tarifa hora se evalúa con tarifa × 210 | Se paga auxilio completo aunque el trabajador haya faltado | Medio |
 | 4 | Las horas en domingo o festivo con recargo van todas al balde festivo | La festiva nocturna no suma el 35 % nocturno y la extra festiva no se paga como extra | Medio |
 | 5 | La hora festiva del asalariado se paga × 1,90 completa encima del sueldo | Validar si corresponde 1,90 o solo el recargo | Medio |
 | 6 | Los descuentos manuales aceptados no tienen tope | El neto podría quedar muy bajo o negativo | Medio |
@@ -422,17 +428,15 @@ Estas reglas hacen que el cálculo actual difiera de la práctica usual en Colom
 | 9 | `SMMLV_COP` es un solo valor, no una tabla por año | Reliquidar un período de un año anterior usa el mínimo actual | Bajo |
 | 10 | Para `tipo_marcacion = libre`, el GPS lo exige solo la app móvil | Una llamada directa a la API puede marcar sin ubicación | Bajo |
 | 11 | Los turnos no pagan recargos nocturnos, festivos ni extra, y las horas se recortan a la hora de fin estimada | Válido para prestación de servicios; revisar si un turno se contrata como laboral | Según contrato |
-| 12 | `salario_base` se paga 100 % íntegro en días de `incapacidad`, sin distinguir tramos (CST art. 227: días 1-2 al 66,67 % los paga el empleador; 3-90 al 66,67 % y 91-180 al 50 % los paga la EPS) ni registrar el recobro a la EPS | El trabajador recibe de más si la ley solo exige el 66,67 %; el recobro a la EPS no queda registrado en la app, se maneja aparte en contabilidad | Medio |
 
 ### Preguntas para el contador
 
 - [x] ¿Pagamos por mes comercial de 30 días (cada quincena = 15 días)? Sí — implementado.
 - [ ] ¿El Fondo de Solidaridad debe calcularse sobre el ingreso mensual del trabajador? Esto corrige el punto 2.
-- [x] ¿El auxilio de transporte se descuenta por días no trabajados? Sí — implementado para ausencia/incapacidad/licencia/vacación (descanso queda fuera de esta decisión, a confirmar si también debe excluirse).
+- [ ] ¿El auxilio de transporte se descuenta por días no trabajados?
 - [ ] ¿La hora dominical del asalariado se paga × 1,90 o solo el recargo del 90 %?
 - [ ] ¿La festiva nocturna debe sumar el 35 % nocturno (× 2,25 hoy)?
 - [ ] ¿Qué tope aplicamos a los descuentos manuales?
 - [x] Tope de descuentos por turno (art. 113 CST, quinta parte de la tarifa del día): implementado como tope del total por turno (lectura conservadora). Pendiente de confirmar: la ley habla de cada multa, no del total; si el contador acepta la lectura por multa, se cambia una línea.
-- [ ] ¿La incapacidad debe pagarse al 66,67 % (días 1-2 empleador, 3-90 EPS) en vez del 100 % del salario? Y si es así, ¿la app debe registrar el recobro a la EPS o eso sigue siendo un trámite externo de contabilidad? Esto corrige el punto 12.
 - [ ] ¿Un descuento por daños a equipo puede hacerse sin orden judicial? El art. 149 lo lista entre los conceptos restringidos.
 - [x] Regla "2 meses" para domingo habitual: confirmada por el contador como domingos seguidos trabajados durante 2 meses. Un domingo libre reinicia la cuenta.

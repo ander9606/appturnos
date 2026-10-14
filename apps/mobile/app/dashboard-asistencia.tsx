@@ -72,9 +72,8 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
     ? TIPO_DIA_LABEL[fila.registroHoy.tipo_dia]
     : null;
 
-  const enVivo = fila.registroHoy?.en_vivo === true;
   const horario = fila.horaEntrada
-    ? `${fila.horaEntrada} → ${fila.horaSalida ?? (enVivo ? 'en curso' : '…')}`
+    ? `${fila.horaEntrada} → ${fila.horaSalida ?? '…'}`
     : null;
 
   const excedeSemana = fila.horasExtra > 0;
@@ -122,7 +121,6 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
                 {fila.horasSemana}h semana
                 {fila.horasNocturnas > 0 ? ` · ${fila.horasNocturnas}h noct` : ''}
                 {excedeSemana ? ` · +${fila.horasExtra}h extra` : ` / ${L}h`}
-                {enVivo ? ' · incluye estimado de hoy' : ''}
               </Text>
             </View>
           );

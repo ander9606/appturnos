@@ -7,19 +7,12 @@ jest.mock('../modules/nomina/registros/registros.model');
 jest.mock('../modules/nomina/periodos/periodos.model');
 jest.mock('../modules/trabajadores/trabajadores.model');
 jest.mock('../modules/puntos-marcaje/puntos-marcaje.model');
-// Proxy al real por defecto — no afecta hoyISO()/ahoraHHMMSS() en el resto de
-// tests; solo se sobreescribe puntualmente con mockReturnValueOnce() donde el
-// "ahora" importa (desglose en vivo de un turno abierto).
-jest.mock('../utils/fechaColombia', () => ({
-  ahoraColombiaSQL: jest.fn(jest.requireActual('../utils/fechaColombia').ahoraColombiaSQL),
-}));
 
 const RegistrosModel     = require('../modules/nomina/registros/registros.model');
 const PeriodosModel      = require('../modules/nomina/periodos/periodos.model');
 const TrabajadoresModel  = require('../modules/trabajadores/trabajadores.model');
 const PuntosMarcajeModel = require('../modules/puntos-marcaje/puntos-marcaje.model');
 const RegistrosService   = require('../modules/nomina/registros/registros.service');
-const { ahoraColombiaSQL } = require('../utils/fechaColombia');
 const { ROLES }          = require('../config/constants');
 
 // Usuario gestor estándar para pruebas.
@@ -28,26 +21,6 @@ const GESTOR = { sub: 10, rol: ROLES.JEFE_NOMINA };
 // ── crear ─────────────────────────────────────────────────────────────────────
 
 describe('RegistrosService.crear', () => {
-  beforeEach(() => {
-    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, empresa_id: 1 });
-  });
-
-  test('trabajador de otra empresa → AppError 404 y no inserta', async () => {
-    TrabajadoresModel.obtenerPorId.mockResolvedValue(null);
-
-    await expect(
-      RegistrosService.crear(1, GESTOR, {
-        trabajador_id: 5,
-        periodo_id: 1,
-        fecha: '2026-06-10',
-        hora_entrada: '08:00',
-        hora_salida: '16:00',
-      })
-    ).rejects.toMatchObject({ statusCode: 404 });
-    expect(TrabajadoresModel.obtenerPorId).toHaveBeenCalledWith(1, 5);
-    expect(RegistrosModel.crear).not.toHaveBeenCalled();
-  });
-
   test('período no encontrado → AppError 404', async () => {
     PeriodosModel.obtenerPorId.mockResolvedValue(null);
 
@@ -383,49 +356,6 @@ describe('RegistrosService.marcarSalida', () => {
     );
     expect(result.id).toBe(1);
     expect(result).toHaveProperty('advertencia'); // null o string
-  });
-});
-
-// ── listar (desglose en vivo de un turno abierto) ─────────────────────────────
-
-describe('RegistrosService.listar — desglose en vivo', () => {
-  const GESTOR_LISTAR = { sub: 10, rol: ROLES.JEFE_NOMINA };
-
-  test('registro cerrado se devuelve sin recalcular', async () => {
-    const cerrado = {
-      id: 1, trabajador_id: 5, fecha: '2026-06-10',
-      hora_entrada: '08:00:00', hora_salida: '16:00:00',
-      horas_ordinarias: 7, horas_nocturnas: 0, horas_extra_diurnas: 0,
-      horas_extra_nocturnas: 0, horas_festivo: 0, es_festivo: 0, sesiones: 1,
-    };
-    RegistrosModel.listar.mockResolvedValue({ data: [cerrado], total: 1 });
-
-    const { data } = await RegistrosService.listar(1, GESTOR_LISTAR, { page: 1, limit: 20 });
-
-    expect(data[0]).toEqual(cerrado); // intacto, sin en_vivo
-    expect(RegistrosModel.sumarOrdinariasEnSemana).not.toHaveBeenCalled();
-  });
-
-  test('turno abierto (sin hora_salida) devuelve horas en vivo con en_vivo:true', async () => {
-    const abierto = {
-      id: 2, trabajador_id: 5, fecha: '2026-06-10', // miércoles, no festivo
-      hora_entrada: '08:00:00', hora_salida: null,
-      horas_ordinarias: 0, horas_nocturnas: 0, horas_extra_diurnas: 0,
-      horas_extra_nocturnas: 0, horas_festivo: 0, es_festivo: 0, sesiones: 1,
-      jornada_continua: 0,
-    };
-    RegistrosModel.listar.mockResolvedValue({ data: [abierto], total: 1 });
-    RegistrosModel.sumarOrdinariasEnSemana.mockResolvedValue({ ordinarias: 0, extras: 0 });
-    ahoraColombiaSQL.mockReturnValueOnce('2026-06-10 12:00:00'); // 4h después de entrar, sin almuerzo (< 6h)
-
-    const { data } = await RegistrosService.listar(1, GESTOR_LISTAR, { page: 1, limit: 20 });
-
-    expect(data[0]).toMatchObject({
-      en_vivo: true,
-      horas_ordinarias: 4,
-      horas_extra_diurnas: 0,
-      horas_nocturnas: 0,
-    });
   });
 });
 

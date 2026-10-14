@@ -197,7 +197,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     isLoading: loadingRegistros,
     refetch: refetchRegistros,
     isRefetching,
-  } = useRegistros({ periodo_id: periodoActivo?.id, limit: 100, refetchInterval: 60_000 });
+  } = useRegistros({ periodo_id: periodoActivo?.id, limit: 100 });
 
   const registros = registrosResp?.data ?? [];
 

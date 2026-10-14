@@ -165,9 +165,7 @@ export function LiquidacionRow({
             </Text>
             <View className="flex-row items-center justify-between gap-2">
               <Text className="text-xs text-muted-foreground flex-1">
-                {linea.salario_base != null
-                  ? `$${linea.salario_base.toLocaleString('es-CO')} ÷ 30 × ${linea.dias_periodo} días`
-                  : `${linea.horas_ordinarias.toFixed(1)}h ordinarias × $${linea.valor_hora.toLocaleString('es-CO')}`}
+                {linea.horas_ordinarias.toFixed(1)}h ordinarias × ${linea.valor_hora.toLocaleString('es-CO')}
               </Text>
               <Text className="text-base font-bold text-foreground">
                 ${linea.pago_ordinario.toLocaleString('es-CO')}

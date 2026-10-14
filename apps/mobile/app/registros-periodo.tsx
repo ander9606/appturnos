@@ -28,9 +28,8 @@ import { RangoFechasCompensatorio } from '@/features/nomina/compensatorios/Rango
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useRoleGuard } from '@/components/RoleGuard';
 import {
-  TIPO_DIA_LABEL, fmtHora, fmtFechaCorta, calcularResumenPeriodo,
+  TIPO_DIA_LABEL, fmtHora, fmtFechaCorta,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
-import { SemanaRow } from '@/features/nomina/trabajador/components/ResumenCards';
 import { useTheme } from '@/lib/theme';
 import { toISODate, bogotaToday } from '@/lib/formatters';
 import { isChronological } from '@/lib/dateValidation';
@@ -862,12 +861,6 @@ export default function RegistrosPeriodoScreen() {
   });
   const [editando, setEditando] = useState<RegistroDiario | null>(null);
   const [creando,  setCreando]  = useState<CreandoState>(null);
-  const [semanasAbiertas, setSemanasAbiertas] = useState<Set<number>>(new Set());
-  const toggleSemanas = (trabajadorId: number) => setSemanasAbiertas((prev) => {
-    const next = new Set(prev);
-    next.has(trabajadorId) ? next.delete(trabajadorId) : next.add(trabajadorId);
-    return next;
-  });
   const [reasignando, setReasignando] = useState<DescansoCompensatorio | null>(null);
   const [viendoUbicacion, setViendoUbicacion] = useState<RegistroDiario | null>(null);
 
@@ -966,53 +959,26 @@ export default function RegistrosPeriodoScreen() {
               onVerUbicacion={setViendoUbicacion}
             />
           )}
-          renderSectionHeader={({ section }) => {
-            const resumen = calcularResumenPeriodo(section.data, 0);
-            const abiertas = semanasAbiertas.has(section.trabajadorId);
-            return (
-              // Fondo sólido + borde propios (no solo texto sobre la página) para que
-              // se note dónde termina un trabajador y empieza el siguiente.
-              <View className="bg-primary-50 border border-primary-100 rounded-2xl mt-5 mb-2 overflow-hidden">
-                <View className="flex-row items-center gap-2 px-3.5 py-2.5">
-                  <View className="w-7 h-7 rounded-full bg-primary-100 items-center justify-center">
-                    <Ionicons name="person-outline" size={14} color="#E83E1F" />
-                  </View>
-                  <Text className="text-sm font-bold text-primary-700 flex-1">{section.title}</Text>
-                  <Text className="text-xs text-primary-600">· {section.data.length} días</Text>
-                  {canEdit && (
-                    <TouchableOpacity
-                      onPress={() => setCreando({ trabajadorId: section.trabajadorId, nombre: section.title })}
-                      hitSlop={8}
-                      className="w-7 h-7 rounded-full bg-white items-center justify-center"
-                    >
-                      <Ionicons name="add" size={16} color="#E83E1F" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Total del período de facturación vs. desglose semanal (lo que cuenta para extra) */}
-                <TouchableOpacity
-                  onPress={() => toggleSemanas(section.trabajadorId)}
-                  className="flex-row items-center justify-between px-3.5 py-2 border-t border-primary-100/70"
-                >
-                  <Text className="text-xs text-primary-700">
-                    Período: <Text className="font-semibold">{resumen.totalHoras.toFixed(1)}h</Text>
-                  </Text>
-                  <View className="flex-row items-center gap-1">
-                    <Text className="text-[11px] text-primary-600">Por semana (cuenta para extra)</Text>
-                    <Ionicons name={abiertas ? 'chevron-up' : 'chevron-down'} size={14} color="#E83E1F" />
-                  </View>
-                </TouchableOpacity>
-                {abiertas && (
-                  <View className="px-3.5 pb-2.5">
-                    {resumen.semanas.map((s) => (
-                      <SemanaRow key={s.inicioSemana} semana={s} valorHora={0} />
-                    ))}
-                  </View>
-                )}
+          renderSectionHeader={({ section }) => (
+            // Fondo sólido + borde propios (no solo texto sobre la página) para que
+            // se note dónde termina un trabajador y empieza el siguiente.
+            <View className="flex-row items-center gap-2 px-3.5 py-2.5 mt-5 mb-2 bg-primary-50 border border-primary-100 rounded-2xl">
+              <View className="w-7 h-7 rounded-full bg-primary-100 items-center justify-center">
+                <Ionicons name="person-outline" size={14} color="#E83E1F" />
               </View>
-            );
-          }}
+              <Text className="text-sm font-bold text-primary-700 flex-1">{section.title}</Text>
+              <Text className="text-xs text-primary-600">· {section.data.length} días</Text>
+              {canEdit && (
+                <TouchableOpacity
+                  onPress={() => setCreando({ trabajadorId: section.trabajadorId, nombre: section.title })}
+                  hitSlop={8}
+                  className="w-7 h-7 rounded-full bg-white items-center justify-center"
+                >
+                  <Ionicons name="add" size={16} color="#E83E1F" />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
           ItemSeparatorComponent={() => <View className="h-2" />}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}

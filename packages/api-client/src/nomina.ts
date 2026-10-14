@@ -56,8 +56,6 @@ export interface RegistroDiario {
   trabajador_apellido: string;
   advertencia?: string | null; // set by marcarSalida when weekly extra limit is near/exceeded
   reingreso_estado?: 'pendiente' | 'aprobado' | null; // solicitud activa del día
-  /** true si horas_* son una proyección en vivo (turno abierto, sin hora_salida) y no el cierre real — sigue cambiando hasta que el trabajador marque salida. */
-  en_vivo?: boolean;
 }
 
 export type EstadoSolicitudReingreso = 'pendiente' | 'aprobado' | 'rechazado' | 'usado';
@@ -124,16 +122,11 @@ export interface LiquidacionLinea {
   horas_nocturnas: number;
   horas_festivo: number;
   valor_hora: number;
-  /** Salario mensual del trabajador (snapshot si el período ya cerró) — null si cobra por `tarifa_hora`. Junto con `dias_periodo` reconstruye la fórmula real de `pago_ordinario`. */
-  salario_base: number | null;
-  /** Días de pago del período (semana=7, quincena=15, mes=30 comerciales) — ver diasPagoPeriodo en el backend. */
-  dias_periodo: number;
   /**
    * Pesos por concepto, ya con el recargo de ley aplicado, suman `total`.
    * `pago_ordinario` es el salario mensual prorrateado al período si el
    * trabajador tiene `salario_base` (siempre completo, no depende de
-   * horas_ordinarias) — fórmula: `salario_base ÷ 30 × dias_periodo`.
-   * Si es por `tarifa_hora` (`salario_base: null`), es `horas_ordinarias × valor_hora`.
+   * horas_ordinarias); si es por `tarifa_hora`, es horas_ordinarias × tarifa.
    */
   pago_ordinario: number;
   pago_nocturno: number;

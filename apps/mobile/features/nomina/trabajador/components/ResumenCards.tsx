@@ -287,9 +287,7 @@ export function ResumenCards({
                   </Text>
                   <View className="flex-row items-center justify-between gap-2">
                     <Text className="text-xs text-muted-foreground flex-1">
-                      {miLiquidacion.salario_base != null
-                        ? `${formatCOP(miLiquidacion.salario_base)} ÷ 30 × ${miLiquidacion.dias_periodo} días`
-                        : `${Number(miLiquidacion.horas_ordinarias).toFixed(1)}h ordinarias × ${formatCOP(miLiquidacion.valor_hora)}`}
+                      {Number(miLiquidacion.horas_ordinarias).toFixed(1)}h ordinarias × {formatCOP(miLiquidacion.valor_hora)}
                     </Text>
                     <Text className="text-base font-bold text-foreground">
                       {formatCOP(miLiquidacion.pago_ordinario)}
@@ -428,7 +426,7 @@ function fmtLunes(iso: string): string {
   return `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
 }
 
-export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorHora: number }) {
+function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorHora: number }) {
   const excede = semana.horasExtra > 0;
   const extra$ = excede ? Math.round(semana.horasExtra * 1.25 * valorHora) : 0;
   const pct = Math.min(100, (semana.horasTotales / semana.limiteHoras) * 100);

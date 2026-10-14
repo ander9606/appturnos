@@ -1,4 +1,4 @@
-import { Utensils, Info, Radio } from 'lucide-react';
+import { Utensils, Info } from 'lucide-react';
 import type { Registro } from '../types';
 import { fmtHrs } from '@/shared/lib/format';
 import { minutosAlmuerzoDescontados, esJornadaLarga, fmtDuracionMin, explicarHorasExtra } from '../utils';
@@ -21,16 +21,6 @@ export function AlmuerzoIndicator({ r }: { r: Registro }) {
     );
   }
   return null;
-}
-
-/** Ícono inline con tooltip: el turno sigue abierto — las horas mostradas son una proyección en vivo, no el cierre real. */
-export function EnVivoIndicator({ r }: { r: Registro }) {
-  if (!r.en_vivo) return null;
-  return (
-    <Radio size={12} className="text-success shrink-0 animate-pulse">
-      <title>En curso — horas estimadas hasta que marque salida</title>
-    </Radio>
-  );
 }
 
 /** Ícono inline con tooltip: por qué el día tuvo horas extra (tope semanal, no diario). */

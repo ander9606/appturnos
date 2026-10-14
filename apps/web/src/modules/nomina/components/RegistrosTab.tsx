@@ -6,9 +6,8 @@ import type { Registro, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { fmtDiaSemana, fmtHora, fmtHrs } from '@/shared/lib/format';
 import { TIPO_DIA_LABELS } from '../constants';
-import { AlmuerzoIndicator, EnVivoIndicator } from './DiaIndicators';
+import { AlmuerzoIndicator, ExtraIndicator } from './DiaIndicators';
 import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
-import { agruparPorSemana, explicarHorasExtra } from '../utils';
 
 export function RegistrosTab({
   registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear,
@@ -107,7 +106,6 @@ export function RegistrosTab({
             const totalExtra = g.registros.reduce((s, r) => s + Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas), 0);
             const totalNoct = g.registros.reduce((s, r) => s + Number(r.horas_nocturnas), 0);
             const totalFestivo = g.registros.reduce((s, r) => s + Number(r.horas_festivo), 0);
-            const semanas = agruparPorSemana(g.registros);
             return (
               <div key={g.trabajadorId} className="bg-card border border-border rounded-xl overflow-hidden">
                 <button
@@ -118,7 +116,7 @@ export function RegistrosTab({
                   <span className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{g.registros.length} día{g.registros.length !== 1 ? 's' : ''}</span>
                     <span>
-                      Período: {fmtHrs(totalOrd)} hrs ord · {fmtHrs(totalExtra)} hrs extra
+                      {fmtHrs(totalOrd)} hrs ord · {fmtHrs(totalExtra)} hrs extra
                       {totalNoct > 0 && ` · ${fmtHrs(totalNoct)} hrs noct.`}
                       {totalFestivo > 0 && ` · ${fmtHrs(totalFestivo)} hrs festivo`}
                     </span>
@@ -126,28 +124,6 @@ export function RegistrosTab({
                   </span>
                 </button>
                 {abierto && (
-                  <>
-                  {semanas.length > 0 && (
-                    <div className="px-4 py-2.5 border-t border-border bg-muted/40 flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                        Por semana (cuenta para extras):
-                      </span>
-                      {semanas.map(s => (
-                        <span key={s.inicioSemana} className="text-xs">
-                          <span className="text-muted-foreground">{fmtDiaSemana(s.inicioSemana)}: </span>
-                          {s.horasExtra > 0 ? (
-                            <span>
-                              <span className="text-foreground">{s.limiteHoras}h cupo</span>
-                              <span className="text-success font-semibold"> + {fmtHrs(s.horasExtra)}h extra</span>
-                              <span className="text-muted-foreground"> = {fmtHrs(s.horasTotales)}h</span>
-                            </span>
-                          ) : (
-                            <span className="text-foreground">{fmtHrs(s.horasTotales)} / {s.limiteHoras}h</span>
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                   <div className="overflow-x-auto">
                   <table className="w-full text-sm border-t border-border">
                     <thead>
@@ -180,8 +156,7 @@ export function RegistrosTab({
                           </td>
                           <td className="px-3 py-2.5 text-muted-foreground">
                             <span className="inline-flex items-center gap-1.5">
-                              {r.en_vivo ? 'En curso' : fmtHora(r.hora_salida)}
-                              <EnVivoIndicator r={r} />
+                              {fmtHora(r.hora_salida)}
                               <AlmuerzoIndicator r={r} />
                             </span>
                           </td>
@@ -190,17 +165,10 @@ export function RegistrosTab({
                             {Number(r.horas_nocturnas) > 0 ? fmtHrs(r.horas_nocturnas) : ''}
                           </td>
                           <td className="px-3 py-2.5 text-right text-muted-foreground">
-                            <div className="flex flex-col items-end">
-                              <span>{fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}</span>
-                              {(() => {
-                                const explicacion = explicarHorasExtra(r);
-                                return explicacion ? (
-                                  <span className="text-[10px] text-muted-foreground/70 whitespace-nowrap">
-                                    {fmtHrs(explicacion.cupoUsado)}h cupo + {fmtHrs(explicacion.horasExtra)}h extra
-                                  </span>
-                                ) : null;
-                              })()}
-                            </div>
+                            <span className="inline-flex items-center gap-1">
+                              {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))}
+                              <ExtraIndicator r={r} />
+                            </span>
                           </td>
                           <td className="px-3 py-2.5 text-right text-danger">
                             {Number(r.horas_festivo) > 0 ? fmtHrs(r.horas_festivo) : ''}
@@ -252,7 +220,6 @@ export function RegistrosTab({
                     </tbody>
                   </table>
                   </div>
-                  </>
                 )}
               </div>
             );

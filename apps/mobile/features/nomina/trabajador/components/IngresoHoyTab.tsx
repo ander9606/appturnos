@@ -151,48 +151,6 @@ export function IngresoHoyTab({
               </View>
             ) : null}
           </View>
-
-          {/* Desglose en vivo — mismas reglas que un día cerrado, pero sigue cambiando hasta marcar salida. */}
-          {estadoHoy === 'en_jornada' && registroHoy.en_vivo && (
-            Number(registroHoy.horas_nocturnas) > 0 ||
-            Number(registroHoy.horas_extra_diurnas) > 0 ||
-            Number(registroHoy.horas_extra_nocturnas) > 0 ||
-            Number(registroHoy.horas_festivo) > 0
-          ) ? (
-            <View className="gap-1 pt-1 border-t border-border">
-              <View className="flex-row gap-1.5 flex-wrap">
-                {Number(registroHoy.horas_nocturnas) > 0 && (
-                  <View className="bg-blue-50 px-2 py-0.5 rounded-full">
-                    <Text className="text-[10px] font-semibold text-info">
-                      {Number(registroHoy.horas_nocturnas).toFixed(1)}h noct.
-                    </Text>
-                  </View>
-                )}
-                {Number(registroHoy.horas_extra_diurnas) > 0 && (
-                  <View className="bg-primary-50 px-2 py-0.5 rounded-full">
-                    <Text className="text-[10px] font-semibold text-primary-600">
-                      +{Number(registroHoy.horas_extra_diurnas).toFixed(1)}h ext. diurna
-                    </Text>
-                  </View>
-                )}
-                {Number(registroHoy.horas_extra_nocturnas) > 0 && (
-                  <View className="bg-primary-50 px-2 py-0.5 rounded-full">
-                    <Text className="text-[10px] font-semibold text-primary-600">
-                      +{Number(registroHoy.horas_extra_nocturnas).toFixed(1)}h ext. noct.
-                    </Text>
-                  </View>
-                )}
-                {Number(registroHoy.horas_festivo) > 0 && (
-                  <View className="bg-danger-light px-2 py-0.5 rounded-full">
-                    <Text className="text-[10px] font-semibold text-danger">Festivo</Text>
-                  </View>
-                )}
-              </View>
-              <Text className="text-[10px] text-muted-foreground">
-                Estimado — sigue cambiando hasta que marques salida.
-              </Text>
-            </View>
-          ) : null}
         </View>
       ) : null}
 

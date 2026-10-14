@@ -140,9 +140,7 @@ export function LiquidacionTab({
                         <div className="bg-muted/60 rounded-lg px-3 py-2.5">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Salario base</p>
                           <Renglon
-                            label={l.salario_base != null
-                              ? `${fmtCOP(l.salario_base)} ÷ 30 × ${l.dias_periodo} días (sueldo fijo, no depende de las horas)`
-                              : `${fmtHrs(l.horas_ordinarias)} h ordinarias × ${fmtCOP(l.valor_hora)}`}
+                            label={`${fmtHrs(l.horas_ordinarias)} h ordinarias × ${fmtCOP(l.valor_hora)}`}
                             valor={fmtCOP(l.pago_ordinario)}
                             fuerte
                             grande
