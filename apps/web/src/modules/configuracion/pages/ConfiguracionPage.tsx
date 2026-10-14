@@ -433,11 +433,31 @@ function PuntosTab() {
                   setDireccionBusqueda(lugar);
                   setForm(f => ({
                     ...f,
-                    latitud: lat != null ? String(lat) : f.latitud,
-                    longitud: lng != null ? String(lng) : f.longitud,
+                    latitud: lat != null ? String(lat) : '',
+                    longitud: lng != null ? String(lng) : '',
                   }));
                 }}
+                ocultarBiblioteca
               />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Coordenadas exactas (opcional) — si ya las tenés de otra fuente
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number" step="any" placeholder="Latitud"
+                  value={form.latitud}
+                  onChange={e => setForm(f => ({ ...f, latitud: e.target.value }))}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+                <input
+                  type="number" step="any" placeholder="Longitud"
+                  value={form.longitud}
+                  onChange={e => setForm(f => ({ ...f, longitud: e.target.value }))}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Radio (metros) *</label>
