@@ -123,6 +123,52 @@ async function revisarMarcajeSospechoso(empresaId, registroId, trabajador, fecha
   }
 }
 
+/**
+ * Desglose EN VIVO de un registro con turno abierto (hora_entrada sin
+ * hora_salida): mismo camino que marcarSalida() pero de solo lectura, usando
+ * la hora actual como salida virtual — sin persistir ni disparar
+ * notificaciones/compensatorios. Un registro cerrado se devuelve intacto (ya
+ * tiene su verdad congelada). `en_vivo: true` le dice a la UI que el
+ * desglose es una proyección que sigue cambiando, no el cierre real.
+ */
+async function conHorasEnVivo(empresaId, registro) {
+  if (!registro.hora_entrada || registro.hora_salida) return registro;
+
+  const lunes = getLunesDeSemana(registro.fecha);
+  const { ordinarias: ordinariasAcum } =
+    await RegistrosModel.sumarOrdinariasEnSemana(empresaId, registro.trabajador_id, lunes, registro.fecha);
+  const ordinariasBase = ordinariasAcum +
+    (registro.sesiones > 1
+      ? Number(registro.horas_ordinarias) + Number(registro.horas_nocturnas)
+      : 0);
+
+  const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
+  const { recargoFestivo } =
+    await clasificarDiaFestivo(empresaId, registro.trabajador_id, registro.fecha, reglaDomingoHabitual);
+  const horasSesion = calcularHoras({
+    horaEntrada: registro.hora_entrada,
+    horaSalida: ahoraHHMMSS(),
+    fecha: registro.fecha,
+    horasOrdinariasAcumuladas: ordinariasBase,
+    jornadaContinua: Boolean(registro.jornada_continua),
+    recargoFestivo,
+    sumarNocturnasFestivo,
+  });
+
+  const horas = registro.sesiones > 1
+    ? {
+        horas_ordinarias:      Number(registro.horas_ordinarias)      + horasSesion.horas_ordinarias,
+        horas_extra_diurnas:   Number(registro.horas_extra_diurnas)   + horasSesion.horas_extra_diurnas,
+        horas_extra_nocturnas: Number(registro.horas_extra_nocturnas) + horasSesion.horas_extra_nocturnas,
+        horas_nocturnas:       Number(registro.horas_nocturnas)       + horasSesion.horas_nocturnas,
+        horas_festivo:         Number(registro.horas_festivo)         + horasSesion.horas_festivo,
+        es_festivo:            horasSesion.es_festivo,
+      }
+    : horasSesion;
+
+  return { ...registro, ...horas, en_vivo: true };
+}
+
 /** ISO date of the Monday of the week containing isoDate. */
 function getLunesDeSemana(isoDate) {
   const d = new Date(isoDate + 'T12:00:00Z');
@@ -158,7 +204,7 @@ const RegistrosService = {
   async obtener(empresaId, registroId) {
     const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
     if (!registro) throw new AppError('Registro no encontrado', 404);
-    return registro;
+    return conHorasEnVivo(empresaId, registro);
   },
 
   async listar(empresaId, usuario, { periodo_id, trabajador_id, fecha, fecha_desde, fecha_hasta, sospechoso, page, limit }) {
@@ -177,7 +223,8 @@ const RegistrosService = {
       limit,
       offset,
     });
-    return { data, pagination: { page, limit, total } };
+    const dataEnVivo = await Promise.all(data.map((r) => conHorasEnVivo(empresaId, r)));
+    return { data: dataEnVivo, pagination: { page, limit, total } };
   },
 
   /** Descarta un flag de sospechoso tras revisión del gestor. */
@@ -193,6 +240,11 @@ const RegistrosService = {
     }
     if (!trabajadorId) {
       throw new AppError('trabajador_id es obligatorio', 422);
+    }
+    // El trabajador_id viene del cliente: debe ser de esta empresa (si no, el registro
+    // quedaría en nuestra liquidación con datos —cédula, banco, sueldo— de otra empresa).
+    if (!(await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId))) {
+      throw new AppError('Trabajador no encontrado', 404);
     }
 
     const periodo = await PeriodosModel.obtenerPorId(empresaId, datos.periodo_id);
