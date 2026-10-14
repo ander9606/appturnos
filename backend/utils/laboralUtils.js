@@ -538,18 +538,20 @@ function calcularDeducciones(ibc) {
 }
 
 /**
- * Auxilio de transporte (Ley 15/1959) prorateado a los días del período.
+ * Auxilio de transporte (Ley 15/1959) prorateado a los días que sí lo causan.
  * Solo aplica si el salario mensual equivalente del trabajador no supera
  * SUBSIDIO_TRANSPORTE_TOPE_SMMLV salarios mínimos. No es IBC — no lleva
  * descuento de salud/pensión.
  * @param {number} salarioMensualEquivalente  valorHora(trabajador) * HORAS_MES_NOMINA.
- * @param {number} diasPeriodo  días comerciales del período (ver diasPagoPeriodo).
+ * @param {number} diasConSubsidio  días comerciales del período (ver diasPagoPeriodo)
+ *   menos los de ausencia/incapacidad/licencia/vacación — no hubo desplazamiento al
+ *   trabajo esos días (ver liquidacion.service.js, dias_sin_subsidio).
  */
-function calcularSubsidioTransporte(salarioMensualEquivalente, diasPeriodo) {
+function calcularSubsidioTransporte(salarioMensualEquivalente, diasConSubsidio) {
   const salario = Number(salarioMensualEquivalente) || 0;
   if (salario <= 0 || salario > SMMLV_COP * SUBSIDIO_TRANSPORTE_TOPE_SMMLV) return 0;
   // Multiplicar antes de dividir: 249095 / 30 * 30 da 249094.9999… en punto flotante.
-  return (SUBSIDIO_TRANSPORTE_COP * diasPeriodo) / 30;
+  return (SUBSIDIO_TRANSPORTE_COP * diasConSubsidio) / 30;
 }
 
 module.exports = {

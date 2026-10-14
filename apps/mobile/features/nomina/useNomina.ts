@@ -35,12 +35,15 @@ export function useRegistros(params: {
   trabajador_id?: number;
   fecha?: string;
   limit?: number;
+  /** Refresca sola cada N ms — para pantallas con un turno en curso cuyo desglose en vivo sigue cambiando. */
+  refetchInterval?: number;
 }) {
   return useQuery({
     queryKey: NOMINA_KEYS.registros(params),
     queryFn:  () => nominaApi.listarRegistros({ ...params, limit: params.limit ?? 100 }),
     enabled:  params.periodo_id !== undefined,
     staleTime: 30_000,
+    refetchInterval: params.refetchInterval,
   });
 }
 

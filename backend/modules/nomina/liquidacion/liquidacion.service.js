@@ -134,8 +134,10 @@ const LiquidacionService = {
       const sueldo = redondear(deducciones.neto - otrosDescuentosTotal);
 
       // Auxilio de transporte: solo contrato laboral, no es IBC (no lleva descuentos).
+      // No se paga los días de ausencia/incapacidad/licencia/vacación — no hubo desplazamiento al trabajo.
+      const diasConSubsidio = Math.max(0, diasPeriodo - (Number(f.dias_sin_subsidio) || 0));
       const subsidioTransporte = tipoContrato === 'laboral'
-        ? redondear(calcularSubsidioTransporte(vh * HORAS_MES_NOMINA, diasPeriodo))
+        ? redondear(calcularSubsidioTransporte(vh * HORAS_MES_NOMINA, diasConSubsidio))
         : 0;
       const neto = redondear(sueldo + subsidioTransporte);
 
@@ -153,6 +155,11 @@ const LiquidacionService = {
         dias_registrados: f.dias_registrados,
         ...desglose,
         valor_hora: redondear(vh),
+        // Para que el frontend pueda mostrar la fórmula real de pago_ordinario:
+        // asalariado → salario_base ÷ 30 × dias_periodo; tarifa_hora → null,
+        // la fórmula es horas_ordinarias × valor_hora (ver calcularSalarioBasePeriodo).
+        salario_base: salarioBase ?? null,
+        dias_periodo: diasPeriodo,
         pago_ordinario: pagoOrdinario,
         pago_nocturno: pagoNocturno,
         pago_extra_diurno: pagoExtraDiurno,
