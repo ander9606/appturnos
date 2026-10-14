@@ -1,4 +1,4 @@
-import { calcularElapsedLabel, calcularElapsedMinutes, etiquetaPeriodo, getJornadaLegalSemanal } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal } from '../features/nomina/trabajador/nominaTrabajadorUtils';
 
 describe('getJornadaLegalSemanal', () => {
   it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
@@ -54,5 +54,44 @@ describe('etiquetaPeriodo', () => {
   it('sin fechas → "Período"', () => {
     expect(etiquetaPeriodo()).toBe('Período');
     expect(etiquetaPeriodo('2026-01-01')).toBe('Período');
+  });
+});
+
+describe('encontrarRegistroActivo — turno que cruza la medianoche', () => {
+  const reg = (o: Record<string, unknown>) => ({ id: 1, tipo_dia: 'ordinario', hora_entrada: null, hora_salida: null, ...o }) as never;
+  // 00:30 del 14-oct en Bogotá (UTC-5).
+  const AHORA = Date.parse('2026-10-14T05:30:00Z');
+
+  it('ayerDe resta un día, también al cambiar de mes', () => {
+    expect(ayerDe('2026-10-14')).toBe('2026-10-13');
+    expect(ayerDe('2026-11-01')).toBe('2026-10-31');
+  });
+
+  it('hoy ya tiene entrada → es el de hoy', () => {
+    const hoy = reg({ id: 2, fecha: '2026-10-14', hora_entrada: '00:10:00' });
+    const ayer = reg({ id: 1, fecha: '2026-10-13', hora_entrada: '22:53:00' });
+    expect(encontrarRegistroActivo([ayer, hoy], '2026-10-14', AHORA)?.id).toBe(2);
+  });
+
+  it('sin registro de hoy y el de ayer sigue abierto → el de ayer (debe marcar SALIDA)', () => {
+    const ayer = reg({ id: 1, fecha: '2026-10-13', hora_entrada: '22:53:00' });
+    expect(encontrarRegistroActivo([ayer], '2026-10-14', AHORA)?.id).toBe(1);
+  });
+
+  it('el registro de hoy no tiene entrada (ej. compensatorio) pero ayer sigue abierto → el de ayer', () => {
+    const hoy = reg({ id: 2, fecha: '2026-10-14', tipo_dia: 'compensatorio' });
+    const ayer = reg({ id: 1, fecha: '2026-10-13', hora_entrada: '22:53:00' });
+    expect(encontrarRegistroActivo([hoy, ayer], '2026-10-14', AHORA)?.id).toBe(1);
+  });
+
+  it('ayer ya tiene salida → no hay registro activo', () => {
+    const ayer = reg({ id: 1, fecha: '2026-10-13', hora_entrada: '14:00:00', hora_salida: '22:00:00' });
+    expect(encontrarRegistroActivo([ayer], '2026-10-14', AHORA)).toBeNull();
+  });
+
+  it('abierto hace más de 24 h (salida olvidada) → no se toma como activo', () => {
+    // Entró ayer 08:00; ahora son las 14:00 de hoy (30 h).
+    const ayer = reg({ id: 1, fecha: '2026-10-13', hora_entrada: '08:00:00' });
+    expect(encontrarRegistroActivo([ayer], '2026-10-14', Date.parse('2026-10-14T19:00:00Z'))).toBeNull();
   });
 });

@@ -296,6 +296,40 @@ function minutosTranscurridosDesde(horaEntrada: string): number {
   return Math.floor(diffMs / 60_000);
 }
 
+/** 'YYYY-MM-DD' del día anterior a `iso`. */
+export function ayerDe(iso: string): string {
+  const d = new Date(`${iso}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Registro que el trabajador tiene "en curso" ahora mismo. Normalmente es el de hoy; pero un
+ * turno nocturno que cruza la medianoche queda guardado con la fecha de ENTRADA (ayer), así
+ * que pasadas las 00:00 buscar solo por la fecha de hoy no lo ve y la app ofrecía "Marcar
+ * ingreso" en vez de "Marcar salida". Si hoy aún no hay entrada y el de ayer sigue abierto
+ * (entrada sin salida, hace menos de 24 h), ese es el activo. Mismo criterio que el guard
+ * de marcarEntrada() en el backend.
+ */
+export function encontrarRegistroActivo(
+  registros: RegistroDiario[],
+  hoyISO: string,
+  ahoraMs: number = Date.now(),
+): RegistroDiario | null {
+  const hoy = registros.find((r) => r.fecha === hoyISO) ?? null;
+  if (hoy?.hora_entrada) return hoy;
+
+  const ayer = ayerDe(hoyISO);
+  const abiertoAyer = registros.find((r) => {
+    if (r.fecha !== ayer || !r.hora_entrada || r.hora_salida) return false;
+    const [y, m, d] = r.fecha.split('-').map(Number);
+    const [hh, mm] = r.hora_entrada.split(':').map(Number);
+    const entradaBogotaMs = Date.UTC(y, m - 1, d, hh, mm ?? 0);
+    return (ahoraMs - BOGOTA_OFFSET_MS) - entradaBogotaMs < 24 * 3_600_000;
+  });
+  return abiertoAyer ?? hoy;
+}
+
 /** Nombre del período según su duración (semana / quincena / mes); "Período" si faltan las fechas. */
 export function etiquetaPeriodo(fechaInicio?: string, fechaFin?: string): string {
   if (!fechaInicio || !fechaFin) return 'Período';

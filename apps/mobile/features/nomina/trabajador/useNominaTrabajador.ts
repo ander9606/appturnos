@@ -26,6 +26,7 @@ import { useMisDescuentos } from '../descuentos/useDescuentos';
 import {
   getValorHora,
   calcularResumenPeriodo,
+  encontrarRegistroActivo,
   getEstadoHoy,
   debePreguntarJornadaContinua,
   type EstadoHoy,
@@ -207,10 +208,12 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     [registros, valorHora],
   );
 
-  const todayISO = useMemo(() => bogotaToday(), []);
+  // Sin useMemo: con la app abierta pasada la medianoche, "hoy" tiene que cambiar solo.
+  const todayISO = bogotaToday();
 
+  // El registro en curso: el de hoy, o el de ayer si el turno cruzó la medianoche y sigue abierto.
   const registroHoy = useMemo(
-    () => registros.find((r) => r.fecha === todayISO) ?? null,
+    () => encontrarRegistroActivo(registros, todayISO),
     [registros, todayISO],
   );
 
