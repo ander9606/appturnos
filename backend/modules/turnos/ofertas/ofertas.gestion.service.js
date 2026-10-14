@@ -509,10 +509,22 @@ module.exports = {
       monto: overrides.has(a.id) ? overrides.get(a.id) : Number(a.tarifa_dia),
     }));
 
-    await OfertasModel.marcarFallida(empresaId, id, montos, motivoFinal, usuarioId);
+    const actualizados = await OfertasModel.marcarFallida(empresaId, id, montos, motivoFinal, usuarioId);
+    const idsActualizados = new Set(actualizados);
+
+    // Mismo detalle que verá luego en el turno: la frase pedida se mantiene
+    // intacta cuando el motivo es el default; si el gestor escribió uno
+    // puntual, se lo decimos también en la notificación (no solo en el detalle).
+    const detalleMotivo = motivoFinal.toLowerCase() === 'fuerza mayor'
+      ? 'fuerza mayor'
+      : `fuerza mayor: ${motivoFinal}`;
 
     const montoPorAsignacion = new Map(montos.map((m) => [m.asignacionId, m.monto]));
-    await Promise.all(enProgreso.map((a) => {
+    // Solo se notifica a quien de verdad quedó 'fallido' — si alguien marcó
+    // egreso justo antes del UPDATE (carrera con marcarFallida), su fila ya
+    // no estaba 'en_progreso' y no se le debe prometer una compensación que
+    // nunca se aplicó (ver OfertasModel.marcarFallida).
+    await Promise.all(enProgreso.filter((a) => idsActualizados.has(a.id)).map((a) => {
       if (!a.usuario_id) return null;
       const monto = montoPorAsignacion.get(a.id);
       return NotificacionesService.notificar({
@@ -520,7 +532,7 @@ module.exports = {
         usuarioId: a.usuario_id,
         tipo: 'asignacion.fallido',
         titulo: 'Turno fallido',
-        mensaje: `Este turno fue fallido por motivos de fuerza mayor, por lo tanto no se podrá realizar. Recibirás una compensación por tu tiempo de $${monto.toLocaleString('es-CO')}.`,
+        mensaje: `Este turno fue fallido por ${detalleMotivo}, por lo tanto no se podrá realizar. Recibirás una compensación por tu tiempo de $${monto.toLocaleString('es-CO')}.`,
         data: { oferta_id: id, asignacion_id: a.id },
       });
     }));
