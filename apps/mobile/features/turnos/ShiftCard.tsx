@@ -9,7 +9,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Asignacion } from '@api-client';
 import { Badge } from '@/components/ui/Badge';
-import { getEstadoConfig, fmtRange, fmtTime, bogotaToday } from './turnosUtils';
+import { getEstadoConfig, fmtRange, fmtTime } from './turnosUtils';
+import { bogotaToday } from '@/lib/formatters';
 
 interface ShiftCardProps {
   asignacion: Asignacion;

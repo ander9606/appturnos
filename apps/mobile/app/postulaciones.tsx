@@ -30,7 +30,8 @@ import {
   useCancelar,
   useNoPresentado,
 } from '@/features/turnos/useTurnos';
-import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
+import { turnoYaInicio } from '@/features/turnos/turnosUtils';
+import { bogotaToday } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui/Button';
 import { useRoleGuard } from '@/components/RoleGuard';

@@ -10,7 +10,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useOfertas, useOferta, useConfirmar, useRechazar, useCancelar, useNoPresentado, useEliminarOfertaDefinitivo } from '@/features/turnos/useTurnos';
-import { bogotaToday, turnoYaInicio } from '@/features/turnos/turnosUtils';
+import { turnoYaInicio } from '@/features/turnos/turnosUtils';
+import { bogotaToday } from '@/lib/formatters';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';

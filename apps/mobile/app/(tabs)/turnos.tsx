@@ -20,7 +20,8 @@ import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
-import { getDateRange, toISODate, bogotaToday } from '@/features/turnos/turnosUtils';
+import { getDateRange, toISODate } from '@/features/turnos/turnosUtils';
+import { bogotaToday } from '@/lib/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';

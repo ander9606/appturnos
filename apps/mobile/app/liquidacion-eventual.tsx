@@ -12,7 +12,7 @@ import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { usePeriodosEventual, useLiquidacionEventual, useLiquidarEventual } from '@/features/turnos/useTurnosEventual';
-import { bogotaToday } from '@/features/turnos/turnosUtils';
+import { bogotaToday } from '@/lib/formatters';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
