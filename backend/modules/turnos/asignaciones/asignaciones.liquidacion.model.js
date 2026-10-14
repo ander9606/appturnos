@@ -15,7 +15,10 @@ module.exports = {
     // t.tipo != 'nomina': esta es la liquidación de personal de turnos (mensual/
     // quincenal/semanal) — un trabajador_nomina que toma un turno eventual se
     // paga en el segmento 'nomina' de turnos-eventual (trimestral, bono), no acá.
-    const where = ['a.empresa_id = ?', "a.estado = 'completado'", "t.tipo != 'nomina'"];
+    // 'fallido' entra aquí también — es la compensación por fuerza mayor
+    // (ver OfertasService.marcarFallida), y debe pagarse igual que un turno
+    // completado, no quedar invisible para el gestor que liquida.
+    const where = ['a.empresa_id = ?', "a.estado IN ('completado', 'fallido')", "t.tipo != 'nomina'"];
     const params = [empresaId];
 
     if (fechaInicio) { where.push('o.fecha >= ?'); params.push(fechaInicio); }
@@ -24,6 +27,8 @@ module.exports = {
     const [filas] = await pool.query(
       `SELECT
          a.id          AS asignacion_id,
+         a.estado,
+         a.compensacion_motivo,
          a.horas_trabajadas,
          a.pago_total,
          COALESCE(a.pago_extra, 0)   AS pago_extra,
@@ -89,7 +94,12 @@ module.exports = {
         });
       }
       const w = workers.get(row.trabajador_id);
-      const firmado = Boolean(row.firmado_trabajador);
+      // 'fallido' nunca tiene contrato que firmar (es una compensación por
+      // fuerza mayor, no un turno trabajado) — sin este OR, el COALESCE de
+      // firmado_trabajador caía en 0 (sin fila en contratos_diarios) y la
+      // compensación quedaba atascada para siempre en turnos_pendientes_firma,
+      // sin sumarse nunca a lo que realmente hay que pagarle.
+      const firmado = row.estado === 'fallido' || Boolean(row.firmado_trabajador);
       const extra  = Number(row.pago_extra ?? 0);
       const bono   = Number(row.bono_monto ?? 0);
       const total  = Number(row.pago_total ?? 0);
@@ -110,6 +120,8 @@ module.exports = {
       }
       w.turnos.push({
         asignacion_id:   row.asignacion_id,
+        estado:          row.estado,
+        compensacion_motivo: row.estado === 'fallido' ? row.compensacion_motivo : null,
         oferta_id:       row.oferta_id,
         oferta_titulo:   row.oferta_titulo,
         oferta_fecha:    row.oferta_fecha,

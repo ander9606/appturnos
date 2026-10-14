@@ -37,7 +37,7 @@ describe('OfertasService.marcarFallida', () => {
       { id: 100, estado: 'en_progreso', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' },
       { id: 101, estado: 'confirmado', trabajador_id: 2, usuario_id: 20, trabajador_nombre: 'Luis', trabajador_apellido: 'Paz', tarifa_dia: '90000' },
     ]);
-    OfertasModel.marcarFallida.mockResolvedValue(undefined);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
 
     await OfertasService.marcarFallida(7, 999, 1);
 
@@ -59,7 +59,7 @@ describe('OfertasService.marcarFallida', () => {
     AsignacionesModel.listarActivasConTarifa.mockResolvedValue([
       { id: 100, estado: 'en_progreso', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' },
     ]);
-    OfertasModel.marcarFallida.mockResolvedValue(undefined);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
 
     await OfertasService.marcarFallida(7, 999, 1, {
       motivo: 'Corte de luz en el edificio',
@@ -69,9 +69,33 @@ describe('OfertasService.marcarFallida', () => {
     expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
       7, 1, [{ asignacionId: 100, monto: 50000 }], 'Corte de luz en el edificio', 999
     );
+    // El motivo puntual del gestor debe quedar en el mensaje, no solo en el
+    // detalle del turno — antes el texto venía fijo con "fuerza mayor" sin
+    // importar lo que el gestor escribiera.
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({
+      mensaje: expect.stringContaining('Corte de luz en el edificio'),
+    }));
     expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({
       mensaje: expect.stringContaining('$50.000'),
     }));
+  });
+
+  test('no notifica a quien marcó egreso justo antes del UPDATE (carrera con marcarFallida)', async () => {
+    // Dos trabajadores en_progreso, pero el modelo solo confirma que uno de
+    // verdad quedó 'fallido' (al otro ya le ganó su propio marcarEgreso) —
+    // no se le debe prometer al segundo una compensación que nunca se aplicó.
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([
+      { id: 100, estado: 'en_progreso', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' },
+      { id: 102, estado: 'en_progreso', trabajador_id: 3, usuario_id: 30, trabajador_nombre: 'Eva', trabajador_apellido: 'Gil', tarifa_dia: '80000' },
+    ]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]); // 102 no se actualizó
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(NotificacionesService.notificar).toHaveBeenCalledTimes(1);
+    expect(NotificacionesService.notificar).toHaveBeenCalledWith(expect.objectContaining({ usuarioId: 10 }));
+    expect(NotificacionesService.notificar).not.toHaveBeenCalledWith(expect.objectContaining({ usuarioId: 30 }));
   });
 
   test('rechaza marcar fallida una oferta ya completada', async () => {
