@@ -304,6 +304,12 @@ export const nominaApi = {
     hora_entrada?: string | null;
     hora_salida?: string | null;
     jornada_continua?: boolean;
+    /**
+     * Día con reingreso (RegistroDiario.sesiones > 1): la lista COMPLETA de sesiones, en orden.
+     * Reemplaza a hora_entrada/hora_salida, que el backend rechaza en ese caso. La última puede
+     * ir con hora_salida null solo si sigue abierta.
+     */
+    sesiones?: { hora_entrada: string; hora_salida?: string | null }[];
   }): Promise<RegistroDiario> {
     return api.put<RegistroDiario>(`/api/nomina/registros/${id}`, datos);
   },

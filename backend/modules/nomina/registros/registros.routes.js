@@ -171,6 +171,10 @@ router.put(
     body('novedad').optional({ values: 'falsy' }).isString(),
     body('tipo_dia').optional().isIn(TIPOS_DIA).withMessage('tipo_dia inválido'),
     body('jornada_continua').optional().isBoolean().withMessage('jornada_continua inválido'),
+    // Día con reingreso: la lista completa de sesiones (la última puede ir sin salida si sigue abierta).
+    body('sesiones').optional().isArray({ min: 2 }).withMessage('sesiones debe traer 2 o más'),
+    body('sesiones.*.hora_entrada').matches(RE_HORA).withMessage('hora_entrada de sesión inválida'),
+    body('sesiones.*.hora_salida').optional({ values: 'falsy' }).matches(RE_HORA).withMessage('hora_salida de sesión inválida'),
   ],
   validar,
   ctrl.corregir

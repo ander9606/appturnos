@@ -11,6 +11,7 @@ const CompensatoriosService     = require('../compensatorios/compensatorios.serv
 const NotificacionesService     = require('../../notificaciones/notificaciones.service');
 const { pool }                  = require('../../../config/database');
 const { calcularHoras, esDomingo, esDomingoHabitual, ventanaRachaDomingos } = require('../../../utils/laboralUtils');
+const { validarSesiones, calcularHorasSesiones } = require('../../../utils/sesionesUtils');
 const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
 const { haversineMetros }       = require('../../../utils/geoUtils');
 const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
@@ -330,8 +331,17 @@ const RegistrosService = {
     const registro = await RegistrosModel.obtenerPorId(empresaId, id);
     if (!registro) throw new AppError('Registro no encontrado', 404);
 
-    if (registro.sesiones > 1) {
-      throw new AppError('No se puede corregir manualmente un registro con múltiples sesiones. Contacta al administrador del sistema.', 422);
+    // Un día con reingreso (varias sesiones) se corrige por sesiones: hay que mandar la lista
+    // completa, porque los horas_* del registro son la suma de todas (ver sesionesUtils.js).
+    const porSesiones = registro.sesiones > 1;
+    if (porSesiones && !Array.isArray(datos.sesiones)) {
+      throw new AppError('Este día tiene reingreso: corrígelo enviando todas sus sesiones.', 422);
+    }
+    if (porSesiones && (datos.hora_entrada !== undefined || datos.hora_salida !== undefined)) {
+      throw new AppError('Este día tiene reingreso: usa "sesiones" en vez de hora_entrada/hora_salida.', 422);
+    }
+    if (!porSesiones && datos.sesiones !== undefined) {
+      throw new AppError('Solo un día con reingreso se corrige por sesiones.', 422);
     }
 
     const periodo = await PeriodosModel.obtenerPorId(empresaId, registro.periodo_id);
@@ -339,14 +349,24 @@ const RegistrosService = {
       throw new AppError('No se puede corregir un registro de un período cerrado', 409);
     }
 
-    const horaEntrada =
-      datos.hora_entrada !== undefined ? datos.hora_entrada : registro.hora_entrada;
-    const horaSalida =
-      datos.hora_salida !== undefined ? datos.hora_salida : registro.hora_salida;
+    let horaEntrada = datos.hora_entrada !== undefined ? datos.hora_entrada : registro.hora_entrada;
+    let horaSalida = datos.hora_salida !== undefined ? datos.hora_salida : registro.hora_salida;
+    // Solo en la corrección por sesiones: qué cambia en sesiones_detalle y en la primera entrada.
+    let camposSesiones = {};
+    let sesiones = null;
 
-    // No se bloquea salida < entrada aquí: un registro creado por marcarEntrada/marcarSalida
-    // puede cruzar medianoche legítimamente. Solo la igualdad exacta es inequívocamente inválida.
-    if (horaEntrada && horaSalida && horaEntrada === horaSalida) {
+    if (porSesiones) {
+      sesiones = validarSesiones(datos.sesiones, { cantidad: registro.sesiones, ultimaAbierta: !registro.hora_salida });
+      const ultima = sesiones[sesiones.length - 1];
+      horaEntrada = ultima.hora_entrada;
+      horaSalida = ultima.hora_salida;
+      camposSesiones = {
+        sesiones_detalle: sesiones.slice(0, -1),
+        hora_entrada_inicial: sesiones[0].hora_entrada,
+      };
+    } else if (horaEntrada && horaSalida && horaEntrada === horaSalida) {
+      // No se bloquea salida < entrada aquí: un registro creado por marcarEntrada/marcarSalida
+      // puede cruzar medianoche legítimamente. Solo la igualdad exacta es inequívocamente inválida.
       throw new AppError('La hora de salida no puede ser igual a la de entrada', 422);
     }
 
@@ -365,12 +385,18 @@ const RegistrosService = {
     const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
     const { clasificacion, recargoFestivo, numeroDomingo } =
       await clasificarDiaFestivo(empresaId, registro.trabajador_id, registro.fecha, reglaDomingoHabitual);
-    const horas = calcularHoras({
-      horaEntrada, horaSalida, fecha: registro.fecha, horasOrdinariasAcumuladas: ordinariasAcumCorregir,
-      jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
-    });
+    const horas = porSesiones
+      ? calcularHorasSesiones({
+          sesiones, fecha: registro.fecha, ordinariasAcum: ordinariasAcumCorregir,
+          jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
+        })
+      : calcularHoras({
+          horaEntrada, horaSalida, fecha: registro.fecha, horasOrdinariasAcumuladas: ordinariasAcumCorregir,
+          jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
+        });
 
     await RegistrosModel.actualizar(empresaId, id, {
+      ...camposSesiones,
       hora_entrada: horaEntrada || null,
       hora_salida: horaSalida || null,
       horas_ordinarias: horas.horas_ordinarias,

@@ -266,13 +266,19 @@ const RegistrosModel = {
     await pool.query('UPDATE registros_diarios SET alerta_extra_enviada = 1 WHERE id = ?', [id]);
   },
 
-  /** Reemplaza los campos recalculables del registro (corrección). */
+  /**
+   * Reemplaza los campos recalculables del registro (corrección). Si trae `sesiones_detalle`
+   * (corrección de un día con reingreso) también reescribe las sesiones cerradas y la primera
+   * entrada, en el MISMO UPDATE: así los totales y las sesiones nunca quedan desincronizados.
+   */
   async actualizar(empresaId, id, d) {
+    const conSesiones = d.sesiones_detalle !== undefined;
     const [res] = await pool.query(
       `UPDATE registros_diarios SET
          hora_entrada = ?, hora_salida = ?, horas_ordinarias = ?, horas_extra_diurnas = ?,
          horas_extra_nocturnas = ?, horas_nocturnas = ?, horas_festivo = ?, es_festivo = ?,
          novedad = ?, tipo_dia = ?, aprobado_por = ?, jornada_continua = ?, horas_acumuladas_semana = ?
+         ${conSesiones ? ', sesiones_detalle = ?, hora_entrada_inicial = ?' : ''}
        WHERE id = ? AND empresa_id = ?`,
       [
         d.hora_entrada,
@@ -288,6 +294,7 @@ const RegistrosModel = {
         d.aprobado_por,
         d.jornada_continua ? 1 : 0,
         d.horas_acumuladas_semana || 0,
+        ...(conSesiones ? [JSON.stringify(d.sesiones_detalle), d.hora_entrada_inicial] : []),
         id,
         empresaId,
       ]
