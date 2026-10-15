@@ -14,7 +14,8 @@ const SEMANAS_VENTANA_ACTIVIDAD = DIAS_VENTANA_ACTIVIDAD / 7;
 const COLUMNAS_PUBLICAS = `id, nombre, slug, ciudad, plan, actividad,
   logo_url, descripcion, acepta_postulaciones, created_at`;
 
-const COLUMNAS_ADMIN = `id, nombre, slug, nit, ciudad, plan, actividad,
+const COLUMNAS_ADMIN = `id, nombre, slug, nit, representante_nombre, representante_cedula, firma_representante_b64,
+  ciudad, plan, actividad,
   logo_url, descripcion, telefono, email_empresa, direccion, acepta_postulaciones,
   tipo_liquidacion, tipo_contrato, sumar_nocturnas_festivo, regla_domingo_habitual, created_at`;
 
@@ -140,7 +141,7 @@ const EmpresasModel = {
   },
 
   async actualizarPorAdmin(empresaId, datos) {
-    const CAMPOS = ['nombre', 'nit', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual'];
+    const CAMPOS = ['nombre', 'nit', 'representante_nombre', 'representante_cedula', 'firma_representante_b64', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual'];
     const sets = [];
     const params = [];
     for (const campo of CAMPOS) {

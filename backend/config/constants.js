@@ -225,7 +225,7 @@ const CONTRATOS_ACUMULATIVOS_ALERTA = 40;
 const CAMPOS_PERSONALES_TRABAJADOR = [
   'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
   'contacto_emergencia_nombre', 'contacto_emergencia_tel',
-  'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
+  'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta', 'direccion',
   'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'descripcion',
 ];
 

@@ -42,6 +42,8 @@ export interface Trabajador {
   banco: string | null;
   tipo_cuenta: TipoCuenta | null;
   numero_cuenta: string | null;
+  /** Dirección de residencia — se imprime en el contrato de prestación de servicios. */
+  direccion: string | null;
   ant_judiciales_fecha: string | null;
   ant_disciplinarios_fecha: string | null;
   tipo_marcacion: 'libre' | 'fijo' | 'zonal';
@@ -114,6 +116,7 @@ export interface CrearTrabajadorPayload {
   banco?: string;
   tipo_cuenta?: TipoCuenta;
   numero_cuenta?: string;
+  direccion?: string;
   cargo?: string;
   descripcion?: string;
   tarifa_hora?: number;
@@ -146,6 +149,7 @@ export interface UpdateMePayload {
   banco?: string;
   tipo_cuenta?: TipoCuenta;
   numero_cuenta?: string;
+  direccion?: string;
   ant_judiciales_fecha?: string;
   ant_disciplinarios_fecha?: string;
 }
