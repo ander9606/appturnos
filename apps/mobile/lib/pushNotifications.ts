@@ -7,6 +7,15 @@ import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 
 const KEY_PUSH_TOKEN = 'appturnos.push_token';
 
+async function reintentarUnaVez<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    await new Promise((r) => setTimeout(r, 3000));
+    return fn();
+  }
+}
+
 // ponytail: setNotificationHandler sí funciona en Expo Go (solo aplica a notificaciones locales)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -45,9 +54,13 @@ export async function registerPushNotifications(): Promise<void> {
     }
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-    const { data: token } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
-    await SecureStore.setItemAsync(KEY_PUSH_TOKEN, token);
-    await notificacionesApi.registrarExpoToken(token);
+    // ponytail: este efecto corre justo al autenticar (cold start) — la red del
+    // dispositivo a veces no está lista aún. Un reintento cubre esa carrera.
+    await reintentarUnaVez(async () => {
+      const { data: token } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+      await SecureStore.setItemAsync(KEY_PUSH_TOKEN, token);
+      await notificacionesApi.registrarExpoToken(token);
+    });
   } catch (err) {
     // Push notifications son no-críticas para el flujo — no se propaga el error,
     // pero se reporta para poder diagnosticar por qué no llegan tokens en producción.
