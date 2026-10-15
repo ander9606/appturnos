@@ -50,6 +50,7 @@ export const trabajadorSchema = z.object({
   banco:        optionalText,
   tipo_cuenta:  z.enum(['ahorros', 'corriente']).optional().or(z.literal('')),
   numero_cuenta: optionalText,
+  direccion:    optionalText,
   ant_judiciales_fecha:     optionalPastISODate,
   ant_disciplinarios_fecha: optionalPastISODate,
 });

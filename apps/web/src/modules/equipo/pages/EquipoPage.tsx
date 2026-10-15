@@ -524,7 +524,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
     nombre: '', apellido: '', tipo: 'nomina' as TipoTrabajador,
     email: '', cedula: '', telefono: '', cargo: '',
     tarifa_hora: '', salario_base: '', hora_entrada_esperada: '',
-    banco: '', tipo_cuenta: '', numero_cuenta: '',
+    banco: '', tipo_cuenta: '', numero_cuenta: '', direccion: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -543,6 +543,7 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
       banco: form.banco || undefined,
       tipo_cuenta: form.tipo_cuenta || undefined,
       numero_cuenta: form.numero_cuenta || undefined,
+      direccion: form.direccion || undefined,
     });
     onClose();
   };
@@ -633,6 +634,10 @@ function TrabajadorFormModal({ onClose }: { onClose: () => void }) {
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Número de cuenta</label>
             <input type="text" {...field('numero_cuenta')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">Dirección</label>
+            <input type="text" placeholder="Se imprime en el contrato de prestación de servicios" {...field('direccion')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
           </div>
 
           <div className="flex gap-2 pt-2">

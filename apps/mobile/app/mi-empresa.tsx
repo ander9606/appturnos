@@ -14,6 +14,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
+import { SvgXml } from 'react-native-svg';
 
 import { empresasApi } from '@api-client';
 import type { ActualizarMiEmpresaPayload, TipoLiquidacion, TipoContrato } from '@api-client';
@@ -24,6 +25,7 @@ import { useTheme } from '@/lib/theme';
 import { showToast } from '@/lib/toast';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import * as WebBrowser from 'expo-web-browser';
+import { SignaturePad } from '@/features/turnos/SignaturePad';
 
 // ── Schema ────────────────────────────────────────────────────────────────
 
@@ -51,6 +53,8 @@ const DOMINGO_HABITUAL_OPTIONS: { value: 'ley' | 'dos_meses'; label: string }[] 
 const schema = z.object({
   nombre:               z.string().trim().min(1, 'Razón social requerida'),
   nit:                  z.string().trim().optional(),
+  representante_nombre: z.string().trim().optional(),
+  representante_cedula: z.string().trim().optional(),
   ciudad:               z.string().trim().optional(),
   actividad:            z.string().trim().optional(),
   descripcion:          z.string().trim().optional(),
@@ -146,6 +150,8 @@ export default function MiEmpresaScreen() {
     defaultValues: {
       nombre:               '',
       nit:                  '',
+      representante_nombre: '',
+      representante_cedula: '',
       ciudad:               '',
       actividad:            '',
       descripcion:          '',
@@ -162,6 +168,43 @@ export default function MiEmpresaScreen() {
   const sumar = watch('sumar_nocturnas_festivo');
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [verAviso, setVerAviso] = useState(false);
+
+  // ── Firma del representante legal — se guarda una sola vez y se estampa
+  // en todos los contratos (ver contratoPdf.js), no se firma contrato por
+  // contrato. Vive fuera del form de RHF: se guarda al instante, igual que
+  // el logo, en vez de esperar al botón "Guardar cambios" del resto de campos.
+  const [showFirma, setShowFirma] = useState(false);
+  const [uploadingFirma, setUploadingFirma] = useState(false);
+  const firmaB64 = empresa?.firma_representante_b64 ?? null;
+  let firmaSvgXml: string | null = null;
+  if (firmaB64 && !firmaB64.startsWith('data:')) {
+    try { firmaSvgXml = atob(firmaB64); } catch { /* no es SVG — se intenta como imagen abajo */ }
+  }
+
+  const handleGuardarFirma = async (b64: string) => {
+    setShowFirma(false);
+    setUploadingFirma(true);
+    try {
+      await actualizar.mutateAsync({ firma_representante_b64: b64 });
+      showToast('Firma del representante actualizada.');
+    } catch {
+      Alert.alert('Error', 'No se pudo guardar la firma. Intenta de nuevo.');
+    } finally {
+      setUploadingFirma(false);
+    }
+  };
+
+  const handleQuitarFirma = async () => {
+    setUploadingFirma(true);
+    try {
+      await actualizar.mutateAsync({ firma_representante_b64: '' });
+      showToast('Firma eliminada.');
+    } catch {
+      Alert.alert('Error', 'No se pudo eliminar la firma.');
+    } finally {
+      setUploadingFirma(false);
+    }
+  };
 
   // ── Logo — mismo flujo de cámara/galería que la foto de perfil de usuario ──
 
@@ -209,6 +252,8 @@ export default function MiEmpresaScreen() {
       reset({
         nombre:               empresa.nombre ?? '',
         nit:                  empresa.nit ?? '',
+        representante_nombre: empresa.representante_nombre ?? '',
+        representante_cedula: empresa.representante_cedula ?? '',
         ciudad:               empresa.ciudad ?? '',
         actividad:            empresa.actividad ?? '',
         descripcion:          empresa.descripcion ?? '',
@@ -227,6 +272,8 @@ export default function MiEmpresaScreen() {
       await actualizar.mutateAsync({
         nombre:               data.nombre,
         nit:                  data.nit       || undefined,
+        representante_nombre: data.representante_nombre || undefined,
+        representante_cedula: data.representante_cedula || undefined,
         ciudad:               data.ciudad    || undefined,
         actividad:            data.actividad || undefined,
         descripcion:          data.descripcion || undefined,
@@ -253,6 +300,7 @@ export default function MiEmpresaScreen() {
   }
 
   return (
+    <>
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
       <Stack.Screen options={{ title: 'Mi empresa', headerShown: true }} />
       <KeyboardAvoidingView
@@ -333,6 +381,68 @@ export default function MiEmpresaScreen() {
               />
             )}
           />
+
+          <Controller
+            control={control}
+            name="representante_nombre"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Representante legal"
+                placeholder="Nombre completo de quien firma por la empresa"
+                autoCapitalize="words"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.representante_nombre?.message}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="representante_cedula"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
+                label="Cédula del representante"
+                placeholder="1.234.567.890"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                error={errors.representante_cedula?.message}
+              />
+            )}
+          />
+
+          {/* ── Firma del representante legal ─────────────────────── */}
+          <View className="gap-2">
+            <Text className="text-sm font-medium text-foreground">Firma del representante legal</Text>
+            <Text className="text-xs text-muted-foreground -mt-1">
+              Se imprime en todos los contratos de prestación de servicios.
+            </Text>
+            <Pressable
+              onPress={() => setShowFirma(true)}
+              disabled={uploadingFirma}
+              className="h-24 rounded-2xl border border-dashed border-border items-center justify-center bg-card active:opacity-70 overflow-hidden"
+            >
+              {uploadingFirma ? (
+                <ActivityIndicator color={theme.primary} />
+              ) : firmaSvgXml ? (
+                <SvgXml xml={firmaSvgXml} width="90%" height={70} />
+              ) : firmaB64 ? (
+                <Image source={{ uri: firmaB64 }} style={{ width: '90%', height: 70 }} resizeMode="contain" />
+              ) : (
+                <View className="items-center gap-1">
+                  <Ionicons name="create-outline" size={20} color="#94A3B8" />
+                  <Text className="text-xs text-muted-foreground">Toca para firmar</Text>
+                </View>
+              )}
+            </Pressable>
+            {firmaB64 && (
+              <Pressable onPress={handleQuitarFirma} disabled={uploadingFirma} hitSlop={8} className="self-start">
+                <Text className="text-xs font-semibold text-danger">Quitar firma</Text>
+              </Pressable>
+            )}
+          </View>
 
           <Controller
             control={control}
@@ -640,5 +750,15 @@ export default function MiEmpresaScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    <SignaturePad
+      visible={showFirma}
+      onClose={() => setShowFirma(false)}
+      onConfirm={handleGuardarFirma}
+      loading={uploadingFirma}
+      confirmLabel="Guardar firma"
+      title="Firma del representante legal"
+      subtitle="Se estampará en todos los contratos de prestación de servicios"
+    />
+    </>
   );
 }
