@@ -77,6 +77,10 @@ router.patch(
   [
     body('nombre').optional().isString().trim().notEmpty().withMessage('nombre no puede ir vacío'),
     body('nit').optional({ values: 'falsy' }).isString().trim(),
+    body('representante_nombre').optional({ values: 'falsy' }).isString().trim().isLength({ max: 150 }),
+    body('representante_cedula').optional({ values: 'falsy' }).isString().trim().isLength({ max: 20 }),
+    // Acepta tanto el SVG de trazos (mobile, como trabajadores.firma_guardada) como una imagen subida (web, como logo_url).
+    body('firma_representante_b64').optional({ values: 'falsy' }).isString().withMessage('firma_representante_b64 inválida'),
     body('ciudad').optional({ values: 'falsy' }).isString().trim(),
     body('descripcion').optional({ values: 'falsy' }).isString().trim(),
     body('actividad').optional({ values: 'falsy' }).isString().trim(),

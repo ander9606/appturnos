@@ -4,6 +4,15 @@
  * Usa PanResponder para capturar trazos y los renderiza como paths SVG.
  * Al confirmar exporta el SVG como base64 (data compatible con firma_b64).
  *
+ * El lienzo se dibuja girado 90° dentro del modal (vertical): una firma
+ * natural es más ancha que alta, y las cajas donde se muestra después
+ * (el recuadro de firma del contrato, el PDF) también son anchas — así
+ * que el usuario gira el teléfono para firmar cómodo, apoyado en la
+ * línea guía, y los trazos quedan capturados ya en esas proporciones
+ * horizontales, sin necesidad de rotar la imagen después. Las posiciones
+ * del toque se leen en pageX/pageY (coordenadas de pantalla, no afectadas
+ * por el transform) y se invierte la rotación a mano — ver toCanvasPoint.
+ *
  * Requiere: react-native-svg (expo install react-native-svg)
  */
 import React, { useRef, useState, useCallback } from 'react';
@@ -14,9 +23,8 @@ import {
   PanResponder,
   LayoutChangeEvent,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Line } from 'react-native-svg';
 
 import * as Haptics from 'expo-haptics';
 import { Button } from '@/components/ui/Button';
@@ -89,9 +97,13 @@ export function SignaturePad({
   subtitle = 'Dibuja tu firma para confirmar la salida y firmar el contrato',
 }: SignaturePadProps) {
   const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [canvasSize, setCanvasSize] = useState({ w: 300, h: 180 });
+  // Tamaño del contenedor tal como se ve en pantalla (vertical, sin rotar).
+  const [outerSize, setOuterSize] = useState({ w: 300, h: 400 });
+  // Lienzo real donde se capturan los trazos: mismo tamaño que outerSize
+  // pero con ancho/alto invertidos, porque se gira 90° para quedar ancho.
+  const landscape = { w: outerSize.h, h: outerSize.w };
   const currentStroke = useRef<Stroke>([]);
-  const canvasRef = useRef<View>(null);
+  const outerRef = useRef<View>(null);
   const canvasOffset = useRef({ x: 0, y: 0 });
 
   const isEmpty = strokes.every((s) => s.length < 2);
@@ -99,12 +111,25 @@ export function SignaturePad({
   // ── Capture canvas position ───────────────────────────────────────────
   const onCanvasLayout = useCallback((e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
-    setCanvasSize({ w: width, h: height });
+    setOuterSize({ w: width, h: height });
 
-    canvasRef.current?.measure((fx, fy, w, h, px, py) => {
+    outerRef.current?.measure((fx, fy, w, h, px, py) => {
       canvasOffset.current = { x: px, y: py };
     });
   }, []);
+
+  /**
+   * El toque llega en coordenadas de pantalla (pageX/pageY), que el
+   * transform:[{rotate}] no altera — se invierte la rotación a mano para
+   * ubicar el punto dentro del lienzo apaisado (ver comentario de cabecera).
+   * Girar 90° deja: el borde izquierdo del lienzo → arriba de la pantalla,
+   * el borde superior del lienzo → derecha de la pantalla.
+   */
+  const toCanvasPoint = useCallback((pageX: number, pageY: number): Point => {
+    const relX = pageX - canvasOffset.current.x;
+    const relY = pageY - canvasOffset.current.y;
+    return { x: relY, y: outerSize.w - relX };
+  }, [outerSize.w]);
 
   // ── PanResponder ──────────────────────────────────────────────────────
   const panResponder = useRef(
@@ -113,14 +138,14 @@ export function SignaturePad({
       onMoveShouldSetPanResponder:  () => true,
 
       onPanResponderGrant: (e) => {
-        const { locationX: x, locationY: y } = e.nativeEvent;
-        currentStroke.current = [{ x, y }];
+        const { pageX, pageY } = e.nativeEvent;
+        currentStroke.current = [toCanvasPoint(pageX, pageY)];
         Haptics.selectionAsync();
       },
 
       onPanResponderMove: (e) => {
-        const { locationX: x, locationY: y } = e.nativeEvent;
-        currentStroke.current = [...currentStroke.current, { x, y }];
+        const { pageX, pageY } = e.nativeEvent;
+        currentStroke.current = [...currentStroke.current, toCanvasPoint(pageX, pageY)];
         // Live update — force re-render by spreading into state
         setStrokes((prev) => {
           const copy = [...prev];
@@ -149,7 +174,7 @@ export function SignaturePad({
 
   const handleConfirm = () => {
     if (isEmpty) return;
-    const base64 = strokesToSvgBase64(strokes, canvasSize.w, canvasSize.h);
+    const base64 = strokesToSvgBase64(strokes, landscape.w, landscape.h);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onConfirm(base64);
   };
@@ -184,52 +209,66 @@ export function SignaturePad({
           </TouchableOpacity>
         </View>
 
+        <Text className="text-xs text-muted-foreground text-center px-6 pt-3">
+          Gira tu teléfono: firmar en horizontal es más cómodo
+        </Text>
+
         {/* ── Canvas ─────────────────────────────────────────────── */}
         <View className="flex-1 px-5 py-6 gap-4">
           <View
-            ref={canvasRef}
+            ref={outerRef}
             onLayout={onCanvasLayout}
             className="flex-1 bg-card rounded-2xl border-2 border-dashed border-border overflow-hidden"
-            {...panResponder.panHandlers}
-            style={{ minHeight: 200 }}
+            style={{ minHeight: 200, alignItems: 'center', justifyContent: 'center' }}
           >
-            <Svg
-              width={canvasSize.w}
-              height={canvasSize.h}
-              style={{ position: 'absolute', top: 0, left: 0 }}
+            {/* Lienzo apaisado, girado 90° dentro del contenedor vertical —
+                ver el comentario de cabecera del archivo. */}
+            <View
+              {...panResponder.panHandlers}
+              style={{ width: landscape.w, height: landscape.h, transform: [{ rotate: '90deg' }] }}
             >
-              {strokes.map((stroke, i) => {
-                const d = strokeToPathD(stroke);
-                if (!d) return null;
-                return (
-                  <Path
-                    key={i}
-                    d={d}
-                    stroke="#0F172A"
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                );
-              })}
-            </Svg>
+              <Svg
+                width={landscape.w}
+                height={landscape.h}
+                style={{ position: 'absolute', top: 0, left: 0 }}
+              >
+                {/* Línea guía — como el renglón de una hoja: se firma apoyado en ella */}
+                <Line
+                  x1={landscape.w * 0.08}
+                  y1={landscape.h * 0.62}
+                  x2={landscape.w * 0.92}
+                  y2={landscape.h * 0.62}
+                  stroke="#CBD5E1"
+                  strokeWidth={1.5}
+                  strokeDasharray="5,5"
+                />
+                {strokes.map((stroke, i) => {
+                  const d = strokeToPathD(stroke);
+                  if (!d) return null;
+                  return (
+                    <Path
+                      key={i}
+                      d={d}
+                      stroke="#0F172A"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                  );
+                })}
+              </Svg>
 
-            {/* Empty hint */}
-            {isEmpty && (
-              <View className="flex-1 items-center justify-center gap-2 pointer-events-none">
-                <Text className="text-3xl opacity-30">✍️</Text>
-                <Text className="text-sm text-muted-foreground opacity-60">
-                  Dibuja tu firma aquí
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* ── Línea de firma ──────────────────────────────────── */}
-          <View className="px-8">
-            <View className="h-px bg-border" />
-            <Text className="text-xs text-center text-muted-foreground mt-1">Firma</Text>
+              {/* Empty hint */}
+              {isEmpty && (
+                <View style={{ width: landscape.w, height: landscape.h }} className="items-center justify-center gap-2 pointer-events-none">
+                  <Text className="text-3xl opacity-30">✍️</Text>
+                  <Text className="text-sm text-muted-foreground opacity-60">
+                    Firma sobre la línea
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* ── Actions ────────────────────────────────────────── */}

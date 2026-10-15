@@ -1,30 +1,39 @@
 'use strict';
 
 /**
- * Dibuja la firma digital (SVG generado por SignaturePad.tsx — paths con
- * comandos M/Q/L, no un PNG/JPEG) en la posición actual del documento.
- *
- * pdfkit solo decodifica PNG/JPEG en doc.image(); por eso toda firma caía
- * siempre al catch de "no legible" — no era un problema de datos truncados
- * (eso ya lo resolvió la migración 101 a MEDIUMTEXT), era que se intentaba
- * leer un SVG como si fuera un raster. doc.path() sí entiende el mismo
- * mini-lenguaje de paths que usa SVG, así que se extraen los <path d="...">
- * y se dibujan como vectores nativos, escalados al cuadro pedido.
+ * Dibuja una firma digital en la posición actual del documento. Admite dos
+ * formatos (misma columna MEDIUMTEXT en ambos casos):
+ *  - SVG de trazos sin prefijo (SignaturePad.tsx en mobile, como
+ *    trabajadores.firma_guardada): paths con comandos M/Q/L. pdfkit no
+ *    decodifica SVG en doc.image(), así que se extraen los <path d="...">
+ *    y se dibujan como vectores nativos con doc.path().
+ *  - Imagen subida como data URI (uploader web, como empresas.logo_url):
+ *    PNG/JPEG en base64 con el prefijo "data:image/...;base64,", que
+ *    doc.image() sí decodifica directamente.
  */
 function dibujarFirma(doc, firmaB64, { width = 180, height = 80 } = {}) {
+  const texto = String(firmaB64);
+  const x = doc.x;
+  const y = doc.y;
+
+  if (/^data:image\/(png|jpe?g);base64,/.test(texto)) {
+    const buffer = Buffer.from(texto.replace(/^data:image\/[\w+-]+;base64,/, ''), 'base64');
+    doc.image(buffer, x, y, { fit: [width, height] });
+    doc.y = y + height;
+    return;
+  }
+
   const svg = Buffer.from(
-    String(firmaB64).replace(/^data:image\/[\w+-]+;base64,/, ''),
+    texto.replace(/^data:image\/[\w+-]+;base64,/, ''),
     'base64'
   ).toString('utf8');
 
   const anchoOriginal = Number(svg.match(/width="([\d.]+)"/)?.[1]) || width;
   const altoOriginal = Number(svg.match(/height="([\d.]+)"/)?.[1]) || height;
   const paths = [...svg.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
-  if (paths.length === 0) throw new Error('SVG de firma sin paths');
+  if (paths.length === 0) throw new Error('Firma sin paths ni imagen reconocible');
 
   const escala = Math.min(width / anchoOriginal, height / altoOriginal, 1);
-  const x = doc.x;
-  const y = doc.y;
   doc.save();
   doc.translate(x, y).scale(escala);
   for (const d of paths) {

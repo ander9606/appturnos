@@ -33,13 +33,17 @@ async function reprocesarRecargos(req, res) {
 
 async function actualizarMiEmpresa(req, res) {
   const {
-    nombre, nit, ciudad, descripcion, actividad, logo_url,
+    nombre, nit, representante_nombre, representante_cedula, firma_representante_b64, ciudad,
+    descripcion, actividad, logo_url,
     telefono, email_empresa, direccion, acepta_postulaciones, tipo_liquidacion, tipo_contrato,
     sumar_nocturnas_festivo, regla_domingo_habitual,
   } = req.body;
   const datos = {};
   if (nombre               !== undefined) datos.nombre               = nombre;
   if (nit                  !== undefined) datos.nit                  = nit;
+  if (representante_nombre !== undefined) datos.representante_nombre = representante_nombre;
+  if (representante_cedula !== undefined) datos.representante_cedula = representante_cedula;
+  if (firma_representante_b64 !== undefined) datos.firma_representante_b64 = firma_representante_b64;
   if (ciudad               !== undefined) datos.ciudad               = ciudad;
   if (descripcion          !== undefined) datos.descripcion          = descripcion;
   if (actividad            !== undefined) datos.actividad            = actividad;

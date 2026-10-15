@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, Alert, ActivityIndicator,
-  StyleSheet, TouchableOpacity,
+  StyleSheet, TouchableOpacity, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -11,6 +11,7 @@ import { SvgXml } from 'react-native-svg';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import * as WebBrowser from 'expo-web-browser';
 import { contratosApi } from '@api-client';
+import type { Contrato } from '@api-client';
 import { SignaturePad } from '@/features/turnos/SignaturePad';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { formatCOP } from '@/lib/formatters';
@@ -28,6 +29,28 @@ function fmtLegal(iso: string): string {
 }
 
 function fmtH(t: string): string { return t?.slice(0, 5) ?? ''; }
+
+/**
+ * Filas de la tabla "Datos del turno" — lo concreto (labor, lugar, fecha,
+ * horario, valor, bono/descuentos) se lee una sola vez acá en vez de quedar
+ * repetido y disperso dentro de la prosa legal (ver PRIMERA/TERCERA/CUARTA,
+ * que ahora remiten a esta tabla en vez de repetir cada cifra). Mismo
+ * criterio que construirFilasTurno() en el PDF (backend/utils/contratoPdf.js).
+ */
+function filasTurno(contrato: Contrato): { label: string; valor: string }[] {
+  const filas = [{ label: 'Labor', valor: contrato.descripcion_labor || contrato.oferta_titulo }];
+  if (contrato.lugar) filas.push({ label: 'Lugar', valor: contrato.lugar });
+  filas.push({ label: 'Fecha', valor: fmtLegal(contrato.fecha) });
+  filas.push({ label: 'Horario', valor: `${fmtH(contrato.hora_inicio)} - ${fmtH(contrato.hora_fin_estimada)}` });
+  filas.push({ label: 'Valor del día', valor: formatCOP(contrato.valor_dia) });
+  if (contrato.bono_monto > 0) {
+    filas.push({ label: 'Bono', valor: `${formatCOP(contrato.bono_monto)}${contrato.bono_motivo ? ` — ${contrato.bono_motivo}` : ''}` });
+  }
+  for (const d of contrato.descuentos ?? []) {
+    filas.push({ label: 'Descuento', valor: `-${formatCOP(d.monto)} — ${d.motivo}` });
+  }
+  return filas;
+}
 
 const GESTORES = ['admin_empresa', 'jefe_turnos'];
 
@@ -93,11 +116,13 @@ export default function ContratoScreen() {
     try { sigXml = atob(contrato.firma_b64); } catch { /* malformed — skip */ }
   }
 
-  // Numerar cláusulas dinámicamente según si hay lugar o no
-  const hayLugar = Boolean(contrato.lugar);
-  const nums = hayLugar
-    ? { objeto: 'PRIMERA', duracion: 'SEGUNDA', lugar: 'TERCERA', valor: 'CUARTA', natura: 'QUINTA' }
-    : { objeto: 'PRIMERA', duracion: 'SEGUNDA', valor: 'TERCERA', natura: 'CUARTA' } as any;
+  // Firma de la empresa: guardada una sola vez (no por contrato) — admite el
+  // mismo SVG de trazos que el trabajador (mobile) o una imagen subida (web).
+  const empresaFirma = contrato.empresa_firma_representante_b64;
+  let empresaSigXml: string | null = null;
+  if (empresaFirma && !empresaFirma.startsWith('data:')) {
+    try { empresaSigXml = atob(empresaFirma); } catch { /* malformed — skip */ }
+  }
 
   return (
     <>
@@ -165,57 +190,111 @@ export default function ContratoScreen() {
             {contrato.empresa_nit
               ? <Text style={s.partyDetail}>NIT: {contrato.empresa_nit}</Text>
               : null}
+            {contrato.empresa_representante_nombre ? (
+              <Text style={s.partyDetail}>
+                Rep. legal: {contrato.empresa_representante_nombre}
+                {contrato.empresa_representante_cedula ? ` · C.C. ${contrato.empresa_representante_cedula}` : ''}
+              </Text>
+            ) : null}
+            {contrato.empresa_direccion
+              ? <Text style={s.partyDetail}>{contrato.empresa_direccion}{contrato.empresa_ciudad ? `, ${contrato.empresa_ciudad}` : ''}</Text>
+              : null}
 
             <View style={{ height: 10 }} />
 
             <Text style={s.partyRole}>CONTRATISTA</Text>
             <Text style={s.partyName}>{contrato.trabajador_nombre} {contrato.trabajador_apellido}</Text>
-            <Text style={s.partyDetail}>C.C. {contrato.trabajador_cedula}</Text>
+            <Text style={s.partyDetail}>{contrato.trabajador_tipo_documento ?? 'C.C.'} {contrato.trabajador_cedula}</Text>
+            {contrato.trabajador_direccion
+              ? <Text style={s.partyDetail}>{contrato.trabajador_direccion}</Text>
+              : null}
+
+            <Divider />
+
+            {/* DATOS DEL TURNO */}
+            <SectionHeader label="DATOS DEL TURNO" />
+            <TablaTurno filas={filasTurno(contrato)} />
 
             <Divider />
 
             {/* CLÁUSULAS */}
             <SectionHeader label="CLÁUSULAS" />
 
-            <Clausula num={nums.objeto} titulo="OBJETO">
-              El CONTRATISTA se compromete a prestar sus servicios como:{'\n'}
-              <Text style={s.clauseEmphasized}>{contrato.descripcion_labor || contrato.oferta_titulo}</Text>
+            <Clausula num="PRIMERA" titulo="OBJETO">
+              El CONTRATISTA se compromete a prestar sus servicios conforme a la labor y el lugar indicados en la
+              tabla de datos del turno anterior, bajo su entera autonomía técnica, administrativa y financiera, sin
+              subordinación laboral alguna.
             </Clausula>
 
-            <Clausula num={nums.duracion} titulo="DURACIÓN">
-              El presente contrato rige el día{' '}
-              <Text style={s.clauseEmphasized}>{fmtLegal(contrato.fecha)}</Text>, entre las{' '}
-              <Text style={s.clauseEmphasized}>{fmtH(contrato.hora_inicio)}</Text> y las{' '}
-              <Text style={s.clauseEmphasized}>{fmtH(contrato.hora_fin_estimada)}</Text> horas.
+            <Clausula num="SEGUNDA" titulo="OBLIGACIONES DEL CONTRATISTA">
+              Cumplir oportunamente la labor encomendada; mantener vigente su afiliación a salud, pensión y riesgos
+              laborales; responder por los daños que, por su culpa, cause a terceros o al CONTRATANTE; y guardar
+              reserva sobre la información del CONTRATANTE que conozca con ocasión de este contrato.
             </Clausula>
 
-            {hayLugar && (
-              <Clausula num={nums.lugar!} titulo="LUGAR DE EJECUCIÓN">
-                {contrato.lugar}
-              </Clausula>
-            )}
-
-            <Clausula num={nums.valor} titulo="VALOR Y FORMA DE PAGO">
-              El CONTRATANTE pagará al CONTRATISTA la suma de{' '}
-              <Text style={s.clauseEmphasized}>{formatCOP(contrato.valor_dia)} (COP)</Text>{' '}
-              por la jornada pactada, una vez el CONTRATISTA haya completado la labor y firmado el presente contrato.
-              {contrato.bono_monto > 0 && (
-                <>
-                  {' '}Adicionalmente, el CONTRATANTE reconoce un bono extra de{' '}
-                  <Text style={s.clauseEmphasized}>{formatCOP(contrato.bono_monto)} (COP)</Text>
-                  {contrato.bono_motivo ? ` por concepto de: ${contrato.bono_motivo}.` : '.'}
-                </>
-              )}
+            <Clausula num="TERCERA" titulo="HONORARIOS">
+              El CONTRATANTE pagará al CONTRATISTA el valor del día indicado en la tabla de datos del turno, más los
+              bonos y menos los descuentos allí señalados, una vez el CONTRATISTA haya completado la labor y firmado
+              el presente contrato. Ese valor es la única contraprestación e incluye los gastos del CONTRATISTA.
             </Clausula>
 
-            <Clausula num={nums.natura} titulo="NATURALEZA JURÍDICA">
-              El presente contrato es de carácter civil y no genera relación laboral,
-              prestaciones sociales ni vínculo de subordinación. El CONTRATISTA actúa
-              con plena autonomía técnica en el desarrollo del objeto contratado.
-              Cualquier controversia se someterá a los jueces competentes de la República de Colombia.
+            <Clausula num="CUARTA" titulo="DURACIÓN">
+              El presente contrato rige por un (1) día, conforme a la fecha y el horario indicados en la tabla de
+              datos del turno. Cualquiera de las partes puede darlo por terminado antes de su inicio, avisando a la
+              otra, sin que ello genere multa o indemnización a su cargo.
+            </Clausula>
+
+            <Clausula num="QUINTA" titulo="NATURALEZA DEL VÍNCULO">
+              El presente contrato es de carácter civil y no genera relación laboral, prestaciones sociales ni
+              subordinación jurídica entre las partes. El CONTRATISTA actúa con plena autonomía técnica,
+              administrativa y financiera en el desarrollo del objeto contratado.
+            </Clausula>
+
+            <Clausula num="SEXTA" titulo="SEGURIDAD SOCIAL">
+              El CONTRATISTA declara encontrarse afiliado, como independiente, al Sistema de Seguridad Social
+              Integral en Salud{contrato.trabajador_eps ? ` (EPS ${contrato.trabajador_eps})` : ''} y Pensión
+              {contrato.trabajador_afp ? ` (AFP ${contrato.trabajador_afp})` : ''}, así como al Sistema General de
+              Riesgos Laborales, y asume por su cuenta los aportes correspondientes.
+            </Clausula>
+
+            <Clausula num="SÉPTIMA" titulo="CONFIDENCIALIDAD">
+              El CONTRATISTA se obliga a guardar reserva sobre la información del CONTRATANTE que conozca con
+              ocasión de este contrato, y a no divulgarla a terceros durante su vigencia ni después de terminado.
+            </Clausula>
+
+            <Clausula num="OCTAVA" titulo="TERMINACIÓN">
+              Este contrato termina por mutuo acuerdo, por vencimiento del día pactado, por incumplimiento de
+              alguna de las partes, o de forma unilateral mediante aviso previo, sin que ello genere indemnización.
+            </Clausula>
+
+            <Clausula num="NOVENA" titulo="INDEMNIDAD">
+              El CONTRATISTA mantendrá indemne al CONTRATANTE frente a cualquier reclamación derivada de sus
+              actos u omisiones, o de las personas que vincule para ejecutar el objeto contratado.
             </Clausula>
 
             <Divider />
+
+            {/* FIRMA — representante legal, guardada una sola vez y estampada en todos los contratos */}
+            <SectionHeader label="FIRMA DEL CONTRATANTE" />
+
+            <View style={s.sigBox}>
+              {empresaSigXml ? (
+                <SvgXml xml={empresaSigXml} width="100%" height={90} />
+              ) : empresaFirma ? (
+                <Image source={{ uri: empresaFirma }} style={{ width: '100%', height: 90 }} resizeMode="contain" />
+              ) : (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  <Ionicons name="time-outline" size={24} color="#94A3B8" />
+                  <Text style={{ color: '#94A3B8', fontSize: 12 }}>Pendiente de firma del representante legal</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={s.sigUnderline} />
+            <Text style={s.sigName}>{contrato.empresa_representante_nombre || contrato.empresa_nombre}</Text>
+            <Text style={s.sigDetail}>Representante legal</Text>
+
+            <View style={{ height: 18 }} />
 
             {/* FIRMA */}
             <SectionHeader label="FIRMA DEL CONTRATISTA" />
@@ -311,6 +390,19 @@ function SectionHeader({ label }: { label: string }) {
   return <Text style={s.sectionHeader}>{label}</Text>;
 }
 
+function TablaTurno({ filas }: { filas: { label: string; valor: string }[] }) {
+  return (
+    <View style={s.tabla}>
+      {filas.map((f, i) => (
+        <View key={`${f.label}-${i}`} style={[s.tablaFila, i === filas.length - 1 && s.tablaFilaUltima]}>
+          <Text style={s.tablaLabel}>{f.label}</Text>
+          <Text style={s.tablaValor}>{f.valor}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function Clausula({ num, titulo, children }: { num: string; titulo: string; children: React.ReactNode }) {
   return (
     <View style={{ marginBottom: 12 }}>
@@ -400,6 +492,33 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#475569',
     marginTop: 1,
+  },
+
+  // Tabla de datos del turno
+  tabla: {
+    borderTopWidth: 1,
+    borderTopColor: '#CBD5E1',
+  },
+  tablaFila: {
+    flexDirection: 'row',
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  tablaFilaUltima: {
+    borderBottomWidth: 0,
+  },
+  tablaLabel: {
+    width: 92,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  tablaValor: {
+    flex: 1,
+    fontSize: 11.5,
+    color: '#334155',
+    lineHeight: 16,
   },
 
   // Cláusulas

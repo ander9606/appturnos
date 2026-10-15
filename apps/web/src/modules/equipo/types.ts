@@ -23,6 +23,8 @@ export interface Trabajador {
   banco: string | null;
   tipo_cuenta: TipoCuenta | null;
   numero_cuenta: string | null;
+  /** Dirección de residencia — se imprime en el contrato de prestación de servicios. */
+  direccion: string | null;
   contacto_emergencia_nombre: string | null;
   contacto_emergencia_tel: string | null;
   ranking: number;

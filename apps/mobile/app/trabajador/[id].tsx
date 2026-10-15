@@ -58,7 +58,7 @@ import { useRoleGuard } from '@/components/RoleGuard';
 // backend (CAMPOS_JEFE_NOMINA en trabajadores.service.js): sin tipo ni datos de pago.
 const CAMPOS_JEFE = [
   'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
-  'telefono', 'email', 'cargo', 'descripcion', 'eps', 'afp',
+  'telefono', 'email', 'cargo', 'descripcion', 'eps', 'afp', 'direccion',
   'contacto_emergencia_nombre', 'contacto_emergencia_tel',
   'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'hora_entrada_esperada',
   'tarifa_hora', 'salario_base',
@@ -286,6 +286,7 @@ export default function TrabajadorDetailScreen() {
         sexo:         (data.sexo as 'M' | 'F' | 'otro') || undefined,
         email:        data.email    || undefined,
         telefono:     data.telefono || undefined,
+        direccion:    data.direccion || undefined,
         contacto_emergencia_nombre: data.contacto_emergencia_nombre || undefined,
         contacto_emergencia_tel:    data.contacto_emergencia_tel    || undefined,
         cargo:        data.cargo    || undefined,
@@ -441,6 +442,7 @@ export default function TrabajadorDetailScreen() {
       sexo:         t.sexo ?? '',
       email:        t.email        ?? '',
       telefono:     t.telefono     ?? '',
+      direccion:    t.direccion    ?? '',
       contacto_emergencia_nombre: t.contacto_emergencia_nombre ?? '',
       contacto_emergencia_tel:    t.contacto_emergencia_tel    ?? '',
       cargo:        t.cargo        ?? '',
@@ -590,6 +592,13 @@ export default function TrabajadorDetailScreen() {
               value={t.contacto_emergencia_tel}
               onCall={t.contacto_emergencia_tel ? () => Linking.openURL(`tel:${t.contacto_emergencia_tel}`) : undefined}
             />
+          </View>
+        )}
+
+        {/* Dirección — se imprime en el contrato de prestación de servicios, aplica a cualquier tipo */}
+        {!!t.direccion && (
+          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4">
+            <InfoRow label="Dirección" value={t.direccion} />
           </View>
         )}
 

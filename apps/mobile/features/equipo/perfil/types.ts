@@ -34,6 +34,7 @@ export interface WizardData {
   sexo: Sexo | '';
   telefono: string;
   email: string;
+  direccion: string;
   emergencia_nombre: string;
   emergencia_tel: string;
   // Paso 2 — Seguridad social y pago
@@ -63,7 +64,7 @@ export const INITIAL: WizardData = {
   tipo_documento: 'CC', cedula: '',
   nac_d: '', nac_m: '', nac_a: '',
   sexo: '',
-  telefono: '', email: '',
+  telefono: '', email: '', direccion: '',
   emergencia_nombre: '', emergencia_tel: '',
   eps: '', afp: '',
   banco: '', tipo_cuenta: '', numero_cuenta: '',
