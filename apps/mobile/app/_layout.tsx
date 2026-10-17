@@ -62,6 +62,9 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
     tracesSampleRate: 0, // ponytail: solo error monitoring, sin tracing/profiling — subir si hace falta
+    // ponytail: "Network request failed" es ruido de conectividad del dispositivo
+    // (sin internet, radio aún no listo al abrir la app), no un bug — no es accionable.
+    ignoreErrors: ['Network request failed'],
   });
 }
 

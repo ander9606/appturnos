@@ -3,9 +3,16 @@
 // Cédula única por empresa (migración 069): el modelo choca contra el UNIQUE
 // de MySQL y el servicio debe traducir ese ER_DUP_ENTRY a un 409 legible,
 // en vez de dejar pasar el error crudo de MySQL.
-jest.mock('../config/database', () => ({
-  pool: { query: jest.fn() },
-}));
+jest.mock('../config/database', () => {
+  const conn = {
+    query: jest.fn(),
+    beginTransaction: jest.fn().mockResolvedValue(undefined),
+    commit: jest.fn().mockResolvedValue(undefined),
+    rollback: jest.fn().mockResolvedValue(undefined),
+    release: jest.fn(),
+  };
+  return { pool: { query: jest.fn(), getConnection: jest.fn().mockResolvedValue(conn) } };
+});
 jest.mock('../modules/trabajadores/trabajadores.model');
 
 const { pool } = require('../config/database');

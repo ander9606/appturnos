@@ -51,6 +51,7 @@ import { NovedadesCard }        from '@/features/turnos/detalle/NovedadesCard';
 import { DescuentosCard }       from '@/features/turnos/detalle/DescuentosCard';
 import { CorregirIngresoEgresoModal } from '@/features/turnos/detalle/CorregirIngresoEgresoModal';
 import { BonoModal }            from '@/features/turnos/detalle/BonoModal';
+import { DescuentoModal }       from '@/features/turnos/detalle/DescuentoModal';
 
 export default function TurnoDetailScreen() {
   const { id: idParam } = useLocalSearchParams<{ id: string }>();
@@ -67,6 +68,7 @@ export default function TurnoDetailScreen() {
   const [cargandoContrato, setCargandoContrato] = useState(false);
   const [corrigiendoIngreso, setCorrigiendoIngreso] = useState(false);
   const [editandoBono, setEditandoBono] = useState(false);
+  const [editandoDescuento, setEditandoDescuento] = useState(false);
 
   const rol = useAuthStore((s) => s.usuario?.rol);
   const isGestor = rol === 'jefe_turnos' || rol === 'admin_empresa';
@@ -543,6 +545,21 @@ export default function TurnoDetailScreen() {
             />
           )}
 
+          {/* ── Gestor: Agregar descuento — solo turnos completados, a
+              diferencia del bono (el backend rechaza el resto de estados con
+              409). Queda pendiente hasta que el trabajador lo acepte, con el
+              mismo tope legal (art. 113 CST) que la versión web
+              (OfertaDetailPage.tsx). ── */}
+          {isGestor && estado === 'completado' && (
+            <Button
+              label="Agregar descuento"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onPress={() => setEditandoDescuento(true)}
+            />
+          )}
+
           {id != null && <DescuentosCard asignacionId={id} puedeResponder={!isGestor && !soloLectura} />}
 
           <NovedadesCard novedades={novedades} onReportar={() => setNovedadModalVisible(true)} />
@@ -581,6 +598,15 @@ export default function TurnoDetailScreen() {
           visible={editandoBono}
           asignacion={asignacion}
           onClose={() => setEditandoBono(false)}
+        />
+      )}
+
+      {/* ── Descuento modal ────────────────────────────────────── */}
+      {id != null && (
+        <DescuentoModal
+          visible={editandoDescuento}
+          asignacion={asignacion}
+          onClose={() => setEditandoDescuento(false)}
         />
       )}
     </>

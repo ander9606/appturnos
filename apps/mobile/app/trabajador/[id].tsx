@@ -4,7 +4,7 @@
  * Roles:
  *   admin_empresa → puede editar, desactivar y calificar turnos
  *   jefe_turnos   → puede calificar turnos (solo lectura para datos del trabajador)
- *   jefe_nomina   → puede editar el sueldo (tarifa/salario), no el resto de la ficha
+ *   jefe_nomina   → edita la ficha (nómina y turnos); el sueldo y la hora de entrada solo en nómina; no el tipo ni los datos de pago
  *   nomina        → solo lectura
  */
 import React, { useState } from 'react';
@@ -54,8 +54,8 @@ import { Button } from '@/components/ui/Button';
 import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 
-// Lo que jefe_nomina puede editar de una ficha de nómina. Mismo criterio que el
-// backend (CAMPOS_JEFE_NOMINA en trabajadores.service.js): sin tipo ni datos de pago.
+// Lo que jefe_nomina puede editar de una ficha. Mismo criterio que el backend
+// (CAMPOS_JEFE_NOMINA / CAMPOS_JEFE_TURNOS en trabajadores.service.js): sin tipo ni datos de pago.
 const CAMPOS_JEFE = [
   'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
   'telefono', 'email', 'cargo', 'descripcion', 'eps', 'afp',
@@ -63,6 +63,8 @@ const CAMPOS_JEFE = [
   'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'hora_entrada_esperada',
   'tarifa_hora', 'salario_base',
 ];
+// Turnos: sin sueldo ni hora de entrada, y sin los datos de persona que se copian a sus otras empresas (solo admin).
+const CAMPOS_JEFE_TURNOS = ['nombre', 'apellido', 'telefono', 'email', 'cargo'];
 
 function filtrarCampos<T extends object>(obj: T, campos: readonly string[]): Partial<T> {
   return Object.fromEntries(Object.entries(obj).filter(([k]) => campos.includes(k))) as Partial<T>;
@@ -159,7 +161,7 @@ export default function TrabajadorDetailScreen() {
   const actualizarSalario = useActualizarSalario(numId);
   const puedeVerSalario = isAdmin || usuario?.rol === 'jefe_nomina';
   const historialSalario  = useHistorialSalario(numId, puedeVerSalario);
-  const canEditSalario = isAdmin || usuario?.rol === 'jefe_nomina';
+  const canEditSalario = isAdmin || (usuario?.rol === 'jefe_nomina' && (t?.tipo === 'nomina' || t?.tipo === 'ambos'));
   const [salarioModal, setSalarioModal] = useState(false);
   const [tarifaInput,  setTarifaInput]  = useState('');
   const [salarioInput, setSalarioInput] = useState('');
@@ -220,7 +222,7 @@ export default function TrabajadorDetailScreen() {
     setEditing((v) => !v);
   }
 
-  const puedeEditarFicha = isAdmin || (usuario?.rol === 'jefe_nomina' && (t?.tipo === 'nomina' || t?.tipo === 'ambos'));
+  const puedeEditarFicha = isAdmin || usuario?.rol === 'jefe_nomina';
   const headerRight = puedeEditarFicha && t && t.activo
     ? () => (
         <Pressable
@@ -300,7 +302,7 @@ export default function TrabajadorDetailScreen() {
         ant_judiciales_fecha:     data.ant_judiciales_fecha     || undefined,
         ant_disciplinarios_fecha: data.ant_disciplinarios_fecha || undefined,
       };
-      await actualizar.mutateAsync(isAdmin ? payload : filtrarCampos(payload, CAMPOS_JEFE));
+      await actualizar.mutateAsync(isAdmin ? payload : filtrarCampos(payload, t.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE));
       if (pasaANomina && rawData.cedula) {
         // Invitar DESPUÉS de guardar: invitar() busca la ficha por cédula en la
         // BD, y si la cédula nueva aún no está persistida crea una ficha fantasma.
@@ -468,7 +470,7 @@ export default function TrabajadorDetailScreen() {
           defaultValues={defaults}
           onSubmit={handleUpdate}
           submitLabel="Guardar cambios"
-          soloCampos={isAdmin ? undefined : CAMPOS_JEFE}
+          soloCampos={isAdmin ? undefined : t.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE}
           submittingLabel="Guardando…"
           onDirtyChange={setFormDirty}
         />

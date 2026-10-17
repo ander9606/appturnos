@@ -453,6 +453,16 @@ export const turnosApi = {
     return api.post<DescuentoTurno & { requiere_nueva_firma: boolean }>(`/api/turnos/descuentos/${id}/responder`, { aceptar });
   },
 
+  /** El gestor registra un descuento sobre un turno completado; queda pendiente de aceptación. */
+  crearDescuento(asignacionId: number, data: { monto: number; motivo: string }): Promise<DescuentoTurno> {
+    return api.post<DescuentoTurno>(`/api/turnos/descuentos/asignacion/${asignacionId}`, data);
+  },
+
+  /** El gestor retira un descuento registrado por error. */
+  eliminarDescuento(id: number): Promise<void> {
+    return api.delete<void>(`/api/turnos/descuentos/${id}`);
+  },
+
   /** Agrega una vacante (puesto) a una oferta existente. Sin restricción de estado en el backend. */
   crearPuesto(ofertaId: number, payload: CrearPuestoPayload): Promise<OfertaPuesto> {
     return api.post<OfertaPuesto>(`/api/turnos/ofertas/${ofertaId}/puestos`, payload);

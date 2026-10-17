@@ -521,11 +521,12 @@ export function useActualizarOferta() {
 }
 
 /** Descuentos del turno (pendientes, aceptados y rechazados). */
-export function useDescuentosAsignacion(asignacionId: number) {
+export function useDescuentosAsignacion(asignacionId: number, opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId),
     queryFn:  () => turnosApi.listarDescuentosAsignacion(asignacionId),
     staleTime: 30_000,
+    enabled:  (opts.enabled ?? true) && asignacionId > 0,
   });
 }
 
@@ -538,6 +539,32 @@ export function useResponderDescuento() {
     onSuccess: (_data, { asignacionId }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId) });
       // Puede reiniciar la firma del contrato: la tarjeta del turno tiene que reflejarlo.
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: ['liquidacion-turnos'] });
+    },
+  });
+}
+
+/** El gestor registra un descuento sobre un turno completado (CST art. 113: tope 1/5 tarifa día). */
+export function useCrearDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId, monto, motivo }: { asignacionId: number; monto: number; motivo: string }) =>
+      turnosApi.crearDescuento(asignacionId, { monto, motivo }),
+    onSuccess: (_data, { asignacionId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId) });
+    },
+  });
+}
+
+/** El gestor retira un descuento registrado por error. */
+export function useEliminarDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: number; asignacionId: number }) => turnosApi.eliminarDescuento(id),
+    onSuccess: (_data, { asignacionId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId) });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: ['liquidacion-turnos'] });

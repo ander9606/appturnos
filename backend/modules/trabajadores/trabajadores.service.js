@@ -2,6 +2,7 @@
 
 const TrabajadoresModel = require('./trabajadores.model');
 const AppError = require('../../utils/AppError');
+const logger = require('../../utils/logger');
 const { pool } = require('../../config/database');
 const { ROLES, ROL_POR_TIPO } = require('../../config/constants');
 const { PlanesModel } = require('../suscripciones/planes.model');
@@ -18,6 +19,9 @@ const CAMPOS_JEFE_NOMINA = [
   'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'hora_entrada_esperada',
   'tarifa_hora', 'salario_base',
 ];
+// Turnos: sin sueldo ni hora de entrada (cobran por turno aceptado), y sin los datos de
+// persona que se copian a sus otras fichas (CAMPOS_PERSONALES_TRABAJADOR): esos son del admin.
+const CAMPOS_JEFE_TURNOS = ['nombre', 'apellido', 'telefono', 'email', 'cargo'];
 
 /**
  * Lógica de negocio de trabajadores. Recibe siempre el empresaId del
@@ -69,6 +73,12 @@ const TrabajadoresService = {
   },
 
   async actualizarSalario(empresaId, id, { tarifa_hora, salario_base }, auditoria) {
+    if (auditoria?.usuario_rol === ROLES.JEFE_NOMINA) {
+      const actual = await this.obtener(empresaId, id);
+      if (!TIPOS_NOMINA.includes(actual.tipo)) {
+        throw new AppError('Solo puedes cambiar el sueldo de trabajadores de nómina', 403);
+      }
+    }
     const resultado = await TrabajadoresModel.actualizarSalarioConAuditoria(
       empresaId, id, { tarifa_hora, salario_base }, auditoria
     );
@@ -232,28 +242,13 @@ const TrabajadoresService = {
   async actualizar(empresaId, id, datos, actor) {
     const actual = await this.obtener(empresaId, id); // 404 si no existe / no es de esta empresa
     if (actor?.usuario_rol === ROLES.JEFE_NOMINA) {
-      if (!TIPOS_NOMINA.includes(actual.tipo)) {
-        throw new AppError('Solo puedes editar trabajadores de nómina', 403);
-      }
-      const noPermitidos = Object.keys(datos).filter((c) => !CAMPOS_JEFE_NOMINA.includes(c));
+      const permitidos = TIPOS_NOMINA.includes(actual.tipo) ? CAMPOS_JEFE_NOMINA : CAMPOS_JEFE_TURNOS;
+      const noPermitidos = Object.keys(datos).filter((c) => !permitidos.includes(c));
       if (noPermitidos.length) {
         throw new AppError(`No tienes permiso para editar: ${noPermitidos.join(', ')}`, 403);
       }
     }
     if (datos.email && datos.email !== actual.email) await this.verificarNoEsGestor(empresaId, datos.email);
-    const { tarifa_hora, salario_base, ...resto } = datos;
-    try {
-      await TrabajadoresModel.actualizar(empresaId, id, resto);
-    } catch (err) {
-      if (err.code === 'ER_DUP_ENTRY') {
-        throw new AppError('Ya existe un trabajador con esa cédula en tu empresa', 409);
-      }
-      throw err;
-    }
-    // El sueldo nunca se escribe fuera de actualizarSalario: ahí va la auditoría y la alerta.
-    if (tarifa_hora !== undefined || salario_base !== undefined) {
-      await this.actualizarSalario(empresaId, id, { tarifa_hora, salario_base }, actor);
-    }
 
     // El rol de la cuenta (qué interfaz ve el trabajador: turnos o nómina) se
     // fija una sola vez al activar la cuenta, a partir de trabajadores.tipo
@@ -262,33 +257,67 @@ const TrabajadoresService = {
     // el rol o la app le sigue mostrando la interfaz vieja aunque la ficha ya
     // diga otra cosa. Solo toca cuentas que hoy son de trabajador (nunca un
     // admin/gestor) y solo si el tipo realmente cambió.
-    if (datos.tipo !== undefined && datos.tipo !== actual.tipo && actual.usuario_id) {
+    const cambiaRol = datos.tipo !== undefined && datos.tipo !== actual.tipo && actual.usuario_id;
+    let rolNuevo;
+    if (cambiaRol) {
       const rolActual = ROL_POR_TIPO[actual.tipo] || ROLES.TRABAJADOR_TURNOS;
-      const rolNuevo = ROL_POR_TIPO[datos.tipo] || ROLES.TRABAJADOR_TURNOS;
+      rolNuevo = ROL_POR_TIPO[datos.tipo] || ROLES.TRABAJADOR_TURNOS;
 
-      // turnos/ambos → nómina es un cambio de exclusividad (nómina ata la
-      // cuenta a una sola empresa) y el trabajador_turnos de este flujo tiene
-      // usuarios.empresa_id = NULL por diseño (vive en trabajador_empresa, no
-      // en una sola empresa) — si lo cambiamos aquí sin más, el UPDATE de rol
-      // de arriba deja la cuenta con rol nómina y empresa_id NULL: huérfana.
-      // El único camino seguro es la invitación de trabajador-empresa.service
-      // (invitar + aceptar tipo='nomina'), que sí fija empresa_id, archiva los
-      // demás vínculos y pide consentimiento explícito del trabajador. Revertimos
-      // el tipo en la ficha (ya se guardó arriba) para no dejar el dato a medias.
+      // turnos/ambos → nómina es un cambio de exclusividad (nómina ata la cuenta a
+      // una sola empresa). El único camino seguro es la invitación de
+      // trabajador-empresa.service (aceptar con tipo='nomina'): fija empresa_id,
+      // archiva los demás vínculos y pide consentimiento explícito. Se rechaza
+      // antes de escribir nada.
       if (rolActual === ROLES.TRABAJADOR_TURNOS && rolNuevo === ROLES.TRABAJADOR_NOMINA) {
-        await TrabajadoresModel.actualizar(empresaId, id, { tipo: actual.tipo });
         throw new AppError(
           'No puedes pasar directamente un trabajador de turnos a nómina desde aquí: nómina es exclusivo a una empresa y requiere que el trabajador acepte. Usa "Invitar por cédula" con tipo nómina.',
           409
         );
       }
-
-      await pool.query(
-        'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
-        [rolNuevo, actual.usuario_id, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
-      );
     }
 
+    // Ficha, copia a las demás fichas, sueldo con su auditoría y rol de la cuenta:
+    // una sola transacción. Si cualquiera falla, no queda nada a medias.
+    const { tarifa_hora, salario_base, ...resto } = datos;
+    const cambiaSueldo = tarifa_hora !== undefined || salario_base !== undefined;
+    const conn = await pool.getConnection();
+    let resultadoSueldo = null;
+    try {
+      await conn.beginTransaction();
+      try {
+        await TrabajadoresModel.actualizar(empresaId, id, resto, conn);
+      } catch (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+          throw new AppError('Ya existe un trabajador con esa cédula en tu empresa', 409);
+        }
+        throw err;
+      }
+      // El sueldo nunca se escribe fuera de su método: ahí va la auditoría.
+      if (cambiaSueldo) {
+        resultadoSueldo = await TrabajadoresModel.actualizarSalarioConAuditoria(
+          empresaId, id, { tarifa_hora, salario_base }, actor, conn
+        );
+      }
+      if (cambiaRol) {
+        await conn.query(
+          'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
+          [rolNuevo, actual.usuario_id, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
+        );
+      }
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    // Aviso después del commit: si falla, el cambio ya está guardado; solo se registra.
+    if (resultadoSueldo?.cambio) {
+      await this.notificarCambioSalario(empresaId, resultadoSueldo, actor).catch((err) =>
+        logger.error(`[trabajadores] no se pudo avisar cambio de sueldo (trabajador ${id}):`, err.message)
+      );
+    }
     return TrabajadoresModel.obtenerPorId(empresaId, id);
   },
 

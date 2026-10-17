@@ -18,12 +18,14 @@ const TIPO_BADGE: Record<TipoTrabajador, string> = {
   ambos: 'bg-info-light text-info',
 };
 
-// Lo que jefe_nomina puede editar de una ficha de nómina. Tipo y datos de pago
-// (banco, cuenta) quedan solo para admin_empresa.
+// Lo que jefe_nomina puede editar de una ficha. Tipo y datos de pago (banco, cuenta)
+// quedan solo para admin_empresa. Sueldo y hora de entrada solo son de nómina.
 const CAMPOS_JEFE = [
   'nombre', 'apellido', 'cedula', 'tipo_documento', 'email', 'telefono', 'sexo', 'fecha_nacimiento',
   'cargo', 'tarifa_hora', 'salario_base', 'hora_entrada_esperada', 'eps', 'afp',
 ];
+// Turnos: sin sueldo ni hora de entrada, y sin los datos de persona que se copian a sus otras empresas (solo admin).
+const CAMPOS_JEFE_TURNOS = ['nombre', 'apellido', 'telefono', 'email', 'cargo'];
 
 function getInitials(nombre: string, apellido: string) {
   return `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
@@ -70,7 +72,7 @@ export function TrabajadorDetailPage() {
 
   const { data, isLoading, isError, error, refetch } = useTrabajador(trabajadorId);
   const trabajador: Trabajador | null = data?.data ?? null;
-  const jefeEdita = usuario?.rol === 'jefe_nomina' && (trabajador?.tipo === 'nomina' || trabajador?.tipo === 'ambos');
+  const jefeEdita = usuario?.rol === 'jefe_nomina';
   const puedeEditarFicha = isAdmin || jefeEdita;
   const actualizar = useActualizarTrabajador();
   const historialSalario = useHistorialSalario(trabajadorId, puedeVerSalario);
@@ -127,10 +129,10 @@ export function TrabajadorDetailPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // jefe_nomina: solo los campos de CAMPOS_JEFE; el sueldo también se audita en el PUT.
+    // jefe_nomina: solo los campos permitidos para el tipo (CAMPOS_JEFE / CAMPOS_JEFE_TURNOS);
+    // el sueldo también se audita en el PUT. Lo que no se permite no se manda: el backend responde 403.
     if (!isAdmin) {
-      await actualizar.mutateAsync({
-        id: trabajadorId,
+      const datos = {
         nombre: form.nombre,
         apellido: form.apellido,
         cedula: form.cedula || undefined,
@@ -145,6 +147,11 @@ export function TrabajadorDetailPage() {
         hora_entrada_esperada: form.hora_entrada_esperada || undefined,
         eps: form.eps || undefined,
         afp: form.afp || undefined,
+      };
+      const campos = trabajador?.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE;
+      await actualizar.mutateAsync({
+        id: trabajadorId,
+        ...Object.fromEntries(Object.entries(datos).filter(([k]) => campos.includes(k))),
       });
       return;
     }
@@ -186,7 +193,8 @@ export function TrabajadorDetailPage() {
     await guardar(form.tipo);
   };
 
-  const editable = (key: keyof FormState) => isAdmin || (jefeEdita && CAMPOS_JEFE.includes(key));
+  const camposJefe = trabajador?.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE;
+  const editable = (key: keyof FormState) => isAdmin || (jefeEdita && camposJefe.includes(key));
   const inp = (key: keyof FormState) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
