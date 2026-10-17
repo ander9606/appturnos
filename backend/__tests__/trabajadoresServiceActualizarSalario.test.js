@@ -19,7 +19,7 @@ const TrabajadoresService = require('../modules/trabajadores/trabajadores.servic
 
 const EMPRESA_ID = 1;
 const TRABAJADOR_ID = 7;
-const base = { id: TRABAJADOR_ID, nombre: 'Ana', apellido: 'Pérez', usuario_id: 99, tarifa_hora: null, salario_base: '1500000.00' };
+const base = { id: TRABAJADOR_ID, nombre: 'Ana', apellido: 'Pérez', usuario_id: 99, tipo: 'nomina', tarifa_hora: null, salario_base: '1500000.00' };
 const auditoriaJefe = { usuario_id: 5, usuario_nombre: 'Luis', usuario_rol: ROLES.JEFE_NOMINA, ip: '10.0.0.1' };
 const auditoriaAdmin = { usuario_id: 2, usuario_nombre: 'Marta', usuario_rol: ROLES.ADMIN_EMPRESA, ip: '10.0.0.2' };
 
