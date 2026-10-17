@@ -6,6 +6,7 @@ const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const IntegracionModel = require('./integracion.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const logger = require('../../utils/logger');
+const AppError = require('../../utils/AppError');
 
 /** admin_empresa activos de la empresa — destinatarios de avisos de facturación. */
 async function usuarioIdsAdminEmpresa(empresaId) {
@@ -235,7 +236,18 @@ async function empleadoCreado(empresaId, data) {
   };
   const existente = await TrabajadoresModel.obtenerPorExternalRef(empresaId, data.external_ref);
   if (existente) {
-    await TrabajadoresModel.actualizar(empresaId, existente.id, campos);
+    try {
+      await TrabajadoresModel.actualizar(empresaId, existente.id, campos);
+    } catch (err) {
+      // El trabajador ya vinculó su cuenta y tiene ficha activa en otra empresa:
+      // la cédula la cambia él, no el sync. Aplicamos el resto del payload igual.
+      if (err instanceof AppError && err.statusCode === 409) {
+        logger.warn(`[integracion] empleado.creado: cédula no actualizada por conflicto (${data.external_ref}): ${err.message}`);
+        await TrabajadoresModel.actualizar(empresaId, existente.id, { ...campos, cedula: undefined });
+      } else {
+        throw err;
+      }
+    }
   } else {
     await TrabajadoresModel.crear(empresaId, {
       ...campos,

@@ -11,10 +11,30 @@ jest.mock('../modules/notificaciones/notificaciones.service', () => ({
 
 const { pool } = require('../config/database');
 const IntegracionModel = require('../modules/integracion/integracion.model');
+const TrabajadoresModel = require('../modules/trabajadores/trabajadores.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
 const { procesar } = require('../modules/integracion/entrantes.handlers');
+const AppError = require('../utils/AppError');
 
 afterEach(() => jest.clearAllMocks());
+
+describe('entrantes.handlers — empleado.creado', () => {
+  test('si la cédula choca con otra ficha activa del mismo usuario (409), aplica el resto del sync sin ella', async () => {
+    TrabajadoresModel.obtenerPorExternalRef.mockResolvedValue({ id: 55 });
+    TrabajadoresModel.actualizar
+      .mockRejectedValueOnce(new AppError('cédula en conflicto', 409))
+      .mockResolvedValueOnce(1);
+
+    const data = { external_ref: 'ext-1', nombre: 'Ana', cedula: '999' };
+    const manejado = await procesar('empleado.creado', 7, data);
+
+    expect(manejado).toBe(true);
+    expect(TrabajadoresModel.actualizar).toHaveBeenCalledTimes(2);
+    const segundaLlamada = TrabajadoresModel.actualizar.mock.calls[1];
+    expect(segundaLlamada[2].cedula).toBeUndefined();
+    expect(segundaLlamada[2].nombre).toBe('Ana');
+  });
+});
 
 describe('entrantes.handlers — integracion.activada / integracion.desactivada', () => {
   test('integracion.activada marca integracion_config.activo = true y notifica a los admin_empresa', async () => {
