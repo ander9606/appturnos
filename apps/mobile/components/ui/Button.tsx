@@ -21,9 +21,10 @@ interface ButtonProps extends Omit<TouchableOpacityProps, 'onPress'> {
   size?: Size;
   loading?: boolean;
   fullWidth?: boolean;
+  icon?: React.ReactNode;
 }
 
-const BASE = 'flex-row items-center justify-center rounded-xl active:opacity-80';
+const BASE = 'flex-row items-center justify-center gap-1.5 rounded-xl active:opacity-80';
 
 const VARIANT_STYLES: Record<Variant, { container: string; text: string }> = {
   primary:        { container: 'bg-primary-500',         text: 'text-white font-semibold' },
@@ -51,6 +52,7 @@ export function Button({
   size = 'md',
   loading = false,
   fullWidth = false,
+  icon,
   disabled,
   ...rest
 }: ButtonProps) {
@@ -112,7 +114,10 @@ export function Button({
           }
         />
       ) : (
-        <Text className={[v.text, s.text].join(' ')}>{label}</Text>
+        <>
+          {icon}
+          <Text className={[v.text, s.text].join(' ')}>{label}</Text>
+        </>
       )}
     </TouchableOpacity>
   );
