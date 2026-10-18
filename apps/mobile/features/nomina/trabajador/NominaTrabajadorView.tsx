@@ -21,7 +21,7 @@ import { ResumenCards } from './components/ResumenCards';
 import { TurnosEventualCard } from './components/TurnosEventualCard';
 import { IngresoHoyTab } from './components/IngresoHoyTab';
 import { useNominaTrabajador } from './useNominaTrabajador';
-import { calcularResumenPeriodo, analizarDia } from './nominaTrabajadorUtils';
+import { analizarDia } from './nominaTrabajadorUtils';
 import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
 import { useRegistrosHistorial } from '../useNomina';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
@@ -79,6 +79,7 @@ export function NominaTrabajadorView() {
     setPeriodoSeleccionado,
     registros,
     resumen,
+    resumenSemana,
     registroHoy,
     estadoHoy,
     todayISO,
@@ -95,17 +96,6 @@ export function NominaTrabajadorView() {
     isError,
     error,
   } = useNominaTrabajador();
-
-  // Resumen solo de esta semana (para la card semanal del header)
-  const resumenSemana = useMemo(() => {
-    const hoy = new Date();
-    const lunes = new Date(hoy);
-    const diaSemana = hoy.getDay();
-    lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
-    lunes.setHours(0, 0, 0, 0);
-    const semana = registros.filter((r) => new Date(`${r.fecha}T00:00:00`) >= lunes);
-    return calcularResumenPeriodo(semana, valorHora);
-  }, [registros, valorHora]);
 
   const analisisHoy = useMemo(
     () => (registroHoy ? analizarDia(registroHoy, valorHora) : null),

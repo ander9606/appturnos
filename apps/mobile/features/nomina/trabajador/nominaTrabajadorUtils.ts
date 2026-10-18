@@ -138,7 +138,7 @@ export function sesionesDelRegistro(r: RegistroDiario): SesionSimple[] {
 }
 
 /** ISO string de la fecha del lunes de la semana a la que pertenece `fecha`. */
-function lunesDeSemana(fecha: string): string {
+export function lunesDeSemana(fecha: string): string {
   const d = new Date(`${fecha}T00:00:00`);
   const dia = d.getDay(); // 0=Dom
   const diff = dia === 0 ? -6 : 1 - dia;

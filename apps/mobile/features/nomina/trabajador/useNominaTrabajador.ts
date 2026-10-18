@@ -16,6 +16,7 @@ import { usePeriodosEventual, useLiquidacionEventual } from '@/features/turnos/u
 import {
   usePeriodos,
   useRegistros,
+  useRegistrosHistorial,
   useNominaPerfil,
   useLiquidacion,
   useMarcarEntrada,
@@ -26,6 +27,7 @@ import { useMisDescuentos } from '../descuentos/useDescuentos';
 import {
   getValorHora,
   calcularResumenPeriodo,
+  lunesDeSemana,
   encontrarRegistroActivo,
   getEstadoHoy,
   debePreguntarJornadaContinua,
@@ -134,6 +136,8 @@ export interface NominaTrabajadorState {
   // Registros
   registros:     RegistroDiario[];
   resumen:       ResumenPeriodoNomina;
+  /** Lunes → hoy, sin importar el período: el tope de 42 h cruza períodos. */
+  resumenSemana: ResumenPeriodoNomina;
   registroHoy:   RegistroDiario | null;
   estadoHoy:     EstadoHoy;
   todayISO:      string;
@@ -210,6 +214,20 @@ export function useNominaTrabajador(): NominaTrabajadorState {
 
   // Sin useMemo: con la app abierta pasada la medianoche, "hoy" tiene que cambiar solo.
   const todayISO = bogotaToday();
+
+  // Semana lunes → hoy, consultada por fechas y no por período: si el período cambió a mitad
+  // de semana, los días previos están en el período anterior pero siguen contando para las 42 h.
+  const lunesISO = lunesDeSemana(todayISO);
+  const { data: semanaResp, refetch: refetchSemana } = useRegistrosHistorial({
+    fechaDesde: lunesISO,
+    fechaHasta: todayISO,
+    refetchInterval: 60_000,
+  });
+  const resumenSemana = useMemo(() => {
+    // Mientras carga, el filtro local del período activo evita que la barra parpadee en 0.
+    const semana = semanaResp?.data ?? registros.filter((r) => r.fecha >= lunesISO);
+    return calcularResumenPeriodo(semana, valorHora);
+  }, [semanaResp, registros, lunesISO, valorHora]);
 
   // El registro en curso: el de hoy, o el de ayer si el turno cruzó la medianoche y sigue abierto.
   const registroHoy = useMemo(
@@ -333,7 +351,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const onRefresh = useCallback(() => {
     refetchPeriodos();
     refetchRegistros();
-  }, [refetchPeriodos, refetchRegistros]);
+    refetchSemana();
+  }, [refetchPeriodos, refetchRegistros, refetchSemana]);
 
   return {
     valorHora,
@@ -347,6 +366,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     setPeriodoSeleccionado,
     registros,
     resumen,
+    resumenSemana,
     registroHoy,
     estadoHoy,
     todayISO,

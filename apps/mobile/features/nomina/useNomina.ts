@@ -49,7 +49,7 @@ export function useRegistros(params: {
 
 /** Últimos registros del trabajador autenticado, sin filtrar por período — para el historial de
  *  ganancias y para el calendario mensual (que sí acota por fecha_desde/fecha_hasta). */
-export function useRegistrosHistorial(opts: { enabled?: boolean; fechaDesde?: string; fechaHasta?: string } = {}) {
+export function useRegistrosHistorial(opts: { enabled?: boolean; fechaDesde?: string; fechaHasta?: string; refetchInterval?: number } = {}) {
   return useQuery({
     queryKey: ['registros', 'historial', opts.fechaDesde, opts.fechaHasta] as const,
     queryFn:  () => nominaApi.listarRegistros({
@@ -59,6 +59,7 @@ export function useRegistrosHistorial(opts: { enabled?: boolean; fechaDesde?: st
     }),
     staleTime: 60_000,
     enabled: opts.enabled ?? true,
+    refetchInterval: opts.refetchInterval,
   });
 }
 
