@@ -28,10 +28,11 @@ import { RangoFechasCompensatorio } from '@/features/nomina/compensatorios/Rango
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useRoleGuard } from '@/components/RoleGuard';
 import {
-  TIPO_DIA_LABEL, fmtHora, fmtFechaCorta, calcularResumenPeriodo, sesionesDelRegistro, spanMinutosSesion,
+  TIPO_DIA_LABEL, fmtHora, fmtFechaCorta, calcularResumenPeriodo, aplicarHorasPrevias, sesionesDelRegistro, spanMinutosSesion,
   fmtDuracionMin, etiquetaPeriodo,
 } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { SemanaRow } from '@/features/nomina/trabajador/components/ResumenCards';
+import { useHorasPreviasSemana } from '@/features/nomina/useHorasPreviasSemana';
 import { useTheme } from '@/lib/theme';
 import { toISODate, bogotaToday } from '@/lib/formatters';
 import { isChronological } from '@/lib/dateValidation';
@@ -1028,6 +1029,8 @@ export default function RegistrosPeriodoScreen() {
   const [viendoUbicacion, setViendoUbicacion] = useState<RegistroDiario | null>(null);
 
   const registros = React.useMemo(() => data?.data ?? [], [data]);
+  // Si el período empezó a mitad de semana, las horas de esa semana en el período anterior cuentan para las 42 h.
+  const previas = useHorasPreviasSemana(registros);
 
   const { data: compensatorios = [] } = useCompensatoriosTodos();
   /** El registro del día 'compensatorio' no guarda el id del descanso — se cruza por trabajador_id + fecha, mismo criterio que usa el backend en compensatorios.service.js. */
@@ -1057,8 +1060,11 @@ export default function RegistrosPeriodoScreen() {
     }
     return Array.from(map.values())
       .sort((a, b) => a.nombre.localeCompare(b.nombre))
-      .map((g) => ({ ...g, resumen: calcularResumenPeriodo(g.registros, 0) }));
-  }, [registros]);
+      .map((g) => ({
+        ...g,
+        resumen: aplicarHorasPrevias(calcularResumenPeriodo(g.registros, 0), previas.lunes, previas.porTrabajador.get(g.trabajadorId)),
+      }));
+  }, [registros, previas]);
 
   const sections: Seccion[] = React.useMemo(() => {
     return grupos.map((g) => ({

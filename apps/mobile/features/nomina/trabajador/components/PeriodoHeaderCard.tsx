@@ -21,6 +21,7 @@ import {
   calcularElapsedLabel,
   analizarDia,
   horaEntradaMostrada,
+  getJornadaLegalSemanal,
   TIPO_PERIODO_LABEL_SALARIO,
   type EstadoHoy,
   type ResumenPeriodoNomina,
@@ -195,7 +196,7 @@ export function PeriodoHeaderCard({
       {/* ── Barra de horas semanales ────────────────────────── */}
       {(() => {
         const semana      = resumenSemana.semanas[0];
-        const limite      = semana?.limiteHoras ?? 40;
+        const limite      = semana?.limiteHoras ?? getJornadaLegalSemanal(new Date().getFullYear());
         const totalH      = resumenSemana.totalHoras;
         const extraH      = resumenSemana.horasExtraDiurnas + resumenSemana.horasExtraNocturnas;
         const ordinH      = Math.max(0, totalH - extraH);

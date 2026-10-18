@@ -24,9 +24,11 @@ import {
   useSolicitarReingreso,
 } from '../useNomina';
 import { useMisDescuentos } from '../descuentos/useDescuentos';
+import { useHorasPreviasSemana } from '../useHorasPreviasSemana';
 import {
   getValorHora,
   calcularResumenPeriodo,
+  aplicarHorasPrevias,
   lunesDeSemana,
   encontrarRegistroActivo,
   getEstadoHoy,
@@ -212,9 +214,11 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const registros = registrosResp?.data ?? [];
 
   // ── Cálculos derivados ─────────────────────────────────────────────────
+  const previas = useHorasPreviasSemana(registros);
   const resumen = useMemo(
-    () => calcularResumenPeriodo(registros, valorHora),
-    [registros, valorHora],
+    () => aplicarHorasPrevias(calcularResumenPeriodo(registros, valorHora), previas.lunes,
+      registros[0] ? previas.porTrabajador.get(registros[0].trabajador_id) : undefined),
+    [registros, valorHora, previas],
   );
 
   // Sin useMemo: con la app abierta pasada la medianoche, "hoy" tiene que cambiar solo.

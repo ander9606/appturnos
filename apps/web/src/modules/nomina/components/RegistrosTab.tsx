@@ -11,7 +11,7 @@ import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
 import { agruparPorSemana, explicarHorasExtra } from '../utils';
 
 export function RegistrosTab({
-  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio,
+  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio, horasPrevias,
 }: {
   registros: Registro[];
   loading: boolean;
@@ -22,6 +22,8 @@ export function RegistrosTab({
   onReasignar: (c: DescansoCompensatorio) => void;
   onShowCrear: () => void;
   periodoInicio?: string;
+  /** Horas por trabajador de la semana partida (período anterior), para el desglose por semana. */
+  horasPrevias?: { lunes: string | null; porTrabajador: Map<number, number> };
 }) {
   const [filtroTrabajador, setFiltroTrabajador] = useState<number | undefined>(undefined);
   const [soloSospechosos, setSoloSospechosos] = useState(false);
@@ -108,7 +110,10 @@ export function RegistrosTab({
             const totalExtra = g.registros.reduce((s, r) => s + Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas), 0);
             const totalNoct = g.registros.reduce((s, r) => s + Number(r.horas_nocturnas), 0);
             const totalFestivo = g.registros.reduce((s, r) => s + Number(r.horas_festivo), 0);
-            const semanas = agruparPorSemana(g.registros);
+            const semanas = agruparPorSemana(
+              g.registros,
+              horasPrevias?.lunes ? { lunes: horasPrevias.lunes, horas: horasPrevias.porTrabajador.get(g.trabajadorId) ?? 0 } : undefined,
+            );
             return (
               <div key={g.trabajadorId} className="bg-card border border-border rounded-xl overflow-hidden">
                 <button
@@ -145,6 +150,9 @@ export function RegistrosTab({
                           ) : (
                             <span className="text-foreground">{fmtHrs(s.horasTotales)} / {s.limiteHoras}h</span>
                           )}
+                          {s.horasPrevias ? (
+                            <span className="text-muted-foreground"> · {fmtHrs(s.horasPrevias)}h del período anterior</span>
+                          ) : null}
                         </span>
                       ))}
                     </div>
