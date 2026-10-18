@@ -11,6 +11,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import { PeriodoBadge } from '../../PeriodoBadge';
 import { TipoPeriodoBadge } from '../../TipoPeriodoBadge';
 import { formatCOP } from '@/lib/formatters';
@@ -32,6 +33,7 @@ interface Props {
   estadoHoy:   EstadoHoy;
   resumen:     ResumenPeriodoNomina;
   resumenSemana: ResumenPeriodoNomina;
+  horasPeriodoAnterior: number;
   salarioBase: number | null;
   valorHora:   number;
   color:       string;  // theme.primary
@@ -48,6 +50,7 @@ export function PeriodoHeaderCard({
   estadoHoy,
   resumen,
   resumenSemana,
+  horasPeriodoAnterior,
   salarioBase,
   valorHora,
   color,
@@ -229,7 +232,7 @@ export function PeriodoHeaderCard({
             </View>
 
             {/* Barra dos colores */}
-            <View className="h-2.5 bg-white/20 rounded-full overflow-hidden flex-row">
+            <View className="relative h-2.5 bg-white/20 rounded-full overflow-hidden flex-row">
               {pctOrdin > 0 && (
                 <View
                   className="h-full rounded-full"
@@ -242,7 +245,13 @@ export function PeriodoHeaderCard({
                   style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }}
                 />
               )}
+              <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color="rgba(15,23,42,0.7)" />
             </View>
+            {horasPeriodoAnterior > 0 && (
+              <Text className="text-white/60 text-[9px]">
+                La raya marca dónde termina el período anterior ({horasPeriodoAnterior.toFixed(1)}h)
+              </Text>
+            )}
 
             {/* Extras en pesos si hay */}
             {hayExtras && resumenSemana.valorExtraCOP > 0 && (

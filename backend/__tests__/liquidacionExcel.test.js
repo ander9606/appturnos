@@ -24,7 +24,11 @@ async function leer(liq) {
   ws.eachRow((row) => {
     if (!cabecera && row.values.includes('Cédula')) cabecera = row.values.slice(1);
   });
-  return { aviso: ws.getCell('A2').value, cabecera, ws };
+  let notaCabecera = null;
+  ws.eachRow((row) => {
+    row.eachCell((cell) => { if (cell.value === 'H. extra diurna') notaCabecera = cell.note; });
+  });
+  return { aviso: ws.getCell('A2').value, cabecera, notaCabecera, ws };
 }
 
 describe('liquidacionExcel: recargos automáticos', () => {
@@ -32,6 +36,13 @@ describe('liquidacionExcel: recargos automáticos', () => {
     const { aviso, cabecera } = await leer(liquidacion({ recargos_automaticos: true }));
     expect(cabecera).toEqual(expect.arrayContaining(['H. nocturnas', 'H. festivo', 'H. extra nocturna']));
     expect(aviso).toBeFalsy();
+  });
+
+  test('el encabezado de extras lleva una nota de celda: el tope de 42 h es semanal y cruza períodos', async () => {
+    for (const recargos of [true, false]) {
+      const { notaCabecera } = await leer(liquidacion({ recargos_automaticos: recargos }));
+      expect(JSON.stringify(notaCabecera)).toMatch(/42 h es semanal.*cruza períodos/);
+    }
   });
 
   test('sin recargos omite esas columnas, avisa y mantiene los totales', async () => {

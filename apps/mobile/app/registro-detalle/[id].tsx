@@ -270,7 +270,7 @@ export default function RegistroDetalleScreen() {
             )}
             {verDetalle && explicacionExtra && (
               <Text className="text-xs text-muted-foreground">
-                Llevaba {explicacionExtra.acumuladoSemana.toFixed(1)}h esta semana → {explicacionExtra.cupoUsado.toFixed(1)}h
+                Llevaba {explicacionExtra.acumuladoSemana.toFixed(1)}h desde el {explicacionExtra.desdeLunes} → {explicacionExtra.cupoUsado.toFixed(1)}h
                 de su cupo ({explicacionExtra.topeSemanal}h) + {explicacionExtra.horasExtra.toFixed(1)}h extra.
               </Text>
             )}

@@ -137,6 +137,8 @@ export interface ExplicacionHorasExtra {
   horasExtra: number;
   /** Tope semanal usado (JORNADA_SEMANAL_HORAS) — para el texto. */
   topeSemanal: number;
+  /** ISO del lunes que abre la semana contada; puede caer en el período anterior. */
+  lunesSemana: string;
 }
 
 /**
@@ -152,5 +154,6 @@ export function explicarHorasExtra(r: Registro): ExplicacionHorasExtra | null {
     cupoUsado: Number(r.horas_ordinarias) + Number(r.horas_nocturnas),
     horasExtra,
     topeSemanal: JORNADA_SEMANAL_HORAS,
+    lunesSemana: lunesDeSemana(r.fecha),
   };
 }

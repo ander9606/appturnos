@@ -138,7 +138,7 @@ export function sesionesDelRegistro(r: RegistroDiario): SesionSimple[] {
 }
 
 /** ISO string de la fecha del lunes de la semana a la que pertenece `fecha`. */
-function lunesDeSemana(fecha: string): string {
+export function lunesDeSemana(fecha: string): string {
   const d = new Date(`${fecha}T00:00:00`);
   const dia = d.getDay(); // 0=Dom
   const diff = dia === 0 ? -6 : 1 - dia;
@@ -418,6 +418,10 @@ export interface ExplicacionHorasExtra {
   horasExtra: number;
   /** Tope semanal usado (JORNADA_SEMANAL_HORAS) — para el texto. */
   topeSemanal: number;
+  /** "lun 12 Oct": lunes que abre la semana contada; puede caer en el período anterior. */
+  desdeLunes: string;
+  /** ISO de ese lunes — para compararlo con el inicio del período. */
+  lunesISO: string;
 }
 
 /**
@@ -430,11 +434,15 @@ export interface ExplicacionHorasExtra {
 export function explicarHorasExtra(r: RegistroDiario): ExplicacionHorasExtra | null {
   const horasExtra = Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas);
   if (horasExtra <= 0) return null;
+  const lunesISO = lunesDeSemana(r.fecha);
+  const lunes = new Date(`${lunesISO}T00:00:00`);
   return {
     acumuladoSemana: Number(r.horas_acumuladas_semana),
     cupoUsado: Number(r.horas_ordinarias) + Number(r.horas_nocturnas),
     horasExtra,
     topeSemanal: JORNADA_SEMANAL_HORAS,
+    desdeLunes: `lun ${lunes.getDate()} ${SHORT_MONTHS[lunes.getMonth()]}`,
+    lunesISO,
   };
 }
 

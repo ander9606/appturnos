@@ -16,6 +16,7 @@ import { usePeriodosEventual, useLiquidacionEventual } from '@/features/turnos/u
 import {
   usePeriodos,
   useRegistros,
+  useRegistrosHistorial,
   useNominaPerfil,
   useLiquidacion,
   useMarcarEntrada,
@@ -26,6 +27,7 @@ import { useMisDescuentos } from '../descuentos/useDescuentos';
 import {
   getValorHora,
   calcularResumenPeriodo,
+  lunesDeSemana,
   encontrarRegistroActivo,
   getEstadoHoy,
   debePreguntarJornadaContinua,
@@ -134,6 +136,10 @@ export interface NominaTrabajadorState {
   // Registros
   registros:     RegistroDiario[];
   resumen:       ResumenPeriodoNomina;
+  /** Lunes → hoy, sin importar el período: el tope de 42 h cruza períodos. */
+  resumenSemana: ResumenPeriodoNomina;
+  /** Parte de resumenSemana.totalHoras que cayó antes del inicio del período activo. */
+  horasSemanaPeriodoAnterior: number;
   registroHoy:   RegistroDiario | null;
   estadoHoy:     EstadoHoy;
   todayISO:      string;
@@ -210,6 +216,30 @@ export function useNominaTrabajador(): NominaTrabajadorState {
 
   // Sin useMemo: con la app abierta pasada la medianoche, "hoy" tiene que cambiar solo.
   const todayISO = bogotaToday();
+
+  // Semana lunes → hoy, consultada por fechas y no por período: si el período cambió a mitad
+  // de semana, los días previos están en el período anterior pero siguen contando para las 42 h.
+  const lunesISO = lunesDeSemana(todayISO);
+  const { data: semanaResp, refetch: refetchSemana } = useRegistrosHistorial({
+    fechaDesde: lunesISO,
+    fechaHasta: todayISO,
+    refetchInterval: 60_000,
+  });
+  const registrosSemana = useMemo(
+    // Mientras carga, el filtro local del período activo evita que la barra parpadee en 0.
+    () => semanaResp?.data ?? registros.filter((r) => r.fecha >= lunesISO),
+    [semanaResp, registros, lunesISO],
+  );
+  const resumenSemana = useMemo(
+    () => calcularResumenPeriodo(registrosSemana, valorHora),
+    [registrosSemana, valorHora],
+  );
+  // Horas de esta semana que quedaron en el período anterior: la barra pinta una raya donde terminan.
+  const horasSemanaPeriodoAnterior = useMemo(() => {
+    const inicio = periodoActivo?.fecha_inicio;
+    if (!inicio) return 0;
+    return calcularResumenPeriodo(registrosSemana.filter((r) => r.fecha < inicio), valorHora).totalHoras;
+  }, [registrosSemana, periodoActivo?.fecha_inicio, valorHora]);
 
   // El registro en curso: el de hoy, o el de ayer si el turno cruzó la medianoche y sigue abierto.
   const registroHoy = useMemo(
@@ -333,7 +363,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const onRefresh = useCallback(() => {
     refetchPeriodos();
     refetchRegistros();
-  }, [refetchPeriodos, refetchRegistros]);
+    refetchSemana();
+  }, [refetchPeriodos, refetchRegistros, refetchSemana]);
 
   return {
     valorHora,
@@ -347,6 +378,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     setPeriodoSeleccionado,
     registros,
     resumen,
+    resumenSemana,
+    horasSemanaPeriodoAnterior,
     registroHoy,
     estadoHoy,
     todayISO,

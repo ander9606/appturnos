@@ -105,6 +105,7 @@ La regla sale de la **fecha del registro**: un registro viejo se sigue clasifica
 - Antes de clasificar, se suman las horas ordinarias y nocturnas ya registradas esa semana (lunes hasta ayer), más las horas del festivo acreditadas por un compensatorio tomado esa semana.
 - Lo que falte para 42 h es ordinario; el resto del turno es extra. Un día de 12 h puede ser todo ordinario si la semana va corta.
 - Las horas festivas no consumen el cupo de la semana.
+- El cupo **no se reinicia al cambiar de período**: si un período cierra a mitad de semana, las horas de esa semana en el período anterior cuentan en el siguiente. Si ya se llegó a 42 h antes del corte, el primer día del período nuevo puede salir todo como extra.
 
 ### Almuerzo
 
