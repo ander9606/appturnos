@@ -130,6 +130,7 @@ export function PeriodoDetailPage() {
       {tab === 'registros' && (
         <RegistrosTab
           registros={registros}
+          periodoInicio={periodo?.fecha_inicio}
           loading={loadingReg}
           error={errReg}
           onRetry={refetchReg}
@@ -143,6 +144,7 @@ export function PeriodoDetailPage() {
       {tab === 'liquidacion' && (
         <LiquidacionTab
           periodoEstado={periodo?.estado as EstadoPeriodo | undefined}
+          periodoInicio={periodo?.fecha_inicio}
           liqData={liqData?.data}
           loading={loadingLiq}
           error={errLiq}

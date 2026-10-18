@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Utensils, Info, Radio } from 'lucide-react';
 import type { Registro } from '../types';
 import { fmtHrs, fmtDiaSemana } from '@/shared/lib/format';
@@ -33,15 +34,52 @@ export function EnVivoIndicator({ r }: { r: Registro }) {
   );
 }
 
-/** Ícono inline con tooltip: por qué el día tuvo horas extra (tope semanal, no diario). */
-export function ExtraIndicator({ r }: { r: Registro }) {
-  const explicacion = explicarHorasExtra(r);
-  if (!explicacion) return null;
+/**
+ * Ícono ⓘ que abre un popover con el porqué de las horas extra (tope semanal, no diario).
+ * El popover es `fixed` para que la tabla con scroll no lo recorte, y se cierra al perder foco o hacer scroll.
+ * `periodoInicio`: si el lunes de la semana cae antes, se avisa que las horas previas son del período anterior.
+ */
+export function ExtraIndicator({ r, periodoInicio }: { r: Registro; periodoInicio?: string }) {
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  useEffect(() => {
+    if (!pos) return;
+    const cerrar = () => setPos(null);
+    window.addEventListener('scroll', cerrar, true);
+    window.addEventListener('resize', cerrar);
+    return () => { window.removeEventListener('scroll', cerrar, true); window.removeEventListener('resize', cerrar); };
+  }, [pos]);
+
+  const e = explicarHorasExtra(r);
+  if (!e) return null;
+  const deOtroPeriodo = !!periodoInicio && e.lunesSemana < periodoInicio;
+
   return (
-    <Info size={12} className="text-muted-foreground/60 shrink-0">
-      <title>
-        {`Llevaba ${fmtHrs(explicacion.acumuladoSemana)}h desde el ${fmtDiaSemana(explicacion.lunesSemana).toLowerCase()} (la semana cuenta aunque empiece en el período anterior) →${fmtHrs(explicacion.cupoUsado)}h de su cupo (${explicacion.topeSemanal}h) + ${fmtHrs(explicacion.horasExtra)}h extra`}
-      </title>
-    </Info>
+    <>
+      <button
+        type="button"
+        aria-label="Por qué hay horas extra"
+        aria-expanded={!!pos}
+        onClick={(ev) => {
+          const rect = ev.currentTarget.getBoundingClientRect();
+          setPos(pos ? null : { top: rect.bottom + 6, right: window.innerWidth - rect.right });
+        }}
+        onBlur={() => setPos(null)}
+        className="inline-flex align-middle text-muted-foreground/60 hover:text-muted-foreground"
+      >
+        <Info size={12} />
+      </button>
+      {pos && (
+        <div
+          role="note"
+          style={{ position: 'fixed', top: pos.top, right: pos.right }}
+          className="z-50 w-56 rounded-lg border border-border bg-card p-3 text-left text-xs text-foreground shadow-lg space-y-1"
+        >
+          <p>Semana del {fmtDiaSemana(e.lunesSemana).toLowerCase()}</p>
+          <p>Antes de hoy: {fmtHrs(e.acumuladoSemana)} h de {e.topeSemanal}</p>
+          <p>Hoy: {fmtHrs(e.cupoUsado)} h de cupo + {fmtHrs(e.horasExtra)} h extra</p>
+          {deOtroPeriodo && <p className="text-muted-foreground">Las horas previas son del período anterior.</p>}
+        </div>
+      )}
+    </>
   );
 }

@@ -30,9 +30,11 @@ const SHORT_DAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 interface RegistroCardProps {
   registro:   RegistroDiario;
   valorHora?: number;
+  /** Inicio del período mostrado: permite avisar si las horas previas de la semana son del período anterior. */
+  periodoInicio?: string;
 }
 
-export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
+export function RegistroCard({ registro, valorHora = 0, periodoInicio }: RegistroCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const analisis     = analizarDia(registro, valorHora);
@@ -183,9 +185,9 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
           )}
           {explicacionExtra && (
             <Text className="text-xs text-muted-foreground">
-              Llevabas {explicacionExtra.acumuladoSemana.toFixed(1)}h desde el {explicacionExtra.desdeLunes} (la semana
-              cuenta aunque empiece en el período anterior) → {explicacionExtra.cupoUsado.toFixed(1)}h
+              Llevabas {explicacionExtra.acumuladoSemana.toFixed(1)}h desde el {explicacionExtra.desdeLunes} → {explicacionExtra.cupoUsado.toFixed(1)}h
               de tu cupo ({explicacionExtra.topeSemanal}h) + {explicacionExtra.horasExtra.toFixed(1)}h extra
+              {periodoInicio && explicacionExtra.lunesISO < periodoInicio ? '. Las horas previas son del período anterior.' : ''}
             </Text>
           )}
           {analisis.tieneExtras && (

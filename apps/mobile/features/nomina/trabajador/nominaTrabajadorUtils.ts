@@ -420,6 +420,8 @@ export interface ExplicacionHorasExtra {
   topeSemanal: number;
   /** "lun 12 Oct": lunes que abre la semana contada; puede caer en el período anterior. */
   desdeLunes: string;
+  /** ISO de ese lunes — para compararlo con el inicio del período. */
+  lunesISO: string;
 }
 
 /**
@@ -432,15 +434,15 @@ export interface ExplicacionHorasExtra {
 export function explicarHorasExtra(r: RegistroDiario): ExplicacionHorasExtra | null {
   const horasExtra = Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas);
   if (horasExtra <= 0) return null;
+  const lunesISO = lunesDeSemana(r.fecha);
+  const lunes = new Date(`${lunesISO}T00:00:00`);
   return {
     acumuladoSemana: Number(r.horas_acumuladas_semana),
     cupoUsado: Number(r.horas_ordinarias) + Number(r.horas_nocturnas),
     horasExtra,
     topeSemanal: JORNADA_SEMANAL_HORAS,
-    desdeLunes: (() => {
-      const l = new Date(`${lunesDeSemana(r.fecha)}T00:00:00`);
-      return `lun ${l.getDate()} ${SHORT_MONTHS[l.getMonth()]}`;
-    })(),
+    desdeLunes: `lun ${lunes.getDate()} ${SHORT_MONTHS[lunes.getMonth()]}`,
+    lunesISO,
   };
 }
 

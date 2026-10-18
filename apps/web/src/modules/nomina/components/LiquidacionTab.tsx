@@ -13,9 +13,10 @@ import { Renglon } from './Renglon';
 
 export function LiquidacionTab({
   periodoEstado, liqData, loading, error, onRetry, registros, descuentos,
-  compensatorioDe, onExport, onCorregir, onReasignar, onAbrirDescuentos,
+  compensatorioDe, onExport, onCorregir, onReasignar, onAbrirDescuentos, periodoInicio,
 }: {
   periodoEstado: EstadoPeriodo | undefined;
+  periodoInicio?: string;
   liqData: LiquidacionData | undefined;
   loading: boolean;
   error: unknown;
@@ -262,7 +263,7 @@ export function LiquidacionTab({
                                 {fmtHrs(r.horas_ordinarias)} h
                                 {Number(r.horas_nocturnas) > 0 && ` + ${fmtHrs(r.horas_nocturnas)} h noct.`}
                                 {Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas) > 0 && (
-                                  <> + {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra <ExtraIndicator r={r} /></>
+                                  <> + {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra <ExtraIndicator r={r} periodoInicio={periodoInicio} /></>
                                 )}
                                 {Number(r.horas_festivo) > 0 && ` + ${fmtHrs(r.horas_festivo)} h festivo`}
                               </span>

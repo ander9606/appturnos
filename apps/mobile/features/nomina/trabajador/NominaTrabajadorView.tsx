@@ -184,7 +184,7 @@ export function NominaTrabajadorView() {
           data={viewMode === 'mes' ? [] : registros}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
-            <RegistroCard registro={item} valorHora={valorHora} />
+            <RegistroCard registro={item} valorHora={valorHora} periodoInicio={periodoActivo?.fecha_inicio} />
           )}
           contentContainerClassName="gap-2 pb-8"
           showsVerticalScrollIndicator={false}

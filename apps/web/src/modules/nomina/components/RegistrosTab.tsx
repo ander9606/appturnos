@@ -6,12 +6,12 @@ import type { Registro, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { fmtDiaSemana, fmtHora, fmtHrs } from '@/shared/lib/format';
 import { TIPO_DIA_LABELS } from '../constants';
-import { AlmuerzoIndicator, EnVivoIndicator } from './DiaIndicators';
+import { AlmuerzoIndicator, EnVivoIndicator, ExtraIndicator } from './DiaIndicators';
 import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
 import { agruparPorSemana, explicarHorasExtra } from '../utils';
 
 export function RegistrosTab({
-  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear,
+  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio,
 }: {
   registros: Registro[];
   loading: boolean;
@@ -21,6 +21,7 @@ export function RegistrosTab({
   onCorregir: (id: number) => void;
   onReasignar: (c: DescansoCompensatorio) => void;
   onShowCrear: () => void;
+  periodoInicio?: string;
 }) {
   const [filtroTrabajador, setFiltroTrabajador] = useState<number | undefined>(undefined);
   const [soloSospechosos, setSoloSospechosos] = useState(false);
@@ -197,8 +198,7 @@ export function RegistrosTab({
                                 return explicacion ? (
                                   <span className="text-[10px] text-muted-foreground/70 whitespace-nowrap">
                                     {fmtHrs(explicacion.cupoUsado)}h cupo + {fmtHrs(explicacion.horasExtra)}h extra
-                                    <br />
-                                    ya llevaba {fmtHrs(explicacion.acumuladoSemana)}h desde el {fmtDiaSemana(explicacion.lunesSemana).toLowerCase()}
+                                    {' '}<ExtraIndicator r={r} periodoInicio={periodoInicio} />
                                   </span>
                                 ) : null;
                               })()}
