@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
 import { HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { Badge } from '@/components/ui/Badge';
+import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import {
   fmtPeriodo,
   getJornadaLegalSemanal,
@@ -422,12 +423,18 @@ export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorH
       </View>
       {/* excede = trabajó más del límite legal = generó extra — es buena noticia
           para el trabajador, por eso va en success y no en un color de alerta. */}
-      <View className="h-1.5 rounded-full bg-muted overflow-hidden">
+      <View className="relative h-1.5 rounded-full bg-muted overflow-hidden">
         <View
           className="h-full rounded-full"
           style={{ width: `${pct}%`, backgroundColor: excede ? '#059669' : '#CBD5E1' }}
         />
+        <MarcaPeriodoAnterior horas={semana.horasPrevias ?? 0} limite={semana.limiteHoras} color="#334155" />
       </View>
+      {!!semana.horasPrevias && (
+        <Text className="text-[10px] text-muted-foreground">
+          {semana.horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).
+        </Text>
+      )}
     </View>
   );
 }

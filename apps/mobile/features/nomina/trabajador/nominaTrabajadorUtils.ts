@@ -109,6 +109,8 @@ export interface ResumenSemana {
   horasTotales: number;
   limiteHoras:  number;
   horasExtra:   number;
+  /** Horas de esta semana que cayeron en el período anterior y ya están sumadas en horasTotales. */
+  horasPrevias?: number;
 }
 
 // ── Helpers internos ───────────────────────────────────────────────────────
@@ -254,6 +256,44 @@ export function calcularResumenPeriodo(
     diasEspeciales,
     valorExtraCOP,
     semanas,
+  };
+}
+
+/**
+ * Tramo de la primera semana del período que cayó ANTES de `primeraFecha` (fecha más temprana
+ * con registros): [lunes, día anterior]. null si esa fecha ya es lunes — no hay semana partida.
+ */
+export function tramoSemanaPrevia(primeraFecha: string): { desde: string; hasta: string } | null {
+  const lunes = lunesDeSemana(primeraFecha);
+  if (lunes === primeraFecha) return null;
+  const d = new Date(`${primeraFecha}T00:00:00`);
+  d.setDate(d.getDate() - 1);
+  return { desde: lunes, hasta: toISODate(d) };
+}
+
+/** Horas totales de un conjunto de registros (mismo criterio que la barra semanal). */
+export function sumarHoras(registros: RegistroDiario[]): number {
+  return registros.reduce((acc, r) => acc + analizarDia(r, 0).totalHoras, 0);
+}
+
+/**
+ * El tope de 42 h es semanal y cruza períodos: si el período empezó a mitad de semana, las horas de
+ * esa semana en el período anterior cuentan. Suma `horas` a la semana `lunesISO` del resumen y
+ * recalcula el extra; el resto del resumen (totales del período) no cambia.
+ */
+export function aplicarHorasPrevias(
+  resumen: ResumenPeriodoNomina,
+  lunesISO: string | null | undefined,
+  horas: number | undefined,
+): ResumenPeriodoNomina {
+  if (!lunesISO || !horas || horas <= 0) return resumen;
+  return {
+    ...resumen,
+    semanas: resumen.semanas.map((s) => {
+      if (s.inicioSemana !== lunesISO) return s;
+      const horasTotales = s.horasTotales + horas;
+      return { ...s, horasTotales, horasExtra: Math.max(0, horasTotales - s.limiteHoras), horasPrevias: horas };
+    }),
   };
 }
 
