@@ -115,6 +115,9 @@ function CuentaCobroCard({ cuenta: c, onPress }: { cuenta: CuentaCobroResumen; o
         <Badge label={firmado ? 'Firmado' : 'Sin firma'} variant={firmado ? 'success' : 'warning'} size="sm" />
       </View>
       <Text className="text-sm text-foreground">{c.fecha_inicio} a {c.fecha_fin}</Text>
+      {c.secuencia > 1 && (
+        <Text className="text-xs text-muted-foreground">Complementaria · diferencia de valores de turnos ya cobrados</Text>
+      )}
       <View className="flex-row items-center justify-between">
         <Text className="text-xs text-muted-foreground">{c.total_turnos} turno{c.total_turnos !== 1 ? 's' : ''}</Text>
         <Text className="text-xs font-semibold text-foreground">{formatCOP(c.valor_total)}</Text>

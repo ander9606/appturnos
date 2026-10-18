@@ -144,6 +144,9 @@ export default function CuentaCobroScreen() {
 
             <Text style={s.docTitle}>CUENTA DE COBRO</Text>
             <Text style={s.docMeta}>N° {cuenta.numero_cuenta}</Text>
+            {cuenta.secuencia > 1 ? (
+              <Text style={s.docMeta}>Cuenta complementaria: diferencia de valores respecto a cuentas anteriores del período</Text>
+            ) : null}
             <Text style={s.docMeta}>Período: {fmtLegal(cuenta.fecha_inicio)} al {fmtLegal(cuenta.fecha_fin)}</Text>
 
             <Divider />

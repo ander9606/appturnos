@@ -44,6 +44,8 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'nomina.periodo_abierto':      'folder-open-outline',
   'nomina.periodo_liquidado':    'cash-outline',
   'cuenta_cobro.pendiente_firma': 'document-text-outline',
+  'cuenta_cobro.bloqueada_sin_firma': 'alert-circle-outline',
+  'cuenta_cobro.trabajadores_sin_firma': 'alert-circle-outline',
   'nomina.sospechoso':           'alert-circle-outline',
   'oferta.creada':               'add-circle-outline',
   'oferta.nueva':                'megaphone-outline',
@@ -101,7 +103,7 @@ function categoriaDeTipo(tipo: string): Exclude<Categoria, 'todas'> {
   if (
     tipo.startsWith('turno.') || tipo.startsWith('asignacion.') || tipo.startsWith('postulacion.') ||
     tipo.startsWith('oferta.') || tipo === 'novedad_turno' || tipo === 'contrato.pendiente_firma' ||
-    tipo === 'calificacion.recibida' || tipo === 'cuenta_cobro.pendiente_firma'
+    tipo === 'calificacion.recibida' || tipo.startsWith('cuenta_cobro.')
   ) {
     return 'turnos';
   }
