@@ -104,6 +104,7 @@ export function NominaTrabajadorView() {
   );
 
   const todayLabel = formatShortDate(todayISO);
+  const descuentosPendientes = misDescuentos.filter((d) => d.estado === 'pendiente').length;
 
   if (loading) {
     return (
@@ -154,13 +155,42 @@ export function NominaTrabajadorView() {
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
             >
-              <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
-                {label}
-              </Text>
+              <View className="flex-row items-center gap-1.5">
+                <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                  {label}
+                </Text>
+                {tab === 'nomina' && descuentosPendientes > 0 && (
+                  <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-warning items-center justify-center">
+                    <Text className="text-[10px] font-bold text-white">{descuentosPendientes}</Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           );
         })}
       </View>
+
+      {/* Aviso de descuentos por aceptar — se aceptan/rechazan en Mi Nómina → Detalle de pago */}
+      {activeTab === 'hoy' && descuentosPendientes > 0 && (
+        <TouchableOpacity
+          onPress={() => setActiveTab('nomina')}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Ir a Mi Nómina para responder los descuentos pendientes"
+          className="mx-5 mt-3 flex-row items-center gap-3 rounded-2xl bg-warning/10 px-4 py-3"
+        >
+          <Ionicons name="alert-circle-outline" size={20} color={theme.primary} />
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-foreground">
+              {descuentosPendientes} descuento{descuentosPendientes > 1 ? 's' : ''} por aceptar
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              Toca para revisarlos en Mi Nómina → Detalle de pago
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#64748B" />
+        </TouchableOpacity>
+      )}
 
       {/* ── Tab: Hoy ───────────────────────────────────────── */}
       {activeTab === 'hoy' ? (

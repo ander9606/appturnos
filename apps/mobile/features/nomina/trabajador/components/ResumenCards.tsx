@@ -9,7 +9,7 @@
  *   5. Selector de período
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
@@ -59,6 +59,10 @@ export function ResumenCards({
   const pendientes = misDescuentos.filter((d) => d.estado === 'pendiente');
   const rechazados = misDescuentos.filter((d) => d.estado === 'rechazado');
   const [expandedPago, setExpandedPago] = useState(pendientes.length > 0);
+  // El estado inicial se calcula antes de que lleguen los descuentos: ábrelo cuando aparezcan pendientes.
+  useEffect(() => {
+    if (pendientes.length > 0) setExpandedPago(true);
+  }, [pendientes.length]);
   const [respondiendoId, setRespondiendoId] = useState<number | null>(null);
   const aceptarDescuento = useAceptarDescuento();
   const rechazarDescuento = useRechazarDescuento();
