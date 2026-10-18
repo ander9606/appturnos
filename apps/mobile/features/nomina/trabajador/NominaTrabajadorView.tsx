@@ -80,6 +80,7 @@ export function NominaTrabajadorView() {
     registros,
     resumen,
     resumenSemana,
+    horasSemanaPeriodoAnterior,
     registroHoy,
     estadoHoy,
     todayISO,
@@ -171,6 +172,7 @@ export function NominaTrabajadorView() {
           estadoHoy={estadoHoy}
           periodoAbierto={periodoActivo?.estado === 'abierto'}
           resumenSemana={resumenSemana}
+          horasPeriodoAnterior={horasSemanaPeriodoAnterior}
           registroHoy={registroHoy}
           compensatorios={compensatorios}
           isRefetching={isRefetching}
@@ -204,6 +206,7 @@ export function NominaTrabajadorView() {
                 estadoHoy={estadoHoy}
                 resumen={resumen}
                 resumenSemana={resumenSemana}
+                horasPeriodoAnterior={horasSemanaPeriodoAnterior}
                 salarioBase={salarioBase}
                 valorHora={valorHora}
                 color={theme.primary}

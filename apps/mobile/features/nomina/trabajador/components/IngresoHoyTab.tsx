@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { PuntoMarcaje, DescansoCompensatorio } from '@api-client';
 import type { RegistroDiario } from '@api-client';
+import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import { CompensatorioBanner } from '../../compensatorios/CompensatorioBanner';
 import { fmtHora, calcularElapsedLabel, horaEntradaMostrada, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
 
@@ -15,6 +16,7 @@ interface Props {
   estadoHoy:      EstadoHoy;
   periodoAbierto: boolean;
   resumenSemana:  ResumenPeriodoNomina;
+  horasPeriodoAnterior: number;
   registroHoy:    RegistroDiario | null;
   compensatorios: DescansoCompensatorio[];
   isRefetching:   boolean;
@@ -38,6 +40,7 @@ export function IngresoHoyTab({
   estadoHoy,
   periodoAbierto,
   resumenSemana,
+  horasPeriodoAnterior,
   registroHoy,
   compensatorios,
   isRefetching,
@@ -240,7 +243,7 @@ export function IngresoHoyTab({
             </View>
 
             {/* Barra dos colores */}
-            <View className="h-3 bg-muted rounded-full overflow-hidden flex-row">
+            <View className="relative h-3 bg-muted rounded-full overflow-hidden flex-row">
               {pctOrdin > 0 && (
                 <View
                   className="h-full rounded-full"
@@ -253,7 +256,13 @@ export function IngresoHoyTab({
                   style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }}
                 />
               )}
+              <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color="#334155" />
             </View>
+            {horasPeriodoAnterior > 0 && (
+              <Text className="text-[10px] text-muted-foreground">
+                La raya marca dónde termina el período anterior ({horasPeriodoAnterior.toFixed(1)}h antes de la raya).
+              </Text>
+            )}
 
             {hayExtra ? (
               <Text className="text-xs text-amber-600 font-medium">
