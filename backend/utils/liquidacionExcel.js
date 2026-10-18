@@ -2,6 +2,9 @@
 
 const ExcelJS = require('exceljs');
 
+const NOTA_TOPE_SEMANAL =
+  'El tope de 42 h es semanal (lunes a domingo) y cruza períodos: si un período cierra a mitad de semana, las horas de esa semana en el período anterior cuentan en este; por eso un período puede empezar con horas extra.';
+
 const AVISO_SIN_RECARGOS =
   'Sin recargos automáticos: las horas de noche y festivo cuentan como normales hasta 42 h a la semana; después, extra diurna.';
 
@@ -54,11 +57,13 @@ async function generarLiquidacionExcel(liquidacion, marcajes) {
     `Liquidación período ${periodo.fecha_inicio} a ${periodo.fecha_fin} (${periodo.estado})`;
   ws.getCell('A1').font = { bold: true, size: 13 };
 
-  if (!recargosAutomaticos) {
-    ws.mergeCells(`A2:${ultima}2`);
-    ws.getCell('A2').value = AVISO_SIN_RECARGOS;
-    ws.getCell('A2').font = { italic: true, size: 10 };
-  }
+  const notas = [NOTA_TOPE_SEMANAL, ...(recargosAutomaticos ? [] : [AVISO_SIN_RECARGOS])];
+  notas.forEach((texto, i) => {
+    const fila = i + 2;
+    ws.mergeCells(`A${fila}:${ultima}${fila}`);
+    ws.getCell(`A${fila}`).value = texto;
+    ws.getCell(`A${fila}`).font = { italic: true, size: 10 };
+  });
   ws.addRow([]);
 
   ws.columns = columnas.map((c) => ({ key: c.header, width: c.width }));
