@@ -22,6 +22,7 @@ import { fmtHora } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
 import { UbicacionLibreIndicator } from '@/features/nomina/trabajador/UbicacionLibreIndicator';
 import { useTheme } from '@/lib/theme';
+import { useSingleFlight } from '@/lib/useSingleFlight';
 import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 
@@ -61,6 +62,12 @@ export default function NominaIngresoScreen() {
     ubicacionLibre,
     valorHora,
   } = useNominaTrabajador();
+
+  // Entrada y salida pasan por diálogos y GPS antes de la mutación (isMutating aún es false):
+  // la guarda evita el doble toque en ese tramo y se libera sola si la acción falla.
+  const entrada = useSingleFlight(handleEntrada);
+  const salida  = useSingleFlight(handleSalida);
+  const ocupado = isMutating || entrada.busy || salida.busy;
 
   // El sueldo es fijo por período — no tiene sentido mostrar "ganaste $X hoy" para
   // horas ordinarias. Lo único que sí varía día a día y vale la pena mostrar es el
@@ -285,14 +292,14 @@ export default function NominaIngresoScreen() {
         {/* ── Botón de marcaje ──────────────────────────────── */}
         {estadoHoy === 'sin_registro' && periodoAbierto && (
           <TouchableOpacity
-            onPress={handleEntrada}
-            disabled={isMutating || marcajeBloqueado}
+            onPress={entrada.run}
+            disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar entrada"
           >
-            {isMutating
+            {ocupado
               ? <ActivityIndicator color="white" />
               : <Text className="text-white text-lg font-bold">Marcar entrada</Text>}
           </TouchableOpacity>
@@ -300,14 +307,14 @@ export default function NominaIngresoScreen() {
 
         {estadoHoy === 'en_jornada' && periodoAbierto && (
           <TouchableOpacity
-            onPress={handleSalida}
-            disabled={isMutating || marcajeBloqueado}
+            onPress={salida.run}
+            disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#dc2626', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar salida"
           >
-            {isMutating
+            {ocupado
               ? <ActivityIndicator color="white" />
               : <Text className="text-white text-lg font-bold">Marcar salida</Text>}
           </TouchableOpacity>
@@ -328,7 +335,7 @@ export default function NominaIngresoScreen() {
             {periodoAbierto && (
               <TouchableOpacity
                 onPress={() => setShowReingresoModal(true)}
-                disabled={isMutating}
+                disabled={ocupado}
                 className="rounded-2xl py-4 items-center border border-border"
                 accessibilityRole="button"
                 accessibilityLabel="Solicitar reingreso"
@@ -348,14 +355,14 @@ export default function NominaIngresoScreen() {
 
         {estadoHoy === 'reingreso_aprobado' && periodoAbierto && (
           <TouchableOpacity
-            onPress={handleEntrada}
-            disabled={isMutating || marcajeBloqueado}
+            onPress={entrada.run}
+            disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
             style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar entrada (reingreso)"
           >
-            {isMutating
+            {ocupado
               ? <ActivityIndicator color="white" />
               : <Text className="text-white text-lg font-bold">Marcar entrada (reingreso)</Text>}
           </TouchableOpacity>

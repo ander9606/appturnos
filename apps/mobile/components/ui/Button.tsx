@@ -6,13 +6,15 @@ import {
   type TouchableOpacityProps,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useSingleFlight } from '@/lib/useSingleFlight';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'successOutline';
 type Size    = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<TouchableOpacityProps, 'onPress'> {
   label: string;
-  onPress?: () => void;
+  /** Si devuelve una promesa, el botón queda en carga hasta que termine y se bloquea el doble toque. */
+  onPress?: () => void | Promise<unknown>;
   onPressDisabled?: () => void; // fires when tapped while disabled (for informational feedback)
   variant?: Variant;
   size?: Size;
@@ -51,18 +53,21 @@ export function Button({
   disabled,
   ...rest
 }: ButtonProps) {
-  const isDisabled = disabled || loading;
+  const { run, busy } = useSingleFlight(onPress);
+  const enCarga    = loading || busy;
+  const isDisabled = disabled || enCarga;
   const v = VARIANT_STYLES[variant];
   const s = SIZE_STYLES[size];
 
   const handlePress = () => {
+    if (busy) return;
     if (isDisabled) {
       onPressDisabled?.();
       return;
     }
     if (!onPress) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onPress();
+    run();
   };
 
   const shadow = variant === 'primary' && !isDisabled ? {
@@ -94,9 +99,9 @@ export function Button({
       ].join(' ')}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      accessibilityState={{ disabled: isDisabled, busy: enCarga }}
     >
-      {loading ? (
+      {enCarga ? (
         <ActivityIndicator
           size="small"
           color={

@@ -29,7 +29,7 @@ export function CTAEnProgresoCard({
   onMarcarSalida: () => void;
   /** Última firma guardada del trabajador — si existe, se ofrece reusarla en vez de dibujarla de nuevo. */
   firmaGuardada?: string | null;
-  onMarcarSalidaConFirmaGuardada?: (firma: string) => void;
+  onMarcarSalidaConFirmaGuardada?: (firma: string) => void | Promise<unknown>;
   marcandoSalida?: boolean;
   isGestor: boolean;
   onCorregir: () => void;
@@ -112,7 +112,8 @@ export function CTAEnProgresoCard({
                 variant="primary"
                 size="lg"
                 fullWidth
-                disabled={!canMark || marcandoSalida}
+                loading={marcandoSalida}
+                disabled={!canMark}
                 onPress={() => onMarcarSalidaConFirmaGuardada(firmaGuardada)}
               />
               <TouchableOpacity onPress={onMarcarSalida} className="items-center py-1">

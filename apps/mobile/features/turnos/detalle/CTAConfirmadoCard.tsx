@@ -27,7 +27,7 @@ export function CTAConfirmadoCard({
   locationUnavailable: boolean;
   ubicacionLibre: { estado: EstadoUbicacionLibre; reintentar: () => void };
   ingresando: boolean;
-  onIngreso: () => void;
+  onIngreso: () => void | Promise<unknown>;
   onIngresoPronto: () => void;
   isGestor: boolean;
   trabajadorTelefono?: string | null;
