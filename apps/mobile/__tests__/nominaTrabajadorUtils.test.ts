@@ -1,4 +1,4 @@
-import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP } from '../features/nomina/trabajador/nominaTrabajadorUtils';
 
 describe('getJornadaLegalSemanal', () => {
   it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
@@ -143,5 +143,24 @@ describe('festivo y cupo semanal', () => {
 
   it('sumarHoras (horas previas) también excluye el festivo habitual', () => {
     expect(sumarHoras([dia('2026-10-12', { horas_ordinarias: 8 }), dia('2026-10-13', { horas_festivo: 8 })])).toBe(8);
+  });
+});
+
+// El estimado en pesos del extra usa la tasa de cada tipo: ×1.25 diurna, ×1.75 nocturna.
+describe('estimarExtraSemanaCOP', () => {
+  const sem = (o: object) => ({ inicioSemana: '2026-10-12', horasTotales: 50, limiteHoras: 42, horasExtra: 8, ...o });
+
+  it('pondera diurnas y nocturnas con su tasa', () => {
+    // 4 h × 1.25 + 4 h × 1.75 = 12 h-equivalentes × $10.000
+    expect(estimarExtraSemanaCOP(sem({ horasExtraDiurnas: 4, horasExtraNocturnas: 4 }), 10_000)).toBe(120_000);
+  });
+
+  it('sin extras por tipo guardadas, estima todo como diurno', () => {
+    expect(estimarExtraSemanaCOP(sem({}), 10_000)).toBe(100_000);
+  });
+
+  it('sin extra o sin valor hora → 0', () => {
+    expect(estimarExtraSemanaCOP(sem({ horasExtra: 0 }), 10_000)).toBe(0);
+    expect(estimarExtraSemanaCOP(sem({}), 0)).toBe(0);
   });
 });

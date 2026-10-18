@@ -16,6 +16,7 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP } from '@/shared/lib/format';
+import { DEDUCCION_SALUD, DEDUCCION_PENSION } from '@/shared/laboral';
 import type { PuntoMarcaje, AlcancePunto, Cargo, Gestor, GestorCreado, LinkPago, PlanCodigo, PlanOpcion } from '../types';
 
 type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores' | 'plan';
@@ -223,7 +224,7 @@ function EmpresaTab() {
           <p className="text-xs text-muted-foreground mt-1">
             {val.tipo_contrato === 'prestacion_servicios'
               ? 'La liquidación no calcula descuentos (el independiente se autoliquida salud/pensión).'
-              : 'La liquidación descuenta salud (4%) y pensión (4%, + fondo de solidaridad si aplica) del pago de cada trabajador.'}
+              : `La liquidación descuenta salud (${Math.round(DEDUCCION_SALUD * 100)}%) y pensión (${Math.round(DEDUCCION_PENSION * 100)}%, + fondo de solidaridad si aplica) del pago de cada trabajador.`}
           </p>
         </div>
       </div>

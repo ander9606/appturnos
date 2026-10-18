@@ -1,11 +1,8 @@
 import type { Registro } from './types';
+import { JORNADA_SEMANAL_HORAS } from '@/shared/laboral';
 
 // Espejo de JORNADA_CONTINUA_UMBRAL_HORAS en backend/config/constants.js.
 const UMBRAL_JORNADA_CONTINUA_MIN = 6 * 60;
-
-// Tope semanal FIJO que usa calcularHoras() en el backend para clasificar
-// ordinaria vs extra (JORNADA_SEMANAL_HORAS en backend/config/constants.js).
-const JORNADA_SEMANAL_HORAS = 42;
 
 interface SesionSimple {
   hora_entrada: string | null;

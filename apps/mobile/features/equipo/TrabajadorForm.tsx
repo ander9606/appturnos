@@ -2,6 +2,7 @@
  * TrabajadorForm — shared create/edit form.
  * Uses React Hook Form + Zod. Caller owns the submit handler.
  */
+import { HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS } from '@api-client';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -568,7 +569,7 @@ export function TrabajadorForm({
                   <Input
                     label="Salario base mensual (COP)"
                     error={errors.salario_base?.message}
-                    hint="Se divide entre 210 (jornada de 42 h) para obtener el valor/hora."
+                    hint={`Se divide entre ${HORAS_MES_NOMINA} (jornada de ${JORNADA_SEMANAL_HORAS} h) para obtener el valor/hora.`}
                     value={field.value != null ? String(field.value) : ''}
                     onChangeText={field.onChange}
                     onBlur={field.onBlur}

@@ -2,7 +2,7 @@
 export * from './types';
 
 // Descuentos de ley (contrato laboral) — cálculo compartido para previews en UI
-export { calcularDeducciones, recargoFestivo, SMMLV_COP, HORAS_MES_NOMINA, DEDUCCION_SALUD, DEDUCCION_PENSION } from './laboral';
+export { calcularDeducciones, recargoFestivo, SMMLV_COP, HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS, RECARGO_NOCTURNO, RECARGO_EXTRA_DIURNA, RECARGO_EXTRA_NOCTURNA, DEDUCCION_SALUD, DEDUCCION_PENSION } from './laboral';
 export type { Deducciones } from './laboral';
 
 // Client initializer + TokenStore interface

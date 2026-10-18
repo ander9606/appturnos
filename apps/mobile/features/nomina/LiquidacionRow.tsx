@@ -11,6 +11,7 @@ import { avatarColorForId, HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { CompositionBar } from '@/components/ui/CompositionBar';
 import { Badge } from '@/components/ui/Badge';
 import { useCrearDescuento } from './descuentos/useDescuentos';
+import { RECARGO_EXTRA } from './trabajador/nominaTrabajadorUtils';
 
 const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
@@ -184,10 +185,10 @@ export function LiquidacionRow({
                 <FilaConcepto label={`${linea.horas_nocturnas.toFixed(1)}h nocturnas × $${linea.valor_hora.toLocaleString('es-CO')} × ${linea.recargo_nocturno}`} valor={linea.pago_nocturno} />
               )}
               {linea.horas_extra_diurnas > 0 && (
-                <FilaConcepto label={`${linea.horas_extra_diurnas.toFixed(1)}h extra diurna × $${linea.valor_hora.toLocaleString('es-CO')} × 1.25`} valor={linea.pago_extra_diurno} />
+                <FilaConcepto label={`${linea.horas_extra_diurnas.toFixed(1)}h extra diurna × $${linea.valor_hora.toLocaleString('es-CO')} × ${RECARGO_EXTRA.EXTRA_DIURNA}`} valor={linea.pago_extra_diurno} />
               )}
               {linea.horas_extra_nocturnas > 0 && (
-                <FilaConcepto label={`${linea.horas_extra_nocturnas.toFixed(1)}h extra nocturna × $${linea.valor_hora.toLocaleString('es-CO')} × 1.75`} valor={linea.pago_extra_nocturno} />
+                <FilaConcepto label={`${linea.horas_extra_nocturnas.toFixed(1)}h extra nocturna × $${linea.valor_hora.toLocaleString('es-CO')} × ${RECARGO_EXTRA.EXTRA_NOCTURNA}`} valor={linea.pago_extra_nocturno} />
               )}
               {linea.horas_festivo > 0 && (
                 <FilaConcepto label={`${linea.horas_festivo.toFixed(1)}h festivo/dominical × $${linea.valor_hora.toLocaleString('es-CO')} × ${linea.recargo_festivo}`} valor={linea.pago_festivo} />

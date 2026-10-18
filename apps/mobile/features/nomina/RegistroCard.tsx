@@ -12,6 +12,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import type { RegistroDiario } from '@api-client';
+import { recargoFestivo } from '@api-client';
 import {
   analizarDia,
   fmtHora,
@@ -22,6 +23,7 @@ import {
   esJornadaLarga,
   fmtDuracionMin,
   explicarHorasExtra,
+  RECARGO_EXTRA,
 } from './trabajador/nominaTrabajadorUtils';
 import { formatCOP } from '@/lib/formatters';
 
@@ -202,22 +204,22 @@ export function RegistroCard({ registro, valorHora = 0, periodoInicio }: Registr
               )}
               {Number(registro.horas_nocturnas) > 0 && (
                 <Text className="text-xs text-info">
-                  {Number(registro.horas_nocturnas).toFixed(1)}h noct. (+135 %)
+                  {Number(registro.horas_nocturnas).toFixed(1)}h noct. (recargo +{Math.round(RECARGO_EXTRA.NOCTURNA * 100)} %)
                 </Text>
               )}
               {Number(registro.horas_extra_diurnas) > 0 && (
                 <Text className="text-xs text-primary-500 font-medium">
-                  +{Number(registro.horas_extra_diurnas).toFixed(1)}h ext. diurna (+125 %)
+                  +{Number(registro.horas_extra_diurnas).toFixed(1)}h ext. diurna (×{RECARGO_EXTRA.EXTRA_DIURNA.toFixed(2)})
                 </Text>
               )}
               {Number(registro.horas_extra_nocturnas) > 0 && (
                 <Text className="text-xs text-primary-600 font-medium">
-                  +{Number(registro.horas_extra_nocturnas).toFixed(1)}h ext. noct. (+175 %)
+                  +{Number(registro.horas_extra_nocturnas).toFixed(1)}h ext. noct. (×{RECARGO_EXTRA.EXTRA_NOCTURNA.toFixed(2)})
                 </Text>
               )}
               {Number(registro.horas_festivo) > 0 && (
                 <Text className="text-xs text-danger font-medium">
-                  {Number(registro.horas_festivo).toFixed(1)}h festivo (+175 %)
+                  {Number(registro.horas_festivo).toFixed(1)}h festivo (×{recargoFestivo(registro.fecha).toFixed(2)})
                 </Text>
               )}
             </View>

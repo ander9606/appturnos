@@ -9,7 +9,14 @@
 export const SMMLV_COP = 1_750_905;
 
 // Jornada de 42 h/semana (Ley 2101): 42 ÷ 6 días × 30 = 210. Espejo de backend/config/constants.js.
+export const JORNADA_SEMANAL_HORAS = 42;
 export const HORAS_MES_NOMINA = 210;
+
+// Multiplicadores de ley que no cambian por fecha (espejo de RECARGOS en backend/config/constants.js).
+// El del festivo sí cambia por fecha: usar recargoFestivo(fecha), nunca un número fijo.
+export const RECARGO_NOCTURNO = 0.35;       // solo el recargo (asalariado: el sueldo ya paga la hora base)
+export const RECARGO_EXTRA_DIURNA = 1.25;
+export const RECARGO_EXTRA_NOCTURNA = 1.75;
 
 // A cargo del trabajador. ARL y caja de compensación no se incluyen: en
 // Colombia corren 100% por cuenta del empleador, nunca se descuentan del trabajador.
