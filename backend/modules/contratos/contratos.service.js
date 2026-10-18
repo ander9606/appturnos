@@ -4,7 +4,9 @@ const ContratosModel = require('./contratos.model');
 const IntegracionService = require('../integracion/integracion.service');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const DescuentosTurnoModel = require('../turnos/descuentos/descuentos-turno.model');
+const CuentasCobroService = require('../cuentas-cobro/cuentas-cobro.service');
 const AppError = require('../../utils/AppError');
+const logger = require('../../utils/logger');
 
 /** Solo los descuentos aceptados van en el contrato: son los que cambian el pago pactado. */
 async function adjuntarDescuentos(contrato) {
@@ -171,6 +173,11 @@ const ContratosService = {
       asignacion_id: contrato.asignacion_id,
       numero_contrato: contrato.numero_contrato,
     });
+    // Si el período del turno ya cerró, su cuenta de cobro se pone al día con esta firma
+    // (best-effort: la firma del contrato ya quedó guardada, esto no debe tumbarla).
+    await CuentasCobroService.actualizarPorTurnoFirmado(
+      realEmpresaId, contrato.asignacion_id, contrato.trabajador_id
+    ).catch((err) => logger.error(`[contratos] no se pudo actualizar la cuenta de cobro (contrato ${id}):`, err.message));
     return ContratosModel.obtenerPorId(realEmpresaId, id);
   },
 

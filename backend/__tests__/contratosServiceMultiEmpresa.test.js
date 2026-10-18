@@ -84,3 +84,32 @@ describe('ContratosService — multi-empresa (trabajador_turnos)', () => {
     ).rejects.toMatchObject({ statusCode: 403 });
   });
 });
+
+describe('ContratosService.firmar — cuenta de cobro del período cerrado', () => {
+  const CuentasCobroService = require('../modules/cuentas-cobro/cuentas-cobro.service');
+
+  beforeEach(() => {
+    jest.spyOn(CuentasCobroService, 'actualizarPorTurnoFirmado');
+    ContratosModel.obtenerPorId.mockResolvedValue({
+      id: 9, empresa_id: 3, asignacion_id: 500, trabajador_id: 61,
+      trabajador_usuario_id: 69, firmado_trabajador: 0,
+    });
+    ContratosModel.firmar.mockResolvedValue(1);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  test('al firmar pone al día la cuenta de cobro de ese turno', async () => {
+    CuentasCobroService.actualizarPorTurnoFirmado.mockResolvedValue({ generadas: 1 });
+
+    await ContratosService.firmar(null, 9, { sub: 69 }, 'firma');
+
+    expect(CuentasCobroService.actualizarPorTurnoFirmado).toHaveBeenCalledWith(3, 500, 61);
+  });
+
+  test('si la cuenta de cobro falla, la firma del contrato igual queda guardada', async () => {
+    CuentasCobroService.actualizarPorTurnoFirmado.mockRejectedValue(new Error('boom'));
+
+    await expect(ContratosService.firmar(null, 9, { sub: 69 }, 'firma')).resolves.toBeDefined();
+    expect(ContratosModel.firmar).toHaveBeenCalledWith(3, 9, 'firma');
+  });
+});

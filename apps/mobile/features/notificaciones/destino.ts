@@ -51,6 +51,8 @@ export function destino(n: { tipo: string; data: unknown }): string | null {
   // cuenta_cobro.pendiente_firma trae cuenta_cobro_id Y periodo_id — debe
   // resolverse antes del fallback genérico de periodo_id de abajo.
   if (d.cuenta_cobro_id) return `/cuenta-cobro/${d.cuenta_cobro_id}`;
+  // Cuenta sin generar porque faltan contratos por firmar: el trabajador va a firmarlos.
+  if (n.tipo === 'cuenta_cobro.bloqueada_sin_firma') return '/mis-contratos?pendientes=1';
   if (d.periodo_id)      return '/(tabs)/nomina';
   // Cierre de ciclo sin reapertura inmediata: no hay periodo_id nuevo que enlazar.
   if (n.tipo === 'nomina.ciclo_cambiado') return '/(tabs)/nomina';
