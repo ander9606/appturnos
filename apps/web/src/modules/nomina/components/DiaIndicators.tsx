@@ -1,6 +1,6 @@
 import { Utensils, Info, Radio } from 'lucide-react';
 import type { Registro } from '../types';
-import { fmtHrs } from '@/shared/lib/format';
+import { fmtHrs, fmtDiaSemana } from '@/shared/lib/format';
 import { minutosAlmuerzoDescontados, esJornadaLarga, fmtDuracionMin, explicarHorasExtra } from '../utils';
 
 /** Ícono inline con tooltip: por qué el total del día no coincide con entrada→salida. */
@@ -40,7 +40,7 @@ export function ExtraIndicator({ r }: { r: Registro }) {
   return (
     <Info size={12} className="text-muted-foreground/60 shrink-0">
       <title>
-        {`Llevaba ${fmtHrs(explicacion.acumuladoSemana)}h esta semana → ${fmtHrs(explicacion.cupoUsado)}h de su cupo (${explicacion.topeSemanal}h) + ${fmtHrs(explicacion.horasExtra)}h extra`}
+        {`Llevaba ${fmtHrs(explicacion.acumuladoSemana)}h desde el ${fmtDiaSemana(explicacion.lunesSemana).toLowerCase()} (la semana cuenta aunque empiece en el período anterior) →${fmtHrs(explicacion.cupoUsado)}h de su cupo (${explicacion.topeSemanal}h) + ${fmtHrs(explicacion.horasExtra)}h extra`}
       </title>
     </Info>
   );

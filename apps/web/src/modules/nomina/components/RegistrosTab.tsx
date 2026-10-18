@@ -197,6 +197,8 @@ export function RegistrosTab({
                                 return explicacion ? (
                                   <span className="text-[10px] text-muted-foreground/70 whitespace-nowrap">
                                     {fmtHrs(explicacion.cupoUsado)}h cupo + {fmtHrs(explicacion.horasExtra)}h extra
+                                    <br />
+                                    ya llevaba {fmtHrs(explicacion.acumuladoSemana)}h desde el {fmtDiaSemana(explicacion.lunesSemana).toLowerCase()}
                                   </span>
                                 ) : null;
                               })()}

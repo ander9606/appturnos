@@ -183,7 +183,8 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
           )}
           {explicacionExtra && (
             <Text className="text-xs text-muted-foreground">
-              Llevabas {explicacionExtra.acumuladoSemana.toFixed(1)}h esta semana → {explicacionExtra.cupoUsado.toFixed(1)}h
+              Llevabas {explicacionExtra.acumuladoSemana.toFixed(1)}h desde el {explicacionExtra.desdeLunes} (la semana
+              cuenta aunque empiece en el período anterior) → {explicacionExtra.cupoUsado.toFixed(1)}h
               de tu cupo ({explicacionExtra.topeSemanal}h) + {explicacionExtra.horasExtra.toFixed(1)}h extra
             </Text>
           )}

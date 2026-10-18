@@ -418,6 +418,8 @@ export interface ExplicacionHorasExtra {
   horasExtra: number;
   /** Tope semanal usado (JORNADA_SEMANAL_HORAS) — para el texto. */
   topeSemanal: number;
+  /** "lun 12 Oct": lunes que abre la semana contada; puede caer en el período anterior. */
+  desdeLunes: string;
 }
 
 /**
@@ -435,6 +437,10 @@ export function explicarHorasExtra(r: RegistroDiario): ExplicacionHorasExtra | n
     cupoUsado: Number(r.horas_ordinarias) + Number(r.horas_nocturnas),
     horasExtra,
     topeSemanal: JORNADA_SEMANAL_HORAS,
+    desdeLunes: (() => {
+      const l = new Date(`${lunesDeSemana(r.fecha)}T00:00:00`);
+      return `lun ${l.getDate()} ${SHORT_MONTHS[l.getMonth()]}`;
+    })(),
   };
 }
 
