@@ -12,11 +12,17 @@ export function useDescuentosPeriodo(periodoId: number | undefined) {
   });
 }
 
-/** Trabajador: los suyos (el backend ya los filtra a su propio trabajador_id). */
+/**
+ * Trabajador: los del período dado + los pendientes de cualquier otro período.
+ * Al vencer el ciclo el período pasa a 'cerrado' (sin liquidar todavía) y el
+ * gestor aún puede cargarle descuentos; si solo filtráramos por el período
+ * abierto, el trabajador nunca vería el botón de aceptar.
+ */
 export function useMisDescuentos(periodoId: number | undefined) {
   return useQuery({
-    queryKey: ['descuentos', 'propios', periodoId],
-    queryFn: () => nominaApi.listarDescuentos({ periodo_id: periodoId }),
+    queryKey: ['descuentos', 'propios'],
+    queryFn: () => nominaApi.listarDescuentos(),
+    select: (todos) => todos.filter((d) => d.periodo_id === periodoId || d.estado === 'pendiente'),
     enabled: periodoId !== undefined,
     staleTime: 30_000,
   });
