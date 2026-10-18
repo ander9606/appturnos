@@ -331,7 +331,7 @@ export default function TurnosScreen() {
                 variant="primary"
                 size="sm"
                 loading={aplicarMutation.isPending}
-                onPress={() => aplicarMutation.mutate({ ofertaId: item.id, puestoId: firstAvailablePuesto.id })}
+                onPress={() => aplicarMutation.mutateAsync({ ofertaId: item.id, puestoId: firstAvailablePuesto.id }).catch(() => undefined)}
               />
             )}
           </View>

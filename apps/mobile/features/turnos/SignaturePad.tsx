@@ -29,7 +29,7 @@ type Stroke = Point[];
 interface SignaturePadProps {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (base64: string) => void;
+  onConfirm: (base64: string) => void | Promise<unknown>;
   loading?: boolean;
   confirmLabel?: string;
   title?: string;
@@ -151,7 +151,7 @@ export function SignaturePad({
     if (isEmpty) return;
     const base64 = strokesToSvgBase64(strokes, canvasSize.w, canvasSize.h);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onConfirm(base64);
+    return onConfirm(base64);
   };
 
   const handleClose = () => {
