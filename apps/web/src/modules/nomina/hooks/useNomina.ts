@@ -39,6 +39,16 @@ export function usePeriodos(
   });
 }
 
+/** Registros entre dos fechas sin importar el período — para semanas que cruzan períodos. */
+export function useRegistrosRango(opts: { desde?: string; hasta?: string }) {
+  return useQuery({
+    queryKey: ['registros-rango', opts.desde, opts.hasta] as const,
+    queryFn: () => nominaApi.listarRegistros({ fecha_desde: opts.desde, fecha_hasta: opts.hasta, limit: 500 }),
+    enabled: !!opts.desde && !!opts.hasta,
+    staleTime: 30_000,
+  });
+}
+
 export function useRegistros(params: { periodo_id?: number; limit?: number }) {
   return useQuery({
     queryKey: KEYS.registros(params),

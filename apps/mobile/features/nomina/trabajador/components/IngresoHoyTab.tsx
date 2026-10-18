@@ -6,7 +6,7 @@ import type { PuntoMarcaje, DescansoCompensatorio } from '@api-client';
 import type { RegistroDiario } from '@api-client';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import { CompensatorioBanner } from '../../compensatorios/CompensatorioBanner';
-import { fmtHora, calcularElapsedLabel, horaEntradaMostrada, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
+import { fmtHora, calcularElapsedLabel, horaEntradaMostrada, getJornadaLegalSemanal, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
 
 interface Props {
   cargo:          string | null;
@@ -205,7 +205,7 @@ export function IngresoHoyTab({
       {/* ── Barra de horas semanales ─────────────────────── */}
       {(() => {
         const semana   = resumenSemana.semanas[0];
-        const limite   = semana?.limiteHoras ?? 40;
+        const limite   = semana?.limiteHoras ?? getJornadaLegalSemanal(new Date().getFullYear());
         const totalH   = resumenSemana.totalHoras;
         const extraH   = resumenSemana.horasExtraDiurnas + resumenSemana.horasExtraNocturnas;
         const ordinH   = Math.max(0, totalH - extraH);

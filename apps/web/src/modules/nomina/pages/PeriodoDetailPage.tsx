@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import {
-  usePeriodos, useRegistros, useLiquidacion, useDescuentosPeriodo, useCompensatorios,
+  usePeriodos, useRegistros, useRegistrosRango, useLiquidacion, useDescuentosPeriodo, useCompensatorios,
 } from '../hooks/useNomina';
 import type { EstadoPeriodo, Registro, DescuentoNomina, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { fmtPeriodo } from '@/shared/lib/format';
 import { ESTADO_BADGE } from '../constants';
+import { tramoSemanaPrevia, horasDeRegistro } from '../utils';
 import { PendientesCompensatoriosBanner } from '../components/PendientesCompensatoriosBanner';
 import { RegistrosTab } from '../components/RegistrosTab';
 import { LiquidacionTab } from '../components/LiquidacionTab';
@@ -35,6 +36,22 @@ export function PeriodoDetailPage() {
 
   const { data: registrosData, isLoading: loadingReg, error: errReg, refetch: refetchReg } = useRegistros({ periodo_id: periodoId });
   const registros: Registro[] = registrosData?.data?.data ?? [];
+
+  // Si el período empezó a mitad de semana, las horas de esa semana en el período anterior cuentan para las 42 h.
+  const tramoPrevio = useMemo(() => {
+    let min: string | null = null;
+    for (const r of registros) if (!min || r.fecha < min) min = r.fecha;
+    return min ? tramoSemanaPrevia(min) : null;
+  }, [registros]);
+  const { data: previoData } = useRegistrosRango({ desde: tramoPrevio?.desde, hasta: tramoPrevio?.hasta });
+  const horasPrevias = useMemo(() => {
+    const porTrabajador = new Map<number, number>();
+    if (tramoPrevio) {
+      const previos: Registro[] = previoData?.data?.data ?? [];
+      for (const r of previos) porTrabajador.set(r.trabajador_id, (porTrabajador.get(r.trabajador_id) ?? 0) + horasDeRegistro(r));
+    }
+    return { lunes: tramoPrevio?.desde ?? null, porTrabajador };
+  }, [tramoPrevio, previoData]);
 
   const { data: compensatoriosData } = useCompensatorios();
   const compensatorios: DescansoCompensatorio[] = compensatoriosData?.data ?? [];
@@ -131,6 +148,7 @@ export function PeriodoDetailPage() {
         <RegistrosTab
           registros={registros}
           periodoInicio={periodo?.fecha_inicio}
+          horasPrevias={horasPrevias}
           loading={loadingReg}
           error={errReg}
           onRetry={refetchReg}

@@ -85,6 +85,8 @@ export interface ResumenSemana {
   horasTotales: number;
   limiteHoras: number;
   horasExtra: number;
+  /** Horas de esta semana que cayeron en el período anterior y ya están sumadas en horasTotales. */
+  horasPrevias?: number;
 }
 
 /** ISO del lunes de la semana a la que pertenece `fecha`. */
@@ -108,24 +110,47 @@ function lunesDeSemana(fecha: string): string {
  * (ya congelado por calcularHoras en el backend) — upgrade path: portar
  * getJornadaLegalSemanal() si hace falta exactitud histórica aquí también.
  */
-export function agruparPorSemana(registros: Registro[]): ResumenSemana[] {
+export function agruparPorSemana(
+  registros: Registro[],
+  /** Horas que el trabajador ya llevaba esa semana en el período anterior (el tope de 42 h cruza períodos). */
+  previas?: { lunes: string; horas: number },
+): ResumenSemana[] {
   const horasPorSemana = new Map<string, number>();
   for (const r of registros) {
-    const total = [
-      r.horas_ordinarias, r.horas_extra_diurnas, r.horas_extra_nocturnas,
-      r.horas_nocturnas, r.horas_festivo,
-    ].reduce((a, b) => a + Number(b), 0);
     const lunes = lunesDeSemana(r.fecha);
-    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + total);
+    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + horasDeRegistro(r));
   }
   return Array.from(horasPorSemana.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([inicioSemana, horasTotales]) => ({
-      inicioSemana,
-      horasTotales,
-      limiteHoras: JORNADA_SEMANAL_HORAS,
-      horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
-    }));
+    .map(([inicioSemana, horasPeriodo]) => {
+      const horasPrevias = previas && previas.lunes === inicioSemana && previas.horas > 0 ? previas.horas : 0;
+      const horasTotales = horasPeriodo + horasPrevias;
+      return {
+        inicioSemana,
+        horasTotales,
+        limiteHoras: JORNADA_SEMANAL_HORAS,
+        horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
+        ...(horasPrevias > 0 ? { horasPrevias } : {}),
+      };
+    });
+}
+
+/** Horas totales de un registro (mismo criterio que agruparPorSemana). */
+export function horasDeRegistro(r: Registro): number {
+  return [r.horas_ordinarias, r.horas_extra_diurnas, r.horas_extra_nocturnas, r.horas_nocturnas, r.horas_festivo]
+    .reduce((a, b) => a + Number(b), 0);
+}
+
+/**
+ * Tramo de la primera semana del período que cayó ANTES de `primeraFecha` (la fecha más temprana
+ * con registros): [lunes, día anterior]. null si ya es lunes — no hay semana partida.
+ */
+export function tramoSemanaPrevia(primeraFecha: string): { desde: string; hasta: string } | null {
+  const lunes = lunesDeSemana(primeraFecha);
+  if (lunes === primeraFecha) return null;
+  const d = new Date(`${primeraFecha}T00:00:00`);
+  d.setDate(d.getDate() - 1);
+  return { desde: lunes, hasta: d.toISOString().slice(0, 10) };
 }
 
 export interface ExplicacionHorasExtra {
