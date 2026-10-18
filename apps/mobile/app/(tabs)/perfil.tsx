@@ -825,7 +825,7 @@ export default function PerfilScreen() {
           {/* ── Mis ausencias + contratos (trabajadores) ─────────── */}
           {(isTrabajadorTurnos || isTrabajadorNomina) && (
             <>
-              <SectionHeader title="Ausencias y contratos" />
+              <SectionHeader title={isTrabajadorTurnos ? 'Ausencias, contratos y cuentas de cobro' : 'Ausencias y contratos'} />
               <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
                 <Pressable
                   onPress={() => router.push('/ausencias')}
@@ -845,6 +845,18 @@ export default function PerfilScreen() {
                     <View className="flex-row items-center gap-3">
                       <Ionicons name="document-text-outline" size={16} color="#64748B" />
                       <Text className="text-sm font-medium text-foreground">Mis contratos</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  </Pressable>
+                )}
+                {isTrabajadorTurnos && (
+                  <Pressable
+                    onPress={() => router.push('/mis-cuentas-cobro')}
+                    className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                  >
+                    <View className="flex-row items-center gap-3">
+                      <Ionicons name="receipt-outline" size={16} color="#64748B" />
+                      <Text className="text-sm font-medium text-foreground">Mis cuentas de cobro</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
                   </Pressable>

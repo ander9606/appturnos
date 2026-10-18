@@ -128,7 +128,13 @@ const CuentasCobroService = {
           if (diferencia > 0) items.push(itemDiferencia(t, diferencia));
         }
       }
-      if (items.length === 0) continue;
+      if (items.length === 0) {
+        // Una cuenta sin firmar que ya no tiene nada que cobrar (se quitó el bono, el turno volvió a
+        // quedar sin firma…) no debe quedar viva con valores viejos: el trabajador podría firmarla y
+        // cobrar algo que ya no corresponde. Se regenera sola cuando vuelva a haber algo.
+        if (abierta) await CuentasCobroModel.eliminarSinFirmar(empresaId, abierta.id);
+        continue;
+      }
 
       const secuencia = abierta
         ? abierta.secuencia

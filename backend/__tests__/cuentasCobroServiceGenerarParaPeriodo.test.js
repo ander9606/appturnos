@@ -187,6 +187,32 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     expect(NotificacionesService.notificar).not.toHaveBeenCalled();
   });
 
+  test('cuenta sin firmar que ya no tiene nada que cobrar (bono quitado) se elimina; la firmada nunca', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },
+      { id: 501, secuencia: 2, firmado_trabajador: 0, items: [{ asignacion_id: 1, valor: 20000 }] }, // el bono ya no existe
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([trabajador([turno({ pago_total: 60000 })])]);
+
+    const resultado = await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(resultado.generadas).toBe(0);
+    expect(CuentasCobroModel.eliminarSinFirmar).toHaveBeenCalledTimes(1);
+    expect(CuentasCobroModel.eliminarSinFirmar).toHaveBeenCalledWith(7, 501);
+    expect(CuentasCobroModel.crear).not.toHaveBeenCalled();
+  });
+
+  test('sin cuenta sin firmar y sin nada que cobrar no elimina nada', async () => {
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 500, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 1, valor: 60000 }] },
+    ]);
+    AsignacionesModel.liquidacion.mockResolvedValue([trabajador([turno({ pago_total: 60000 })])]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    expect(CuentasCobroModel.eliminarSinFirmar).not.toHaveBeenCalled();
+  });
+
   test('trabajadorId limita la generación a ese trabajador', async () => {
     AsignacionesModel.liquidacion.mockResolvedValue([
       trabajador([turno()]),
