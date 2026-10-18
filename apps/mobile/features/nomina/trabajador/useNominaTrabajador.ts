@@ -194,7 +194,10 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     refetch: refetchPeriodos,
   } = usePeriodos('abierto');
 
-  const periodos = periodosResp?.data ?? [];
+  // Períodos vencidos pero aún sin liquidar: siguen mostrando descuentos por aceptar.
+  const { data: cerradosResp } = usePeriodos('cerrado');
+  const periodos = [...(periodosResp?.data ?? []), ...(cerradosResp?.data ?? [])]
+    .sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio));
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState<number | undefined>();
   const periodoActivo = periodos.find((p) => p.id === (periodoSeleccionado ?? periodos[0]?.id)) ?? periodos[0];
 
