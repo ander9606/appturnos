@@ -111,6 +111,11 @@ export interface ResumenSemana {
   horasExtra:   number;
   /** Horas de esta semana que cayeron en el período anterior y ya están sumadas en horasTotales. */
   horasPrevias?: number;
+  /**
+   * Horas de festivo habitual (3.º día festivo/domingo del mes en adelante) de esta semana. NO están en
+   * horasTotales: no consumen el cupo de 42 h, llevan recargo y se acreditan en la semana del compensatorio.
+   */
+  horasFestivo?: number;
 }
 
 // ── Helpers internos ───────────────────────────────────────────────────────
@@ -207,6 +212,7 @@ export function calcularResumenPeriodo(
 
   // Acumulado de horas totales por semana (lunes ISO → horas)
   const horasPorSemana = new Map<string, number>();
+  const festivoPorSemana = new Map<string, number>();
 
   for (const r of registros) {
     const exd  = Number(r.horas_extra_diurnas);
@@ -229,7 +235,10 @@ export function calcularResumenPeriodo(
 
     // Acumular horas totales por semana para desglose semanal
     const lunes = lunesDeSemana(r.fecha);
-    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + analisis.totalHoras);
+    // El festivo habitual (horas_festivo) no consume el cupo semanal: va aparte. El ocasional ya viene
+    // clasificado como horas normales y sí suma.
+    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + analisis.totalHoras - fest);
+    if (fest > 0) festivoPorSemana.set(lunes, (festivoPorSemana.get(lunes) ?? 0) + fest);
   }
 
   // Construir resumen por semana
@@ -239,7 +248,8 @@ export function calcularResumenPeriodo(
       const year = Number(inicioSemana.slice(0, 4));
       const limiteHoras = getJornadaLegalSemanal(year);
       const horasExtra = Math.max(0, horasTotales - limiteHoras);
-      return { inicioSemana, horasTotales, limiteHoras, horasExtra };
+      const horasFestivo = festivoPorSemana.get(inicioSemana);
+      return { inicioSemana, horasTotales, limiteHoras, horasExtra, ...(horasFestivo ? { horasFestivo } : {}) };
     });
 
   const round = (n: number) => Math.round(n * 100) / 100;
@@ -271,9 +281,9 @@ export function tramoSemanaPrevia(primeraFecha: string): { desde: string; hasta:
   return { desde: lunes, hasta: toISODate(d) };
 }
 
-/** Horas totales de un conjunto de registros (mismo criterio que la barra semanal). */
+/** Horas que cuentan para el cupo semanal de 42 h: todas menos el festivo habitual (horas_festivo). */
 export function sumarHoras(registros: RegistroDiario[]): number {
-  return registros.reduce((acc, r) => acc + analizarDia(r, 0).totalHoras, 0);
+  return registros.reduce((acc, r) => acc + analizarDia(r, 0).totalHoras - Number(r.horas_festivo), 0);
 }
 
 /**

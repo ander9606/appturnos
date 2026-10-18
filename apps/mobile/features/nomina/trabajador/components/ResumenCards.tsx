@@ -430,6 +430,11 @@ export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorH
         />
         <MarcaPeriodoAnterior horas={semana.horasPrevias ?? 0} limite={semana.limiteHoras} color="#334155" />
       </View>
+      {!!semana.horasFestivo && (
+        <Text className="text-[10px] text-danger">
+          +{semana.horasFestivo.toFixed(1)}h festivo (recargo, no cuenta para las {semana.limiteHoras}h)
+        </Text>
+      )}
       {!!semana.horasPrevias && (
         <Text className="text-[10px] text-muted-foreground">
           {semana.horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).

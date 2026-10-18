@@ -99,7 +99,10 @@ export function RegistroCard({ registro, valorHora = 0, periodoInicio }: Registr
         )}
         {analisis.esFestivo && (
           <View className="bg-danger-light px-2 py-0.5 rounded-full">
-            <Text className="text-[10px] font-semibold text-danger">Festivo</Text>
+            {/* horas_festivo > 0 ⇒ habitual (recargo); si no, sus horas se clasificaron como normales (ocasional). */}
+            <Text className="text-[10px] font-semibold text-danger">
+              {Number(registro.horas_festivo) > 0 ? 'Festivo habitual' : 'Festivo · horas normales'}
+            </Text>
           </View>
         )}
       </View>

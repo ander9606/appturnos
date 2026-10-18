@@ -121,6 +121,7 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
               <Text className={`text-[10px] font-semibold ${excedeSemana ? 'text-amber-600' : 'text-muted-foreground'}`}>
                 {fila.horasSemana}h semana
                 {fila.horasNocturnas > 0 ? ` · ${fila.horasNocturnas}h noct` : ''}
+                {fila.horasFestivo > 0 ? ` · +${fila.horasFestivo}h festivo (fuera de las ${L}h)` : ''}
                 {excedeSemana ? ` · +${fila.horasExtra}h extra` : ` / ${L}h`}
                 {enVivo ? ' · incluye estimado de hoy' : ''}
               </Text>

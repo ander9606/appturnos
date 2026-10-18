@@ -197,7 +197,8 @@ export function PeriodoHeaderCard({
       {(() => {
         const semana      = resumenSemana.semanas[0];
         const limite      = semana?.limiteHoras ?? getJornadaLegalSemanal(new Date().getFullYear());
-        const totalH      = resumenSemana.totalHoras;
+        const festivoH    = resumenSemana.horasFestivo;
+        const totalH      = resumenSemana.totalHoras - festivoH; // el festivo habitual no cuenta para las 42 h
         const extraH      = resumenSemana.horasExtraDiurnas + resumenSemana.horasExtraNocturnas;
         const ordinH      = Math.max(0, totalH - extraH);
         const pctOrdin    = Math.min(100, (ordinH / limite) * 100);
@@ -251,6 +252,12 @@ export function PeriodoHeaderCard({
             {horasPeriodoAnterior > 0 && (
               <Text className="text-white/60 text-[9px]">
                 La raya marca dónde termina el período anterior ({horasPeriodoAnterior.toFixed(1)}h)
+              </Text>
+            )}
+
+            {festivoH > 0 && (
+              <Text className="text-white/70 text-[10px]">
+                +{festivoH.toFixed(1)}h festivo (recargo, no cuenta para las {limite}h)
               </Text>
             )}
 

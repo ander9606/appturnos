@@ -49,6 +49,7 @@ export interface FilaDashboard {
   horasSemana:     number;
   limiteSemana:    number;
   horasExtra:      number;
+  horasFestivo:    number; // festivo habitual: fuera del cupo semanal
   horasNocturnas:  number; // always carry the +35 % night surcharge, shown separately
 }
 
@@ -94,11 +95,13 @@ export function useDashboardAsistencia() {
     );
     const horasSemPorTrabajador = new Map<number, number>();
     const horasNocPorTrabajador = new Map<number, number>();
+    const horasFestPorTrabajador = new Map<number, number>();
     for (const r of registrosSemana) {
+      // El festivo habitual (horas_festivo) no consume el cupo de 42 h: se muestra aparte.
       const total =
         Number(r.horas_ordinarias) + Number(r.horas_extra_diurnas) +
-        Number(r.horas_extra_nocturnas) + Number(r.horas_nocturnas) +
-        Number(r.horas_festivo);
+        Number(r.horas_extra_nocturnas) + Number(r.horas_nocturnas);
+      horasFestPorTrabajador.set(r.trabajador_id, (horasFestPorTrabajador.get(r.trabajador_id) ?? 0) + Number(r.horas_festivo));
       horasSemPorTrabajador.set(
         r.trabajador_id,
         (horasSemPorTrabajador.get(r.trabajador_id) ?? 0) + total
@@ -132,6 +135,7 @@ export function useDashboardAsistencia() {
         horasSemana,
         limiteSemana:  limite,
         horasExtra:    Math.max(0, Math.round((horasSemana - limite) * 10) / 10),
+        horasFestivo: Math.round((horasFestPorTrabajador.get(t.id) ?? 0) * 10) / 10,
         horasNocturnas,
       };
     }).sort((a, b) => {
