@@ -429,6 +429,20 @@ export function NominaTurnosView() {
               </TouchableOpacity>
             )}
 
+            {/* Acceso permanente: las cuentas de cobro firmadas se descargan siempre desde aquí */}
+            <TouchableOpacity
+              onPress={() => router.push('/mis-cuentas-cobro')}
+              className="mx-5 bg-card border border-border rounded-2xl px-4 py-3 flex-row items-center gap-2.5"
+              accessibilityRole="button"
+            >
+              <Ionicons name="document-text-outline" size={18} color={theme.primary} />
+              <Text className="flex-1 text-sm font-semibold text-foreground">
+                Mis cuentas de cobro
+              </Text>
+              <Text className="text-xs text-muted-foreground">Ver y descargar PDF</Text>
+              <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
+            </TouchableOpacity>
+
             {/* Desglose por empresa */}
             {porEmpresa.length > 0 && (
               <View className="mx-5 bg-card border border-border rounded-2xl px-4 py-3 gap-2">

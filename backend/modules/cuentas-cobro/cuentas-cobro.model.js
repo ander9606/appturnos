@@ -82,15 +82,19 @@ const CuentasCobroModel = {
     return filas[0] || null;
   },
 
-  /** Todas las cuentas de cobro del usuario, a través de todas sus empresas activas. */
+  /**
+   * Todas las cuentas de cobro del usuario, de todas sus empresas — incluso las de una
+   * empresa donde ya no está activo: es un documento de cobro histórico y debe poder
+   * descargarse siempre (el acceso al detalle/PDF ya se valida por dueño, no por estado).
+   */
   async listarPorUsuario(usuarioId) {
     const [filas] = await pool.query(
-      `SELECT cc.id, cc.numero_cuenta, cc.fecha_inicio, cc.fecha_fin,
+      `SELECT DISTINCT cc.id, cc.numero_cuenta, cc.fecha_inicio, cc.fecha_fin,
               cc.total_turnos, cc.total_horas, cc.valor_total,
               cc.firmado_trabajador, cc.firmado_at
        FROM cuentas_cobro cc
        JOIN trabajador_empresa te ON te.trabajador_id = cc.trabajador_id
-       WHERE te.usuario_id = ? AND te.estado = 'activo'
+       WHERE te.usuario_id = ?
        ORDER BY cc.fecha_fin DESC`,
       [usuarioId]
     );

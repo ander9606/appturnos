@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl,
+  View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -10,6 +10,7 @@ import { cuentasCobroApi } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { Badge } from '@/components/ui/Badge';
 import { formatCOP } from '@/lib/formatters';
+import { descargarCuentaCobro } from '@/features/nomina/descargarCuentaCobro';
 import type { CuentaCobroResumen } from '@api-client';
 
 export default function MisCuentasCobroScreen() {
@@ -92,6 +93,17 @@ export default function MisCuentasCobroScreen() {
 
 function CuentaCobroCard({ cuenta: c, onPress }: { cuenta: CuentaCobroResumen; onPress: () => void }) {
   const firmado = Boolean(c.firmado_trabajador);
+  const [descargando, setDescargando] = useState(false);
+  const descargar = async () => {
+    setDescargando(true);
+    try {
+      await descargarCuentaCobro(c.id);
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
+    } finally {
+      setDescargando(false);
+    }
+  };
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -107,12 +119,26 @@ function CuentaCobroCard({ cuenta: c, onPress }: { cuenta: CuentaCobroResumen; o
         <Text className="text-xs text-muted-foreground">{c.total_turnos} turno{c.total_turnos !== 1 ? 's' : ''}</Text>
         <Text className="text-xs font-semibold text-foreground">{formatCOP(c.valor_total)}</Text>
       </View>
-      {!firmado && (
-        <View className="flex-row items-center gap-1 mt-1">
-          <Ionicons name="pencil-outline" size={12} color="#D97706" />
-          <Text className="text-xs text-warning font-medium">Toca para firmar</Text>
-        </View>
-      )}
+      <View className="flex-row items-center justify-between mt-1">
+        {!firmado ? (
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="pencil-outline" size={12} color="#D97706" />
+            <Text className="text-xs text-warning font-medium">Toca para firmar</Text>
+          </View>
+        ) : <View />}
+        <TouchableOpacity
+          onPress={descargar}
+          disabled={descargando}
+          hitSlop={8}
+          accessibilityLabel={`Descargar PDF de la cuenta ${c.numero_cuenta}`}
+          className="flex-row items-center gap-1"
+        >
+          {descargando
+            ? <ActivityIndicator size="small" />
+            : <Ionicons name="download-outline" size={14} color="#FF5A3C" />}
+          <Text className="text-xs font-semibold" style={{ color: '#FF5A3C' }}>Descargar PDF</Text>
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 }

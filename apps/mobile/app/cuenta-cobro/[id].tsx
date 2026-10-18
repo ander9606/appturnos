@@ -8,9 +8,8 @@ import { useLocalSearchParams, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
-import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
-import * as WebBrowser from 'expo-web-browser';
 import { cuentasCobroApi } from '@api-client';
+import { descargarCuentaCobro } from '@/features/nomina/descargarCuentaCobro';
 import { SignaturePad } from '@/features/turnos/SignaturePad';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { formatCOP } from '@/lib/formatters';
@@ -71,9 +70,11 @@ export default function CuentaCobroScreen() {
   });
 
   async function handleDescargar() {
-    const token = await SecureStore.getItemAsync('appturnos.access_token');
-    const base  = process.env.EXPO_PUBLIC_API_URL;
-    await WebBrowser.openBrowserAsync(`${base}/api/cuentas-cobro/${id}/pdf?token=${token}`);
+    try {
+      await descargarCuentaCobro(Number(id));
+    } catch {
+      Alert.alert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
+    }
   }
 
   // ── states ──────────────────────────────────────────────────────────────
@@ -251,6 +252,11 @@ export default function CuentaCobroScreen() {
 
             <Text style={s.footer}>Generado por Zaturno · zaturno.app</Text>
           </View>
+
+          <TouchableOpacity onPress={handleDescargar} style={s.downloadButton} accessibilityRole="button">
+            <Ionicons name="download-outline" size={18} color="#FF5A3C" style={{ marginRight: 8 }} />
+            <Text style={s.downloadButtonLabel}>Descargar PDF</Text>
+          </TouchableOpacity>
 
           {!firmado && !isGestor && (
             cuenta.trabajador_firma_guardada ? (
@@ -514,6 +520,21 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  downloadButton: {
+    marginTop: 14,
+    borderWidth: 1.5,
+    borderColor: '#FF5A3C',
+    borderRadius: 14,
+    paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  downloadButtonLabel: {
+    color: '#FF5A3C',
+    fontWeight: '700',
+    fontSize: 15,
   },
   signButtonLabel: {
     color: '#fff',
