@@ -5,7 +5,7 @@
  * Toda la lógica de negocio vive en useNominaTrabajador + nominaTrabajadorUtils.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/Button';
 import { RegistroCard } from '../RegistroCard';
 import { PeriodoHeaderCard } from './components/PeriodoHeaderCard';
 import { ResumenCards } from './components/ResumenCards';
+import { DescuentosPendientesModal } from './components/DescuentosPendientesModal';
 import { TurnosEventualCard } from './components/TurnosEventualCard';
 import { IngresoHoyTab } from './components/IngresoHoyTab';
 import { useNominaTrabajador } from './useNominaTrabajador';
@@ -104,7 +105,18 @@ export function NominaTrabajadorView() {
   );
 
   const todayLabel = formatShortDate(todayISO);
-  const descuentosPendientes = misDescuentos.filter((d) => d.estado === 'pendiente').length;
+  const pendientesLista = useMemo(() => misDescuentos.filter((d) => d.estado === 'pendiente'), [misDescuentos]);
+  const descuentosPendientes = pendientesLista.length;
+
+  // Emergente de descuentos: sale sola la primera vez que hay pendientes; luego se reabre a mano.
+  const [modalDescuentos, setModalDescuentos] = useState(false);
+  const [modalYaAbierto, setModalYaAbierto] = useState(false);
+  useEffect(() => {
+    if (descuentosPendientes > 0 && !modalYaAbierto) {
+      setModalDescuentos(true);
+      setModalYaAbierto(true);
+    }
+  }, [descuentosPendientes, modalYaAbierto]);
 
   if (loading) {
     return (
@@ -170,13 +182,13 @@ export function NominaTrabajadorView() {
         })}
       </View>
 
-      {/* Aviso de descuentos por aceptar — se aceptan/rechazan en Mi Nómina → Detalle de pago */}
+      {/* Aviso de descuentos por aceptar — abre la ventana emergente para responderlos */}
       {activeTab === 'hoy' && descuentosPendientes > 0 && (
         <TouchableOpacity
-          onPress={() => setActiveTab('nomina')}
+          onPress={() => setModalDescuentos(true)}
           activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel="Ir a Mi Nómina para responder los descuentos pendientes"
+          accessibilityLabel="Responder los descuentos pendientes"
           className="mx-5 mt-3 flex-row items-center gap-3 rounded-2xl bg-warning/10 px-4 py-3"
         >
           <Ionicons name="alert-circle-outline" size={20} color={theme.primary} />
@@ -185,7 +197,7 @@ export function NominaTrabajadorView() {
               {descuentosPendientes} descuento{descuentosPendientes > 1 ? 's' : ''} por aceptar
             </Text>
             <Text className="text-xs text-muted-foreground">
-              Toca para revisarlos en Mi Nómina → Detalle de pago
+              Toca para aceptarlos o rechazarlos
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color="#64748B" />
@@ -260,6 +272,7 @@ export function NominaTrabajadorView() {
                   miLiquidacion={miLiquidacion}
                   tipoContrato={tipoContrato}
                   misDescuentos={misDescuentos}
+                  onRevisarDescuentos={() => setModalDescuentos(true)}
                 />
                 <View className="flex-row items-center justify-between mt-1">
                   <Text className="text-sm font-semibold text-foreground">
@@ -355,6 +368,12 @@ export function NominaTrabajadorView() {
           contentContainerStyle={{ paddingHorizontal: 20 }}
         />
       )}
+
+      <DescuentosPendientesModal
+        visible={modalDescuentos}
+        descuentos={pendientesLista}
+        onClose={() => setModalDescuentos(false)}
+      />
     </SafeAreaView>
   );
 }
