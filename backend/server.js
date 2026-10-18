@@ -71,6 +71,10 @@ app.use('/api/turnos/asignaciones/:id/ingreso', marcajeLimiter);
 app.use('/api/turnos/asignaciones/:id/egreso', marcajeLimiter);
 app.use('/api/turnos/ofertas/:id/aplicar', marcajeLimiter);
 
+// Reportar novedad adjunta una foto en base64 (una foto de iPhone pesa varios MB):
+// parser propio con más cupo, montado antes del global (que se salta el body ya leído).
+app.use('/api/novedades/asignaciones', express.json({ limit: '8mb' }));
+
 // Captura el body crudo: necesario para verificar la firma HMAC de los
 // webhooks entrantes de logiq360 (ver 05-INTEGRACION.md).
 app.use(
