@@ -85,6 +85,15 @@ const CuentasCobroModel = {
     }));
   },
 
+  /** Borra una cuenta que ya no tiene nada que cobrar. Nunca toca una firmada. */
+  async eliminarSinFirmar(empresaId, id) {
+    const [res] = await pool.query(
+      'DELETE FROM cuentas_cobro WHERE id = ? AND empresa_id = ? AND firmado_trabajador = 0',
+      [id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
   /** usuario_id de quienes administran cuentas de cobro (para avisarles de bloqueos al generarlas). */
   async listarGestoresUsuarioIds(empresaId) {
     const [filas] = await pool.query(
