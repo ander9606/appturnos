@@ -43,7 +43,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.5,
+      quality: 0.3,
       base64: true,
     });
     if (!result.canceled && result.assets[0]?.base64) {
@@ -60,7 +60,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.5,
+      quality: 0.3,
       base64: true,
     });
     if (!result.canceled && result.assets[0]?.base64) {
