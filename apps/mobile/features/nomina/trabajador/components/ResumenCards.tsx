@@ -19,6 +19,8 @@ import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import {
   fmtPeriodo,
   getJornadaLegalSemanal,
+  estimarExtraSemanaCOP,
+  RECARGO_EXTRA,
   type ResumenPeriodoNomina,
   type ResumenSemana,
 } from '../nominaTrabajadorUtils';
@@ -279,10 +281,10 @@ export function ResumenCards({
                       <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_nocturno}`} valor={Number(miLiquidacion.pago_nocturno)} />
                     )}
                     {Number(miLiquidacion.horas_extra_diurnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna × ${formatCOP(miLiquidacion.valor_hora)} × 1.25`} valor={Number(miLiquidacion.pago_extra_diurno)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna × ${formatCOP(miLiquidacion.valor_hora)} × ${RECARGO_EXTRA.EXTRA_DIURNA}`} valor={Number(miLiquidacion.pago_extra_diurno)} />
                     )}
                     {Number(miLiquidacion.horas_extra_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna × ${formatCOP(miLiquidacion.valor_hora)} × 1.75`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna × ${formatCOP(miLiquidacion.valor_hora)} × ${RECARGO_EXTRA.EXTRA_NOCTURNA}`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
                     )}
                     {Number(miLiquidacion.horas_festivo) > 0 && (
                       <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_festivo}`} valor={Number(miLiquidacion.pago_festivo)} />
@@ -400,7 +402,7 @@ function fmtLunes(iso: string): string {
 
 export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorHora: number }) {
   const excede = semana.horasExtra > 0;
-  const extra$ = excede ? Math.round(semana.horasExtra * 1.25 * valorHora) : 0;
+  const extra$ = estimarExtraSemanaCOP(semana, valorHora);
   const pct = Math.min(100, (semana.horasTotales / semana.limiteHoras) * 100);
 
   return (
@@ -430,6 +432,11 @@ export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorH
         />
         <MarcaPeriodoAnterior horas={semana.horasPrevias ?? 0} limite={semana.limiteHoras} color="#334155" />
       </View>
+      {!!semana.horasFestivo && (
+        <Text className="text-[10px] text-danger">
+          +{semana.horasFestivo.toFixed(1)}h festivo (recargo, no cuenta para las {semana.limiteHoras}h)
+        </Text>
+      )}
       {!!semana.horasPrevias && (
         <Text className="text-[10px] text-muted-foreground">
           {semana.horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).

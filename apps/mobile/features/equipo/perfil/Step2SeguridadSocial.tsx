@@ -1,3 +1,4 @@
+import { HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS } from '@api-client';
 import React from 'react';
 import {
   View,
@@ -136,7 +137,7 @@ export function Step2SeguridadSocial({ data, onChange, onBack, onNext }: Props) 
         <Input
           label="Salario base mensual (COP)"
           placeholder="Ej. 1300000"
-          hint="Se divide entre 210 (jornada de 42 h) para obtener el valor/hora."
+          hint={`Se divide entre ${HORAS_MES_NOMINA} (jornada de ${JORNADA_SEMANAL_HORAS} h) para obtener el valor/hora.`}
           value={data.salario_base}
           onChangeText={(t) => onChange({ salario_base: t })}
           keyboardType="numeric"

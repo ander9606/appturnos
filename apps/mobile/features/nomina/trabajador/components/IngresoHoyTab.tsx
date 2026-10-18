@@ -206,7 +206,8 @@ export function IngresoHoyTab({
       {(() => {
         const semana   = resumenSemana.semanas[0];
         const limite   = semana?.limiteHoras ?? getJornadaLegalSemanal(new Date().getFullYear());
-        const totalH   = resumenSemana.totalHoras;
+        const festivoH = resumenSemana.horasFestivo;
+        const totalH   = resumenSemana.totalHoras - festivoH; // el festivo habitual no cuenta para las 42 h
         const extraH   = resumenSemana.horasExtraDiurnas + resumenSemana.horasExtraNocturnas;
         const ordinH   = Math.max(0, totalH - extraH);
         const pctOrdin = Math.min(100, (ordinH / limite) * 100);
@@ -261,6 +262,12 @@ export function IngresoHoyTab({
             {horasPeriodoAnterior > 0 && (
               <Text className="text-[10px] text-muted-foreground">
                 La raya marca dónde termina el período anterior ({horasPeriodoAnterior.toFixed(1)}h antes de la raya).
+              </Text>
+            )}
+
+            {festivoH > 0 && (
+              <Text className="text-xs text-danger font-medium">
+                +{festivoH.toFixed(1)}h festivo (recargo, no cuenta para las {limite}h)
               </Text>
             )}
 

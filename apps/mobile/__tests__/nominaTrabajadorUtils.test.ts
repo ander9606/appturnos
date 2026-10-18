@@ -1,4 +1,4 @@
-import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias } from '../features/nomina/trabajador/nominaTrabajadorUtils';
+import { ayerDe, calcularElapsedLabel, calcularElapsedMinutes, encontrarRegistroActivo, etiquetaPeriodo, getJornadaLegalSemanal, tramoSemanaPrevia, aplicarHorasPrevias, calcularResumenPeriodo, sumarHoras, estimarExtraSemanaCOP } from '../features/nomina/trabajador/nominaTrabajadorUtils';
 
 describe('getJornadaLegalSemanal', () => {
   it('2026 en adelante → 42h (tope final de la Ley 2101, coincide con el backend)', () => {
@@ -119,5 +119,48 @@ describe('tramoSemanaPrevia / aplicarHorasPrevias', () => {
   it('sin horas previas o semana distinta no cambia nada', () => {
     expect(aplicarHorasPrevias(base, '2026-10-12', 0)).toBe(base);
     expect(aplicarHorasPrevias(base, '2026-10-05', 10).semanas[0].horasTotales).toBe(5.5);
+  });
+});
+
+// Festivo habitual (3.º del mes en adelante): sus horas van a horas_festivo y NO consumen el cupo de 42 h.
+// El ocasional (1.º y 2.º) ya viene como horas normales y sí suma a la semana.
+describe('festivo y cupo semanal', () => {
+  const dia = (fecha: string, o: Record<string, number>) => ({
+    id: 1, fecha, tipo_dia: 'ordinario', es_festivo: 0, hora_entrada: '08:00:00', hora_salida: '16:00:00',
+    horas_ordinarias: 0, horas_extra_diurnas: 0, horas_extra_nocturnas: 0, horas_nocturnas: 0, horas_festivo: 0, ...o,
+  }) as never;
+
+  it('el festivo habitual queda fuera de horasTotales y aparece en horasFestivo', () => {
+    const r = calcularResumenPeriodo([dia('2026-10-12', { horas_ordinarias: 8 }), dia('2026-10-13', { horas_festivo: 8 })], 0);
+    expect(r.semanas[0]).toMatchObject({ horasTotales: 8, horasFestivo: 8, horasExtra: 0 });
+  });
+
+  it('el festivo ocasional (horas normales) sí suma a la semana', () => {
+    const r = calcularResumenPeriodo([dia('2026-10-12', { horas_ordinarias: 8 }), dia('2026-10-13', { horas_ordinarias: 8, es_festivo: 1 })], 0);
+    expect(r.semanas[0].horasTotales).toBe(16);
+    expect(r.semanas[0].horasFestivo).toBeUndefined();
+  });
+
+  it('sumarHoras (horas previas) también excluye el festivo habitual', () => {
+    expect(sumarHoras([dia('2026-10-12', { horas_ordinarias: 8 }), dia('2026-10-13', { horas_festivo: 8 })])).toBe(8);
+  });
+});
+
+// El estimado en pesos del extra usa la tasa de cada tipo: ×1.25 diurna, ×1.75 nocturna.
+describe('estimarExtraSemanaCOP', () => {
+  const sem = (o: object) => ({ inicioSemana: '2026-10-12', horasTotales: 50, limiteHoras: 42, horasExtra: 8, ...o });
+
+  it('pondera diurnas y nocturnas con su tasa', () => {
+    // 4 h × 1.25 + 4 h × 1.75 = 12 h-equivalentes × $10.000
+    expect(estimarExtraSemanaCOP(sem({ horasExtraDiurnas: 4, horasExtraNocturnas: 4 }), 10_000)).toBe(120_000);
+  });
+
+  it('sin extras por tipo guardadas, estima todo como diurno', () => {
+    expect(estimarExtraSemanaCOP(sem({}), 10_000)).toBe(100_000);
+  });
+
+  it('sin extra o sin valor hora → 0', () => {
+    expect(estimarExtraSemanaCOP(sem({ horasExtra: 0 }), 10_000)).toBe(0);
+    expect(estimarExtraSemanaCOP(sem({}), 0)).toBe(0);
   });
 });

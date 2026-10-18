@@ -29,6 +29,7 @@ import {
   getValorHora,
   calcularResumenPeriodo,
   aplicarHorasPrevias,
+  sumarHoras,
   lunesDeSemana,
   encontrarRegistroActivo,
   getEstadoHoy,
@@ -245,8 +246,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const horasSemanaPeriodoAnterior = useMemo(() => {
     const inicio = periodoActivo?.fecha_inicio;
     if (!inicio) return 0;
-    return calcularResumenPeriodo(registrosSemana.filter((r) => r.fecha < inicio), valorHora).totalHoras;
-  }, [registrosSemana, periodoActivo?.fecha_inicio, valorHora]);
+    return sumarHoras(registrosSemana.filter((r) => r.fecha < inicio));
+  }, [registrosSemana, periodoActivo?.fecha_inicio]);
 
   // El registro en curso: el de hoy, o el de ayer si el turno cruzó la medianoche y sigue abierto.
   const registroHoy = useMemo(

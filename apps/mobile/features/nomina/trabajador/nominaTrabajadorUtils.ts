@@ -20,12 +20,13 @@
  */
 
 import type { RegistroDiario, PeriodoNomina, TipoDia, TipoPeriodo } from '@api-client';
-import { recargoFestivo } from '@api-client';
+import {
+  recargoFestivo, HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS,
+  RECARGO_NOCTURNO, RECARGO_EXTRA_DIURNA, RECARGO_EXTRA_NOCTURNA,
+} from '@api-client';
 import { toISODate, BOGOTA_OFFSET_MS } from '@/lib/formatters';
 
 // ── Constantes ─────────────────────────────────────────────────────────────
-
-const HORAS_MES_NOMINA = 210; // 42 h/semana ÷ 6 × 30 (espejo de backend/config/constants.js)
 
 // Umbral de jornada continua (Art. 167 CST): por debajo de esto no aplica
 // descanso obligatorio, así que no tiene sentido preguntar por almuerzo.
@@ -37,17 +38,16 @@ export const JORNADA_CONTINUA_UMBRAL_HORAS = 6;
 // a diferencia de getJornadaLegalSemanal() más abajo (que sí escalona por año
 // y solo se usa para el resumen informativo del límite legal por semana), este
 // es el número que realmente decidió el desglose ordinarias/extra de cada día.
-const JORNADA_SEMANAL_HORAS = 42;
 
 // Espejo de desglosarPagoNomina (backend) para un asalariado — se suma encima
 // del salario base (que se paga siempre íntegro, ver calcularSalarioBasePeriodo).
 // Nocturna ordinaria: solo el recargo (+35 %), la hora base ya la paga el
 // sueldo. Extras y festivo: multiplicador completo, son horas fuera de la
 // jornada que el sueldo no cubre (festivo según fecha, recargoFestivo()).
-const RECARGO_EXTRA = {
-  NOCTURNA:        0.35, // solo el recargo: el salario base ya paga la hora (asalariado)
-  EXTRA_DIURNA:    1.25,
-  EXTRA_NOCTURNA:  1.75,
+export const RECARGO_EXTRA = {
+  NOCTURNA:        RECARGO_NOCTURNO,       // solo el recargo: el salario base ya paga la hora (asalariado)
+  EXTRA_DIURNA:    RECARGO_EXTRA_DIURNA,
+  EXTRA_NOCTURNA:  RECARGO_EXTRA_NOCTURNA,
 } as const;
 
 // Límites semanales según Ley 2101 de 2021 (reducción progresiva, corte cada
@@ -111,6 +111,14 @@ export interface ResumenSemana {
   horasExtra:   number;
   /** Horas de esta semana que cayeron en el período anterior y ya están sumadas en horasTotales. */
   horasPrevias?: number;
+  /**
+   * Horas de festivo habitual (3.º día festivo/domingo del mes en adelante) de esta semana. NO están en
+   * horasTotales: no consumen el cupo de 42 h, llevan recargo y se acreditan en la semana del compensatorio.
+   */
+  horasFestivo?: number;
+  /** Extras guardadas por el backend en los registros de la semana (para estimar el pago con la tasa de cada tipo). */
+  horasExtraDiurnas?: number;
+  horasExtraNocturnas?: number;
 }
 
 // ── Helpers internos ───────────────────────────────────────────────────────
@@ -207,6 +215,9 @@ export function calcularResumenPeriodo(
 
   // Acumulado de horas totales por semana (lunes ISO → horas)
   const horasPorSemana = new Map<string, number>();
+  const festivoPorSemana = new Map<string, number>();
+  const extraDiurnaPorSemana = new Map<string, number>();
+  const extraNocturnaPorSemana = new Map<string, number>();
 
   for (const r of registros) {
     const exd  = Number(r.horas_extra_diurnas);
@@ -229,7 +240,12 @@ export function calcularResumenPeriodo(
 
     // Acumular horas totales por semana para desglose semanal
     const lunes = lunesDeSemana(r.fecha);
-    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + analisis.totalHoras);
+    // El festivo habitual (horas_festivo) no consume el cupo semanal: va aparte. El ocasional ya viene
+    // clasificado como horas normales y sí suma.
+    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + analisis.totalHoras - fest);
+    if (fest > 0) festivoPorSemana.set(lunes, (festivoPorSemana.get(lunes) ?? 0) + fest);
+    extraDiurnaPorSemana.set(lunes, (extraDiurnaPorSemana.get(lunes) ?? 0) + exd);
+    extraNocturnaPorSemana.set(lunes, (extraNocturnaPorSemana.get(lunes) ?? 0) + exn);
   }
 
   // Construir resumen por semana
@@ -239,7 +255,13 @@ export function calcularResumenPeriodo(
       const year = Number(inicioSemana.slice(0, 4));
       const limiteHoras = getJornadaLegalSemanal(year);
       const horasExtra = Math.max(0, horasTotales - limiteHoras);
-      return { inicioSemana, horasTotales, limiteHoras, horasExtra };
+      const horasFestivo = festivoPorSemana.get(inicioSemana);
+      return {
+        inicioSemana, horasTotales, limiteHoras, horasExtra,
+        horasExtraDiurnas: extraDiurnaPorSemana.get(inicioSemana) ?? 0,
+        horasExtraNocturnas: extraNocturnaPorSemana.get(inicioSemana) ?? 0,
+        ...(horasFestivo ? { horasFestivo } : {}),
+      };
     });
 
   const round = (n: number) => Math.round(n * 100) / 100;
@@ -271,9 +293,22 @@ export function tramoSemanaPrevia(primeraFecha: string): { desde: string; hasta:
   return { desde: lunes, hasta: toISODate(d) };
 }
 
-/** Horas totales de un conjunto de registros (mismo criterio que la barra semanal). */
+/**
+ * Estimado en pesos del extra de la semana: cada tipo con su tasa (×1.25 diurna, ×1.75 nocturna).
+ * Si el backend aún no guardó extras por tipo (registro en curso), cae a todo diurno.
+ */
+export function estimarExtraSemanaCOP(semana: ResumenSemana, valorHora: number): number {
+  if (semana.horasExtra <= 0 || valorHora <= 0) return 0;
+  const exd = semana.horasExtraDiurnas ?? 0;
+  const exn = semana.horasExtraNocturnas ?? 0;
+  const multiplicadas = exd + exn > 0 ? exd * RECARGO_EXTRA.EXTRA_DIURNA + exn * RECARGO_EXTRA.EXTRA_NOCTURNA
+                                      : semana.horasExtra * RECARGO_EXTRA.EXTRA_DIURNA;
+  return Math.round(multiplicadas * valorHora);
+}
+
+/** Horas que cuentan para el cupo semanal de 42 h: todas menos el festivo habitual (horas_festivo). */
 export function sumarHoras(registros: RegistroDiario[]): number {
-  return registros.reduce((acc, r) => acc + analizarDia(r, 0).totalHoras, 0);
+  return registros.reduce((acc, r) => acc + analizarDia(r, 0).totalHoras - Number(r.horas_festivo), 0);
 }
 
 /**

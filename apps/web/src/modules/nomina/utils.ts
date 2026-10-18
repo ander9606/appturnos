@@ -1,11 +1,8 @@
 import type { Registro } from './types';
+import { JORNADA_SEMANAL_HORAS } from '@/shared/laboral';
 
 // Espejo de JORNADA_CONTINUA_UMBRAL_HORAS en backend/config/constants.js.
 const UMBRAL_JORNADA_CONTINUA_MIN = 6 * 60;
-
-// Tope semanal FIJO que usa calcularHoras() en el backend para clasificar
-// ordinaria vs extra (JORNADA_SEMANAL_HORAS en backend/config/constants.js).
-const JORNADA_SEMANAL_HORAS = 42;
 
 interface SesionSimple {
   hora_entrada: string | null;
@@ -87,6 +84,8 @@ export interface ResumenSemana {
   horasExtra: number;
   /** Horas de esta semana que cayeron en el período anterior y ya están sumadas en horasTotales. */
   horasPrevias?: number;
+  /** Horas de festivo habitual (3.º en adelante): fuera del cupo de 42 h, con recargo; no están en horasTotales. */
+  horasFestivo?: number;
 }
 
 /** ISO del lunes de la semana a la que pertenece `fecha`. */
@@ -116,9 +115,12 @@ export function agruparPorSemana(
   previas?: { lunes: string; horas: number },
 ): ResumenSemana[] {
   const horasPorSemana = new Map<string, number>();
+  const festivoPorSemana = new Map<string, number>();
   for (const r of registros) {
     const lunes = lunesDeSemana(r.fecha);
     horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + horasDeRegistro(r));
+    const fest = Number(r.horas_festivo);
+    if (fest > 0) festivoPorSemana.set(lunes, (festivoPorSemana.get(lunes) ?? 0) + fest);
   }
   return Array.from(horasPorSemana.entries())
     .sort(([a], [b]) => a.localeCompare(b))
@@ -131,13 +133,17 @@ export function agruparPorSemana(
         limiteHoras: JORNADA_SEMANAL_HORAS,
         horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
         ...(horasPrevias > 0 ? { horasPrevias } : {}),
+        ...(festivoPorSemana.get(inicioSemana) ? { horasFestivo: festivoPorSemana.get(inicioSemana) } : {}),
       };
     });
 }
 
-/** Horas totales de un registro (mismo criterio que agruparPorSemana). */
+/**
+ * Horas de un registro que cuentan para el cupo semanal: todas menos el festivo habitual (horas_festivo).
+ * El festivo ocasional (1.º y 2.º del mes) ya viene como horas normales y sí suma.
+ */
 export function horasDeRegistro(r: Registro): number {
-  return [r.horas_ordinarias, r.horas_extra_diurnas, r.horas_extra_nocturnas, r.horas_nocturnas, r.horas_festivo]
+  return [r.horas_ordinarias, r.horas_extra_diurnas, r.horas_extra_nocturnas, r.horas_nocturnas]
     .reduce((a, b) => a + Number(b), 0);
 }
 

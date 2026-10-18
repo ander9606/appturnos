@@ -8,7 +8,7 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useWatch, type Control } from 'react-hook-form';
-import { empresasApi, calcularDeducciones, HORAS_MES_NOMINA } from '@api-client';
+import { empresasApi, calcularDeducciones, HORAS_MES_NOMINA, DEDUCCION_SALUD, DEDUCCION_PENSION } from '@api-client';
 import { formatCOP } from '@/lib/formatters';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import type { TrabajadorFormValues } from './schemas';
@@ -41,8 +41,8 @@ export function DeduccionesChecklist({ control }: Props) {
 
   const d = calcularDeducciones(ibc);
   const items = [
-    { label: 'Salud (4%)', valor: d.salud, aplica: true },
-    { label: 'Pensión (4%)', valor: d.pension - d.fondoSolidaridadTasa * ibc, aplica: true },
+    { label: `Salud (${Math.round(DEDUCCION_SALUD * 100)}%)`, valor: d.salud, aplica: true },
+    { label: `Pensión (${Math.round(DEDUCCION_PENSION * 100)}%)`, valor: d.pension - d.fondoSolidaridadTasa * ibc, aplica: true },
     {
       label: `Fondo de solidaridad pensional (+${(d.fondoSolidaridadTasa * 100).toFixed(1)}%)`,
       valor: d.fondoSolidaridadTasa * ibc,

@@ -150,6 +150,9 @@ export function RegistrosTab({
                           ) : (
                             <span className="text-foreground">{fmtHrs(s.horasTotales)} / {s.limiteHoras}h</span>
                           )}
+                          {s.horasFestivo ? (
+                            <span className="text-danger"> · +{fmtHrs(s.horasFestivo)}h festivo (recargo, fuera de las {s.limiteHoras}h)</span>
+                          ) : null}
                           {s.horasPrevias ? (
                             <span className="text-muted-foreground"> · {fmtHrs(s.horasPrevias)}h del período anterior</span>
                           ) : null}
