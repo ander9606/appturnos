@@ -9,13 +9,12 @@
  *   5. Selector de período
  */
 
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
 import { HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { Badge } from '@/components/ui/Badge';
-import { useAceptarDescuento, useRechazarDescuento } from '../../descuentos/useDescuentos';
 import {
   fmtPeriodo,
   getJornadaLegalSemanal,
@@ -24,7 +23,7 @@ import {
 } from '../nominaTrabajadorUtils';
 import type { PeriodoNomina, LiquidacionLinea, TipoContrato, DescuentoNomina, TipoDescuento } from '@api-client';
 
-const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
+export const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
   inasistencia: 'Inasistencia',
   dano_equipo: 'Daño a equipo',
@@ -43,6 +42,8 @@ interface Props {
   tipoContrato?:  TipoContrato;
   /** Descuentos manuales propios del período (pendientes, aceptados, rechazados). */
   misDescuentos?: DescuentoNomina[];
+  /** Abre la ventana emergente donde se aceptan / rechazan los descuentos pendientes. */
+  onRevisarDescuentos?: () => void;
 }
 
 export function ResumenCards({
@@ -54,14 +55,16 @@ export function ResumenCards({
   miLiquidacion,
   tipoContrato,
   misDescuentos = [],
+  onRevisarDescuentos,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const pendientes = misDescuentos.filter((d) => d.estado === 'pendiente');
   const rechazados = misDescuentos.filter((d) => d.estado === 'rechazado');
   const [expandedPago, setExpandedPago] = useState(pendientes.length > 0);
-  const [respondiendoId, setRespondiendoId] = useState<number | null>(null);
-  const aceptarDescuento = useAceptarDescuento();
-  const rechazarDescuento = useRechazarDescuento();
+  // El estado inicial se calcula antes de que lleguen los descuentos: ábrelo cuando aparezcan pendientes.
+  useEffect(() => {
+    if (pendientes.length > 0) setExpandedPago(true);
+  }, [pendientes.length]);
 
   const tieneDeduccionLegal = tipoContrato === 'laboral' && miLiquidacion && miLiquidacion.neto !== miLiquidacion.total;
   const tieneDescuentos = tieneDeduccionLegal || pendientes.length > 0 || rechazados.length > 0;
@@ -72,26 +75,6 @@ export function ResumenCards({
     ? Number(miLiquidacion.pago_nocturno) + Number(miLiquidacion.pago_extra_diurno) +
       Number(miLiquidacion.pago_extra_nocturno) + Number(miLiquidacion.pago_festivo)
     : resumen.valorExtraCOP;
-
-  const handleResponder = async (id: number, aceptar: boolean) => {
-    if (!aceptar) {
-      const ok = await new Promise<boolean>((resolve) =>
-        Alert.alert('Rechazar descuento', 'Tu empleador verá que lo rechazaste. ¿Confirmas?', [
-          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Rechazar', style: 'destructive', onPress: () => resolve(true) },
-        ])
-      );
-      if (!ok) return;
-    }
-    setRespondiendoId(id);
-    try {
-      await (aceptar ? aceptarDescuento : rechazarDescuento).mutateAsync(id);
-    } catch {
-      Alert.alert('Error', 'No se pudo registrar tu respuesta. Intenta de nuevo.');
-    } finally {
-      setRespondiendoId(null);
-    }
-  };
 
   const tieneExtras    = resumen.horasExtraDiurnas > 0 || resumen.horasExtraNocturnas > 0 ||
                          resumen.horasNocturnas > 0    || resumen.horasFestivo > 0;
@@ -174,33 +157,19 @@ export function ResumenCards({
                 <View className="gap-2 pt-1 border-t border-border">
                   <Text className="text-xs font-semibold text-foreground mt-2">Por tu aceptación</Text>
                   {pendientes.map((d) => (
-                    <View key={d.id} className="bg-warning/10 rounded-xl p-3 gap-2">
-                      <View className="flex-row items-center justify-between">
-                        <Text className="text-xs font-semibold text-foreground flex-1">
-                          {TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}
-                        </Text>
-                        <Text className="text-xs font-bold text-danger">-{formatCOP(d.monto)}</Text>
-                      </View>
-                      <View className="flex-row gap-2">
-                        <TouchableOpacity
-                          onPress={() => handleResponder(d.id, false)}
-                          disabled={respondiendoId === d.id}
-                          className="flex-1 h-8 rounded-lg border border-border items-center justify-center"
-                        >
-                          <Text className="text-xs font-semibold text-muted-foreground">Rechazar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => handleResponder(d.id, true)}
-                          disabled={respondiendoId === d.id}
-                          className="flex-1 h-8 rounded-lg bg-primary-500 items-center justify-center active:opacity-80"
-                        >
-                          {respondiendoId === d.id
-                            ? <ActivityIndicator size="small" color="#fff" />
-                            : <Text className="text-xs font-semibold text-white">Aceptar</Text>}
-                        </TouchableOpacity>
-                      </View>
+                    <View key={d.id} className="flex-row items-center justify-between">
+                      <Text className="text-xs text-muted-foreground flex-1">
+                        {TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}
+                      </Text>
+                      <Text className="text-xs font-bold text-danger">-{formatCOP(d.monto)}</Text>
                     </View>
                   ))}
+                  <TouchableOpacity
+                    onPress={onRevisarDescuentos}
+                    className="h-9 rounded-lg bg-primary-500 items-center justify-center active:opacity-80"
+                  >
+                    <Text className="text-xs font-semibold text-white">Revisar y responder</Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
