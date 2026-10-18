@@ -98,6 +98,18 @@ const CuentasCobroService = {
     return { generadas };
   },
 
+  /**
+   * El trabajador firmó el contrato de un turno cuyo período ya cerró: la cuenta de cobro
+   * se generó sin ese turno (o no existía). La refresca solo para él; mientras esté sin
+   * firmar recoge el turno nuevo (una ya firmada queda intacta, ver CuentasCobroModel.crear).
+   * Con el período aún abierto no hace nada: el cierre la generará.
+   */
+  async actualizarPorTurnoFirmado(empresaId, asignacionId, trabajadorId) {
+    const periodoId = await CuentasCobroModel.periodoCerradoDeAsignacion(empresaId, asignacionId);
+    if (!periodoId) return null;
+    return this.generarParaPeriodo(empresaId, periodoId, { trabajadorId, notificar: false });
+  },
+
   async listarMisCuentas(usuario) {
     return CuentasCobroModel.listarPorUsuario(usuario.sub);
   },

@@ -68,6 +68,22 @@ const CuentasCobroModel = {
     return row || null;
   },
 
+  /** Período ya cerrado (o liquidado) que cubre la fecha del turno; null si sigue abierto o no existe. */
+  async periodoCerradoDeAsignacion(empresaId, asignacionId) {
+    const [filas] = await pool.query(
+      `SELECT p.id
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o   ON o.id = a.oferta_id
+       JOIN periodos_nomina p ON p.empresa_id = a.empresa_id
+                             AND o.fecha BETWEEN p.fecha_inicio AND p.fecha_fin
+                             AND p.estado IN ('cerrado', 'liquidado')
+       WHERE a.id = ? AND a.empresa_id = ?
+       LIMIT 1`,
+      [asignacionId, empresaId]
+    );
+    return filas[0]?.id ?? null;
+  },
+
   /** Cuenta del trabajador cuyo período cubre la fecha de la oferta (si ya existe). */
   async obtenerPorOfertaYTrabajador(empresaId, ofertaId, trabajadorId) {
     const [filas] = await pool.query(

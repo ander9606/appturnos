@@ -77,6 +77,44 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     expect(NotificacionesService.notificar).not.toHaveBeenCalled();
   });
 
+  test('actualizarPorTurnoFirmado: período cerrado → refresca solo la cuenta de ese trabajador, sin avisar', async () => {
+    CuentasCobroModel.periodoCerradoDeAsignacion.mockResolvedValue(10);
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      {
+        trabajador_id: 61,
+        usuario_id: 69,
+        turnos: [
+          { asignacion_id: 1, oferta_titulo: 'Turno A', oferta_fecha: '2026-09-03', horas_trabajadas: 8, pago_total: 60000, firmado_trabajador: true },
+        ],
+      },
+      { // otro trabajador: no debe tocarse
+        trabajador_id: 62,
+        usuario_id: 70,
+        turnos: [
+          { asignacion_id: 3, oferta_titulo: 'Turno C', oferta_fecha: '2026-09-04', horas_trabajadas: 8, pago_total: 50000, firmado_trabajador: true },
+        ],
+      },
+    ]);
+
+    const resultado = await CuentasCobroService.actualizarPorTurnoFirmado(7, 1, 61);
+
+    expect(CuentasCobroModel.periodoCerradoDeAsignacion).toHaveBeenCalledWith(7, 1);
+    expect(resultado).toEqual({ generadas: 1 });
+    expect(CuentasCobroModel.crear).toHaveBeenCalledTimes(1);
+    expect(CuentasCobroModel.crear).toHaveBeenCalledWith(7, expect.objectContaining({ trabajadorId: 61, periodoId: 10 }));
+    expect(NotificacionesService.notificar).not.toHaveBeenCalled();
+  });
+
+  test('actualizarPorTurnoFirmado: período aún abierto → no hace nada (lo genera el cierre)', async () => {
+    CuentasCobroModel.periodoCerradoDeAsignacion.mockResolvedValue(null);
+
+    const resultado = await CuentasCobroService.actualizarPorTurnoFirmado(7, 1, 61);
+
+    expect(resultado).toBeNull();
+    expect(AsignacionesModel.liquidacion).not.toHaveBeenCalled();
+    expect(CuentasCobroModel.crear).not.toHaveBeenCalled();
+  });
+
   test('período no encontrado → AppError 404', async () => {
     PeriodosModel.obtenerPorId.mockResolvedValue(null);
     AsignacionesModel.liquidacion.mockResolvedValue([]);
