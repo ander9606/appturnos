@@ -24,6 +24,17 @@ const otpLimiter = rateLimit({
   message: { success: false, message: 'Demasiados códigos solicitados, intenta más tarde' },
 });
 
+// Además del límite por destino: sin tope por IP, un atacante podría usar el
+// endpoint para mandar correos/SMS desde nuestro dominio a cualquier lista de destinos.
+const otpIpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  message: { success: false, message: 'Demasiados códigos solicitados, intenta más tarde' },
+});
+
 const emailSanitizado = body('email')
   .isEmail()
   .withMessage('Email inválido')
@@ -117,8 +128,16 @@ router.post(
   [
     body('tipo').isIn(['email', 'telefono']).withMessage('tipo debe ser "email" o "telefono"'),
     destinoSanitizado,
+    body('proposito')
+      .optional()
+      .isIn(['recuperacion'])
+      .withMessage('proposito inválido')
+      .bail()
+      .custom((v, { req }) => req.body.tipo === 'email')
+      .withMessage('La recuperación solo aplica a email'),
   ],
   validar,
+  otpIpLimiter,
   otpLimiter,
   ctrl.enviarOtp,
 );

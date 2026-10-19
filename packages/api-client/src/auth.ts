@@ -208,8 +208,12 @@ export const authApi = {
     return api.delete<null>(`/api/auth/oauth/${provider}`);
   },
 
-  /** Envía un código OTP de 6 dígitos al email o teléfono indicado. */
-  enviarOtp(params: { tipo: 'email' | 'telefono'; destino: string }): Promise<null> {
+  /**
+   * Envía un código OTP de 6 dígitos al email o teléfono indicado.
+   * Con `proposito: 'recuperacion'` solo se envía si el email tiene cuenta, pero la
+   * respuesta es igual exista o no (no revela qué correos están registrados).
+   */
+  enviarOtp(params: { tipo: 'email' | 'telefono'; destino: string; proposito?: 'recuperacion' }): Promise<null> {
     return api.post<null>('/api/auth/enviar-otp', params, { authenticated: false });
   },
 
