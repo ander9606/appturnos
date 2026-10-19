@@ -43,7 +43,7 @@ export function RecuperarPasswordPage() {
   const form1 = useForm<EmailForm>({ resolver: zodResolver(emailSchema) });
   const onSubmitEmail = async (data: EmailForm) => {
     try {
-      await api.post('/auth/enviar-otp', { tipo: 'email', destino: data.email });
+      await api.post('/auth/enviar-otp', { tipo: 'email', destino: data.email, proposito: 'recuperacion' });
       setEmail(data.email);
       setStep('reset');
     } catch (err) {
@@ -73,7 +73,7 @@ export function RecuperarPasswordPage() {
   const reenviarCodigo = async () => {
     setResending(true);
     try {
-      await api.post('/auth/enviar-otp', { tipo: 'email', destino: email });
+      await api.post('/auth/enviar-otp', { tipo: 'email', destino: email, proposito: 'recuperacion' });
     } finally {
       setResending(false);
     }

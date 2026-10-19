@@ -6,6 +6,7 @@ const AppError = require('../../utils/AppError');
 const { enviarEmail } = require('../../utils/mailer');
 const { enviarSms }   = require('../../utils/sms');
 const logger = require('../../utils/logger');
+const AuthModel = require('./auth.model');
 
 const OTP_TTL_MIN  = 10;
 const MAX_INTENTOS = 5;
@@ -58,6 +59,19 @@ async function enviarOtp(tipo, destino) {
   } finally {
     conn.release();
   }
+}
+
+/**
+ * Código para recuperar contraseña: solo se envía si el email pertenece a una
+ * cuenta activa. Quien lo llama responde siempre lo mismo exista o no, para no
+ * revelar qué correos están registrados, y no espera el envío — así tampoco se
+ * distingue por tiempo de respuesta.
+ */
+async function enviarOtpRecuperacion(email) {
+  const usuario = await AuthModel.buscarUsuarioPorEmail(email);
+  if (!usuario || !usuario.activo) return;
+  enviarOtp('email', email).catch((err) =>
+    logger.error(`[verificacion] no se pudo enviar OTP de recuperación: ${err.message}`));
 }
 
 async function verificarOtp(tipo, destino, codigo) {
@@ -118,4 +132,4 @@ function validarTokenVerificacion(token, tipo, destino) {
   }
 }
 
-module.exports = { enviarOtp, verificarOtp, validarTokenVerificacion };
+module.exports = { enviarOtp, enviarOtpRecuperacion, verificarOtp, validarTokenVerificacion };
