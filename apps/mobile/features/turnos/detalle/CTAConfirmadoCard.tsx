@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +47,7 @@ export function CTAConfirmadoCard({
         style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
       >
         <View className="flex-row items-center gap-2">
-          <Ionicons name="hourglass-outline" size={20} color="#64748B" />
+          <Ionicons name="hourglass-outline" size={20} color={COLORS.mutedForeground} />
           <Text className="text-sm font-semibold text-foreground">Esperando ingreso del trabajador</Text>
         </View>
         <Text className="text-xs text-muted-foreground">
@@ -76,7 +77,7 @@ export function CTAConfirmadoCard({
       {/* Countdown — visible mientras falte más de 30 min */}
       {!dentroVentana && minutosParaIngreso !== null && (
         <View className="flex-row items-center gap-2.5 bg-muted rounded-xl px-3 py-3">
-          <Ionicons name="time-outline" size={18} color="#64748B" />
+          <Ionicons name="time-outline" size={18} color={COLORS.mutedForeground} />
           <View className="flex-1">
             <Text className="text-xs text-muted-foreground">El marcaje se habilita en</Text>
             <Text className="text-base font-bold text-foreground tabular-nums">
@@ -99,7 +100,7 @@ export function CTAConfirmadoCard({
 
           {dentroVentana && !canMark && distanceM !== null && (
             <View className="flex-row items-start gap-2">
-              <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
+              <Ionicons name="information-circle-outline" size={16} color={COLORS.mutedForeground} style={{ marginTop: 1 }} />
               <Text className="flex-1 text-xs text-muted-foreground">
                 Acércate al punto de trabajo para habilitar el marcaje de entrada.
               </Text>

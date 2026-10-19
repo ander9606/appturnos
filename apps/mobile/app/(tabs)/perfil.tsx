@@ -6,6 +6,8 @@
  * - Cambiar su contraseña
  * - Cerrar sesión
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -14,7 +16,6 @@ import {
   Pressable,
   TextInput,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Switch,
@@ -80,7 +81,7 @@ function CardRow({
       <Text className="text-sm font-medium text-foreground flex-1 text-right" numberOfLines={1}>
         {value}
       </Text>
-      {onPress && <Ionicons name="chevron-forward" size={16} color="#94A3B8" style={{ marginLeft: 4 }} />}
+      {onPress && <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} style={{ marginLeft: 4 }} />}
     </Pressable>
   );
 }
@@ -130,7 +131,7 @@ function EditProfileForm({
             keyboardType={key === 'email' ? 'email-address' : 'default'}
             autoCorrect={false}
             placeholder={label}
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
           />
         </View>
       ))}
@@ -148,7 +149,7 @@ function EditProfileForm({
           className="flex-1 h-11 rounded-xl bg-primary items-center justify-center active:opacity-80 disabled:opacity-50"
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <Spinner size="small" color={COLORS.white} />
           ) : (
             <Text className="text-sm font-semibold text-white">{t('perfil.guardarCambios')}</Text>
           )}
@@ -207,7 +208,7 @@ function ChangePasswordForm({
             secureTextEntry
             className="text-sm text-foreground"
             placeholder={t('perfil.passwordMin')}
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             autoCorrect={false}
             autoCapitalize="none"
           />
@@ -227,7 +228,7 @@ function ChangePasswordForm({
           className="flex-1 h-11 rounded-xl bg-primary items-center justify-center active:opacity-80 disabled:opacity-50"
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <Spinner size="small" color={COLORS.white} />
           ) : (
             <Text className="text-sm font-semibold text-white">{t('perfil.actualizandoPwd')}</Text>
           )}
@@ -267,7 +268,7 @@ function DeleteAccountForm({
           secureTextEntry
           className="text-sm text-foreground"
           placeholder="Tu contraseña actual"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.placeholder}
           autoCorrect={false}
           autoCapitalize="none"
         />
@@ -286,7 +287,7 @@ function DeleteAccountForm({
           className="flex-1 h-11 rounded-xl bg-danger items-center justify-center active:opacity-80 disabled:opacity-50"
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <Spinner size="small" color={COLORS.white} />
           ) : (
             <Text className="text-sm font-semibold text-white">Eliminar cuenta</Text>
           )}
@@ -479,7 +480,7 @@ export default function PerfilScreen() {
               />
               <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white items-center justify-center border-2 border-white" style={{ borderColor: theme.primary }}>
                 {uploadingFoto
-                  ? <ActivityIndicator size="small" color={theme.primary} />
+                  ? <Spinner size="small" color={theme.primary} />
                   : <Ionicons name="camera" size={14} color={theme.primary} />}
               </View>
             </TouchableOpacity>
@@ -544,25 +545,25 @@ export default function PerfilScreen() {
                 className="px-5 py-4 flex-row items-center justify-between active:opacity-70"
               >
                 <View className="flex-row items-center gap-3">
-                  <Ionicons name="key-outline" size={16} color="#64748B" />
+                  <Ionicons name="key-outline" size={16} color={COLORS.mutedForeground} />
                   <Text className="text-sm font-medium text-foreground">
                     {t('perfil.cambiarPassword')}
                   </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
               </Pressable>
 
               {bioSupported && (
                 <View className="border-t border-border px-5 py-4 flex-row items-center justify-between">
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="finger-print" size={16} color="#64748B" />
+                    <Ionicons name="finger-print" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Bloqueo biométrico</Text>
                   </View>
                   <Switch
                     value={bioEnabled}
                     onValueChange={handleToggleBio}
-                    trackColor={{ false: '#E2E8F0', true: theme.primary }}
-                    thumbColor="#FFFFFF"
+                    trackColor={{ false: COLORS.border, true: theme.primary }}
+                    thumbColor={COLORS.white}
                   />
                 </View>
               )}
@@ -584,40 +585,40 @@ export default function PerfilScreen() {
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="id-card-outline" size={16} color="#64748B" />
+                    <Ionicons name="id-card-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Perfil laboral</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/mis-postulaciones')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="list-outline" size={16} color="#64748B" />
+                    <Ionicons name="list-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Mis postulaciones</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/mis-empresas')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="business-outline" size={16} color="#64748B" />
+                    <Ionicons name="business-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Mis empresas</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/disponibilidad')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="calendar-clear-outline" size={16} color="#64748B" />
+                    <Ionicons name="calendar-clear-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Mi disponibilidad</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
               </>
             )}
@@ -630,50 +631,50 @@ export default function PerfilScreen() {
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="people-outline" size={16} color="#64748B" />
+                    <Ionicons name="people-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Mi equipo</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/solicitudes')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="person-add-outline" size={16} color="#64748B" />
+                    <Ionicons name="person-add-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Solicitudes de ingreso</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/(tabs)/turnos')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                    <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Gestión de turnos</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/cargos')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+                    <Ionicons name="briefcase-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Gestión de cargos</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/puntos-marcaje')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="location-outline" size={16} color="#64748B" />
+                    <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Puntos de marcaje</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
               </>
             )}
@@ -686,10 +687,10 @@ export default function PerfilScreen() {
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="business-outline" size={16} color="#64748B" />
+                    <Ionicons name="business-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Mi empresa</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/mi-plan')}
@@ -697,70 +698,70 @@ export default function PerfilScreen() {
                   accessibilityRole="button"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="pricetag-outline" size={16} color="#64748B" />
+                    <Ionicons name="pricetag-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Mi plan</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/gestores')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="people-outline" size={16} color="#64748B" />
+                    <Ionicons name="people-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Gestores</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/reportes')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="bar-chart-outline" size={16} color="#64748B" />
+                    <Ionicons name="bar-chart-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Reportes</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/crear-gestor')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="person-add-outline" size={16} color="#64748B" />
+                    <Ionicons name="person-add-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Crear gestor</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/solicitudes')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="person-add-outline" size={16} color="#64748B" />
+                    <Ionicons name="person-add-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Solicitudes de ingreso</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/cargos')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+                    <Ionicons name="briefcase-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Gestión de cargos</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
                   onPress={() => router.push('/puntos-marcaje')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="location-outline" size={16} color="#64748B" />
+                    <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Puntos de marcaje</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
               </>
             )}
@@ -776,16 +777,16 @@ export default function PerfilScreen() {
                   className="px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="id-card-outline" size={16} color="#64748B" />
+                    <Ionicons name="id-card-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Mi información laboral</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
 
                 {/* Toggle acepta_extras */}
                 <View className="border-t border-border px-5 py-4 flex-row items-center justify-between">
                   <View className="flex-row items-center gap-3 flex-1 mr-3">
-                    <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+                    <Ionicons name="briefcase-outline" size={16} color={COLORS.mutedForeground} />
                     <View className="flex-1">
                       <Text className="text-sm font-medium text-foreground">Turnos extra</Text>
                       <Text className="text-xs text-muted-foreground mt-0.5">
@@ -794,13 +795,13 @@ export default function PerfilScreen() {
                     </View>
                   </View>
                   {actualizarExtrasMutation.isPending ? (
-                    <ActivityIndicator size="small" color={theme.primary} />
+                    <Spinner size="small" color={theme.primary} />
                   ) : (
                     <Switch
                       value={Boolean(nominaPerfil?.acepta_extras)}
                       onValueChange={handleToggleExtras}
-                      trackColor={{ false: '#E2E8F0', true: theme.primary }}
-                      thumbColor="#FFFFFF"
+                      trackColor={{ false: COLORS.border, true: theme.primary }}
+                      thumbColor={COLORS.white}
                     />
                   )}
                 </View>
@@ -812,10 +813,10 @@ export default function PerfilScreen() {
                     className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                   >
                     <View className="flex-row items-center gap-3">
-                      <Ionicons name="list-outline" size={16} color="#64748B" />
+                      <Ionicons name="list-outline" size={16} color={COLORS.mutedForeground} />
                       <Text className="text-sm font-medium text-foreground">Mis postulaciones extra</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                   </Pressable>
                 )}
               </View>
@@ -832,10 +833,10 @@ export default function PerfilScreen() {
                   className="px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-3">
-                    <Ionicons name="calendar-clear-outline" size={16} color="#64748B" />
+                    <Ionicons name="calendar-clear-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Mis ausencias</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 {isTrabajadorTurnos && (
                   <Pressable
@@ -843,10 +844,10 @@ export default function PerfilScreen() {
                     className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                   >
                     <View className="flex-row items-center gap-3">
-                      <Ionicons name="document-text-outline" size={16} color="#64748B" />
+                      <Ionicons name="document-text-outline" size={16} color={COLORS.mutedForeground} />
                       <Text className="text-sm font-medium text-foreground">Mis contratos</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                   </Pressable>
                 )}
                 {isTrabajadorTurnos && (
@@ -855,10 +856,10 @@ export default function PerfilScreen() {
                     className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                   >
                     <View className="flex-row items-center gap-3">
-                      <Ionicons name="receipt-outline" size={16} color="#64748B" />
+                      <Ionicons name="receipt-outline" size={16} color={COLORS.mutedForeground} />
                       <Text className="text-sm font-medium text-foreground">Mis cuentas de cobro</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                   </Pressable>
                 )}
               </View>
@@ -873,20 +874,20 @@ export default function PerfilScreen() {
               className="px-5 py-4 flex-row items-center justify-between active:opacity-70"
             >
               <View className="flex-row items-center gap-3">
-                <Ionicons name="shield-checkmark-outline" size={16} color="#64748B" />
+                <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="text-sm font-medium text-foreground">Términos y condiciones</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
             </Pressable>
             <Pressable
               onPress={() => router.push('/privacidad')}
               className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
             >
               <View className="flex-row items-center gap-3">
-                <Ionicons name="lock-closed-outline" size={16} color="#64748B" />
+                <Ionicons name="lock-closed-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="text-sm font-medium text-foreground">Política de privacidad</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+              <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
             </Pressable>
           </View>
 
@@ -897,7 +898,7 @@ export default function PerfilScreen() {
             className="mx-5 mt-6 h-14 rounded-2xl bg-danger/10 border border-danger/30 items-center justify-center active:opacity-80 disabled:opacity-50"
           >
             {loggingOut ? (
-              <ActivityIndicator size="small" color="#EF4444" />
+              <Spinner size="small" color={COLORS.danger} />
             ) : (
               <Text className="text-base font-semibold text-danger">
                 {t('perfil.cerrarSesion')}

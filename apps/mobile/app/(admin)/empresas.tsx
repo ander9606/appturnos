@@ -2,6 +2,8 @@
  * Lista de todas las empresas — panel super_admin.
  * Permite buscar, filtrar por estado y navegar al detalle.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -10,7 +12,6 @@ import {
   Pressable,
   TextInput,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -39,11 +40,11 @@ function FilterChip({
         'px-3 py-1.5 rounded-full border',
         active ? 'border-transparent' : 'border-border bg-card',
       ].join(' ')}
-      style={active ? { backgroundColor: color ?? '#6366F1' } : {}}
+      style={active ? { backgroundColor: color ?? COLORS.integracion } : {}}
     >
       <Text
         className="text-xs font-semibold"
-        style={{ color: active ? '#FFFFFF' : '#64748B' }}
+        style={{ color: active ? COLORS.white : COLORS.mutedForeground }}
       >
         {label}
       </Text>
@@ -93,7 +94,7 @@ export default function EmpresasScreen() {
       {/* ── Header ──────────────────────────────────────────────────── */}
       <View
         className="px-4 pt-4 pb-5"
-        style={{ backgroundColor: '#6366F1' }}
+        style={{ backgroundColor: COLORS.integracion }}
       >
         <Text className="text-white text-2xl font-bold mb-3">🏢 Empresas</Text>
 
@@ -128,7 +129,7 @@ export default function EmpresasScreen() {
                 label={f.charAt(0).toUpperCase() + f.slice(1)}
                 active={filtroEstado === f}
                 onPress={() => setFiltroEstado(f)}
-                color={f === 'activas' ? '#22C55E' : f === 'inactivas' ? '#EF4444' : '#6366F1'}
+                color={f === 'activas' ? COLORS.success : f === 'inactivas' ? COLORS.danger : COLORS.integracion}
               />
             ))}
           </View>
@@ -142,7 +143,7 @@ export default function EmpresasScreen() {
                 label={f === 'todas' ? 'Recargos: todas' : f === 'con' ? 'Con recargos' : 'Sin recargos'}
                 active={filtroRecargos === f}
                 onPress={() => setFiltroRecargos(f)}
-                color={f === 'sin' ? '#F59E0B' : '#6366F1'}
+                color={f === 'sin' ? COLORS.warning : COLORS.integracion}
               />
             ))}
           </View>
@@ -157,14 +158,14 @@ export default function EmpresasScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#6366F1"
-            colors={['#6366F1']}
+            tintColor={COLORS.integracion}
+            colors={[COLORS.integracion]}
           />
         }
       >
         {isLoading && (
           <View className="items-center py-16">
-            <ActivityIndicator size="large" color="#6366F1" />
+            <Spinner size="large" color={COLORS.integracion} />
             <Text className="text-muted-foreground mt-3 text-sm">Cargando empresas…</Text>
           </View>
         )}
@@ -214,7 +215,7 @@ export default function EmpresasScreen() {
                     >
                       <Text
                         className="text-[10px] font-bold"
-                        style={{ color: isActiva ? '#16A34A' : '#DC2626' }}
+                        style={{ color: isActiva ? COLORS.success : COLORS.dangerDark }}
                       >
                         {isActiva ? 'ACTIVA' : 'INACTIVA'}
                       </Text>
@@ -247,7 +248,7 @@ export default function EmpresasScreen() {
                   </Text>
                   {empresa.logiq360_conectado && (
                     <View className="rounded-lg px-2 py-0.5" style={{ backgroundColor: '#22C55E20' }}>
-                      <Text className="text-[10px] font-bold" style={{ color: '#16A34A' }}>
+                      <Text className="text-[10px] font-bold" style={{ color: COLORS.success }}>
                         🔗 logiq360
                       </Text>
                     </View>
@@ -287,7 +288,7 @@ export default function EmpresasScreen() {
       <Pressable
         onPress={() => router.push('/empresa/nueva')}
         className="absolute bottom-8 right-6 w-14 h-14 rounded-full items-center justify-center shadow-lg active:opacity-80"
-        style={{ backgroundColor: '#6366F1' }}
+        style={{ backgroundColor: COLORS.integracion }}
       >
         <Text className="text-white text-2xl font-bold">+</Text>
       </Pressable>

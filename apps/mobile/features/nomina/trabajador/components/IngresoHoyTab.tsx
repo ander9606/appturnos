@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Linking, Platform, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -63,7 +64,7 @@ export function IngresoHoyTab({
       {tipoMarcacion === 'fijo' && puntoMarcaje && (
         <View className="bg-card rounded-2xl p-4 gap-3 border border-border">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="location-outline" size={16} color="#64748B" />
+            <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Dónde ir
             </Text>
@@ -78,7 +79,7 @@ export function IngresoHoyTab({
             accessibilityRole="button"
             accessibilityLabel="Abrir en mapas"
           >
-            <Ionicons name="navigate-outline" size={13} color="#3B82F6" />
+            <Ionicons name="navigate-outline" size={13} color={COLORS.info} />
             <Text className="text-xs font-semibold text-info">Cómo llegar</Text>
           </TouchableOpacity>
         </View>
@@ -87,7 +88,7 @@ export function IngresoHoyTab({
       {tipoMarcacion === 'zonal' && puntosZonales.length > 0 && (
         <View className="bg-card rounded-2xl p-4 gap-3 border border-border">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="location-outline" size={16} color="#64748B" />
+            <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Puedes marcar en cualquiera de estas zonas
             </Text>
@@ -101,7 +102,7 @@ export function IngresoHoyTab({
                 accessibilityRole="button"
                 accessibilityLabel={`Abrir ${p.nombre} en mapas`}
               >
-                <Ionicons name="navigate-outline" size={13} color="#3B82F6" />
+                <Ionicons name="navigate-outline" size={13} color={COLORS.info} />
                 <Text className="text-xs font-semibold text-info">Cómo llegar</Text>
               </TouchableOpacity>
             </View>
@@ -113,7 +114,7 @@ export function IngresoHoyTab({
       {cargo ? (
         <View className="bg-card rounded-2xl p-4 gap-2 border border-border">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+            <Ionicons name="briefcase-outline" size={16} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Tu cargo
             </Text>
@@ -126,7 +127,7 @@ export function IngresoHoyTab({
       {registroHoy ? (
         <View className="bg-card rounded-2xl p-4 gap-3 border border-border">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="time-outline" size={16} color="#64748B" />
+            <Ionicons name="time-outline" size={16} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Hoy
             </Text>
@@ -239,7 +240,7 @@ export function IngresoHoyTab({
                 hitSlop={6}
               >
                 <Text className="text-xs font-semibold text-muted-foreground">Ver detalles</Text>
-                <Ionicons name="chevron-forward" size={11} color="#64748B" />
+                <Ionicons name="chevron-forward" size={11} color={COLORS.mutedForeground} />
               </TouchableOpacity>
             </View>
 
@@ -254,7 +255,7 @@ export function IngresoHoyTab({
               {pctExtra > 0 && (
                 <View
                   className="h-full"
-                  style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }}
+                  style={{ width: `${pctExtra}%`, backgroundColor: COLORS.warning }}
                 />
               )}
               <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color="#334155" />

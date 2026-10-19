@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity, Alert,
@@ -60,11 +61,11 @@ export default function AusenciaNuevaScreen() {
                 onPress={() => setTipo(key)}
                 className="px-4 py-2 rounded-xl border"
                 style={{
-                  borderColor: tipo === key ? theme.primary : '#E2E8F0',
+                  borderColor: tipo === key ? theme.primary : COLORS.border,
                   backgroundColor: tipo === key ? theme.primary + '1A' : '#F8FAFC',
                 }}
               >
-                <Text className="text-sm font-medium" style={{ color: tipo === key ? theme.primary : '#64748B' }}>
+                <Text className="text-sm font-medium" style={{ color: tipo === key ? theme.primary : COLORS.mutedForeground }}>
                   {label}
                 </Text>
               </TouchableOpacity>
@@ -80,7 +81,7 @@ export default function AusenciaNuevaScreen() {
               onPress={() => setPicker('inicio')}
               className="flex-1 bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
             >
-              <Ionicons name="calendar-outline" size={16} color="#64748B" />
+              <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
               <View>
                 <Text className="text-xs text-muted-foreground">Desde</Text>
                 <Text className="text-sm font-medium text-foreground">{isoDate(inicio)}</Text>
@@ -90,7 +91,7 @@ export default function AusenciaNuevaScreen() {
               onPress={() => setPicker('fin')}
               className="flex-1 bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
             >
-              <Ionicons name="calendar-outline" size={16} color="#64748B" />
+              <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
               <View>
                 <Text className="text-xs text-muted-foreground">Hasta</Text>
                 <Text className="text-sm font-medium text-foreground">{isoDate(fin)}</Text>
@@ -106,7 +107,7 @@ export default function AusenciaNuevaScreen() {
             value={motivo}
             onChangeText={setMotivo}
             placeholder="Describe brevemente el motivo..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             multiline
             numberOfLines={3}
             maxLength={500}

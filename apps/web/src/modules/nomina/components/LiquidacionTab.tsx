@@ -1,3 +1,4 @@
+import { PageLoading } from '@/shared/components/Spinner';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Download, Plus, Pencil, CalendarClock, BedDouble, ChevronDown, X, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap } from 'lucide-react';
@@ -57,7 +58,7 @@ export function LiquidacionTab({
         </div>
       )}
       {loading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <PageLoading />
       ) : error ? (
         <ErrorState error={error} onRetry={onRetry} />
       ) : liqData ? (

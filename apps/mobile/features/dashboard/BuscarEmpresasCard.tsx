@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +16,7 @@ export function BuscarEmpresasCard() {
       className="mx-4 mt-4 bg-primary-500 rounded-2xl p-5 items-center gap-2 active:opacity-90"
     >
       <View className="w-14 h-14 rounded-full bg-white/20 items-center justify-center">
-        <Ionicons name="search" size={26} color="#fff" />
+        <Ionicons name="search" size={26} color={COLORS.white} />
       </View>
       <Text className="text-base font-bold text-white">Aún no tienes empresa</Text>
       <Text className="text-sm text-white/90 text-center">

@@ -4,9 +4,11 @@
  *   - Asistencia: turnos por trabajador y días de nómina
  *   - Costos: costo de mano de obra (turnos + nómina)
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, Pressable, ActivityIndicator, Platform,
+  View, Text, ScrollView, Pressable, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -187,7 +189,7 @@ export default function ReportesScreen() {
             >
               <Text
                 className="text-xs font-semibold"
-                style={{ color: i === presetIdx ? '#fff' : '#64748B' }}
+                style={{ color: i === presetIdx ? COLORS.white : COLORS.mutedForeground }}
               >
                 {p.label}
               </Text>
@@ -200,7 +202,7 @@ export default function ReportesScreen() {
           >
             <Text
               className="text-xs font-semibold"
-              style={{ color: presetIdx === CUSTOM ? '#fff' : '#64748B' }}
+              style={{ color: presetIdx === CUSTOM ? COLORS.white : COLORS.mutedForeground }}
             >
               Personalizado
             </Text>
@@ -213,14 +215,14 @@ export default function ReportesScreen() {
               onPress={() => setPickerAbierto('desde')}
               className="flex-1 h-10 rounded-xl bg-muted items-center justify-center flex-row gap-1.5"
             >
-              <Ionicons name="calendar-outline" size={14} color="#64748B" />
+              <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
               <Text className="text-xs text-foreground">Desde {formatDate(toISODate(customDesde))}</Text>
             </Pressable>
             <Pressable
               onPress={() => setPickerAbierto('hasta')}
               className="flex-1 h-10 rounded-xl bg-muted items-center justify-center flex-row gap-1.5"
             >
-              <Ionicons name="calendar-outline" size={14} color="#64748B" />
+              <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
               <Text className="text-xs text-foreground">Hasta {formatDate(toISODate(customHasta))}</Text>
             </Pressable>
           </View>
@@ -243,7 +245,7 @@ export default function ReportesScreen() {
 
         {isLoading ? (
           <View className="items-center justify-center py-20">
-            <ActivityIndicator size="large" color={theme.primary} />
+            <Spinner size="large" color={theme.primary} />
           </View>
         ) : (
           <>
@@ -316,7 +318,7 @@ export default function ReportesScreen() {
             {/* Error states */}
             {(asistencia.isError || costos.isError) && (
               <View className="mt-4 bg-danger/10 border border-danger/30 rounded-2xl p-4 flex-row items-center gap-3">
-                <Ionicons name="warning-outline" size={20} color="#EF4444" />
+                <Ionicons name="warning-outline" size={20} color={COLORS.danger} />
                 <Text className="text-sm text-danger flex-1">
                   No se pudieron cargar algunos datos. Comprueba tu conexión.
                 </Text>

@@ -2,6 +2,8 @@
  * Pantalla de configuración de la integración logiq360.
  * Solo visible para admin_empresa.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,7 +13,6 @@ import {
   Pressable,
   Switch,
   Alert,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -90,7 +91,7 @@ export default function IntegracionConfigScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -105,7 +106,7 @@ export default function IntegracionConfigScreen() {
         }
       >
         {/* ── Header ─────────────────────────────────────────────── */}
-        <View className="px-4 pt-4 pb-6 gap-1" style={{ backgroundColor: '#6366F1' }}>
+        <View className="px-4 pt-4 pb-6 gap-1" style={{ backgroundColor: COLORS.integracion }}>
           <Text className="text-white text-lg font-bold">Integración logiq360</Text>
           <Text className="text-white/70 text-sm">
             Conecta tu empresa con el sistema de alquiler de equipos
@@ -124,7 +125,7 @@ export default function IntegracionConfigScreen() {
             value={codigoPair}
             onChangeText={setCodigoPair}
             placeholder="Pega el código aquí"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             autoCapitalize="none"
             autoCorrect={false}
             multiline
@@ -137,7 +138,7 @@ export default function IntegracionConfigScreen() {
             style={{ backgroundColor: emparejando || !codigoPair.trim() ? theme.primary + '80' : theme.primary }}
           >
             {emparejando ? (
-              <ActivityIndicator color="white" />
+              <Spinner color="white" />
             ) : (
               <Text className="text-white font-bold text-sm">Conectar con logiq360</Text>
             )}
@@ -158,7 +159,7 @@ export default function IntegracionConfigScreen() {
               onValueChange={handleToggleActivo}
               disabled={isPending}
               trackColor={{ true: theme.primary }}
-              thumbColor="#FFFFFF"
+              thumbColor={COLORS.white}
             />
           </View>
         </Row>
@@ -173,11 +174,11 @@ export default function IntegracionConfigScreen() {
               className="w-8 h-8 rounded-xl items-center justify-center"
               style={{ backgroundColor: '#6366F11A' }}
             >
-              <Ionicons name="people-outline" size={18} color="#6366F1" />
+              <Ionicons name="people-outline" size={18} color={COLORS.integracion} />
             </View>
             <Text className="text-sm font-semibold text-foreground">Conciliación de personal</Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+          <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
         </Pressable>
 
         {/* ── Enlace a estado ────────────────────────────────────── */}
@@ -190,11 +191,11 @@ export default function IntegracionConfigScreen() {
               className="w-8 h-8 rounded-xl items-center justify-center"
               style={{ backgroundColor: '#6366F11A' }}
             >
-              <Ionicons name="pulse-outline" size={18} color="#6366F1" />
+              <Ionicons name="pulse-outline" size={18} color={COLORS.integracion} />
             </View>
             <Text className="text-sm font-semibold text-foreground">Estado de la cola de eventos</Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+          <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
         </Pressable>
 
       </ScrollView>

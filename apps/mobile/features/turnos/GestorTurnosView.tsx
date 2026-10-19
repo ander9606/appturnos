@@ -1,10 +1,11 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -191,7 +192,7 @@ function PostulanteRow({
           {isConfirmed && (
             <View className="flex-row items-center gap-2 flex-wrap">
               <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
-                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
                 <Text className="text-xs font-semibold text-success">Aceptado</Text>
               </View>
               <Button label={isCancelling ? '…' : 'Cancelar'} variant="secondary" size="sm"
@@ -206,7 +207,7 @@ function PostulanteRow({
           {/* En progreso → chip */}
           {isEnProgreso && (
             <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
-              <Ionicons name="time-outline" size={14} color="#3B82F6" />
+              <Ionicons name="time-outline" size={14} color={COLORS.info} />
               <Text className="text-xs font-semibold text-info">En turno</Text>
             </View>
           )}
@@ -288,7 +289,7 @@ function GestorOfertaItem({
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
       >
-        <View className="w-1.5" style={{ backgroundColor: esCancelada ? '#94A3B8' : esPasado ? '#CBD5E1' : '#FF7150' }} />
+        <View className="w-1.5" style={{ backgroundColor: esCancelada ? COLORS.placeholder : esPasado ? COLORS.borderStrong : '#FF7150' }} />
 
         <View className="flex-1 px-4 py-4 gap-1.5">
           {/* Title + badge finalizado/cancelada */}
@@ -348,14 +349,14 @@ function GestorOfertaItem({
             onPress={() => router.push(`/oferta/${oferta.id}` as any)}
             className="flex-row items-center gap-1 mb-3"
           >
-            <Ionicons name="information-circle-outline" size={14} color="#6366F1" />
+            <Ionicons name="information-circle-outline" size={14} color={COLORS.integracion} />
             <Text className="text-xs font-semibold text-primary">Ver detalles completos</Text>
-            <Ionicons name="chevron-forward" size={12} color="#6366F1" />
+            <Ionicons name="chevron-forward" size={12} color={COLORS.integracion} />
           </TouchableOpacity>
 
           {loadingDetalle ? (
             <View className="py-4 items-center">
-              <ActivityIndicator size="small" color="#FF5A3C" />
+              <Spinner size="small" color={COLORS.primary} />
             </View>
           ) : !detalle?.asignaciones.length ? (
             <Text className="text-sm text-muted-foreground py-2">
@@ -426,7 +427,7 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien, puedeGestionar
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#FF5A3C" />
+        <Spinner size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -472,8 +473,8 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien, puedeGestionar
         <RefreshControl
           refreshing={isRefetching}
           onRefresh={refetch}
-          tintColor="#FF5A3C"
-          colors={['#FF5A3C']}
+          tintColor={COLORS.primary}
+          colors={[COLORS.primary]}
         />
       }
       showsVerticalScrollIndicator={false}

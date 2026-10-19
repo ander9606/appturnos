@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import { KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -105,7 +106,7 @@ export default function NuevoTurnoScreen() {
           headerTitle: TITLES[step - 1],
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerTintColor: theme.primary,
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />

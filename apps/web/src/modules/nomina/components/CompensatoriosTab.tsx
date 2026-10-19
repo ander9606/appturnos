@@ -1,3 +1,4 @@
+import { PageLoading } from '@/shared/components/Spinner';
 import { useState } from 'react';
 import { useCompensatorios } from '../hooks/useNomina';
 import type { DescansoCompensatorio } from '../types';
@@ -9,7 +10,7 @@ export function CompensatoriosTab() {
   const { data, isLoading, isError, error, refetch } = useCompensatorios();
   const [asignando, setAsignando] = useState<DescansoCompensatorio | null>(null);
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <PageLoading />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const todos: DescansoCompensatorio[] = data?.data ?? [];

@@ -1,7 +1,9 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  ActivityIndicator, Alert, Linking, Platform, Switch,
+  Alert, Linking, Platform, Switch,
   Modal, Pressable,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -139,7 +141,7 @@ function PostulanteRow({
           {isConf && (
             <View className="flex-row items-center gap-2 flex-wrap">
               <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
-                <Ionicons name="checkmark-circle" size={14} color="#059669" />
+                <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
                 <Text className="text-xs font-semibold text-success">Aceptado</Text>
               </View>
               <Button label={cancelarM.isPending ? '…' : 'Cancelar'} variant="danger" size="sm"
@@ -165,7 +167,7 @@ function PostulanteRow({
           )}
           {isEnProg && (
             <View className="flex-row items-center gap-1 bg-info/10 px-3 py-1.5 rounded-xl self-start">
-              <Ionicons name="time-outline" size={14} color="#3B82F6" />
+              <Ionicons name="time-outline" size={14} color={COLORS.info} />
               <Text className="text-xs font-semibold text-info">En turno</Text>
             </View>
           )}
@@ -187,7 +189,7 @@ function PostulanteRow({
           className="flex-row items-center gap-1 self-start"
           hitSlop={6}
         >
-          <Ionicons name="chevron-forward-circle-outline" size={13} color="#64748B" />
+          <Ionicons name="chevron-forward-circle-outline" size={13} color={COLORS.mutedForeground} />
           <Text className="text-xs font-semibold text-muted-foreground">Ver detalle</Text>
         </TouchableOpacity>
       )}
@@ -337,7 +339,7 @@ export default function OfertaDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Detalle del turno', headerShown: true }} />
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -355,7 +357,7 @@ export default function OfertaDetailScreen() {
           <TurnosExtraOptIn />
         ) : (
           <View className="flex-1 items-center justify-center gap-4 px-6">
-            <Ionicons name="search-outline" size={48} color="#94A3B8" />
+            <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
             <Text className="text-base font-semibold text-foreground text-center">
               {esDelayRanking
                 ? 'Este turno aún no está disponible para tu nivel de calificación'
@@ -397,7 +399,7 @@ export default function OfertaDetailScreen() {
                   hitSlop={10}
                   accessibilityLabel="Editar turno"
                 >
-                  <Ionicons name="create-outline" size={22} color="#FF5A3C" />
+                  <Ionicons name="create-outline" size={22} color={COLORS.primary} />
                 </TouchableOpacity>
               )}
               <TouchableOpacity
@@ -406,7 +408,7 @@ export default function OfertaDetailScreen() {
                 accessibilityLabel="Duplicar oferta"
                 style={{ marginRight: 4 }}
               >
-                <Ionicons name="copy-outline" size={22} color="#FF5A3C" />
+                <Ionicons name="copy-outline" size={22} color={COLORS.primary} />
               </TouchableOpacity>
             </View>
           ) : undefined,
@@ -419,7 +421,7 @@ export default function OfertaDetailScreen() {
           {/* ── Info principal ──────────────────────────────────── */}
           <View className="bg-card rounded-3xl overflow-hidden"
             style={{ elevation: 3, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
-            <View className="h-2" style={{ backgroundColor: esPasado ? '#CBD5E1' : '#FF7150' }} />
+            <View className="h-2" style={{ backgroundColor: esPasado ? COLORS.borderStrong : '#FF7150' }} />
             <View className="px-5 py-5 gap-3">
               <View className="flex-row items-start justify-between gap-2">
                 <Text className="text-xl font-bold text-foreground flex-1 pr-2" numberOfLines={2}>
@@ -435,7 +437,7 @@ export default function OfertaDetailScreen() {
               {/* Fecha */}
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
-                  <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                  <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-xs text-muted-foreground">Fecha</Text>
@@ -446,7 +448,7 @@ export default function OfertaDetailScreen() {
               {/* Horario */}
               <View className="flex-row items-center gap-3">
                 <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
-                  <Ionicons name="time-outline" size={16} color="#64748B" />
+                  <Ionicons name="time-outline" size={16} color={COLORS.mutedForeground} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-xs text-muted-foreground">Horario</Text>
@@ -460,7 +462,7 @@ export default function OfertaDetailScreen() {
               {oferta.lugar && (
                 <View className="flex-row items-center gap-3">
                   <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
-                    <Ionicons name="location-outline" size={16} color="#64748B" />
+                    <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-xs text-muted-foreground">Lugar</Text>
@@ -470,7 +472,7 @@ export default function OfertaDetailScreen() {
                     <TouchableOpacity onPress={openInMaps}
                       className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted"
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="map-outline" size={14} color="#3B82F6" />
+                      <Ionicons name="map-outline" size={14} color={COLORS.info} />
                       <Text className="text-xs font-semibold text-info">Mapa</Text>
                     </TouchableOpacity>
                   )}
@@ -482,7 +484,7 @@ export default function OfertaDetailScreen() {
               {puedeGestionar && ofertaEsEditable ? (
                 <View className="flex-row items-center gap-3">
                   <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
-                    <Ionicons name="navigate-circle-outline" size={16} color="#64748B" />
+                    <Ionicons name="navigate-circle-outline" size={16} color={COLORS.mutedForeground} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-sm font-medium text-foreground">Ubicación libre</Text>
@@ -495,13 +497,13 @@ export default function OfertaDetailScreen() {
                     onValueChange={handleToggleUbicacionLibre}
                     disabled={actualizarOfertaM.isPending}
                     trackColor={{ true: theme.primary }}
-                    thumbColor="#fff"
+                    thumbColor={COLORS.white}
                   />
                 </View>
               ) : oferta.ubicacion_libre === 1 ? (
                 <View className="flex-row items-center gap-3">
                   <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center">
-                    <Ionicons name="navigate-circle-outline" size={16} color="#64748B" />
+                    <Ionicons name="navigate-circle-outline" size={16} color={COLORS.mutedForeground} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-xs text-muted-foreground">Ubicación</Text>
@@ -527,7 +529,7 @@ export default function OfertaDetailScreen() {
             <View className="bg-card rounded-2xl px-5 py-4 gap-2"
               style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
               <View className="flex-row items-center gap-2">
-                <Ionicons name="document-text-outline" size={14} color="#64748B" />
+                <Ionicons name="document-text-outline" size={14} color={COLORS.mutedForeground} />
                 <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   Descripción
                 </Text>
@@ -541,7 +543,7 @@ export default function OfertaDetailScreen() {
             <View className="bg-card rounded-2xl px-5 py-4 gap-2"
               style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
               <View className="flex-row items-center gap-2">
-                <Ionicons name="information-circle-outline" size={14} color="#64748B" />
+                <Ionicons name="information-circle-outline" size={14} color={COLORS.mutedForeground} />
                 <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   Detalles adicionales
                 </Text>
@@ -569,7 +571,7 @@ export default function OfertaDetailScreen() {
                       <Ionicons
                         name={seleccionado ? 'radio-button-on' : 'radio-button-off'}
                         size={18}
-                        color={seleccionado ? '#FF7150' : '#94A3B8'}
+                        color={seleccionado ? '#FF7150' : COLORS.placeholder}
                       />
                     )}
                     <View className="flex-1 gap-0.5">
@@ -579,7 +581,7 @@ export default function OfertaDetailScreen() {
                       )}
                       {isWorker && (
                         <TouchableOpacity onPress={() => setFuncionesPuesto(p)} hitSlop={6} className="flex-row items-center gap-1 mt-0.5">
-                          <Ionicons name="list-outline" size={12} color="#3B82F6" />
+                          <Ionicons name="list-outline" size={12} color={COLORS.info} />
                           <Text className="text-xs text-info font-medium">Ver funciones</Text>
                         </TouchableOpacity>
                       )}
@@ -610,21 +612,21 @@ export default function OfertaDetailScreen() {
             <View>
               {esPasado ? (
                 <View className="bg-muted rounded-2xl px-5 py-4 flex-row items-center gap-3">
-                  <Ionicons name="time-outline" size={20} color="#94A3B8" />
+                  <Ionicons name="time-outline" size={20} color={COLORS.placeholder} />
                   <Text className="text-sm text-muted-foreground">Evento finalizado</Text>
                 </View>
               ) : yaAplicado ? (
                 <View className="gap-3">
                   {miAsignacion?.estado === 'pendiente' && miCupoLleno ? (
                     <View className="bg-warning-light rounded-2xl px-5 py-4 flex-row items-center gap-3">
-                      <Ionicons name="alert-circle-outline" size={22} color="#D97706" />
+                      <Ionicons name="alert-circle-outline" size={22} color={COLORS.warningDark} />
                       <Text className="text-sm font-semibold text-amber-700 flex-1">
                         Cupo lleno — tu postulación se mantiene. Te avisaremos si se libera un cupo o se amplía la oferta.
                       </Text>
                     </View>
                   ) : (
                     <View className="bg-info/10 rounded-2xl px-5 py-4 flex-row items-center gap-3">
-                      <Ionicons name="checkmark-circle-outline" size={22} color="#3B82F6" />
+                      <Ionicons name="checkmark-circle-outline" size={22} color={COLORS.info} />
                       <Text className="text-sm font-semibold text-info">
                         {miAsignacion?.estado === 'pendiente' ? 'Ya estás postulado a este turno' : 'Ya estás confirmado en este turno'}
                       </Text>
@@ -642,7 +644,7 @@ export default function OfertaDetailScreen() {
                 </View>
               ) : turnoIniciado ? (
                 <View className="bg-muted rounded-2xl px-5 py-4 flex-row items-center gap-3">
-                  <Ionicons name="time-outline" size={20} color="#94A3B8" />
+                  <Ionicons name="time-outline" size={20} color={COLORS.placeholder} />
                   <Text className="text-sm text-muted-foreground">El turno ya empezó — ya no se puede postular</Text>
                 </View>
               ) : selectedPuesto ? (
@@ -862,7 +864,7 @@ function DuplicarOfertaModal({
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-bold text-foreground">Duplicar oferta</Text>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -872,7 +874,7 @@ function DuplicarOfertaModal({
               onPress={() => setShowFecha(true)}
               className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
             >
-              <Ionicons name="calendar-outline" size={16} color="#64748B" />
+              <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
               <Text className="text-sm text-foreground">{fmtDate(toISODate(fecha))}</Text>
             </TouchableOpacity>
             {showFecha && (
@@ -897,7 +899,7 @@ function DuplicarOfertaModal({
               onPress={() => setShowHora(true)}
               className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
             >
-              <Ionicons name="time-outline" size={16} color="#64748B" />
+              <Ionicons name="time-outline" size={16} color={COLORS.mutedForeground} />
               <Text className="text-sm text-foreground">{formatTimeObj(hora)}</Text>
             </TouchableOpacity>
             {showHora && (
@@ -1052,7 +1054,7 @@ function EditarOfertaModal({
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-bold text-foreground">Editar turno</Text>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -1071,7 +1073,7 @@ function EditarOfertaModal({
               onPress={() => setShowFecha(true)}
               className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
             >
-              <Ionicons name="calendar-outline" size={16} color="#64748B" />
+              <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
               <Text className="text-sm text-foreground">{fmtDate(toISODate(fecha))}</Text>
             </TouchableOpacity>
             {showFecha && (
@@ -1100,7 +1102,7 @@ function EditarOfertaModal({
                 onPress={() => setShowHoraInicio(true)}
                 className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
               >
-                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Ionicons name="time-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="text-sm text-foreground">{formatTimeObj(horaInicio)}</Text>
               </TouchableOpacity>
               {showHoraInicio && (
@@ -1127,7 +1129,7 @@ function EditarOfertaModal({
                 onPress={() => setShowHoraFin(true)}
                 className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
               >
-                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Ionicons name="time-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="text-sm text-foreground">{horaFin ? formatTimeObj(horaFin) : 'Sin definir'}</Text>
               </TouchableOpacity>
               {showHoraFin && (
@@ -1176,7 +1178,7 @@ function EditarOfertaModal({
               <Text className="text-sm font-semibold text-foreground">Vacantes</Text>
               {!agregandoVacante && (
                 <TouchableOpacity onPress={() => setAgregandoVacante(true)} hitSlop={8} className="flex-row items-center gap-1">
-                  <Ionicons name="add-circle-outline" size={16} color="#FF5A3C" />
+                  <Ionicons name="add-circle-outline" size={16} color={COLORS.primary} />
                   <Text className="text-xs font-semibold text-primary">Agregar vacante</Text>
                 </TouchableOpacity>
               )}
@@ -1210,14 +1212,14 @@ function EditarOfertaModal({
                         className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
                         onPress={() => setVacante(v => ({ ...v, plazas: Math.max(1, v.plazas - 1) }))}
                       >
-                        <Ionicons name="remove" size={16} color="#64748B" />
+                        <Ionicons name="remove" size={16} color={COLORS.mutedForeground} />
                       </TouchableOpacity>
                       <Text className="text-base font-bold text-foreground w-6 text-center">{vacante.plazas}</Text>
                       <TouchableOpacity
                         className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
                         onPress={() => setVacante(v => ({ ...v, plazas: v.plazas + 1 }))}
                       >
-                        <Ionicons name="add" size={16} color="#64748B" />
+                        <Ionicons name="add" size={16} color={COLORS.mutedForeground} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1228,7 +1230,7 @@ function EditarOfertaModal({
                       <TextInput
                         className="flex-1 py-2 text-sm font-semibold text-foreground"
                         placeholder="120.000"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={COLORS.placeholder}
                         value={vacante.tarifa}
                         onChangeText={t => setVacante(v => ({ ...v, tarifa: t.replace(/[^\d.,]/g, '') }))}
                         keyboardType="numeric"
@@ -1337,7 +1339,7 @@ function TurnoFallidoModal({
           <View className="flex-row items-center justify-between">
             <Text className="text-lg font-bold text-foreground">Turno fallido</Text>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -1352,7 +1354,7 @@ function TurnoFallidoModal({
               value={motivo}
               onChangeText={setMotivo}
               placeholder="Ej. fuerza mayor"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               maxLength={255}
               className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
             />

@@ -1,10 +1,11 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -87,22 +88,22 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
     <View className="gap-1.5">
       {/* Input con icono de búsqueda */}
       <View className="flex-row items-center bg-muted rounded-2xl px-4 gap-2">
-        <Ionicons name="search-outline" size={16} color="#64748B" />
+        <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} />
         <TextInput
           className="flex-1 py-3 text-base text-foreground"
           placeholder="Buscar dirección o lugar…"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.placeholder}
           value={value}
           onChangeText={handleChangeText}
           returnKeyType="search"
         />
-        {buscando && <ActivityIndicator size="small" color="#94A3B8" />}
+        {buscando && <Spinner size="small" color={COLORS.placeholder} />}
         {value.length > 0 && !buscando && (
           <TouchableOpacity
             onPress={() => { onChange('', null, null); limpiar(); }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="close-circle" size={16} color="#94A3B8" />
+            <Ionicons name="close-circle" size={16} color={COLORS.placeholder} />
           </TouchableOpacity>
         )}
       </View>
@@ -115,7 +116,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
           className="flex-row items-center gap-2 self-start px-3 py-2 bg-muted rounded-xl"
           onPress={() => setBibliotecaAbierta((v) => !v)}
         >
-          <Ionicons name="bookmark-outline" size={16} color="#3B82F6" />
+          <Ionicons name="bookmark-outline" size={16} color={COLORS.info} />
           <Text className="text-sm font-medium text-info">De la biblioteca de ubicaciones</Text>
         </TouchableOpacity>
       )}
@@ -133,7 +134,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
               }`}
               onPress={() => handleSelectPunto(p)}
             >
-              <Ionicons name="location-outline" size={15} color="#64748B" style={{ marginTop: 2 }} />
+              <Ionicons name="location-outline" size={15} color={COLORS.mutedForeground} style={{ marginTop: 2 }} />
               <Text className="flex-1 text-sm text-foreground">
                 {p.nombre} <Text className="text-muted-foreground">· radio {p.radio_metros} m</Text>
               </Text>
@@ -150,8 +151,8 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
           disabled={locLoading}
         >
           {locLoading
-            ? <ActivityIndicator size="small" color="#3B82F6" />
-            : <Ionicons name="locate-outline" size={16} color="#3B82F6" />}
+            ? <Spinner size="small" color={COLORS.info} />
+            : <Ionicons name="locate-outline" size={16} color={COLORS.info} />}
           <Text className="text-sm font-medium text-info">
             {locLoading ? 'Obteniendo GPS…' : 'Usar mi ubicación actual'}
           </Text>
@@ -161,7 +162,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
           className="flex-row items-center gap-2 self-start px-3 py-2 bg-muted rounded-xl"
           onPress={() => setMapaVisible(true)}
         >
-          <Ionicons name="map-outline" size={16} color="#3B82F6" />
+          <Ionicons name="map-outline" size={16} color={COLORS.info} />
           <Text className="text-sm font-medium text-info">Ajustar en mapa</Text>
         </TouchableOpacity>
       </View>
@@ -169,7 +170,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
       {/* Confirmación GPS */}
       {latitud !== null && (
         <View className="flex-row items-center gap-1.5">
-          <Ionicons name="checkmark-circle" size={14} color="#059669" />
+          <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
           <Text className="text-xs text-success">
             GPS: {latitud.toFixed(5)}, {longitud?.toFixed(5)}
           </Text>

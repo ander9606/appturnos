@@ -1,3 +1,4 @@
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
@@ -6,7 +7,6 @@ import {
   Pressable,
   TextInput,
   Alert,
-  ActivityIndicator,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -216,7 +216,7 @@ export default function PuntosMarcajeScreen() {
           <Ionicons
             name="location-outline"
             size={16}
-            color={isZonal ? COLORS.info : '#D97706'}
+            color={isZonal ? COLORS.info : COLORS.warningDark}
           />
         </View>
 
@@ -229,7 +229,7 @@ export default function PuntosMarcajeScreen() {
             >
               <Text
                 className="text-xs font-medium"
-                style={{ color: isZonal ? COLORS.info : '#D97706' }}
+                style={{ color: isZonal ? COLORS.info : COLORS.warningDark }}
               >
                 {isZonal ? 'Zonal' : 'Fijo'}
               </Text>
@@ -260,7 +260,7 @@ export default function PuntosMarcajeScreen() {
             accessibilityLabel="Editar punto de marcaje"
             className="w-8 h-8 rounded-full bg-muted items-center justify-center active:opacity-70"
           >
-            <Ionicons name="pencil-outline" size={15} color="#64748B" />
+            <Ionicons name="pencil-outline" size={15} color={COLORS.mutedForeground} />
           </Pressable>
           <Pressable
             onPress={() => handleEliminar(punto)}
@@ -284,7 +284,7 @@ export default function PuntosMarcajeScreen() {
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={COLORS.info} />
+            <Spinner size="large" color={COLORS.info} />
           </View>
         ) : (
           <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
@@ -303,7 +303,7 @@ export default function PuntosMarcajeScreen() {
             </Text>
             {fijosPuntos.length === 0 ? (
               <View className="bg-card border border-dashed border-border rounded-2xl p-5 items-center gap-2 mb-6">
-                <Ionicons name="location-outline" size={28} color="#94A3B8" />
+                <Ionicons name="location-outline" size={28} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground text-center">
                   Sin puntos fijos. Crea uno con el botón +
                 </Text>
@@ -324,7 +324,7 @@ export default function PuntosMarcajeScreen() {
             </Text>
             {zonalesPuntos.length === 0 ? (
               <View className="bg-card border border-dashed border-border rounded-2xl p-5 items-center gap-2">
-                <Ionicons name="map-outline" size={28} color="#94A3B8" />
+                <Ionicons name="map-outline" size={28} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground text-center">
                   Sin puntos zonales. Los puntos zonales aceptan marcaje desde cualquiera de sus ubicaciones.
                 </Text>
@@ -348,14 +348,14 @@ export default function PuntosMarcajeScreen() {
           className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center active:opacity-80"
           style={{
             backgroundColor: COLORS.info,
-            shadowColor: '#3B82F6',
+            shadowColor: COLORS.info,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,
             shadowRadius: 8,
             elevation: 8,
           }}
         >
-          <Ionicons name="add" size={28} color="#fff" />
+          <Ionicons name="add" size={28} color={COLORS.white} />
         </Pressable>
       </SafeAreaView>
 
@@ -380,7 +380,7 @@ export default function PuntosMarcajeScreen() {
                 {editingPunto ? 'Editar punto' : 'Nuevo punto'}
               </Text>
               <Pressable onPress={() => setModalVisible(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color="#64748B" />
+                <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
               </Pressable>
             </View>
 
@@ -437,7 +437,7 @@ export default function PuntosMarcajeScreen() {
                   className="flex-row items-center gap-1.5 active:opacity-70"
                 >
                   {locating ? (
-                    <ActivityIndicator size="small" color={COLORS.info} />
+                    <Spinner size="small" color={COLORS.info} />
                   ) : (
                     <Ionicons name="navigate-outline" size={14} color={COLORS.info} />
                   )}
@@ -553,7 +553,7 @@ export default function PuntosMarcajeScreen() {
               style={{ backgroundColor: COLORS.info }}
             >
               {isSaving ? (
-                <ActivityIndicator color="#fff" />
+                <Spinner color={COLORS.white} />
               ) : (
                 <Text className="text-base font-semibold text-white">
                   {editingPunto ? 'Guardar cambios' : 'Crear punto'}

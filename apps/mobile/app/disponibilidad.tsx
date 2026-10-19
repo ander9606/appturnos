@@ -1,6 +1,8 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, Switch, Alert, ActivityIndicator, TouchableOpacity,
+  View, Text, ScrollView, Switch, Alert, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -90,7 +92,7 @@ export default function DisponibilidadScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -116,7 +118,7 @@ export default function DisponibilidadScreen() {
               value={slot.activo}
               onValueChange={() => toggleActivo(idx)}
               trackColor={{ true: theme.primary }}
-              thumbColor="#fff"
+              thumbColor={COLORS.white}
             />
 
             {slot.activo && (

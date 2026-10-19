@@ -1,3 +1,5 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
@@ -6,7 +8,6 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -71,23 +72,23 @@ export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClo
           <View className="flex-row items-center justify-between px-5 pt-5 pb-3">
             <Text className="text-base font-bold text-foreground">Elegir personas</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#64748B" />
+              <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
             </TouchableOpacity>
           </View>
 
           <View className="mx-5 mb-3 flex-row items-center bg-muted rounded-2xl px-3 gap-2">
-            <Ionicons name="search-outline" size={16} color="#64748B" />
+            <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} />
             <TextInput
               className="flex-1 py-3 text-sm text-foreground"
               placeholder="Buscar por nombre o cédula…"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               value={search}
               onChangeText={setSearch}
             />
           </View>
 
           {isLoading ? (
-            <ActivityIndicator size="small" color="#FF5A3C" style={{ paddingVertical: 24 }} />
+            <Spinner size="small" color={COLORS.primary} style={{ paddingVertical: 24 }} />
           ) : (
             <FlatList
               data={filtrados}
@@ -109,7 +110,7 @@ export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClo
                         elegido ? 'bg-primary border-primary' : 'border-border'
                       }`}
                     >
-                      {elegido && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
+                      {elegido && <Ionicons name="checkmark" size={13} color={COLORS.white} />}
                     </View>
                     <View className="flex-1">
                       <Text className="text-sm font-semibold text-foreground">

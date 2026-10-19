@@ -3,13 +3,14 @@
  * logiq360. Muestra una sugerencia de match por nombre y permite elegir manualmente.
  * Solo visible para admin_empresa.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   Pressable,
-  ActivityIndicator,
   RefreshControl,
   Alert,
 } from 'react-native';
@@ -108,7 +109,7 @@ export default function ConciliacionScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -125,7 +126,7 @@ export default function ConciliacionScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={theme.primary} />
         }
       >
-        <View className="px-4 pt-4 pb-6 gap-1" style={{ backgroundColor: '#6366F1' }}>
+        <View className="px-4 pt-4 pb-6 gap-1" style={{ backgroundColor: COLORS.integracion }}>
           <Text className="text-white text-lg font-bold">Conciliación de personal</Text>
           <Text className="text-white/70 text-sm">
             Vincula tus trabajadores con los empleados de logiq360
@@ -134,7 +135,7 @@ export default function ConciliacionScreen() {
 
         {pendientes.length === 0 ? (
           <View className="items-center justify-center px-8 py-16 gap-3">
-            <Ionicons name="checkmark-circle-outline" size={48} color="#22C55E" />
+            <Ionicons name="checkmark-circle-outline" size={48} color={COLORS.success} />
             <Text className="text-base font-semibold text-foreground text-center">
               Todo el personal está vinculado
             </Text>

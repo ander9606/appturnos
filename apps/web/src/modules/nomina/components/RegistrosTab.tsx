@@ -1,3 +1,4 @@
+import { PageLoading } from '@/shared/components/Spinner';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Plus, Pencil, CalendarClock, MapPin, ChevronDown, X, AlertTriangle } from 'lucide-react';
@@ -97,7 +98,7 @@ export function RegistrosTab({
       </div>
 
       {loading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <PageLoading />
       ) : error ? (
         <ErrorState error={error} onRetry={onRetry} />
       ) : gruposPorTrabajador.length === 0 ? (

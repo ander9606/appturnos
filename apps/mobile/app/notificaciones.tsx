@@ -3,13 +3,13 @@
  * Accesible desde la campana del header en cualquier tab.
  */
 
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
   FlatList,
   Pressable,
-  ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
@@ -188,7 +188,7 @@ export default function NotificacionesScreen() {
         <Ionicons
           name={iconForTipo(item.tipo)}
           size={18}
-          color={item.leida ? '#94A3B8' : colorDeCategoria(categoriaDeTipo(item.tipo))}
+          color={item.leida ? COLORS.placeholder : colorDeCategoria(categoriaDeTipo(item.tipo))}
         />
       </View>
 
@@ -282,7 +282,7 @@ export default function NotificacionesScreen() {
                   className="px-3 py-1.5 rounded-full"
                   style={{ backgroundColor: active ? color : color + '18' }}
                 >
-                  <Text className="text-xs font-semibold" style={{ color: active ? '#FFFFFF' : color }}>
+                  <Text className="text-xs font-semibold" style={{ color: active ? COLORS.white : color }}>
                     {CATEGORIA_LABEL[c]}
                   </Text>
                 </TouchableOpacity>
@@ -293,7 +293,7 @@ export default function NotificacionesScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
+          <Spinner size="large" color={theme.primary} />
         </View>
       ) : (
         <FlatList
@@ -311,7 +311,7 @@ export default function NotificacionesScreen() {
           }
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center gap-3 py-20 px-8">
-              <Ionicons name="notifications-off-outline" size={48} color="#94A3B8" />
+              <Ionicons name="notifications-off-outline" size={48} color={COLORS.placeholder} />
               <Text className="text-base font-semibold text-foreground text-center">
                 Sin notificaciones
               </Text>

@@ -1,3 +1,4 @@
+import { PageLoading } from '@/shared/components/Spinner';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -131,7 +132,7 @@ export function PlanesPage() {
         </p>
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground py-8 text-center">Cargando...</p>}
+      {isLoading && <PageLoading />}
       {isError && <ErrorState error={error} onRetry={refetch} />}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

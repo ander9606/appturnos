@@ -1,3 +1,4 @@
+import { PageLoading } from '@/shared/components/Spinner';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
@@ -176,7 +177,7 @@ export function SuperAdminPage() {
         <p className="text-xs text-muted-foreground -mt-1">{total} empresa{total !== 1 ? 's' : ''}</p>
 
         {isLoading ? (
-          <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+          <PageLoading />
         ) : isError ? (
           <ErrorState error={error} onRetry={refetch} />
         ) : empresas.length === 0 ? (

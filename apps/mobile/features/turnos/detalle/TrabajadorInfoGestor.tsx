@@ -3,6 +3,7 @@
  * trabajador, mostrado al gestor en el detalle de turno (confirmado / en
  * curso) en vez del CTA de marcaje que no le corresponde.
  */
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,7 +52,7 @@ export function TrabajadorInfoGestor({
           accessibilityLabel="Llamar al trabajador"
           hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         >
-          <Ionicons name="call-outline" size={16} color="#3B82F6" />
+          <Ionicons name="call-outline" size={16} color={COLORS.info} />
           <Text className="text-sm font-semibold text-info">Llamar al trabajador</Text>
         </TouchableOpacity>
       )}

@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,7 @@ function InfoRow({ icon, label, value }: { icon: IoniconsName; label: string; va
   return (
     <View className="flex-row items-start gap-3 py-3 border-b border-border last:border-0">
       <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
-        <Ionicons name={icon} size={16} color="#64748B" />
+        <Ionicons name={icon} size={16} color={COLORS.mutedForeground} />
       </View>
       <View className="flex-1 gap-0.5">
         <Text className="text-xs text-muted-foreground">{label}</Text>
@@ -48,13 +49,13 @@ export function TurnoHeroCard({
     >
       <View
         className="h-2"
-        style={{ backgroundColor: estadoConfig?.accentColor ?? '#E2E8F0' }}
+        style={{ backgroundColor: estadoConfig?.accentColor ?? COLORS.border }}
       />
 
       <View className="px-5 py-5 gap-1">
         {empresa_nombre && (
           <View className="flex-row items-center gap-1.5 mb-1">
-            <Ionicons name="business-outline" size={12} color="#94A3B8" />
+            <Ionicons name="business-outline" size={12} color={COLORS.placeholder} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               {empresa_nombre}
             </Text>
@@ -72,7 +73,7 @@ export function TurnoHeroCard({
 
         {isGestor && trabajador_nombre && (
           <View className="flex-row items-center gap-1.5 mt-1">
-            <Ionicons name="person-outline" size={13} color="#64748B" />
+            <Ionicons name="person-outline" size={13} color={COLORS.mutedForeground} />
             <Text className="text-sm font-semibold text-foreground">
               {trabajador_nombre} {trabajador_apellido}
             </Text>
@@ -87,7 +88,7 @@ export function TurnoHeroCard({
           {lugar && (
             <View className="flex-row items-start gap-3 py-3 border-b border-border">
               <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
-                <Ionicons name="location-outline" size={16} color="#64748B" />
+                <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
               </View>
               <View className="flex-1 gap-0.5">
                 <Text className="text-xs text-muted-foreground">Lugar</Text>
@@ -100,7 +101,7 @@ export function TurnoHeroCard({
                   accessibilityLabel="Ver en Google Maps"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="map-outline" size={14} color="#3B82F6" />
+                  <Ionicons name="map-outline" size={14} color={COLORS.info} />
                   <Text className="text-xs font-semibold text-info">Mapa</Text>
                 </TouchableOpacity>
               )}
@@ -111,7 +112,7 @@ export function TurnoHeroCard({
           {encargado_nombre && (
             <View className="flex-row items-start gap-3 py-3 border-b border-border">
               <View className="w-8 h-8 bg-muted rounded-xl items-center justify-center mt-0.5">
-                <Ionicons name="person-outline" size={16} color="#64748B" />
+                <Ionicons name="person-outline" size={16} color={COLORS.mutedForeground} />
               </View>
               <View className="flex-1 gap-0.5">
                 <Text className="text-xs text-muted-foreground">Encargado en el punto</Text>
@@ -124,7 +125,7 @@ export function TurnoHeroCard({
                   accessibilityLabel={`Llamar a ${encargado_nombre}`}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="call-outline" size={14} color="#3B82F6" />
+                  <Ionicons name="call-outline" size={14} color={COLORS.info} />
                   <Text className="text-xs font-semibold text-info">Llamar</Text>
                 </TouchableOpacity>
               )}

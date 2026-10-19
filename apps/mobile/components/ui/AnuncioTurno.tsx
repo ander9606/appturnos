@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import { useEffect, useRef } from 'react';
 import { Animated, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,9 +9,9 @@ const AUTO_HIDE_MS = 3200;
 const HIDDEN_Y = -200;
 
 const CONFIG: Record<TipoAnuncioTurno, { icon: keyof typeof Ionicons.glyphMap; bg: string }> = {
-  publicado:  { icon: 'megaphone',      bg: '#059669' }, // success
-  cancelado:  { icon: 'close-circle',   bg: '#DC2626' }, // danger
-  completado: { icon: 'checkmark-done', bg: '#3B82F6' }, // info
+  publicado:  { icon: 'megaphone',      bg: COLORS.success }, // success
+  cancelado:  { icon: 'close-circle',   bg: COLORS.dangerDark }, // danger
+  completado: { icon: 'checkmark-done', bg: COLORS.info }, // info
 };
 
 /**
@@ -44,7 +45,7 @@ export function AnuncioTurno() {
           className="flex-row items-center gap-3 rounded-2xl px-4 py-3 shadow-lg"
           style={{ backgroundColor: cfg.bg }}
         >
-          <Ionicons name={cfg.icon} size={20} color="#FFFFFF" />
+          <Ionicons name={cfg.icon} size={20} color={COLORS.white} />
           <Text className="flex-1 text-white text-sm font-semibold">{mensaje}</Text>
         </View>
       </Animated.View>

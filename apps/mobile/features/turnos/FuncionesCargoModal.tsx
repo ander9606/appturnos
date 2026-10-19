@@ -2,8 +2,9 @@
  * FuncionesCargoModal — ver (todos) / diligenciar (admin, jefe_turnos) el
  * listado de funciones que un cargo tiene en la empresa actual.
  */
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, TextInput, Modal, FlatList, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, TextInput, Modal, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -63,13 +64,13 @@ export function FuncionesCargoModal({ visible, onClose, cargoId, cargoNombre, ed
             <Text className="text-xs text-muted-foreground" numberOfLines={1}>{cargoNombre}</Text>
           </View>
           <Pressable onPress={onClose} hitSlop={8}>
-            <Ionicons name="close" size={24} color="#64748B" />
+            <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
           </Pressable>
         </View>
 
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={COLORS.info} />
+            <Spinner color={COLORS.info} />
           </View>
         ) : (
           <FlatList
@@ -84,14 +85,14 @@ export function FuncionesCargoModal({ visible, onClose, cargoId, cargoNombre, ed
                 <Text className="flex-1 text-sm text-foreground">{item}</Text>
                 {editable && (
                   <Pressable onPress={() => quitar(index)} hitSlop={8}>
-                    <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                    <Ionicons name="close-circle" size={18} color={COLORS.placeholder} />
                   </Pressable>
                 )}
               </View>
             )}
             ListEmptyComponent={
               <View className="items-center gap-2 py-12">
-                <Ionicons name="list-outline" size={32} color="#94A3B8" />
+                <Ionicons name="list-outline" size={32} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground text-center">
                   {editable
                     ? 'Aún no hay funciones registradas para este cargo.\nAgrega la primera abajo.'
@@ -119,7 +120,7 @@ export function FuncionesCargoModal({ visible, onClose, cargoId, cargoNombre, ed
                       className="w-12 h-12 rounded-2xl items-center justify-center active:opacity-80"
                       style={{ backgroundColor: COLORS.info }}
                     >
-                      <Ionicons name="add" size={22} color="#fff" />
+                      <Ionicons name="add" size={22} color={COLORS.white} />
                     </Pressable>
                   </View>
 
@@ -130,7 +131,7 @@ export function FuncionesCargoModal({ visible, onClose, cargoId, cargoNombre, ed
                     style={{ backgroundColor: COLORS.info }}
                   >
                     {actualizar.isPending ? (
-                      <ActivityIndicator color="#fff" />
+                      <Spinner color={COLORS.white} />
                     ) : (
                       <Text className="text-base font-semibold text-white">Guardar funciones</Text>
                     )}

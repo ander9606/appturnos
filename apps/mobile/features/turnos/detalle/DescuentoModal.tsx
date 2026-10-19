@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, Alert,
@@ -93,7 +94,7 @@ export function DescuentoModal({
                 </Text>
               </View>
               <Pressable onPress={onClose} hitSlop={10}>
-                <Ionicons name="close" size={22} color="#64748B" />
+                <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
               </Pressable>
             </View>
 
@@ -121,7 +122,7 @@ export function DescuentoModal({
                           <Text className="text-xs text-muted-foreground">{ESTADO_LABEL[d.estado]}</Text>
                         </View>
                         <Pressable onPress={() => handleEliminar(d.id)} disabled={eliminar.isPending} hitSlop={10}>
-                          <Ionicons name="trash-outline" size={16} color="#94A3B8" />
+                          <Ionicons name="trash-outline" size={16} color={COLORS.placeholder} />
                         </Pressable>
                       </View>
                     ))}
@@ -135,7 +136,7 @@ export function DescuentoModal({
                     onChangeText={setMonto}
                     keyboardType="numeric"
                     placeholder="0"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={COLORS.placeholder}
                     className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
                   />
                 </View>
@@ -145,7 +146,7 @@ export function DescuentoModal({
                     value={motivo}
                     onChangeText={setMotivo}
                     placeholder="Ej. llegada tarde sin aviso"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={COLORS.placeholder}
                     maxLength={255}
                     className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
                   />

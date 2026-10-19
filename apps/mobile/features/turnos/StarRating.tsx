@@ -5,6 +5,7 @@
  *  - mode="display"  → solo lectura, muestra el valor recibido
  *  - mode="input"    → interactivo, el usuario selecciona 1–5
  */
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 
@@ -51,7 +52,7 @@ export function StarRating(props: StarRatingProps) {
           return (
             <Text
               key={s}
-              style={{ fontSize: size, color: filled ? '#F59E0B' : '#CBD5E1' }}
+              style={{ fontSize: size, color: filled ? COLORS.warning : COLORS.borderStrong }}
             >
               ★
             </Text>
@@ -79,7 +80,7 @@ export function StarRating(props: StarRatingProps) {
           <Text
             style={{
               fontSize: size,
-              color: s <= value ? '#F59E0B' : '#CBD5E1',
+              color: s <= value ? COLORS.warning : COLORS.borderStrong,
             }}
           >
             ★

@@ -7,6 +7,8 @@
  *  - Invitaciones recibidas de empresas (pendientes de aceptación)
  *  - Buscador para solicitar nuevas empresas
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -14,7 +16,6 @@ import {
   ScrollView,
   Pressable,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   RefreshControl,
   Linking,
@@ -54,7 +55,7 @@ function StarRating({ value, total }: { value: number; total: number }) {
           key={i}
           name={i <= filled ? 'star' : 'star-outline'}
           size={12}
-          color={i <= filled ? '#F59E0B' : '#CBD5E1'}
+          color={i <= filled ? COLORS.warning : COLORS.borderStrong}
         />
       ))}
       <Text className="text-xs text-muted-foreground ml-0.5">
@@ -79,7 +80,7 @@ function EmpresaActivaCard({
     <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden">
       <View className="flex-row items-center gap-3 p-4">
         <View className="w-11 h-11 rounded-xl bg-success/10 items-center justify-center">
-          <Ionicons name="business" size={20} color="#059669" />
+          <Ionicons name="business" size={20} color={COLORS.success} />
         </View>
         <View className="flex-1">
           <Text className="text-base font-bold text-foreground">{vinculo.empresa_nombre}</Text>
@@ -120,7 +121,7 @@ function EmpresaActivaCard({
               onPress={() => Linking.openURL(`tel:${vinculo.empresa_telefono}`)}
               className={`flex-1 flex-row items-center justify-center gap-1.5 py-3 active:opacity-70 ${vinculo.empresa_email ? 'border-r border-border' : ''}`}
             >
-              <Ionicons name="call-outline" size={14} color="#3B82F6" />
+              <Ionicons name="call-outline" size={14} color={COLORS.info} />
               <Text className="text-xs font-semibold text-info">Llamar</Text>
             </TouchableOpacity>
           )}
@@ -129,7 +130,7 @@ function EmpresaActivaCard({
               onPress={() => Linking.openURL(`mailto:${vinculo.empresa_email}`)}
               className="flex-1 flex-row items-center justify-center gap-1.5 py-3 active:opacity-70"
             >
-              <Ionicons name="mail-outline" size={14} color="#3B82F6" />
+              <Ionicons name="mail-outline" size={14} color={COLORS.info} />
               <Text className="text-xs font-semibold text-info">Correo</Text>
             </TouchableOpacity>
           )}
@@ -142,9 +143,9 @@ function EmpresaActivaCard({
         className="border-t border-border px-4 py-3 flex-row items-center justify-center gap-1.5 active:opacity-70"
       >
         {archivando
-          ? <ActivityIndicator size="small" color="#DC2626" />
+          ? <Spinner size="small" color={COLORS.dangerDark} />
           : <>
-              <Ionicons name="exit-outline" size={14} color="#DC2626" />
+              <Ionicons name="exit-outline" size={14} color={COLORS.dangerDark} />
               <Text className="text-sm font-semibold text-danger">Dejar de recibir ofertas</Text>
             </>
         }
@@ -163,7 +164,7 @@ function SolicitudCard({
     <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden">
       <View className="flex-row items-center gap-3 p-4">
         <View className="w-11 h-11 rounded-xl bg-warning/10 items-center justify-center">
-          <Ionicons name="time-outline" size={20} color="#D97706" />
+          <Ionicons name="time-outline" size={20} color={COLORS.warningDark} />
         </View>
         <View className="flex-1">
           <Text className="text-base font-semibold text-foreground">{vinculo.empresa_nombre}</Text>
@@ -196,7 +197,7 @@ function InvitacionCard({
     <View className={`mx-5 mb-3 bg-card rounded-2xl border overflow-hidden ${esNomina ? 'border-warning/50' : 'border-primary-200'}`}>
       <View className="flex-row items-center gap-3 px-4 pt-4 pb-3">
         <View className={`w-11 h-11 rounded-xl items-center justify-center ${esNomina ? 'bg-warning/10' : 'bg-primary-50'}`}>
-          <Ionicons name={esNomina ? 'briefcase-outline' : 'mail-outline'} size={20} color={esNomina ? '#D97706' : '#FF5A3C'} />
+          <Ionicons name={esNomina ? 'briefcase-outline' : 'mail-outline'} size={20} color={esNomina ? COLORS.warningDark : COLORS.primary} />
         </View>
         <View className="flex-1">
           <Text className="text-base font-semibold text-foreground">{vinculo.empresa_nombre}</Text>
@@ -227,7 +228,7 @@ function InvitacionCard({
           className="flex-1 h-10 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <Spinner size="small" color={COLORS.white} />
           ) : (
             <Text className="text-sm font-semibold text-white">Aceptar</Text>
           )}
@@ -249,7 +250,7 @@ function ArchivadaCard({
     <View className="mx-5 mb-3 bg-card rounded-2xl border border-border overflow-hidden opacity-90">
       <View className="flex-row items-center gap-3 p-4">
         <View className="w-11 h-11 rounded-xl bg-muted items-center justify-center">
-          <Ionicons name="business-outline" size={20} color="#94A3B8" />
+          <Ionicons name="business-outline" size={20} color={COLORS.placeholder} />
         </View>
         <View className="flex-1">
           <Text className="text-base font-semibold text-foreground">{vinculo.empresa_nombre}</Text>
@@ -270,9 +271,9 @@ function ArchivadaCard({
         className="border-t border-border px-4 py-3 flex-row items-center justify-center gap-1.5 active:opacity-70"
       >
         {loading
-          ? <ActivityIndicator size="small" color="#FF5A3C" />
+          ? <Spinner size="small" color={COLORS.primary} />
           : <>
-              <Ionicons name="refresh-outline" size={14} color="#FF5A3C" />
+              <Ionicons name="refresh-outline" size={14} color={COLORS.primary} />
               <Text className="text-sm font-semibold text-primary-500">Volver a solicitar</Text>
             </>
         }
@@ -380,7 +381,7 @@ export default function MisEmpresasScreen() {
               className="flex-row items-center gap-1.5 mr-1"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="add-circle-outline" size={22} color="#FF5A3C" />
+              <Ionicons name="add-circle-outline" size={22} color={COLORS.primary} />
               <Text className="text-sm font-semibold text-primary-500">Buscar</Text>
             </TouchableOpacity>
           ),
@@ -396,7 +397,7 @@ export default function MisEmpresasScreen() {
         {!isLoading && total === 0 && (
           <View className="items-center justify-center px-8 py-16 gap-4">
             <View className="w-20 h-20 rounded-2xl bg-muted items-center justify-center">
-              <Ionicons name="business-outline" size={40} color="#94A3B8" />
+              <Ionicons name="business-outline" size={40} color={COLORS.placeholder} />
             </View>
             <Text className="text-xl font-bold text-foreground text-center">
               Sin empresas todavía

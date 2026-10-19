@@ -7,8 +7,9 @@
  * el backend, así el cliente nunca puede seleccionar una fecha fuera de ley.
  */
 
+import { Spinner } from '@/components/ui/Spinner';
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRangoCompensatorio } from './useCompensatorios';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';
 
@@ -24,7 +25,7 @@ export function RangoFechasCompensatorio({ compensatorioId, seleccionada, onSele
   if (isLoading) {
     return (
       <View className="py-4 items-center">
-        <ActivityIndicator size="small" />
+        <Spinner size="small" />
       </View>
     );
   }

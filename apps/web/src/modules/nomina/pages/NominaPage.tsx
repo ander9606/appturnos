@@ -1,3 +1,4 @@
+import { PageLoading } from '@/shared/components/Spinner';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -119,7 +120,7 @@ export function NominaPage() {
       )}
 
       {isLoading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <PageLoading />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : periodos.length === 0 ? (

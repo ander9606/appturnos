@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/shared/components/Skeleton';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Plus, UserX, UserPlus, Search, Users, AlertTriangle } from 'lucide-react';
@@ -158,7 +159,7 @@ export function EquipoPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <SkeletonList />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : trabajadores.length === 0 ? (
@@ -288,7 +289,7 @@ function BancoTalentoModal({ onClose }: { onClose: () => void }) {
         />
       </div>
       {isLoading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <SkeletonList />
       ) : trabajadores.length === 0 ? (
         <p className="text-muted-foreground text-sm py-8 text-center">
           {q ? `Sin resultados para "${q}".` : 'No hay trabajadores libres registrados todavía.'}

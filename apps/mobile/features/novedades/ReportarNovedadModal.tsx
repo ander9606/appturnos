@@ -1,7 +1,9 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator, Image, Platform,
+  ScrollView, Alert, Image, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiError } from '@api-client';
@@ -111,7 +113,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
         <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
           <Text className="text-base font-bold text-foreground">Reportar novedad</Text>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={22} color="#64748B" />
+            <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
           </TouchableOpacity>
         </View>
 
@@ -128,7 +130,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
                     onPress={() => setTipo(t.value)}
                     className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl border ${sel ? 'bg-primary border-primary' : 'bg-card border-border'}`}
                   >
-                    <Ionicons name={t.icon} size={14} color={sel ? '#fff' : '#64748B'} />
+                    <Ionicons name={t.icon} size={14} color={sel ? COLORS.white : COLORS.mutedForeground} />
                     <Text className={`text-sm font-medium ${sel ? 'text-white' : 'text-foreground'}`}>{t.label}</Text>
                   </TouchableOpacity>
                 );
@@ -143,7 +145,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
               value={descripcion}
               onChangeText={setDescripcion}
               placeholder="Describe la situación…"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               multiline
               numberOfLines={4}
               maxLength={1000}
@@ -158,10 +160,10 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hora del evento</Text>
             {horaEvento ? (
               <View className="flex-row items-center gap-2 bg-muted rounded-xl px-4 py-3">
-                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Ionicons name="time-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="flex-1 text-sm text-foreground">{horaEvento.replace('T', ' ').slice(0, 16)}</Text>
                 <TouchableOpacity onPress={() => setHoraEvento(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                  <Ionicons name="close-circle" size={18} color={COLORS.placeholder} />
                 </TouchableOpacity>
               </View>
             ) : (
@@ -169,7 +171,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
                 onPress={handleUsarAhora}
                 className="flex-row items-center gap-2 bg-muted rounded-xl px-4 py-3"
               >
-                <Ionicons name="time-outline" size={16} color="#64748B" />
+                <Ionicons name="time-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="text-sm text-muted-foreground">Usar hora actual</Text>
               </TouchableOpacity>
             )}
@@ -189,7 +191,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
                   onPress={() => setFotoB64(null)}
                   className="flex-row items-center gap-1.5 self-start px-3 py-1.5 bg-muted rounded-xl"
                 >
-                  <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                  <Ionicons name="trash-outline" size={14} color={COLORS.dangerDark} />
                   <Text className="text-xs font-medium text-danger">Quitar foto</Text>
                 </TouchableOpacity>
               </View>
@@ -198,7 +200,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
                 onPress={handleFoto}
                 className="flex-row items-center gap-2 bg-muted rounded-xl px-4 py-3 border border-dashed border-border"
               >
-                <Ionicons name="camera-outline" size={18} color="#64748B" />
+                <Ionicons name="camera-outline" size={18} color={COLORS.mutedForeground} />
                 <Text className="text-sm text-muted-foreground">Adjuntar foto</Text>
               </TouchableOpacity>
             )}
@@ -212,8 +214,8 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
             style={{ opacity: mutation.isPending ? 0.6 : 1 }}
           >
             {mutation.isPending
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Ionicons name="send-outline" size={18} color="#fff" />}
+              ? <Spinner size="small" color={COLORS.white} />
+              : <Ionicons name="send-outline" size={18} color={COLORS.white} />}
             <Text className="text-white font-semibold text-base">
               {mutation.isPending ? 'Enviando…' : 'Enviar novedad'}
             </Text>

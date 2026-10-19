@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +32,7 @@ export function TurnosExtraOptIn() {
 
   return (
     <View className="flex-1 items-center justify-center gap-3 px-8 py-16">
-      <Ionicons name="briefcase-outline" size={48} color="#94A3B8" />
+      <Ionicons name="briefcase-outline" size={48} color={COLORS.placeholder} />
       <Text className="text-base font-semibold text-foreground text-center">
         Activa turnos extra para ver esto
       </Text>

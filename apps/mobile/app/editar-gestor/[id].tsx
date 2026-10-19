@@ -3,9 +3,10 @@
  * admin_empresa (una empresa puede tener varios, p.ej. socios). El backend
  * bloquea quitarle el rol de admin al único administrador activo.
  */
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, ActivityIndicator, Alert,
+  View, Text, TextInput, Pressable, Alert,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -147,7 +148,7 @@ export default function EditarGestorScreen() {
               style={{ backgroundColor: COLORS.info }}
             >
               {mutation.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <Spinner color={COLORS.white} />
               ) : (
                 <Text className="text-base font-semibold text-white">Guardar cambios</Text>
               )}

@@ -2,6 +2,7 @@
  * WeekStrip — strip de fechas scrollable continuo.
  * Muestra ~7 semanas, auto-centra en hoy, dots en días con turnos.
  */
+import { COLORS } from '@/lib/designTokens';
 import React, { useRef, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { bogotaToday } from '@/lib/formatters';
@@ -19,7 +20,7 @@ interface WeekStripProps {
   primaryColor?: string;
 }
 
-const DEFAULT_PRIMARY = '#FF5A3C';
+const DEFAULT_PRIMARY = COLORS.primary;
 
 export function WeekStrip({
   days,
@@ -93,7 +94,7 @@ export function WeekStrip({
                   fontSize: 11,
                   fontWeight: '500',
                   marginTop: 1,
-                  color: isSelected ? '#FFFFFF' : day.isToday ? primaryColor : isPast ? '#CBD5E1' : '#64748B',
+                  color: isSelected ? COLORS.white : day.isToday ? primaryColor : isPast ? COLORS.borderStrong : COLORS.mutedForeground,
                 }}
               >
                 {day.dayLabel}
@@ -103,7 +104,7 @@ export function WeekStrip({
                 style={{
                   fontSize: 16,
                   fontWeight: '700',
-                  color: isSelected ? '#FFFFFF' : day.isToday ? primaryColor : isPast ? '#CBD5E1' : '#0F172A',
+                  color: isSelected ? COLORS.white : day.isToday ? primaryColor : isPast ? COLORS.borderStrong : COLORS.foreground,
                 }}
               >
                 {day.dayNum}
@@ -117,7 +118,7 @@ export function WeekStrip({
                       width: 20,
                       height: 3,
                       borderRadius: 2,
-                      backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : isPast ? '#CBD5E1' : primaryColor,
+                      backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : isPast ? COLORS.borderStrong : primaryColor,
                     }}
                   />
                 )}

@@ -22,9 +22,11 @@ module.exports = {
         },
         // Semantic
         success: { DEFAULT: '#059669', foreground: '#FFFFFF', light: '#D1FAE5' },
-        warning: { DEFAULT: '#F59E0B', foreground: '#FFFFFF', light: '#FEF3C7' },
-        danger:  { DEFAULT: '#EF4444', foreground: '#FFFFFF', light: '#FEE2E2' },
+        warning: { DEFAULT: '#F59E0B', foreground: '#FFFFFF', light: '#FEF3C7', dark: '#D97706' },
+        danger:  { DEFAULT: '#EF4444', foreground: '#FFFFFF', light: '#FEE2E2', dark: '#DC2626' },
         info:    { DEFAULT: '#3B82F6', foreground: '#FFFFFF', light: '#DBEAFE' },
+        // Módulo logiq360 (integración)
+        integracion: { DEFAULT: '#6366F1', light: '#E0E7FF' },
         // Background
         background: '#F8FAFC',
         card:       '#FFFFFF',

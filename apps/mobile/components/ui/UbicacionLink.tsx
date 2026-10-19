@@ -1,5 +1,7 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import { useState } from 'react';
-import { TouchableOpacity, Text, Linking, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { geocodingApi } from '@api-client';
 
@@ -51,9 +53,9 @@ export function UbicacionLink({ lat, lng, label }: Props) {
       accessibilityRole="button"
     >
       {loading ? (
-        <ActivityIndicator size="small" color="#3B82F6" />
+        <Spinner size="small" color={COLORS.info} />
       ) : (
-        <Ionicons name="location-outline" size={13} color="#3B82F6" />
+        <Ionicons name="location-outline" size={13} color={COLORS.info} />
       )}
       <Text numberOfLines={1} className="text-xs font-semibold text-info flex-shrink">
         {label}: {loading ? 'Buscando…' : (direccion ?? 'Ver ubicación')}

@@ -1,3 +1,5 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -5,7 +7,6 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -232,13 +233,13 @@ export default function TurnosScreen() {
         {/* Accent bar */}
         <View
           className="w-1.5"
-          style={{ backgroundColor: esPasado ? '#CBD5E1' : hayTraslape ? '#F59E0B' : '#FF7150' }}
+          style={{ backgroundColor: esPasado ? COLORS.borderStrong : hayTraslape ? COLORS.warning : '#FF7150' }}
         />
 
         <View className="flex-1 px-4 py-4 gap-2">
           {item.empresa_nombre && (
             <View className="flex-row items-center gap-1">
-              <Ionicons name="business-outline" size={12} color="#94A3B8" />
+              <Ionicons name="business-outline" size={12} color={COLORS.placeholder} />
               <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide" numberOfLines={1}>
                 {item.empresa_nombre}
               </Text>
@@ -262,14 +263,14 @@ export default function TurnosScreen() {
 
           {hayVariosCargos ? (
             <View className="flex-row items-center gap-1 -mt-1">
-              <Ionicons name="briefcase-outline" size={12} color="#64748B" />
+              <Ionicons name="briefcase-outline" size={12} color={COLORS.mutedForeground} />
               <Text className="text-xs text-muted-foreground">
                 {puestosDisponibles.length} cargos disponibles
               </Text>
             </View>
           ) : (firstAvailablePuesto ?? item.puestos?.[0])?.cargo_nombre && (
             <View className="flex-row items-center gap-1 -mt-1">
-              <Ionicons name="briefcase-outline" size={12} color="#64748B" />
+              <Ionicons name="briefcase-outline" size={12} color={COLORS.mutedForeground} />
               <Text className="text-xs text-muted-foreground">
                 {(firstAvailablePuesto ?? item.puestos?.[0])?.cargo_nombre}
               </Text>
@@ -278,7 +279,7 @@ export default function TurnosScreen() {
 
           {hayTraslape && (
             <View className="flex-row items-center gap-1.5 bg-warning/10 rounded-xl px-2.5 py-1.5">
-              <Ionicons name="warning-outline" size={13} color="#D97706" />
+              <Ionicons name="warning-outline" size={13} color={COLORS.warningDark} />
               <Text className="text-xs font-medium text-warning flex-1">
                 Ya tienes un turno confirmado en este horario
               </Text>
@@ -287,20 +288,20 @@ export default function TurnosScreen() {
 
           <View className="flex-row gap-3 flex-wrap">
             <View className="flex-row items-center gap-1">
-              <Ionicons name="calendar-outline" size={13} color="#64748B" />
+              <Ionicons name="calendar-outline" size={13} color={COLORS.mutedForeground} />
               <Text className="text-sm text-muted-foreground">
                 {formatShortDate(item.fecha)}
               </Text>
             </View>
             <View className="flex-row items-center gap-1">
-              <Ionicons name="time-outline" size={13} color="#64748B" />
+              <Ionicons name="time-outline" size={13} color={COLORS.mutedForeground} />
               <Text className="text-sm text-muted-foreground">
                 {fmtRangeSimple(item.hora_inicio, item.hora_fin_estimada)}
               </Text>
             </View>
             {item.lugar && (
               <View className="flex-row items-center gap-1 flex-1">
-                <Ionicons name="location-outline" size={13} color="#64748B" />
+                <Ionicons name="location-outline" size={13} color={COLORS.mutedForeground} />
                 <Text className="text-sm text-muted-foreground" numberOfLines={1}>
                   {item.lugar}
                 </Text>
@@ -344,7 +345,7 @@ export default function TurnosScreen() {
 
   const EmptyMiosTurnos = () => (
     <View className="flex-1 items-center justify-center py-16 gap-3">
-      <Ionicons name="calendar-outline" size={48} color="#94A3B8" />
+      <Ionicons name="calendar-outline" size={48} color={COLORS.placeholder} />
       <Text className="text-base font-semibold text-foreground">Sin turnos este día</Text>
       <Text className="text-sm text-muted-foreground text-center px-8">
         No tienes turnos asignados el{' '}
@@ -355,7 +356,7 @@ export default function TurnosScreen() {
 
   const EmptyOfertas = () => (
     <View className="flex-1 items-center justify-center py-16 gap-3">
-      <Ionicons name="search-outline" size={48} color="#94A3B8" />
+      <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
       <Text className="text-base font-semibold text-foreground">Sin ofertas este día</Text>
       <Text className="text-sm text-muted-foreground text-center px-8">
         No hay turnos disponibles el{' '}
@@ -413,10 +414,10 @@ export default function TurnosScreen() {
               className="items-center justify-center rounded-2xl"
               style={{ backgroundColor: pendientesCount > 0 ? '#FEF3C7' : '#F1F5F9', minWidth: 68, paddingHorizontal: 12 }}
             >
-              <Ionicons name="people" size={18} color={pendientesCount > 0 ? '#D97706' : '#64748B'} />
+              <Ionicons name="people" size={18} color={pendientesCount > 0 ? COLORS.warningDark : COLORS.mutedForeground} />
               <Text
                 className="text-[10px] font-bold mt-0.5"
-                style={{ color: pendientesCount > 0 ? '#D97706' : '#64748B' }}
+                style={{ color: pendientesCount > 0 ? COLORS.warningDark : COLORS.mutedForeground }}
               >
                 {pendientesCount > 0 ? `${pendientesCount} pend.` : 'Al día'}
               </Text>
@@ -460,10 +461,10 @@ export default function TurnosScreen() {
               </View>
 
               {loadingOfertasMes ? (
-                <ActivityIndicator size="large" color={theme.primary} />
+                <SkeletonList count={3} />
               ) : errorOfertasMes ? (
                 <View className="items-center justify-center gap-2 py-10">
-                  <Ionicons name="warning-outline" size={32} color="#94A3B8" />
+                  <Ionicons name="warning-outline" size={32} color={COLORS.placeholder} />
                   <Text className="text-sm text-muted-foreground">No se pudieron cargar los turnos del mes</Text>
                   <Button label="Reintentar" onPress={() => refetchOfertasMes()} variant="secondary" size="sm" />
                 </View>
@@ -527,7 +528,7 @@ export default function TurnosScreen() {
             }}
             accessibilityLabel="Crear turno"
           >
-            <Ionicons name="add" size={28} color="#fff" />
+            <Ionicons name="add" size={28} color={COLORS.white} />
           </TouchableOpacity>
           )}
         </View>
@@ -554,12 +555,12 @@ export default function TurnosScreen() {
             </View>
 
             {loadingOfertasMes || loadingMios ? (
-              <ActivityIndicator size="large" color={theme.primary} />
+              <SkeletonList count={3} />
             ) : isNomina && esErrorTurnosExtraApagadas(errOfertasMes) ? (
               <TurnosExtraOptIn />
             ) : errorOfertasMes || errorMios ? (
               <View className="items-center justify-center gap-2 py-10">
-                <Ionicons name="warning-outline" size={32} color="#94A3B8" />
+                <Ionicons name="warning-outline" size={32} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground">No se pudieron cargar los turnos del mes</Text>
                 <Button
                   label="Reintentar"
@@ -591,7 +592,7 @@ export default function TurnosScreen() {
                         <View key={`p${a.id}`} className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: theme.primary }} />
                       ))}
                       {disponibles.slice(0, 3).map(o => (
-                        <View key={`d${o.id}`} className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: '#3B82F6' }} />
+                        <View key={`d${o.id}`} className="w-1.5 h-1.5 rounded-full border" style={{ borderColor: COLORS.info }} />
                       ))}
                     </View>
                   );
@@ -609,7 +610,7 @@ export default function TurnosScreen() {
                 <Text className="text-xs text-muted-foreground">Postulación pendiente</Text>
               </View>
               <View className="flex-row items-center gap-1.5">
-                <View className="w-2 h-2 rounded-full border" style={{ borderColor: '#3B82F6' }} />
+                <View className="w-2 h-2 rounded-full border" style={{ borderColor: COLORS.info }} />
                 <Text className="text-xs text-muted-foreground">Disponibles</Text>
               </View>
             </View>
@@ -664,12 +665,10 @@ export default function TurnosScreen() {
           {/* ── Worker list ──────────────────────────────────────── */}
           {(!isWorker || activeTab === 'mis_turnos') ? (
             loadingMios ? (
-              <View className="flex-1 items-center justify-center">
-                <ActivityIndicator size="large" color={theme.primary} />
-              </View>
+              <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
             ) : errorMios ? (
               <View className="flex-1 items-center justify-center gap-3 px-6">
-                <Ionicons name="warning-outline" size={48} color="#94A3B8" />
+                <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
                 <Text className="text-base font-semibold text-foreground">
                   {apiErrorMessage(errMios, 'Error al cargar turnos')}
                 </Text>
@@ -695,14 +694,12 @@ export default function TurnosScreen() {
             )
           ) : (
             loadingOfertas ? (
-              <View className="flex-1 items-center justify-center">
-                <ActivityIndicator size="large" color={theme.primary} />
-              </View>
+              <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
             ) : isNomina && esErrorTurnosExtraApagadas(errOfertas) ? (
               <TurnosExtraOptIn />
             ) : errorOfertas ? (
               <View className="flex-1 items-center justify-center gap-3 px-6">
-                <Ionicons name="warning-outline" size={48} color="#94A3B8" />
+                <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
                 <Text className="text-base font-semibold text-foreground">
                   {apiErrorMessage(errOfertas, 'Error al cargar ofertas')}
                 </Text>
@@ -721,7 +718,7 @@ export default function TurnosScreen() {
                         onPress={() => router.push('/mis-empresas')}
                         className="flex-row items-center gap-2 bg-info/10 rounded-xl px-3 py-2 mb-3"
                       >
-                        <Ionicons name="information-circle-outline" size={15} color="#3B82F6" />
+                        <Ionicons name="information-circle-outline" size={15} color={COLORS.info} />
                         <Text className="text-xs text-info flex-1">
                           Ves las ofertas antes o después según tu calificación en cada empresa.
                         </Text>
@@ -730,18 +727,18 @@ export default function TurnosScreen() {
                     )}
                     {ofertas.length > 0 && (
                       <View className="flex-row items-center bg-card border border-border rounded-xl px-3 h-10 mb-3">
-                        <Ionicons name="search-outline" size={15} color="#64748B" style={{ marginRight: 8 }} />
+                        <Ionicons name="search-outline" size={15} color={COLORS.mutedForeground} style={{ marginRight: 8 }} />
                         <TextInput
                           className="flex-1 text-sm text-foreground"
                           placeholder="Buscar por empresa, cargo o lugar…"
-                          placeholderTextColor="#94A3B8"
+                          placeholderTextColor={COLORS.placeholder}
                           value={searchOfertas}
                           onChangeText={setSearchOfertas}
                           autoCorrect={false}
                         />
                         {searchOfertas.length > 0 && (
                           <TouchableOpacity onPress={() => setSearchOfertas('')} hitSlop={8}>
-                            <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                            <Ionicons name="close-circle" size={16} color={COLORS.placeholder} />
                           </TouchableOpacity>
                         )}
                       </View>
@@ -751,7 +748,7 @@ export default function TurnosScreen() {
                 ListEmptyComponent={
                   searchOfertas.trim() ? (
                     <View className="items-center justify-center py-16 gap-2">
-                      <Ionicons name="search-outline" size={40} color="#94A3B8" />
+                      <Ionicons name="search-outline" size={40} color={COLORS.placeholder} />
                       <Text className="text-sm text-muted-foreground text-center">
                         Sin resultados para "{searchOfertas}"
                       </Text>
@@ -804,10 +801,10 @@ function turnosSolapan(oferta: Oferta, confirmados: Asignacion[]): boolean {
 }
 
 const CAL_COLOR = {
-  borrador:   '#94A3B8', // gris — no publicada, no requiere acción
-  urgente:    '#F59E0B', // ámbar — puestos sin cubrir cerca de la fecha, o postulantes sin revisar
-  completada: '#059669', // verde
-  cancelada:  '#EF4444', // rojo
+  borrador:   COLORS.placeholder, // gris — no publicada, no requiere acción
+  urgente:    COLORS.warning, // ámbar — puestos sin cubrir cerca de la fecha, o postulantes sin revisar
+  completada: COLORS.success, // verde
+  cancelada:  COLORS.danger, // rojo
   // Naranja (activa, sin urgencia) usa `primary` del theme — es el acento del módulo Turnos.
 };
 

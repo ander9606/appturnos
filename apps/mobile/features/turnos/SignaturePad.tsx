@@ -6,6 +6,7 @@
  *
  * Requiere: react-native-svg (expo install react-native-svg)
  */
+import { COLORS } from '@/lib/designTokens';
 import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
@@ -67,7 +68,7 @@ function strokesToSvgBase64(
     .filter(Boolean)
     .map(
       (d) =>
-        `<path d="${d}" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+        `<path d="${d}" stroke={COLORS.foreground} stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
     )
     .join('');
 
@@ -205,7 +206,7 @@ export function SignaturePad({
                   <Path
                     key={i}
                     d={d}
-                    stroke="#0F172A"
+                    stroke={COLORS.foreground}
                     strokeWidth={2.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"

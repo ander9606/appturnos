@@ -3,11 +3,12 @@
  * Campos: logo, razón social, NIT, ciudad, actividad, descripción,
  *         acepta_postulaciones (visible en directorio marketplace).
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, Switch, Alert, Pressable, Animated,
-  KeyboardAvoidingView, Platform, Image, ActivityIndicator,
-} from 'react-native';
+  KeyboardAvoidingView, Platform, Image, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -247,7 +248,7 @@ export default function MiEmpresaScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Mi empresa', headerShown: true }} />
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -276,14 +277,14 @@ export default function MiEmpresaScreen() {
                     onError={() => {}}
                   />
                 ) : (
-                  <Ionicons name="business-outline" size={40} color="#94A3B8" />
+                  <Ionicons name="business-outline" size={40} color={COLORS.placeholder} />
                 )}
               </View>
               <View className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary items-center justify-center border-2 border-background">
                 {uploadingLogo ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <Spinner size="small" color={COLORS.white} />
                 ) : (
-                  <Ionicons name="camera" size={14} color="#fff" />
+                  <Ionicons name="camera" size={14} color={COLORS.white} />
                 )}
               </View>
             </Pressable>
@@ -603,7 +604,7 @@ export default function MiEmpresaScreen() {
                   value={value}
                   onValueChange={onChange}
                   trackColor={{ true: theme.primary }}
-                  thumbColor="#fff"
+                  thumbColor={COLORS.white}
                 />
               )}
             />
@@ -625,7 +626,7 @@ export default function MiEmpresaScreen() {
               <Text className="text-sm font-semibold text-foreground">Cómo calculamos los pagos</Text>
               <Text className="text-xs text-muted-foreground">Horas, recargos, descuentos y turnos · PDF</Text>
             </View>
-            <Ionicons name="download-outline" size={18} color="#94A3B8" />
+            <Ionicons name="download-outline" size={18} color={COLORS.placeholder} />
           </Pressable>
 
           {/* Guardar */}

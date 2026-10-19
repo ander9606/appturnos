@@ -1,10 +1,11 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   FlatList,
   TextInput,
-  ActivityIndicator,
   RefreshControl,
   SectionList,
 } from 'react-native';
@@ -51,7 +52,7 @@ function MisEmpresasView() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#FF5A3C" />
+        <Spinner size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -72,7 +73,7 @@ function MisEmpresasView() {
   if (totalVinculos === 0) {
     return (
       <View className="flex-1 items-center justify-center px-8">
-        <Ionicons name="business-outline" size={48} color="#94A3B8" />
+        <Ionicons name="business-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-foreground font-semibold text-base mt-4 text-center">
           {t('empresas.misEmpresas')}
         </Text>
@@ -88,7 +89,7 @@ function MisEmpresasView() {
       sections={sections}
       keyExtractor={(item) => String(item.id)}
       contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24 }}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#FF5A3C" />}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
       renderSectionHeader={({ section: { title } }) => (
         <Text className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-2 mt-4">
           {title}
@@ -139,11 +140,11 @@ function DirectorioView() {
     <View className="flex-1">
       <View className="px-4 pt-3 pb-2">
         <View className="flex-row items-center bg-card border border-border rounded-xl px-3 gap-2">
-          <Ionicons name="search-outline" size={18} color="#94A3B8" />
+          <Ionicons name="search-outline" size={18} color={COLORS.placeholder} />
           <TextInput
             className="flex-1 py-3 text-sm text-foreground"
             placeholder="Buscar empresa…"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             value={busqueda}
             onChangeText={setBusqueda}
             onSubmitEditing={handleSearch}
@@ -153,7 +154,7 @@ function DirectorioView() {
             <Ionicons
               name="close-circle"
               size={18}
-              color="#94A3B8"
+              color={COLORS.placeholder}
               onPress={() => { setBusqueda(''); setQuery(''); }}
             />
           )}
@@ -162,7 +163,7 @@ function DirectorioView() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#FF5A3C" />
+          <Spinner size="large" color={COLORS.primary} />
         </View>
       ) : isError ? (
         <View className="flex-1 items-center justify-center px-6">
@@ -170,7 +171,7 @@ function DirectorioView() {
         </View>
       ) : empresas.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Ionicons name="search-outline" size={48} color="#94A3B8" />
+          <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
           <Text className="text-muted-foreground text-sm text-center mt-4">
             {t('empresas.emptyDirectorio')}
           </Text>
@@ -180,7 +181,7 @@ function DirectorioView() {
           data={empresas}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#FF5A3C" />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />}
           renderItem={({ item }) => (
             <EmpresaCard
               empresa={item}

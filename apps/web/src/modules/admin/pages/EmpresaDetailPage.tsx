@@ -1,3 +1,4 @@
+import { PageLoading } from '@/shared/components/Spinner';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Building2, Users, Briefcase, Calendar, DollarSign, ToggleLeft, ToggleRight, Copy, Check, CreditCard, Zap } from 'lucide-react';
@@ -70,7 +71,7 @@ export function EmpresaDetailPage() {
   const [manualPlan,  setManualPlan]  = useState<Plan>('basico');
   const [manualFecha, setManualFecha] = useState('');
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-12 text-center">Cargando...</p>;
+  if (isLoading) return <PageLoading />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!empresa)  return <p className="text-muted-foreground text-sm py-12 text-center">Empresa no encontrada</p>;
 

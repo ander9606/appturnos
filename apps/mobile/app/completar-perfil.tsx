@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
@@ -68,7 +69,7 @@ export default function CompletarPerfilScreen() {
         <View className="flex-1 px-6 pt-8 pb-6 gap-4">
           {error && (
             <View className="flex-row items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+              <Ionicons name="alert-circle-outline" size={16} color={COLORS.danger} />
               <Text className="flex-1 text-sm font-medium text-danger">{error}</Text>
             </View>
           )}

@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -10,6 +11,6 @@ interface IconProps {
   style?: object;
 }
 
-export function Icon({ name, size = 20, color = '#64748B', style }: IconProps) {
+export function Icon({ name, size = 20, color = COLORS.mutedForeground, style }: IconProps) {
   return <Ionicons name={name} size={size} color={color} style={style} />;
 }

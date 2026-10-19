@@ -1,6 +1,7 @@
+import { PageLoading, Spinner } from '@/shared/components/Spinner';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, MinusCircle, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, MinusCircle, AlertTriangle, X, Download } from 'lucide-react';
 import {
   useOferta,
   useAsignaciones,
@@ -155,7 +156,7 @@ export function OfertaDetailPage() {
   // Completar antes de que el turno empiece no tiene sentido — recién ahí hay algo que cerrar.
   const turnoIniciado = oferta ? new Date(`${oferta.fecha}T${oferta.hora_inicio}`) <= new Date() : false;
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-12 text-center">Cargando...</p>;
+  if (isLoading) return <PageLoading />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!oferta) return <p className="text-muted-foreground text-sm py-12 text-center">Oferta no encontrada</p>;
 
@@ -363,7 +364,7 @@ export function OfertaDetailPage() {
           </div>
 
           {loadingAsig ? (
-            <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+            <PageLoading />
           ) : asignaciones.length === 0 ? (
             <p className="text-muted-foreground text-sm py-8 text-center">Sin asignaciones</p>
           ) : (
@@ -474,7 +475,7 @@ export function OfertaDetailPage() {
                               aria-label="Descargar contrato"
                             >
                               {descargandoContratoId === a.id
-                                ? <Loader2 size={13} className="animate-spin" />
+                                ? <Spinner size={13} />
                                 : <Download size={13} />}
                             </button>
                           )}

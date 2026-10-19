@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,7 +30,7 @@ export function SugerenciasDropdown({ sugerencias, searched, onSelect }: Props) 
             }`}
             onPress={() => onSelect(s)}
           >
-            <Ionicons name="location-outline" size={15} color="#64748B" style={{ marginTop: 2 }} />
+            <Ionicons name="location-outline" size={15} color={COLORS.mutedForeground} style={{ marginTop: 2 }} />
             <Text className="flex-1 text-sm text-foreground" numberOfLines={2}>
               {s.display_name}
             </Text>

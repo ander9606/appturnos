@@ -6,10 +6,11 @@
  * Fijo   → debe estar dentro del radio del punto_marcaje asignado.
  */
 
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
-  View, Text, FlatList, ActivityIndicator,
-  RefreshControl,
+  View, Text, FlatList, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -84,7 +85,7 @@ export default function AsignacionesLugarScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
+          <Spinner size="large" color={theme.primary} />
         </View>
       ) : (
         <FlatList
@@ -129,7 +130,7 @@ export default function AsignacionesLugarScreen() {
               </View>
 
               <View className="bg-muted rounded-xl px-4 py-2.5 flex-row items-start gap-2">
-                <Ionicons name="information-circle-outline" size={14} color="#64748B" className="mt-0.5" />
+                <Ionicons name="information-circle-outline" size={14} color={COLORS.mutedForeground} className="mt-0.5" />
                 <Text className="text-xs text-muted-foreground flex-1">
                   <Text className="font-semibold">Fijo</Text>: debe estar dentro del radio de un único punto asignado.{' '}
                   <Text className="font-semibold">Zonal</Text>: puede marcar desde cualquiera de los puntos zonales de la empresa.{' '}
@@ -140,7 +141,7 @@ export default function AsignacionesLugarScreen() {
           }
           ListEmptyComponent={
             <View className="py-16 items-center gap-3 px-8">
-              <Ionicons name="people-outline" size={40} color="#94A3B8" />
+              <Ionicons name="people-outline" size={40} color={COLORS.placeholder} />
               <Text className="text-base font-semibold text-foreground text-center">
                 Sin trabajadores de nómina activos
               </Text>

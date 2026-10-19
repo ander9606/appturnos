@@ -3,6 +3,7 @@
  * entre mis-empresas.tsx (tarjeta en la lista) y InvitacionFlotanteCard.tsx
  * (aviso invasivo al recibir la invitación), para que ambos digan lo mismo.
  */
+import { COLORS } from '@/lib/designTokens';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -25,7 +26,7 @@ export function CambioRow({ tipo, texto }: { tipo: 'pierde' | 'gana'; texto: str
       <Ionicons
         name={gana ? 'checkmark-circle' : 'close-circle'}
         size={15}
-        color={gana ? '#059669' : '#DC2626'}
+        color={gana ? COLORS.success : COLORS.dangerDark}
         style={{ marginTop: 1 }}
       />
       <Text className="text-xs text-foreground flex-1">{texto}</Text>

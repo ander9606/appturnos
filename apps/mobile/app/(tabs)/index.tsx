@@ -7,6 +7,7 @@
  *
  * Colores: naranja (trabajador_turnos), verde (trabajador_nomina), azul (gestores).
  */
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -324,7 +325,7 @@ export default function DashboardScreen() {
             className="mx-4 mt-4 flex-row items-center gap-3 bg-danger-light border border-danger/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
-            <Ionicons name="alert-circle" size={20} color="#ef4444" />
+            <Ionicons name="alert-circle" size={20} color={COLORS.danger} />
             <View className="flex-1">
               <Text className="text-danger text-sm font-semibold">Suscripción vencida</Text>
               <Text className="text-danger/80 text-xs mt-0.5">
@@ -335,7 +336,7 @@ export default function DashboardScreen() {
                   : 'Tienes 3 días de gracia. Toca aquí para renovar.'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#ef4444" />
+            <Ionicons name="chevron-forward" size={16} color={COLORS.danger} />
           </Pressable>
         )}
 
@@ -347,14 +348,14 @@ export default function DashboardScreen() {
             className="mx-4 mt-4 flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
-            <Ionicons name="time-outline" size={20} color="#d97706" />
+            <Ionicons name="time-outline" size={20} color={COLORS.warningDark} />
             <View className="flex-1">
               <Text className="text-warning text-sm font-semibold">Tu suscripción vence pronto</Text>
               <Text className="text-warning/80 text-xs mt-0.5">
                 Quedan {suscData?.dias_restantes} día{suscData?.dias_restantes === 1 ? '' : 's'}. Toca aquí para renovar.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#d97706" />
+            <Ionicons name="chevron-forward" size={16} color={COLORS.warningDark} />
           </Pressable>
         )}
 
@@ -363,7 +364,7 @@ export default function DashboardScreen() {
           <View
             className="mx-4 mt-4 flex-row items-center gap-3 bg-success-light border border-success/30 rounded-2xl px-4 py-3"
           >
-            <Ionicons name="link" size={20} color="#16a34a" />
+            <Ionicons name="link" size={20} color={COLORS.success} />
             <Text className="text-success text-sm font-medium flex-1">
               Usas Zaturno gratis por tu integración activa con logiq360.
             </Text>

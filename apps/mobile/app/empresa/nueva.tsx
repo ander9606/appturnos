@@ -1,6 +1,8 @@
 /**
  * Crear nueva empresa — panel super_admin.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -9,7 +11,6 @@ import {
   Pressable,
   TextInput,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -61,7 +62,7 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={COLORS.placeholder}
         keyboardType={keyboardType}
         autoCapitalize="none"
       />
@@ -155,7 +156,7 @@ export default function NuevaEmpresaScreen() {
       {/* ── Header ──────────────────────────────────────────────────── */}
       <View
         className="px-4 pt-3 pb-5 flex-row items-center gap-3"
-        style={{ backgroundColor: '#6366F1' }}
+        style={{ backgroundColor: COLORS.integracion }}
       >
         <Pressable onPress={() => router.back()}>
           <Text className="text-white text-base">←</Text>
@@ -207,7 +208,7 @@ export default function NuevaEmpresaScreen() {
               value={slug}
               onChangeText={handleSlugChange}
               placeholder="ej. servicios-logisticos"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               autoCapitalize="none"
             />
             <Text className="text-xs text-muted-foreground">
@@ -264,10 +265,10 @@ export default function NuevaEmpresaScreen() {
           onPress={handleCrear}
           disabled={isPending}
           className="h-12 rounded-xl items-center justify-center active:opacity-80"
-          style={{ backgroundColor: '#6366F1' }}
+          style={{ backgroundColor: COLORS.integracion }}
         >
           {isPending ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <Spinner size="small" color={COLORS.white} />
           ) : (
             <Text className="text-white text-base font-bold">Crear empresa</Text>
           )}

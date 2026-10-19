@@ -1,7 +1,9 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,7 +53,7 @@ export function NominaGestorTurnosView() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -59,7 +61,7 @@ export function NominaGestorTurnosView() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-8" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color="#94A3B8" />
+        <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground text-center">Error al cargar datos</Text>
         <TouchableOpacity onPress={() => refetch()} className="bg-card border border-border px-5 py-2.5 rounded-2xl">
           <Text className="text-sm font-medium text-foreground">Reintentar</Text>
@@ -131,7 +133,7 @@ export function NominaGestorTurnosView() {
         }
         ListEmptyComponent={
           <View className="py-16 items-center gap-3 px-8">
-            <Ionicons name="clipboard-outline" size={48} color="#94A3B8" />
+            <Ionicons name="clipboard-outline" size={48} color={COLORS.placeholder} />
             <Text className="text-base font-semibold text-foreground text-center">
               Sin turnos completados
             </Text>

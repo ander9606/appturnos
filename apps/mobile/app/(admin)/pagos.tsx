@@ -3,6 +3,8 @@
  * Lista los eventos de pago recibidos vía webhook, con filtro por estado
  * y reintento manual para los que quedaron en error.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -10,7 +12,6 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,20 +26,20 @@ import type { WompiEstado, WompiEvento } from '@api-client';
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const ESTADOS: { value: WompiEstado | 'todos'; label: string; color: string }[] = [
-  { value: 'todos',     label: 'Todos',     color: '#6366F1' },
-  { value: 'procesado', label: 'Procesado', color: '#22C55E' },
-  { value: 'error',     label: 'Error',     color: '#EF4444' },
-  { value: 'rechazado', label: 'Rechazado', color: '#F59E0B' },
-  { value: 'recibido',  label: 'Recibido',  color: '#3B82F6' },
-  { value: 'ignorado',  label: 'Ignorado',  color: '#94A3B8' },
+  { value: 'todos',     label: 'Todos',     color: COLORS.integracion },
+  { value: 'procesado', label: 'Procesado', color: COLORS.success },
+  { value: 'error',     label: 'Error',     color: COLORS.danger },
+  { value: 'rechazado', label: 'Rechazado', color: COLORS.warning },
+  { value: 'recibido',  label: 'Recibido',  color: COLORS.info },
+  { value: 'ignorado',  label: 'Ignorado',  color: COLORS.placeholder },
 ];
 
 const ESTADO_COLOR: Record<WompiEstado, string> = {
-  procesado: '#22C55E',
-  error: '#EF4444',
-  rechazado: '#F59E0B',
-  recibido: '#3B82F6',
-  ignorado: '#94A3B8',
+  procesado: COLORS.success,
+  error: COLORS.danger,
+  rechazado: COLORS.warning,
+  recibido: COLORS.info,
+  ignorado: COLORS.placeholder,
 };
 
 function fmtFecha(iso: string | null): string {
@@ -57,7 +58,7 @@ function FilterChip({ label, active, onPress, color }: { label: string; active: 
       className={['px-3 py-1.5 rounded-full border', active ? 'border-transparent' : 'border-border bg-card'].join(' ')}
       style={active ? { backgroundColor: color } : {}}
     >
-      <Text className="text-xs font-semibold" style={{ color: active ? '#FFFFFF' : '#64748B' }}>{label}</Text>
+      <Text className="text-xs font-semibold" style={{ color: active ? COLORS.white : COLORS.mutedForeground }}>{label}</Text>
     </Pressable>
   );
 }
@@ -111,7 +112,7 @@ function EventoCard({ evento, onReintentar, reintentando }: {
           className="mt-1 h-9 rounded-xl items-center justify-center border border-danger/40 bg-danger/10 active:opacity-70"
         >
           {reintentando ? (
-            <ActivityIndicator size="small" color="#EF4444" />
+            <Spinner size="small" color={COLORS.danger} />
           ) : (
             <Text className="text-xs font-bold text-danger">🔄 Reintentar (intento {evento.intentos})</Text>
           )}
@@ -167,7 +168,7 @@ export default function PagosScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <View className="px-4 pt-3 pb-5 flex-row items-center gap-3" style={{ backgroundColor: '#6366F1' }}>
+      <View className="px-4 pt-3 pb-5 flex-row items-center gap-3" style={{ backgroundColor: COLORS.integracion }}>
         <Pressable onPress={() => router.back()}>
           <Text className="text-white text-base">←</Text>
         </Pressable>
@@ -198,11 +199,11 @@ export default function PagosScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32, paddingTop: 12 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" colors={['#6366F1']} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.integracion} colors={[COLORS.integracion]} />}
       >
         {isLoading && (
           <View className="items-center py-16">
-            <ActivityIndicator size="large" color="#6366F1" />
+            <Spinner size="large" color={COLORS.integracion} />
             <Text className="text-muted-foreground mt-3 text-sm">Cargando pagos…</Text>
           </View>
         )}

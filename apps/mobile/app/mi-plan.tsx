@@ -9,8 +9,10 @@
  * dentro de la app — en iOS solo se muestra el uso del plan, sin precios
  * ni botón de pago. Sigue disponible tal cual en Android y en la web.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Linking, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -62,7 +64,7 @@ export default function MiPlanScreen() {
             <Text className="text-sm text-primary">No se pudo cargar. Toca para reintentar.</Text>
           </Pressable>
         ) : (
-          <ActivityIndicator size="large" color={theme.primary} />
+          <Spinner size="large" color={theme.primary} />
         )}
       </SafeAreaView>
     );
@@ -129,14 +131,14 @@ export default function MiPlanScreen() {
 
         {s.origen === 'logiq360' ? (
           <View className="bg-success-light border border-success/30 rounded-2xl px-4 py-3 flex-row gap-3 items-center">
-            <Ionicons name="link" size={18} color="#16a34a" />
+            <Ionicons name="link" size={18} color={COLORS.success} />
             <Text className="text-success text-sm flex-1">
               Tu suscripción se gestiona con tu integración logiq360 — no necesitas pagarla aquí.
             </Text>
           </View>
         ) : Platform.OS === 'ios' ? (
           <View className="bg-muted/40 border border-border rounded-2xl px-4 py-3 flex-row gap-3 items-center">
-            <Ionicons name="information-circle-outline" size={18} color="#64748B" />
+            <Ionicons name="information-circle-outline" size={18} color={COLORS.mutedForeground} />
             <Text className="text-muted-foreground text-sm flex-1">
               Para renovar o ampliar tu plan, ingresa a Zaturno desde un navegador web.
             </Text>
@@ -166,7 +168,7 @@ export default function MiPlanScreen() {
                       <Ionicons
                         name={activo ? 'radio-button-on' : 'radio-button-off'}
                         size={18}
-                        color={activo ? theme.primary : '#94A3B8'}
+                        color={activo ? theme.primary : COLORS.placeholder}
                       />
                       <View className="flex-1">
                         <Text className="text-sm font-semibold text-foreground">

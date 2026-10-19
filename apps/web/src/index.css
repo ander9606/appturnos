@@ -22,10 +22,16 @@
   --color-success-light:    #D1FAE5;
   --color-warning:          #F59E0B;
   --color-warning-light:    #FEF3C7;
+  --color-warning-dark:     #D97706;
   --color-danger:           #EF4444;
   --color-danger-light:     #FEE2E2;
+  --color-danger-dark:      #DC2626;
   --color-info:             #3B82F6;
   --color-info-light:       #DBEAFE;
+
+  /* Módulo logiq360 (integración) */
+  --color-integracion:      #6366F1;
+  --color-integracion-light:#E0E7FF;
 
   /* Surfaces */
   --color-background:       #F8FAFC;

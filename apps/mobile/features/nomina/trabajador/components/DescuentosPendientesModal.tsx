@@ -5,8 +5,10 @@
  * Se cierra sola cuando ya no quedan pendientes (visible && lista no vacía).
  */
 
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Modal, Pressable, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Modal, Pressable, Alert, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -68,7 +70,7 @@ export function DescuentosPendientesModal({ visible, descuentos, onClose }: Prop
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10} accessibilityLabel="Cerrar">
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -97,7 +99,7 @@ export function DescuentosPendientesModal({ visible, descuentos, onClose }: Prop
                       className="flex-1 h-10 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
                     >
                       {respondiendoId === d.id
-                        ? <ActivityIndicator size="small" color="#fff" />
+                        ? <Spinner size="small" color={COLORS.white} />
                         : <Text className="text-sm font-semibold text-white">Aceptar</Text>}
                     </TouchableOpacity>
                   </View>

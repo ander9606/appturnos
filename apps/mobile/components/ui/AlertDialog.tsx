@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import { Modal, View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAlertStore } from '@/lib/alertDialog';
@@ -15,7 +16,7 @@ export function AlertDialog() {
       <Pressable className="flex-1 bg-black/40 items-center justify-center px-8" onPress={close}>
         <Pressable className="bg-card w-full max-w-sm rounded-2xl p-5 gap-1" onPress={(e) => e.stopPropagation()}>
           <View className="flex-row items-center gap-2">
-            <Ionicons name="alert-circle" size={20} color="#EF4444" />
+            <Ionicons name="alert-circle" size={20} color={COLORS.danger} />
             <Text className="text-base font-bold text-foreground flex-1">{options.title}</Text>
           </View>
           {options.message && (

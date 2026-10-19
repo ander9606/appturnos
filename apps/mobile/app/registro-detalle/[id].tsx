@@ -5,6 +5,8 @@
  * de los registros de nómina de los trabajadores.
  */
 
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import React, { useState } from 'react';
 import {
@@ -12,7 +14,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -130,7 +131,7 @@ export default function RegistroDetalleScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -138,7 +139,7 @@ export default function RegistroDetalleScreen() {
   if (!registro) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Ionicons name="search-outline" size={48} color="#94A3B8" />
+        <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground text-center">
           Registro no encontrado
         </Text>
@@ -160,7 +161,7 @@ export default function RegistroDetalleScreen() {
           headerTitle: 'Detalle de Registro',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerTintColor: theme.primary,
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />
@@ -173,7 +174,7 @@ export default function RegistroDetalleScreen() {
           {/* Sospechoso — mismo dispositivo y ubicación que otro trabajador (posible buddy punching) */}
           {puedeCorregir && registro.sospechoso === 1 && (
             <View className="flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3">
-              <Ionicons name="warning-outline" size={20} color="#d97706" />
+              <Ionicons name="warning-outline" size={20} color={COLORS.warningDark} />
               <Text className="flex-1 text-warning text-xs">
                 Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador.
               </Text>
@@ -184,7 +185,7 @@ export default function RegistroDetalleScreen() {
                 accessibilityRole="button"
               >
                 {isDescartando ? (
-                  <ActivityIndicator size="small" color="#d97706" />
+                  <Spinner size="small" color={COLORS.warningDark} />
                 ) : (
                   <Text className="text-warning text-xs font-semibold">Descartar</Text>
                 )}
@@ -234,7 +235,7 @@ export default function RegistroDetalleScreen() {
                   </View>
 
                   <View className="items-center justify-center">
-                    <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+                    <Ionicons name="arrow-forward" size={18} color={COLORS.placeholder} />
                   </View>
 
                   <View className="flex-1 bg-muted rounded-xl px-4 py-3">

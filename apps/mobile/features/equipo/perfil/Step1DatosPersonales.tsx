@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
@@ -34,7 +35,7 @@ function SegInput({
         onChangeText={(t) => onChange(t.replace(/\D/g, '').slice(0, maxLength))}
         keyboardType="number-pad"
         placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={COLORS.placeholder}
         maxLength={maxLength}
       />
     </View>

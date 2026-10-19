@@ -4,8 +4,10 @@
  * `planes`). Espejo de la página web /admin/planes. Un cambio solo afecta
  * los links de pago que se generen después; lo ya pagado no cambia.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
@@ -130,7 +132,7 @@ export default function PlanesScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <View className="px-4 pt-3 pb-5 flex-row items-center gap-3" style={{ backgroundColor: '#6366F1' }}>
+      <View className="px-4 pt-3 pb-5 flex-row items-center gap-3" style={{ backgroundColor: COLORS.integracion }}>
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Volver" hitSlop={12}>
           <Text className="text-white text-base">←</Text>
         </Pressable>
@@ -143,11 +145,11 @@ export default function PlanesScreen() {
       <ScrollView
         contentContainerStyle={{ paddingTop: 16, paddingBottom: 48 }}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#6366F1" colors={['#6366F1']} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.integracion} colors={[COLORS.integracion]} />}
       >
         {isLoading && (
           <View className="items-center py-16">
-            <ActivityIndicator size="large" color="#6366F1" />
+            <Spinner size="large" color={COLORS.integracion} />
           </View>
         )}
         {isError && (

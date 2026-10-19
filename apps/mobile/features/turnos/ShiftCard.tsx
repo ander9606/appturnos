@@ -4,6 +4,7 @@
  * Muestra: barra de color (estado) | título | fecha/hora | lugar | badge estado
  * Tap → onPress (navegar al detalle o expandir)
  */
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,7 +51,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
         {/* Empresa (solo presente en el feed multi-empresa) */}
         {asignacion.empresa_nombre && (
           <View className="flex-row items-center gap-1">
-            <Ionicons name="business-outline" size={11} color="#94A3B8" />
+            <Ionicons name="business-outline" size={11} color={COLORS.placeholder} />
             <Text className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide" numberOfLines={1}>
               {asignacion.empresa_nombre}
             </Text>
@@ -80,7 +81,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
         {/* Meta row: time range + lugar */}
         <View className="flex-row items-center gap-3">
           <View className="flex-row items-center gap-1">
-            <Ionicons name="time-outline" size={12} color="#64748B" />
+            <Ionicons name="time-outline" size={12} color={COLORS.mutedForeground} />
             <Text className="text-sm text-muted-foreground">
               {fmtRange(asignacion.hora_inicio, asignacion.hora_fin_estimada)}
             </Text>
@@ -88,7 +89,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
 
           {asignacion.lugar && (
             <View className="flex-row items-center gap-1 flex-1">
-              <Ionicons name="location-outline" size={12} color="#64748B" />
+              <Ionicons name="location-outline" size={12} color={COLORS.mutedForeground} />
               <Text className="text-sm text-muted-foreground" numberOfLines={1}>
                 {asignacion.lugar}
               </Text>

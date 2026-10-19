@@ -1,3 +1,4 @@
+import { PageLoading } from '@/shared/components/Spinner';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -136,7 +137,7 @@ export function CalendarioPage() {
       </div>
 
       {(modo === 'turnos' ? loadingOfertas : loadingPeriodos) ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <PageLoading />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">

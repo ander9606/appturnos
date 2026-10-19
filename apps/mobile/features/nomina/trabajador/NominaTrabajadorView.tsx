@@ -5,8 +5,10 @@
  * Toda la lógica de negocio vive en useNominaTrabajador + nominaTrabajadorUtils.
  */
 
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -121,7 +123,7 @@ export function NominaTrabajadorView() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -129,7 +131,7 @@ export function NominaTrabajadorView() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color="#94A3B8" />
+        <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground">
           {apiErrorMessage(error, 'Error al cargar tu nómina')}
         </Text>
@@ -141,7 +143,7 @@ export function NominaTrabajadorView() {
   if (periodos.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-8" edges={['top']}>
-        <Ionicons name="clipboard-outline" size={48} color="#94A3B8" />
+        <Ionicons name="clipboard-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground text-center">
           Sin período activo
         </Text>
@@ -200,7 +202,7 @@ export function NominaTrabajadorView() {
               Toca para aceptarlos o rechazarlos
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={16} color="#64748B" />
+          <Ionicons name="chevron-forward" size={16} color={COLORS.mutedForeground} />
         </TouchableOpacity>
       )}
 
@@ -350,11 +352,11 @@ export function NominaTrabajadorView() {
           ListEmptyComponent={
             viewMode === 'mes' ? null : loadingRegistros ? (
               <View className="py-12 items-center">
-                <ActivityIndicator color={theme.primary} />
+                <Spinner color={theme.primary} />
               </View>
             ) : (
               <View className="py-12 items-center gap-3 px-8">
-                <Ionicons name="clipboard-outline" size={40} color="#94A3B8" />
+                <Ionicons name="clipboard-outline" size={40} color={COLORS.placeholder} />
                 <Text className="text-base font-semibold text-foreground text-center">
                   Sin registros aún
                 </Text>

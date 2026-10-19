@@ -7,6 +7,7 @@
  *   Paso 2 — verificación de los dos códigos OTP
  *             → al confirmar ambos, crea la cuenta y autentica
  */
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
@@ -324,7 +325,7 @@ export default function RegistroScreen() {
                   <Ionicons
                     name={emailVerified ? 'checkmark-circle' : 'mail-outline'}
                     size={20}
-                    color={emailVerified ? '#22c55e' : '#6b7280'}
+                    color={emailVerified ? COLORS.success : '#6b7280'}
                   />
                   <Text className="text-sm font-semibold text-foreground">
                     Código de correo electrónico

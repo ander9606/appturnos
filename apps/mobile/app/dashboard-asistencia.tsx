@@ -5,10 +5,11 @@
  * con horas acumuladas en la semana vs límite legal (Ley 2101).
  */
 
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, ActivityIndicator,
-  TouchableOpacity, RefreshControl,
+  View, Text, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -31,25 +32,25 @@ const ESTADO_CONFIG: Record<EstadoAsistencia, {
 }> = {
   en_jornada: {
     label:     'En jornada',
-    dot:       '#22C55E',
+    dot:       COLORS.success,
     badge:     'bg-green-100',
     badgeText: 'text-green-700',
   },
   completo: {
     label:     'Completó',
-    dot:       '#6366F1',
+    dot:       COLORS.integracion,
     badge:     'bg-indigo-50',
     badgeText: 'text-indigo-600',
   },
   ausente: {
     label:     'Sin registro',
-    dot:       '#EF4444',
+    dot:       COLORS.danger,
     badge:     'bg-red-50',
     badgeText: 'text-danger',
   },
   especial: {
     label:     'Día especial',
-    dot:       '#F59E0B',
+    dot:       COLORS.warning,
     badge:     'bg-warning-light',
     badgeText: 'text-amber-700',
   },
@@ -116,7 +117,7 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
               <View className="h-2 bg-muted rounded-full overflow-hidden flex-row">
                 {pctO > 0 && <View className="h-full bg-primary/60" style={{ width: `${pctO}%` }} />}
                 {pctN > 0 && <View className="h-full" style={{ width: `${pctN}%`, backgroundColor: '#818CF8' }} />}
-                {pctE > 0 && <View className="h-full" style={{ width: `${pctE}%`, backgroundColor: '#F59E0B' }} />}
+                {pctE > 0 && <View className="h-full" style={{ width: `${pctE}%`, backgroundColor: COLORS.warning }} />}
               </View>
               <Text className={`text-[10px] font-semibold ${excedeSemana ? 'text-amber-600' : 'text-muted-foreground'}`}>
                 {fila.horasSemana}h semana
@@ -137,7 +138,7 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
           <Text className={`text-[10px] font-semibold ${cfg.badgeText}`}>{cfg.label}</Text>
         </View>
         {fila.registroHoy?.novedad && (
-          <Ionicons name="chatbox-ellipses-outline" size={12} color="#94A3B8" />
+          <Ionicons name="chatbox-ellipses-outline" size={12} color={COLORS.placeholder} />
         )}
       </View>
     </View>
@@ -181,7 +182,7 @@ export default function DashboardAsistenciaScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Asistencia hoy', headerShown: true }} />
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -216,10 +217,10 @@ export default function DashboardAsistenciaScreen() {
               </View>
               {/* Contadores rápidos */}
               <View className="flex-row gap-4 mt-1">
-                <CounterPill color="#22C55E" label={`${contadores.enJornada} en jornada`} />
-                <CounterPill color="#EF4444" label={`${contadores.ausentes} ausentes`} />
+                <CounterPill color={COLORS.success} label={`${contadores.enJornada} en jornada`} />
+                <CounterPill color={COLORS.danger} label={`${contadores.ausentes} ausentes`} />
                 {contadores.especiales > 0 && (
-                  <CounterPill color="#F59E0B" label={`${contadores.especiales} especial`} />
+                  <CounterPill color={COLORS.warning} label={`${contadores.especiales} especial`} />
                 )}
                 {contadores.compensatorios > 0 && (
                   <CounterPill
@@ -261,7 +262,7 @@ export default function DashboardAsistenciaScreen() {
         }
         ListEmptyComponent={
           <View className="py-16 items-center gap-3 px-8">
-            <Ionicons name="people-outline" size={40} color="#94A3B8" />
+            <Ionicons name="people-outline" size={40} color={COLORS.placeholder} />
             <Text className="text-base font-semibold text-foreground text-center">
               {filtro === 'todos' ? 'Sin trabajadores de nómina' : 'Sin resultados para este filtro'}
             </Text>

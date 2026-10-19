@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Switch,
@@ -179,7 +180,7 @@ export function CorregirIngresoEgresoModal({
                 </Text>
               </View>
               <Pressable onPress={onClose} hitSlop={10}>
-                <Ionicons name="close" size={22} color="#64748B" />
+                <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
               </Pressable>
             </View>
 
@@ -191,7 +192,7 @@ export function CorregirIngresoEgresoModal({
                     onPress={abrirIngreso}
                     className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
                   >
-                    <Ionicons name="log-in-outline" size={16} color="#64748B" />
+                    <Ionicons name="log-in-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm text-foreground">{ingreso ? fmtDateTime(ingreso) : 'Sin definir'}</Text>
                   </TouchableOpacity>
                   {showIngreso && Platform.OS === 'ios' && (
@@ -215,7 +216,7 @@ export function CorregirIngresoEgresoModal({
                     onPress={abrirEgreso}
                     className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
                   >
-                    <Ionicons name="log-out-outline" size={16} color="#64748B" />
+                    <Ionicons name="log-out-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm text-foreground">{egreso ? fmtDateTime(egreso) : 'Sin definir'}</Text>
                   </TouchableOpacity>
                   {showEgreso && Platform.OS === 'ios' && (
@@ -239,7 +240,7 @@ export function CorregirIngresoEgresoModal({
                       value={egresoSiguienteDia}
                       onValueChange={toggleEgresoSiguienteDia}
                       trackColor={{ true: theme.primary }}
-                      thumbColor="#fff"
+                      thumbColor={COLORS.white}
                     />
                   </View>
                 </View>

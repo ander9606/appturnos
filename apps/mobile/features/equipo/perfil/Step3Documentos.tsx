@@ -1,3 +1,5 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -7,7 +9,6 @@ import {
   TouchableOpacity,
   Pressable,
   Alert,
-  ActivityIndicator,
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,7 +49,7 @@ function MonthYearInput({
             onChangeText={(t) => onChangeM(t.replace(/\D/g, '').slice(0, 2))}
             keyboardType="number-pad"
             placeholder="06"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             maxLength={2}
           />
         </View>
@@ -62,7 +63,7 @@ function MonthYearInput({
             onChangeText={(t) => onChangeA(t.replace(/\D/g, '').slice(0, 4))}
             keyboardType="number-pad"
             placeholder="2022"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             maxLength={4}
           />
         </View>
@@ -97,7 +98,7 @@ function DateSegInput({
                 onChangeText={(t) => fn(t.replace(/\D/g, '').slice(0, max))}
                 keyboardType="number-pad"
                 placeholder={ph}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={COLORS.placeholder}
                 maxLength={max}
               />
             </View>
@@ -120,7 +121,7 @@ function ExperienciaRow({
       <View className="flex-row justify-between items-center">
         <Text className="text-sm font-semibold text-foreground">Experiencia</Text>
         <TouchableOpacity onPress={onDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
         </TouchableOpacity>
       </View>
       <Input
@@ -171,7 +172,7 @@ function DiplomaRow({
       <View className="flex-row justify-between items-center">
         <Text className="text-sm font-semibold text-foreground">Diploma / Certificado</Text>
         <TouchableOpacity onPress={onDelete} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="trash-outline" size={18} color="#EF4444" />
+          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
         </TouchableOpacity>
       </View>
       <Input
@@ -309,7 +310,7 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
           onPress={addExperiencia}
           className="flex-row items-center gap-1 px-3 py-1.5 bg-primary-50 rounded-xl"
         >
-          <Ionicons name="add" size={16} color="#FF5A3C" />
+          <Ionicons name="add" size={16} color={COLORS.primary} />
           <Text className="text-sm font-semibold text-primary-500">Añadir</Text>
         </TouchableOpacity>
       </View>
@@ -335,7 +336,7 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
           onPress={addDiploma}
           className="flex-row items-center gap-1 px-3 py-1.5 bg-primary-50 rounded-xl"
         >
-          <Ionicons name="add" size={16} color="#FF5A3C" />
+          <Ionicons name="add" size={16} color={COLORS.primary} />
           <Text className="text-sm font-semibold text-primary-500">Añadir</Text>
         </TouchableOpacity>
       </View>
@@ -361,7 +362,7 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
           onPress={() => setNuevoCargoModal(true)}
           className="flex-row items-center gap-1 px-3 py-1.5 bg-primary-50 rounded-xl"
         >
-          <Ionicons name="add" size={16} color="#FF5A3C" />
+          <Ionicons name="add" size={16} color={COLORS.primary} />
           <Text className="text-sm font-semibold text-primary-500">Crear cargo</Text>
         </TouchableOpacity>
       </View>
@@ -370,7 +371,7 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
       </Text>
 
       {cargosLoading ? (
-        <ActivityIndicator size="small" color="#FF5A3C" />
+        <Spinner size="small" color={COLORS.primary} />
       ) : (
         <View className="flex-row flex-wrap gap-2">
           {(cargos ?? []).filter((c) => c.activo).map((c) => {
@@ -383,7 +384,7 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
                   selected ? 'bg-primary-500 border-primary-500' : 'bg-card border-border'
                 }`}
               >
-                {selected && <Ionicons name="checkmark" size={14} color="#fff" />}
+                {selected && <Ionicons name="checkmark" size={14} color={COLORS.white} />}
                 <Text className={`text-sm font-medium ${selected ? 'text-white' : 'text-foreground'}`}>
                   {c.nombre}
                 </Text>
@@ -418,7 +419,7 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
         <View className="flex-row items-center justify-between mb-6">
           <Text className="text-lg font-bold text-foreground">Nuevo cargo</Text>
           <Pressable onPress={() => setNuevoCargoModal(false)} hitSlop={8}>
-            <Ionicons name="close" size={24} color="#64748B" />
+            <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
           </Pressable>
         </View>
         <Input

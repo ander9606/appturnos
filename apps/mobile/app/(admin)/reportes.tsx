@@ -2,6 +2,8 @@
  * Tab de Reportes globales — panel super_admin.
  * Muestra estadísticas detalladas del sistema con visualizaciones básicas.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -9,7 +11,6 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -76,7 +77,7 @@ export default function ReportesScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
       {/* Header */}
-      <View className="px-4 pt-4 pb-5" style={{ backgroundColor: '#6366F1' }}>
+      <View className="px-4 pt-4 pb-5" style={{ backgroundColor: COLORS.integracion }}>
         <Text className="text-white text-2xl font-bold">📈 Reportes</Text>
         <Text className="text-white/70 text-sm mt-0.5">Métricas globales del sistema</Text>
       </View>
@@ -88,14 +89,14 @@ export default function ReportesScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#6366F1"
-            colors={['#6366F1']}
+            tintColor={COLORS.integracion}
+            colors={[COLORS.integracion]}
           />
         }
       >
         {isLoading && (
           <View className="items-center py-16">
-            <ActivityIndicator size="large" color="#6366F1" />
+            <Spinner size="large" color={COLORS.integracion} />
             <Text className="text-muted-foreground mt-3 text-sm">Cargando reportes…</Text>
           </View>
         )}

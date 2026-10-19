@@ -3,8 +3,10 @@
  * Compartido entre asignaciones-lugar.tsx (vista masiva) y trabajador/[id].tsx
  * (edición puntual), ambos guardan vía el mismo PATCH /trabajadores/:id/marcacion.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Modal, Pressable, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useActualizarMarcacion } from './useEquipo';
 import { confirm } from '@/lib/confirmDialog';
@@ -55,9 +57,9 @@ export function MarcacionSelector({ trabajador: t, puntos }: Props) {
       <View className="gap-2">
         {tipo === 'fijo' && puntoActual ? (
           <TouchableOpacity onPress={() => setShowPuntos(true)} className="flex-row items-center gap-1">
-            <Ionicons name="location-outline" size={12} color="#6366F1" />
+            <Ionicons name="location-outline" size={12} color={COLORS.integracion} />
             <Text className="text-xs text-primary" numberOfLines={1}>{puntoActual.nombre}</Text>
-            <Ionicons name="pencil-outline" size={10} color="#6366F1" />
+            <Ionicons name="pencil-outline" size={10} color={COLORS.integracion} />
           </TouchableOpacity>
         ) : tipo === 'fijo' ? (
           <Text className="text-xs text-danger">Sin punto asignado</Text>
@@ -78,7 +80,7 @@ export function MarcacionSelector({ trabajador: t, puntos }: Props) {
                 className={`flex-1 py-1.5 rounded-full items-center ${active ? 'bg-primary/10' : 'bg-muted'}`}
               >
                 {isPending && active ? (
-                  <ActivityIndicator size="small" color="#6366F1" />
+                  <Spinner size="small" color={COLORS.integracion} />
                 ) : (
                   <Text className={`text-xs font-semibold ${active ? 'text-primary' : 'text-muted-foreground'}`}>
                     {opt.label}
@@ -101,7 +103,7 @@ export function MarcacionSelector({ trabajador: t, puntos }: Props) {
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}>
             {puntosFijos.length === 0 ? (
               <View className="py-8 items-center gap-2">
-                <Ionicons name="location-outline" size={32} color="#94A3B8" />
+                <Ionicons name="location-outline" size={32} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground text-center">
                   No hay puntos fijos configurados.{'\n'}Créalos en la sección de Empresa.
                 </Text>
@@ -119,7 +121,7 @@ export function MarcacionSelector({ trabajador: t, puntos }: Props) {
                   <Ionicons
                     name="location"
                     size={18}
-                    color={p.id === t.punto_marcaje_id ? '#6366F1' : '#64748B'}
+                    color={p.id === t.punto_marcaje_id ? COLORS.integracion : COLORS.mutedForeground}
                   />
                   <View className="flex-1">
                     <Text className={`text-sm font-semibold ${p.id === t.punto_marcaje_id ? 'text-primary' : 'text-foreground'}`}>
@@ -128,7 +130,7 @@ export function MarcacionSelector({ trabajador: t, puntos }: Props) {
                     <Text className="text-xs text-muted-foreground">Radio {p.radio_metros} m</Text>
                   </View>
                   {p.id === t.punto_marcaje_id && (
-                    <Ionicons name="checkmark-circle" size={18} color="#6366F1" />
+                    <Ionicons name="checkmark-circle" size={18} color={COLORS.integracion} />
                   )}
                 </TouchableOpacity>
               ))

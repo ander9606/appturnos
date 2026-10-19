@@ -1,10 +1,10 @@
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   Pressable,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -134,7 +134,7 @@ export default function CrearGestorScreen() {
                 className="w-16 h-16 rounded-full items-center justify-center mb-3"
                 style={{ backgroundColor: '#DCFCE7' }}
               >
-                <Ionicons name="checkmark-circle" size={40} color="#16A34A" />
+                <Ionicons name="checkmark-circle" size={40} color={COLORS.success} />
               </View>
               <Text className="text-xl font-bold text-foreground">¡Cuenta creada!</Text>
               <Text className="text-sm text-muted-foreground mt-1 text-center">
@@ -145,7 +145,7 @@ export default function CrearGestorScreen() {
             {/* Credenciales */}
             <View className="bg-warning/10 border border-warning/30 rounded-2xl p-5 mb-6">
               <View className="flex-row items-center gap-2 mb-3">
-                <Ionicons name="key-outline" size={16} color="#D97706" />
+                <Ionicons name="key-outline" size={16} color={COLORS.warningDark} />
                 <Text className="text-sm font-bold text-warning">Credenciales de acceso</Text>
               </View>
 
@@ -164,20 +164,20 @@ export default function CrearGestorScreen() {
               <Pressable
                 onPress={handleCopiar}
                 className="flex-row items-center justify-center gap-1.5 mt-3 h-11 rounded-xl border active:opacity-70"
-                style={{ borderColor: copiado ? '#16A34A' : COLORS.info }}
+                style={{ borderColor: copiado ? COLORS.success : COLORS.info }}
               >
                 <Ionicons
                   name={copiado ? 'checkmark' : 'copy-outline'}
                   size={16}
-                  color={copiado ? '#16A34A' : COLORS.info}
+                  color={copiado ? COLORS.success : COLORS.info}
                 />
-                <Text className="text-sm font-semibold" style={{ color: copiado ? '#16A34A' : COLORS.info }}>
+                <Text className="text-sm font-semibold" style={{ color: copiado ? COLORS.success : COLORS.info }}>
                   {copiado ? 'Copiado' : 'Copiar email y contraseña'}
                 </Text>
               </Pressable>
 
               <View className="flex-row items-start gap-2 mt-3">
-                <Ionicons name="alert-circle-outline" size={14} color="#D97706" style={{ marginTop: 1 }} />
+                <Ionicons name="alert-circle-outline" size={14} color={COLORS.warningDark} style={{ marginTop: 1 }} />
                 <Text className="text-xs text-warning flex-1">
                   Guarda esta contraseña — solo se muestra una vez. El usuario deberá cambiarla al iniciar sesión.
                 </Text>
@@ -300,7 +300,7 @@ export default function CrearGestorScreen() {
                       <Ionicons
                         name={opt.icon as any}
                         size={18}
-                        color={active ? '#fff' : '#64748B'}
+                        color={active ? COLORS.white : COLORS.mutedForeground}
                       />
                     </View>
                     <View className="flex-1">
@@ -323,10 +323,10 @@ export default function CrearGestorScreen() {
               style={{ backgroundColor: COLORS.info }}
             >
               {mutation.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <Spinner color={COLORS.white} />
               ) : (
                 <View className="flex-row items-center gap-2">
-                  <Ionicons name="person-add-outline" size={18} color="#fff" />
+                  <Ionicons name="person-add-outline" size={18} color={COLORS.white} />
                   <Text className="text-base font-semibold text-white">Crear cuenta</Text>
                 </View>
               )}

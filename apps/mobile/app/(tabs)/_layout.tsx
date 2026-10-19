@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t } from '@/lib/i18n';
 import { useAuthStore } from '@/features/auth/useAuthStore';
-import { THEME_COLORS } from '@/lib/designTokens';
+import { COLORS,THEME_COLORS } from '@/lib/designTokens';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -43,10 +43,10 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: primaryColor,
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarInactiveTintColor: COLORS.placeholder,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
+          backgroundColor: COLORS.white,
+          borderTopColor: COLORS.border,
           borderTopWidth: 1,
           // Con edge-to-edge, el contenido dibuja detrás de la barra de navegación
           // de Android — insets.bottom es 0 sin botones (ocupa toda la pantalla),

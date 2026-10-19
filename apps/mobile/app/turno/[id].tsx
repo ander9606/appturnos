@@ -7,12 +7,13 @@
  *   completado  → resumen de horas y pago
  *   cancelado / no_presentado / pendiente → informativo
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   Alert,
   Linking,
   Platform,
@@ -306,7 +307,7 @@ export default function TurnoDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -314,7 +315,7 @@ export default function TurnoDetailScreen() {
   if (!asignacion) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Ionicons name="search-outline" size={48} color="#94A3B8" />
+        <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground text-center">
           Turno no encontrado
         </Text>
@@ -338,7 +339,7 @@ export default function TurnoDetailScreen() {
           headerTitle: oferta_titulo,
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerTintColor: theme.primary,
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />
@@ -501,7 +502,7 @@ export default function TurnoDetailScreen() {
               una confirmación que no va a llegar así como está. ── */}
           {estado === 'pendiente' && (
             <View className="bg-warning-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
-              <Ionicons name="hourglass-outline" size={26} color="#D97706" />
+              <Ionicons name="hourglass-outline" size={26} color={COLORS.warningDark} />
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-amber-700">
                   {cupoLleno ? 'Cupo lleno' : 'Esperando confirmación'}

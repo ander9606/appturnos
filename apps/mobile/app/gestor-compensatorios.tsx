@@ -3,10 +3,11 @@
  * para admin_empresa / jefe_nomina.
  */
 
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, ActivityIndicator,
-  TouchableOpacity, RefreshControl,
+  View, Text, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -58,7 +59,7 @@ export default function GestorCompensatoriosScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
+          <Spinner size="large" color={theme.primary} />
         </View>
       ) : (
         <FlatList
@@ -118,7 +119,7 @@ export default function GestorCompensatoriosScreen() {
           }
           ListEmptyComponent={
             <View className="py-16 items-center gap-3 px-8">
-              <Ionicons name="calendar-outline" size={40} color="#94A3B8" />
+              <Ionicons name="calendar-outline" size={40} color={COLORS.placeholder} />
               <Text className="text-base font-semibold text-foreground text-center">
                 {filtro === 'todos' ? 'Sin descansos registrados' : `Sin descansos ${filtro === 'pendiente' ? 'pendientes' : 'asignados'}`}
               </Text>
@@ -173,7 +174,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
           onPress={() => setShowPicker(true)}
           className="self-start bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
         >
-          <Ionicons name="calendar-outline" size={14} color="#64748B" />
+          <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
           <Text className="text-sm text-foreground">Elegir fecha</Text>
         </TouchableOpacity>
       ) : (

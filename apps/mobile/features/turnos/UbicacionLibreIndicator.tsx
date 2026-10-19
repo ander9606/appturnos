@@ -5,7 +5,9 @@
  * medir distancia — solo se necesita CUALQUIER fix de ubicación antes de
  * marcar, para dejar registro de dónde se marcó (ver useUbicacionLibre).
  */
-import { View, Text, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
+import { View, Text, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { EstadoUbicacionLibre } from './useUbicacionLibre';
 
@@ -19,7 +21,7 @@ export function UbicacionLibreIndicator({
   if (estado === 'obteniendo') {
     return (
       <View className="bg-muted rounded-2xl px-4 py-3 flex-row items-center gap-3">
-        <ActivityIndicator size="small" color="#94A3B8" />
+        <Spinner size="small" color={COLORS.placeholder} />
         <Text className="text-sm font-semibold text-muted-foreground flex-1">Obteniendo tu ubicación…</Text>
       </View>
     );

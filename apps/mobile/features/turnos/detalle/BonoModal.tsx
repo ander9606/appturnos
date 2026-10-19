@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, Alert,
@@ -69,7 +70,7 @@ export function BonoModal({
                 </Text>
               </View>
               <Pressable onPress={onClose} hitSlop={10}>
-                <Ionicons name="close" size={22} color="#64748B" />
+                <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
               </Pressable>
             </View>
 
@@ -82,7 +83,7 @@ export function BonoModal({
                     onChangeText={setMonto}
                     keyboardType="numeric"
                     placeholder="0"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={COLORS.placeholder}
                     className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
                   />
                 </View>
@@ -92,7 +93,7 @@ export function BonoModal({
                     value={motivo}
                     onChangeText={setMotivo}
                     placeholder="Ej. propina del cliente"
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={COLORS.placeholder}
                     maxLength={255}
                     className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
                   />
@@ -102,7 +103,7 @@ export function BonoModal({
                 </Text>
                 {asignacion.contrato_firmado === 1 && (
                   <View className="flex-row items-start gap-2 bg-warning/10 border border-warning/30 rounded-xl px-3 py-2.5">
-                    <Ionicons name="alert-circle-outline" size={15} color="#F59E0B" style={{ marginTop: 1 }} />
+                    <Ionicons name="alert-circle-outline" size={15} color={COLORS.warning} style={{ marginTop: 1 }} />
                     <Text className="flex-1 text-xs text-warning">
                       El contrato de este turno ya fue firmado. Si cambias el bono, el trabajador deberá volver a firmarlo.
                     </Text>

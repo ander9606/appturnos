@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,17 +24,17 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
             {linea.oferta_titulo}
           </Text>
           {!linea.firmado_trabajador && (
-            <Ionicons name="warning" size={11} color="#D97706" />
+            <Ionicons name="warning" size={11} color={COLORS.warningDark} />
           )}
         </View>
         {linea.calificacion != null ? (
           <View className="flex-row items-center gap-0.5">
-            <Ionicons name="star" size={10} color="#F59E0B" />
+            <Ionicons name="star" size={10} color={COLORS.warning} />
             <Text className="text-[10px] font-semibold text-amber-600">{linea.calificacion}</Text>
           </View>
         ) : (
           <View className="flex-row items-center gap-0.5">
-            <Ionicons name="star-outline" size={10} color="#94A3B8" />
+            <Ionicons name="star-outline" size={10} color={COLORS.placeholder} />
             <Text className="text-[10px] text-muted-foreground">S/C</Text>
           </View>
         )}
@@ -43,19 +44,19 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2 flex-wrap">
           <View className="flex-row items-center gap-0.5">
-            <Ionicons name="calendar-outline" size={10} color="#94A3B8" />
+            <Ionicons name="calendar-outline" size={10} color={COLORS.placeholder} />
             <Text className="text-[11px] text-muted-foreground">
               {formatShortDate(linea.oferta_fecha)}
             </Text>
           </View>
           <View className="flex-row items-center gap-0.5">
-            <Ionicons name="time-outline" size={10} color="#94A3B8" />
+            <Ionicons name="time-outline" size={10} color={COLORS.placeholder} />
             <Text className="text-[11px] text-muted-foreground">
               {formatTimestampHora(linea.hora_ingreso_real)} – {formatTimestampHora(linea.hora_egreso_real)}
             </Text>
           </View>
           <View className="flex-row items-center gap-0.5">
-            <Ionicons name="stopwatch-outline" size={10} color="#94A3B8" />
+            <Ionicons name="stopwatch-outline" size={10} color={COLORS.placeholder} />
             <Text className="text-[11px] text-muted-foreground">
               {Number(linea.horas_trabajadas).toFixed(1)}h
             </Text>

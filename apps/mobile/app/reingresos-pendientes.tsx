@@ -1,7 +1,8 @@
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
-  View, Text, FlatList, ActivityIndicator,
-  TouchableOpacity, Alert, RefreshControl,
+  View, Text, FlatList, TouchableOpacity, Alert, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -92,7 +93,7 @@ function ReingresoItem({ item }: { item: SolicitudReingreso }) {
           className="flex-1 bg-success rounded-xl py-2.5 items-center"
         >
           {aprobarMutation.isPending
-            ? <ActivityIndicator size="small" color="white" />
+            ? <Spinner size="small" color="white" />
             : <Text className="text-sm font-semibold text-white">Aprobar</Text>}
         </TouchableOpacity>
       </View>
@@ -112,7 +113,7 @@ export default function ReingresosPendientesScreen() {
 
       {isLoading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
+          <Spinner size="large" color={theme.primary} />
         </View>
       ) : (
         <FlatList
@@ -131,7 +132,7 @@ export default function ReingresosPendientesScreen() {
           }
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center gap-3 pt-20">
-              <Ionicons name="checkmark-circle-outline" size={48} color="#94A3B8" />
+              <Ionicons name="checkmark-circle-outline" size={48} color={COLORS.placeholder} />
               <Text className="text-base font-semibold text-foreground text-center">
                 Sin solicitudes pendientes
               </Text>

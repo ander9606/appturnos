@@ -1,7 +1,8 @@
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -171,7 +172,7 @@ export function AsistenciaView({ selectedDate }: Props) {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </View>
     );
   }

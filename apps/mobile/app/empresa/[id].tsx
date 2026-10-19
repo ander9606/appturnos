@@ -2,6 +2,8 @@
  * Detalle y edición de una empresa — panel super_admin.
  * Permite ver métricas, editar campos y cambiar estado activo/inactivo.
  */
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,7 +13,6 @@ import {
   TextInput,
   Switch,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -35,8 +36,8 @@ const OPCIONES_MESES = [1, 3, 6, 12];
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const PLANES: { value: PlanEmpresa; label: string; color: string }[] = [
-  { value: 'basico', label: 'Básico', color: '#94A3B8' },
-  { value: 'profesional', label: 'Profesional', color: '#3B82F6' },
+  { value: 'basico', label: 'Básico', color: COLORS.placeholder },
+  { value: 'profesional', label: 'Profesional', color: COLORS.info },
   { value: 'empresarial', label: 'Empresarial', color: '#8B5CF6' },
 ];
 
@@ -79,7 +80,7 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={COLORS.placeholder}
         editable={!disabled}
         keyboardType={keyboardType}
         autoCapitalize="none"
@@ -210,7 +211,7 @@ export default function EmpresaDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color="#6366F1" />
+        <Spinner size="large" color={COLORS.integracion} />
         <Text className="text-muted-foreground mt-3 text-sm">Cargando empresa…</Text>
       </SafeAreaView>
     );
@@ -237,7 +238,7 @@ export default function EmpresaDetailScreen() {
       {/* ── Header ──────────────────────────────────────────────────── */}
       <View
         className="px-4 pt-3 pb-5 flex-row items-center justify-between"
-        style={{ backgroundColor: '#6366F1' }}
+        style={{ backgroundColor: COLORS.integracion }}
       >
         <Pressable onPress={() => router.back()} className="mr-3">
           <Text className="text-white text-base">←</Text>
@@ -282,7 +283,7 @@ export default function EmpresaDetailScreen() {
             <Text className="text-2xl">{isActiva ? '✅' : '⛔'}</Text>
             <Text
               className="text-xs font-bold"
-              style={{ color: isActiva ? '#16A34A' : '#DC2626' }}
+              style={{ color: isActiva ? COLORS.success : COLORS.dangerDark }}
             >
               {isActiva ? 'ACTIVA' : 'INACTIVA'}
             </Text>
@@ -383,13 +384,13 @@ export default function EmpresaDetailScreen() {
                 onPress={() => setMesesLink(m)}
                 className="flex-1 rounded-xl border py-2 items-center"
                 style={{
-                  borderColor: mesesLink === m ? '#6366F1' : '#E2E8F0',
+                  borderColor: mesesLink === m ? COLORS.integracion : COLORS.border,
                   backgroundColor: mesesLink === m ? '#6366F120' : 'transparent',
                 }}
               >
                 <Text
                   className="text-xs font-bold"
-                  style={{ color: mesesLink === m ? '#6366F1' : '#94A3B8' }}
+                  style={{ color: mesesLink === m ? COLORS.integracion : COLORS.placeholder }}
                 >
                   {m} mes{m > 1 ? 'es' : ''}
                 </Text>
@@ -401,10 +402,10 @@ export default function EmpresaDetailScreen() {
             onPress={handleGenerarLink}
             disabled={generandoLink}
             className="h-11 rounded-xl items-center justify-center active:opacity-80"
-            style={{ backgroundColor: '#6366F1' }}
+            style={{ backgroundColor: COLORS.integracion }}
           >
             {generandoLink ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Spinner size="small" color={COLORS.white} />
             ) : (
               <Text className="text-white text-sm font-bold">Generar link</Text>
             )}
@@ -428,11 +429,11 @@ export default function EmpresaDetailScreen() {
               <Pressable
                 onPress={handleCopiarLink}
                 className="h-10 rounded-lg items-center justify-center border active:opacity-70"
-                style={{ borderColor: linkCopiado ? '#16A34A' : '#6366F1' }}
+                style={{ borderColor: linkCopiado ? COLORS.success : COLORS.integracion }}
               >
                 <Text
                   className="text-xs font-semibold"
-                  style={{ color: linkCopiado ? '#16A34A' : '#6366F1' }}
+                  style={{ color: linkCopiado ? COLORS.success : COLORS.integracion }}
                 >
                   {linkCopiado ? '✓ Copiado' : '📋 Copiar link'}
                 </Text>
@@ -496,8 +497,8 @@ export default function EmpresaDetailScreen() {
               value={aceptaPostulaciones}
               onValueChange={setAceptaPostulaciones}
               disabled={!editMode}
-              trackColor={{ false: '#E2E8F0', true: '#6366F1' }}
-              thumbColor="#FFFFFF"
+              trackColor={{ false: COLORS.border, true: COLORS.integracion }}
+              thumbColor={COLORS.white}
             />
           </View>
 
@@ -506,10 +507,10 @@ export default function EmpresaDetailScreen() {
               onPress={handleGuardar}
               disabled={guardando}
               className="h-11 rounded-xl items-center justify-center active:opacity-80"
-              style={{ backgroundColor: '#6366F1' }}
+              style={{ backgroundColor: COLORS.integracion }}
             >
               {guardando ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Spinner size="small" color={COLORS.white} />
               ) : (
                 <Text className="text-white text-sm font-bold">Guardar cambios</Text>
               )}
@@ -525,16 +526,16 @@ export default function EmpresaDetailScreen() {
             disabled={cambiandoEstado}
             className="h-11 rounded-xl items-center justify-center border active:opacity-80"
             style={{
-              borderColor: isActiva ? '#EF4444' : '#22C55E',
+              borderColor: isActiva ? COLORS.danger : COLORS.success,
               backgroundColor: isActiva ? '#EF444410' : '#22C55E10',
             }}
           >
             {cambiandoEstado ? (
-              <ActivityIndicator size="small" color={isActiva ? '#EF4444' : '#22C55E'} />
+              <Spinner size="small" color={isActiva ? COLORS.danger : COLORS.success} />
             ) : (
               <Text
                 className="text-sm font-bold"
-                style={{ color: isActiva ? '#EF4444' : '#22C55E' }}
+                style={{ color: isActiva ? COLORS.danger : COLORS.success }}
               >
                 {isActiva ? '⛔ Desactivar empresa' : '✅ Activar empresa'}
               </Text>
@@ -545,10 +546,10 @@ export default function EmpresaDetailScreen() {
             onPress={handleEliminar}
             disabled={eliminando}
             className="h-11 rounded-xl items-center justify-center active:opacity-80"
-            style={{ backgroundColor: '#EF4444' }}
+            style={{ backgroundColor: COLORS.danger }}
           >
             {eliminando ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Spinner size="small" color={COLORS.white} />
             ) : (
               <Text className="text-sm font-bold text-white">🗑️ Eliminar empresa permanentemente</Text>
             )}
