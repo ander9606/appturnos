@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { LiquidacionLinea, DescansoCompensatorio, DescuentoNomina, TipoDescuento } from '@api-client';
 import { getInitials } from '@/lib/formatters';
-import { COLORS,avatarColorForId, HOUR_TYPE_COLORS } from '@/lib/designTokens';
+import { COLORS, HOUR_TYPE_COLORS, avatarColorForId } from '@/lib/designTokens';
 import { CompositionBar } from '@/components/ui/CompositionBar';
 import { Badge } from '@/components/ui/Badge';
 import { useCrearDescuento } from './descuentos/useDescuentos';
@@ -92,7 +92,7 @@ export function LiquidacionRow({
       onPress={() => setExpanded((v) => !v)}
       activeOpacity={0.8}
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 1, shadowColor:'#000', shadowOpacity:0.05, shadowRadius:6 }}
+      style={{ elevation: 1, shadowColor:COLORS.shadow, shadowOpacity:0.05, shadowRadius:6 }}
     >
       {/* ── Main row ─────────────────────────────────────────── */}
       <View className="flex-row items-center px-4 py-4 gap-3">

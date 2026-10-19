@@ -52,6 +52,27 @@ Los tres deben tener los mismos valores. Al añadir o cambiar un color, tócalos
 
 Cada semántico tiene variante `light` (fondo suave de alertas y badges): `success-light`, `warning-light`, `danger-light`, `info-light`, `integracion-light`.
 
+**Tokens solo JS (móvil, `lib/designTokens.ts`)** — para estilos en línea (`style={{ … }}`), íconos y props de colores donde `className` no alcanza:
+
+| Token | Hex | Uso |
+|---|---|---|
+| `muted` | `#F1F5F9` | Fondos atenuados, chips inactivos (igual que `bg-muted`) |
+| `primaryLight`, `primary400`, `primary600` | `#FFF1EE`, `#FF7150`, `#E83E1F` | Escala de la marca (50, 400, 600) |
+| `successLight`, `warningLight`, `dangerLight`, `infoLight` | `#D1FAE5`, `#FEF3C7`, `#FEE2E2`, `#DBEAFE` | Fondos suaves de badges y banners (igual que `bg-*-light`) |
+| `successText`, `warningText`, `dangerText`, `infoText` | `#166534`, `#92400E`, `#991B1B`, `#1E3A8A` | Texto/íconos **fuertes sobre** esos fondos suaves: 6.3 · 6.4 · 6.8 · 8.5 : 1 (AA) |
+| `infoBorder`, `warningSoft` | `#BFDBFE`, `#FCD34D` | Bordes suaves de aviso |
+| `slate600`, `slate700` | `#475569`, `#334155` | Texto entre `foreground` y `muted-foreground` (7.6 y 10.4 : 1 sobre blanco) |
+| `eventual` | `#7C3AED` | Acento de los **turnos eventuales** (5.7 : 1 sobre blanco) |
+| `shadow` | `#000000` | `shadowColor` de todas las sombras |
+
+**`ACCENT`** — acentos *categóricos*: distinguen categorías (rol, tipo de día, nivel de ranking), no significan éxito ni error. `violeta` (compensatorio, rol de nómina, ranking elite), `rosa`, `esmeralda`, `naranja`, `amarillo`, `indigo`. Para estados usa los semánticos de arriba.
+
+**`DOCUMENT_COLORS`** — el look de "papel" de las pantallas de contrato y cuenta de cobro (`canvas`, `paper`, `infoBg`, `infoIcon`, `warningBg`), que comparten valores.
+
+**`THIRD_PARTY`** — colores de marcas ajenas que se usan tal cual (`google`).
+
+**`alpha(color, opacidad)`** — color con transparencia: `alpha(COLORS.danger, 0.1)` es un fondo rojo al 10 %. Solo acepta `#RRGGBB` (los tokens); con otro formato devuelve el color sin cambios.
+
 ### 2.3 Color por módulo
 
 | Módulo | Acento | Token |
@@ -60,20 +81,24 @@ Cada semántico tiene variante `light` (fondo suave de alertas y badges): `succe
 | Nómina | Verde | `THEME_COLORS.nomina` |
 | Gestores | Azul | `THEME_COLORS.gestores` |
 | Integración (logiq360) | Índigo | `COLORS.integracion` |
+| Turnos eventuales | Violeta | `COLORS.eventual` |
 
 En móvil, `const theme = useTheme()` (de `lib/theme.ts`) devuelve la paleta según el rol del usuario: usa `theme.primary` en vez de `COLORS.primary` en pantallas que cambian de color por módulo.
 
 ### 2.4 Reglas
 
-- **Prohibido el hex literal** en pantallas y componentes. En `className` usa el token Tailwind; en JS usa `COLORS.*`.
+- **Prohibido el hex literal** en pantallas y componentes. En `className` usa el token Tailwind; en JS usa `COLORS.*`, `ACCENT.*` o `alpha()`. **En móvil lo impide el lint** (`no-restricted-syntax`): un `'#ABCDEF'` nuevo es un error. Solo se permite en `lib/designTokens.ts` y en las pruebas.
   ```tsx
   <Ionicons name="pin-outline" color={COLORS.mutedForeground} />   // ✅
-  <Ionicons name="pin-outline" color="#64748B" />                  // ❌
+  <Ionicons name="pin-outline" color="#64748B" />                  // ❌ error de lint
   ```
-- **¿Falta un color?** No lo inventes en la pantalla: agrégalo a los tres archivos de §2.1 y a la tabla de §2.2.
-- **Transparencias:** si necesitas un tinte, usa la variante `light` o `className="bg-primary/10"`. (Ver deuda en §8: aún hay hex con alfa tipo `#6366F11A`.)
+- **¿Falta un color?** No lo inventes en la pantalla: agrégalo a `lib/designTokens.ts` (y, si se usa en `className`, a `tailwind.config.js` e `index.css`) y a la tabla de §2.2. Si es una categoría y no un estado, va en `ACCENT`.
+- **Transparencias:** `alpha(COLORS.x, 0.1)` en JS; en `className`, `bg-primary/10`. **No** armes el alfa pegando texto (`color + '18'`, `` `${color}20` ``): `alpha()` lo hace bien y se puede buscar.
+- **Texto sobre fondo suave:** usa el `*Text` de ese semántico (`warningText` sobre `warningLight`…), no el color principal (no pasa AA, §6).
+- **Web:** en la app, los colores en línea van como variables CSS (`'var(--color-primary)'`, `'var(--color-info)'`), que también funcionan en atributos SVG y en estilos de Leaflet. La **landing** (`src/pages/landing/`) es la excepción: dibuja una maqueta del teléfono con su propia paleta y degradados de marketing, y usa hex.
 - **Avatares:** paleta fija `AVATAR_COLORS` (mismo id → mismo color).
 - **Gráficos de horas:** `HOUR_TYPE_COLORS` (validada contra daltonismo; no cambiar sin revalidar).
+- Al unificar valores sueltos con su token, algunos tonos se acercaron (los verdes `#22C55E`/`#16A34A` → `success`, los celestes `#0284C7`/`#0EA5E9` → `info`, `#B45309` → `warningText`): si una pantalla pierde legibilidad o identidad, se corrige en el token, no con un hex en la pantalla.
 
 ---
 
@@ -316,7 +341,7 @@ Reglas:
 
 ## 7. Checklist antes de abrir un PR de UI
 
-- [ ] Sin hex literales nuevos (busca `#[0-9A-Fa-f]{6}` en lo que tocaste).
+- [ ] Sin hex literales nuevos (móvil: lo comprueba el lint; web: busca `#[0-9A-Fa-f]{6}` en lo que tocaste).
 - [ ] Si agregaste un color: está en `tailwind.config.js`, `designTokens.ts`, `index.css` **y** en §2.2.
 - [ ] Sin `ActivityIndicator`, `Loader2`, texto "Cargando…", bloques de error armados a mano ni `Alert.alert` nuevos (§5.5).
 - [ ] Listas: skeleton al cargar, `ErrorState` (pasando `error`) con reintento, `EmptyState` (tipo según el caso) si no hay datos.
@@ -330,7 +355,7 @@ Reglas:
 ## 8. Deuda conocida (próximos pasos, por orden de impacto)
 
 1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes, que el código compila y que ningún interlineado baja de 1.25×, pero no se vio en pantalla: revisar que no haya texto cortado (sobre todo números grandes y emojis en Android), que la negrita de Android no salga doble y que el arranque no parpadee.
-2. **Hex sueltos restantes (~124 en móvil):** sobre todo `#000` (sombras), tintes claros (`#F1F5F9`, `#FEF3C7`, `#EFF6FF`), violetas (`#8B5CF6`, `#7C3AED`), `#475569`, y hex con alfa (`#6366F11A`). Decidir cuáles pasan a token y cuáles son de un solo uso.
+2. **Hex en la web.** La app ya usa variables CSS, pero la web no tiene configuración de ESLint (el script `lint` existe sin `.eslintrc`), así que nada impide que vuelvan a aparecer hex. Crear la configuración y copiar la regla de móvil (con la landing como excepción).
 3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. Si se repite una forma nueva (p. ej. el calendario mensual), crear su skeleton propio.
 4. **Contraste de marca.** Evaluar oscurecer ligeramente `primary` o usar `primary-600` en botones (4.09 → casi AA) sin perder identidad.
 5. **Modo oscuro.** `userInterfaceStyle: "light"` fijo. Con los tokens ya centralizados, es viable como etapa propia.

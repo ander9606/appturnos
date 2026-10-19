@@ -4,6 +4,7 @@
  * null si no activó acepta_extras o todavía no hay período (autocreado on-demand
  * por el backend en cuanto el trabajador consulta, así que solo falta mientras carga).
  */
+import { COLORS } from '@/lib/designTokens';
 import { Text } from '@/components/ui/Text';
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
@@ -30,7 +31,7 @@ export function TurnosEventualCard({ aceptaExtras, periodo, linea }: Props) {
       activeOpacity={0.8}
       className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex-row items-center gap-3"
     >
-      <Ionicons name="briefcase-outline" size={20} color="#7C3AED" />
+      <Ionicons name="briefcase-outline" size={20} color={COLORS.eventual} />
       <View className="flex-1">
         <Text className="text-sm font-semibold text-violet-700">Turnos eventuales · Pago trimestral</Text>
         {linea ? (
@@ -44,7 +45,7 @@ export function TurnosEventualCard({ aceptaExtras, periodo, linea }: Props) {
           </Text>
         )}
       </View>
-      <Ionicons name="chevron-forward-outline" size={16} color="#7C3AED" />
+      <Ionicons name="chevron-forward-outline" size={16} color={COLORS.eventual} />
     </TouchableOpacity>
   );
 }

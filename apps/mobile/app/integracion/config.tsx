@@ -6,7 +6,7 @@ import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -135,7 +135,7 @@ export default function IntegracionConfigScreen() {
             onPress={handleEmparejar}
             disabled={emparejando || !codigoPair.trim()}
             className="mt-3 h-11 rounded-2xl items-center justify-center"
-            style={{ backgroundColor: emparejando || !codigoPair.trim() ? theme.primary + '80' : theme.primary }}
+            style={{ backgroundColor: emparejando || !codigoPair.trim() ? alpha(theme.primary, 0.5) : theme.primary }}
           >
             {emparejando ? (
               <Spinner color="white" />
@@ -172,7 +172,7 @@ export default function IntegracionConfigScreen() {
           <View className="flex-row items-center gap-3">
             <View
               className="w-8 h-8 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F11A' }}
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.1) }}
             >
               <Ionicons name="people-outline" size={18} color={COLORS.integracion} />
             </View>
@@ -189,7 +189,7 @@ export default function IntegracionConfigScreen() {
           <View className="flex-row items-center gap-3">
             <View
               className="w-8 h-8 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F11A' }}
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.1) }}
             >
               <Ionicons name="pulse-outline" size={18} color={COLORS.integracion} />
             </View>

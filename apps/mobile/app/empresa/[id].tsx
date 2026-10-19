@@ -6,7 +6,7 @@ import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -38,7 +38,7 @@ const OPCIONES_MESES = [1, 3, 6, 12];
 const PLANES: { value: PlanEmpresa; label: string; color: string }[] = [
   { value: 'basico', label: 'Básico', color: COLORS.placeholder },
   { value: 'profesional', label: 'Profesional', color: COLORS.info },
-  { value: 'empresarial', label: 'Empresarial', color: '#8B5CF6' },
+  { value: 'empresarial', label: 'Empresarial', color: ACCENT.violeta },
 ];
 
 // ── Sub-components ────────────────────────────────────────────────────────
@@ -275,8 +275,8 @@ export default function EmpresaDetailScreen() {
           <View
             className="flex-1 rounded-2xl p-3 border items-center gap-1"
             style={{
-              backgroundColor: isActiva ? '#22C55E10' : '#EF444410',
-              borderColor: isActiva ? '#22C55E40' : '#EF444440',
+              backgroundColor: isActiva ? alpha(COLORS.success, 0.06) : alpha(COLORS.danger, 0.06),
+              borderColor: isActiva ? alpha(COLORS.success, 0.25) : alpha(COLORS.danger, 0.25),
             }}
           >
             <Text className="text-2xl">{isActiva ? '✅' : '⛔'}</Text>
@@ -295,8 +295,8 @@ export default function EmpresaDetailScreen() {
               <View
                 className="flex-1 rounded-2xl p-3 border items-center gap-1"
                 style={{
-                  backgroundColor: planInfo.color + '10',
-                  borderColor: planInfo.color + '40',
+                  backgroundColor: alpha(planInfo.color, 0.06),
+                  borderColor: alpha(planInfo.color, 0.25),
                 }}
               >
                 <Text className="text-2xl">⭐</Text>
@@ -384,7 +384,7 @@ export default function EmpresaDetailScreen() {
                 className="flex-1 rounded-xl border py-2 items-center"
                 style={{
                   borderColor: mesesLink === m ? COLORS.integracion : COLORS.border,
-                  backgroundColor: mesesLink === m ? '#6366F120' : 'transparent',
+                  backgroundColor: mesesLink === m ? alpha(COLORS.integracion, 0.13) : 'transparent',
                 }}
               >
                 <Text
@@ -526,7 +526,7 @@ export default function EmpresaDetailScreen() {
             className="h-11 rounded-xl items-center justify-center border active:opacity-80"
             style={{
               borderColor: isActiva ? COLORS.danger : COLORS.success,
-              backgroundColor: isActiva ? '#EF444410' : '#22C55E10',
+              backgroundColor: isActiva ? alpha(COLORS.danger, 0.06) : alpha(COLORS.success, 0.06),
             }}
           >
             {cambiandoEstado ? (

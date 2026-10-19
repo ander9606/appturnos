@@ -25,7 +25,7 @@ export function BuscarEmpresasCard() {
       </Text>
       <View className="flex-row items-center gap-1.5 mt-2 bg-white rounded-xl px-4 py-2.5">
         <Text className="text-sm font-bold text-primary-600">Buscar empresas</Text>
-        <Ionicons name="arrow-forward" size={14} color="#E83E1F" />
+        <Ionicons name="arrow-forward" size={14} color={COLORS.primary600} />
       </View>
     </Pressable>
   );

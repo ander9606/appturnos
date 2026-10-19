@@ -211,7 +211,7 @@ export default function PuntosMarcajeScreen() {
       <View className="px-4 py-4 flex-row items-center gap-3">
         <View
           className="w-9 h-9 rounded-full items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: isZonal ? '#DBEAFE' : '#FEF3C7' }}
+          style={{ backgroundColor: isZonal ? COLORS.infoLight : COLORS.warningLight }}
         >
           <Ionicons
             name="location-outline"
@@ -225,7 +225,7 @@ export default function PuntosMarcajeScreen() {
             <Text className="text-sm font-semibold text-foreground">{punto.nombre}</Text>
             <View
               className="px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: isZonal ? '#DBEAFE' : '#FEF3C7' }}
+              style={{ backgroundColor: isZonal ? COLORS.infoLight : COLORS.warningLight }}
             >
               <Text
                 className="text-xs font-medium"

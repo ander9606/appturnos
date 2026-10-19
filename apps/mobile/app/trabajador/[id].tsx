@@ -539,7 +539,7 @@ export default function TrabajadorDetailScreen() {
           <View className="mx-4 mb-3 bg-warning/10 border border-warning/30 rounded-2xl p-4 flex-row gap-3">
             <Ionicons name="time-outline" size={20} color={COLORS.warningDark} style={{ marginTop: 1 }} />
             <View className="flex-1 gap-1">
-              <Text className="text-sm font-semibold" style={{ color: '#B45309' }}>Cuenta sin activar</Text>
+              <Text className="text-sm font-semibold" style={{ color: COLORS.warningText }}>Cuenta sin activar</Text>
               <Text className="text-xs text-muted-foreground">
                 {t.cedula
                   ? `Pídele que descargue la app y use "Activar cuenta" con la cédula ${t.cedula}.`

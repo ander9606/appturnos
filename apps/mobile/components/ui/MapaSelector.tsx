@@ -16,7 +16,7 @@ import type { SugerenciaLugar } from '@api-client';
 import { Button } from './Button';
 import { SugerenciasDropdown } from './SugerenciasDropdown';
 import { useGeocodingSearch } from '@/lib/useGeocodingSearch';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 
 // Bogotá — centro de referencia cuando no hay coords ni GPS disponible.
 const FALLBACK_CENTER: LatLng = { latitude: 4.7110, longitude: -74.0721 };
@@ -143,7 +143,7 @@ export function MapaSelector({ visible, initialLat, initialLng, radiusM, onConfi
                   center={pin}
                   radius={radiusM}
                   strokeColor={COLORS.info}
-                  fillColor={`${COLORS.info}20`}
+                  fillColor={alpha(COLORS.info, 0.13)}
                 />
               )}
             </MapView>

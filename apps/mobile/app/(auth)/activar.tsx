@@ -9,7 +9,7 @@
  *   4. Si error → mensaje en pantalla
  */
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
@@ -140,7 +140,7 @@ export default function ActivarCuentaScreen() {
                   />
                   {invitacionInfo && !cuentaExistente && (
                     <View style={styles.invitacionBanner}>
-                      <Ionicons name="business-outline" size={16} color="#0EA5E9" />
+                      <Ionicons name="business-outline" size={16} color={COLORS.info} />
                       <Text style={styles.invitacionText}>
                         Tienes una invitación de{' '}
                         <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
@@ -151,7 +151,7 @@ export default function ActivarCuentaScreen() {
                   )}
                   {cuentaExistente && (
                     <View style={styles.invitacionBanner}>
-                      <Ionicons name="information-circle-outline" size={16} color="#0EA5E9" />
+                      <Ionicons name="information-circle-outline" size={16} color={COLORS.info} />
                       <Text style={styles.invitacionText}>
                         Esta cédula ya tiene una cuenta
                         {invitacionInfo ? (
@@ -260,7 +260,7 @@ export default function ActivarCuentaScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#F8FAFC' },
+  root:   { flex: 1, backgroundColor: COLORS.background },
   scroll: { flexGrow: 1 },
 
   // Header
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    backgroundColor: alpha(COLORS.danger, 0.07), borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
   },
   errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: COLORS.danger },
@@ -311,9 +311,9 @@ const styles = StyleSheet.create({
 
   invitacionBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: '#F0F9FF', borderWidth: 1, borderColor: '#BAE6FD',
+    backgroundColor: COLORS.infoLight, borderWidth: 1, borderColor: COLORS.infoBorder,
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginTop: 8,
   },
-  invitacionText: { flex: 1, fontSize: 13, color: '#0369A1', lineHeight: 18 },
+  invitacionText: { flex: 1, fontSize: 13, color: COLORS.infoText, lineHeight: 18 },
   invitacionBold: { fontWeight: '700' },
 });

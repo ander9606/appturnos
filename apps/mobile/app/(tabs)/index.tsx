@@ -9,7 +9,7 @@
  */
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -452,11 +452,11 @@ export default function DashboardScreen() {
           <Pressable
             onPress={() => router.push('/(tabs)/nomina')}
             className="mx-4 mt-4 flex-row items-center gap-3 rounded-2xl px-4 py-4 active:opacity-80 border"
-            style={{ backgroundColor: theme.primaryLight, borderColor: theme.primary + '4D' }}
+            style={{ backgroundColor: theme.primaryLight, borderColor: alpha(theme.primary, 0.3) }}
           >
             <View
               className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: theme.primary + '22' }}
+              style={{ backgroundColor: alpha(theme.primary, 0.13) }}
             >
               <Ionicons name="time-outline" size={22} color={theme.primary} />
             </View>
@@ -464,7 +464,7 @@ export default function DashboardScreen() {
               <Text className="text-sm font-semibold" style={{ color: theme.primary }}>
                 Marcaje de jornada
               </Text>
-              <Text className="text-xs" style={{ color: theme.primary + 'BB' }}>
+              <Text className="text-xs" style={{ color: alpha(theme.primary, 0.73) }}>
                 Toca para marcar entrada / salida →
               </Text>
             </View>
@@ -524,7 +524,7 @@ export default function DashboardScreen() {
               >
                 <View
                   className="w-10 h-10 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: theme.primary + '1A' }}
+                  style={{ backgroundColor: alpha(theme.primary, 0.1) }}
                 >
                   <Ionicons name={a.icon} size={20} color={theme.primary} />
                 </View>
@@ -545,7 +545,7 @@ export default function DashboardScreen() {
             className="flex-row items-center justify-center gap-1.5 mx-4 mt-4 py-2 rounded-full bg-card border border-border active:opacity-60"
             accessibilityRole="button"
           >
-            <Ionicons name="checkmark-circle-outline" size={13} color="#9CA3AF" />
+            <Ionicons name="checkmark-circle-outline" size={13} color={COLORS.placeholder} />
             <Text className="text-xs text-muted-foreground">
               Suscripción activa
               {suscData.vigente_hasta ? ` · vence el ${formatShortDate(suscData.vigente_hasta)}` : ''}

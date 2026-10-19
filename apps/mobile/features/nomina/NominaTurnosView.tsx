@@ -200,7 +200,7 @@ export function NominaTurnosView() {
       <TouchableOpacity
         onPress={() => router.push(`/turno/${item.id}`)}
         className="bg-card rounded-2xl px-4 py-4 gap-2"
-        style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+        style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
         activeOpacity={0.7}
       >
         <View className="flex-row items-start justify-between gap-2">

@@ -217,7 +217,7 @@ function PostulanteRow({
           {/* Por reconfirmar → solo el trabajador puede resolverlo, acá solo se avisa */}
           {asignacion.estado === 'por_reconfirmar' && (
             <View className="flex-row items-center gap-1 bg-warning-light px-3 py-1.5 rounded-xl self-start">
-              <Ionicons name="alert-circle-outline" size={14} color="#B45309" />
+              <Ionicons name="alert-circle-outline" size={14} color={COLORS.warningText} />
               <Text className="text-xs font-semibold text-warning">Esperando que reconfirme</Text>
             </View>
           )}
@@ -279,7 +279,7 @@ function GestorOfertaItem({
       style={{
         opacity: esCancelada ? 0.55 : esPasado ? 0.72 : 1,
         elevation: (esPasado || esCancelada) ? 0 : 2,
-        shadowColor: '#000',
+        shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: (esPasado || esCancelada) ? 0 : 0.06,
         shadowRadius: 8,
@@ -291,7 +291,7 @@ function GestorOfertaItem({
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
       >
-        <View className="w-1.5" style={{ backgroundColor: esCancelada ? COLORS.placeholder : esPasado ? COLORS.borderStrong : '#FF7150' }} />
+        <View className="w-1.5" style={{ backgroundColor: esCancelada ? COLORS.placeholder : esPasado ? COLORS.borderStrong : COLORS.primary400 }} />
 
         <View className="flex-1 px-4 py-4 gap-1.5">
           {/* Title + badge finalizado/cancelada */}

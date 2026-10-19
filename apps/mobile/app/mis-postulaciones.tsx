@@ -42,15 +42,15 @@ function fmtPago(n: number | null | undefined) {
 const ESTADO_CFG: Record<string, {
   label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>['name'];
 }> = {
-  pendiente:      { label: 'Pendiente',    color: COLORS.warningDark, bg: '#FEF3C7', icon: 'time-outline' },
-  confirmado:     { label: 'Confirmado',   color: COLORS.info, bg: '#DBEAFE', icon: 'checkmark-circle-outline' },
-  en_progreso:    { label: 'En progreso',  color: COLORS.success, bg: '#D1FAE5', icon: 'play-circle-outline' },
-  completado:     { label: 'Completado',   color: COLORS.success, bg: '#D1FAE5', icon: 'checkmark-done-outline' },
-  cancelado:      { label: 'Cancelado',    color: COLORS.danger, bg: '#FEE2E2', icon: 'close-circle-outline' },
-  rechazado:      { label: 'Rechazado',    color: COLORS.danger, bg: '#FEE2E2', icon: 'ban-outline' },
-  no_presentado:  { label: 'No presentado',color: COLORS.placeholder, bg: '#F1F5F9', icon: 'alert-circle-outline' },
-  por_reconfirmar: { label: 'Reconfirma', color: COLORS.warningDark, bg: '#FEF3C7', icon: 'alert-circle-outline' },
-  fallido:        { label: 'Turno fallido', color: COLORS.warningDark, bg: '#FEF3C7', icon: 'warning-outline' },
+  pendiente:      { label: 'Pendiente',    color: COLORS.warningDark, bg: COLORS.warningLight, icon: 'time-outline' },
+  confirmado:     { label: 'Confirmado',   color: COLORS.info, bg: COLORS.infoLight, icon: 'checkmark-circle-outline' },
+  en_progreso:    { label: 'En progreso',  color: COLORS.success, bg: COLORS.successLight, icon: 'play-circle-outline' },
+  completado:     { label: 'Completado',   color: COLORS.success, bg: COLORS.successLight, icon: 'checkmark-done-outline' },
+  cancelado:      { label: 'Cancelado',    color: COLORS.danger, bg: COLORS.dangerLight, icon: 'close-circle-outline' },
+  rechazado:      { label: 'Rechazado',    color: COLORS.danger, bg: COLORS.dangerLight, icon: 'ban-outline' },
+  no_presentado:  { label: 'No presentado',color: COLORS.placeholder, bg: COLORS.muted, icon: 'alert-circle-outline' },
+  por_reconfirmar: { label: 'Reconfirma', color: COLORS.warningDark, bg: COLORS.warningLight, icon: 'alert-circle-outline' },
+  fallido:        { label: 'Turno fallido', color: COLORS.warningDark, bg: COLORS.warningLight, icon: 'warning-outline' },
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────

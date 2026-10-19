@@ -129,7 +129,7 @@ function OptionCard({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8FAFC' },
+  root: { flex: 1, backgroundColor: COLORS.background },
 
   hero: {
     minHeight: height * 0.46,
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderWidth: 1.5,
     borderColor: COLORS.border,
-    shadowColor: '#000',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   iconWrapFilled: { backgroundColor: 'rgba(255,255,255,0.22)' },
-  iconWrapOutline: { backgroundColor: '#FFF1EE' },
+  iconWrapOutline: { backgroundColor: COLORS.primaryLight },
   cardText: { flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: '700' },
   cardDesc: { fontSize: 13, marginTop: 3, lineHeight: 18 },

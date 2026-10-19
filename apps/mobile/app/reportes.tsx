@@ -186,7 +186,7 @@ export default function ReportesScreen() {
               key={p.label}
               onPress={() => setPresetIdx(i)}
               className="flex-1 h-9 rounded-xl items-center justify-center active:opacity-70"
-              style={{ backgroundColor: i === presetIdx ? theme.primary : '#F1F5F9' }}
+              style={{ backgroundColor: i === presetIdx ? theme.primary : COLORS.muted }}
             >
               <Text
                 className="text-xs font-semibold"
@@ -199,7 +199,7 @@ export default function ReportesScreen() {
           <Pressable
             onPress={() => setPresetIdx(CUSTOM)}
             className="flex-1 h-9 rounded-xl items-center justify-center active:opacity-70"
-            style={{ backgroundColor: presetIdx === CUSTOM ? theme.primary : '#F1F5F9' }}
+            style={{ backgroundColor: presetIdx === CUSTOM ? theme.primary : COLORS.muted }}
           >
             <Text
               className="text-xs font-semibold"

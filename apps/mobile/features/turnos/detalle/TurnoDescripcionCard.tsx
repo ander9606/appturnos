@@ -37,7 +37,7 @@ export function TurnoDescripcionCard({
   return (
     <View
       className="bg-card rounded-2xl px-5 py-4 gap-3"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}
     >
       {secciones.map((s, i) => (
         <React.Fragment key={s.key}>

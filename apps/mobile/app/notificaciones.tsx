@@ -25,7 +25,7 @@ import {
 } from '@/features/notificaciones/useNotificaciones';
 import { destino } from '@/features/notificaciones/destino';
 import { useTheme } from '@/lib/theme';
-import { THEME_COLORS, COLORS } from '@/lib/designTokens';
+import { COLORS, THEME_COLORS, alpha } from '@/lib/designTokens';
 import type { Notificacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ export default function NotificacionesScreen() {
       {/* Icono del tipo — coloreado por módulo (turnos/nómina/general) */}
       <View
         className="w-9 h-9 rounded-full items-center justify-center shrink-0 mt-0.5"
-        style={{ backgroundColor: item.leida ? '#E2E8F022' : colorDeCategoria(categoriaDeTipo(item.tipo)) + '18' }}
+        style={{ backgroundColor: item.leida ? alpha(COLORS.border, 0.13) : alpha(colorDeCategoria(categoriaDeTipo(item.tipo)), 0.09) }}
       >
         <Ionicons
           name={iconForTipo(item.tipo)}
@@ -281,7 +281,7 @@ export default function NotificacionesScreen() {
                   key={c}
                   onPress={() => setCategoria(c)}
                   className="px-3 py-1.5 rounded-full"
-                  style={{ backgroundColor: active ? color : color + '18' }}
+                  style={{ backgroundColor: active ? color : alpha(color, 0.09) }}
                 >
                   <Text className="text-xs font-semibold" style={{ color: active ? COLORS.white : color }}>
                     {CATEGORIA_LABEL[c]}

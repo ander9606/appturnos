@@ -6,7 +6,7 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React from 'react';
 import {
   View, ScrollView, Pressable, } from 'react-native';
@@ -34,8 +34,8 @@ const ROL_LABELS: Record<string, string> = {
 const ROL_COLORS: Record<string, string> = {
   admin_empresa: COLORS.dangerDark,
   jefe_turnos:   COLORS.info,
-  jefe_nomina:   '#8B5CF6',
-  nomina:        '#10B981',
+  jefe_nomina:   ACCENT.violeta,
+  nomina:        ACCENT.esmeralda,
 };
 
 // ── Hooks ─────────────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
         {/* Avatar */}
         <View
           className="w-11 h-11 rounded-full items-center justify-center"
-          style={{ backgroundColor: rolColor + '20' }}
+          style={{ backgroundColor: alpha(rolColor, 0.13) }}
         >
           <Text className="text-base font-bold" style={{ color: rolColor }}>
             {gestor.nombre[0].toUpperCase()}
@@ -124,7 +124,7 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
           <Text className="text-xs text-muted-foreground" numberOfLines={1}>{gestor.email}</Text>
           <View
             className="mt-1 self-start rounded-full px-2 py-0.5"
-            style={{ backgroundColor: rolColor + '20' }}
+            style={{ backgroundColor: alpha(rolColor, 0.13) }}
           >
             <Text className="text-xs font-semibold" style={{ color: rolColor }}>
               {ROL_LABELS[gestor.rol] ?? gestor.rol}

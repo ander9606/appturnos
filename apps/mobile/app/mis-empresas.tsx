@@ -10,7 +10,7 @@
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -93,7 +93,7 @@ function EmpresaActivaCard({
               <View className="flex-row items-center gap-1.5 mt-1">
                 <View
                   className="rounded-full px-2 py-0.5"
-                  style={{ backgroundColor: `${color}20` }}
+                  style={{ backgroundColor: alpha(color, 0.13) }}
                 >
                   <Text className="text-xs font-semibold" style={{ color }}>
                     {rankingLabel(nivel)}

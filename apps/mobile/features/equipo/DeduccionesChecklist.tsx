@@ -4,7 +4,7 @@
  * Solo se renderiza si la empresa contrata por nómina laboral.
  */
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, ACCENT } from '@/lib/designTokens';
 import React from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -63,7 +63,7 @@ export function DeduccionesChecklist({ control }: Props) {
           <Ionicons
             name={item.aplica ? 'checkmark-circle' : 'ellipse-outline'}
             size={16}
-            color={item.aplica ? '#10B981' : COLORS.borderStrong}
+            color={item.aplica ? ACCENT.esmeralda : COLORS.borderStrong}
           />
           <Text className={`text-sm flex-1 ${item.aplica ? 'text-foreground' : 'text-muted-foreground'}`}>
             {item.label}{item.hint && !item.aplica ? ` — ${item.hint}` : ''}

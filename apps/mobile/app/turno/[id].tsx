@@ -365,7 +365,7 @@ export default function TurnoDetailScreen() {
           {/* ── Timeline ──────────────────────────────────────── */}
           <View
             className="bg-card rounded-2xl px-5 py-5"
-            style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
+            style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}
           >
             <Text className="text-sm font-semibold text-foreground mb-4">Progreso del turno</Text>
             <TurnoTimeline
@@ -406,7 +406,7 @@ export default function TurnoDetailScreen() {
           {/* ── Fallido: resumen de la compensación ──────────────────── */}
           {estado === 'fallido' && (
             <View className="bg-card rounded-2xl px-5 py-4 gap-1.5"
-              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}>
               <Text className="text-sm font-semibold text-foreground">
                 Este turno fue fallido por {(compensacion_motivo || 'fuerza mayor').toLowerCase()}, no se pudo realizar.
               </Text>
@@ -425,7 +425,7 @@ export default function TurnoDetailScreen() {
               de TurnoTimeline, sin botones. ── */}
           {estado === 'por_reconfirmar' && !isGestor && !soloLectura && (
             <View className="bg-card rounded-2xl px-5 py-4 gap-3"
-              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}>
               <Text className="text-sm text-foreground">
                 ¿Sigues disponible para este turno con el nuevo horario/lugar?
               </Text>

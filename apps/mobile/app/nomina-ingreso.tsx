@@ -9,7 +9,7 @@
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Alert, TouchableOpacity, ScrollView, Modal, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -182,7 +182,7 @@ export default function NominaIngresoScreen() {
               <>
                 <View
                   className="w-44 h-44 rounded-full items-center justify-center"
-                  style={{ backgroundColor: theme.primary + '18', borderWidth: 3, borderColor: theme.primary + '44' }}
+                  style={{ backgroundColor: alpha(theme.primary, 0.09), borderWidth: 3, borderColor: alpha(theme.primary, 0.27) }}
                 >
                   <Text className="text-4xl font-extrabold" style={{ color: theme.primary }}>
                     {elapsed ?? '—'}
@@ -196,7 +196,7 @@ export default function NominaIngresoScreen() {
             ) : estadoHoy === 'jornada_completa' ? (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#16a34a18', borderWidth: 3, borderColor: '#16a34a44' }}
+                style={{ backgroundColor: alpha(COLORS.success, 0.09), borderWidth: 3, borderColor: alpha(COLORS.success, 0.27) }}
               >
                 <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
                 <Text className="text-sm font-bold text-success mt-1">Jornada completa</Text>
@@ -204,7 +204,7 @@ export default function NominaIngresoScreen() {
             ) : estadoHoy === 'reingreso_pendiente' ? (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#f59e0b18', borderWidth: 3, borderColor: '#f59e0b44' }}
+                style={{ backgroundColor: alpha(COLORS.warning, 0.09), borderWidth: 3, borderColor: alpha(COLORS.warning, 0.27) }}
               >
                 <Ionicons name="hourglass-outline" size={48} color={COLORS.warning} />
                 <Text className="text-sm font-bold text-warning mt-1">Pendiente</Text>
@@ -212,7 +212,7 @@ export default function NominaIngresoScreen() {
             ) : estadoHoy === 'reingreso_aprobado' ? (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#16a34a18', borderWidth: 3, borderColor: '#16a34a44' }}
+                style={{ backgroundColor: alpha(COLORS.success, 0.09), borderWidth: 3, borderColor: alpha(COLORS.success, 0.27) }}
               >
                 <Ionicons name="enter-outline" size={48} color={COLORS.success} />
                 <Text className="text-sm font-bold text-success mt-1">Reingreso ok</Text>
@@ -220,15 +220,15 @@ export default function NominaIngresoScreen() {
             ) : estadoHoy === 'compensatorio' ? (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#8B5CF618', borderWidth: 3, borderColor: '#8B5CF644' }}
+                style={{ backgroundColor: alpha(ACCENT.violeta, 0.09), borderWidth: 3, borderColor: alpha(ACCENT.violeta, 0.27) }}
               >
-                <Ionicons name="bed-outline" size={48} color="#8B5CF6" />
-                <Text className="text-sm font-bold mt-1" style={{ color: '#8B5CF6' }}>Compensatorio</Text>
+                <Ionicons name="bed-outline" size={48} color={ACCENT.violeta} />
+                <Text className="text-sm font-bold mt-1" style={{ color: ACCENT.violeta }}>Compensatorio</Text>
               </View>
             ) : (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: theme.primary + '12', borderWidth: 3, borderColor: theme.primary + '30' }}
+                style={{ backgroundColor: alpha(theme.primary, 0.07), borderWidth: 3, borderColor: alpha(theme.primary, 0.19) }}
               >
                 <Ionicons name="log-in-outline" size={48} color={theme.primary} />
                 <Text className="text-sm font-semibold mt-1" style={{ color: theme.primary }}>
@@ -283,8 +283,8 @@ export default function NominaIngresoScreen() {
 
         {/* ── Día de descanso compensatorio — no debe marcar entrada ──── */}
         {estadoHoy === 'compensatorio' && (
-          <View className="rounded-2xl py-4 px-4 items-center gap-1" style={{ backgroundColor: '#8B5CF618' }}>
-            <Text className="font-semibold text-center" style={{ color: '#8B5CF6' }}>
+          <View className="rounded-2xl py-4 px-4 items-center gap-1" style={{ backgroundColor: alpha(ACCENT.violeta, 0.09) }}>
+            <Text className="font-semibold text-center" style={{ color: ACCENT.violeta }}>
               Hoy es tu descanso compensatorio
             </Text>
             <Text className="text-sm text-muted-foreground text-center">
@@ -299,7 +299,7 @@ export default function NominaIngresoScreen() {
             onPress={entrada.run}
             disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
-            style={{ backgroundColor: COLORS.success, elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
+            style={{ backgroundColor: COLORS.success, elevation: 3, shadowColor: COLORS.shadow, shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar entrada"
           >
@@ -314,7 +314,7 @@ export default function NominaIngresoScreen() {
             onPress={salida.run}
             disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
-            style={{ backgroundColor: COLORS.dangerDark, elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
+            style={{ backgroundColor: COLORS.dangerDark, elevation: 3, shadowColor: COLORS.shadow, shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar salida"
           >
@@ -326,7 +326,7 @@ export default function NominaIngresoScreen() {
 
         {estadoHoy === 'jornada_completa' && (
           <>
-            <View className="rounded-2xl py-4 items-center gap-1" style={{ backgroundColor: '#16a34a20' }}>
+            <View className="rounded-2xl py-4 items-center gap-1" style={{ backgroundColor: alpha(COLORS.success, 0.13) }}>
               <Text className="text-success font-semibold">
                 Jornada completada{registroHoy?.hora_salida ? ` · Salida ${fmtHora(registroHoy.hora_salida)}` : ''}
               </Text>
@@ -351,7 +351,7 @@ export default function NominaIngresoScreen() {
         )}
 
         {estadoHoy === 'reingreso_pendiente' && (
-          <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: '#f59e0b20' }}>
+          <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: alpha(COLORS.warning, 0.13) }}>
             <Text className="text-warning font-semibold text-center">Solicitud de reingreso enviada</Text>
             <Text className="text-xs text-muted-foreground text-center">Esperando aprobación del gestor</Text>
           </View>
@@ -362,7 +362,7 @@ export default function NominaIngresoScreen() {
             onPress={entrada.run}
             disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
-            style={{ backgroundColor: COLORS.success, elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
+            style={{ backgroundColor: COLORS.success, elevation: 3, shadowColor: COLORS.shadow, shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar entrada (reingreso)"
           >

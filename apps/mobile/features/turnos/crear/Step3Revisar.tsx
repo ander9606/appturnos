@@ -42,7 +42,7 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublishe
     <ScrollView contentContainerClassName="px-5 py-4 gap-5 pb-10">
       <View
         className="bg-card rounded-2xl px-4 py-2"
-        style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+        style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
       >
         <SummaryRow icon="text-outline"     label="Título"   value={data.titulo} />
         <SummaryRow icon="calendar-outline" label="Fecha"    value={fecha} />
@@ -71,7 +71,7 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublishe
 
       <View
         className="bg-card rounded-2xl px-4 py-3 gap-2"
-        style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+        style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
       >
         <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
           Puestos ({totalPlazas} plazas en total)

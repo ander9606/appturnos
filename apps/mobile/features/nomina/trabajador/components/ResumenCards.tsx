@@ -14,7 +14,7 @@ import React, { useEffect, useState } from 'react';
 import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
-import { COLORS,HOUR_TYPE_COLORS } from '@/lib/designTokens';
+import { COLORS, HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { Badge } from '@/components/ui/Badge';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import {
@@ -368,7 +368,7 @@ function StatCard({ label, value, valueClass }: { label: string; value: string; 
   return (
     <View
       className="flex-1 bg-card rounded-2xl px-3 py-3 gap-0.5"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       <Text className={`text-base font-extrabold ${valueClass}`}>{value}</Text>
       <Text className="text-[10px] text-muted-foreground">{label}</Text>
@@ -431,7 +431,7 @@ export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorH
           className="h-full rounded-full"
           style={{ width: `${pct}%`, backgroundColor: excede ? COLORS.success : COLORS.borderStrong }}
         />
-        <MarcaPeriodoAnterior horas={semana.horasPrevias ?? 0} limite={semana.limiteHoras} color="#334155" />
+        <MarcaPeriodoAnterior horas={semana.horasPrevias ?? 0} limite={semana.limiteHoras} color={COLORS.slate700} />
       </View>
       {!!semana.horasFestivo && (
         <Text className="text-[10px] text-danger">

@@ -4,7 +4,7 @@
  * curso) en vez del CTA de marcaje que no le corresponde.
  */
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React from 'react';
 import { View, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,7 +33,7 @@ export function TrabajadorInfoGestor({
           <>
             <View className="flex-row items-center gap-2">
               <StarRating mode="display" value={Number(ranking)} size="sm" />
-              <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${color}20` }}>
+              <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: alpha(color, 0.13) }}>
                 <Text className="text-xs font-semibold" style={{ color }}>{rankingLabel(nivel)}</Text>
               </View>
             </View>

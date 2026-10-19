@@ -33,7 +33,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
       className="bg-card rounded-2xl flex-row overflow-hidden"
       style={{
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: COLORS.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 8,

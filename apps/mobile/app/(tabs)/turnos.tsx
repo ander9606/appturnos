@@ -2,7 +2,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -223,7 +223,7 @@ export default function TurnosScreen() {
         className="bg-card rounded-2xl overflow-hidden flex-row"
         style={{
           elevation: esPasado ? 0 : 2,
-          shadowColor: '#000',
+          shadowColor: COLORS.shadow,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: esPasado ? 0 : 0.06,
           shadowRadius: 8,
@@ -233,7 +233,7 @@ export default function TurnosScreen() {
         {/* Accent bar */}
         <View
           className="w-1.5"
-          style={{ backgroundColor: esPasado ? COLORS.borderStrong : hayTraslape ? COLORS.warning : '#FF7150' }}
+          style={{ backgroundColor: esPasado ? COLORS.borderStrong : hayTraslape ? COLORS.warning : COLORS.primary400 }}
         />
 
         <View className="flex-1 px-4 py-4 gap-2">
@@ -380,7 +380,7 @@ export default function TurnosScreen() {
               onPress={() => router.push('/liquidacion-turnos')}
               activeOpacity={0.8}
               className="flex-1 flex-row items-center justify-between rounded-2xl px-4 py-2.5"
-              style={{ backgroundColor: theme.primary + '15' }}
+              style={{ backgroundColor: alpha(theme.primary, 0.08) }}
             >
               <View>
                 <Text className="text-[11px] font-medium" style={{ color: theme.primary }}>
@@ -398,7 +398,7 @@ export default function TurnosScreen() {
               activeOpacity={0.8}
               accessibilityLabel="Ver postulaciones"
               className="items-center justify-center rounded-2xl"
-              style={{ backgroundColor: pendientesCount > 0 ? '#FEF3C7' : '#F1F5F9', minWidth: 68, paddingHorizontal: 12 }}
+              style={{ backgroundColor: pendientesCount > 0 ? COLORS.warningLight : COLORS.muted, minWidth: 68, paddingHorizontal: 12 }}
             >
               <Ionicons name="people" size={18} color={pendientesCount > 0 ? COLORS.warningDark : COLORS.mutedForeground} />
               <Text
@@ -604,7 +604,7 @@ export default function TurnosScreen() {
               className="mx-5 mt-3 bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex-row items-center gap-3"
               style={{ opacity: periodoEventual ? 1 : 0.6 }}
             >
-              <Ionicons name="briefcase-outline" size={20} color="#7C3AED" />
+              <Ionicons name="briefcase-outline" size={20} color={COLORS.eventual} />
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-violet-700">Turnos eventuales · Pago trimestral</Text>
                 <Text className="text-xs text-violet-500 mt-0.5">
@@ -613,7 +613,7 @@ export default function TurnosScreen() {
                     : 'Aún no hay período eventual abierto'}
                 </Text>
               </View>
-              {periodoEventual && <Ionicons name="chevron-forward-outline" size={16} color="#7C3AED" />}
+              {periodoEventual && <Ionicons name="chevron-forward-outline" size={16} color={COLORS.eventual} />}
             </TouchableOpacity>
           )}
 

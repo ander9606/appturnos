@@ -4,7 +4,7 @@
  */
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
 import { View, ScrollView, RefreshControl } from 'react-native';
 
@@ -57,7 +57,7 @@ function DayRow({ isoDate, dayLabel, dayNum, monthLabel, isToday, registro, prim
   return (
     <View
       className="bg-card rounded-2xl flex-row items-center overflow-hidden"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       {/* Indicador lateral */}
       <View
@@ -68,7 +68,7 @@ function DayRow({ isoDate, dayLabel, dayNum, monthLabel, isToday, registro, prim
       {/* Día */}
       <View
         className="w-14 items-center py-3 px-1"
-        style={isToday ? { backgroundColor: primaryColor + '15' } : undefined}
+        style={isToday ? { backgroundColor: alpha(primaryColor, 0.08) } : undefined}
       >
         <Text
           className="text-[10px] font-semibold uppercase"
@@ -84,7 +84,7 @@ function DayRow({ isoDate, dayLabel, dayNum, monthLabel, isToday, registro, prim
         </Text>
         <Text
           className="text-[9px]"
-          style={{ color: isToday ? primaryColor + 'AA' : COLORS.placeholder }}
+          style={{ color: isToday ? alpha(primaryColor, 0.67) : COLORS.placeholder }}
         >
           {monthLabel}
         </Text>

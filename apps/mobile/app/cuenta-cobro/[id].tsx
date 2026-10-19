@@ -1,7 +1,7 @@
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, DOCUMENT_COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View, ScrollView, StyleSheet, TouchableOpacity,
@@ -84,7 +84,7 @@ export default function CuentaCobroScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted, alignItems: 'center', justifyContent: 'center' }}>
         <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
@@ -92,7 +92,7 @@ export default function CuentaCobroScreen() {
 
   if (isError || !cuenta) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Ionicons name="alert-circle-outline" size={48} color={COLORS.danger} />
         <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '600', color: COLORS.foreground }}>Cuenta de cobro no encontrada</Text>
       </SafeAreaView>
@@ -125,14 +125,14 @@ export default function CuentaCobroScreen() {
         }}
       />
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#E8EEF4' }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: DOCUMENT_COLORS.canvas }} edges={['bottom']}>
         <ScrollView
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
         >
           {!isGestor && (
             <View style={s.summaryBox}>
-              <Ionicons name="information-circle" size={18} color="#2563EB" style={{ marginTop: 1 }} />
+              <Ionicons name="information-circle" size={18} color={DOCUMENT_COLORS.infoIcon} style={{ marginTop: 1 }} />
               <Text style={s.summaryText}>
                 {firmado ? 'Firmaste una' : 'Vas a firmar una'} cuenta de cobro por{' '}
                 <Text style={s.summaryEmphasized}>{cuenta.total_turnos} turno{cuenta.total_turnos !== 1 ? 's' : ''}</Text>{' '}
@@ -328,9 +328,9 @@ const s = StyleSheet.create({
   summaryBox: {
     flexDirection: 'row',
     gap: 8,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: DOCUMENT_COLORS.infoBg,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: COLORS.infoBorder,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -339,18 +339,18 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 19,
-    color: '#1E3A8A',
+    color: COLORS.infoText,
   },
   summaryEmphasized: {
     fontWeight: '700',
   },
 
   paper: {
-    backgroundColor: '#FFFEFB',
+    backgroundColor: DOCUMENT_COLORS.paper,
     borderRadius: 14,
     padding: 26,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: COLORS.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 5 },
@@ -368,7 +368,7 @@ const s = StyleSheet.create({
   docMeta: {
     textAlign: 'center',
     fontSize: 11.5,
-    color: '#475569',
+    color: COLORS.slate600,
     marginTop: 5,
   },
 
@@ -396,7 +396,7 @@ const s = StyleSheet.create({
   },
   partyDetail: {
     fontSize: 12,
-    color: '#475569',
+    color: COLORS.slate600,
     marginTop: 1,
   },
 
@@ -421,7 +421,7 @@ const s = StyleSheet.create({
     gap: 8,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: COLORS.muted,
   },
   tableCell: {
     fontSize: 12,
@@ -474,7 +474,7 @@ const s = StyleSheet.create({
 
   clauseBody: {
     fontSize: 12,
-    color: '#334155',
+    color: COLORS.slate700,
     lineHeight: 18,
     textAlign: 'justify',
   },
@@ -486,12 +486,12 @@ const s = StyleSheet.create({
     borderRadius: 8,
     marginTop: 8,
     overflow: 'hidden',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.background,
   },
   sigBoxPending: {
     borderStyle: 'dashed',
-    borderColor: '#FCD34D',
-    backgroundColor: '#FFFBEB',
+    borderColor: COLORS.warningSoft,
+    backgroundColor: DOCUMENT_COLORS.warningBg,
   },
   sigUnderline: {
     height: 1,

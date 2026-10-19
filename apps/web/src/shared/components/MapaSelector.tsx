@@ -154,7 +154,7 @@ export function MapaSelector({ initialLat, initialLng, radiusM, onConfirm, onClo
               }}
             />
             {!!radiusM && (
-              <Circle center={pin} radius={radiusM} pathOptions={{ color: '#3B82F6', fillColor: '#3B82F6', fillOpacity: 0.12 }} />
+              <Circle center={pin} radius={radiusM} pathOptions={{ color: 'var(--color-info)', fillColor: 'var(--color-info)', fillOpacity: 0.12 }} />
             )}
             <ClickHandler onMove={(lat, lng) => setPin([lat, lng])} />
             <RecenterMap position={centerTarget} />

@@ -11,7 +11,7 @@
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -260,7 +260,7 @@ function OfertaCard({
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden mb-3"
-      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6 }}
+      style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 6 }}
     >
       {/* Cabecera de la oferta — toca para ver el detalle completo del evento */}
       <TouchableOpacity
@@ -466,7 +466,7 @@ export default function PostulacionesScreen() {
         <View className="flex-1 items-center justify-center gap-4 px-8">
           <View
             className="w-20 h-20 rounded-full items-center justify-center"
-            style={{ backgroundColor: `${theme.primary}18` }}
+            style={{ backgroundColor: alpha(theme.primary, 0.09) }}
           >
             <Ionicons name="checkmark-done-outline" size={36} color={theme.primary} />
           </View>

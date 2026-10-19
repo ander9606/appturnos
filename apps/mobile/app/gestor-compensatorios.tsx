@@ -148,7 +148,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
   return (
     <View
       className="bg-card rounded-2xl px-4 py-3 gap-3"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-1">

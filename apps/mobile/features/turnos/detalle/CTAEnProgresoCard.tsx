@@ -42,7 +42,7 @@ export function CTAEnProgresoCard({
   return (
     <View
       className="bg-card rounded-2xl px-5 py-5 gap-4"
-      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
+      style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 8 }}
     >
       <Text className="text-sm font-semibold text-foreground">Turno en curso</Text>
 

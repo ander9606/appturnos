@@ -8,7 +8,7 @@
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, ACCENT } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View, FlatList, TouchableOpacity, RefreshControl,
@@ -85,7 +85,7 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
   return (
     <View
       className="bg-card rounded-2xl px-4 py-3 flex-row items-center gap-3"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       {/* Avatar */}
       <View className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center flex-shrink-0">
@@ -118,7 +118,7 @@ function FilaTrabajador({ fila }: { fila: FilaDashboard }) {
             <View className="gap-1 mt-1">
               <View className="h-2 bg-muted rounded-full overflow-hidden flex-row">
                 {pctO > 0 && <View className="h-full bg-primary/60" style={{ width: `${pctO}%` }} />}
-                {pctN > 0 && <View className="h-full" style={{ width: `${pctN}%`, backgroundColor: '#818CF8' }} />}
+                {pctN > 0 && <View className="h-full" style={{ width: `${pctN}%`, backgroundColor: ACCENT.indigo }} />}
                 {pctE > 0 && <View className="h-full" style={{ width: `${pctE}%`, backgroundColor: COLORS.warning }} />}
               </View>
               <Text className={`text-[10px] font-semibold ${excedeSemana ? 'text-amber-600' : 'text-muted-foreground'}`}>
@@ -226,7 +226,7 @@ export default function DashboardAsistenciaScreen() {
                 )}
                 {contadores.compensatorios > 0 && (
                   <CounterPill
-                    color="#8B5CF6"
+                    color={ACCENT.violeta}
                     label={`${contadores.compensatorios} compensatorio${contadores.compensatorios > 1 ? 's' : ''}`}
                   />
                 )}

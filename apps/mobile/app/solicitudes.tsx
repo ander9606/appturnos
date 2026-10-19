@@ -116,11 +116,11 @@ function SolicitudCard({
   const loading   = loadingId === solicitud.id;
 
   const estadoConfig: Record<string, { label: string; color: string; bg: string }> = {
-    solicitado_por_trabajador: { label: 'Solicita unirse',    color: COLORS.warningDark, bg: '#FEF3C7' },
-    solicitado_por_empresa:    { label: 'Invitación enviada', color: COLORS.info, bg: '#EFF6FF' },
-    activo:                    { label: 'Activo',             color: COLORS.success, bg: '#D1FAE5' },
-    rechazado:                 { label: 'Rechazado',          color: COLORS.danger, bg: '#FEE2E2' },
-    archivado:                 { label: 'Archivado',          color: COLORS.placeholder, bg: '#F1F5F9' },
+    solicitado_por_trabajador: { label: 'Solicita unirse',    color: COLORS.warningDark, bg: COLORS.warningLight },
+    solicitado_por_empresa:    { label: 'Invitación enviada', color: COLORS.info, bg: COLORS.infoLight },
+    activo:                    { label: 'Activo',             color: COLORS.success, bg: COLORS.successLight },
+    rechazado:                 { label: 'Rechazado',          color: COLORS.danger, bg: COLORS.dangerLight },
+    archivado:                 { label: 'Archivado',          color: COLORS.placeholder, bg: COLORS.muted },
   };
 
   const cfg = estadoConfig[solicitud.estado] ?? estadoConfig.archivado;

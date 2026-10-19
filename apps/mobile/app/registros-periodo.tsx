@@ -7,7 +7,7 @@
  */
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View, SectionList, TouchableOpacity, Modal, Pressable, Alert, KeyboardAvoidingView, Platform, ScrollView,
@@ -48,8 +48,8 @@ const TIPOS_DIA: { v: TipoDia; label: string; color: string }[] = [
   { v: 'descanso',      label: 'Descanso',      color: COLORS.info },
   { v: 'vacacion',      label: 'Vacación',      color: COLORS.success },
   { v: 'incapacidad',   label: 'Incapacidad',   color: COLORS.warning },
-  { v: 'compensatorio', label: 'Compensatorio', color: '#8B5CF6' },
-  { v: 'licencia',      label: 'Licencia',      color: '#EC4899' },
+  { v: 'compensatorio', label: 'Compensatorio', color: ACCENT.violeta },
+  { v: 'licencia',      label: 'Licencia',      color: ACCENT.rosa },
   { v: 'ausencia',      label: 'Ausencia (no vino)', color: COLORS.danger },
 ];
 
@@ -953,7 +953,7 @@ function RegistroRow({
           );
         })}
         {tipoDef && tipoDef.v !== 'ordinario' && (
-          <View className="self-start px-2 py-0.5 rounded-full" style={{ backgroundColor: `${tipoDef.color}20` }}>
+          <View className="self-start px-2 py-0.5 rounded-full" style={{ backgroundColor: alpha(tipoDef.color, 0.13) }}>
             <Text className="text-[10px] font-semibold" style={{ color: tipoDef.color }}>
               {tipoDef.label}
             </Text>
@@ -969,7 +969,7 @@ function RegistroRow({
         <View className="flex-row items-center gap-2">
           {canEdit && compensatorio && (
             <TouchableOpacity onPress={() => onReasignar?.(compensatorio)} hitSlop={8}>
-              <Ionicons name="calendar-outline" size={16} color={tipoDef?.color ?? '#8B5CF6'} />
+              <Ionicons name="calendar-outline" size={16} color={tipoDef?.color ?? ACCENT.violeta} />
             </TouchableOpacity>
           )}
           {canEdit && tieneUbicacion && (

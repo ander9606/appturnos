@@ -131,7 +131,7 @@ export default function EditarGestorScreen() {
                     className={`flex-row items-center justify-between p-4 rounded-2xl border active:opacity-70 ${
                       active ? 'border-info' : 'bg-card border-border'
                     }`}
-                    style={active ? { backgroundColor: '#EFF6FF' } : {}}
+                    style={active ? { backgroundColor: COLORS.infoLight } : {}}
                   >
                     <Text className={`text-sm font-semibold ${active ? 'text-info' : 'text-foreground'}`}>
                       {opt.label}

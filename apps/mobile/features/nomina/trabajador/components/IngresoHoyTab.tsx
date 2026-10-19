@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React from 'react';
 import { View, TouchableOpacity, ScrollView, Linking, Platform, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -259,7 +259,7 @@ export function IngresoHoyTab({
                   style={{ width: `${pctExtra}%`, backgroundColor: COLORS.warning }}
                 />
               )}
-              <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color="#334155" />
+              <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color={COLORS.slate700} />
             </View>
             {horasPeriodoAnterior > 0 && (
               <Text className="text-[10px] text-muted-foreground">
@@ -295,10 +295,10 @@ export function IngresoHoyTab({
           </Text>
         </View>
       ) : estadoHoy === 'compensatorio' ? (
-        <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: '#8B5CF618' }}>
+        <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: alpha(ACCENT.violeta, 0.09) }}>
           <View className="flex-row items-center gap-2">
-            <Ionicons name="bed-outline" size={20} color="#8B5CF6" />
-            <Text className="text-sm font-semibold text-center" style={{ color: '#8B5CF6' }}>
+            <Ionicons name="bed-outline" size={20} color={ACCENT.violeta} />
+            <Text className="text-sm font-semibold text-center" style={{ color: ACCENT.violeta }}>
               Hoy es tu descanso compensatorio
             </Text>
           </View>

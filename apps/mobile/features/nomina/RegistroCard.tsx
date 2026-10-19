@@ -9,6 +9,7 @@
  *   • Día especial (descanso, vacación, etc.): badge amber, sin horario
  */
 
+import { COLORS } from '@/lib/designTokens';
 import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
 import { View, TouchableOpacity } from 'react-native';
@@ -117,7 +118,7 @@ export function RegistroCard({ registro, valorHora = 0, periodoInicio }: Registr
       onPress={() => canExpand && setExpanded((v) => !v)}
       activeOpacity={canExpand ? 0.8 : 1}
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
       accessibilityRole="button"
       accessibilityLabel={`Registro ${fmtFechaCorta(registro.fecha)}`}
     >

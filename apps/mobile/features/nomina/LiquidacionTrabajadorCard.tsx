@@ -20,7 +20,7 @@ export function LiquidacionTrabajadorCard({ trabajador, primaryColor }: Props) {
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       <TouchableOpacity
         className="px-4 py-4 gap-2"
