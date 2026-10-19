@@ -1,6 +1,7 @@
+import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useActualizarExtras } from '@/features/nomina/useNomina';
@@ -26,7 +27,7 @@ export function TurnosExtraOptIn() {
   const handleActivar = () => {
     mutation.mutate(true, {
       onSuccess: () => showToast('Turnos extra activados'),
-      onError: (err) => Alert.alert('Error', (err as ApiError).message ?? t('common.error')),
+      onError: (err) => showAlert('Error', (err as ApiError).message ?? t('common.error')),
     });
   };
 

@@ -6,6 +6,7 @@
  * el trabajador está dentro del radio autorizado según el tipo de
  * geofence configurado en el cargo (oferta, fijo, zonal, libre).
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
@@ -13,7 +14,6 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -119,7 +119,7 @@ export default function IngresoScreen() {
       router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar el ingreso.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 

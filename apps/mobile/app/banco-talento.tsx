@@ -1,6 +1,7 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, FlatList, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -109,7 +110,7 @@ export default function BancoTalentoScreen() {
         setInvitados((prev) => new Set(prev).add(t.id));
         showToast(`${t.nombre} ${t.apellido} recibirá una notificación para unirse a tu empresa.`);
       },
-      onError: (err: unknown) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo enviar la invitación.')),
+      onError: (err: unknown) => showAlert('Error', apiErrorMessage(err, 'No se pudo enviar la invitación.')),
     });
   }
 

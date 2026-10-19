@@ -2,11 +2,12 @@
  * Gestores — lista de gestores (admin_empresa, jefe_turnos, jefe_nomina, nomina)
  * de la empresa. Permite editar, activar/desactivar y eliminar usuarios gestores.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
-  View, Text, ScrollView, Pressable, Alert, } from 'react-native';
+  View, Text, ScrollView, Pressable, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -82,7 +83,7 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
     if (!ok) return;
     toggleMutation.mutate(
       { id: gestor.id, activo: !gestor.activo },
-      { onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el estado.')) }
+      { onError: (err) => showAlert('Error', apiErrorMessage(err, 'No se pudo actualizar el estado.')) }
     );
   };
 
@@ -95,7 +96,7 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
     });
     if (!ok) return;
     eliminarMutation.mutate(gestor.id, {
-      onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo eliminar el gestor.')),
+      onError: (err) => showAlert('Error', apiErrorMessage(err, 'No se pudo eliminar el gestor.')),
     });
   };
 

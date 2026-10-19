@@ -7,6 +7,7 @@
  *  - Invitaciones recibidas de empresas (pendientes de aceptación)
  *  - Buscador para solicitar nuevas empresas
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
@@ -16,7 +17,6 @@ import {
   ScrollView,
   Pressable,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   Linking,
 } from 'react-native';
@@ -314,7 +314,7 @@ export default function MisEmpresasScreen() {
     try {
       await aceptar.mutateAsync(id);
     } catch {
-      Alert.alert('Error', 'No se pudo aceptar la invitación');
+      showAlert('Error', 'No se pudo aceptar la invitación');
     } finally {
       setActionLoadingId(null);
     }
@@ -336,7 +336,7 @@ export default function MisEmpresasScreen() {
     try {
       await rechazar.mutateAsync({ id });
     } catch {
-      Alert.alert('Error', esCancelar ? 'No se pudo cancelar' : 'No se pudo rechazar');
+      showAlert('Error', esCancelar ? 'No se pudo cancelar' : 'No se pudo rechazar');
     } finally {
       setActionLoadingId(null);
     }
@@ -354,7 +354,7 @@ export default function MisEmpresasScreen() {
     try {
       await archivar.mutateAsync(id);
     } catch {
-      Alert.alert('Error', 'No se pudo completar la acción');
+      showAlert('Error', 'No se pudo completar la acción');
     } finally {
       setActionLoadingId(null);
     }
@@ -362,7 +362,7 @@ export default function MisEmpresasScreen() {
 
   const handleReactivar = (empresaId: number) => {
     solicitar.mutate({ empresaId }, {
-      onError: () => Alert.alert('Error', 'No se pudo enviar la solicitud.'),
+      onError: () => showAlert('Error', 'No se pudo enviar la solicitud.'),
     });
   };
   const reactivandoEmpresaId = solicitar.isPending ? solicitar.variables?.empresaId : null;

@@ -5,6 +5,7 @@
  * Muestra el tiempo transcurrido desde el ingreso y captura
  * la firma digital para confirmar la salida.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
@@ -12,7 +13,6 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
   TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
@@ -137,7 +137,7 @@ export default function EgresoScreen() {
       router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 

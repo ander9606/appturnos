@@ -1,8 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, Switch, Alert, TouchableOpacity,
+  View, Text, ScrollView, Switch, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -59,7 +60,7 @@ export default function DisponibilidadScreen() {
       qc.invalidateQueries({ queryKey: ['disponibilidad'] });
       showToast('Tu disponibilidad fue actualizada.');
     },
-    onError: () => Alert.alert('Error', 'No se pudo guardar la disponibilidad.'),
+    onError: () => showAlert('Error', 'No se pudo guardar la disponibilidad.'),
   });
 
   function toggleActivo(idx: number) {

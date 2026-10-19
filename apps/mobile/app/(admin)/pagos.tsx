@@ -3,6 +3,7 @@
  * Lista los eventos de pago recibidos vía webhook, con filtro por estado
  * y reintento manual para los que quedaron en error.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
@@ -12,7 +13,6 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -157,7 +157,7 @@ export default function PagosScreen() {
       await reintentarMutation.mutateAsync(id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al reintentar';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setReintentandoId(null);
     }

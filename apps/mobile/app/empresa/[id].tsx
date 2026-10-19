@@ -2,6 +2,7 @@
  * Detalle y edición de una empresa — panel super_admin.
  * Permite ver métricas, editar campos y cambiar estado activo/inactivo.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
@@ -12,7 +13,6 @@ import {
   Pressable,
   TextInput,
   Switch,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -145,7 +145,7 @@ export default function EmpresaDetailScreen() {
       showToast('Empresa actualizada correctamente.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al guardar';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -164,7 +164,7 @@ export default function EmpresaDetailScreen() {
       await cambiarEstado({ id: empresaId, activo: empresa.activo !== 1 });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -183,7 +183,7 @@ export default function EmpresaDetailScreen() {
       router.replace('/(admin)/empresas');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al eliminar';
-      Alert.alert('No se pudo eliminar', msg);
+      showAlert('No se pudo eliminar', msg);
     }
   };
 
@@ -195,7 +195,7 @@ export default function EmpresaDetailScreen() {
       setLinkGenerado(resultado);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al generar el link';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 

@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS } from '@api-client';
 import React from 'react';
 import {
@@ -5,7 +6,6 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Alert,
 } from 'react-native';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -51,7 +51,7 @@ type Props = {
 export function Step2SeguridadSocial({ data, onChange, onBack, onNext }: Props) {
   const handleNext = () => {
     const err = validateStep2(data);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
     onNext();
   };
 

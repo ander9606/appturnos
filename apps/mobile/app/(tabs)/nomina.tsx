@@ -10,12 +10,12 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  RefreshControl, Alert,
-} from 'react-native';
+  RefreshControl, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -174,7 +174,7 @@ function NominaGestorView() {
       showToast('Período liquidado correctamente.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al liquidar';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 

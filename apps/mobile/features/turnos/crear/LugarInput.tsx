@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
@@ -6,7 +7,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -61,7 +61,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso requerido', 'Activa el permiso de ubicación para buscar el lugar del turno con tu GPS.');
+        showAlert('Permiso requerido', 'Activa el permiso de ubicación para buscar el lugar del turno con tu GPS.', 'warning');
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -76,7 +76,7 @@ export function LugarInput({ value, latitud, longitud, onChange }: Props) {
         onChange(`${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng);
       }
     } catch {
-      Alert.alert('No se pudo obtener el GPS', 'Revisa que el GPS esté activado e intenta de nuevo, o busca el lugar por texto.');
+      showAlert('No se pudo obtener el GPS', 'Revisa que el GPS esté activado e intenta de nuevo, o busca el lugar por texto.');
     } finally {
       setLocLoading(false);
     }

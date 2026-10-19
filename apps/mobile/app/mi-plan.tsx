@@ -9,10 +9,11 @@
  * dentro de la app — en iOS solo se muestra el uso del plan, sin precios
  * ni botón de pago. Sigue disponible tal cual en Android y en la web.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert, Linking, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -49,7 +50,7 @@ export default function MiPlanScreen() {
     // Link hospedado por Wompi, se abre en el navegador del sistema — no un webview embebido.
     onSuccess: (link) => Linking.openURL(link.url),
     onError: (error: ApiError) =>
-      Alert.alert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
+      showAlert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
   });
 
   const denied = useRoleGuard(['admin_empresa']);

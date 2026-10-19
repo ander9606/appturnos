@@ -4,8 +4,9 @@
  * geofence y mutaciones de marcaje.
  */
 
+import { showAlert } from '@/lib/alertDialog';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Alert, AppState } from 'react-native';
+import { AppState } from 'react-native';
 import { ApiError } from '@api-client';
 import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina, LineaLiquidacionEventual, PeriodoTurnoEventual } from '@api-client';
 import { bogotaToday } from '@/lib/formatters';
@@ -320,7 +321,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
       await entradaMutation.mutateAsync(coords);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar entrada';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }, [obtenerCoordsParaMarcaje, entradaMutation]);
 
@@ -348,10 +349,10 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     try {
       const coords = await obtenerCoordsParaMarcaje();
       const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, jornada_continua: jornadaContinua, ...coords });
-      if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
+      if (result?.advertencia) showAlert('Horas extra', result.advertencia, 'warning');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }, [registroHoy, obtenerCoordsParaMarcaje, salidaMutation]);
 
@@ -360,10 +361,10 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const handleReingreso = useCallback(async (motivo?: string) => {
     try {
       await reingresoMutation.mutateAsync(motivo);
-      Alert.alert('Solicitud enviada', 'El gestor recibirá una notificación para aprobarte.');
+      showAlert('Solicitud enviada', 'El gestor recibirá una notificación para aprobarte.', 'success');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al enviar la solicitud';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }, [reingresoMutation]);
 

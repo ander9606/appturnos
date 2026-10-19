@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import { KeyboardAvoidingView, Platform, Alert } from 'react-native';
@@ -89,7 +90,7 @@ export default function NuevoTurnoScreen() {
       // ya se publicó, en vez de cerrar la pantalla de golpe tras la espera.
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo publicar el turno.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 

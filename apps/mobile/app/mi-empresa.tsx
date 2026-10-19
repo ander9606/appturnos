@@ -3,6 +3,8 @@
  * Campos: logo, razón social, NIT, ciudad, actividad, descripción,
  *         acepta_postulaciones (visible en directorio marketplace).
  */
+import { confirm } from '@/lib/confirmDialog';
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
@@ -108,7 +110,7 @@ function useReprocesarRecargos() {
           : 'No había registros por recalcular en el período abierto.',
       );
     },
-    onError: () => Alert.alert('Error', 'No se pudo reprocesar el período. Intenta de nuevo.'),
+    onError: () => showAlert('Error', 'No se pudo reprocesar el período. Intenta de nuevo.'),
   });
 }
 
@@ -173,7 +175,7 @@ export default function MiEmpresaScreen() {
         onPress: async () => {
           const ImagePicker = await import('expo-image-picker');
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la cámara.'); return; }
+          if (!perm.granted) { showAlert('Permiso requerido', 'Permite el acceso a la cámara.', 'warning'); return; }
           const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
           if (!result.canceled && result.assets[0]?.base64) _subirLogo(result.assets[0].base64);
         },
@@ -183,7 +185,7 @@ export default function MiEmpresaScreen() {
         onPress: async () => {
           const ImagePicker = await import('expo-image-picker');
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la galería.'); return; }
+          if (!perm.granted) { showAlert('Permiso requerido', 'Permite el acceso a la galería.', 'warning'); return; }
           const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
           if (!result.canceled && result.assets[0]?.base64) _subirLogo(result.assets[0].base64);
         },
@@ -199,7 +201,7 @@ export default function MiEmpresaScreen() {
       await actualizar.mutateAsync({ logo_url: b64 ? `data:image/jpeg;base64,${b64}` : '' });
       showToast(b64 ? 'Logo actualizado.' : 'Logo eliminado.');
     } catch {
-      Alert.alert('Error', 'No se pudo actualizar el logo. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo actualizar el logo. Intenta de nuevo.');
     } finally {
       setUploadingLogo(false);
     }
@@ -240,7 +242,7 @@ export default function MiEmpresaScreen() {
       });
       showToast('Datos de la empresa actualizados.');
     } catch {
-      Alert.alert('Error', 'No se pudo guardar. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo guardar. Intenta de nuevo.');
     }
   };
 
@@ -491,14 +493,12 @@ export default function MiEmpresaScreen() {
                     const active = value === opt.value;
                     const elegir = () => {
                       if (opt.value || !value) return onChange(opt.value);
-                      Alert.alert(
-                        'Dejar de sumar recargos',
-                        'Zaturno dejará de calcular el recargo nocturno y festivo. Las horas son normales hasta 42 h a la semana y, después, extra diurna. La empresa calcula esos recargos y responde por la liquidación. ¿Confirmas?',
-                        [
-                          { text: 'Cancelar', style: 'cancel' },
-                          { text: 'Sí, dejar de sumar', style: 'destructive', onPress: () => onChange(false) },
-                        ],
-                      );
+                      confirm({
+                        title: 'Dejar de sumar recargos',
+                        message: 'Zaturno dejará de calcular el recargo nocturno y festivo. Las horas son normales hasta 42 h a la semana y, después, extra diurna. La empresa calcula esos recargos y responde por la liquidación. ¿Confirmas?',
+                        confirmLabel: 'Sí, dejar de sumar',
+                        destructive: true,
+                      }).then((ok) => { if (ok) onChange(false); });
                     };
                     return (
                       <Pressable

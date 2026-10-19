@@ -1,8 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, Alert, RefreshControl,
+  View, Text, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -34,7 +35,7 @@ function ReingresoItem({ item }: { item: SolicitudReingreso }) {
     try {
       await aprobarMutation.mutateAsync(item.id);
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'Error al aprobar');
+      showAlert('Error', err instanceof ApiError ? err.message : 'Error al aprobar');
     }
   };
 
@@ -49,7 +50,7 @@ function ReingresoItem({ item }: { item: SolicitudReingreso }) {
     try {
       await rechazarMutation.mutateAsync(item.id);
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'Error al rechazar');
+      showAlert('Error', err instanceof ApiError ? err.message : 'Error al rechazar');
     }
   };
 

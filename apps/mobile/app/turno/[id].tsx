@@ -7,6 +7,7 @@
  *   completado  → resumen de horas y pago
  *   cancelado / no_presentado / pendiente → informativo
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
@@ -14,7 +15,6 @@ import {
   View,
   Text,
   ScrollView,
-  Alert,
   Linking,
   Platform,
 } from 'react-native';
@@ -191,10 +191,10 @@ export default function TurnoDetailScreen() {
     const label = h > 0 && m > 0 ? `${h}h ${m}m`
                 : h > 0            ? `${h}h`
                 :                    `${m} min`;
-    Alert.alert(
+    showAlert(
       'Muy pronto',
       `Falta ${label} para el ingreso.\nEl marcaje se habilita 30 min antes de la hora de entrada.`,
-      [{ text: 'Entendido', style: 'cancel' }],
+      'info',
     );
   }, [minutosParaIngreso]);
 
@@ -211,7 +211,7 @@ export default function TurnoDetailScreen() {
       showToast('Ingreso registrado — tu llegada ha sido confirmada.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar el ingreso.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -227,7 +227,7 @@ export default function TurnoDetailScreen() {
       showToast('Salida registrada — ¡turno completado, buen trabajo!');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -249,7 +249,7 @@ export default function TurnoDetailScreen() {
       showToast(acepta ? 'Participación reconfirmada.' : 'Declinaste el turno.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo procesar tu respuesta.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -265,7 +265,7 @@ export default function TurnoDetailScreen() {
       showToast('Calificación guardada.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo guardar la calificación.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -278,7 +278,7 @@ export default function TurnoDetailScreen() {
       await WebBrowser.openBrowserAsync(`${base}/api/contratos/asignacion/${id}/pdf?token=${token}`);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo abrir el contrato.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setCargandoContrato(false);
     }

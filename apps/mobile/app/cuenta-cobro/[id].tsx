@@ -1,8 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, Alert, StyleSheet, TouchableOpacity,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -67,14 +68,14 @@ export default function CuentaCobroScreen() {
       qc.invalidateQueries({ queryKey: ['cuentas-cobro-sin-firmar'] });
       setShowFirma(false);
     },
-    onError: () => Alert.alert('Error', 'No se pudo registrar la firma.'),
+    onError: () => showAlert('Error', 'No se pudo registrar la firma.'),
   });
 
   async function handleDescargar() {
     try {
       await descargarCuentaCobro(Number(id));
     } catch {
-      Alert.alert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
     }
   }
 

@@ -5,6 +5,7 @@
  * identificación, información personal, seguridad social,
  * datos bancarios y contacto de emergencia.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
@@ -15,7 +16,6 @@ import {
   TextInput,
   TouchableOpacity,
   Pressable,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -351,7 +351,7 @@ export default function MiPerfilLaboralScreen() {
     ];
     for (const [valor, label] of fechas) {
       if (valor && (!isValidISODate(valor) || valor > bogotaToday())) {
-        Alert.alert('Fecha inválida', `${label} debe tener formato AAAA-MM-DD y no puede ser futura.`);
+        showAlert('Fecha inválida', `${label} debe tener formato AAAA-MM-DD y no puede ser futura.`, 'warning');
         return;
       }
     }
@@ -380,7 +380,7 @@ export default function MiPerfilLaboralScreen() {
         err && typeof err === 'object' && 'message' in err
           ? String((err as { message: string }).message)
           : 'Error al guardar';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -391,15 +391,15 @@ export default function MiPerfilLaboralScreen() {
 
   const handleAddExperiencia = async () => {
     if (!newExp.empresa_nombre || !newExp.cargo || !newExp.fecha_inicio) {
-      Alert.alert('Campos requeridos', 'Empresa, cargo y fecha de inicio son obligatorios');
+      showAlert('Campos requeridos', 'Empresa, cargo y fecha de inicio son obligatorios', 'warning');
       return;
     }
     if (!isValidISODate(newExp.fecha_inicio)) {
-      Alert.alert('Fecha inválida', 'La fecha de inicio debe tener formato AAAA-MM-DD.');
+      showAlert('Fecha inválida', 'La fecha de inicio debe tener formato AAAA-MM-DD.', 'warning');
       return;
     }
     if (newExp.fecha_fin && (!isValidISODate(newExp.fecha_fin) || newExp.fecha_fin < newExp.fecha_inicio)) {
-      Alert.alert('Fecha inválida', 'La fecha de fin debe ser AAAA-MM-DD y no puede ser antes que la de inicio.');
+      showAlert('Fecha inválida', 'La fecha de fin debe ser AAAA-MM-DD y no puede ser antes que la de inicio.', 'warning');
       return;
     }
     try {
@@ -412,7 +412,7 @@ export default function MiPerfilLaboralScreen() {
       setNewExp(EMPTY_EXP);
       setShowAddExp(false);
     } catch {
-      Alert.alert('Error', 'No se pudo guardar la experiencia');
+      showAlert('Error', 'No se pudo guardar la experiencia');
     }
   };
 
@@ -423,7 +423,7 @@ export default function MiPerfilLaboralScreen() {
 
   const handleAddDiploma = async () => {
     if (!newDip.titulo || !newDip.institucion) {
-      Alert.alert('Campos requeridos', 'Título e institución son obligatorios');
+      showAlert('Campos requeridos', 'Título e institución son obligatorios', 'warning');
       return;
     }
     try {
@@ -435,7 +435,7 @@ export default function MiPerfilLaboralScreen() {
       setNewDip(EMPTY_DIP);
       setShowAddDip(false);
     } catch {
-      Alert.alert('Error', 'No se pudo guardar el diploma');
+      showAlert('Error', 'No se pudo guardar el diploma');
     }
   };
 

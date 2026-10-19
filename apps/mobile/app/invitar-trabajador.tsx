@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -5,7 +6,6 @@ import {
   Text,
   TextInput,
   Pressable,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -59,7 +59,7 @@ export default function InvitarTrabajadorScreen() {
         router.back();
       },
       onError: (err: unknown) => {
-        Alert.alert('Error', (err as ApiError).message ?? 'No se pudo enviar la invitación.');
+        showAlert('Error', (err as ApiError).message ?? 'No se pudo enviar la invitación.');
       },
     });
   }

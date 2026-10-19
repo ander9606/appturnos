@@ -7,6 +7,7 @@
  *
  * Colores: naranja (trabajador_turnos), verde (trabajador_nomina), azul (gestores).
  */
+import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -16,7 +17,6 @@ import {
   Pressable,
   RefreshControl,
   Linking,
-  Alert,
   Platform,
 } from 'react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -166,7 +166,7 @@ export default function DashboardScreen() {
     // Link hospedado por Wompi, se abre en el navegador del sistema — no un webview embebido.
     onSuccess: (data) => Linking.openURL(data.url),
     onError: (error: ApiError) =>
-      Alert.alert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
+      showAlert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
   });
 
   function iniciarRenovacion() {

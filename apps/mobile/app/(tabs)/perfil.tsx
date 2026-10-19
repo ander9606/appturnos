@@ -6,6 +6,7 @@
  * - Cambiar su contraseña
  * - Cerrar sesión
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
@@ -176,11 +177,11 @@ function ChangePasswordForm({
 
   const handleSave = () => {
     if (nueva.length < 8) {
-      Alert.alert('Error', t('perfil.errorPasswordShort'));
+      showAlert('Error', t('perfil.errorPasswordShort'));
       return;
     }
     if (nueva !== confirmar) {
-      Alert.alert('Error', t('perfil.errorPasswordMatch'));
+      showAlert('Error', t('perfil.errorPasswordMatch'));
       return;
     }
     onSave(actual, nueva);
@@ -340,7 +341,7 @@ export default function PerfilScreen() {
 
   const handleToggleExtras = (val: boolean) => {
     actualizarExtrasMutation.mutate(val, {
-      onError: (err) => Alert.alert('Error', (err as ApiError).message ?? t('common.error')),
+      onError: (err) => showAlert('Error', (err as ApiError).message ?? t('common.error')),
     });
   };
 
@@ -353,7 +354,7 @@ export default function PerfilScreen() {
         onPress: async () => {
           const ImagePicker = await import('expo-image-picker');
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la cámara.'); return; }
+          if (!perm.granted) { showAlert('Permiso requerido', 'Permite el acceso a la cámara.', 'warning'); return; }
           const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
           if (!result.canceled && result.assets[0]?.base64) _subirFoto(result.assets[0].base64);
         },
@@ -363,7 +364,7 @@ export default function PerfilScreen() {
         onPress: async () => {
           const ImagePicker = await import('expo-image-picker');
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la galería.'); return; }
+          if (!perm.granted) { showAlert('Permiso requerido', 'Permite el acceso a la galería.', 'warning'); return; }
           const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
           if (!result.canceled && result.assets[0]?.base64) _subirFoto(result.assets[0].base64);
         },
@@ -379,7 +380,7 @@ export default function PerfilScreen() {
       const perfil = await authApi.actualizarFoto(b64);
       setUsuario(perfil);
     } catch (err) {
-      Alert.alert('Error', (err as ApiError).message ?? t('common.error'));
+      showAlert('Error', (err as ApiError).message ?? t('common.error'));
     } finally {
       setUploadingFoto(false);
     }
@@ -396,7 +397,7 @@ export default function PerfilScreen() {
       showToast(t('perfil.successDatos'));
     },
     onError: (err: ApiError) => {
-      Alert.alert('Error', err.message ?? t('common.error'));
+      showAlert('Error', err.message ?? t('common.error'));
     },
   });
 
@@ -409,7 +410,7 @@ export default function PerfilScreen() {
       await logout();
     },
     onError: (err: ApiError) => {
-      Alert.alert('Error', err.message ?? t('common.error'));
+      showAlert('Error', err.message ?? t('common.error'));
     },
   });
 
@@ -419,7 +420,7 @@ export default function PerfilScreen() {
       await logout();
     },
     onError: (err: ApiError) => {
-      Alert.alert('No se pudo eliminar la cuenta', err.message ?? t('common.error'));
+      showAlert('No se pudo eliminar la cuenta', err.message ?? t('common.error'));
     },
   });
 

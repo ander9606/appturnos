@@ -1,8 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, Alert, StyleSheet, TouchableOpacity,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -58,7 +59,7 @@ export default function ContratoScreen() {
       qc.invalidateQueries({ queryKey: ['asignacion', contrato?.asignacion_id] });
       setShowFirma(false);
     },
-    onError: () => Alert.alert('Error', 'No se pudo registrar la firma.'),
+    onError: () => showAlert('Error', 'No se pudo registrar la firma.'),
   });
 
   async function handleDescargar() {

@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
@@ -6,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   Pressable,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Input } from '@/components/ui/Input';
@@ -86,7 +86,7 @@ export function Step1DatosPersonales({ data, onChange, onNext }: Props) {
 
   const handleNext = async () => {
     const err = validateStep1(data);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
 
     if (data.cedula.length >= 4) {
       try {

@@ -3,6 +3,7 @@
  * logiq360. Muestra una sugerencia de match por nombre y permite elegir manualmente.
  * Solo visible para admin_empresa.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
@@ -12,7 +13,6 @@ import {
   ScrollView,
   Pressable,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -102,7 +102,7 @@ export default function ConciliacionScreen() {
     try {
       await vincular({ trabajadorId, empleadoId });
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo vincular.');
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo vincular.');
     }
   }
 

@@ -186,6 +186,36 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 - Aviso global (móvil, `StatusBanner`): barra **oscura** "Sin conexión · mostrando lo último que guardamos" (17:1) o **rojo oscuro** "No pudimos cargar todo" (4.8:1). Nunca blanco sobre ámbar (2.15:1).
 - `ErrorBoundary` (error inesperado de código) usa el anillo torcido con el título "Algo se torció".
 
+### 5.5 Avisos, confirmaciones y toasts (móvil)
+
+**Prohibido `Alert.alert` nativo** (se ve distinto en iOS y Android y no lleva la marca). Hay tres herramientas propias, montadas una sola vez en `app/_layout.tsx`:
+
+| Necesitas… | Usa | Archivo | Ejemplo |
+|---|---|---|---|
+| Avisar algo que el usuario **debe leer** (error de una acción, dato faltante) | `showAlert(título, mensaje, tipo)` | `lib/alertDialog.ts` | `showAlert('Campo requerido', 'El email es obligatorio.', 'warning')` |
+| **Preguntar** (cancelar / confirmar) | `confirm({…})` → `Promise<boolean>` | `lib/confirmDialog.ts` | `if (await confirm({ title, destructive: true })) …` |
+| Feedback **breve y no bloqueante** | `showToast(mensaje, tipo)` | `lib/toast.ts` | `showToast('Turno confirmado')` |
+| Feedback con **acción** y cuenta atrás ("Deshacer") | `actionToast()` | `lib/actionToast.ts` | — |
+
+**Tipos** (`FeedbackVariant`, definidos en `components/ui/feedback.ts`; el ícono va en un círculo de color suave):
+
+| Tipo | Cuándo | Ícono / color |
+|---|---|---|
+| `error` *(por defecto)* | Falló algo: "Error", "No se pudo…" | `alert-circle` · rojo |
+| `warning` | Falta o está mal un dato: "Campo requerido", "Fecha inválida", "Permiso requerido" | `warning` · ámbar oscuro |
+| `info` | Información que no es culpa de nadie: "Muy pronto" | `information-circle` · azul |
+| `success` | Salió bien: "Solicitud enviada" | `checkmark-circle` · verde |
+
+- `confirm({ destructive: true })` pinta el botón de rojo y usa el ícono de papelera: **para acciones irreversibles** (eliminar, rechazar, dejar de sumar recargos).
+- `confirm` para elegir entre dos caminos también vale: `confirmLabel`/`cancelLabel` permiten textos como "Ver detalle" / "Volver a lista".
+- Un error de una **acción del usuario** va en `showAlert`; el feedback de que algo **salió bien** va en `showToast`. No pongas un diálogo para un éxito.
+- Todos llevan `accessibilityRole` (`alert`/`header`) y los diálogos `accessibilityViewIsModal`. Texto, ícono y tipo siempre juntos: nunca solo color.
+- Los diálogos comparten el marco `components/ui/DialogCard.tsx` (fondo oscuro + tarjeta con entrada de resorte).
+
+**Excepciones que siguen con `Alert.alert` nativo** (pendientes, ver §8):
+1. **Archivos con un `<Modal>` de React Native** (19 archivos, ~75 llamadas). En iOS un `Modal` abierto puede impedir que se muestre otro desde el layout raíz, y no se pudo comprobar en dispositivo. Mientras tanto, ahí se conserva el nativo, que siempre aparece encima.
+2. **Menús de opciones** (cámara/galería en perfil y logo de empresa) y los avisos con botones dinámicos (`turno/nuevo`): necesitan un *bottom sheet*, no un diálogo.
+
 ---
 
 ## 6. Accesibilidad
@@ -219,7 +249,7 @@ Reglas:
 
 - [ ] Sin hex literales nuevos (busca `#[0-9A-Fa-f]{6}` en lo que tocaste).
 - [ ] Si agregaste un color: está en `tailwind.config.js`, `designTokens.ts`, `index.css` **y** en §2.2.
-- [ ] Sin `ActivityIndicator`, `Loader2`, texto "Cargando…" ni bloques de error armados a mano.
+- [ ] Sin `ActivityIndicator`, `Loader2`, texto "Cargando…", bloques de error armados a mano ni `Alert.alert` nuevos (§5.5).
 - [ ] Listas: skeleton al cargar, `ErrorState` (pasando `error`) con reintento, `EmptyState` si no hay datos.
 - [ ] Texto pequeño cumple contraste (§6).
 - [ ] Strings visibles por `t('clave')` en móvil.
@@ -242,7 +272,10 @@ Reglas:
 10. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
 11. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
 12. **Más ilustraciones de marca.** Reutilizar el planeta en estados vacíos (sin turnos, sin equipo) y en el 404 de la web.
-13. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
+13. **`Alert.alert` restantes en móvil (~85 llamadas).** Probar en un iPhone si un diálogo del layout raíz aparece sobre un `Modal` abierto; si funciona, migrar los 19 archivos con `Modal` (mismo script). Si no, montar el diálogo dentro de cada `Modal` o sustituir esos `Modal` por pantallas/`bottom sheet`.
+14. **Menús de opciones** (foto de perfil, logo): reemplazar los `Alert.alert` con botones por un *bottom sheet* de marca.
+15. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
+16. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
 ---
 

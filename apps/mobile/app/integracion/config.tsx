@@ -2,6 +2,7 @@
  * Pantalla de configuración de la integración logiq360.
  * Solo visible para admin_empresa.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useState } from 'react';
@@ -12,7 +13,6 @@ import {
   TextInput,
   Pressable,
   Switch,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -74,7 +74,7 @@ export default function IntegracionConfigScreen() {
       setCodigoPair('');
       showToast(`Integración vinculada con logiq360 (tenant ${r.logiq360_tenant_id}).`);
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo emparejar.');
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo emparejar.');
     }
   }
 
@@ -84,7 +84,7 @@ export default function IntegracionConfigScreen() {
       await guardar({ activo: value });
     } catch (err) {
       setActivo(!value);
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo actualizar.');
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo actualizar.');
     }
   }
 

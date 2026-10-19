@@ -3,11 +3,11 @@
  * admin_empresa (una empresa puede tener varios, p.ej. socios). El backend
  * bloquea quitarle el rol de admin al único administrador activo.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, Alert,
-  KeyboardAvoidingView, Platform, ScrollView,
+  View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -48,7 +48,7 @@ export default function EditarGestorScreen() {
       qc.invalidateQueries({ queryKey: ['gestores'] });
       router.back();
     },
-    onError: (err: unknown) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el gestor.')),
+    onError: (err: unknown) => showAlert('Error', apiErrorMessage(err, 'No se pudo actualizar el gestor.')),
   });
 
   const denied = useRoleGuard(['admin_empresa']);
@@ -56,11 +56,11 @@ export default function EditarGestorScreen() {
 
   function handleGuardar() {
     if (!nombre.trim()) {
-      Alert.alert('Campo requerido', 'El nombre es obligatorio.');
+      showAlert('Campo requerido', 'El nombre es obligatorio.', 'warning');
       return;
     }
     if (!email.trim()) {
-      Alert.alert('Campo requerido', 'El email es obligatorio.');
+      showAlert('Campo requerido', 'El email es obligatorio.', 'warning');
       return;
     }
     mutation.mutate({ nombre: nombre.trim(), apellido: apellido.trim() || undefined, email: email.trim(), rol });

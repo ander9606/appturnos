@@ -1,8 +1,8 @@
+import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TextInput, TouchableOpacity, Alert,
-} from 'react-native';
+  View, Text, ScrollView, TextInput, TouchableOpacity, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
@@ -35,7 +35,7 @@ export default function AusenciaNuevaScreen() {
 
   async function handleGuardar() {
     if (isoDate(fin) < isoDate(inicio)) {
-      Alert.alert('Error', 'La fecha de fin no puede ser antes del inicio.');
+      showAlert('Error', 'La fecha de fin no puede ser antes del inicio.');
       return;
     }
     try {
@@ -43,7 +43,7 @@ export default function AusenciaNuevaScreen() {
       showToast('Tu solicitud fue enviada al gestor.');
       router.back();
     } catch {
-      Alert.alert('Error', 'No se pudo enviar la solicitud.');
+      showAlert('Error', 'No se pudo enviar la solicitud.');
     }
   }
 

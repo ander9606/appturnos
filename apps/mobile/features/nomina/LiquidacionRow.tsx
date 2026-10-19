@@ -1,9 +1,10 @@
 /**
  * LiquidacionRow — fila de trabajador en la vista de liquidación (jefe/admin)
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { LiquidacionLinea, DescansoCompensatorio, DescuentoNomina, TipoDescuento } from '@api-client';
@@ -59,8 +60,8 @@ export function LiquidacionRow({
 
   const handleGuardarDescuento = async () => {
     const montoNum = Number(monto);
-    if (!motivo.trim()) { Alert.alert('Falta el motivo', 'Escribe una razón breve para el descuento.'); return; }
-    if (!montoNum || montoNum <= 0) { Alert.alert('Monto inválido', 'El monto debe ser mayor a 0.'); return; }
+    if (!motivo.trim()) { showAlert('Falta el motivo', 'Escribe una razón breve para el descuento.', 'warning'); return; }
+    if (!montoNum || montoNum <= 0) { showAlert('Monto inválido', 'El monto debe ser mayor a 0.', 'warning'); return; }
     if (!periodoId) return;
     try {
       await crearDescuento.mutateAsync({
@@ -72,7 +73,7 @@ export function LiquidacionRow({
       });
       setMotivo(''); setMonto(''); setTipo('prestamo'); setMostrarForm(false);
     } catch {
-      Alert.alert('Error', 'No se pudo registrar el descuento.');
+      showAlert('Error', 'No se pudo registrar el descuento.');
     }
   };
 

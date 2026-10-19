@@ -1,6 +1,8 @@
 /**
  * Crear nueva empresa — panel super_admin.
  */
+import { confirm } from '@/lib/confirmDialog';
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
@@ -10,7 +12,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -100,23 +101,23 @@ export default function NuevaEmpresaScreen() {
 
   const handleCrear = async () => {
     if (!nombre.trim()) {
-      Alert.alert('Requerido', 'El nombre de la empresa es obligatorio.');
+      showAlert('Requerido', 'El nombre de la empresa es obligatorio.', 'warning');
       return;
     }
     if (!slug.trim()) {
-      Alert.alert('Requerido', 'El slug es obligatorio.');
+      showAlert('Requerido', 'El slug es obligatorio.', 'warning');
       return;
     }
     if (!/^[a-z0-9-]+$/.test(slug)) {
-      Alert.alert('Slug inválido', 'Solo letras minúsculas, números y guiones.');
+      showAlert('Slug inválido', 'Solo letras minúsculas, números y guiones.', 'warning');
       return;
     }
     if (adminNombre.trim() && !adminEmail.trim()) {
-      Alert.alert('Falta el email', 'Si indicas un nombre de administrador, el email es obligatorio.');
+      showAlert('Falta el email', 'Si indicas un nombre de administrador, el email es obligatorio.', 'warning');
       return;
     }
     if (adminEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail.trim())) {
-      Alert.alert('Email inválido', 'Revisa el email del administrador.');
+      showAlert('Email inválido', 'Revisa el email del administrador.', 'warning');
       return;
     }
 
@@ -135,19 +136,16 @@ export default function NuevaEmpresaScreen() {
         : nueva.credenciales_email_enviado
         ? `\n\nSe enviaron las credenciales de acceso a ${adminEmail.trim()}.`
         : `\n\n⚠️ El administrador se creó pero no se pudo enviar el correo con las credenciales. Usa "Olvidé mi contraseña" con ${adminEmail.trim()} para generarlas de nuevo.`;
-      Alert.alert('✅', `Empresa "${nueva.nombre}" creada correctamente.${credencialesMsg}`, [
-        {
-          text: 'Ver detalle',
-          onPress: () => router.replace(`/empresa/${nueva.id}`),
-        },
-        {
-          text: 'Volver a lista',
-          onPress: () => router.replace('/(admin)/empresas'),
-        },
-      ]);
+      const verDetalle = await confirm({
+        title: 'Empresa creada',
+        message: `Empresa "${nueva.nombre}" creada correctamente.${credencialesMsg}`,
+        confirmLabel: 'Ver detalle',
+        cancelLabel: 'Volver a lista',
+      });
+      router.replace(verDetalle ? `/empresa/${nueva.id}` : '/(admin)/empresas');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al crear la empresa';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 

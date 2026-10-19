@@ -1,5 +1,6 @@
+import { showAlert } from '@/lib/alertDialog';
 import React from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text } from 'react-native';
 import { ApiError } from '@api-client';
 
 import { Button } from '@/components/ui/Button';
@@ -33,7 +34,7 @@ export function DescuentosCard({ asignacionId, puedeResponder }: { asignacionId:
         showToast(aceptar ? 'Descuento aceptado.' : 'Descuento rechazado.');
       }
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo responder el descuento.');
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo responder el descuento.');
     }
   }
 

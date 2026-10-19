@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -7,7 +8,6 @@ import {
   TextInput,
   TouchableOpacity,
   Switch,
-  Alert,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -49,7 +49,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
 
   const handleNext = () => {
     const err = validateStep1(data);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
     onNext();
   };
 

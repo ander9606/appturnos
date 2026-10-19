@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
@@ -5,7 +6,6 @@ import {
   Text,
   TextInput,
   Pressable,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -78,9 +78,9 @@ export default function CrearGestorScreen() {
         onError: (err: unknown) => {
           const apiErr = err as ApiError;
           if (apiErr.status === 409) {
-            Alert.alert('Email en uso', 'Ya existe un usuario con ese email en la plataforma.');
+            showAlert('Email en uso', 'Ya existe un usuario con ese email en la plataforma.', 'warning');
           } else {
-            Alert.alert('Error', apiErr.message ?? 'No se pudo crear el gestor.');
+            showAlert('Error', apiErr.message ?? 'No se pudo crear el gestor.');
           }
         },
       },
@@ -89,11 +89,11 @@ export default function CrearGestorScreen() {
 
   async function handleCrear() {
     if (!nombre.trim()) {
-      Alert.alert('Campo requerido', 'El nombre es obligatorio.');
+      showAlert('Campo requerido', 'El nombre es obligatorio.', 'warning');
       return;
     }
     if (!email.trim()) {
-      Alert.alert('Campo requerido', 'El email es obligatorio.');
+      showAlert('Campo requerido', 'El email es obligatorio.', 'warning');
       return;
     }
 

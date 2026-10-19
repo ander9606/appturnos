@@ -1,9 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, RefreshControl, Alert,
-} from 'react-native';
+  View, Text, FlatList, TouchableOpacity, RefreshControl, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -101,7 +101,7 @@ function CuentaCobroCard({ cuenta: c, onPress }: { cuenta: CuentaCobroResumen; o
     try {
       await descargarCuentaCobro(c.id);
     } catch {
-      Alert.alert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
     } finally {
       setDescargando(false);
     }

@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
@@ -7,7 +8,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -66,7 +66,7 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
 
   const handleNext = () => {
     const err = validateStep2(data.puestos);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
     onNext();
   };
 
