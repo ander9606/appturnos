@@ -363,7 +363,7 @@ const s = StyleSheet.create({
     letterSpacing: 1,
     color: COLORS.foreground,
     textTransform: 'uppercase',
-    lineHeight: 17,
+    lineHeight: 18,
   },
   docMeta: {
     textAlign: 'center',

@@ -37,6 +37,17 @@ module.exports = {
         // Border
         border: '#E2E8F0',
       },
+      // Inter mide 1.21× su tamaño de alto natural; el interlineado de Tailwind en 3xl+ (1.2 → 1.0) es
+      // menor y recorta tildes y emojis en Android. Mantener >= 1.25 (lo comprueba lib/__tests__/tailwindFontSize.test.ts).
+      fontSize: {
+        '3xl': ['1.875rem', { lineHeight: '2.375rem' }],
+        '4xl': ['2.25rem',  { lineHeight: '2.8125rem' }],
+        '5xl': ['3rem',     { lineHeight: '3.75rem' }],
+        '6xl': ['3.75rem',  { lineHeight: '4.6875rem' }],
+        '7xl': ['4.5rem',   { lineHeight: '5.625rem' }],
+        '8xl': ['6rem',     { lineHeight: '7.5rem' }],
+        '9xl': ['8rem',     { lineHeight: '10rem' }],
+      },
       fontFamily: {
         sans: ['Inter_400Regular'], // el peso lo resuelve components/ui/Text.tsx (docs/DISENO.md §3)
       },

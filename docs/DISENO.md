@@ -100,6 +100,9 @@ En móvil, `const theme = useTheme()` (de `lib/theme.ts`) devuelve la paleta seg
 - Fuera de `Text` (títulos de cabecera, etiquetas de pestañas, `Alert` nativo) la fuente se pone con `fontFamily: INTER[600]` (de `lib/tipografia.ts`), no con `fontWeight`.
 - Si necesitas otro peso (300, 900), agrégalo en tres sitios: la tabla `INTER` de `lib/tipografia.ts`, el `useFonts` de `app/_layout.tsx` y esta tabla.
 - Texto de cuerpo: `text-base`; secundario: `text-sm text-muted-foreground`; títulos: `font-semibold`/`font-bold`. No fijar tamaños en px sueltos; usar la escala de Tailwind.
+- **Interlineado ≥ 1.25× el tamaño.** Inter mide 1.21× de alto natural (Roboto 1.17, San Francisco 1.19): un interlineado menor recorta tildes, emojis y números grandes en Android. Los tamaños `text-3xl` en adelante traían 1.2 → 1.0 en Tailwind, así que se redefinieron en `tailwind.config.js` (`fontSize`), y `lib/__tests__/tailwindFontSize.test.ts` falla si algún tamaño baja de 1.25.
+- Si escribes un `lineHeight` a mano (estilo inline), que sea ≥ 1.25 × su `fontSize` (14 px → mínimo 18). Si no pones `lineHeight`, se usa el natural y es seguro.
+- Una caja de **altura fija** con texto dentro debe medir al menos el interlineado del texto (`text-sm` = 20 px, `text-base` = 24 px); mejor `min-h-*` que `h-*`.
 - Un texto que no pase por `Text` (librerías de terceros, texto nativo del sistema) seguirá en la fuente del dispositivo: es esperado.
 
 ## 4. Forma y espaciado
@@ -282,7 +285,7 @@ Reglas:
 
 ## 8. Deuda conocida (próximos pasos, por orden de impacto)
 
-1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes y que el código compila, pero no se vio en pantalla: revisar que no haya texto cortado por la altura de línea de Inter, que la negrita de Android no salga doble y que el arranque no parpadee.
+1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes, que el código compila y que ningún interlineado baja de 1.25×, pero no se vio en pantalla: revisar que no haya texto cortado (sobre todo números grandes y emojis en Android), que la negrita de Android no salga doble y que el arranque no parpadee.
 2. **Hex sueltos restantes (~124 en móvil):** sobre todo `#000` (sombras), tintes claros (`#F1F5F9`, `#FEF3C7`, `#EFF6FF`), violetas (`#8B5CF6`, `#7C3AED`), `#475569`, y hex con alfa (`#6366F11A`). Decidir cuáles pasan a token y cuáles son de un solo uso.
 3. **Skeleton en más pantallas.** Faltan Nómina, Notificaciones, Historial de ganancias, Dashboard de asistencia y las páginas web de Nómina, Configuración y Admin (hoy usan `PageLoading`/`Spinner`).
 4. **Skeletons con forma propia.** Detalle de turno, perfil de trabajador y tarjetas de nómina usan spinner porque su forma no es la tarjeta genérica.
