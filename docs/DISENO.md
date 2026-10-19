@@ -310,6 +310,17 @@ El mismo planeta del logo, pero con el **anillo en su órbita** (en los errores 
 - El vacío va **después** de cargando y de error: `cargando → error → vacío → contenido` (§5.3).
 - Los dos `PlanetIllustration` dibujan lo mismo con las mismas coordenadas: si cambias uno, cambia el otro.
 
+### 5.7 Movimiento
+
+La marca se mueve poco y con intención. Referencia: el hero de la bienvenida (`app/(auth)/index.tsx`): el planeta **entra** (escalado de 0.85 a 1 y aparición, 0.7 s), **flota** (±4 px, 2.2 s por sentido) y sus **órbitas se mecen** (±2.5°, 5 s por sentido).
+
+- **Sutil y lento.** Amplitudes de pocos píxeles o grados y duraciones de segundos; nada que compita con el contenido ni con la acción principal. Las animaciones de entrada duran menos de 1 s.
+- **Solo `transform` y `opacity`**, con `useNativeDriver: true`: corren en el hilo nativo y no bloquean la interfaz. Se usa el `Animated` de React Native (sin dependencias extra).
+- **Suavizado `Easing.inOut(Easing.sin)`** para vaivenes (sin saltos en los extremos) y `Easing.out(Easing.cubic)` para entradas.
+- **Respeta "reducir movimiento"** (`AccessibilityInfo.isReduceMotionEnabled` + el evento `reduceMotionChanged`): con él activado no hay bucles ni entradas, y el contenido aparece ya visible. Si el sistema no responde en 400 ms se asume "sin reducir", para no dejar nada invisible.
+- **Los bucles se detienen al desmontar** (`loop.stop()` en el cleanup del efecto).
+- **Nunca solo con movimiento:** lo que se anima es decorativo; la información y las acciones no dependen de la animación.
+
 ---
 
 ## 6. Accesibilidad

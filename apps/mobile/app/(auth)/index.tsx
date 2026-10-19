@@ -1,10 +1,12 @@
 import { Text } from '@/components/ui/Text';
 import { Button } from '@/components/ui/Button';
 import { COLORS, alpha } from '@/lib/designTokens';
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
-  Image,
+  Animated,
+  Easing,
+  AccessibilityInfo,
   TouchableOpacity,
   Dimensions,
   StyleSheet,
@@ -26,6 +28,7 @@ export default function WelcomeScreen() {
   const insets       = useSafeAreaInsets();
   const markLaunched = useAuthStore((s) => s.markLaunched);
   React.useEffect(() => { markLaunched(); }, []);
+  const { entrada, float, sway } = useAnimacionHero();
 
   return (
     <View style={styles.root}>
@@ -33,11 +36,33 @@ export default function WelcomeScreen() {
 
       {/* ── Hero: llega hasta el borde superior (sin franja clara bajo la barra de estado) ── */}
       <View style={[styles.hero, { paddingTop: insets.top + 16 }]}>
-        <HeroBackground />
+        <HeroBackground sway={sway} />
 
-        <Image source={require('../../assets/logo-mark.png')} style={styles.logo} accessibilityLabel="Logo de Zaturno" />
-        <Text style={styles.appName}>Zaturno</Text>
-        <Text style={styles.appSub}>Turnos y nómina para tu empresa</Text>
+        {/* El planeta entra con un pequeño escalado y luego flota; el texto sube suavemente */}
+        <Animated.Image
+          source={require('../../assets/logo-mark.png')}
+          accessibilityLabel="Logo de Zaturno"
+          style={[
+            styles.logo,
+            {
+              opacity: entrada,
+              transform: [
+                { scale: entrada.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) },
+                { translateY: float.interpolate({ inputRange: [0, 1], outputRange: [4, -4] }) },
+              ],
+            },
+          ]}
+        />
+        <Animated.View
+          style={{
+            alignItems: 'center',
+            opacity: entrada,
+            transform: [{ translateY: entrada.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }],
+          }}
+        >
+          <Text style={styles.appName}>Zaturno</Text>
+          <Text style={styles.appSub}>Turnos y nómina para tu empresa</Text>
+        </Animated.View>
       </View>
 
       {/* ── Contenido ── */}
@@ -82,34 +107,85 @@ export default function WelcomeScreen() {
   );
 }
 
+/**
+ * Animación del hero: entrada (0→1 una vez), flotar del planeta y vaivén de las órbitas (0↔1 en bucle).
+ * Respeta "reducir movimiento" del sistema: en ese caso todo queda quieto y ya visible.
+ */
+function useAnimacionHero() {
+  const entrada = useRef(new Animated.Value(0)).current;
+  const float   = useRef(new Animated.Value(0.5)).current;
+  const sway    = useRef(new Animated.Value(0.5)).current;
+  const [reducir, setReducir] = useState<boolean | null>(null); // null = aún no se sabe
+
+  useEffect(() => {
+    let vivo = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => vivo && setReducir(v)).catch(() => vivo && setReducir(false));
+    // Si el sistema tarda en responder, no dejar el hero invisible: se asume "sin reducir"
+    const espera = setTimeout(() => vivo && setReducir((r) => r ?? false), 400);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducir);
+    return () => { vivo = false; clearTimeout(espera); sub.remove(); };
+  }, []);
+
+  useEffect(() => {
+    if (reducir === null) return;
+    if (reducir) { entrada.setValue(1); float.setValue(0.5); sway.setValue(0.5); return; }
+
+    Animated.timing(entrada, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    const vaiven = (v: Animated.Value, duration: number) =>
+      Animated.loop(Animated.sequence([
+        Animated.timing(v, { toValue: 1, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(v, { toValue: 0, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]));
+    const loops = [vaiven(float, 2200), vaiven(sway, 5000)];
+    float.setValue(0); sway.setValue(0);
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [reducir, entrada, float, sway]);
+
+  return { entrada, float, sway };
+}
+
 /** Degradado de marca (naranja → naranja oscuro) con órbitas finas, como las del planeta del logo. */
-function HeroBackground() {
+function HeroBackground({ sway }: { sway: Animated.Value }) {
   return (
-    <Svg style={StyleSheet.absoluteFill} viewBox="0 0 390 320" preserveAspectRatio="xMidYMid slice">
-      <Defs>
-        <LinearGradient id="hero" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={COLORS.primary} />
-          <Stop offset="1" stopColor={COLORS.primary600} />
-        </LinearGradient>
-      </Defs>
-      <Rect width="390" height="320" fill="url(#hero)" />
-      {[
-        { rx: 150, ry: 50, o: 0.18 },
-        { rx: 215, ry: 74, o: 0.12 },
-        { rx: 290, ry: 100, o: 0.07 },
-      ].map((e) => (
-        <Ellipse
-          key={e.rx}
-          cx={195} cy={118} rx={e.rx} ry={e.ry}
-          rotation={25} origin="195, 118"
-          fill="none" stroke={alpha(COLORS.white, e.o)} strokeWidth={1.5}
-        />
-      ))}
-      <Circle cx={52} cy={70} r={2.5} fill={alpha(COLORS.white, 0.5)} />
-      <Circle cx={338} cy={58} r={2} fill={alpha(COLORS.white, 0.4)} />
-      <Circle cx={352} cy={188} r={3} fill={alpha(COLORS.white, 0.35)} />
-      <Circle cx={36} cy={196} r={2} fill={alpha(COLORS.white, 0.4)} />
-    </Svg>
+    <>
+      <Svg style={StyleSheet.absoluteFill} viewBox="0 0 390 320" preserveAspectRatio="xMidYMid slice">
+        <Defs>
+          <LinearGradient id="hero" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={COLORS.primary} />
+            <Stop offset="1" stopColor={COLORS.primary600} />
+          </LinearGradient>
+        </Defs>
+        <Rect width="390" height="320" fill="url(#hero)" />
+      </Svg>
+      {/* Las órbitas se mecen unos grados alrededor del centro, como si el planeta tirara de ellas */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          { transform: [{ rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ['-2.5deg', '2.5deg'] }) }] },
+        ]}
+      >
+        <Svg style={StyleSheet.absoluteFill} viewBox="0 0 390 320" preserveAspectRatio="xMidYMid slice">
+          {[
+            { rx: 150, ry: 50, o: 0.18 },
+            { rx: 215, ry: 74, o: 0.12 },
+            { rx: 290, ry: 100, o: 0.07 },
+          ].map((e) => (
+            <Ellipse
+              key={e.rx}
+              cx={195} cy={118} rx={e.rx} ry={e.ry}
+              rotation={25} origin="195, 118"
+              fill="none" stroke={alpha(COLORS.white, e.o)} strokeWidth={1.5}
+            />
+          ))}
+          <Circle cx={52} cy={70} r={2.5} fill={alpha(COLORS.white, 0.5)} />
+          <Circle cx={338} cy={58} r={2} fill={alpha(COLORS.white, 0.4)} />
+          <Circle cx={352} cy={188} r={3} fill={alpha(COLORS.white, 0.35)} />
+          <Circle cx={36} cy={196} r={2} fill={alpha(COLORS.white, 0.4)} />
+        </Svg>
+      </Animated.View>
+    </>
   );
 }
 
