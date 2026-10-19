@@ -13,6 +13,21 @@ export interface CostoComparado {
   delta_pct: number | null;
 }
 
+/** Calificaciones (0 a 5) que los gestores dan a los turnos completados; solo las manuales. */
+export interface CalificacionesTurnos {
+  /** null si no hubo calificaciones en el período. */
+  promedio: number | null;
+  /** Promedio del período anterior; delta = promedio − previo (null si falta alguno). */
+  previo: number | null;
+  delta: number | null;
+  calificadas: number;
+  /** Turnos completados que todavía no tienen calificación. */
+  sin_calificar: number;
+  distribucion: { 1: number; 2: number; 3: number; 4: number; 5: number };
+}
+
+export interface PersonaCalificada { trabajador_id: number; nombre: string; apellido: string | null; n: number; promedio: number }
+
 export interface ResumenTurnos {
   costo: CostoComparado;
   desglose: { tarifas: number; bonos: number };
@@ -20,6 +35,7 @@ export interface ResumenTurnos {
   completados: number;
   no_presentados: number;
   cobertura: { plazas: number; cubiertas: number; pct: number | null };
+  calificaciones: CalificacionesTurnos;
   insights: Insight[];
 }
 
@@ -46,7 +62,11 @@ export interface HorasPersona {
   horas: number; dias: number; prom_dia: number; prom_semana: number;
 }
 
-export interface PersonaCargo { trabajador_id: number; nombre: string; apellido: string | null; turnos: number; pago: number }
+export interface PersonaCargo {
+  trabajador_id: number; nombre: string; apellido: string | null; turnos: number; pago: number;
+  /** null si no tuvo calificaciones en el período. */
+  calificacion: { promedio: number; n: number } | null;
+}
 export interface CargoTurnos {
   cargo_id: number;
   cargo: string;
@@ -60,7 +80,13 @@ export interface CargoTurnos {
 
 export interface PersonasResponse {
   rango: Rango;
-  turnos: { jornadas: Jornadas | null; cargos: CargoTurnos[]; insights: Insight[] };
+  turnos: {
+    jornadas: Jornadas | null;
+    cargos: CargoTurnos[];
+    /** Solo con 3 o más calificaciones; "peores" son los de menor promedio entre el resto. */
+    calificaciones: { mejores: PersonaCalificada[]; peores: PersonaCalificada[] };
+    insights: Insight[];
+  };
   nomina: {
     jornadas: Jornadas | null;
     horas: { prom_semana_equipo: number | null; ranking: HorasPersona[]; mas: HorasPersona[]; menos: HorasPersona[] };

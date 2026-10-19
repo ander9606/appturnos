@@ -11,6 +11,7 @@
  *   - 4 personas concentran casi todas las horas extra
  *   - una persona con inasistencias frecuentes (nómina) y otra que no se presenta a turnos
  *   - cobertura de plazas por debajo del 100 % en algunos turnos
+ *   - calificaciones: la mayoría de los turnos completados calificados (algunos sin calificar), 3 personas con promedio bajo
  *   - turnos de 3 cargos: auxiliares (2 acaparan, 2 casi sin turnos), conductores (3) y jefe de montaje (1)
  *   - el último mes cuesta más que el anterior (más extras)
  * Idempotente: si la empresa ya existe, la borra y la regenera.
@@ -57,10 +58,12 @@ async function main() {
      VALUES ('Reportes Demo', ?, '900000100-1', 'Bogotá D.C.', 'empresarial', 1)`, [SLUG]);
 
   const hash = await bcrypt.hash('Prueba1234!', 10);
+  let adminId = null;
   for (const [nombre, email, rol] of [['Admin', 'admin', 'admin_empresa'], ['Jefe', 'jturnos', 'jefe_turnos'], ['Jefe', 'jnomina', 'jefe_nomina']]) {
-    await pool.query(
+    const [u] = await pool.query(
       'INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol, activo) VALUES (?,?,?,?,?,?,1)',
       [eId, nombre, 'Demo', `${email}@reportes-demo.co`, hash, rol]);
+    if (rol === 'admin_empresa') adminId = u.insertId;
   }
 
   // Trabajadores: 28 de nómina (los 4 primeros hacen casi todas las extras, el 5.º falta mucho) y 12 de turnos
@@ -170,11 +173,20 @@ async function main() {
         ya.add(t);
         const falta = t === turnistas[0] ? azar() < 0.3 : azar() < 0.03;
         const bono = !falta && azar() < 0.1 ? 20000 : 0;
-        await pool.query(
+        const [{ insertId: asigId }] = await pool.query(
           `INSERT INTO asignaciones_turno (empresa_id, oferta_id, puesto_id, trabajador_id, estado, pago_total, bono_monto, horas_trabajadas)
            VALUES (?,?,?,?,?,?,?,?)`,
           [eId, oid, pid, t, !pasada ? 'confirmado' : falta ? 'no_presentado' : 'completado', falta || !pasada ? null : tarifas[codigo] + bono, bono, falta || !pasada ? null : 5 + Math.floor(azar() * 8)]); // turnos de 5 a 12 h
         asignaciones++;
+        // Calificaciones: el gestor califica la mayoría de los completados (se le quedan sin calificar ~15 %);
+        // el no se presentó lleva un 0 automático (calificado_por NULL). Las personas 6 y 7 (casi sin turnos) y la 5 salen mal.
+        if (pasada && falta) {
+          await pool.query('INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, calificado_por) VALUES (?,?,?,0,NULL)', [eId, asigId, t]);
+        } else if (pasada && azar() > 0.15) {
+          const base = [4.8, 4.6, 4.2, 4.0, 3.9, 2.4, 2.1, 2.3, 4.4, 4.0, 3.8, 4.7][turnistas.indexOf(t)] ?? 4;
+          const cal = Math.max(1, Math.min(5, Math.round(base + (azar() - 0.5) * 2)));
+          await pool.query('INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, calificado_por) VALUES (?,?,?,?,?)', [eId, asigId, t, cal, adminId]);
+        }
       }
     }
   }
@@ -185,6 +197,7 @@ async function main() {
 
 async function borrarEmpresa(id) {
   const tablas = ['registros_diarios', 'periodos_nomina', 'trabajadores', 'usuarios'];
+  await pool.query('DELETE FROM calificaciones_turno WHERE empresa_id = ?', [id]);
   await pool.query('DELETE FROM asignaciones_turno WHERE empresa_id = ?', [id]);
   await pool.query('DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)', [id]);
   await pool.query('DELETE FROM ofertas_turno WHERE empresa_id = ?', [id]);

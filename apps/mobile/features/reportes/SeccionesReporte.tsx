@@ -10,6 +10,7 @@ import { COLORS, THEME_COLORS, alpha } from '@/lib/designTokens';
 import type { ResumenInsight } from '@api-client';
 import { COLOR_CONCEPTO, Insight, Mini, TarjetaCosto, useResumen } from './ResumenPeriodo';
 import { AnilloProgreso } from './marca';
+import { ListasCalificados, TarjetaCalificaciones } from './Calificaciones';
 import { Cargo, Horas, Jornadas, Titulo, usePersonas } from './PersonasPeriodo';
 
 /**
@@ -109,6 +110,11 @@ export function TurnosSeccion({ desde, hasta, children }: Props) {
         />
       </View>
       <ParaMirar insights={[...t.insights, ...pt.insights]} />
+      <Titulo>Calificaciones</Titulo>
+      <TarjetaCalificaciones cal={t.calificaciones} />
+      <View className="mt-3">
+        <ListasCalificados mejores={pt.calificaciones.mejores} peores={pt.calificaciones.peores} />
+      </View>
       {pt.jornadas && (
         <>
           <Titulo>Duración de los turnos</Titulo>

@@ -335,6 +335,7 @@ Referencia móvil: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`). Refe
 - **Cifra protagonista**: el costo va en `text-4xl font-extrabold`; la variación contra el período anterior es un chip (sube = ámbar, baja = verde, igual = azul) con ícono y texto.
 - **Anillo de progreso** (`AnilloProgreso`) para porcentajes con meta (cobertura de plazas): verde desde 90 %, ámbar desde 75 %, rojo por debajo; el valor va siempre escrito al centro.
 - **Desglose de costos**: nómina reutiliza `HOUR_TYPE_COLORS` (los mismos del gráfico de horas de Nómina); turnos usa la marca.
+- **Calificaciones** (0 a 5): estrella `warning` + promedio (`4,1`), con la variación contra el período anterior (aquí **subir es bueno**: verde; bajar es aviso ámbar, al revés que el costo), distribución por estrellas con barras y lo que falta calificar. En las filas de personas, la estrella con su promedio en pequeño.
 - **Avisos** ("Para mirar"): ver §6, fondo `*Light` + texto `*Text` + ícono. **Vacíos**: `EmptyState compact` por sección, no ceros.
 
 ---

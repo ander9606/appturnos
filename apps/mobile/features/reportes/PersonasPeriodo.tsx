@@ -8,6 +8,7 @@ import type { CargoTurnos, ExtremoJornada, HorasPersona, PersonasResponse, Resum
 import { Text } from '@/components/ui/Text';
 import { COLORS, alpha } from '@/lib/designTokens';
 import { formatCOP, formatDate } from '@/lib/formatters';
+import { PromedioEstrella } from './Calificaciones';
 
 type HorasNomina = NonNullable<PersonasResponse['nomina']>['horas'];
 
@@ -128,6 +129,7 @@ export function Cargo({ c }: { c: CargoTurnos }) {
         <View key={p.trabajador_id} className="px-4 py-2.5 border-t border-border">
           <View className="flex-row items-center">
             <Text className="flex-1 text-sm text-foreground" numberOfLines={1}>{nombreDe(p)}</Text>
+            {p.calificacion && <View className="mr-3"><PromedioEstrella promedio={p.calificacion.promedio} /></View>}
             <Text className="text-xs text-muted-foreground mr-3">{p.turnos} {p.turnos === 1 ? 'turno' : 'turnos'}</Text>
             <Text className="text-sm font-semibold text-foreground">{formatCOP(p.pago)}</Text>
           </View>
