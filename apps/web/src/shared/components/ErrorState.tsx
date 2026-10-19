@@ -19,7 +19,7 @@ function errorKind(error: unknown): Kind {
 }
 
 const COPY = {
-  offline: { title: 'Sin conexión', body: 'Se nos cayó el anillo. Revisa tu internet y vuelve a intentarlo.' },
+  offline: { title: 'Sin conexión', body: 'No tienes conexión a internet. Revisa tu señal y vuelve a intentarlo.' },
   server:  { title: 'Algo se torció', body: 'Tuvimos un problema de nuestro lado. Intenta de nuevo en un momento.' },
 } as const;
 

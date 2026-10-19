@@ -303,7 +303,7 @@
   "errors": {
     "offline": {
       "title": "Sin conexión",
-      "body": "Se nos cayó el anillo. Revisa tu internet y vuelve a intentarlo."
+      "body": "No tienes conexión a internet. Revisa tu señal y vuelve a intentarlo."
     },
     "server": {
       "title": "Algo se torció",

@@ -156,11 +156,11 @@ Bloques grises que laten (opacidad 100 % ↔ 45 %, 1.4 s) en el lugar del conten
 
 ### 5.4 Estados de error
 
-El **planeta del logo con el anillo fuera de lugar** es la cara de los errores de Zaturno (el nombre suena a Saturno: perder la conexión = perder el anillo). Hay tres casos, elegidos automáticamente según el error:
+El **planeta del logo con el anillo fuera de lugar** es la cara de los errores de Zaturno (el nombre suena a Saturno: perder la conexión = perder el anillo; el texto no hace el chiste, la ilustración sí). Hay tres casos, elegidos automáticamente según el error:
 
 | Tipo | Cuándo | Ilustración | Texto |
 |---|---|---|---|
-| `offline` | Sin red: `fetch` lanza `TypeError("Network request failed")` (móvil) / axios sin `response` o `navigator.onLine === false` (web) | **Anillo caído** en el suelo | "Sin conexión — Se nos cayó el anillo…" |
+| `offline` | Sin red: `fetch` lanza `TypeError("Network request failed")` (móvil) / axios sin `response` o `navigator.onLine === false` (web) | **Anillo caído** en el suelo | "Sin conexión — No tienes conexión a internet…" |
 | `server` | El backend respondió 5xx | **Anillo torcido y roto**, con chispas | "Algo se torció — Tuvimos un problema de nuestro lado…" |
 | `generic` | 4xx u otro | Anillo torcido | "No pudimos cargar esto" + **mensaje real del backend** |
 
