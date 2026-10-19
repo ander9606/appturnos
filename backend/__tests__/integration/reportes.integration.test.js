@@ -26,8 +26,8 @@ d('reportes con MySQL real', () => {
     const [p] = await pool.query("INSERT INTO periodos_nomina (empresa_id, fecha_inicio, fecha_fin) VALUES (?, '2026-03-01', '2026-03-15')", [empresaId]);
     await pool.query(
       `INSERT INTO registros_diarios (empresa_id, trabajador_id, periodo_id, fecha, horas_ordinarias, horas_extra_diurnas)
-       VALUES (?,?,?,'2026-03-02',8,2), (?,?,?,'2026-03-03',8,0)`,
-      [empresaId, obreroId, p.insertId, empresaId, obreroId, p.insertId]);
+       VALUES (?,?,?,'2026-03-02',8,2), (?,?,?,'2026-03-03',8,0), (?,?,?,'2026-03-04',8,0)`,
+      [empresaId, obreroId, p.insertId, empresaId, obreroId, p.insertId, empresaId, obreroId, p.insertId]);
 
     const [[cargo]] = await pool.query("SELECT id FROM cargos WHERE empresa_id IS NULL LIMIT 1");
     const [o] = await pool.query(
@@ -85,6 +85,19 @@ d('reportes con MySQL real', () => {
     expect((await llamar('jefe_turnos')).nomina).toBeNull();
     expect((await llamar('jefe_nomina')).nomina.detalle).toHaveLength(1);
     expect((await llamar('admin_empresa')).nomina.detalle).toHaveLength(1);
+  });
+
+  it('personas: horas promedio solo con verPagos y turnos agrupados por cargo', async () => {
+    const con = await ReportesService.personas(empresaId, rango, { verPagos: true });
+    expect(con.horas.ranking).toHaveLength(1);
+    expect(con.horas.ranking[0]).toMatchObject({ horas: 26, dias: 3, prom_dia: 8.67 });
+    expect(con.cargos).toHaveLength(1);
+    expect(con.cargos[0]).toMatchObject({ total_turnos: 1, total_pago: 100000, rotable: false });
+    expect(con.cargos[0].personas[0]).toMatchObject({ turnos: 1, pago: 100000 });
+
+    const sin = await ReportesService.personas(empresaId, rango, { verPagos: false });
+    expect(sin.horas).toBeNull();
+    expect(sin.cargos).toHaveLength(1); // el reparto de turnos lo ven también los jefes de turnos
   });
 
   it('el índice (empresa_id, fecha) existe (migración 113)', async () => {

@@ -81,6 +81,49 @@ export interface ResumenPeriodoResponse {
   insights: ResumenInsight[];
 }
 
+export interface HorasPersona {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string | null;
+  horas: number;
+  dias: number;
+  prom_dia: number;
+  prom_semana: number;
+}
+
+export interface PersonaCargo {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string | null;
+  turnos: number;
+  pago: number;
+}
+
+export interface CargoTurnos {
+  cargo_id: number;
+  cargo: string;
+  /** Ordenadas por pago, de más a menos. turnos = 0 → ya hizo este cargo (últimos 6 meses) pero no tuvo turnos. */
+  personas: PersonaCargo[];
+  total_turnos: number;
+  total_pago: number;
+  /** false con menos de 4 personas: no tiene sentido pedir rotación (jefes, encargados). */
+  rotable: boolean;
+}
+
+export interface PersonasResponse {
+  rango: ReporteRango;
+  /** null para quien no ve nómina (jefe_turnos). */
+  horas: {
+    prom_semana_equipo: number | null;
+    /** Solo quienes tienen 3 o más días con horas. */
+    ranking: HorasPersona[];
+    mas: HorasPersona[];
+    menos: HorasPersona[];
+  } | null;
+  cargos: CargoTurnos[];
+  insights: ResumenInsight[];
+}
+
 export interface TurnoHistorial {
   id: number;
   fecha: string;
@@ -130,6 +173,11 @@ export const reportesApi = {
   resumen(params: ReporteParams): Promise<ResumenPeriodoResponse> {
     const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
     return api.get<ResumenPeriodoResponse>(`/api/reportes/resumen?${qs}`);
+  },
+
+  personas(params: ReporteParams): Promise<PersonasResponse> {
+    const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
+    return api.get<PersonasResponse>(`/api/reportes/personas?${qs}`);
   },
 
   costos(params: ReporteParams): Promise<CostosResponse> {

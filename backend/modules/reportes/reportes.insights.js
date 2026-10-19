@@ -16,6 +16,12 @@ const UMBRALES = {
   NO_PRESENTADOS_ALERTA: 10,
   COBERTURA_AVISO: 90,        // % de plazas cubiertas
   COBERTURA_ALERTA: 75,
+  // Personas
+  JORNADA_SEMANAL: 42,         // horas por semana de la jornada ordinaria (constants.js)
+  JORNADA_MARGEN: 1,           // h/semana de holgura: una extra suelta no cuenta como hábito
+  MIN_PERSONAS_ROTAR: 4,       // un cargo con menos personas no se puede rotar (jefes, encargados)
+  ACAPARA_VECES_JUSTO: 2,      // el que más gana vs su parte justa (1/n del cargo)
+  BANCA_AVISO: 1,              // personas del cargo sin turnos para que valga el aviso
 };
 const MAX = 5;
 const ORDEN = { alerta: 0, aviso: 1, info: 2, ok: 3 };
@@ -94,4 +100,47 @@ function generarInsights({ costo, nomina, turnos, cobertura }) {
   return lista.sort((a, b) => ORDEN[a.nivel] - ORDEN[b.nivel]).slice(0, MAX);
 }
 
-module.exports = { generarInsights, UMBRALES };
+/**
+ * Avisos de la sección Personas. `horas` es null para quien no ve nómina.
+ * `cargos[i].personas[j]` trae { nombre, apellido, turnos, pago }; los que tienen turnos = 0 son "la banca".
+ */
+function generarInsightsPersonas({ horas, cargos }) {
+  const lista = [];
+  const nombre = (p) => `${p.nombre} ${p.apellido || ''}`.trim();
+
+  if (horas) {
+    const sobre = horas.ranking.filter((h) => h.prom_semana > UMBRALES.JORNADA_SEMANAL + UMBRALES.JORNADA_MARGEN);
+    if (sobre.length) {
+      lista.push({
+        id: 'sobre_jornada',
+        nivel: 'aviso',
+        texto: `${sobre.length} ${sobre.length === 1 ? 'persona promedia' : 'personas promedian'} más de ${UMBRALES.JORNADA_SEMANAL} h por semana: ${sobre.slice(0, 3).map(nombre).join(', ')}${sobre.length > 3 ? '…' : ''}.`,
+      });
+    }
+  }
+
+  for (const c of cargos) {
+    if (!c.rotable) continue;
+    const n = c.personas.length;
+    const top = c.personas[0]; // vienen ordenadas por pago desc
+    const justo = c.total_pago / n;
+    if (c.total_pago > 0 && top.pago >= UMBRALES.ACAPARA_VECES_JUSTO * justo) {
+      lista.push({
+        id: `acapara_${c.cargo_id}`,
+        nivel: 'aviso',
+        texto: `En ${c.cargo}, ${nombre(top)} se llevó el ${Math.round((top.pago / c.total_pago) * 100)}% de lo pagado en turnos (su parte pareja sería ${Math.round(100 / n)}%).`,
+      });
+    }
+    const banca = c.personas.filter((p) => p.turnos === 0);
+    if (banca.length >= UMBRALES.BANCA_AVISO && c.total_pago > 0) {
+      lista.push({
+        id: `banca_${c.cargo_id}`,
+        nivel: 'info',
+        texto: `${banca.length} ${banca.length === 1 ? 'persona de' : 'personas de'} ${c.cargo} no tuvo turnos: ${banca.slice(0, 3).map(nombre).join(', ')}${banca.length > 3 ? '…' : ''}. Podrías rotarles turnos.`,
+      });
+    }
+  }
+  return lista.sort((a, b) => ORDEN[a.nivel] - ORDEN[b.nivel]).slice(0, MAX);
+}
+
+module.exports = { generarInsights, generarInsightsPersonas, UMBRALES };

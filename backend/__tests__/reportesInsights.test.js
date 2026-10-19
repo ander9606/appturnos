@@ -1,6 +1,6 @@
 jest.mock('../config/database', () => ({ pool: { query: jest.fn() } }));
 
-const { generarInsights } = require('../modules/reportes/reportes.insights');
+const { generarInsights, generarInsightsPersonas } = require('../modules/reportes/reportes.insights');
 const { rangoAnterior } = require('../modules/reportes/reportes.service');
 
 const base = {
@@ -50,5 +50,35 @@ describe('generarInsights', () => {
   it('sin nómina (jefe de turnos) no habla de pagos', () => {
     const r = generarInsights({ ...base, nomina: null });
     expect(r.some((i) => i.id.startsWith('extras'))).toBe(false);
+  });
+});
+
+describe('generarInsightsPersonas', () => {
+  const persona = (nombre, turnos, pago) => ({ nombre, apellido: '', turnos, pago });
+  const cargo = (personas, extra = {}) => ({
+    cargo_id: 1, cargo: 'Auxiliar', personas,
+    total_pago: personas.reduce((s, p) => s + p.pago, 0), rotable: personas.length >= 4, ...extra,
+  });
+
+  it('avisa si una persona acapara los turnos de un cargo con varias personas', () => {
+    const r = generarInsightsPersonas({ horas: null, cargos: [cargo([persona('Ana', 9, 900), persona('Beto', 1, 100), persona('Cris', 1, 100), persona('Dani', 1, 100)])] });
+    expect(r.find((i) => i.id === 'acapara_1').texto).toMatch(/Ana se llevó el 75%/);
+  });
+
+  it('no juzga el reparto en cargos con pocas personas (no se pueden rotar)', () => {
+    const r = generarInsightsPersonas({ horas: null, cargos: [cargo([persona('Jefe', 10, 1000), persona('Otro', 0, 0)])] });
+    expect(r).toEqual([]);
+  });
+
+  it('nombra a quienes no tuvieron turnos', () => {
+    const r = generarInsightsPersonas({ horas: null, cargos: [cargo([persona('A', 3, 300), persona('B', 3, 300), persona('C', 3, 300), persona('D', 0, 0)])] });
+    expect(r.find((i) => i.id === 'banca_1').texto).toMatch(/D/);
+  });
+
+  it('avisa de quien promedia más de la jornada, con margen de 1 h', () => {
+    const h = (n, v) => ({ nombre: n, apellido: '', prom_semana: v });
+    const r = generarInsightsPersonas({ horas: { ranking: [h('Uno', 50), h('Dos', 42.5)] }, cargos: [] });
+    expect(r[0].texto).toMatch(/1 persona promedia.*Uno/);
+    expect(r[0].texto).not.toMatch(/Dos/);
   });
 });

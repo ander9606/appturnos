@@ -83,7 +83,7 @@ function Desglose({ d }: { d: ResumenPeriodoResponse['desglose'] }) {
   );
 }
 
-function Insight({ nivel, texto }: { nivel: NivelInsight; texto: string }) {
+export function Insight({ nivel, texto }: { nivel: NivelInsight; texto: string }) {
   const n = NIVEL[nivel];
   return (
     <View className="flex-row items-start gap-3 rounded-2xl p-3.5" style={{ backgroundColor: n.fondo }}>

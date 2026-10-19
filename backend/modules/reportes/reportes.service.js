@@ -3,7 +3,7 @@
 const ReportesModel = require('./reportes.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
-const { generarInsights } = require('./reportes.insights');
+const { generarInsights, generarInsightsPersonas, UMBRALES } = require('./reportes.insights');
 const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, diasComerciales } = require('../../utils/laboralUtils');
 
 function redondear(n) {
@@ -25,6 +25,10 @@ function rangoAnterior(desde, hasta) {
   const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
   return { desde: iso(ini - dias * DIA), hasta: iso(ini - DIA) };
 }
+
+// Personas
+const MIN_DIAS_HORAS = 3;          // días con horas para que el promedio cuente
+const VENTANA_BANCA_DIAS = 180;    // "ya hizo este cargo" = lo hizo en los últimos 6 meses
 
 const ReportesService = {
   /** Asistencia por período: turnos (por estado) y días de nómina. */
@@ -150,6 +154,61 @@ const ReportesService = {
       cobertura,
       insights: generarInsights({ costo, nomina: nominaInfo, turnos, cobertura }),
     };
+  },
+
+  /**
+   * Personas: quién trabaja más/menos horas en promedio (solo con verPagos) y cómo se reparten
+   * turnos y plata dentro de cada cargo, para rotar sin tocar los cargos con pocas personas.
+   */
+  async personas(empresaId, { desde, hasta }, { verPagos }) {
+    const DIA = 24 * 60 * 60 * 1000;
+    const dias = Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / DIA) + 1;
+    const semanas = Math.max(1, dias / 7);
+
+    const [filasHoras, filasTurnos] = await Promise.all([
+      verPagos ? ReportesModel.horasTotalesPorTrabajador(empresaId, desde, hasta) : [],
+      ReportesModel.turnosPorCargoYTrabajador(empresaId, desde, hasta, VENTANA_BANCA_DIAS),
+    ]);
+
+    // Horas: con menos de MIN_DIAS_HORAS días trabajados el promedio no dice nada
+    let horas = null;
+    if (verPagos) {
+      const ranking = filasHoras
+        .map((f) => ({
+          trabajador_id: f.trabajador_id, nombre: f.nombre, apellido: f.apellido,
+          horas: redondear(Number(f.horas) || 0), dias: Number(f.dias) || 0,
+        }))
+        .filter((f) => f.dias >= MIN_DIAS_HORAS)
+        .map((f) => ({ ...f, prom_dia: redondear(f.horas / f.dias), prom_semana: redondear(f.horas / semanas) }))
+        .sort((a, b) => b.prom_semana - a.prom_semana);
+      const promEquipo = ranking.length ? redondear(ranking.reduce((s, r) => s + r.prom_semana, 0) / ranking.length) : null;
+      horas = {
+        prom_semana_equipo: promEquipo,
+        ranking,
+        mas: ranking.slice(0, 5),
+        menos: ranking.slice(-5).reverse().filter((r) => !ranking.slice(0, 5).includes(r)),
+      };
+    }
+
+    const porCargo = new Map();
+    for (const f of filasTurnos) {
+      if (!porCargo.has(f.cargo_id)) porCargo.set(f.cargo_id, { cargo_id: f.cargo_id, cargo: f.cargo, personas: [] });
+      porCargo.get(f.cargo_id).personas.push({
+        trabajador_id: f.trabajador_id, nombre: f.nombre, apellido: f.apellido,
+        turnos: Number(f.turnos) || 0, pago: redondear(Number(f.pago) || 0),
+      });
+    }
+    const cargos = [...porCargo.values()].map((c) => {
+      c.personas.sort((a, b) => b.pago - a.pago || b.turnos - a.turnos);
+      return {
+        ...c,
+        total_turnos: c.personas.reduce((s, p) => s + p.turnos, 0),
+        total_pago: redondear(c.personas.reduce((s, p) => s + p.pago, 0)),
+        rotable: c.personas.length >= UMBRALES.MIN_PERSONAS_ROTAR,
+      };
+    }).filter((c) => c.total_turnos > 0).sort((a, b) => b.total_pago - a.total_pago);
+
+    return { rango: { desde, hasta }, horas, cargos, insights: generarInsightsPersonas({ horas, cargos }) };
   },
 
   /** Historial individual de un trabajador: turnos + registros de nómina. */

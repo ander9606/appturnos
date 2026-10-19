@@ -23,6 +23,7 @@ import { useTheme } from '@/lib/theme';
 import { formatDate, formatCOP, toISODate } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { ResumenPeriodo } from '@/features/reportes/ResumenPeriodo';
+import { PersonasPeriodo } from '@/features/reportes/PersonasPeriodo';
 
 // ── Rango presets ─────────────────────────────────────────────────────────
 
@@ -251,6 +252,7 @@ export default function ReportesScreen() {
           <>
             {/* ── Resumen del período: costo vs anterior, desglose y avisos ── */}
             <ResumenPeriodo desde={desde} hasta={hasta} />
+            <PersonasPeriodo desde={desde} hasta={hasta} />
 
             {/* Detalle nómina */}
             {(costos.data?.nomina?.detalle ?? []).length > 0 && (

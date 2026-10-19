@@ -103,6 +103,44 @@ const ReportesModel = {
     return fila;
   },
 
+  /** Horas totales (todos los baldes, que son disjuntos) y días con horas por trabajador de nómina. */
+  async horasTotalesPorTrabajador(empresaId, desde, hasta) {
+    const total = 'r.horas_ordinarias + r.horas_extra_diurnas + r.horas_extra_nocturnas + r.horas_nocturnas + r.horas_festivo';
+    const [filas] = await pool.query(
+      `SELECT r.trabajador_id, t.nombre, t.apellido,
+              SUM(${total}) AS horas,
+              SUM((${total}) > 0) AS dias
+       FROM registros_diarios r
+       JOIN trabajadores t ON t.id = r.trabajador_id
+       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ?
+       GROUP BY r.trabajador_id, t.nombre, t.apellido`,
+      [empresaId, desde, hasta]
+    );
+    return filas;
+  },
+
+  /**
+   * Turnos completados y pago por cargo y trabajador. Mira también `ventanaDias` antes de `desde`
+   * para encontrar a quienes ya hicieron ese cargo pero no tuvieron turnos en el rango (turnos = 0).
+   */
+  async turnosPorCargoYTrabajador(empresaId, desde, hasta, ventanaDias) {
+    const [filas] = await pool.query(
+      `SELECT p.cargo_id, c.nombre AS cargo, a.trabajador_id, t.nombre, t.apellido,
+              COALESCE(SUM(o.fecha >= ?), 0) AS turnos,
+              COALESCE(SUM(CASE WHEN o.fecha >= ? THEN a.pago_total END), 0) AS pago
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN oferta_puestos p ON p.id = a.puesto_id
+       JOIN cargos c ON c.id = p.cargo_id
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.activo = 1
+         AND o.fecha BETWEEN DATE_SUB(?, INTERVAL ? DAY) AND ?
+       GROUP BY p.cargo_id, c.nombre, a.trabajador_id, t.nombre, t.apellido`,
+      [desde, desde, empresaId, desde, ventanaDias, hasta]
+    );
+    return filas;
+  },
+
   async turnosDeTrabajador(empresaId, trabajadorId, desde, hasta) {
     const [filas] = await pool.query(
       `SELECT a.id, a.estado, a.horas_trabajadas, a.pago_total,
