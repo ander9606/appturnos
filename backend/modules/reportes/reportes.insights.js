@@ -57,7 +57,7 @@ function generarInsights({ costo, nomina, turnos, cobertura }) {
       lista.push({
         id: 'extras_altas',
         nivel: 'aviso',
-        texto: `Las horas extra son el ${entero(pctExtras)}% del costo de nómina (${cop(extras)}). Revisa si hace falta más personal.`,
+        texto: `Las horas extra son el ${entero(pctExtras)}% del costo de nómina (${cop(extras)}).`,
       });
     }
     const top = nomina.top_extras;
@@ -69,7 +69,7 @@ function generarInsights({ costo, nomina, turnos, cobertura }) {
         lista.push({
           id: 'extras_concentradas',
           nivel: 'aviso',
-          texto: `${top.length} personas acumulan el ${entero(pctTop)}% de las horas extra: ${nombres}. Repartir la carga reduce costo y desgaste.`,
+          texto: `${top.length} personas acumulan el ${entero(pctTop)}% de las horas extra: ${nombres}.`,
         });
       }
     }
@@ -136,7 +136,7 @@ function generarInsightsPersonas({ horas, cargos }) {
       lista.push({
         id: `banca_${c.cargo_id}`,
         nivel: 'info',
-        texto: `${banca.length} ${banca.length === 1 ? 'persona de' : 'personas de'} ${c.cargo} no tuvo turnos: ${banca.slice(0, 3).map(nombre).join(', ')}${banca.length > 3 ? '…' : ''}. Podrías rotarles turnos.`,
+        texto: `${banca.length} ${banca.length === 1 ? 'persona de' : 'personas de'} ${c.cargo} no tuvo turnos en el período: ${banca.slice(0, 3).map(nombre).join(', ')}${banca.length > 3 ? '…' : ''}.`,
       });
     }
   }
