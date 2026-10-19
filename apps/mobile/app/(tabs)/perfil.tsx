@@ -308,6 +308,7 @@ export default function PerfilScreen() {
   const isTrabajadorTurnos = usuario?.rol === 'trabajador_turnos';
   const isJefeTurnos       = usuario?.rol === 'jefe_turnos';
   const isAdmin            = usuario?.rol === 'admin_empresa';
+  const isGestorNomina     = usuario?.rol === 'jefe_nomina' || usuario?.rol === 'nomina';
 
   const isTrabajadorNomina = usuario?.rol === 'trabajador_nomina';
 
@@ -553,7 +554,7 @@ export default function PerfilScreen() {
 
           <View className="mx-5 bg-card rounded-2xl border border-border overflow-hidden">
             {/* isTrabajadorNomina no agrega filas en esta tarjeta — "Rol" queda como última fila para ese rol */}
-            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos && !isAdmin} />
+            <CardRow label={t('perfil.rol')} value={ROL_LABELS[usuario?.rol ?? ''] ?? (usuario?.rol ?? '—')} last={!isTrabajadorTurnos && !isJefeTurnos && !isAdmin && !isGestorNomina} />
 
             {/* ── Trabajador Turnos — accesos rápidos ──────────────── */}
             {isTrabajadorTurnos && (
@@ -645,6 +646,16 @@ export default function PerfilScreen() {
                   <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
+                  onPress={() => router.push('/reportes')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="bar-chart-outline" size={16} color={COLORS.mutedForeground} />
+                    <Text className="text-sm font-medium text-foreground">Reportes</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
+                </Pressable>
+                <Pressable
                   onPress={() => router.push('/integracion/estado')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
@@ -661,6 +672,22 @@ export default function PerfilScreen() {
                   <View className="flex-row items-center gap-3">
                     <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Puntos de marcaje</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
+                </Pressable>
+              </>
+            )}
+
+            {/* ── Jefe de Nómina y rol nomina — accesos rápidos ───── */}
+            {isGestorNomina && (
+              <>
+                <Pressable
+                  onPress={() => router.push('/reportes')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="bar-chart-outline" size={16} color={COLORS.mutedForeground} />
+                    <Text className="text-sm font-medium text-foreground">Reportes</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
