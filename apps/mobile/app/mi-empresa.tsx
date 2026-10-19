@@ -3,6 +3,7 @@
  * Campos: logo, razón social, NIT, ciudad, actividad, descripción,
  *         acepta_postulaciones (visible en directorio marketplace).
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { elegirFotoConMenu } from '@/lib/pickImage';
 import { confirm } from '@/lib/confirmDialog';
@@ -227,9 +228,9 @@ export default function MiEmpresaScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Mi empresa', headerShown: true }} />
-        <Spinner size="large" color={theme.primary} />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

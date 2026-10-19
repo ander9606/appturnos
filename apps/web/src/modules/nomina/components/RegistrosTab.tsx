@@ -1,4 +1,4 @@
-import { PageLoading } from '@/shared/components/Spinner';
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Plus, Pencil, CalendarClock, MapPin, ChevronDown, X, AlertTriangle } from 'lucide-react';
@@ -98,7 +98,7 @@ export function RegistrosTab({
       </div>
 
       {loading ? (
-        <PageLoading />
+        <SkeletonTable />
       ) : error ? (
         <ErrorState error={error} onRetry={onRetry} />
       ) : gruposPorTrabajador.length === 0 ? (

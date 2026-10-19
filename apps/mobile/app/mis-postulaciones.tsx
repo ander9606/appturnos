@@ -7,8 +7,8 @@
  *  - Completadas → turnos finalizados con pago calculado
  *  - Canceladas  → rechazadas, canceladas o no presentadas
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
 import {
@@ -141,9 +141,7 @@ export default function MisPostulacionesScreen() {
         contentContainerStyle={{ paddingVertical: 16, paddingBottom: 40 }}
       >
         {isLoading && (
-          <View className="py-16 items-center">
-            <Spinner color={COLORS.primary} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
 
         {!isLoading && grupos.length === 0 && (

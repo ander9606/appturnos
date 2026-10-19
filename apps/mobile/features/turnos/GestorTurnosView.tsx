@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
@@ -427,9 +428,7 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien, puedeGestionar
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <Spinner size="large" color={COLORS.primary} />
-      </View>
+      <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
     );
   }
 

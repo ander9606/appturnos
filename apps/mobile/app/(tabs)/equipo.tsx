@@ -12,8 +12,7 @@
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { SkeletonList } from '@/components/ui/Skeleton';
-import { Spinner } from '@/components/ui/Spinner';
+import { SkeletonDetail, SkeletonList } from '@/components/ui/Skeleton';
 import React, { useState } from 'react';
 import {
   View,
@@ -49,8 +48,8 @@ function MiEmpresaNominaView() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <Spinner color={COLORS.mutedForeground} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -189,8 +188,8 @@ function WorkerView() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <Spinner color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

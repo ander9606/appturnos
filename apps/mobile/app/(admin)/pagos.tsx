@@ -3,6 +3,7 @@
  * Lista los eventos de pago recibidos vía webhook, con filtro por estado
  * y reintento manual para los que quedaron en error.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -202,10 +203,7 @@ export default function PagosScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.integracion} colors={[COLORS.integracion]} />}
       >
         {isLoading && (
-          <View className="items-center py-16">
-            <Spinner size="large" color={COLORS.integracion} />
-            <Text className="text-muted-foreground mt-3 text-sm">Cargando pagos…</Text>
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
 
         {isError && (

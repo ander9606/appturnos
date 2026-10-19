@@ -2,6 +2,7 @@
  * Gestores — lista de gestores (admin_empresa, jefe_turnos, jefe_nomina, nomina)
  * de la empresa. Permite editar, activar/desactivar y eliminar usuarios gestores.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -197,9 +198,9 @@ export default function GestoresScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Gestores', headerShown: true }} />
-        <Spinner size="large" color={theme.primary} />
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

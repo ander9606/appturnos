@@ -5,10 +5,10 @@
  * Toda la lógica de negocio vive en useNominaTrabajador + nominaTrabajadorUtils.
  */
 
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
@@ -123,8 +123,8 @@ export function NominaTrabajadorView() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -348,9 +348,7 @@ export function NominaTrabajadorView() {
           }
           ListEmptyComponent={
             viewMode === 'mes' ? null : loadingRegistros ? (
-              <View className="py-12 items-center">
-                <Spinner color={theme.primary} />
-              </View>
+              <SkeletonList count={3} />
             ) : (
               <EmptyState title="Sin registros aún" message="Marca tu entrada para comenzar a registrar horas." />
             )

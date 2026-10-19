@@ -1,6 +1,6 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
@@ -88,7 +88,7 @@ export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClo
           </View>
 
           {isLoading ? (
-            <Spinner size="small" color={COLORS.primary} style={{ paddingVertical: 24 }} />
+            <SkeletonList count={4} />
           ) : (
             <FlatList
               data={filtrados}

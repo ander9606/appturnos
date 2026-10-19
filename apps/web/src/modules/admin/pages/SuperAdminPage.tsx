@@ -1,4 +1,4 @@
-import { PageLoading } from '@/shared/components/Spinner';
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
@@ -177,7 +177,7 @@ export function SuperAdminPage() {
         <p className="text-xs text-muted-foreground -mt-1">{total} empresa{total !== 1 ? 's' : ''}</p>
 
         {isLoading ? (
-          <PageLoading />
+          <SkeletonTable />
         ) : isError ? (
           <ErrorState error={error} onRetry={refetch} />
         ) : empresas.length === 0 ? (

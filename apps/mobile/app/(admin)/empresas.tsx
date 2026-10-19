@@ -2,8 +2,8 @@
  * Lista de todas las empresas — panel super_admin.
  * Permite buscar, filtrar por estado y navegar al detalle.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import {
@@ -163,10 +163,7 @@ export default function EmpresasScreen() {
         }
       >
         {isLoading && (
-          <View className="items-center py-16">
-            <Spinner size="large" color={COLORS.integracion} />
-            <Text className="text-muted-foreground mt-3 text-sm">Cargando empresas…</Text>
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
 
         {isError && (

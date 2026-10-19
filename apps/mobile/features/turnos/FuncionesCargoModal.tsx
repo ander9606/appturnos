@@ -2,6 +2,7 @@
  * FuncionesCargoModal — ver (todos) / diligenciar (admin, jefe_turnos) el
  * listado de funciones que un cargo tiene en la empresa actual.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
@@ -71,9 +72,7 @@ export function FuncionesCargoModal({ visible, onClose, cargoId, cargoNombre, ed
         </View>
 
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <Spinner color={COLORS.info} />
-          </View>
+          <SkeletonList count={3} />
         ) : (
           <FlatList
             data={items}

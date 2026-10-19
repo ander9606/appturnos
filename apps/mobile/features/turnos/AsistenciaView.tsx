@@ -1,6 +1,6 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, FlatList, TouchableOpacity, RefreshControl,
@@ -172,9 +172,7 @@ export function AsistenciaView({ selectedDate }: Props) {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <Spinner size="large" color={theme.primary} />
-      </View>
+      <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
     );
   }
 

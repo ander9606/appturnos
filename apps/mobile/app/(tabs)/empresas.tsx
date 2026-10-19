@@ -1,5 +1,5 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
@@ -50,9 +50,7 @@ function MisEmpresasView() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <Spinner size="large" color={COLORS.primary} />
-      </View>
+      <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
     );
   }
 
@@ -161,9 +159,7 @@ function DirectorioView() {
       </View>
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <Spinner size="large" color={COLORS.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : isError ? (
         <View className="flex-1 items-center justify-center px-6">
           <Text className="text-danger text-center">{t('common.error')}</Text>

@@ -1,4 +1,4 @@
-import { SkeletonList } from '@/shared/components/Skeleton';
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
@@ -137,7 +137,7 @@ export function TurnosPage() {
       </div>
 
       {isLoading ? (
-        <SkeletonList />
+        <SkeletonTable />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : ofertas.length === 0 ? (

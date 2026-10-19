@@ -1,4 +1,4 @@
-import { PageLoading } from '@/shared/components/Spinner';
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { DollarSign, Calendar, Clock, Gift } from 'lucide-react';
 import { useConfirm } from '@/shared/hooks/useConfirm';
@@ -28,7 +28,7 @@ export function LiquidacionEventualView() {
   const puedeLiquidar = periodo && periodo.estado === 'abierto' && periodo.fecha_fin < hoy;
   const isLoading = loadingPeriodo || loadingLiq;
 
-  if (isLoading) return <PageLoading />;
+  if (isLoading) return <SkeletonTable />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!periodo) return <p className="text-muted-foreground text-sm py-8 text-center">Sin período activo</p>;
 

@@ -3,9 +3,9 @@
  * logiq360. Muestra una sugerencia de match por nombre y permite elegir manualmente.
  * Solo visible para admin_empresa.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -108,8 +108,8 @@ export default function ConciliacionScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

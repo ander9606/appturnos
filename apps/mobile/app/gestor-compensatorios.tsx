@@ -3,9 +3,9 @@
  * para admin_empresa / jefe_nomina.
  */
 
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -60,9 +60,7 @@ export default function GestorCompensatoriosScreen() {
       <Stack.Screen options={{ title: 'Descansos compensatorios', headerShown: true }} />
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <Spinner size="large" color={theme.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : (
         <FlatList
           data={lista}

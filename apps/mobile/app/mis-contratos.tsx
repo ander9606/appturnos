@@ -1,6 +1,6 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo, useState } from 'react';
 import {
@@ -71,7 +71,7 @@ export default function MisContratosScreen() {
         }
         ListEmptyComponent={
           isLoading ? (
-            <Spinner size="large" color={theme.primary} style={{ marginTop: 48 }} />
+            <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
           ) : (
             <EmptyState
               variant={soloPendientes ? 'done' : 'empty'}

@@ -7,6 +7,7 @@
  *   jefe_nomina   → edita la ficha (nómina y turnos); el sueldo y la hora de entrada solo en nómina; no el tipo ni los datos de pago
  *   nomina        → solo lectura
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
@@ -410,9 +411,9 @@ export default function TrabajadorDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Trabajador', headerShown: true, headerRight }} />
-        <Spinner color={COLORS.primary} />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

@@ -152,21 +152,32 @@ Tiempo de giro: 800 ms por vuelta, lineal. Animado con el `Animated` nativo de R
 
 ### 5.2 Skeleton
 
-Bloques grises que laten (opacidad 100 % ↔ 45 %, 1.4 s) en el lugar del contenido.
+Bloques grises que laten (opacidad 100 % ↔ 45 %, 1.4 s) en el lugar del contenido. **Elige el que se parezca a lo que va a aparecer**, para que no haya saltos de diseño al cargar:
+
+| Cuando carga… | Móvil | Web |
+|---|---|---|
+| Una **lista de tarjetas** (equipo, notificaciones, contratos) | `SkeletonList` | `SkeletonList` |
+| Una **tabla** (turnos, períodos, eventos) | — (en móvil las tablas son listas) | `SkeletonTable` |
+| Una **pantalla de detalle o ficha** (trabajador, turno, contrato, formularios) | `SkeletonDetail` | `SkeletonDetail` |
+| Un **panel de métricas** (reportes, dashboard, liquidación) | `SkeletonStats` | `SkeletonStats` |
+| Una forma propia | `Skeleton` (bloque suelto) | `Skeleton` |
 
 | | Móvil | Web |
 |---|---|---|
 | Archivo | `apps/mobile/components/ui/Skeleton.tsx` | `apps/web/src/shared/components/Skeleton.tsx` |
-| Piezas | `Skeleton`, `SkeletonCard`, `SkeletonList` | `Skeleton`, `SkeletonCard`, `SkeletonList` |
 
 ```tsx
 {isLoading ? <SkeletonList count={6} /> : isError ? <ErrorState …/> : <Lista …/>}
+if (isLoading) return <SkeletonDetail />;                  // pantalla completa (web)
+<SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />   // pantalla completa (móvil)
 ```
 
-- **`Skeleton`**: bloque suelto (`width`, `height`, `radius`; `'full'` = círculo) para armar formas propias.
-- **`SkeletonCard`** / **`SkeletonList`**: tarjeta genérica avatar + 2 líneas + etiqueta. Calca el tamaño de las tarjetas reales; si una lista tiene otra forma, **crea un skeleton propio con `Skeleton`** en vez de forzar la genérica.
+- **`Skeleton`**: bloque suelto (móvil: `width`, `height`, `radius`, `'full'` = círculo; web: clases de Tailwind) para armar formas propias.
+- **`SkeletonCard`** / **`SkeletonList`**: tarjeta genérica avatar + 2 líneas + etiqueta. Si una lista tiene otra forma, crea un skeleton propio con `Skeleton` en vez de forzar la genérica.
+- **Pantallas completas en móvil**: el skeleton va dentro del mismo contenedor (`SafeAreaView`) **sin** `items-center justify-center` (eso es para spinners centrados); se le pasa `style={{ paddingHorizontal: 16, paddingTop: 12 }}`. Dentro de una lista que ya tiene su padding, `<SkeletonList count={3} />` sin estilo.
+- **Se queda el `Spinner`** (no skeleton) en: botones y acciones en curso, cargas pequeñas en línea (un selector, la ubicación, un historial dentro de una tarjeta) y cuando no se conoce la forma del resultado.
 - En móvil todos los skeletons comparten un solo pulso (laten juntos) y la animación se apaga sola cuando no hay ninguno montado.
-- Dónde ya se usan: móvil → Equipo (lista), Turnos (mis turnos, ofertas, listas del mes); web → Equipo y Turnos.
+- Todos llevan etiqueta "Cargando" para lectores de pantalla y ocultan sus bloques.
 
 ### 5.3 Reglas de carga
 
@@ -320,22 +331,21 @@ Reglas:
 
 1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes, que el código compila y que ningún interlineado baja de 1.25×, pero no se vio en pantalla: revisar que no haya texto cortado (sobre todo números grandes y emojis en Android), que la negrita de Android no salga doble y que el arranque no parpadee.
 2. **Hex sueltos restantes (~124 en móvil):** sobre todo `#000` (sombras), tintes claros (`#F1F5F9`, `#FEF3C7`, `#EFF6FF`), violetas (`#8B5CF6`, `#7C3AED`), `#475569`, y hex con alfa (`#6366F11A`). Decidir cuáles pasan a token y cuáles son de un solo uso.
-3. **Skeleton en más pantallas.** Faltan Nómina, Notificaciones, Historial de ganancias, Dashboard de asistencia y las páginas web de Nómina, Configuración y Admin (hoy usan `PageLoading`/`Spinner`).
-4. **Skeletons con forma propia.** Detalle de turno, perfil de trabajador y tarjetas de nómina usan spinner porque su forma no es la tarjeta genérica.
-5. **Contraste de marca.** Evaluar oscurecer ligeramente `primary` o usar `primary-600` en botones (4.09 → casi AA) sin perder identidad.
-6. **Modo oscuro.** `userInterfaceStyle: "light"` fijo. Con los tokens ya centralizados, es viable como etapa propia.
-7. **Íconos.** Web usa `lucide-react`, móvil usa `Ionicons`. Unificar estilo (grosor, tamaño) o elegir un solo set.
-8. **Identidad propia.** Definir 3-4 rasgos distintivos (forma recurrente, sombra, ilustración para estados vacíos) y documentarlos en esta guía.
-9. **Spinner a nivel de marca.** Evaluar una animación con la forma del logo (Lottie) para el splash y la carga inicial.
-10. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
-11. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
-12. **Más ilustraciones de marca.** Reutilizar el planeta en estados vacíos (sin turnos, sin equipo) y en el 404 de la web.
-13. **`Alert.alert` restantes en móvil (~85 llamadas).** Probar en un iPhone si un diálogo del layout raíz aparece sobre un `Modal` abierto; si funciona, migrar los 19 archivos con `Modal` (mismo script; ahí se estrenan `actionSheet` y `elegirFotoConMenu` en `oferta/[id]` y `ReportarNovedadModal`). El `ActionSheet` también es un `Modal`, así que tiene la misma restricción. Si no, montar el diálogo dentro de cada `Modal` o sustituir esos `Modal` por pantallas/`bottom sheet`.
-14. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
-15. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
+3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. Si se repite una forma nueva (p. ej. el calendario mensual), crear su skeleton propio.
+4. **Contraste de marca.** Evaluar oscurecer ligeramente `primary` o usar `primary-600` en botones (4.09 → casi AA) sin perder identidad.
+5. **Modo oscuro.** `userInterfaceStyle: "light"` fijo. Con los tokens ya centralizados, es viable como etapa propia.
+6. **Íconos.** Web usa `lucide-react`, móvil usa `Ionicons`. Unificar estilo (grosor, tamaño) o elegir un solo set.
+7. **Identidad propia.** Definir 3-4 rasgos distintivos (forma recurrente, sombra, ilustración para estados vacíos) y documentarlos en esta guía.
+8. **Spinner a nivel de marca.** Evaluar una animación con la forma del logo (Lottie) para el splash y la carga inicial.
+9. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
+10. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
+11. **Más ilustraciones de marca.** Reutilizar el planeta en estados vacíos (sin turnos, sin equipo) y en el 404 de la web.
+12. **`Alert.alert` restantes en móvil (~85 llamadas).** Probar en un iPhone si un diálogo del layout raíz aparece sobre un `Modal` abierto; si funciona, migrar los 19 archivos con `Modal` (mismo script; ahí se estrenan `actionSheet` y `elegirFotoConMenu` en `oferta/[id]` y `ReportarNovedadModal`). El `ActionSheet` también es un `Modal`, así que tiene la misma restricción. Si no, montar el diálogo dentro de cada `Modal` o sustituir esos `Modal` por pantallas/`bottom sheet`.
+13. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
+14. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
 ---
-16. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: solo 3 pantallas usan `EmptyState`; unos 28 vacíos más son un texto gris en tablas y tarjetas.
+15. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: solo 3 pantallas usan `EmptyState`; unos 28 vacíos más son un texto gris en tablas y tarjetas.
 
 ## 9. Referencias
 

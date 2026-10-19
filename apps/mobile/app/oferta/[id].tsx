@@ -1,5 +1,5 @@
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -336,9 +336,9 @@ export default function OfertaDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Detalle del turno', headerShown: true }} />
-        <Spinner size="large" color={theme.primary} />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

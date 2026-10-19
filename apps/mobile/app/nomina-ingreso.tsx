@@ -6,6 +6,7 @@
  * - Alerta nativa de hidratación/descanso cada 4 h trabajadas.
  */
 
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -128,8 +129,8 @@ export default function NominaIngresoScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

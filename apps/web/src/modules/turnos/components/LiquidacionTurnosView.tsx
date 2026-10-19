@@ -1,4 +1,5 @@
-import { PageLoading, Spinner } from '@/shared/components/Spinner';
+import { SkeletonStats } from '@/shared/components/Skeleton';
+import { Spinner } from '@/shared/components/Spinner';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DollarSign, Calendar, Clock, ChevronDown, Download, AlertTriangle } from 'lucide-react';
@@ -189,7 +190,7 @@ export function LiquidacionTurnosView() {
       </div>
 
       {isLoading ? (
-        <PageLoading />
+        <SkeletonStats />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : (

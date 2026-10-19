@@ -5,6 +5,7 @@
  * identificación, información personal, seguridad social,
  * datos bancarios y contacto de emergencia.
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -445,9 +446,9 @@ export default function MiPerfilLaboralScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Perfil laboral', headerShown: true }} />
-        <Spinner color={COLORS.primary} />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

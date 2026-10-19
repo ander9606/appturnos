@@ -1,4 +1,4 @@
-import { PageLoading } from '@/shared/components/Spinner';
+import { SkeletonList } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { useCompensatorios } from '../hooks/useNomina';
 import type { DescansoCompensatorio } from '../types';
@@ -10,7 +10,7 @@ export function CompensatoriosTab() {
   const { data, isLoading, isError, error, refetch } = useCompensatorios();
   const [asignando, setAsignando] = useState<DescansoCompensatorio | null>(null);
 
-  if (isLoading) return <PageLoading />;
+  if (isLoading) return <SkeletonList count={3} />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const todos: DescansoCompensatorio[] = data?.data ?? [];

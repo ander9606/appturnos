@@ -2,8 +2,8 @@
  * Tab de Reportes globales — panel super_admin.
  * Muestra estadísticas detalladas del sistema con visualizaciones básicas.
  */
+import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -95,10 +95,7 @@ export default function ReportesScreen() {
         }
       >
         {isLoading && (
-          <View className="items-center py-16">
-            <Spinner size="large" color={COLORS.integracion} />
-            <Text className="text-muted-foreground mt-3 text-sm">Cargando reportes…</Text>
-          </View>
+          <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
 
         {isError && (

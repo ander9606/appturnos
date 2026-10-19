@@ -5,9 +5,9 @@
  * Muestra el tiempo transcurrido desde el ingreso y captura
  * la firma digital para confirmar la salida.
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
@@ -145,8 +145,8 @@ export default function EgresoScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <Spinner size="large" color={COLORS.primary} />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

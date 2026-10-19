@@ -2,8 +2,8 @@
  * Vista semanal de asistencia para trabajador_nomina.
  * Muestra los 7 días de la semana con entrada/salida de cada registro.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
 import { View, ScrollView, RefreshControl } from 'react-native';
@@ -194,9 +194,7 @@ export function NominaAsistenciaSemanalView({ selectedDate, weekDays }: Props) {
 
   if (loadingPeriodos || loadingRegistros) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <Spinner size="large" color={theme.primary} />
-      </View>
+      <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
     );
   }
 

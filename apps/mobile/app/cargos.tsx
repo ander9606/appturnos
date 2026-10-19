@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
@@ -171,9 +172,7 @@ export default function CargosScreen() {
       />
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <Spinner size="large" color={COLORS.info} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : (
           <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
 

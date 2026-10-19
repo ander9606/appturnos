@@ -2,8 +2,8 @@
  * Dashboard del super_admin.
  * Muestra las métricas globales del sistema en tiempo real.
  */
+import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
@@ -108,10 +108,7 @@ export default function AdminDashboard() {
 
         {/* ── Loading / Error ───────────────────────────────────────── */}
         {isLoading && (
-          <View className="items-center justify-center py-16">
-            <Spinner size="large" color={COLORS.integracion} />
-            <Text className="text-muted-foreground mt-3 text-sm">Cargando métricas…</Text>
-          </View>
+          <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
 
         {isError && (

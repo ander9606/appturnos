@@ -4,8 +4,8 @@
  * Pantalla de descubrimiento: buscar, filtrar por ciudad y solicitar vínculo.
  * Se accede desde mis-empresas.tsx al tocar "Buscar empresa".
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import {
@@ -289,9 +289,7 @@ export default function DirectorioEmpresasScreen() {
 
       {/* List */}
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <Spinner size="large" color={COLORS.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : empresas.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8 gap-3">
           <Ionicons name="search-outline" size={48} color={COLORS.borderStrong} />

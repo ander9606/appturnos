@@ -2,6 +2,7 @@
  * Estado de la cola de eventos de integración logiq360.
  * Auto-refresca cada 30 s (configurado en useEstadoIntegracion).
  */
+import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -68,8 +69,8 @@ export default function EstadoIntegracionScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

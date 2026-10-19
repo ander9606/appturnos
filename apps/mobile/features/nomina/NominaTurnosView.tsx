@@ -5,10 +5,10 @@
  * según empresas.tipo_liquidacion) con el total a cobrar, horas
  * trabajadas y badge de turno extendido.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
@@ -315,8 +315,8 @@ export function NominaTurnosView() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

@@ -1,6 +1,6 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -137,9 +137,7 @@ export default function LiquidacionEventualScreen() {
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {!esTrabajador && <SegmentoToggle value={segmento} onChange={setSegmento} />}
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <Spinner size="large" color="#7C3AED" />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : !periodo ? (
           <View className="flex-1 items-center justify-center gap-3 px-8">
             <Ionicons name="calendar-outline" size={48} color={COLORS.borderStrong} />

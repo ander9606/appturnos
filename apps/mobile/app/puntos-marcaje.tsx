@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
@@ -282,9 +283,7 @@ export default function PuntosMarcajeScreen() {
       />
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <Spinner size="large" color={COLORS.info} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : (
           <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
 

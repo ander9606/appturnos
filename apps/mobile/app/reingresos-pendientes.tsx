@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
@@ -113,9 +114,7 @@ export default function ReingresosPendientesScreen() {
       <Stack.Screen options={{ title: 'Reingresos pendientes' }} />
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <Spinner size="large" color={theme.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : (
         <FlatList
           data={data}

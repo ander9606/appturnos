@@ -1,6 +1,6 @@
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
@@ -93,8 +93,8 @@ export default function DisponibilidadScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

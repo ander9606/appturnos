@@ -5,6 +5,7 @@
  * de los registros de nómina de los trabajadores.
  */
 
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -130,8 +131,8 @@ export default function RegistroDetalleScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

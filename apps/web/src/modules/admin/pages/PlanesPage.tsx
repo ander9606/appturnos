@@ -1,4 +1,4 @@
-import { PageLoading } from '@/shared/components/Spinner';
+import { SkeletonList } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { ArrowLeft, Save } from 'lucide-react';
@@ -132,7 +132,7 @@ export function PlanesPage() {
         </p>
       </div>
 
-      {isLoading && <PageLoading />}
+      {isLoading && <SkeletonList count={2} />}
       {isError && <ErrorState error={error} onRetry={refetch} />}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

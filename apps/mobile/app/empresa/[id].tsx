@@ -2,6 +2,7 @@
  * Detalle y edición de una empresa — panel super_admin.
  * Permite ver métricas, editar campos y cambiar estado activo/inactivo.
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -209,9 +210,8 @@ export default function EmpresaDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <Spinner size="large" color={COLORS.integracion} />
-        <Text className="text-muted-foreground mt-3 text-sm">Cargando empresa…</Text>
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

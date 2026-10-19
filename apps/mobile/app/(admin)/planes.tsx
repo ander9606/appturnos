@@ -4,9 +4,9 @@
  * `planes`). Espejo de la página web /admin/planes. Un cambio solo afecta
  * los links de pago que se generen después; lo ya pagado no cambia.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import { View, ScrollView, Pressable, RefreshControl } from 'react-native';
@@ -150,9 +150,7 @@ export default function PlanesScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.integracion} colors={[COLORS.integracion]} />}
       >
         {isLoading && (
-          <View className="items-center py-16">
-            <Spinner size="large" color={COLORS.integracion} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
         {isError && (
           <View className="mx-4 bg-danger/10 border border-danger/30 rounded-2xl p-4 items-center gap-2">

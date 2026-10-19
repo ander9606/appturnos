@@ -1,4 +1,4 @@
-import { PageLoading } from '@/shared/components/Spinner';
+import { SkeletonStats } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Download, Plus, Pencil, CalendarClock, BedDouble, ChevronDown, X, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap } from 'lucide-react';
@@ -58,7 +58,7 @@ export function LiquidacionTab({
         </div>
       )}
       {loading ? (
-        <PageLoading />
+        <SkeletonStats />
       ) : error ? (
         <ErrorState error={error} onRetry={onRetry} />
       ) : liqData ? (

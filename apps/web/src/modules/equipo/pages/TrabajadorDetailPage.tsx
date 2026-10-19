@@ -1,4 +1,4 @@
-import { PageLoading } from '@/shared/components/Spinner';
+import { SkeletonDetail, SkeletonTable } from '@/shared/components/Skeleton';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
@@ -205,7 +205,7 @@ export function TrabajadorDetailPage() {
       'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground',
   });
 
-  if (isLoading) return <PageLoading />;
+  if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!trabajador) return <p className="text-muted-foreground text-sm py-8 text-center">Trabajador no encontrado</p>;
 
@@ -363,7 +363,7 @@ export function TrabajadorDetailPage() {
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Historial de sueldo</h2>
           <p className="text-xs text-muted-foreground mb-4">Registro de auditoría: quién cambió tarifa o salario y cuándo. No se puede editar ni borrar.</p>
           {historialSalario.isLoading ? (
-            <PageLoading />
+            <SkeletonTable rows={3} />
           ) : (historialSalario.data?.data ?? []).length === 0 ? (
             <p className="text-muted-foreground text-sm">Sin cambios registrados.</p>
           ) : (

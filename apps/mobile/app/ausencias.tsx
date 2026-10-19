@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
@@ -84,7 +85,7 @@ export default function AusenciasScreen() {
         }
         ListEmptyComponent={
           isLoading ? (
-            <Spinner size="large" color={theme.primary} style={{ marginTop: 48 }} />
+            <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
           ) : (
             <EmptyState title="Sin ausencias" />
           )

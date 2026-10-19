@@ -10,10 +10,10 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, FlatList, ScrollView, TouchableOpacity, RefreshControl, } from 'react-native';
@@ -181,8 +181,8 @@ function NominaGestorView() {
 
   if (loadingPeriodos) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -483,9 +483,7 @@ function NominaGestorView() {
         }
         ListEmptyComponent={
           loadingLiq ? (
-            <View className="py-12 items-center">
-              <Spinner color={theme.primary} />
-            </View>
+            <SkeletonList count={3} />
           ) : (
             <EmptyState title="Sin registros en este período" />
           )

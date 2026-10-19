@@ -1,4 +1,4 @@
-import { PageLoading } from '@/shared/components/Spinner';
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -120,7 +120,7 @@ export function NominaPage() {
       )}
 
       {isLoading ? (
-        <PageLoading />
+        <SkeletonTable />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : periodos.length === 0 ? (

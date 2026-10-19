@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
@@ -72,7 +73,7 @@ export default function MisCuentasCobroScreen() {
         }
         ListEmptyComponent={
           isLoading ? (
-            <Spinner size="large" color={theme.primary} style={{ marginTop: 48 }} />
+            <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
           ) : (
             <EmptyState
               variant={soloPendientes ? 'done' : 'empty'}

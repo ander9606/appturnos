@@ -6,9 +6,9 @@
  * el trabajador está dentro del radio autorizado según el tipo de
  * geofence configurado en el cargo (oferta, fijo, zonal, libre).
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
 import {
@@ -127,8 +127,8 @@ export default function IngresoScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <Spinner size="large" color={COLORS.primary} />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }

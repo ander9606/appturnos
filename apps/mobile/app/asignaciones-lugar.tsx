@@ -6,9 +6,9 @@
  * Fijo   → debe estar dentro del radio del punto_marcaje asignado.
  */
 
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
@@ -86,9 +86,7 @@ export default function AsignacionesLugarScreen() {
       <Stack.Screen options={{ title: 'Asignaciones de lugar', headerShown: true }} />
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <Spinner size="large" color={theme.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : (
         <FlatList
           data={trabajadores}

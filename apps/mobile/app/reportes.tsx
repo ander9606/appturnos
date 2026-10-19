@@ -4,8 +4,8 @@
  *   - Asistencia: turnos por trabajador y días de nómina
  *   - Costos: costo de mano de obra (turnos + nómina)
  */
+import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
@@ -245,9 +245,7 @@ export default function ReportesScreen() {
         </Text>
 
         {isLoading ? (
-          <View className="items-center justify-center py-20">
-            <Spinner size="large" color={theme.primary} />
-          </View>
+          <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : (
           <>
             {/* ── Resumen costos ───────────────────────────────── */}

@@ -5,10 +5,10 @@
  * completados en el período seleccionado.  Cada card es expandible para
  * ver el desglose turno por turno (pago base + extra + total).
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
@@ -413,9 +413,7 @@ export default function LiquidacionTurnosScreen() {
 
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <Spinner size="large" color={theme.primary} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : isError ? (
           <ErrorState error={error} onRetry={refetch} fallback="Error al cargar la liquidación" />
         ) : (

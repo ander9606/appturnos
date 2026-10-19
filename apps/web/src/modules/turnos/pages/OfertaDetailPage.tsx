@@ -1,4 +1,5 @@
-import { PageLoading, Spinner } from '@/shared/components/Spinner';
+import { SkeletonDetail, SkeletonTable } from '@/shared/components/Skeleton';
+import { Spinner } from '@/shared/components/Spinner';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Plus, Pencil, Trash2, Star, Send, Zap, CheckCircle2, Clock, Gift, MinusCircle, AlertTriangle, X, Download } from 'lucide-react';
@@ -156,7 +157,7 @@ export function OfertaDetailPage() {
   // Completar antes de que el turno empiece no tiene sentido — recién ahí hay algo que cerrar.
   const turnoIniciado = oferta ? new Date(`${oferta.fecha}T${oferta.hora_inicio}`) <= new Date() : false;
 
-  if (isLoading) return <PageLoading />;
+  if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!oferta) return <p className="text-muted-foreground text-sm py-12 text-center">Oferta no encontrada</p>;
 
@@ -364,7 +365,7 @@ export function OfertaDetailPage() {
           </div>
 
           {loadingAsig ? (
-            <PageLoading />
+            <SkeletonTable rows={4} />
           ) : asignaciones.length === 0 ? (
             <p className="text-muted-foreground text-sm py-8 text-center">Sin asignaciones</p>
           ) : (

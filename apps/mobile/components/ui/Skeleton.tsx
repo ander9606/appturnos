@@ -74,3 +74,58 @@ export function SkeletonList({ count = 5, style }: { count?: number; style?: Sty
     </View>
   );
 }
+
+/** Marco común de los skeletons de pantalla: se anuncia como "Cargando…" y oculta los bloques a lectores de pantalla. */
+function Cargando({ style, children }: { style?: StyleProp<ViewStyle>; children: React.ReactNode }) {
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={t('common.loading')}
+      importantForAccessibility="no-hide-descendants"
+      className="gap-4"
+      style={style}
+    >
+      {children}
+    </View>
+  );
+}
+
+/** Pantalla de detalle: tarjeta de cabecera (avatar + título) y dos tarjetas de datos (etiqueta + valor). */
+export function SkeletonDetail({ style }: { style?: StyleProp<ViewStyle> }) {
+  const fila = (i: number) => (
+    <View key={i} className="gap-1.5">
+      <Skeleton width="30%" height={11} />
+      <Skeleton width={i % 2 ? '55%' : '75%'} height={15} />
+    </View>
+  );
+  return (
+    <Cargando style={style}>
+      <View className="bg-card rounded-2xl border border-border p-4 flex-row items-center gap-3">
+        <Skeleton width={56} height={56} radius="full" />
+        <View className="flex-1 gap-2">
+          <Skeleton width="55%" height={16} />
+          <Skeleton width="35%" height={12} />
+        </View>
+      </View>
+      <View className="bg-card rounded-2xl border border-border p-4 gap-4">{[0, 1, 2, 3].map(fila)}</View>
+      <View className="bg-card rounded-2xl border border-border p-4 gap-4">{[0, 1, 2].map(fila)}</View>
+    </Cargando>
+  );
+}
+
+/** Panel de métricas: cuadrícula de 2×2 tarjetas con un número grande, y una lista debajo. */
+export function SkeletonStats({ style }: { style?: StyleProp<ViewStyle> }) {
+  const tarjeta = (i: number) => (
+    <View key={i} className="flex-1 bg-card rounded-2xl border border-border p-4 gap-2">
+      <Skeleton width="45%" height={12} />
+      <Skeleton width="60%" height={28} radius={8} />
+    </View>
+  );
+  return (
+    <Cargando style={style}>
+      <View className="flex-row gap-3">{[0, 1].map(tarjeta)}</View>
+      <View className="flex-row gap-3">{[2, 3].map(tarjeta)}</View>
+      <SkeletonList count={3} />
+    </Cargando>
+  );
+}

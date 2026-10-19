@@ -2,6 +2,7 @@
  * Pantalla de configuración de la integración logiq360.
  * Solo visible para admin_empresa.
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -89,8 +90,8 @@ export default function IntegracionConfigScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <Spinner size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
