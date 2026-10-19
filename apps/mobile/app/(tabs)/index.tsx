@@ -292,7 +292,7 @@ export default function DashboardScreen() {
               { icon: 'person-add-outline'  as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') },
               { icon: 'briefcase-outline'   as IoniconsName, label: 'Cargos',       onPress: () => router.push('/cargos') },
               { icon: 'location-outline'    as IoniconsName, label: 'Puntos marcaje', onPress: () => router.push('/puntos-marcaje') },
-              { icon: 'link-outline'        as IoniconsName, label: 'logiq360',     onPress: () => router.push('/integracion/config') },
+              { icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') },
             ]
           : [
               { icon: 'pulse-outline'       as IoniconsName, label: 'Estado sync',  onPress: () => router.push('/integracion/estado') },
