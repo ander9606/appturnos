@@ -6,8 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import { reportesApi } from '@api-client';
 import type { CostoComparado, NivelInsight } from '@api-client';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { ACCENT, COLORS, HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { formatCOP, formatDate } from '@/lib/formatters';
+import { OrbitaDecor } from './marca';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -49,14 +50,17 @@ function Delta({ pct }: { pct: number | null }) {
 
 export interface ConceptoCosto { label: string; valor: number; color: string }
 
-/** Conceptos de los desgloses; cada lado (turnos / nómina) usa solo los suyos. */
+/**
+ * Colores de los desgloses. Nómina reutiliza los de las horas (HOUR_TYPE_COLORS, validados contra
+ * daltonismo) para que Reportes y la pantalla de Nómina se lean igual; turnos usa la marca.
+ */
 export const COLOR_CONCEPTO = {
-  ordinario: COLORS.primary,
-  extras: COLORS.warning,
-  nocturno: COLORS.info,
-  festivo: COLORS.success,
-  tarifas: COLORS.slate600,
-  bonos: COLORS.primary400,
+  ordinario: HOUR_TYPE_COLORS.ordinarias,
+  extras: HOUR_TYPE_COLORS.extraDiurna,
+  nocturno: HOUR_TYPE_COLORS.nocturna,
+  festivo: HOUR_TYPE_COLORS.festivo,
+  tarifas: COLORS.primary,
+  bonos: ACCENT.violeta,
 };
 
 function Desglose({ items }: { items: ConceptoCosto[] }) {
@@ -84,18 +88,19 @@ function Desglose({ items }: { items: ConceptoCosto[] }) {
 }
 
 /** Costo de UN lado contra su propio período anterior, con su desglose. */
-export function TarjetaCosto({ titulo, costo, previo, items }: {
-  titulo: string; costo: CostoComparado; previo: { desde: string; hasta: string }; items: ConceptoCosto[];
+export function TarjetaCosto({ titulo, costo, previo, items, acento }: {
+  titulo: string; costo: CostoComparado; previo: { desde: string; hasta: string }; items: ConceptoCosto[]; acento: string;
 }) {
   return (
-    <View className="bg-card border border-border rounded-2xl p-5">
-      <Text className="text-xs text-muted-foreground">{titulo}</Text>
-      <Text className="text-3xl font-bold text-foreground mt-1">{formatCOP(costo.total)}</Text>
+    <View className="bg-card border border-border rounded-2xl p-5 overflow-hidden">
+      <OrbitaDecor color={acento} />
+      <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{titulo}</Text>
+      <Text className="text-4xl font-extrabold text-foreground mt-1">{formatCOP(costo.total)}</Text>
       <View className="flex-row items-center gap-2 mt-2">
         <Delta pct={costo.delta_pct} />
         {costo.delta_pct != null && (
-          <Text className="flex-1 text-xs text-muted-foreground" numberOfLines={1}>
-            vs {formatCOP(costo.previo)} ({formatDate(previo.desde)} – {formatDate(previo.hasta)})
+          <Text className="flex-1 text-xs text-muted-foreground">
+            vs {formatCOP(costo.previo)} en {formatDate(previo.desde)} – {formatDate(previo.hasta)}
           </Text>
         )}
       </View>

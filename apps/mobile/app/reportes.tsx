@@ -6,23 +6,24 @@
  */
 import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
   View, ScrollView, Pressable, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import { reportesApi } from '@api-client';
 import type { AsistenciaTurno, AsistenciaNomina, CostoNominaDetalle } from '@api-client';
-import { useTheme } from '@/lib/theme';
 import { formatDate, formatCOP, toISODate } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { NominaSeccion, TurnosSeccion } from '@/features/reportes/SeccionesReporte';
+import { HeroMarca } from '@/features/reportes/marca';
 
 // ── Rango presets ─────────────────────────────────────────────────────────
 
@@ -42,8 +43,8 @@ function buildPresets(): Preset[] {
 
   return [
     { label: 'Este mes',      desde: toISODate(primeroMesActual), hasta: toISODate(now) },
-    { label: 'Mes anterior',  desde: toISODate(primeroMesAnt),    hasta: toISODate(ultimoMesAnt) },
-    { label: 'Últimos 3m',   desde: toISODate(hace90),            hasta: toISODate(now) },
+    { label: 'Mes pasado',  desde: toISODate(primeroMesAnt),    hasta: toISODate(ultimoMesAnt) },
+    { label: '3 meses',   desde: toISODate(hace90),            hasta: toISODate(now) },
   ];
 }
 
@@ -134,7 +135,6 @@ function CostoRow({ d }: { d: CostoNominaDetalle }) {
 const CUSTOM = -1;
 
 export default function ReportesScreen() {
-  const theme   = useTheme();
   const presets = useMemo(buildPresets, []);
   const [presetIdx, setPresetIdx] = useState(0);
 
@@ -174,62 +174,77 @@ export default function ReportesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Reportes', headerShown: true }} />
+      <StatusBar style="light" />
+      <Stack.Screen
+        options={{
+          title: 'Reportes',
+          headerShown: true,
+          headerStyle: { backgroundColor: COLORS.primary },
+          headerTintColor: COLORS.white,
+          headerShadowVisible: false,
+        }}
+      />
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 48 }}
+        contentContainerStyle={{ paddingBottom: 48 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Selector de rango ────────────────────────────────── */}
-        <View className="flex-row gap-2 mb-2">
-          {presets.map((p, i) => (
-            <Pressable
-              key={p.label}
-              onPress={() => setPresetIdx(i)}
-              className="flex-1 h-9 rounded-xl items-center justify-center active:opacity-70"
-              style={{ backgroundColor: i === presetIdx ? theme.primary : COLORS.muted }}
-            >
-              <Text
-                className="text-xs font-semibold"
-                style={{ color: i === presetIdx ? COLORS.white : COLORS.mutedForeground }}
-              >
-                {p.label}
-              </Text>
-            </Pressable>
-          ))}
-          <Pressable
-            onPress={() => setPresetIdx(CUSTOM)}
-            className="flex-1 h-9 rounded-xl items-center justify-center active:opacity-70"
-            style={{ backgroundColor: presetIdx === CUSTOM ? theme.primary : COLORS.muted }}
-          >
-            <Text
-              className="text-xs font-semibold"
-              style={{ color: presetIdx === CUSTOM ? COLORS.white : COLORS.mutedForeground }}
-            >
-              Personalizado
-            </Text>
-          </Pressable>
-        </View>
+        {/* ── Encabezado de marca con el selector de período ───── */}
+        <HeroMarca>
+          <Text className="text-xs font-semibold uppercase tracking-widest" style={{ color: COLORS.white }}>
+            Resumen de tu operación
+          </Text>
+          <Text className="text-2xl font-extrabold mt-1" numberOfLines={1} adjustsFontSizeToFit style={{ color: COLORS.white }}>
+            {formatDate(desde)} – {formatDate(hasta)}
+          </Text>
 
-        {presetIdx === CUSTOM && (
-          <View className="flex-row gap-2 mb-2">
-            <Pressable
-              onPress={() => setPickerAbierto('desde')}
-              className="flex-1 h-10 rounded-xl bg-muted items-center justify-center flex-row gap-1.5"
-            >
-              <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
-              <Text className="text-xs text-foreground">Desde {formatDate(toISODate(customDesde))}</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setPickerAbierto('hasta')}
-              className="flex-1 h-10 rounded-xl bg-muted items-center justify-center flex-row gap-1.5"
-            >
-              <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
-              <Text className="text-xs text-foreground">Hasta {formatDate(toISODate(customHasta))}</Text>
-            </Pressable>
+          <View className="flex-row gap-2 mt-4">
+            {[...presets.map((p) => p.label), 'Otro rango'].map((label, i) => {
+              const idx = i === presets.length ? CUSTOM : i;
+              const activo = idx === presetIdx;
+              return (
+                <Pressable
+                  key={label}
+                  onPress={() => setPresetIdx(idx)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: activo }}
+                  className="flex-1 h-10 rounded-xl items-center justify-center active:opacity-70 px-1"
+                  style={{ backgroundColor: activo ? COLORS.white : alpha(COLORS.white, 0.2) }}
+                >
+                  <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                    className={`text-xs font-bold ${activo ? 'text-primary-700' : ''}`}
+                    style={activo ? undefined : { color: COLORS.white }}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-        )}
 
+          {presetIdx === CUSTOM && (
+            <View className="flex-row gap-2 mt-2">
+              {(['desde', 'hasta'] as const).map((campo) => (
+                <Pressable
+                  key={campo}
+                  onPress={() => setPickerAbierto(campo)}
+                  className="flex-1 h-10 rounded-xl items-center justify-center flex-row gap-1.5 active:opacity-70"
+                  style={{ backgroundColor: alpha(COLORS.white, 0.2) }}
+                >
+                  <Ionicons name="calendar-outline" size={14} color={COLORS.white} />
+                  <Text className="text-xs font-semibold" style={{ color: COLORS.white }}>
+                    {campo === 'desde' ? 'Desde' : 'Hasta'} {formatDate(toISODate(campo === 'desde' ? customDesde : customHasta))}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </HeroMarca>
+
+        <View className="px-5 pt-2">
         {pickerAbierto && (
           <DateTimePicker
             value={pickerAbierto === 'desde' ? customDesde : customHasta}
@@ -240,10 +255,6 @@ export default function ReportesScreen() {
             onChange={(e, d) => onChangeFecha(pickerAbierto, e, d)}
           />
         )}
-
-        <Text className="text-xs text-muted-foreground text-center mb-6 mt-2">
-          {formatDate(desde)} – {formatDate(hasta)}
-        </Text>
 
         {isLoading ? (
           <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
@@ -307,6 +318,7 @@ export default function ReportesScreen() {
             )}
           </>
         )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

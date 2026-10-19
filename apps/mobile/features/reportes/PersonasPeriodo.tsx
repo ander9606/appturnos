@@ -34,8 +34,8 @@ function FilaHoras({ p, max }: { p: HorasPersona; max: number }) {
         <Text className="flex-1 text-sm font-medium text-foreground" numberOfLines={1}>{nombreDe(p)}</Text>
         <Text className="text-sm font-semibold text-foreground">{p.prom_semana.toLocaleString('es-CO')} h/sem</Text>
       </View>
-      <View className="h-1.5 rounded-full mt-2" style={{ backgroundColor: COLORS.muted }}>
-        <View className="h-1.5 rounded-full" style={{ width: `${Math.min(100, (p.prom_semana / max) * 100)}%`, backgroundColor: COLORS.primary }} />
+      <View className="h-1.5 rounded-full mt-2" style={{ backgroundColor: alpha(COLORS.success, 0.12) }}>
+        <View className="h-1.5 rounded-full" style={{ width: `${Math.min(100, (p.prom_semana / max) * 100)}%`, backgroundColor: COLORS.success }} />
       </View>
       <Text className="text-xs text-muted-foreground mt-1">{p.prom_dia.toLocaleString('es-CO')} h por día trabajado · {p.dias} días</Text>
     </View>
@@ -49,7 +49,12 @@ function Extremo({ label, e }: { label: string; e: ExtremoJornada | null }) {
     <View className="flex-1 bg-card border border-border rounded-2xl p-4 gap-1">
       <Text className="text-xs text-muted-foreground">{label}</Text>
       <Text className="text-xl font-bold text-foreground">{e ? horasTxt(e.horas) : '—'}</Text>
-      {e && <Text className="text-xs text-muted-foreground" numberOfLines={2}>{nombreDe(e)} · {formatDate(e.fecha)}</Text>}
+      {e && (
+        <>
+          <Text className="text-xs text-foreground" numberOfLines={2}>{nombreDe(e)}</Text>
+          <Text className="text-xs text-muted-foreground">{formatDate(e.fecha)}</Text>
+        </>
+      )}
     </View>
   );
 }

@@ -323,6 +323,19 @@ La marca se mueve poco y con intención. Referencia: el hero de la bienvenida (`
 
 ---
 
+### 5.8 Reportes y paneles de métricas
+
+Referencia: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`).
+
+- **Encabezado de marca** (`HeroMarca`): degradado `primary` → `primary-600`, órbitas finas y el planeta del logo tenue a la derecha; la cabecera de navegación va en `primary` con texto blanco (`headerShadowVisible: false`) para que se funda con él. Es decorativo y estático (sin animación). En él van el título del período y el selector (chips: el activo en blanco con `text-primary-700`, los demás `alpha(white, 0.2)` con texto blanco en negrita).
+- **Acento por módulo** (§2.3): la sección **Turnos** usa naranja (`THEME_COLORS.turnos`) y **Nómina** verde (`THEME_COLORS.nomina`): ícono, línea bajo el título y órbita de la tarjeta de costo. Turnos y nómina **no se mezclan**: cada una tiene su costo, desglose, personas y avisos.
+- **Cifra protagonista**: el costo va en `text-4xl font-extrabold`; la variación contra el período anterior es un chip (sube = ámbar, baja = verde, igual = azul) con ícono y texto.
+- **Anillo de progreso** (`AnilloProgreso`) para porcentajes con meta (cobertura de plazas): verde desde 90 %, ámbar desde 75 %, rojo por debajo; el valor va siempre escrito al centro.
+- **Desglose de costos**: nómina reutiliza `HOUR_TYPE_COLORS` (los mismos del gráfico de horas de Nómina); turnos usa la marca.
+- **Avisos** ("Para mirar"): ver §6, fondo `*Light` + texto `*Text` + ícono. **Vacíos**: `EmptyState compact` por sección, no ceros.
+
+---
+
 ## 6. Accesibilidad
 
 Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 px en negrita, y elementos gráficos):
