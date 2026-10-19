@@ -169,7 +169,7 @@ export default function ReportesScreen() {
     [asistencia.data]
   );
 
-  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina']);
+  const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina']);
   if (denied) return denied;
 
   return (

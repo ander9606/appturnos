@@ -10,8 +10,9 @@ const ctrl = require('./reportes.controller');
 
 const router = express.Router();
 
-// Reportes: admin_empresa y jefes (matriz de 06-AUTH.md).
-const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA];
+// Reportes: admin_empresa, jefes y el rol nomina (solo lectura, igual que liquidación). Quién ve pagos
+// individuales lo decide el controlador (verPagos).
+const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA];
 
 // Estos endpoints agregan sobre todo el rango sin paginar — sin tope, un
 // rango de décadas es una query cara y barata de pedir repetidamente.

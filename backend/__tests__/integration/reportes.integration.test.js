@@ -81,7 +81,7 @@ d('reportes con MySQL real', () => {
     expect(r.nomina.costo.delta_pct).toBeNull();
   });
 
-  it('GET costos: jefe_turnos no recibe el detalle por trabajador, jefe_nomina sí', async () => {
+  it('GET costos: jefe_turnos no recibe el detalle por trabajador; jefe_nomina y nomina sí', async () => {
     const llamar = async (rol) => {
       let body;
       await ctrl.costos({ empresa_id: empresaId, usuario: { rol }, query: rango }, { json: (b) => { body = b; } });
@@ -89,6 +89,7 @@ d('reportes con MySQL real', () => {
     };
     expect((await llamar('jefe_turnos')).nomina).toBeNull();
     expect((await llamar('jefe_nomina')).nomina.detalle).toHaveLength(1);
+    expect((await llamar('nomina')).nomina.detalle).toHaveLength(1);
     expect((await llamar('admin_empresa')).nomina.detalle).toHaveLength(1);
   });
 

@@ -298,8 +298,11 @@ export default function DashboardScreen() {
             ]
           : isJefeTurnos
             ? [{ icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') }]
-            // Rol 'nomina' (solo lectura): no tiene acceso a Reportes
-            : [{ icon: 'pulse-outline'       as IoniconsName, label: 'Estado sync',  onPress: () => router.push('/integracion/estado') }]),
+            // Rol 'nomina' (solo lectura): ve Reportes y conserva el estado de la sincronización
+            : [
+                { icon: 'bar-chart-outline' as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') },
+                { icon: 'pulse-outline'     as IoniconsName, label: 'Estado sync',  onPress: () => router.push('/integracion/estado') },
+              ]),
       ];
 
   const actions: Action[] = isWorker ? workerActions : managerActions;

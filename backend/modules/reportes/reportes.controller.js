@@ -19,8 +19,9 @@ async function asistencia(req, res) {
   res.json({ success: true, data, message: 'Reporte de asistencia' });
 }
 
-// Cuánto se le paga a cada persona solo lo ven admin y jefe de nómina.
-const verPagos = (req) => [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA].includes(req.usuario.rol);
+// Cuánto se le paga a cada persona lo ven quienes ya ven la liquidación: admin, jefe de nómina y nomina.
+// El jefe de turnos no.
+const verPagos = (req) => [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.NOMINA].includes(req.usuario.rol);
 
 async function costos(req, res) {
   const data = await ReportesService.costos(req.empresa_id, rango(req), { verPagos: verPagos(req) });
