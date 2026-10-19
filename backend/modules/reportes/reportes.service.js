@@ -3,7 +3,7 @@
 const ReportesModel = require('./reportes.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const AppError = require('../../utils/AppError');
-const { generarInsights, generarInsightsPersonas, UMBRALES } = require('./reportes.insights');
+const { generarInsightsTurnos, generarInsightsNomina, generarInsightsPersonas, UMBRALES } = require('./reportes.insights');
 const { valorHora, desglosarPagoNomina, calcularSalarioBasePeriodo, diasComerciales } = require('../../utils/laboralUtils');
 
 function redondear(n) {
@@ -29,6 +29,13 @@ function rangoAnterior(desde, hasta) {
 // Personas
 const MIN_DIAS_HORAS = 3;          // días con horas para que el promedio cuente
 const VENTANA_BANCA_DIAS = 180;    // "ya hizo este cargo" = lo hizo en los últimos 6 meses
+
+/** Costo del período contra el anterior de su mismo lado. delta_pct es null si antes no hubo costo. */
+function comparar(total, previo) {
+  total = redondear(total);
+  previo = redondear(previo);
+  return { total, previo, delta_pct: previo > 0 ? redondear(((total - previo) / previo) * 100) : null };
+}
 
 /** Promedio, más larga y más corta; null si no hubo jornadas en el rango. */
 function formatearJornadas({ resumen, mayor, menor }) {
@@ -114,9 +121,9 @@ const ReportesService = {
   },
 
   /**
-   * Resumen del período para gestores: costo vs período anterior, a dónde se va,
-   * asistencia a turnos y avisos. `verPagos` (admin y jefe de nómina) controla
-   * si entra nómina; sin él, la respuesta solo trae lo de turnos.
+   * Resumen del período para gestores. Turnos y nómina se analizan por separado (cada uno con su
+   * costo, su comparación con el período anterior, su desglose y sus avisos) y nunca se suman.
+   * `verPagos` (admin y jefe de nómina) controla si entra la parte de nómina; sin él, `nomina` es null.
    */
   async resumen(empresaId, { desde, hasta }, { verPagos }) {
     const previo = rangoAnterior(desde, hasta);
@@ -128,45 +135,40 @@ const ReportesService = {
       verPagos ? this.calcularNomina(empresaId, previo.desde, previo.hasta) : null,
     ]);
 
-    const turnos = aNumeros(tAct, ['convocados', 'completados', 'no_presentados', 'costo', 'bonos']);
-    const costoTurnosPrev = Number(tPrev.costo) || 0;
-    const total = redondear(turnos.costo + (nAct?.costo || 0));
-    const totalPrev = redondear(costoTurnosPrev + (nPrev?.costo || 0));
-    const costo = {
-      total,
-      previo: totalPrev,
-      delta_pct: totalPrev > 0 ? redondear(((total - totalPrev) / totalPrev) * 100) : null,
-      turnos: redondear(turnos.costo),
-      nomina: nAct ? nAct.costo : null,
-    };
-
+    // ── Turnos ──
+    const t = aNumeros(tAct, ['convocados', 'completados', 'no_presentados', 'costo', 'bonos']);
+    const costoTurnos = comparar(t.costo, Number(tPrev.costo) || 0);
     const plazas = Number(cobAct.plazas) || 0;
     const cubiertas = Number(cobAct.cubiertas) || 0;
     const cobertura = { plazas, cubiertas, pct: plazas > 0 ? redondear((cubiertas / plazas) * 100) : null };
-
-    const nominaInfo = nAct && {
-      ...nAct,
-      top_extras: [...nAct.detalle].filter((d) => d.horas_extra > 0).sort((a, b) => b.horas_extra - a.horas_extra).slice(0, 3),
-    };
-
-    return {
-      rango: { desde, hasta },
-      previo,
-      costo,
-      desglose: { ...nAct?.desglose, bonos: redondear(turnos.bonos), turnos: redondear(turnos.costo - turnos.bonos) },
-      turnos: {
-        convocados: turnos.convocados,
-        completados: turnos.completados,
-        no_presentados: turnos.no_presentados,
-      },
+    const turnos = {
+      costo: costoTurnos,
+      desglose: { tarifas: redondear(t.costo - t.bonos), bonos: redondear(t.bonos) },
+      convocados: t.convocados,
+      completados: t.completados,
+      no_presentados: t.no_presentados,
       cobertura,
-      insights: generarInsights({ costo, nomina: nominaInfo, turnos, cobertura }),
+      insights: generarInsightsTurnos({ costo: costoTurnos, turnos: t, cobertura }),
     };
+
+    // ── Nómina ──
+    let nomina = null;
+    if (nAct) {
+      const costoNomina = comparar(nAct.costo, nPrev.costo);
+      const top_extras = [...nAct.detalle].filter((d) => d.horas_extra > 0).sort((a, b) => b.horas_extra - a.horas_extra).slice(0, 3);
+      nomina = {
+        costo: costoNomina,
+        desglose: nAct.desglose,
+        insights: generarInsightsNomina({ costo: costoNomina, nomina: { ...nAct, top_extras } }),
+      };
+    }
+
+    return { rango: { desde, hasta }, previo, turnos, nomina };
   },
 
   /**
-   * Personas: quién trabaja más/menos horas en promedio (solo con verPagos) y cómo se reparten
-   * turnos y plata dentro de cada cargo, para rotar sin tocar los cargos con pocas personas.
+   * Personas, en dos bloques que no se mezclan. Turnos: duración de los turnos y cómo se reparten turnos y
+   * plata dentro de cada cargo. Nómina (solo con verPagos): horas promedio por persona y duración de la jornada.
    */
   async personas(empresaId, { desde, hasta }, { verPagos }) {
     const DIA = 24 * 60 * 60 * 1000;
@@ -179,7 +181,6 @@ const ReportesService = {
       verPagos ? ReportesModel.jornadas(empresaId, desde, hasta, 'nomina') : null,
       ReportesModel.jornadas(empresaId, desde, hasta, 'turnos'),
     ]);
-    const jornadas = { nomina: jNomina && formatearJornadas(jNomina), turnos: formatearJornadas(jTurnos) };
 
     // Horas: con menos de MIN_DIAS_HORAS días trabajados el promedio no dice nada
     let horas = null;
@@ -219,7 +220,12 @@ const ReportesService = {
       };
     }).filter((c) => c.total_turnos > 0).sort((a, b) => b.total_pago - a.total_pago);
 
-    return { rango: { desde, hasta }, horas, jornadas, cargos, insights: generarInsightsPersonas({ horas, cargos }) };
+    const insights = generarInsightsPersonas({ horas, cargos });
+    return {
+      rango: { desde, hasta },
+      turnos: { jornadas: formatearJornadas(jTurnos), cargos, insights: insights.turnos },
+      nomina: verPagos ? { jornadas: jNomina && formatearJornadas(jNomina), horas, insights: insights.nomina } : null,
+    };
   },
 
   /** Historial individual de un trabajador: turnos + registros de nómina. */

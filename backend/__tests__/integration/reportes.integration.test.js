@@ -51,29 +51,31 @@ d('reportes con MySQL real', () => {
 
   const rango = { desde: '2026-03-01', hasta: '2026-03-15' };
 
-  it('resumen con nómina: suma turnos, bonos y nómina', async () => {
+  it('resumen: turnos y nómina por separado, sin total combinado', async () => {
     const r = await ReportesService.resumen(empresaId, rango, { verPagos: true });
-    expect(r.costo.turnos).toBe(100000);
-    expect(r.desglose.bonos).toBe(10000);
-    expect(r.desglose.turnos).toBe(90000);
-    expect(r.costo.nomina).toBeGreaterThan(0);
-    expect(r.costo.total).toBeCloseTo(r.costo.turnos + r.costo.nomina, 2);
-    expect(r.cobertura).toEqual({ plazas: 2, cubiertas: 1, pct: 50 });
-    expect(r.turnos).toEqual({ convocados: 1, completados: 1, no_presentados: 0 });
-    expect(r.insights.some((i) => i.id === 'cobertura_baja')).toBe(true);
+    expect(r.turnos.costo.total).toBe(100000);
+    expect(r.turnos.desglose).toEqual({ tarifas: 90000, bonos: 10000 });
+    expect(r.nomina.costo.total).toBeGreaterThan(0);
+    expect(r.nomina.desglose.ordinario).toBeGreaterThan(0);
+    expect(r).not.toHaveProperty('costo');
+    expect(r.turnos.cobertura).toEqual({ plazas: 2, cubiertas: 1, pct: 50 });
+    expect([r.turnos.convocados, r.turnos.completados, r.turnos.no_presentados]).toEqual([1, 1, 0]);
+    expect(r.turnos.insights.some((i) => i.id === 'turnos_cobertura_baja')).toBe(true);
+    expect(r.nomina.insights.every((i) => i.id.startsWith('nomina_'))).toBe(true);
   });
 
   it('resumen sin verPagos no trae nada de nómina', async () => {
     const r = await ReportesService.resumen(empresaId, rango, { verPagos: false });
-    expect(r.costo.nomina).toBeNull();
-    expect(r.costo.total).toBe(100000);
+    expect(r.nomina).toBeNull();
+    expect(r.turnos.costo.total).toBe(100000);
     expect(JSON.stringify(r)).not.toMatch(/horas_extra|Ana/);
   });
 
   it('período previo vacío no divide por cero', async () => {
     const r = await ReportesService.resumen(empresaId, rango, { verPagos: true });
-    expect(r.costo.previo).toBe(0);
-    expect(r.costo.delta_pct).toBeNull();
+    expect(r.turnos.costo.previo).toBe(0);
+    expect(r.turnos.costo.delta_pct).toBeNull();
+    expect(r.nomina.costo.delta_pct).toBeNull();
   });
 
   it('GET costos: jefe_turnos no recibe el detalle por trabajador, jefe_nomina sí', async () => {
@@ -87,22 +89,24 @@ d('reportes con MySQL real', () => {
     expect((await llamar('admin_empresa')).nomina.detalle).toHaveLength(1);
   });
 
-  it('personas: horas promedio solo con verPagos y turnos agrupados por cargo', async () => {
+  it('personas: bloques de turnos y de nómina separados', async () => {
     const con = await ReportesService.personas(empresaId, rango, { verPagos: true });
-    expect(con.horas.ranking).toHaveLength(1);
-    expect(con.horas.ranking[0]).toMatchObject({ horas: 26, dias: 3, prom_dia: 8.67 });
-    expect(con.cargos).toHaveLength(1);
-    expect(con.cargos[0]).toMatchObject({ total_turnos: 1, total_pago: 100000, rotable: false });
-    expect(con.cargos[0].personas[0]).toMatchObject({ turnos: 1, pago: 100000 });
+    expect(con.nomina.horas.ranking).toHaveLength(1);
+    expect(con.nomina.horas.ranking[0]).toMatchObject({ horas: 26, dias: 3, prom_dia: 8.67 });
+    expect(con.nomina.jornadas).toMatchObject({ jornadas: 3, promedio: 8.67 });
+    expect(con.nomina.jornadas.mas_larga).toMatchObject({ horas: 10, fecha: '2026-03-02' });
+    expect(con.nomina.jornadas.mas_corta.horas).toBe(8);
+    expect(con.turnos.jornadas).toBeNull(); // el turno de prueba no tiene horas_trabajadas
+    expect(con.turnos.cargos).toHaveLength(1);
+    expect(con.turnos.cargos[0]).toMatchObject({ total_turnos: 1, total_pago: 100000, rotable: false });
+    expect(con.turnos.cargos[0].personas[0]).toMatchObject({ turnos: 1, pago: 100000 });
+    // el obrero de nómina no aparece en el análisis de turnos, ni el turnista en el de nómina
+    expect(JSON.stringify(con.turnos)).not.toMatch(new RegExp(`"trabajador_id":${obreroId}[,}]`));
+    expect(JSON.stringify(con.nomina)).not.toMatch(new RegExp(`"trabajador_id":${turnistaId}[,}]`));
 
     const sin = await ReportesService.personas(empresaId, rango, { verPagos: false });
-    expect(con.jornadas.nomina).toMatchObject({ jornadas: 3, promedio: 8.67 });
-    expect(con.jornadas.nomina.mas_larga).toMatchObject({ horas: 10, fecha: '2026-03-02' });
-    expect(con.jornadas.nomina.mas_corta.horas).toBe(8);
-    expect(con.jornadas.turnos).toBeNull(); // el turno de prueba no tiene horas_trabajadas
-    expect(sin.jornadas.nomina).toBeNull();
-    expect(sin.horas).toBeNull();
-    expect(sin.cargos).toHaveLength(1); // el reparto de turnos lo ven también los jefes de turnos
+    expect(sin.nomina).toBeNull();
+    expect(sin.turnos.cargos).toHaveLength(1); // el reparto de turnos lo ven también los jefes de turnos
   });
 
   it('el índice (empresa_id, fecha) existe (migración 113)', async () => {

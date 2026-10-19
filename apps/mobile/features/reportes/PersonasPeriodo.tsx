@@ -6,11 +6,10 @@ import { useQuery } from '@tanstack/react-query';
 import { reportesApi } from '@api-client';
 import type { CargoTurnos, ExtremoJornada, HorasPersona, PersonasResponse, ResumenJornadas } from '@api-client';
 import { Text } from '@/components/ui/Text';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { SkeletonStats } from '@/components/ui/Skeleton';
 import { COLORS, alpha } from '@/lib/designTokens';
 import { formatCOP, formatDate } from '@/lib/formatters';
-import { Insight } from './ResumenPeriodo';
+
+type HorasNomina = NonNullable<PersonasResponse['nomina']>['horas'];
 
 const MAX_FILAS_CARGO = 6;
 
@@ -24,7 +23,7 @@ export function usePersonas(desde: string, hasta: string) {
 
 const nombreDe = (p: { nombre: string; apellido: string | null }) => `${p.nombre}${p.apellido ? ` ${p.apellido}` : ''}`;
 
-function Titulo({ children }: { children: string }) {
+export function Titulo({ children }: { children: string }) {
   return <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1 mb-3 mt-5">{children}</Text>;
 }
 
@@ -55,7 +54,7 @@ function Extremo({ label, e }: { label: string; e: ExtremoJornada | null }) {
   );
 }
 
-function Jornadas({ titulo, j }: { titulo: string; j: ResumenJornadas | null }) {
+export function Jornadas({ titulo, j }: { titulo: string; j: ResumenJornadas | null }) {
   if (!j) return null;
   return (
     <View className="mb-3">
@@ -73,7 +72,7 @@ function Jornadas({ titulo, j }: { titulo: string; j: ResumenJornadas | null }) 
   );
 }
 
-function Horas({ horas }: { horas: NonNullable<PersonasResponse['horas']> }) {
+export function Horas({ horas }: { horas: HorasNomina }) {
   if (!horas.ranking.length) return null;
   const max = horas.ranking[0].prom_semana || 1;
   return (
@@ -98,7 +97,7 @@ function Horas({ horas }: { horas: NonNullable<PersonasResponse['horas']> }) {
   );
 }
 
-function Cargo({ c }: { c: CargoTurnos }) {
+export function Cargo({ c }: { c: CargoTurnos }) {
   const maxPago = Math.max(...c.personas.map((p) => p.pago), 1);
   const activos = c.personas.filter((p) => p.turnos > 0);
   const banca = c.personas.filter((p) => p.turnos === 0);
@@ -146,35 +145,3 @@ function Cargo({ c }: { c: CargoTurnos }) {
   );
 }
 
-export function PersonasPeriodo({ desde, hasta }: { desde: string; hasta: string }) {
-  const q = usePersonas(desde, hasta);
-  if (q.isLoading) return <SkeletonStats style={{ paddingTop: 12 }} />;
-  if (q.isError || !q.data) return <ErrorState compact error={q.error} onRetry={q.refetch} fallback="No se pudo cargar el análisis de personas" />;
-
-  const { horas, jornadas, cargos, insights } = q.data;
-  if (!horas?.ranking.length && !cargos.length && !jornadas.nomina && !jornadas.turnos) return null;
-  return (
-    <View>
-      {insights.length > 0 && (
-        <>
-          <Titulo>Personas: para mirar</Titulo>
-          <View className="gap-3">{insights.map((i) => <Insight key={i.id} nivel={i.nivel} texto={i.texto} />)}</View>
-        </>
-      )}
-      {(jornadas.nomina || jornadas.turnos) && (
-        <>
-          <Titulo>Duración de las jornadas</Titulo>
-          <Jornadas titulo="Nómina (por día trabajado)" j={jornadas.nomina} />
-          <Jornadas titulo="Turnos (por turno completado)" j={jornadas.turnos} />
-        </>
-      )}
-      {horas && <Horas horas={horas} />}
-      {cargos.length > 0 && (
-        <>
-          <Titulo>Turnos y pago por cargo</Titulo>
-          {cargos.map((c) => <Cargo key={c.cargo_id} c={c} />)}
-        </>
-      )}
-    </View>
-  );
-}

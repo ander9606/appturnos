@@ -54,31 +54,38 @@ export interface ResumenInsight {
   texto: string;
 }
 
+/** Costo de un lado (turnos o nómina) contra el período anterior de ese mismo lado. */
+export interface CostoComparado {
+  total: number;
+  previo: number;
+  /** null si el período anterior no tuvo costo (no hay base de comparación). */
+  delta_pct: number | null;
+}
+
+export interface ResumenTurnos {
+  costo: CostoComparado;
+  desglose: { tarifas: number; bonos: number };
+  convocados: number;
+  completados: number;
+  no_presentados: number;
+  cobertura: { plazas: number; cubiertas: number; pct: number | null };
+  insights: ResumenInsight[];
+}
+
+export interface ResumenNomina {
+  costo: CostoComparado;
+  desglose: { ordinario: number; nocturno: number; extras: number; festivo: number };
+  insights: ResumenInsight[];
+}
+
+/** Turnos y nómina se analizan por separado y no se suman. */
 export interface ResumenPeriodoResponse {
   rango: ReporteRango;
   /** Período anterior de igual duración, contra el que se compara. */
   previo: ReporteRango;
-  costo: {
-    total: number;
-    previo: number;
-    /** null si el período anterior no tuvo costo (no hay base de comparación). */
-    delta_pct: number | null;
-    turnos: number;
-    /** null para quien no ve nómina (jefe_turnos). */
-    nomina: number | null;
-  };
-  /** ordinario/nocturno/extras/festivo solo vienen para quien ve nómina. */
-  desglose: {
-    ordinario?: number;
-    nocturno?: number;
-    extras?: number;
-    festivo?: number;
-    turnos: number;
-    bonos: number;
-  };
-  turnos: { convocados: number; completados: number; no_presentados: number };
-  cobertura: { plazas: number; cubiertas: number; pct: number | null };
-  insights: ResumenInsight[];
+  turnos: ResumenTurnos;
+  /** null para quien no ve nómina (jefe_turnos). */
+  nomina: ResumenNomina | null;
 }
 
 export interface HorasPersona {
@@ -128,18 +135,25 @@ export interface ResumenJornadas {
 
 export interface PersonasResponse {
   rango: ReporteRango;
+  turnos: {
+    /** Duración de los turnos completados; null si no hubo. */
+    jornadas: ResumenJornadas | null;
+    cargos: CargoTurnos[];
+    insights: ResumenInsight[];
+  };
   /** null para quien no ve nómina (jefe_turnos). */
-  horas: {
-    prom_semana_equipo: number | null;
-    /** Solo quienes tienen 3 o más días con horas. */
-    ranking: HorasPersona[];
-    mas: HorasPersona[];
-    menos: HorasPersona[];
+  nomina: {
+    /** Duración de los días trabajados; null si no hubo. */
+    jornadas: ResumenJornadas | null;
+    horas: {
+      prom_semana_equipo: number | null;
+      /** Solo quienes tienen 3 o más días con horas. */
+      ranking: HorasPersona[];
+      mas: HorasPersona[];
+      menos: HorasPersona[];
+    };
+    insights: ResumenInsight[];
   } | null;
-  /** nomina: null para quien no ve nómina. Cada una es null si no hubo jornadas en el rango. */
-  jornadas: { nomina: ResumenJornadas | null; turnos: ResumenJornadas | null };
-  cargos: CargoTurnos[];
-  insights: ResumenInsight[];
 }
 
 export interface TurnoHistorial {

@@ -4,10 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 
 import { reportesApi } from '@api-client';
-import type { NivelInsight, ResumenPeriodoResponse } from '@api-client';
+import type { CostoComparado, NivelInsight } from '@api-client';
 import { Text } from '@/components/ui/Text';
-import { ErrorState } from '@/components/ui/ErrorState';
-import { SkeletonStats } from '@/components/ui/Skeleton';
 import { COLORS } from '@/lib/designTokens';
 import { formatCOP, formatDate } from '@/lib/formatters';
 
@@ -20,16 +18,6 @@ const NIVEL: Record<NivelInsight, { icon: IconName; fondo: string; texto: string
   info:   { icon: 'information-circle', fondo: COLORS.infoLight,  texto: COLORS.infoText,    icono: COLORS.info },
   ok:     { icon: 'checkmark-circle', fondo: COLORS.successLight, texto: COLORS.successText, icono: COLORS.success },
 };
-
-/** Conceptos del desglose, en el orden en que se muestran; los que no vienen o valen 0 se omiten. */
-const CONCEPTOS = [
-  { key: 'ordinario', label: 'Salario ordinario', color: COLORS.primary },
-  { key: 'extras',    label: 'Horas extra',       color: COLORS.warning },
-  { key: 'nocturno',  label: 'Recargo nocturno',  color: COLORS.info },
-  { key: 'festivo',   label: 'Dominicales y festivos', color: COLORS.success },
-  { key: 'turnos',    label: 'Turnos',            color: COLORS.slate600 },
-  { key: 'bonos',     label: 'Bonos',             color: COLORS.primary400 },
-] as const;
 
 export function useResumen(desde: string, hasta: string) {
   return useQuery({
@@ -59,26 +47,59 @@ function Delta({ pct }: { pct: number | null }) {
   );
 }
 
-function Desglose({ d }: { d: ResumenPeriodoResponse['desglose'] }) {
-  const items = CONCEPTOS.map((c) => ({ ...c, valor: d[c.key] ?? 0 })).filter((c) => c.valor > 0);
-  const total = items.reduce((s, c) => s + c.valor, 0);
+export interface ConceptoCosto { label: string; valor: number; color: string }
+
+/** Conceptos de los desgloses; cada lado (turnos / nómina) usa solo los suyos. */
+export const COLOR_CONCEPTO = {
+  ordinario: COLORS.primary,
+  extras: COLORS.warning,
+  nocturno: COLORS.info,
+  festivo: COLORS.success,
+  tarifas: COLORS.slate600,
+  bonos: COLORS.primary400,
+};
+
+function Desglose({ items }: { items: ConceptoCosto[] }) {
+  const lista = items.filter((c) => c.valor > 0);
+  const total = lista.reduce((s, c) => s + c.valor, 0);
   if (!total) return null;
   return (
     <View className="mt-4 gap-3">
       {/* Barra apilada: cada tramo proporcional a su concepto */}
       <View className="flex-row h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: COLORS.muted }}>
-        {items.map((c) => (
-          <View key={c.key} style={{ flex: c.valor, backgroundColor: c.color }} />
+        {lista.map((c) => (
+          <View key={c.label} style={{ flex: c.valor, backgroundColor: c.color }} />
         ))}
       </View>
-      {items.map((c) => (
-        <View key={c.key} className="flex-row items-center gap-2">
+      {lista.map((c) => (
+        <View key={c.label} className="flex-row items-center gap-2">
           <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }} />
           <Text className="flex-1 text-sm text-foreground">{c.label}</Text>
           <Text className="text-sm font-semibold text-foreground">{formatCOP(c.valor)}</Text>
           <Text className="w-10 text-right text-xs text-muted-foreground">{Math.round((c.valor / total) * 100)}%</Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+/** Costo de UN lado contra su propio período anterior, con su desglose. */
+export function TarjetaCosto({ titulo, costo, previo, items }: {
+  titulo: string; costo: CostoComparado; previo: { desde: string; hasta: string }; items: ConceptoCosto[];
+}) {
+  return (
+    <View className="bg-card border border-border rounded-2xl p-5">
+      <Text className="text-xs text-muted-foreground">{titulo}</Text>
+      <Text className="text-3xl font-bold text-foreground mt-1">{formatCOP(costo.total)}</Text>
+      <View className="flex-row items-center gap-2 mt-2">
+        <Delta pct={costo.delta_pct} />
+        {costo.delta_pct != null && (
+          <Text className="flex-1 text-xs text-muted-foreground" numberOfLines={1}>
+            vs {formatCOP(costo.previo)} ({formatDate(previo.desde)} – {formatDate(previo.hasta)})
+          </Text>
+        )}
+      </View>
+      <Desglose items={items} />
     </View>
   );
 }
@@ -93,55 +114,12 @@ export function Insight({ nivel, texto }: { nivel: NivelInsight; texto: string }
   );
 }
 
-function Mini({ label, value, sub }: { label: string; value: string; sub: string }) {
+export function Mini({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <View className="flex-1 bg-card border border-border rounded-2xl p-4 gap-1">
       <Text className="text-xs text-muted-foreground" numberOfLines={1}>{label}</Text>
       <Text className="text-xl font-bold text-foreground">{value}</Text>
       <Text className="text-xs text-muted-foreground">{sub}</Text>
-    </View>
-  );
-}
-
-export function ResumenPeriodo({ desde, hasta }: { desde: string; hasta: string }) {
-  const q = useResumen(desde, hasta);
-
-  if (q.isLoading) return <SkeletonStats style={{ paddingTop: 12 }} />;
-  if (q.isError || !q.data) return <ErrorState compact error={q.error} onRetry={q.refetch} fallback="No se pudo cargar el resumen" />;
-
-  const r = q.data;
-  const { costo, turnos, cobertura } = r;
-  return (
-    <View className="gap-3">
-      <View className="bg-card border border-border rounded-2xl p-5">
-        <Text className="text-xs text-muted-foreground">Costo de mano de obra</Text>
-        <Text className="text-3xl font-bold text-foreground mt-1">{formatCOP(costo.total)}</Text>
-        <View className="flex-row items-center gap-2 mt-2">
-          <Delta pct={costo.delta_pct} />
-          {costo.delta_pct != null && (
-            <Text className="flex-1 text-xs text-muted-foreground" numberOfLines={1}>
-              vs {formatCOP(costo.previo)} ({formatDate(r.previo.desde)} – {formatDate(r.previo.hasta)})
-            </Text>
-          )}
-        </View>
-        <Desglose d={r.desglose} />
-      </View>
-
-      <View className="flex-row gap-3">
-        <Mini
-          label="Cobertura de plazas"
-          value={cobertura.pct == null ? '—' : `${Math.round(cobertura.pct)}%`}
-          sub={cobertura.plazas ? `${cobertura.cubiertas} de ${cobertura.plazas} plazas` : 'Sin turnos publicados'}
-        />
-        <Mini
-          label="No se presentaron"
-          value={String(turnos.no_presentados)}
-          sub={turnos.convocados ? `de ${turnos.convocados} convocados` : 'Sin convocados'}
-        />
-      </View>
-
-      <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest px-1 mt-3">Para mirar</Text>
-      {r.insights.map((i) => <Insight key={i.id} nivel={i.nivel} texto={i.texto} />)}
     </View>
   );
 }

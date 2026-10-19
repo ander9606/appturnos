@@ -1,8 +1,8 @@
 /**
  * Reportes — resumen de asistencia y costos para admin_empresa, jefe_turnos, jefe_nomina.
  * Permite seleccionar un rango de fechas y consultar:
- *   - Resumen: costo vs período anterior, desglose y avisos (solo admin y jefe de nómina ven nómina)
- *   - Asistencia: turnos por trabajador y días de nómina
+ *   - Turnos y Nómina, en secciones separadas: costo vs período anterior, desglose, personas y avisos
+ *     (la sección de nómina solo la ven admin y jefe de nómina)
  */
 import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
@@ -22,8 +22,7 @@ import type { AsistenciaTurno, AsistenciaNomina, CostoNominaDetalle } from '@api
 import { useTheme } from '@/lib/theme';
 import { formatDate, formatCOP, toISODate } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
-import { ResumenPeriodo } from '@/features/reportes/ResumenPeriodo';
-import { PersonasPeriodo } from '@/features/reportes/PersonasPeriodo';
+import { NominaSeccion, TurnosSeccion } from '@/features/reportes/SeccionesReporte';
 
 // ── Rango presets ─────────────────────────────────────────────────────────
 
@@ -250,54 +249,52 @@ export default function ReportesScreen() {
           <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : (
           <>
-            {/* ── Resumen del período: costo vs anterior, desglose y avisos ── */}
-            <ResumenPeriodo desde={desde} hasta={hasta} />
-            <PersonasPeriodo desde={desde} hasta={hasta} />
+            {/* ── Turnos y nómina: dos análisis separados, nunca mezclados ── */}
+            <TurnosSeccion desde={desde} hasta={hasta}>
+              <SectionTitle title="Asistencia por persona" />
+              <View className="flex-row gap-3 mb-3">
+                <StatCard label="Total turnos" value={String(totalTurnos)} />
+                <StatCard label="Ausencias" value={String(totalAusencias)} />
+              </View>
 
-            {/* Detalle nómina */}
-            {(costos.data?.nomina?.detalle ?? []).length > 0 && (
-              <>
-                <SectionTitle title="Nómina por trabajador" />
+              {(asistencia.data?.turnos ?? []).length > 0 ? (
                 <View className="bg-card border border-border rounded-2xl overflow-hidden">
-                  {costos.data!.nomina!.detalle.map((d) => (
-                    <CostoRow key={d.trabajador_id} d={d} />
+                  {asistencia.data!.turnos.map((t) => (
+                    <TurnoRow key={t.trabajador_id} t={t} />
                   ))}
                 </View>
-              </>
-            )}
-
-            {/* ── Asistencia turnos ────────────────────────────── */}
-            <SectionTitle title="Asistencia — Turnos" />
-            <View className="flex-row gap-3 mb-3">
-              <StatCard label="Total turnos" value={String(totalTurnos)} />
-              <StatCard label="Ausencias" value={String(totalAusencias)} />
-            </View>
-
-            {(asistencia.data?.turnos ?? []).length > 0 ? (
-              <View className="bg-card border border-border rounded-2xl overflow-hidden">
-                {asistencia.data!.turnos.map((t) => (
-                  <TurnoRow key={t.trabajador_id} t={t} />
-                ))}
-              </View>
-            ) : (
-              <View className="bg-card border border-border rounded-2xl p-6 items-center">
-                <Text className="text-sm text-muted-foreground">
-                  Sin turnos en este período
-                </Text>
-              </View>
-            )}
-
-            {/* ── Asistencia nómina ────────────────────────────── */}
-            {(asistencia.data?.nomina ?? []).length > 0 && (
-              <>
-                <SectionTitle title="Asistencia — Nómina" />
-                <View className="bg-card border border-border rounded-2xl overflow-hidden">
-                  {asistencia.data!.nomina.map((n) => (
-                    <NominaRow key={n.trabajador_id} n={n} />
-                  ))}
+              ) : (
+                <View className="bg-card border border-border rounded-2xl p-6 items-center">
+                  <Text className="text-sm text-muted-foreground">
+                    Sin turnos en este período
+                  </Text>
                 </View>
-              </>
-            )}
+              )}
+            </TurnosSeccion>
+
+            <NominaSeccion desde={desde} hasta={hasta}>
+              {(costos.data?.nomina?.detalle ?? []).length > 0 && (
+                <>
+                  <SectionTitle title="Costo por trabajador" />
+                  <View className="bg-card border border-border rounded-2xl overflow-hidden">
+                    {costos.data!.nomina!.detalle.map((d) => (
+                      <CostoRow key={d.trabajador_id} d={d} />
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {(asistencia.data?.nomina ?? []).length > 0 && (
+                <>
+                  <SectionTitle title="Días registrados por persona" />
+                  <View className="bg-card border border-border rounded-2xl overflow-hidden">
+                    {asistencia.data!.nomina.map((n) => (
+                      <NominaRow key={n.trabajador_id} n={n} />
+                    ))}
+                  </View>
+                </>
+              )}
+            </NominaSeccion>
 
             {/* Error states */}
             {(asistencia.isError || costos.isError) && (
