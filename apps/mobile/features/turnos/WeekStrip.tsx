@@ -3,7 +3,7 @@
  * Muestra ~7 semanas, auto-centra en hoy, dots en días con turnos.
  */
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useRef, useEffect, useMemo } from 'react';
 import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { bogotaToday } from '@/lib/formatters';
@@ -67,7 +67,7 @@ export function WeekStrip({
                 backgroundColor: isSelected
                   ? primaryColor
                   : day.isToday
-                    ? primaryColor + '1A'
+                    ? alpha(primaryColor, 0.1)
                     : 'transparent',
                 borderRadius: 14,
               }}

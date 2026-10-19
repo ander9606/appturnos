@@ -1,5 +1,5 @@
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import { View, Image, TouchableOpacity, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,8 +8,8 @@ import type { Novedad, TipoNovedad } from '@api-client';
 const TIPO_CONFIG: Record<TipoNovedad, { icon: React.ComponentProps<typeof Ionicons>['name']; color: string; label: string }> = {
   retraso:   { icon: 'time-outline',          color: COLORS.warningDark, label: 'Retraso' },
   ausencia:  { icon: 'person-remove-outline', color: COLORS.dangerDark, label: 'Ausencia' },
-  incidente: { icon: 'warning-outline',       color: '#7C3AED', label: 'Incidente' },
-  otro:      { icon: 'chatbubble-outline',    color: '#0284C7', label: 'Novedad' },
+  incidente: { icon: 'warning-outline',       color: COLORS.eventual, label: 'Incidente' },
+  otro:      { icon: 'chatbubble-outline',    color: COLORS.info, label: 'Novedad' },
 };
 
 function fmtTs(iso: string): string {
@@ -25,7 +25,7 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
   return (
     <View className="py-3 border-b border-border last:border-0 gap-2">
       <View className="flex-row gap-3">
-        <View className="w-8 h-8 rounded-xl items-center justify-center mt-0.5" style={{ backgroundColor: cfg.color + '20' }}>
+        <View className="w-8 h-8 rounded-xl items-center justify-center mt-0.5" style={{ backgroundColor: alpha(cfg.color, 0.13) }}>
           <Ionicons name={cfg.icon} size={16} color={cfg.color} />
         </View>
         <View className="flex-1 gap-0.5">
@@ -48,7 +48,7 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
                 onPress={() => Linking.openURL(`https://maps.google.com/?q=${novedad.latitud},${novedad.longitud}`)}
                 className="flex-row items-center gap-1"
               >
-                <Ionicons name="location-outline" size={11} color="#0284C7" />
+                <Ionicons name="location-outline" size={11} color={COLORS.info} />
                 <Text className="text-xs text-primary">Ver ubicación</Text>
               </TouchableOpacity>
             )}

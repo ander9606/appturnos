@@ -325,7 +325,7 @@ export default function RegistroScreen() {
                   <Ionicons
                     name={emailVerified ? 'checkmark-circle' : 'mail-outline'}
                     size={20}
-                    color={emailVerified ? COLORS.success : '#6b7280'}
+                    color={emailVerified ? COLORS.success : COLORS.mutedForeground}
                   />
                   <Text className="text-sm font-semibold text-foreground">
                     Código de correo electrónico

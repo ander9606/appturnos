@@ -46,7 +46,7 @@ export function TurnoHeroCard({
   return (
     <View
       className="bg-card rounded-3xl overflow-hidden"
-      style={{ elevation: 3, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
+      style={{ elevation: 3, shadowColor: COLORS.shadow, shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
     >
       <View
         className="h-2"

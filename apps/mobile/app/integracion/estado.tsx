@@ -5,7 +5,7 @@
 import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
@@ -41,7 +41,7 @@ function StatBubble({ value, label, color, bg }: StatBubbleProps) {
   return (
     <View className="flex-1 rounded-2xl items-center py-4 gap-1" style={{ backgroundColor: bg }}>
       <Text className="text-2xl font-bold" style={{ color }}>{value}</Text>
-      <Text className="text-xs font-medium" style={{ color: color + 'CC' }}>{label}</Text>
+      <Text className="text-xs font-medium" style={{ color: alpha(color, 0.8) }}>{label}</Text>
     </View>
   );
 }
@@ -85,7 +85,7 @@ export default function EstadoIntegracionScreen() {
         <Pressable
           onPress={() => refetch()}
           className="px-5 py-2.5 rounded-xl"
-          style={{ backgroundColor: theme.primary + '1A' }}
+          style={{ backgroundColor: alpha(theme.primary, 0.1) }}
         >
           <Text className="font-semibold" style={{ color: theme.primary }}>Reintentar</Text>
         </Pressable>
@@ -120,7 +120,7 @@ export default function EstadoIntegracionScreen() {
             <Text className="text-white text-lg font-bold">Estado de la cola</Text>
             <View
               className="flex-row items-center gap-1.5 px-3 py-1 rounded-full"
-              style={{ backgroundColor: data.activo ? '#22C55E22' : '#EF444422' }}
+              style={{ backgroundColor: data.activo ? alpha(COLORS.success, 0.13) : alpha(COLORS.danger, 0.13) }}
             >
               <View
                 className="w-2 h-2 rounded-full"
@@ -143,9 +143,9 @@ export default function EstadoIntegracionScreen() {
         <SectionHeader title="Eventos salientes" icon="arrow-up-circle-outline" />
 
         <View className="px-4 flex-row gap-3">
-          <StatBubble value={pendientes}  label="Pendientes" color={COLORS.warning} bg="#F59E0B1A" />
-          <StatBubble value={enviados}    label="Enviados"   color={COLORS.success} bg="#22C55E1A" />
-          <StatBubble value={fallidos}    label="Fallidos"   color={COLORS.danger} bg="#EF44441A" />
+          <StatBubble value={pendientes}  label="Pendientes" color={COLORS.warning} bg={alpha(COLORS.warning, 0.1)} />
+          <StatBubble value={enviados}    label="Enviados"   color={COLORS.success} bg={alpha(COLORS.success, 0.1)} />
+          <StatBubble value={fallidos}    label="Fallidos"   color={COLORS.danger} bg={alpha(COLORS.danger, 0.1)} />
         </View>
 
         {descartados > 0 && (
@@ -185,9 +185,9 @@ export default function EstadoIntegracionScreen() {
         <SectionHeader title="Eventos entrantes" icon="arrow-down-circle-outline" />
 
         <View className="px-4 flex-row gap-3">
-          <StatBubble value={recibidos}  label="Recibidos"  color={COLORS.integracion} bg="#6366F11A" />
-          <StatBubble value={procesados} label="Procesados" color={COLORS.success} bg="#22C55E1A" />
-          <StatBubble value={errores}    label="Errores"    color={COLORS.danger} bg="#EF44441A" />
+          <StatBubble value={recibidos}  label="Recibidos"  color={COLORS.integracion} bg={alpha(COLORS.integracion, 0.1)} />
+          <StatBubble value={procesados} label="Procesados" color={COLORS.success} bg={alpha(COLORS.success, 0.1)} />
+          <StatBubble value={errores}    label="Errores"    color={COLORS.danger} bg={alpha(COLORS.danger, 0.1)} />
         </View>
 
         {/* ── Webhook URL status ─────────────────────────────────── */}

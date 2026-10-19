@@ -193,7 +193,7 @@ export default function IngresoScreen() {
           {/* ── Info del turno ──────────────────────────────────── */}
           <View
             className="bg-card rounded-2xl border border-border overflow-hidden"
-            style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+            style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
           >
             <View className="h-1.5 bg-primary" />
             <View className="px-5 py-5 gap-3">
@@ -240,7 +240,7 @@ export default function IngresoScreen() {
           ) : (
             <View
               className="bg-card rounded-2xl border border-border px-5 py-5 gap-4"
-              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+              style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
             >
               <Text className="text-sm font-semibold text-foreground">{t('ingreso.ubicacion')}</Text>
 

@@ -3,7 +3,7 @@
  * POST /api/auth/registro-empresa → crea empresa + admin_empresa → auto-login
  */
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
@@ -442,7 +442,7 @@ function Section({ label, icon }: { label: string; icon: React.ComponentProps<ty
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#F8FAFC' },
+  root:   { flex: 1, backgroundColor: COLORS.background },
   scroll: { flexGrow: 1 },
 
   // Header
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    backgroundColor: alpha(COLORS.danger, 0.07), borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
   },
   errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: COLORS.danger },
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   },
   sectionIcon: {
     width: 24, height: 24, borderRadius: 8,
-    backgroundColor: '#FFF1EE',
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
   sectionLabel: {
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
   otpBox: { alignItems: 'center', gap: 14, paddingVertical: 8 },
   otpIconWrap: {
     width: 56, height: 56, borderRadius: 18,
-    backgroundColor: '#FFF1EE',
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
   otpTitle: { fontSize: 18, fontWeight: '800', color: COLORS.foreground },

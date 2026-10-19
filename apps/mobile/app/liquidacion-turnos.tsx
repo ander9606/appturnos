@@ -9,7 +9,7 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
@@ -187,7 +187,7 @@ function TrabajadorCard({
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+      style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
     >
       {/* ── Header: nombre + monto a pagar, visibles sin expandir ─────── */}
       <TouchableOpacity
@@ -284,7 +284,7 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+      style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
     >
       <TouchableOpacity onPress={() => setExpanded((v) => !v)} activeOpacity={0.75} className="flex-row">
         <View className="w-1.5" style={{ backgroundColor: primary }} />
@@ -474,10 +474,10 @@ export default function LiquidacionTurnosScreen() {
                 {trabajadores.length > 0 && (
                   <View
                     className="rounded-2xl px-5 py-4 flex-row items-center justify-between"
-                    style={{ backgroundColor: theme.primary + '15' }}
+                    style={{ backgroundColor: alpha(theme.primary, 0.08) }}
                   >
                     <View className="gap-0.5">
-                      <Text className="text-xs font-medium" style={{ color: theme.primary + 'AA' }}>
+                      <Text className="text-xs font-medium" style={{ color: alpha(theme.primary, 0.67) }}>
                         Total a pagar
                       </Text>
                       <Text className="text-2xl font-bold" style={{ color: theme.primary }}>

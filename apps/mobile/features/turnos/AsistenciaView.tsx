@@ -1,3 +1,4 @@
+import { COLORS, ACCENT } from '@/lib/designTokens';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
@@ -55,14 +56,14 @@ function AsistenciaRow({ registro, primaryColor }: { registro: RegistroDiario; p
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       <TouchableOpacity
         className="flex-row"
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
       >
-        <View className="w-1.5" style={{ backgroundColor: registro.es_festivo ? '#F97316' : primaryColor }} />
+        <View className="w-1.5" style={{ backgroundColor: registro.es_festivo ? ACCENT.naranja : primaryColor }} />
 
         <View className="flex-1 px-4 py-3 gap-1">
           <View className="flex-row items-center justify-between">

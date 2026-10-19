@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Pressable } from 'react-native';
 import type { Trabajador } from '@api-client';
 import { Avatar } from '@/components/ui/Avatar';
-import { THEME_COLORS, COLORS } from '@/lib/designTokens';
+import { COLORS, THEME_COLORS, alpha } from '@/lib/designTokens';
 
 const TIPO_LABELS: Record<string, string> = {
   turnos:  'Turnos',
@@ -74,7 +74,7 @@ export function TrabajadorCard({ trabajador: t, onPress }: Props) {
 
       {/* Right side */}
       <View className="items-end ml-2 shrink-0">
-        <View className="rounded-full px-2 py-0.5 mb-1" style={{ backgroundColor: (TIPO_COLORS[tipo] ?? COLORS.primary) + '1A' }}>
+        <View className="rounded-full px-2 py-0.5 mb-1" style={{ backgroundColor: alpha(TIPO_COLORS[tipo] ?? COLORS.primary, 0.1) }}>
           <Text className="text-xs font-semibold" style={{ color: TIPO_COLORS[tipo] ?? COLORS.primary }}>
             {TIPO_LABELS[tipo] ?? tipo}
           </Text>

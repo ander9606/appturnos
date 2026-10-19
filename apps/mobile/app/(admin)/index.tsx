@@ -4,7 +4,7 @@
  */
 import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
             style={{ width: '47%' }}
           >
             <View className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F110' }}>
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.06) }}>
               <Text className="text-xl">🏢</Text>
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
             style={{ width: '47%' }}
           >
             <View className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F110' }}>
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.06) }}>
               <Text className="text-xl">📈</Text>
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">
@@ -265,7 +265,7 @@ export default function AdminDashboard() {
             style={{ width: '47%' }}
           >
             <View className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F110' }}>
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.06) }}>
               <Text className="text-xl">💳</Text>
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">
@@ -280,7 +280,7 @@ export default function AdminDashboard() {
             accessibilityRole="button"
           >
             <View className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F110' }}>
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.06) }}>
               <Text className="text-xl">🏷️</Text>
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">

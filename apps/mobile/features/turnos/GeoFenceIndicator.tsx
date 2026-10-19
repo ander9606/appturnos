@@ -56,7 +56,7 @@ export function GeoFenceIndicator({
   if (permissionDenied) {
     return (
       <View className="bg-warning-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
-        <Ionicons name="warning-outline" size={20} color="#92400E" />
+        <Ionicons name="warning-outline" size={20} color={COLORS.warningText} />
         <View className="flex-1">
           <Text className="text-sm font-semibold text-amber-700">Permiso de ubicación requerido</Text>
           <Text className="text-xs text-amber-600 mt-0.5">
@@ -76,7 +76,7 @@ export function GeoFenceIndicator({
   if (locationUnavailable && distanceM === null) {
     return (
       <View className="bg-danger-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
-        <Ionicons name="warning-outline" size={20} color="#991B1B" />
+        <Ionicons name="warning-outline" size={20} color={COLORS.dangerText} />
         <View className="flex-1">
           <Text className="text-sm font-semibold text-danger">No se pudo obtener tu ubicación</Text>
           <Text className="text-xs text-danger opacity-80 mt-0.5">

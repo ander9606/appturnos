@@ -32,7 +32,7 @@ import { useMisEmpresas, useSolicitudes } from '@/features/empresas/useTrabajado
 import { useAusenciasPendientesCount } from '@/features/ausencias/useAusencias';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
-import { COLORS, THEME_COLORS } from '@/lib/designTokens';
+import { COLORS, THEME_COLORS, alpha } from '@/lib/designTokens';
 import { useTheme } from '@/lib/theme';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
@@ -91,7 +91,7 @@ function MiEmpresaNominaView() {
           <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
             <View className="flex-row items-center gap-4">
               <View className="w-12 h-12 rounded-2xl bg-violet-50 items-center justify-center">
-                <Ionicons name="location-outline" size={22} color="#7C3AED" />
+                <Ionicons name="location-outline" size={22} color={COLORS.eventual} />
               </View>
               <View className="flex-1">
                 <Text className="text-base font-semibold text-foreground">
@@ -217,7 +217,7 @@ function WorkerView() {
           {/* Ranking */}
           {perfil?.ranking != null && (
             <View className="flex-row items-center gap-1 bg-white/15 px-3 py-1.5 rounded-full">
-              <Ionicons name="star" size={14} color="#FCD34D" />
+              <Ionicons name="star" size={14} color={COLORS.warningSoft} />
               <Text className="text-sm font-bold text-white">{Number(perfil.ranking).toFixed(1)}</Text>
               <Text className="text-xs text-white/70">· {perfil.total_calificaciones} calif.</Text>
             </View>
@@ -318,7 +318,7 @@ function WorkerView() {
             className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
           >
             <View className="flex-row items-center gap-3">
-              <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: theme.primary + '18' }}>
+              <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: alpha(theme.primary, 0.09) }}>
                 <Ionicons name="business-outline" size={20} color={theme.primary} />
               </View>
               <View>

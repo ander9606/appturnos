@@ -72,7 +72,7 @@ function strokesToSvgBase64(
     )
     .join('');
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#fff">${paths}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:${COLORS.white}">${paths}</svg>`;
 
   // btoa is available in Hermes (React Native's JS engine)
   return btoa(unescape(encodeURIComponent(svg)));

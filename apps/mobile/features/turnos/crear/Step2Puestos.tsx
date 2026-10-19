@@ -86,7 +86,7 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
         <View
           key={p.key}
           className="bg-card rounded-2xl px-4 py-4 gap-3"
-          style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+          style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2 flex-1">

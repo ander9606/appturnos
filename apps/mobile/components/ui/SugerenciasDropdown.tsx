@@ -18,7 +18,7 @@ export function SugerenciasDropdown({ sugerencias, searched, onSelect }: Props) 
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden border border-border"
-      style={{ elevation: 6, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}
+      style={{ elevation: 6, shadowColor: COLORS.shadow, shadowOpacity: 0.1, shadowRadius: 8 }}
     >
       {sugerencias.length === 0 ? (
         <Text className="px-4 py-3 text-sm text-muted-foreground">Sin resultados</Text>

@@ -172,7 +172,7 @@ function PostulanteRow({
           )}
           {isPorReconfirmar && (
             <View className="flex-row items-center gap-1 bg-warning-light px-3 py-1.5 rounded-xl self-start">
-              <Ionicons name="alert-circle-outline" size={14} color="#B45309" />
+              <Ionicons name="alert-circle-outline" size={14} color={COLORS.warningText} />
               <Text className="text-xs font-semibold text-warning">Esperando que reconfirme</Text>
             </View>
           )}
@@ -419,8 +419,8 @@ export default function OfertaDetailScreen() {
 
           {/* ── Info principal ──────────────────────────────────── */}
           <View className="bg-card rounded-3xl overflow-hidden"
-            style={{ elevation: 3, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
-            <View className="h-2" style={{ backgroundColor: esPasado ? COLORS.borderStrong : '#FF7150' }} />
+            style={{ elevation: 3, shadowColor: COLORS.shadow, shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}>
+            <View className="h-2" style={{ backgroundColor: esPasado ? COLORS.borderStrong : COLORS.primary400 }} />
             <View className="px-5 py-5 gap-3">
               <View className="flex-row items-start justify-between gap-2">
                 <Text className="text-xl font-bold text-foreground flex-1 pr-2" numberOfLines={2}>
@@ -516,7 +516,7 @@ export default function OfertaDetailScreen() {
           {/* ── Falta marcar completada: el turno ya terminó, todos resueltos, nadie le dio Completar ── */}
           {puedeGestionar && oferta.necesita_completar && (
             <View className="bg-warning-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
-              <Ionicons name="warning-outline" size={20} color="#B45309" />
+              <Ionicons name="warning-outline" size={20} color={COLORS.warningText} />
               <Text className="flex-1 text-sm font-medium text-warning">
                 Este turno ya terminó y todos quedaron resueltos, pero nadie lo marcó como completado.
               </Text>
@@ -526,7 +526,7 @@ export default function OfertaDetailScreen() {
           {/* ── Descripción ─────────────────────────────────────── */}
           {oferta.descripcion && (
             <View className="bg-card rounded-2xl px-5 py-4 gap-2"
-              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}>
               <View className="flex-row items-center gap-2">
                 <Ionicons name="document-text-outline" size={14} color={COLORS.mutedForeground} />
                 <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -540,7 +540,7 @@ export default function OfertaDetailScreen() {
           {/* ── Detalles adicionales — visible para todos, nunca sale en el contrato ── */}
           {oferta.notas_adicionales && (
             <View className="bg-card rounded-2xl px-5 py-4 gap-2"
-              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}>
               <View className="flex-row items-center gap-2">
                 <Ionicons name="information-circle-outline" size={14} color={COLORS.mutedForeground} />
                 <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -553,7 +553,7 @@ export default function OfertaDetailScreen() {
 
           {/* ── Puestos / cargos ─────────────────────────────────── */}
           <View className="bg-card rounded-2xl px-5 py-4 gap-3"
-            style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+            style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}>
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               {isWorker && !yaAplicado && !yaNoSePuedePostular && availablePuestos.length > 1
                 ? '¿A qué cargo quieres aplicar?'
@@ -570,7 +570,7 @@ export default function OfertaDetailScreen() {
                       <Ionicons
                         name={seleccionado ? 'radio-button-on' : 'radio-button-off'}
                         size={18}
-                        color={seleccionado ? '#FF7150' : COLORS.placeholder}
+                        color={seleccionado ? COLORS.primary400 : COLORS.placeholder}
                       />
                     )}
                     <View className="flex-1 gap-0.5">
@@ -665,7 +665,7 @@ export default function OfertaDetailScreen() {
           {/* ── Postulantes (gestores) ───────────────────────────── */}
           {isGestor && (
             <View className="bg-card rounded-2xl px-5 py-4"
-              style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}>
+              style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}>
               <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                 {esPasado ? 'Historial de asistencia' : 'Postulantes'}
               </Text>
@@ -1253,7 +1253,7 @@ function EditarOfertaModal({
 
           {cambianCriticos && (
             <View className="flex-row items-center gap-2 bg-warning-light rounded-xl px-3 py-2.5">
-              <Ionicons name="warning-outline" size={16} color="#B45309" />
+              <Ionicons name="warning-outline" size={16} color={COLORS.warningText} />
               <Text className="flex-1 text-xs font-medium text-warning">
                 Quienes ya estén confirmados deberán reconfirmar su participación tras este cambio.
               </Text>

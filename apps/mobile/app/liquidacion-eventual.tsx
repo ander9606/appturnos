@@ -68,7 +68,7 @@ function LineaRow({ item }: { item: LineaLiquidacionEventual }) {
   return (
     <View
       className="bg-card rounded-2xl px-4 py-4 gap-1.5"
-      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
+      style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
     >
       <View className="flex-row items-center justify-between gap-2">
         <Text className="text-sm font-semibold text-foreground flex-1" numberOfLines={1}>
@@ -128,7 +128,7 @@ export default function LiquidacionEventualScreen() {
           headerShown: true,
           headerTitle: 'Turnos eventuales',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerTintColor: '#7C3AED',
+          headerTintColor: COLORS.eventual,
           headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
@@ -154,8 +154,8 @@ export default function LiquidacionEventualScreen() {
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={() => { refetchPeriodo(); refetchLiq(); }}
-                tintColor="#7C3AED"
-                colors={['#7C3AED']}
+                tintColor={COLORS.eventual}
+                colors={[COLORS.eventual]}
               />
             }
             ListHeaderComponent={

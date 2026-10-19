@@ -45,7 +45,7 @@ export function CTAConfirmadoCard({
     return (
       <View
         className="bg-card rounded-2xl px-5 py-5 gap-2"
-        style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
+        style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 8 }}
       >
         <View className="flex-row items-center gap-2">
           <Ionicons name="hourglass-outline" size={20} color={COLORS.mutedForeground} />
@@ -71,7 +71,7 @@ export function CTAConfirmadoCard({
   return (
     <View
       className="bg-card rounded-2xl px-5 py-5 gap-4"
-      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8 }}
+      style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 8 }}
     >
       <Text className="text-sm font-semibold text-foreground">Marcar llegada</Text>
 

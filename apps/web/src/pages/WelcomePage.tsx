@@ -9,7 +9,7 @@ export function WelcomePage() {
       {/* Hero */}
       <div
         className="flex flex-col items-center justify-end pt-20 pb-14 px-6"
-        style={{ background: 'linear-gradient(160deg, #FF7150 0%, #FF5A3C 50%, #E83E1F 100%)' }}
+        style={{ background: 'linear-gradient(160deg, var(--color-primary-400) 0%, var(--color-primary) 50%, var(--color-primary-600) 100%)' }}
       >
         <div className="w-20 h-20 rounded-3xl bg-white/20 flex items-center justify-center mb-5">
           <Calendar size={40} className="text-white" />
@@ -21,7 +21,7 @@ export function WelcomePage() {
         {/* Wave separator */}
         <div className="w-full mt-10 overflow-hidden" style={{ height: 32 }}>
           <svg viewBox="0 0 1440 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
-            <path d="M0 32L1440 32L1440 16C1200 0 960 32 720 32C480 32 240 0 0 16L0 32Z" fill="#F8FAFC"/>
+            <path d="M0 32L1440 32L1440 16C1200 0 960 32 720 32C480 32 240 0 0 16L0 32Z" fill="var(--color-background)"/>
           </svg>
         </div>
       </div>
@@ -37,7 +37,7 @@ export function WelcomePage() {
           <button
             onClick={() => navigate('/login')}
             className="flex items-center gap-4 p-5 rounded-2xl text-left transition-all active:scale-[0.98] hover:shadow-md"
-            style={{ backgroundColor: '#FF5A3C' }}
+            style={{ backgroundColor: 'var(--color-primary)' }}
           >
             <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
               <Users size={24} className="text-white" />
@@ -53,7 +53,7 @@ export function WelcomePage() {
           <button
             onClick={() => navigate('/registro')}
             className="flex items-center gap-4 p-5 rounded-2xl border border-border text-left transition-all active:scale-[0.98] hover:bg-muted"
-            style={{ backgroundColor: '#FFFFFF' }}
+            style={{ backgroundColor: 'var(--color-card)' }}
           >
             <div className="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0">
               <Briefcase size={24} className="text-primary" />

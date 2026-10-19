@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import { Text } from '@/components/ui/Text';
 import React from 'react';
 import { View, Image } from 'react-native';
@@ -42,7 +43,7 @@ export function VinculoCard({ vinculo, onAceptar, onRechazar, onArchivar, onCanc
   return (
     <View
       className="bg-card rounded-2xl px-4 py-3 mb-3 overflow-hidden"
-      style={{ elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 }}
     >
       <View className="absolute left-0 top-0 bottom-0 w-1 bg-primary-500" />
 

@@ -7,7 +7,7 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
@@ -83,7 +83,7 @@ function EventoCard({ evento, onReintentar, reintentando }: {
             {evento.referencia ?? evento.transaction_id}
           </Text>
         </View>
-        <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: color + '20' }}>
+        <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: alpha(color, 0.13) }}>
           <Text className="text-[10px] font-bold" style={{ color }}>
             {evento.estado.toUpperCase()}
           </Text>

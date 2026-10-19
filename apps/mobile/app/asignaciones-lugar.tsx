@@ -38,7 +38,7 @@ function FilaTrabajador({
   return (
     <View
       className="bg-card rounded-2xl px-4 py-3 gap-3"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       <View className="flex-row items-center gap-3">
         <View className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center flex-shrink-0">

@@ -8,7 +8,7 @@
  *   4. Si error → mensaje en pantalla
  */
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, THIRD_PARTY, alpha } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
@@ -171,7 +171,7 @@ export default function LoginScreen() {
 
               {!!process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB && (
                 <TouchableOpacity style={styles.googleBtn} onPress={() => googleLogin()} disabled={googleLoading || appleLoading} activeOpacity={0.8}>
-                  <Ionicons name="logo-google" size={20} color="#4285F4" />
+                  <Ionicons name="logo-google" size={20} color={THIRD_PARTY.google} />
                   <Text style={styles.googleBtnText}>{googleLoading ? 'Conectando…' : 'Continuar con Google'}</Text>
                 </TouchableOpacity>
               )}
@@ -218,7 +218,7 @@ function LinkRow({ label, action, onPress }: { label: string; action: string; on
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#F8FAFC' },
+  root:   { flex: 1, backgroundColor: COLORS.background },
   scroll: { flexGrow: 1 },
 
   // Header
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    backgroundColor: alpha(COLORS.danger, 0.07), borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
   },
   errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: COLORS.danger },

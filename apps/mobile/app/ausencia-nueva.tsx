@@ -1,6 +1,6 @@
 import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View, ScrollView, TouchableOpacity, } from 'react-native';
@@ -63,7 +63,7 @@ export default function AusenciaNuevaScreen() {
                 className="px-4 py-2 rounded-xl border"
                 style={{
                   borderColor: tipo === key ? theme.primary : COLORS.border,
-                  backgroundColor: tipo === key ? theme.primary + '1A' : '#F8FAFC',
+                  backgroundColor: tipo === key ? alpha(theme.primary, 0.1) : COLORS.background,
                 }}
               >
                 <Text className="text-sm font-medium" style={{ color: tipo === key ? theme.primary : COLORS.mutedForeground }}>

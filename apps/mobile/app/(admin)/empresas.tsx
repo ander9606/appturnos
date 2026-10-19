@@ -4,7 +4,7 @@
  */
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import {
   View,
@@ -206,7 +206,7 @@ export default function EmpresasScreen() {
                     <View
                       className="rounded-full px-2 py-0.5"
                       style={{
-                        backgroundColor: isActiva ? '#22C55E20' : '#EF444420',
+                        backgroundColor: isActiva ? alpha(COLORS.success, 0.13) : alpha(COLORS.danger, 0.13),
                       }}
                     >
                       <Text
@@ -219,11 +219,11 @@ export default function EmpresasScreen() {
                     {/* Recargos automáticos */}
                     <View
                       className="rounded-full px-2 py-0.5"
-                      style={{ backgroundColor: empresa.sumar_nocturnas_festivo ? '#6366F120' : '#F59E0B20' }}
+                      style={{ backgroundColor: empresa.sumar_nocturnas_festivo ? alpha(COLORS.integracion, 0.13) : alpha(COLORS.warning, 0.13) }}
                     >
                       <Text
                         className="text-[10px] font-bold"
-                        style={{ color: empresa.sumar_nocturnas_festivo ? '#4F46E5' : '#B45309' }}
+                        style={{ color: empresa.sumar_nocturnas_festivo ? COLORS.integracion : COLORS.warningText }}
                       >
                         {empresa.sumar_nocturnas_festivo ? 'CON RECARGOS' : 'SIN RECARGOS'}
                       </Text>
@@ -243,7 +243,7 @@ export default function EmpresasScreen() {
                     {formatCOP(empresa.ingresos_totales_cop ?? 0)}
                   </Text>
                   {empresa.logiq360_conectado && (
-                    <View className="rounded-lg px-2 py-0.5" style={{ backgroundColor: '#22C55E20' }}>
+                    <View className="rounded-lg px-2 py-0.5" style={{ backgroundColor: alpha(COLORS.success, 0.13) }}>
                       <Text className="text-[10px] font-bold" style={{ color: COLORS.success }}>
                         🔗 logiq360
                       </Text>

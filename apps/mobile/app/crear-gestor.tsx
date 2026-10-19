@@ -131,7 +131,7 @@ export default function CrearGestorScreen() {
             <View className="items-center mb-6 mt-4">
               <View
                 className="w-16 h-16 rounded-full items-center justify-center mb-3"
-                style={{ backgroundColor: '#DCFCE7' }}
+                style={{ backgroundColor: COLORS.successLight }}
               >
                 <Ionicons name="checkmark-circle" size={40} color={COLORS.success} />
               </View>
@@ -290,11 +290,11 @@ export default function CrearGestorScreen() {
                     className={`flex-row items-center gap-3 p-4 rounded-2xl border active:opacity-70 ${
                       active ? 'border-info' : 'bg-card border-border'
                     }`}
-                    style={active ? { backgroundColor: '#EFF6FF' } : {}}
+                    style={active ? { backgroundColor: COLORS.infoLight } : {}}
                   >
                     <View
                       className="w-10 h-10 rounded-full items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: active ? COLORS.info : '#F1F5F9' }}
+                      style={{ backgroundColor: active ? COLORS.info : COLORS.muted }}
                     >
                       <Ionicons
                         name={opt.icon as any}
