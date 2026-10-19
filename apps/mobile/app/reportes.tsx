@@ -1,15 +1,14 @@
 /**
- * Reportes — resumen de asistencia y costos para admin_empresa, jefe_turnos, jefe_nomina.
+ * Reportes — resumen de asistencia y costos para admin_empresa, jefe_turnos, jefe_nomina y nomina.
  * Permite seleccionar un rango de fechas y consultar:
- *   - Turnos y Nómina, en secciones separadas: costo vs período anterior, desglose, personas y avisos
+ *   - Turnos y Nómina, en páginas que se deslizan de lado (pestañas arriba): costo vs período anterior, desglose, personas y avisos
  *     (la sección de nómina solo la ven admin y jefe de nómina)
  */
-import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
-  View, ScrollView, Pressable, Platform,
+  View, Pressable, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -24,6 +23,8 @@ import { formatDate, formatCOP, toISODate } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { NominaSeccion, TurnosSeccion } from '@/features/reportes/SeccionesReporte';
 import { HeroMarca } from '@/features/reportes/marca';
+import { ReportePager } from '@/features/reportes/ReportePager';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 
 // ── Rango presets ─────────────────────────────────────────────────────────
 
@@ -157,8 +158,6 @@ export default function ReportesScreen() {
   const asistencia = useAsistencia(desde, hasta);
   const costos     = useCostos(desde, hasta);
 
-  const isLoading = asistencia.isLoading || costos.isLoading;
-
   // Totales de asistencia
   const totalTurnos = useMemo(
     () => (asistencia.data?.turnos ?? []).reduce((s, t) => s + t.total_turnos, 0),
@@ -168,6 +167,10 @@ export default function ReportesScreen() {
     () => (asistencia.data?.turnos ?? []).reduce((s, t) => s + t.no_presentados, 0),
     [asistencia.data]
   );
+
+  // Nómina solo para quien la ve (el servidor igual la entrega vacía al jefe de turnos)
+  const rol = useAuthStore((s) => s.usuario?.rol) ?? '';
+  const verNomina = ['admin_empresa', 'jefe_nomina', 'nomina'].includes(rol);
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina']);
   if (denied) return denied;
@@ -185,11 +188,7 @@ export default function ReportesScreen() {
         }}
       />
 
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 48 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Encabezado de marca con el selector de período ───── */}
+      {/* ── Encabezado de marca con el selector de período ───── */}
         <HeroMarca>
           <Text className="text-xs font-semibold uppercase tracking-widest" style={{ color: COLORS.white }}>
             Resumen de tu operación
@@ -244,23 +243,31 @@ export default function ReportesScreen() {
           )}
         </HeroMarca>
 
-        <View className="px-5 pt-2">
         {pickerAbierto && (
-          <DateTimePicker
-            value={pickerAbierto === 'desde' ? customDesde : customHasta}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            minimumDate={pickerAbierto === 'hasta' ? customDesde : undefined}
-            maximumDate={pickerAbierto === 'desde' ? customHasta : today}
-            onChange={(e, d) => onChangeFecha(pickerAbierto, e, d)}
-          />
+          <View className="px-5 pt-2">
+            <DateTimePicker
+              value={pickerAbierto === 'desde' ? customDesde : customHasta}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              minimumDate={pickerAbierto === 'hasta' ? customDesde : undefined}
+              maximumDate={pickerAbierto === 'desde' ? customHasta : today}
+              onChange={(e, d) => onChangeFecha(pickerAbierto, e, d)}
+            />
+          </View>
         )}
 
-        {isLoading ? (
-          <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
-        ) : (
-          <>
-            {/* ── Turnos y nómina: dos análisis separados, nunca mezclados ── */}
+        {(asistencia.isError || costos.isError) && (
+          <View className="mx-5 mt-3 bg-danger/10 border border-danger/30 rounded-2xl p-4 flex-row items-center gap-3">
+            <Ionicons name="warning-outline" size={20} color={COLORS.danger} />
+            <Text className="text-sm text-danger flex-1">
+              No se pudieron cargar algunos datos. Comprueba tu conexión.
+            </Text>
+          </View>
+        )}
+
+        {/* ── Turnos y nómina: dos páginas que se deslizan, nunca mezcladas ── */}
+        <ReportePager
+          turnos={
             <TurnosSeccion desde={desde} hasta={hasta}>
               <SectionTitle title="Asistencia por persona" />
               <View className="flex-row gap-3 mb-3">
@@ -282,7 +289,8 @@ export default function ReportesScreen() {
                 </View>
               )}
             </TurnosSeccion>
-
+          }
+          nomina={verNomina ? (
             <NominaSeccion desde={desde} hasta={hasta}>
               {(costos.data?.nomina?.detalle ?? []).length > 0 && (
                 <>
@@ -306,20 +314,8 @@ export default function ReportesScreen() {
                 </>
               )}
             </NominaSeccion>
-
-            {/* Error states */}
-            {(asistencia.isError || costos.isError) && (
-              <View className="mt-4 bg-danger/10 border border-danger/30 rounded-2xl p-4 flex-row items-center gap-3">
-                <Ionicons name="warning-outline" size={20} color={COLORS.danger} />
-                <Text className="text-sm text-danger flex-1">
-                  No se pudieron cargar algunos datos. Comprueba tu conexión.
-                </Text>
-              </View>
-            )}
-          </>
-        )}
-        </View>
-      </ScrollView>
+          ) : null}
+        />
     </SafeAreaView>
   );
 }

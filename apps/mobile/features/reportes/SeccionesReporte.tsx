@@ -24,7 +24,7 @@ function Encabezado({ icon, titulo, sub, acento }: {
   icon: React.ComponentProps<typeof Ionicons>['name']; titulo: string; sub: string; acento: { primary: string; primaryLight: string };
 }) {
   return (
-    <View className="flex-row items-center gap-3 mt-8 mb-4 pb-3 border-b" style={{ borderBottomColor: alpha(acento.primary, 0.35) }}>
+    <View className="flex-row items-center gap-3 mb-4 pb-3 border-b" style={{ borderBottomColor: alpha(acento.primary, 0.35) }}>
       <View className="w-10 h-10 rounded-full items-center justify-center" style={{ backgroundColor: acento.primaryLight }}>
         <Ionicons name={icon} size={20} color={acento.primary} />
       </View>
