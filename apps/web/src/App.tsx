@@ -19,6 +19,7 @@ import { TurnosPage } from '@/modules/turnos/pages/TurnosPage';
 import { OfertaDetailPage } from '@/modules/turnos/pages/OfertaDetailPage';
 import { ConfiguracionPage } from '@/modules/configuracion/pages/ConfiguracionPage';
 import { IntegracionPage } from '@/modules/integracion/pages/IntegracionPage';
+import { ReportesPage } from '@/modules/reportes/pages/ReportesPage';
 import { SuperAdminPage } from '@/modules/admin/pages/SuperAdminPage';
 import { EmpresaDetailPage } from '@/modules/admin/pages/EmpresaDetailPage';
 import { WompiEventosPage } from '@/modules/admin/pages/WompiEventosPage';
@@ -61,6 +62,9 @@ export default function App() {
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_turnos', 'jefe_nomina']} />}>
               <Route path="turnos" element={<TurnosPage />} />
               <Route path="turnos/:id" element={<OfertaDetailPage />} />
+            </Route>
+            <Route element={<RoleRoute roles={['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina']} />}>
+              <Route path="reportes" element={<ReportesPage />} />
             </Route>
             <Route element={<RoleRoute roles={['admin_empresa', 'jefe_turnos']} />}>
               <Route path="configuracion" element={<ConfiguracionPage />} />

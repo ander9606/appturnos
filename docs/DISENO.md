@@ -60,6 +60,8 @@ Cada semántico tiene variante `light` (fondo suave de alertas y badges): `succe
 | `primaryLight`, `primary400`, `primary600` | `#FFF1EE`, `#FF7150`, `#E83E1F` | Escala de la marca (50, 400, 600) |
 | `successLight`, `warningLight`, `dangerLight`, `infoLight` | `#D1FAE5`, `#FEF3C7`, `#FEE2E2`, `#DBEAFE` | Fondos suaves de badges y banners (igual que `bg-*-light`) |
 | `successText`, `warningText`, `dangerText`, `infoText` | `#166534`, `#92400E`, `#991B1B`, `#1E3A8A` | Texto/íconos **fuertes sobre** esos fondos suaves: 6.3 · 6.4 · 6.8 · 8.5 : 1 (AA) |
+
+En la **web** los mismos valores viven en `index.css` como `--color-success-text`, `--color-warning-text`, `--color-danger-text` y `--color-info-text` (clases `text-warning-text`…), y los colores de horas como `--color-hora-ordinaria`, `--color-hora-extra`, `--color-hora-extra-nocturna`, `--color-hora-nocturna`, `--color-hora-festivo` (= `HOUR_TYPE_COLORS`) y `--color-bonos` (= `ACCENT.violeta`).
 | `infoBorder`, `warningSoft` | `#BFDBFE`, `#FCD34D` | Bordes suaves de aviso |
 | `slate600`, `slate700` | `#475569`, `#334155` | Texto entre `foreground` y `muted-foreground` (7.6 y 10.4 : 1 sobre blanco) |
 | `eventual` | `#7C3AED` | Acento de los **turnos eventuales** (5.7 : 1 sobre blanco) |
@@ -325,7 +327,7 @@ La marca se mueve poco y con intención. Referencia: el hero de la bienvenida (`
 
 ### 5.8 Reportes y paneles de métricas
 
-Referencia: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`).
+Referencia móvil: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`). Referencia web: `modules/reportes/` (`ReportesPage.tsx`, `components/`): mismo lenguaje y mismos datos, con pestañas **Turnos | Nómina** en vez de deslizar, cuadrícula de 2–3 columnas en escritorio y el encabezado como tarjeta redondeada (no a sangre). Los colores van como variables CSS (`var(--color-hora-extra)`), no como hex.
 
 - **Encabezado de marca** (`HeroMarca`): degradado `primary` → `primary-600`, órbitas finas y el planeta del logo tenue a la derecha; la cabecera de navegación va en `primary` con texto blanco (`headerShadowVisible: false`) para que se funda con él. Es decorativo y estático (sin animación). En él van el título del período y el selector (chips: el activo en blanco con `text-primary-700`, los demás `alpha(white, 0.2)` con texto blanco en negrita).
 - **Páginas que se deslizan** (`ReportePager`): Turnos y Nómina son dos páginas con scroll vertical propio; se cambia de una a otra deslizando de lado o tocando las pestañas (ícono + nombre, subrayado en el color del módulo). El encabezado y el período quedan fijos arriba. Quien solo ve una sección (jefe de turnos) ve una sola página, sin pestañas. Es un `ScrollView` horizontal con `pagingEnabled`, sin dependencias.

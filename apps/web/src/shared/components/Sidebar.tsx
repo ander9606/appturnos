@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router';
-import { LayoutDashboard, Users, Calendar, CalendarDays, Settings, DollarSign, LogOut, Plug, Building2 } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, CalendarDays, Settings, DollarSign, LogOut, Plug, Building2, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '@/modules/auth/authStore';
 import type { Rol } from '@/modules/auth/authStore';
 
@@ -23,6 +23,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Turnos',         to: '/turnos',         icon: Calendar },
     { label: 'Nómina',         to: '/nomina',         icon: DollarSign, accent: 'success' },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
+    { label: 'Reportes',       to: '/reportes',       icon: BarChart3 },
     { label: 'Configuración',  to: '/configuracion',  icon: Settings, bottom: true },
     { label: 'logiq360',       to: '/integracion',    icon: Plug, bottom: true },
   ],
@@ -32,18 +33,21 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Turnos',      to: '/turnos',      icon: Calendar },
     { label: 'Nómina',      to: '/nomina',      icon: DollarSign, accent: 'success' },
     { label: 'Equipo',      to: '/equipo',      icon: Users },
+    { label: 'Reportes',    to: '/reportes',    icon: BarChart3 },
   ],
   jefe_turnos: [
     { label: 'Inicio',        to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Calendario',    to: '/calendario',    icon: CalendarDays },
     { label: 'Turnos',        to: '/turnos',        icon: Calendar },
     { label: 'Equipo',        to: '/equipo',        icon: Users },
+    { label: 'Reportes',      to: '/reportes',      icon: BarChart3 },
     { label: 'Configuración', to: '/configuracion', icon: Settings, bottom: true },
   ],
   nomina: [
     { label: 'Inicio',      to: '/dashboard',  icon: LayoutDashboard },
     { label: 'Calendario',  to: '/calendario', icon: CalendarDays },
     { label: 'Nómina',      to: '/nomina',     icon: DollarSign, accent: 'success' },
+    { label: 'Reportes',    to: '/reportes',   icon: BarChart3 },
   ],
 };
 
