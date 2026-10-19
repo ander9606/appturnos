@@ -23,6 +23,14 @@ const UMBRALES = {
   MIN_PERSONAS_ROTAR: 4,       // un cargo con menos personas no se puede rotar (jefes, encargados)
   ACAPARA_VECES_JUSTO: 2,      // el que más gana vs su parte justa (1/n del cargo)
   BANCA_AVISO: 1,              // personas del cargo sin turnos para que valga el aviso
+  // Calificaciones (0 a 5)
+  CALIF_MIN_PERIODO: 5,        // calificaciones mínimas en el período para opinar sobre el promedio
+  CALIF_BAJA: 3,               // promedio del período por debajo de esto es alerta
+  CALIF_CAMBIO: 0.3,           // cambio del promedio vs el período anterior que vale un aviso
+  SIN_CALIFICAR_PCT: 20,       // % de turnos completados sin calificar
+  SIN_CALIFICAR_MIN: 3,        // y al menos tantos turnos
+  CALIF_PERSONA_BAJA: 2.5,     // promedio de una persona bajo esto (nivel "bajo" del ranking)
+  CALIF_PERSONA_MIN: 3,        // calificaciones mínimas para juzgar a una persona
 };
 const MAX = 5;
 const ORDEN = { alerta: 0, aviso: 1, info: 2, ok: 3 };
@@ -52,8 +60,24 @@ function avisoCosto(lado, etiqueta, costo) {
 }
 
 /** Resumen de TURNOS: costo, asistencia y cobertura. No mira nada de nómina. */
-function generarInsightsTurnos({ costo, turnos, cobertura }) {
+function generarInsightsTurnos({ costo, turnos, cobertura, calificaciones }) {
   const lista = avisoCosto('turnos', 'los turnos', costo);
+
+  const cal = calificaciones;
+  const dec = (n) => n.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  if (cal?.promedio != null && cal.calificadas >= UMBRALES.CALIF_MIN_PERIODO) {
+    if (cal.promedio < UMBRALES.CALIF_BAJA) {
+      lista.push({ id: 'turnos_calif_baja', nivel: 'alerta', texto: `La calificación promedio de los turnos es ${dec(cal.promedio)} de 5.` });
+    } else if (cal.delta != null && cal.delta <= -UMBRALES.CALIF_CAMBIO) {
+      lista.push({ id: 'turnos_calif_baja', nivel: 'aviso', texto: `La calificación promedio de los turnos bajó de ${dec(cal.previo)} a ${dec(cal.promedio)}.` });
+    } else if (cal.delta != null && cal.delta >= UMBRALES.CALIF_CAMBIO) {
+      lista.push({ id: 'turnos_calif_sube', nivel: 'info', texto: `La calificación promedio de los turnos subió de ${dec(cal.previo)} a ${dec(cal.promedio)}.` });
+    }
+  }
+  const pctSin = pct(cal?.sin_calificar || 0, turnos.completados);
+  if (cal && pctSin != null && pctSin >= UMBRALES.SIN_CALIFICAR_PCT && cal.sin_calificar >= UMBRALES.SIN_CALIFICAR_MIN) {
+    lista.push({ id: 'turnos_sin_calificar', nivel: 'aviso', texto: `${cal.sin_calificar} de ${turnos.completados} turnos completados siguen sin calificar (${entero(pctSin)}%).` });
+  }
 
   const pctNo = pct(turnos.no_presentados, turnos.convocados);
   if (pctNo != null && pctNo >= UMBRALES.NO_PRESENTADOS_AVISO) {
@@ -103,7 +127,7 @@ function generarInsightsNomina({ costo, nomina }) {
  * Avisos de la sección Personas. `horas` es null para quien no ve nómina.
  * `cargos[i].personas[j]` trae { nombre, apellido, turnos, pago }; los que tienen turnos = 0 son "la banca".
  */
-function generarInsightsPersonas({ horas, cargos }) {
+function generarInsightsPersonas({ horas, cargos, calificadas = [] }) {
   const nom = [];
   const tur = [];
   const nombre = (p) => `${p.nombre} ${p.apellido || ''}`.trim();
@@ -139,6 +163,17 @@ function generarInsightsPersonas({ horas, cargos }) {
         texto: `${banca.length} ${banca.length === 1 ? 'persona de' : 'personas de'} ${c.cargo} no tuvo turnos en el período: ${banca.slice(0, 3).map(nombre).join(', ')}${banca.length > 3 ? '…' : ''}.`,
       });
     }
+  }
+  const bajas = calificadas
+    .filter((p) => p.n >= UMBRALES.CALIF_PERSONA_MIN && p.promedio < UMBRALES.CALIF_PERSONA_BAJA)
+    .sort((a, b) => a.promedio - b.promedio);
+  if (bajas.length) {
+    const dec = (n) => n.toLocaleString('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    tur.push({
+      id: 'turnos_calif_personas_bajas',
+      nivel: 'aviso',
+      texto: `${bajas.length} ${bajas.length === 1 ? 'persona tiene' : 'personas tienen'} calificación promedio por debajo de ${dec(UMBRALES.CALIF_PERSONA_BAJA)}: ${bajas.slice(0, 3).map((p) => `${nombre(p)} (${dec(p.promedio)})`).join(', ')}${bajas.length > 3 ? '…' : ''}.`,
+    });
   }
   return { turnos: ordenar(tur), nomina: ordenar(nom) };
 }

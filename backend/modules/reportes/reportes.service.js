@@ -30,6 +30,21 @@ function rangoAnterior(desde, hasta) {
 const MIN_DIAS_HORAS = 3;          // días con horas para que el promedio cuente
 const VENTANA_BANCA_DIAS = 180;    // "ya hizo este cargo" = lo hizo en los últimos 6 meses
 
+/** Promedio (0-5) de las calificaciones de turnos, su cambio vs el período anterior, la distribución por estrellas y lo que falta calificar. */
+function formatearCalificaciones(act, prev) {
+  const prom = (f) => (Number(f.calificadas) > 0 && f.promedio != null ? redondear(Number(f.promedio)) : null);
+  const promedio = prom(act);
+  const previo = prom(prev);
+  return {
+    promedio,
+    previo,
+    delta: promedio != null && previo != null ? redondear(promedio - previo) : null,
+    calificadas: Number(act.calificadas) || 0,
+    sin_calificar: Number(act.sin_calificar) || 0,
+    distribucion: { 1: Number(act.e1) || 0, 2: Number(act.e2) || 0, 3: Number(act.e3) || 0, 4: Number(act.e4) || 0, 5: Number(act.e5) || 0 },
+  };
+}
+
 /** Costo del período contra el anterior de su mismo lado. delta_pct es null si antes no hubo costo. */
 function comparar(total, previo) {
   total = redondear(total);
@@ -127,10 +142,12 @@ const ReportesService = {
    */
   async resumen(empresaId, { desde, hasta }, { verPagos }) {
     const previo = rangoAnterior(desde, hasta);
-    const [tAct, tPrev, cobAct, nAct, nPrev] = await Promise.all([
+    const [tAct, tPrev, cobAct, calAct, calPrev, nAct, nPrev] = await Promise.all([
       ReportesModel.resumenTurnos(empresaId, desde, hasta),
       ReportesModel.resumenTurnos(empresaId, previo.desde, previo.hasta),
       ReportesModel.coberturaTurnos(empresaId, desde, hasta),
+      ReportesModel.resumenCalificaciones(empresaId, desde, hasta),
+      ReportesModel.resumenCalificaciones(empresaId, previo.desde, previo.hasta),
       verPagos ? this.calcularNomina(empresaId, desde, hasta) : null,
       verPagos ? this.calcularNomina(empresaId, previo.desde, previo.hasta) : null,
     ]);
@@ -141,6 +158,7 @@ const ReportesService = {
     const plazas = Number(cobAct.plazas) || 0;
     const cubiertas = Number(cobAct.cubiertas) || 0;
     const cobertura = { plazas, cubiertas, pct: plazas > 0 ? redondear((cubiertas / plazas) * 100) : null };
+    const calificaciones = formatearCalificaciones(calAct, calPrev);
     const turnos = {
       costo: costoTurnos,
       desglose: { tarifas: redondear(t.costo - t.bonos), bonos: redondear(t.bonos) },
@@ -148,7 +166,8 @@ const ReportesService = {
       completados: t.completados,
       no_presentados: t.no_presentados,
       cobertura,
-      insights: generarInsightsTurnos({ costo: costoTurnos, turnos: t, cobertura }),
+      calificaciones,
+      insights: generarInsightsTurnos({ costo: costoTurnos, turnos: t, cobertura, calificaciones }),
     };
 
     // ── Nómina ──
@@ -175,12 +194,15 @@ const ReportesService = {
     const dias = Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / DIA) + 1;
     const semanas = Math.max(1, dias / 7);
 
-    const [filasHoras, filasTurnos, jNomina, jTurnos] = await Promise.all([
+    const [filasHoras, filasTurnos, jNomina, jTurnos, filasCal] = await Promise.all([
       verPagos ? ReportesModel.horasTotalesPorTrabajador(empresaId, desde, hasta) : [],
       ReportesModel.turnosPorCargoYTrabajador(empresaId, desde, hasta, VENTANA_BANCA_DIAS),
       verPagos ? ReportesModel.jornadas(empresaId, desde, hasta, 'nomina') : null,
       ReportesModel.jornadas(empresaId, desde, hasta, 'turnos'),
+      ReportesModel.calificacionesPorTrabajador(empresaId, desde, hasta),
     ]);
+    const calificadas = filasCal.map((f) => ({ trabajador_id: f.trabajador_id, nombre: f.nombre, apellido: f.apellido, n: Number(f.n) || 0, promedio: redondear(Number(f.promedio)) }));
+    const calDe = new Map(calificadas.map((c) => [c.trabajador_id, { promedio: c.promedio, n: c.n }]));
 
     // Horas: con menos de MIN_DIAS_HORAS días trabajados el promedio no dice nada
     let horas = null;
@@ -208,6 +230,7 @@ const ReportesService = {
       porCargo.get(f.cargo_id).personas.push({
         trabajador_id: f.trabajador_id, nombre: f.nombre, apellido: f.apellido,
         turnos: Number(f.turnos) || 0, pago: redondear(Number(f.pago) || 0),
+        calificacion: calDe.get(f.trabajador_id) ?? null,
       });
     }
     const cargos = [...porCargo.values()].map((c) => {
@@ -220,10 +243,14 @@ const ReportesService = {
       };
     }).filter((c) => c.total_turnos > 0).sort((a, b) => b.total_pago - a.total_pago);
 
-    const insights = generarInsightsPersonas({ horas, cargos });
+    // Mejores y peores calificados: solo con calificaciones suficientes para que el promedio diga algo
+    const juzgables = calificadas.filter((c) => c.n >= UMBRALES.CALIF_PERSONA_MIN).sort((a, b) => b.promedio - a.promedio || b.n - a.n);
+    const mejores = juzgables.slice(0, 3);
+    const peores = juzgables.slice(3).slice(-3).reverse();
+    const insights = generarInsightsPersonas({ horas, cargos, calificadas });
     return {
       rango: { desde, hasta },
-      turnos: { jornadas: formatearJornadas(jTurnos), cargos, insights: insights.turnos },
+      turnos: { jornadas: formatearJornadas(jTurnos), cargos, calificaciones: { mejores, peores }, insights: insights.turnos },
       nomina: verPagos ? { jornadas: jNomina && formatearJornadas(jNomina), horas, insights: insights.nomina } : null,
     };
   },

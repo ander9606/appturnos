@@ -35,6 +35,41 @@ describe('avisos de turnos', () => {
   });
 });
 
+describe('avisos de calificaciones (turnos)', () => {
+  const cal = (o) => ({ promedio: 4.3, previo: 4.3, delta: 0, calificadas: 20, sin_calificar: 0, ...o });
+  const con = (c, completados = 20) => generarInsightsTurnos({ ...turnosBase, turnos: { ...turnosBase.turnos, completados }, calificaciones: c });
+
+  it('sin cambios ni pendientes no avisa nada', () => {
+    expect(con(cal({}))).toEqual([expect.objectContaining({ id: 'turnos_ok' })]);
+  });
+
+  it('promedio bajo 3 es alerta; una caída de 0,3 o más es aviso; una subida es informativa', () => {
+    expect(con(cal({ promedio: 2.8, delta: -0.1 }))[0]).toMatchObject({ id: 'turnos_calif_baja', nivel: 'alerta' });
+    const baja = con(cal({ promedio: 3.9, previo: 4.3, delta: -0.4 }))[0];
+    expect(baja).toMatchObject({ id: 'turnos_calif_baja', nivel: 'aviso' });
+    expect(baja.texto).toMatch(/bajó de 4,3 a 3,9/);
+    expect(con(cal({ promedio: 4.7, previo: 4.3, delta: 0.4 }))[0]).toMatchObject({ id: 'turnos_calif_sube', nivel: 'info' });
+  });
+
+  it('con pocas calificaciones no opina sobre el promedio', () => {
+    expect(con(cal({ promedio: 2, calificadas: 3 }), 3)).toEqual([expect.objectContaining({ id: 'turnos_ok' })]);
+  });
+
+  it('avisa cuando muchos turnos completados siguen sin calificar', () => {
+    const r = con(cal({ sin_calificar: 8 }), 20);
+    expect(r.find((i) => i.id === 'turnos_sin_calificar').texto).toMatch(/8 de 20 turnos completados siguen sin calificar \(40%\)/);
+    expect(con(cal({ sin_calificar: 2 }), 20).some((i) => i.id === 'turnos_sin_calificar')).toBe(false); // pocos
+  });
+
+  it('nombra a las personas con promedio bajo, solo con calificaciones suficientes', () => {
+    const p = (nombre, n, promedio) => ({ nombre, apellido: '', n, promedio });
+    const r = generarInsightsPersonas({ horas: null, cargos: [], calificadas: [p('Ana', 5, 2.1), p('Beto', 2, 1.0), p('Cris', 6, 4.5)] });
+    const aviso = r.turnos.find((i) => i.id === 'turnos_calif_personas_bajas');
+    expect(aviso.texto).toMatch(/1 persona tiene.*Ana \(2,1\)/);
+    expect(aviso.texto).not.toMatch(/Beto|Cris/);
+  });
+});
+
 describe('avisos de nómina', () => {
   it('sin nada raro dice que todo está bien', () => {
     expect(generarInsightsNomina(nominaBase)).toEqual([expect.objectContaining({ id: 'nomina_ok', nivel: 'ok' })]);

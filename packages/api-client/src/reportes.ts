@@ -62,6 +62,20 @@ export interface CostoComparado {
   delta_pct: number | null;
 }
 
+/** Calificaciones (0 a 5) que los gestores dan a los turnos completados; solo las manuales. */
+export interface CalificacionesTurnos {
+  /** null si no hubo calificaciones en el período. */
+  promedio: number | null;
+  /** Promedio del período anterior; delta = promedio − previo (null si falta alguno). */
+  previo: number | null;
+  delta: number | null;
+  calificadas: number;
+  /** Turnos completados que todavía no tienen calificación. */
+  sin_calificar: number;
+  /** Cuántas calificaciones hubo de cada estrella. */
+  distribucion: { 1: number; 2: number; 3: number; 4: number; 5: number };
+}
+
 export interface ResumenTurnos {
   costo: CostoComparado;
   desglose: { tarifas: number; bonos: number };
@@ -69,6 +83,7 @@ export interface ResumenTurnos {
   completados: number;
   no_presentados: number;
   cobertura: { plazas: number; cubiertas: number; pct: number | null };
+  calificaciones: CalificacionesTurnos;
   insights: ResumenInsight[];
 }
 
@@ -98,12 +113,25 @@ export interface HorasPersona {
   prom_semana: number;
 }
 
+/** Promedio de calificaciones de una persona en el período y cuántas son. */
+export interface CalificacionPersona { promedio: number; n: number }
+
+export interface PersonaCalificada {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string | null;
+  n: number;
+  promedio: number;
+}
+
 export interface PersonaCargo {
   trabajador_id: number;
   nombre: string;
   apellido: string | null;
   turnos: number;
   pago: number;
+  /** null si no tuvo calificaciones en el período. */
+  calificacion: CalificacionPersona | null;
 }
 
 export interface CargoTurnos {
@@ -139,6 +167,8 @@ export interface PersonasResponse {
     /** Duración de los turnos completados; null si no hubo. */
     jornadas: ResumenJornadas | null;
     cargos: CargoTurnos[];
+    /** Solo con 3 o más calificaciones en el período; "peores" son los de menor promedio entre el resto. */
+    calificaciones: { mejores: PersonaCalificada[]; peores: PersonaCalificada[] };
     insights: ResumenInsight[];
   };
   /** null para quien no ve nómina (jefe_turnos). */

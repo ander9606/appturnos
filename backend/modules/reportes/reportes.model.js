@@ -175,6 +175,52 @@ const ReportesModel = {
     return { resumen, mayor: mayor || null, menor: menor || null };
   },
 
+  /**
+   * Calificaciones de los turnos del rango. Cuenta solo las que puso un gestor (calificado_por no nulo):
+   * el 0 automático de "no se presentó" ya se mide aparte como inasistencia.
+   * `sin_calificar` = turnos completados que todavía no tienen calificación.
+   */
+  async resumenCalificaciones(empresaId, desde, hasta) {
+    const [[agg]] = await pool.query(
+      `SELECT COUNT(*) AS calificadas, AVG(c.calificacion) AS promedio,
+              COALESCE(SUM(c.calificacion = 1), 0) AS e1, COALESCE(SUM(c.calificacion = 2), 0) AS e2,
+              COALESCE(SUM(c.calificacion = 3), 0) AS e3, COALESCE(SUM(c.calificacion = 4), 0) AS e4,
+              COALESCE(SUM(c.calificacion = 5), 0) AS e5
+       FROM calificaciones_turno c
+       JOIN asignaciones_turno a ON a.id = c.asignacion_id
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN trabajadores t ON t.id = c.trabajador_id
+       WHERE c.empresa_id = ? AND o.fecha BETWEEN ? AND ? AND t.tipo = 'turnos' AND c.calificado_por IS NOT NULL`,
+      [empresaId, desde, hasta]
+    );
+    const [[pend]] = await pool.query(
+      `SELECT COUNT(*) AS sin_calificar
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       LEFT JOIN calificaciones_turno c ON c.asignacion_id = a.id
+       WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.tipo = 'turnos'
+         AND o.fecha BETWEEN ? AND ? AND c.id IS NULL`,
+      [empresaId, desde, hasta]
+    );
+    return { ...agg, ...pend };
+  },
+
+  /** Promedio de calificaciones por trabajador de turnos en el rango (solo las manuales). */
+  async calificacionesPorTrabajador(empresaId, desde, hasta) {
+    const [filas] = await pool.query(
+      `SELECT c.trabajador_id, t.nombre, t.apellido, COUNT(*) AS n, AVG(c.calificacion) AS promedio
+       FROM calificaciones_turno c
+       JOIN asignaciones_turno a ON a.id = c.asignacion_id
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN trabajadores t ON t.id = c.trabajador_id
+       WHERE c.empresa_id = ? AND o.fecha BETWEEN ? AND ? AND t.tipo = 'turnos' AND c.calificado_por IS NOT NULL
+       GROUP BY c.trabajador_id, t.nombre, t.apellido`,
+      [empresaId, desde, hasta]
+    );
+    return filas;
+  },
+
   async turnosDeTrabajador(empresaId, trabajadorId, desde, hasta) {
     const [filas] = await pool.query(
       `SELECT a.id, a.estado, a.horas_trabajadas, a.pago_total,

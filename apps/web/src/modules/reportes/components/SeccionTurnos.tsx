@@ -5,6 +5,7 @@ import { EmptyState } from '@/shared/components/EmptyState';
 import { fmtCOP } from '@/shared/lib/format';
 import { useAsistencia, usePersonas, useResumen } from '../hooks/useReportes';
 import type { CargoTurnos, Rango } from '../types';
+import { ListasCalificados, PromedioEstrella, TarjetaCalificaciones } from './Calificaciones';
 import { Anillo, Mini, ParaMirar, TarjetaCosto, TarjetasJornada, Titulo, nombreDe } from './ReportesUI';
 
 const MAX_FILAS_CARGO = 8;
@@ -33,6 +34,7 @@ function TarjetaCargo({ c }: { c: CargoTurnos }) {
         <div key={p.trabajador_id} className="border-t border-border px-5 py-2.5">
           <div className="flex items-center gap-3 text-sm">
             <span className="flex-1 truncate text-foreground">{nombreDe(p)}</span>
+            {p.calificacion && <PromedioEstrella promedio={p.calificacion.promedio} />}
             <span className="text-xs text-muted-foreground">{p.turnos} {p.turnos === 1 ? 'turno' : 'turnos'}</span>
             <span className="w-28 text-right font-semibold text-foreground">{fmtCOP(p.pago)}</span>
           </div>
@@ -99,6 +101,13 @@ export function SeccionTurnos({ rango }: { rango: Rango }) {
       </div>
 
       <ParaMirar insights={[...t.insights, ...pt.insights]} />
+
+      <section className="space-y-4">
+        <Titulo>Calificaciones</Titulo>
+        <TarjetaCalificaciones cal={t.calificaciones} />
+        <ListasCalificados mejores={pt.calificaciones.mejores} peores={pt.calificaciones.peores} />
+      </section>
+
       <TarjetasJornada titulo="Duración de los turnos" j={pt.jornadas} />
 
       {pt.cargos.length > 0 && (

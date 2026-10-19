@@ -43,6 +43,7 @@ d('reportes con MySQL real', () => {
 
   afterAll(async () => {
     if (!pool) return;
+    await pool.query('DELETE FROM calificaciones_turno WHERE empresa_id = ?', [empresaId]);
     await pool.query('DELETE FROM asignaciones_turno WHERE empresa_id = ?', [empresaId]);
     await pool.query('DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)', [empresaId]);
     for (const t of ['registros_diarios', 'periodos_nomina', 'ofertas_turno', 'trabajadores']) {
@@ -139,6 +140,32 @@ d('reportes con MySQL real', () => {
     const asis = await ReportesService.asistencia(empresaId, rango);
     expect(JSON.stringify(asis.turnos)).not.toMatch(/Cruzado/);
     expect(JSON.stringify(asis.nomina)).not.toMatch(/Cruzado/);
+  });
+
+  it('calificaciones: cuenta solo las manuales de trabajadores de turnos y detecta lo que falta calificar', async () => {
+    const abril = { desde: '2026-04-01', hasta: '2026-04-15' };
+    const [[cargo]] = await pool.query('SELECT id FROM cargos WHERE empresa_id IS NULL LIMIT 1');
+    const [o] = await pool.query("INSERT INTO ofertas_turno (empresa_id, titulo, fecha, hora_inicio, estado) VALUES (?, 'Cal', '2026-04-05', '08:00:00', 'completada')", [empresaId]);
+    const [pu] = await pool.query('INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, plazas_cubiertas, tarifa_dia) VALUES (?,?,5,5,90000)', [o.insertId, cargo.id]);
+    const mk = async (tipo) => (await pool.query('INSERT INTO trabajadores (empresa_id, nombre, apellido, tipo, activo) VALUES (?,?,?,?,1)', [empresaId, 'Cal', tipo, tipo]))[0].insertId;
+    const asig = async (trab, estado) => (await pool.query(
+      'INSERT INTO asignaciones_turno (empresa_id, oferta_id, puesto_id, trabajador_id, estado, pago_total) VALUES (?,?,?,?,?,90000)',
+      [empresaId, o.insertId, pu.insertId, trab, estado]))[0].insertId;
+    const cal = (a, trab, c, por) => pool.query('INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, calificado_por) VALUES (?,?,?,?,?)', [empresaId, a, trab, c, por]);
+    const [ta, tb, tc, td] = [await mk('turnos'), await mk('turnos'), await mk('turnos'), await mk('turnos')];
+    const nom = await mk('nomina');
+    await cal(await asig(ta, 'completado'), ta, 5, 1);
+    await cal(await asig(tb, 'completado'), tb, 3, 1);
+    await asig(tc, 'completado');                                  // completado sin calificar
+    await cal(await asig(td, 'no_presentado'), td, 0, null);       // 0 automático: no cuenta
+    await cal(await asig(nom, 'completado'), nom, 1, 1);           // trabajador de nómina: no cuenta
+
+    const r = await ReportesService.resumen(empresaId, abril, { verPagos: false });
+    expect(r.turnos.calificaciones).toMatchObject({ promedio: 4, calificadas: 2, sin_calificar: 1, delta: null, distribucion: { 1: 0, 3: 1, 5: 1 } });
+    const p = await ReportesService.personas(empresaId, abril, { verPagos: false });
+    const persona = p.turnos.cargos[0].personas.find((x) => x.trabajador_id === ta);
+    expect(persona.calificacion).toEqual({ promedio: 5, n: 1 });
+    expect(p.turnos.calificaciones).toEqual({ mejores: [], peores: [] }); // con 1 calificación no se juzga a nadie
   });
 
   it('el índice (empresa_id, fecha) existe (migración 113)', async () => {
