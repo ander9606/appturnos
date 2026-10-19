@@ -9,6 +9,7 @@
  *  - FAB "+" para crear nuevo trabajador
  *  - Navegar al detalle con opciones de editar / desactivar
  */
+import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
@@ -33,7 +34,6 @@ import { useAusenciasPendientesCount } from '@/features/ausencias/useAusencias';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { COLORS, THEME_COLORS } from '@/lib/designTokens';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { useTheme } from '@/lib/theme';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
@@ -525,15 +525,7 @@ export default function EquipoScreen() {
       {isLoading ? (
         <SkeletonList count={6} style={{ paddingHorizontal: 16, paddingTop: 8 }} />
       ) : isError ? (
-        <View className="flex-1 items-center justify-center px-8">
-          <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} style={{ marginBottom: 12 }} />
-          <Text className="text-base font-semibold text-foreground">
-            {apiErrorMessage(error, 'Error al cargar')}
-          </Text>
-          <Pressable onPress={() => refetch()} className="mt-4">
-            <Text className="text-primary font-semibold">Reintentar</Text>
-          </Pressable>
-        </View>
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar" />
       ) : (
         <FlatList
           data={trabajadores}

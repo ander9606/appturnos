@@ -5,6 +5,7 @@
  * completados en el período seleccionado.  Cada card es expandible para
  * ver el desglose turno por turno (pago base + extra + total).
  */
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
@@ -24,7 +25,6 @@ import { usePeriodos } from '@/features/nomina/useNomina';
 import { PeriodoSelector } from '@/features/nomina/PeriodoSelector';
 import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
 import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
-import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurnoLinea } from '@api-client';
@@ -374,6 +374,7 @@ export default function LiquidacionTurnosScreen() {
     data,
     isLoading,
     isError,
+    error,
     refetch,
     isRefetching,
   } = useLiquidacionTurnos(
@@ -415,13 +416,7 @@ export default function LiquidacionTurnosScreen() {
             <Spinner size="large" color={theme.primary} />
           </View>
         ) : isError ? (
-          <View className="flex-1 items-center justify-center gap-3 px-6">
-            <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-            <Text className="text-base font-semibold text-foreground text-center">
-              Error al cargar la liquidación
-            </Text>
-            <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
-          </View>
+          <ErrorState error={error} onRetry={refetch} fallback="Error al cargar la liquidación" />
         ) : (
           <FlatList
             data={listData}

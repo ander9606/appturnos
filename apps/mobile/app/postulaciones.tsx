@@ -8,6 +8,7 @@
  * realmente necesita acción); Rechazados se filtra client-side por
  * rechazado_por, porque comparte estado='cancelado' con las cancelaciones.
  */
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -327,7 +328,7 @@ export default function PostulacionesScreen() {
   const pendientesQuery  = usePostulacionesPendientes();
   const aceptadosQuery   = useAsignacionesConfirmadas({ enabled: tab === 'aceptados' });
   const rechazadosQuery  = useAsignacionesRechazadas({ enabled: tab === 'rechazados' });
-  const { data: resp, isLoading, isRefetching, isError, refetch } =
+  const { data: resp, isLoading, isRefetching, isError, error, refetch } =
     tab === 'pendientes' ? pendientesQuery : tab === 'aceptados' ? aceptadosQuery : rechazadosQuery;
 
   const confirmarMutation    = useConfirmar();
@@ -416,11 +417,7 @@ export default function PostulacionesScreen() {
           </TouchableOpacity>
           <Text className="text-lg font-bold text-foreground">Postulaciones</Text>
         </View>
-        <View className="flex-1 items-center justify-center gap-4 px-8">
-          <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-          <Text className="text-base font-semibold text-foreground text-center">Error al cargar postulaciones</Text>
-          <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
-        </View>
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar postulaciones" />
       </SafeAreaView>
     );
   }

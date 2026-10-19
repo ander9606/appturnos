@@ -5,6 +5,7 @@
  * según empresas.tipo_liquidacion) con el total a cobrar, horas
  * trabajadas y badge de turno extendido.
  */
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
@@ -20,8 +21,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
-import { Button } from '@/components/ui/Button';
 import { usePeriodos } from './useNomina';
 import { TipoPeriodoBadge } from './TipoPeriodoBadge';
 import { PeriodoSelector } from './PeriodoSelector';
@@ -324,11 +323,7 @@ export function NominaTurnosView() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar turnos')}
-        </Text>
-        <Button label="Reintentar" onPress={() => refetch()} variant="secondary" />
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar turnos" />
       </SafeAreaView>
     );
   }

@@ -5,6 +5,7 @@
  * Toda la lógica de negocio vive en useNominaTrabajador + nominaTrabajadorUtils.
  */
 
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect } from 'react';
@@ -15,8 +16,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
 import { formatShortDate } from '@/lib/formatters';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
-import { Button } from '@/components/ui/Button';
 import { RegistroCard } from '../RegistroCard';
 import { PeriodoHeaderCard } from './components/PeriodoHeaderCard';
 import { ResumenCards } from './components/ResumenCards';
@@ -131,11 +130,7 @@ export function NominaTrabajadorView() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar tu nómina')}
-        </Text>
-        <Button label="Reintentar" onPress={onRefresh} variant="secondary" />
+        <ErrorState error={error} onRetry={onRefresh} fallback="Error al cargar tu nómina" />
       </SafeAreaView>
     );
   }

@@ -7,6 +7,7 @@
  *   jefe_nomina   → edita la ficha (nómina y turnos); el sueldo y la hora de entrada solo en nómina; no el tipo ni los datos de pago
  *   nomina        → solo lectura
  */
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
@@ -150,7 +151,7 @@ export default function TrabajadorDetailScreen() {
   const [ratingStars,    setRatingStars]    = useState(5);
   const [ratingComment,  setRatingComment]  = useState('');
 
-  const { data: t, isLoading, isError, refetch } = useTrabajador(numId);
+  const { data: t, isLoading, isError, error, refetch } = useTrabajador(numId);
   const { data: puntosMarcaje = [] } = usePuntosMarcaje(isAdmin && t?.tipo !== 'turnos');
   const actualizar  = useActualizarTrabajador(numId);
   const invitar     = useInvitar();
@@ -421,11 +422,7 @@ export default function TrabajadorDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-8" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Trabajador', headerShown: true }} />
-        <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} style={{ marginBottom: 12 }} />
-        <Text className="text-base font-semibold text-foreground">No se pudo cargar</Text>
-        <Pressable onPress={() => refetch()} className="mt-4">
-          <Text className="text-primary font-semibold">Reintentar</Text>
-        </Pressable>
+        <ErrorState error={error} onRetry={refetch} fallback="No se pudo cargar" />
       </SafeAreaView>
     );
   }

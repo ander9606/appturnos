@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import * as Sentry from '@sentry/react-native';
+import { PlanetIllustration } from '@/components/ui/PlanetIllustration';
 
 interface Props {
   children: React.ReactNode;
@@ -25,7 +26,8 @@ export class ErrorBoundary extends React.Component<Props, State> {
     if (this.state.hasError) {
       return (
         <View className="flex-1 items-center justify-center px-6 bg-background gap-3">
-          <Text className="text-lg font-bold text-foreground">Algo salió mal</Text>
+          <PlanetIllustration variant="tilted" width={190} />
+          <Text className="text-lg font-bold text-foreground">Algo se torció</Text>
           <Text className="text-sm text-muted-foreground text-center">
             La app tuvo un error inesperado. Ya se reportó automáticamente.
           </Text>

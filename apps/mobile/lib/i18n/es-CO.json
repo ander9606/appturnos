@@ -299,5 +299,18 @@
     "statRequests":   "Solicitudes",
     "hoursLeft":      "{{h}}h restantes",
     "completed":      "{{pct}}% completado"
+  },
+  "errors": {
+    "offline": {
+      "title": "Sin conexión",
+      "body": "Se nos cayó el anillo. Revisa tu internet y vuelve a intentarlo."
+    },
+    "server": {
+      "title": "Algo se torció",
+      "body": "Tuvimos un problema de nuestro lado. Intenta de nuevo en un momento."
+    },
+    "generic": {
+      "title": "No pudimos cargar esto"
+    }
   }
 }

@@ -6,6 +6,7 @@
  *                        se muestra aparte; lo que varía período a período son
  *                        las horas con recargo)
  */
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo, useCallback, useState } from 'react';
@@ -18,8 +19,6 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme } from '@/lib/theme';
 import { formatCOP, formatDate, toISODate } from '@/lib/formatters';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
-import { Button } from '@/components/ui/Button';
 import { PeriodoBadge } from '@/features/nomina/PeriodoBadge';
 import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
@@ -217,11 +216,7 @@ function HistorialTurnos() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar el historial')}
-        </Text>
-        <Button label="Reintentar" onPress={() => refetch()} variant="secondary" />
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar el historial" />
       </SafeAreaView>
     );
   }
@@ -389,11 +384,7 @@ function HistorialNomina() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar el historial')}
-        </Text>
-        <Button label="Reintentar" onPress={() => refetch()} variant="secondary" />
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar el historial" />
       </SafeAreaView>
     );
   }

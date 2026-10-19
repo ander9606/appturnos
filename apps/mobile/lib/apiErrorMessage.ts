@@ -13,3 +13,18 @@ export function apiErrorMessage(err: unknown, fallback: string): string {
 export function isClientError(err: unknown): boolean {
   return err instanceof ApiError && err.status >= 400 && err.status < 500;
 }
+
+/** Sin red: `fetch` no llega a abrir la conexión y lanza un TypeError ("Network request failed"), nunca un ApiError. */
+export function isNetworkError(err: unknown): boolean {
+  return err instanceof Error && !(err instanceof ApiError)
+    && /network request failed|failed to fetch|network error|timed out|aborted/i.test(err.message);
+}
+
+export type ErrorKind = 'offline' | 'server' | 'generic';
+
+/** Qué ilustración y texto mostrar: sin conexión, falla nuestra (5xx) u otro (4xx, desconocido). */
+export function errorKind(err: unknown): ErrorKind {
+  if (isNetworkError(err)) return 'offline';
+  if (err instanceof ApiError && err.status >= 500) return 'server';
+  return 'generic';
+}

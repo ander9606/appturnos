@@ -1,8 +1,9 @@
+import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
+  View, Text, FlatList,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,7 +29,7 @@ export function NominaGestorTurnosView() {
   const activePeriodoId = periodoId ?? periodos[0]?.id;
   const periodo = periodos.find((p) => p.id === activePeriodoId);
 
-  const { data, isLoading, isError, refetch, isRefetching } = useLiquidacionTurnos({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useLiquidacionTurnos({
     fecha_inicio: periodo?.fecha_inicio ?? '',
     fecha_fin:    periodo?.fecha_fin ?? '',
   }, { enabled: periodo !== undefined });
@@ -61,11 +62,7 @@ export function NominaGestorTurnosView() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-8" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-        <Text className="text-base font-semibold text-foreground text-center">Error al cargar datos</Text>
-        <TouchableOpacity onPress={() => refetch()} className="bg-card border border-border px-5 py-2.5 rounded-2xl">
-          <Text className="text-sm font-medium text-foreground">Reintentar</Text>
-        </TouchableOpacity>
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar datos" />
       </SafeAreaView>
     );
   }

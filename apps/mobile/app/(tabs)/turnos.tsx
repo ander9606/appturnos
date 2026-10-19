@@ -1,3 +1,4 @@
+import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
@@ -29,7 +30,6 @@ import { Button }  from '@/components/ui/Button';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
 import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -463,11 +463,7 @@ export default function TurnosScreen() {
               {loadingOfertasMes ? (
                 <SkeletonList count={3} />
               ) : errorOfertasMes ? (
-                <View className="items-center justify-center gap-2 py-10">
-                  <Ionicons name="warning-outline" size={32} color={COLORS.placeholder} />
-                  <Text className="text-sm text-muted-foreground">No se pudieron cargar los turnos del mes</Text>
-                  <Button label="Reintentar" onPress={() => refetchOfertasMes()} variant="secondary" size="sm" />
-                </View>
+                <ErrorState compact error={errOfertasMes} onRetry={refetchOfertasMes} fallback="No se pudieron cargar los turnos del mes" />
               ) : (
                 <MonthCalendar
                   weeks={mesWeeks}
@@ -559,16 +555,12 @@ export default function TurnosScreen() {
             ) : isNomina && esErrorTurnosExtraApagadas(errOfertasMes) ? (
               <TurnosExtraOptIn />
             ) : errorOfertasMes || errorMios ? (
-              <View className="items-center justify-center gap-2 py-10">
-                <Ionicons name="warning-outline" size={32} color={COLORS.placeholder} />
-                <Text className="text-sm text-muted-foreground">No se pudieron cargar los turnos del mes</Text>
-                <Button
-                  label="Reintentar"
-                  onPress={() => { refetchOfertasMes(); refetchMios(); }}
-                  variant="secondary"
-                  size="sm"
-                />
-              </View>
+              <ErrorState
+                compact
+                error={errOfertasMes ?? errMios}
+                onRetry={() => Promise.all([refetchOfertasMes(), refetchMios()])}
+                fallback="No se pudieron cargar los turnos del mes"
+              />
             ) : (
               <MonthCalendar
                 weeks={mesWeeks}
@@ -667,13 +659,7 @@ export default function TurnosScreen() {
             loadingMios ? (
               <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
             ) : errorMios ? (
-              <View className="flex-1 items-center justify-center gap-3 px-6">
-                <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-                <Text className="text-base font-semibold text-foreground">
-                  {apiErrorMessage(errMios, 'Error al cargar turnos')}
-                </Text>
-                <Button label="Reintentar" onPress={() => refetchMios()} variant="secondary" />
-              </View>
+              <ErrorState error={errMios} onRetry={refetchMios} fallback="Error al cargar turnos" />
             ) : (
               <FlatList
                 data={turnosDelDia}
@@ -698,13 +684,7 @@ export default function TurnosScreen() {
             ) : isNomina && esErrorTurnosExtraApagadas(errOfertas) ? (
               <TurnosExtraOptIn />
             ) : errorOfertas ? (
-              <View className="flex-1 items-center justify-center gap-3 px-6">
-                <Ionicons name="warning-outline" size={48} color={COLORS.placeholder} />
-                <Text className="text-base font-semibold text-foreground">
-                  {apiErrorMessage(errOfertas, 'Error al cargar ofertas')}
-                </Text>
-                <Button label="Reintentar" onPress={() => refetchOfertas()} variant="secondary" />
-              </View>
+              <ErrorState error={errOfertas} onRetry={refetchOfertas} fallback="Error al cargar ofertas" />
             ) : (
               <FlatList
                 data={ofertasFiltradas}

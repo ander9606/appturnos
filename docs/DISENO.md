@@ -93,7 +93,7 @@ En móvil, `const theme = useTheme()` (de `lib/theme.ts`) devuelve la paleta seg
 
 ---
 
-## 5. Estados de carga
+## 5. Estados de carga y de error
 
 Hay **tres** herramientas. Elige según qué estás esperando:
 
@@ -154,6 +154,38 @@ Bloques grises que laten (opacidad 100 % ↔ 45 %, 1.4 s) en el lugar del conten
 3. No pongas texto "Cargando…" suelto: usa `PageLoading` (web) o `Spinner` (móvil), que ya llevan etiqueta de accesibilidad.
 4. No uses spinner a pantalla completa cuando ya hay datos en caché y solo refrescas: usa `RefreshControl` (móvil) o deja el contenido visible.
 
+### 5.4 Estados de error
+
+El **planeta del logo con el anillo fuera de lugar** es la cara de los errores de Zaturno (el nombre suena a Saturno: perder la conexión = perder el anillo). Hay tres casos, elegidos automáticamente según el error:
+
+| Tipo | Cuándo | Ilustración | Texto |
+|---|---|---|---|
+| `offline` | Sin red: `fetch` lanza `TypeError("Network request failed")` (móvil) / axios sin `response` o `navigator.onLine === false` (web) | **Anillo caído** en el suelo | "Sin conexión — Se nos cayó el anillo…" |
+| `server` | El backend respondió 5xx | **Anillo torcido y roto**, con chispas | "Algo se torció — Tuvimos un problema de nuestro lado…" |
+| `generic` | 4xx u otro | Anillo torcido | "No pudimos cargar esto" + **mensaje real del backend** |
+
+| | Móvil | Web |
+|---|---|---|
+| Componente | `components/ui/ErrorState.tsx` | `shared/components/ErrorState.tsx` |
+| Dibujo | `components/ui/PlanetIllustration.tsx` (react-native-svg) | `shared/components/PlanetIllustration.tsx` |
+| Clasificación | `errorKind()` en `lib/apiErrorMessage.ts` (con prueba en `lib/__tests__/apiErrorMessage.test.ts`) | `errorKind()` dentro del componente |
+| Textos | `errors.*` en `lib/i18n/es-CO.json` | `COPY` en el componente |
+
+```tsx
+// Móvil
+{isLoading ? <SkeletonList /> : isError ? <ErrorState error={error} onRetry={refetch} fallback="Error al cargar turnos" /> : <Lista />}
+<ErrorState compact … />   // dentro de una tarjeta o sección, sin ocupar toda la pantalla
+
+// Web
+{isError ? <ErrorState error={error} onRetry={refetch} /> : …}
+```
+
+- **Prohibido** armar bloques de error a mano (ícono `warning-outline` + "Error al cargar" + "Reintentar"): usa `ErrorState`, que ya trae reintento con spinner, `role="alert"` y la ilustración oculta a lectores de pantalla.
+- Pasa siempre `error` (no solo `isError`): sin él no se puede distinguir "sin internet" de "falló el servidor".
+- Los dos `PlanetIllustration` (móvil y web) dibujan lo mismo con las mismas coordenadas: si cambias uno, cambia el otro.
+- Aviso global (móvil, `StatusBanner`): barra **oscura** "Sin conexión · mostrando lo último que guardamos" (17:1) o **rojo oscuro** "No pudimos cargar todo" (4.8:1). Nunca blanco sobre ámbar (2.15:1).
+- `ErrorBoundary` (error inesperado de código) usa el anillo torcido con el título "Algo se torció".
+
 ---
 
 ## 6. Accesibilidad
@@ -187,8 +219,8 @@ Reglas:
 
 - [ ] Sin hex literales nuevos (busca `#[0-9A-Fa-f]{6}` en lo que tocaste).
 - [ ] Si agregaste un color: está en `tailwind.config.js`, `designTokens.ts`, `index.css` **y** en §2.2.
-- [ ] Sin `ActivityIndicator`, `Loader2` ni texto "Cargando…" nuevos.
-- [ ] Listas: skeleton al cargar, `ErrorState` con reintento, `EmptyState` si no hay datos.
+- [ ] Sin `ActivityIndicator`, `Loader2`, texto "Cargando…" ni bloques de error armados a mano.
+- [ ] Listas: skeleton al cargar, `ErrorState` (pasando `error`) con reintento, `EmptyState` si no hay datos.
 - [ ] Texto pequeño cumple contraste (§6).
 - [ ] Strings visibles por `t('clave')` en móvil.
 - [ ] Móvil: `npm run type-check` y `npm run lint`. Web: `npm run build`.
@@ -207,7 +239,10 @@ Reglas:
 7. **Íconos.** Web usa `lucide-react`, móvil usa `Ionicons`. Unificar estilo (grosor, tamaño) o elegir un solo set.
 8. **Identidad propia.** Definir 3-4 rasgos distintivos (forma recurrente, sombra, ilustración para estados vacíos) y documentarlos en esta guía.
 9. **Spinner a nivel de marca.** Evaluar una animación con la forma del logo (Lottie) para el splash y la carga inicial.
-10. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
+10. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
+11. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
+12. **Más ilustraciones de marca.** Reutilizar el planeta en estados vacíos (sin turnos, sin equipo) y en el 404 de la web.
+13. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
 ---
 
