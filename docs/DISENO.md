@@ -195,6 +195,8 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 | Avisar algo que el usuario **debe leer** (error de una acción, dato faltante) | `showAlert(título, mensaje, tipo)` | `lib/alertDialog.ts` | `showAlert('Campo requerido', 'El email es obligatorio.', 'warning')` |
 | **Preguntar** (cancelar / confirmar) | `confirm({…})` → `Promise<boolean>` | `lib/confirmDialog.ts` | `if (await confirm({ title, destructive: true })) …` |
 | Feedback **breve y no bloqueante** | `showToast(mensaje, tipo)` | `lib/toast.ts` | `showToast('Turno confirmado')` |
+| Elegir entre **3 o más opciones** (menú desde abajo) | `actionSheet({…})` → `key` o `null` | `lib/actionSheet.ts` | `await actionSheet({ title: 'Foto', items: [{ key: 'camara', label: 'Tomar foto', icon: 'camera-outline' }] })` |
+| Elegir/quitar una **foto** (cámara, galería) | `elegirFotoConMenu({ title, quitarLabel? })` | `lib/pickImage.ts` | `const b64 = await elegirFotoConMenu({ title: 'Logo', quitarLabel: 'Quitar logo' })` |
 | Feedback con **acción** y cuenta atrás ("Deshacer") | `actionToast()` | `lib/actionToast.ts` | — |
 
 **Tipos** (`FeedbackVariant`, definidos en `components/ui/feedback.ts`; el ícono va en un círculo de color suave):
@@ -210,11 +212,13 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 - `confirm` para elegir entre dos caminos también vale: `confirmLabel`/`cancelLabel` permiten textos como "Ver detalle" / "Volver a lista".
 - Un error de una **acción del usuario** va en `showAlert`; el feedback de que algo **salió bien** va en `showToast`. No pongas un diálogo para un éxito.
 - Todos llevan `accessibilityRole` (`alert`/`header`) y los diálogos `accessibilityViewIsModal`. Texto, ícono y tipo siempre juntos: nunca solo color.
+- `actionSheet`: cada opción lleva ícono en círculo (naranja suave; `destructive: true` → rojo) y el botón "Cancelar" va siempre abajo. Resuelve `null` si se cancela o se toca fuera. `message` sirve para avisos con acciones ("Revisa tu turno" + "Ir a Mi plan").
+- `elegirFotoConMenu` resuelve `string` (base64) si eligió imagen, `null` si eligió quitarla y `undefined` si canceló o no dio permiso: `if (r !== undefined) subir(r)` cubre los tres casos. Reutilízalo en vez de repetir el flujo de `expo-image-picker`.
 - Los diálogos comparten el marco `components/ui/DialogCard.tsx` (fondo oscuro + tarjeta con entrada de resorte).
 
-**Excepciones que siguen con `Alert.alert` nativo** (pendientes, ver §8):
+**Excepción que sigue con `Alert.alert` nativo** (pendiente, ver §8):
 1. **Archivos con un `<Modal>` de React Native** (19 archivos, ~75 llamadas). En iOS un `Modal` abierto puede impedir que se muestre otro desde el layout raíz, y no se pudo comprobar en dispositivo. Mientras tanto, ahí se conserva el nativo, que siempre aparece encima.
-2. **Menús de opciones** (cámara/galería en perfil y logo de empresa) y los avisos con botones dinámicos (`turno/nuevo`): necesitan un *bottom sheet*, no un diálogo.
+   Pendientes ahí: `oferta/[id]` ("Hay trabajadores sin marcar salida", ideal para `actionSheet`), `ReportarNovedadModal` ("Adjuntar foto", ideal para `elegirFotoConMenu`) y `nomina-ingreso`.
 
 ---
 
@@ -272,10 +276,9 @@ Reglas:
 10. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
 11. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
 12. **Más ilustraciones de marca.** Reutilizar el planeta en estados vacíos (sin turnos, sin equipo) y en el 404 de la web.
-13. **`Alert.alert` restantes en móvil (~85 llamadas).** Probar en un iPhone si un diálogo del layout raíz aparece sobre un `Modal` abierto; si funciona, migrar los 19 archivos con `Modal` (mismo script). Si no, montar el diálogo dentro de cada `Modal` o sustituir esos `Modal` por pantallas/`bottom sheet`.
-14. **Menús de opciones** (foto de perfil, logo): reemplazar los `Alert.alert` con botones por un *bottom sheet* de marca.
-15. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
-16. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
+13. **`Alert.alert` restantes en móvil (~85 llamadas).** Probar en un iPhone si un diálogo del layout raíz aparece sobre un `Modal` abierto; si funciona, migrar los 19 archivos con `Modal` (mismo script; ahí se estrenan `actionSheet` y `elegirFotoConMenu` en `oferta/[id]` y `ReportarNovedadModal`). El `ActionSheet` también es un `Modal`, así que tiene la misma restricción. Si no, montar el diálogo dentro de cada `Modal` o sustituir esos `Modal` por pantallas/`bottom sheet`.
+14. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
+15. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
 ---
 

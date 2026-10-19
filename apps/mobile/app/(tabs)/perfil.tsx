@@ -6,6 +6,7 @@
  * - Cambiar su contraseña
  * - Cerrar sesión
  */
+import { elegirFotoConMenu } from '@/lib/pickImage';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -16,7 +17,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Switch,
@@ -347,31 +347,9 @@ export default function PerfilScreen() {
 
   // ── Foto de perfil ─────────────────────────────────────────────────
 
-  const handleCambiarFoto = () => {
-    Alert.alert('Foto de perfil', undefined, [
-      {
-        text: 'Tomar foto',
-        onPress: async () => {
-          const ImagePicker = await import('expo-image-picker');
-          const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { showAlert('Permiso requerido', 'Permite el acceso a la cámara.', 'warning'); return; }
-          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
-          if (!result.canceled && result.assets[0]?.base64) _subirFoto(result.assets[0].base64);
-        },
-      },
-      {
-        text: 'Galería',
-        onPress: async () => {
-          const ImagePicker = await import('expo-image-picker');
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { showAlert('Permiso requerido', 'Permite el acceso a la galería.', 'warning'); return; }
-          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
-          if (!result.canceled && result.assets[0]?.base64) _subirFoto(result.assets[0].base64);
-        },
-      },
-      usuario?.foto_perfil ? { text: 'Quitar foto', style: 'destructive' as const, onPress: () => _subirFoto(null) } : null,
-      { text: 'Cancelar', style: 'cancel' as const },
-    ].filter(Boolean) as any[]);
+  const handleCambiarFoto = async () => {
+    const foto = await elegirFotoConMenu({ title: 'Foto de perfil', quitarLabel: usuario?.foto_perfil ? 'Quitar foto' : undefined });
+    if (foto !== undefined) _subirFoto(foto);
   };
 
   const _subirFoto = async (b64: string | null) => {

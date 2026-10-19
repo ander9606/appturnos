@@ -3,13 +3,14 @@
  * Campos: logo, razón social, NIT, ciudad, actividad, descripción,
  *         acepta_postulaciones (visible en directorio marketplace).
  */
+import { elegirFotoConMenu } from '@/lib/pickImage';
 import { confirm } from '@/lib/confirmDialog';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, Switch, Alert, Pressable, Animated,
+  View, Text, ScrollView, Switch, Pressable, Animated,
   KeyboardAvoidingView, Platform, Image, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -168,31 +169,9 @@ export default function MiEmpresaScreen() {
 
   // ── Logo — mismo flujo de cámara/galería que la foto de perfil de usuario ──
 
-  const handleCambiarLogo = () => {
-    Alert.alert('Logo de la empresa', undefined, [
-      {
-        text: 'Tomar foto',
-        onPress: async () => {
-          const ImagePicker = await import('expo-image-picker');
-          const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { showAlert('Permiso requerido', 'Permite el acceso a la cámara.', 'warning'); return; }
-          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
-          if (!result.canceled && result.assets[0]?.base64) _subirLogo(result.assets[0].base64);
-        },
-      },
-      {
-        text: 'Galería',
-        onPress: async () => {
-          const ImagePicker = await import('expo-image-picker');
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { showAlert('Permiso requerido', 'Permite el acceso a la galería.', 'warning'); return; }
-          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
-          if (!result.canceled && result.assets[0]?.base64) _subirLogo(result.assets[0].base64);
-        },
-      },
-      logoUrl ? { text: 'Quitar logo', style: 'destructive' as const, onPress: () => _subirLogo(null) } : null,
-      { text: 'Cancelar', style: 'cancel' as const },
-    ].filter(Boolean) as any[]);
+  const handleCambiarLogo = async () => {
+    const logo = await elegirFotoConMenu({ title: 'Logo de la empresa', quitarLabel: logoUrl ? 'Quitar logo' : undefined });
+    if (logo !== undefined) _subirLogo(logo);
   };
 
   const _subirLogo = async (b64: string | null) => {

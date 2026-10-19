@@ -6,6 +6,7 @@
  * 2. Rehidratar la sesión desde SecureStore
  * 3. Redirigir a (auth) o (tabs) según el estado de autenticación
  */
+import { ActionSheet } from '@/components/ui/ActionSheet';
 import '../global.css';
 
 import React, { useEffect } from 'react';
@@ -197,6 +198,7 @@ function RootLayout() {
         <AnuncioTurno />
         <InvitacionFlotanteCard />
         <ConfirmDialog />
+        <ActionSheet />
         <AlertDialog />
         <AuthGuard>
           {/* Default: header visible, slide from right.
