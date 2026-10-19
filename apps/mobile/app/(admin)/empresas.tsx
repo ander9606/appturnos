@@ -2,15 +2,14 @@
  * Lista de todas las empresas — panel super_admin.
  * Permite buscar, filtrar por estado y navegar al detalle.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

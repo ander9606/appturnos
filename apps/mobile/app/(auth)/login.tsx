@@ -7,11 +7,11 @@
  *   3. Si OK → Expo Router redirige automáticamente a (tabs) via _layout.tsx
  *   4. Si error → mensaje en pantalla
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,

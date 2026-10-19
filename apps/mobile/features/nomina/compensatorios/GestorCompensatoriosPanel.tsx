@@ -4,9 +4,10 @@
  * dentro del rango de 28 días que calcula el backend (RangoFechasCompensatorio).
  */
 
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';

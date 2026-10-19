@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';

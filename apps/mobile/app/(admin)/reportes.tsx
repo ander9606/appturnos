@@ -2,12 +2,12 @@
  * Tab de Reportes globales — panel super_admin.
  * Muestra estadísticas detalladas del sistema con visualizaciones básicas.
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,

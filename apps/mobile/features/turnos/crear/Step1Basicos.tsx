@@ -1,11 +1,10 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Switch,
   Platform,

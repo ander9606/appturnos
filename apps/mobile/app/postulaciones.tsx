@@ -8,13 +8,13 @@
  * realmente necesita acción); Rechazados se filtra client-side por
  * rechazado_por, porque comparte estado='cancelado' con las cancelaciones.
  */
+import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   SectionList,
   TouchableOpacity,
   RefreshControl,

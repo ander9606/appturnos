@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Linking, Platform, RefreshControl } from 'react-native';
+import { View, TouchableOpacity, ScrollView, Linking, Platform, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { PuntoMarcaje, DescansoCompensatorio } from '@api-client';

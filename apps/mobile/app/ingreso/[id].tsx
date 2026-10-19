@@ -6,13 +6,13 @@
  * el trabajador está dentro del radio autorizado según el tipo de
  * geofence configurado en el cargo (oferta, fijo, zonal, libre).
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';

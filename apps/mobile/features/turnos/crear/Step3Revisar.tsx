@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';

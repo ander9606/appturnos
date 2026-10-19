@@ -2,16 +2,15 @@
  * Detalle y edición de una empresa — panel super_admin.
  * Permite ver métricas, editar campos y cambiar estado activo/inactivo.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

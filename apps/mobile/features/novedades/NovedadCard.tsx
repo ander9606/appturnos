@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, Modal, Linking } from 'react-native';
+import { View, Image, TouchableOpacity, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Novedad, TipoNovedad } from '@api-client';
 

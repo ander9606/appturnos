@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { PlanetIllustration } from '@/components/ui/PlanetIllustration';
 

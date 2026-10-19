@@ -3,9 +3,10 @@
  * trabajador, mostrado al gestor en el detalle de turno (confirmado / en
  * curso) en vez del CTA de marcaje que no le corresponde.
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, TouchableOpacity, Linking } from 'react-native';
+import { View, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { StarRating } from '../StarRating';

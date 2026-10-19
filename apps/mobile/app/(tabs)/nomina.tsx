@@ -10,12 +10,12 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, FlatList, ScrollView, TouchableOpacity,
-  RefreshControl, } from 'react-native';
+  View, FlatList, ScrollView, TouchableOpacity, RefreshControl, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 

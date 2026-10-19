@@ -2,13 +2,13 @@
  * TrabajadorForm — shared create/edit form.
  * Uses React Hook Form + Zod. Caller owns the submit handler.
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import { HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS } from '@api-client';
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   Pressable,
   ScrollView,
   FlatList,

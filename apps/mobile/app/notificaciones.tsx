@@ -3,11 +3,11 @@
  * Accesible desde la campana del header en cualquier tab.
  */
 
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
   Pressable,
   RefreshControl,

@@ -2,6 +2,7 @@
  * Layout del panel de super_admin.
  * Tabs: Dashboard, Empresas, Reportes.
  */
+import { INTER } from '@/lib/tipografia';
 import { COLORS } from '@/lib/designTokens';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,7 +42,7 @@ export default function AdminLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '600',
+          fontFamily: INTER[600],
         },
       }}
     >

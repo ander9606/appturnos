@@ -1,10 +1,11 @@
 /**
  * LiquidacionRow — fila de trabajador en la vista de liquidación (jefe/admin)
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { LiquidacionLinea, DescansoCompensatorio, DescuentoNomina, TipoDescuento } from '@api-client';

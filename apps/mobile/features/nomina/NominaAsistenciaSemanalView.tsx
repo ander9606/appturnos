@@ -2,10 +2,11 @@
  * Vista semanal de asistencia para trabajador_nomina.
  * Muestra los 7 días de la semana con entrada/salida de cada registro.
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, RefreshControl } from 'react-native';
+import { View, ScrollView, RefreshControl } from 'react-native';
 
 import { usePeriodos, useRegistros } from '@/features/nomina/useNomina';
 import { useTheme } from '@/lib/theme';

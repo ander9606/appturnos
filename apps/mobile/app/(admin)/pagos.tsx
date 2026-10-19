@@ -3,13 +3,13 @@
  * Lista los eventos de pago recibidos vía webhook, con filtro por estado
  * y reintento manual para los que quedaron en error.
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,

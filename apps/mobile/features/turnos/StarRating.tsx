@@ -5,9 +5,10 @@
  *  - mode="display"  → solo lectura, muestra el valor recibido
  *  - mode="input"    → interactivo, el usuario selecciona 1–5
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 
 const STARS = [1, 2, 3, 4, 5];
 

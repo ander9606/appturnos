@@ -7,11 +7,11 @@
  *   Paso 2 — verificación de los dos códigos OTP
  *             → al confirmar ambos, crea la cuenta y autentica
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,

@@ -1,10 +1,9 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput,
-  Alert, Linking, Platform, Switch,
-  Modal, Pressable,
+  View, ScrollView, TouchableOpacity, Alert, Linking, Platform, Switch, Modal, Pressable,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';

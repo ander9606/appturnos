@@ -6,10 +6,11 @@
  * Rojo   → fuera de rango (> 200 m)
  * Gris   → calculando / sin GPS
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Linking, TouchableOpacity } from 'react-native';
+import { View, Linking, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { formatDistance, type GeofenceStatus } from '@/lib/geo';

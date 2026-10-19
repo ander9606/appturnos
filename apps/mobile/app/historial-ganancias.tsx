@@ -6,11 +6,12 @@
  *                        se muestra aparte; lo que varía período a período son
  *                        las horas con recargo)
  */
+import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, Text, FlatList, RefreshControl, TouchableOpacity, Pressable, Platform } from 'react-native';
+import { View, FlatList, RefreshControl, TouchableOpacity, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

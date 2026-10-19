@@ -1,4 +1,5 @@
-import { View, Text } from 'react-native';
+import { Text } from '@/components/ui/Text';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAlertStore } from '@/lib/alertDialog';
 import { Button } from './Button';

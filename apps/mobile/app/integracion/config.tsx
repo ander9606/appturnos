@@ -2,15 +2,14 @@
  * Pantalla de configuración de la integración logiq360.
  * Solo visible para admin_empresa.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   Pressable,
   Switch,
   RefreshControl,

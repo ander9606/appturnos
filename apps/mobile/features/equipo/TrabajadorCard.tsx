@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import type { Trabajador } from '@api-client';
 import { Avatar } from '@/components/ui/Avatar';
 import { THEME_COLORS, COLORS } from '@/lib/designTokens';

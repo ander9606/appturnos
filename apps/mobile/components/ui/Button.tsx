@@ -1,9 +1,9 @@
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   TouchableOpacity,
-  Text,
   type TouchableOpacityProps,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';

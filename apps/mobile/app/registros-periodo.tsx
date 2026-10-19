@@ -5,12 +5,12 @@
  * Permite editar tipo_dia y novedad de registros existentes, y crear
  * registros nuevos para días sin marcaje.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, SectionList, TouchableOpacity, Modal, Pressable, TextInput, Alert, KeyboardAvoidingView, Platform,
-  ScrollView,
+  View, SectionList, TouchableOpacity, Modal, Pressable, Alert, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';

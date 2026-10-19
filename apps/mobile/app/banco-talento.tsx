@@ -1,7 +1,8 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, FlatList } from 'react-native';
+import { View, Pressable, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

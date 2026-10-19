@@ -5,13 +5,13 @@
  * de los registros de nómina de los trabajadores.
  */
 
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
   Alert,

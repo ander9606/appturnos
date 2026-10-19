@@ -8,11 +8,11 @@
  *   3. Si OK → queda autenticado, _layout.tsx redirige a (tabs)
  *   4. Si error → mensaje en pantalla
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,

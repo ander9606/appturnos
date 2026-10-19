@@ -7,15 +7,14 @@
  *   jefe_nomina   → edita la ficha (nómina y turnos); el sueldo y la hora de entrada solo en nómina; no el tipo ni los datos de pago
  *   nomina        → solo lectura
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
   Alert,
   Linking,
   Modal,

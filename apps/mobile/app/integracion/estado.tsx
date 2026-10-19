@@ -2,12 +2,12 @@
  * Estado de la cola de eventos de integración logiq360.
  * Auto-refresca cada 30 s (configurado en useEstadoIntegracion).
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,

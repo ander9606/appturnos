@@ -1,9 +1,9 @@
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS } from '@api-client';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
 } from 'react-native';

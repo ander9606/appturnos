@@ -1,4 +1,5 @@
-import { View, Text } from 'react-native';
+import { Text } from '@/components/ui/Text';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/lib/designTokens';
 import { useConfirmStore } from '@/lib/confirmDialog';

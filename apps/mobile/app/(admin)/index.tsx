@@ -2,12 +2,12 @@
  * Dashboard del super_admin.
  * Muestra las métricas globales del sistema en tiempo real.
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,

@@ -9,8 +9,9 @@
  *   5. Selector de período
  */
 
+import { Text } from '@/components/ui/Text';
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
 import { COLORS,HOUR_TYPE_COLORS } from '@/lib/designTokens';

@@ -9,11 +9,12 @@
  * dentro de la app — en iOS solo se muestra el uso del plan, sin precios
  * ni botón de pago. Sigue disponible tal cual en Android y en la web.
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Linking, Platform } from 'react-native';
+import { View, ScrollView, Pressable, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useQuery, useMutation } from '@tanstack/react-query';

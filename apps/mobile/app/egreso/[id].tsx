@@ -5,13 +5,13 @@
  * Muestra el tiempo transcurrido desde el ingreso y captura
  * la firma digital para confirmar la salida.
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';

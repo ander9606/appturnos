@@ -79,10 +79,28 @@ En móvil, `const theme = useTheme()` (de `lib/theme.ts`) devuelve la paleta seg
 
 ## 3. Tipografía
 
-- **Web:** `Inter` (declarada en `index.css`). ⚠️ *Hoy no se carga* (§8): cae a la fuente del sistema.
-- **Móvil:** fuente del sistema (`System`).
-- Texto de cuerpo: `text-base`; secundario: `text-sm text-muted-foreground`; títulos: `font-semibold`/`font-bold`.
-- No fijar tamaños en px sueltos; usar la escala de Tailwind.
+**Inter** en web y móvil, cargada de verdad (no depende de la fuente del dispositivo).
+
+| | Web | Móvil |
+|---|---|---|
+| Fuente | `@fontsource-variable/inter` (variable, solo se descarga el subconjunto que se usa: latino ≈ 48 kB, cubre tildes y ñ) | `@expo-google-fonts/inter`: 400, 500, 600, 700 y 800 (≈ 1.7 MB en la app) |
+| Dónde se carga | `import '@fontsource-variable/inter'` en `src/main.tsx`; token `--font-family-sans` en `index.css` | `useFonts` en `app/_layout.tsx` (la pantalla de arranque se retiene hasta que esté lista) |
+| Cómo se usa | Normal: `font-semibold`, `font-bold`… | **Importa `Text` y `TextInput` de `@/components/ui/Text`**, nunca de `react-native` (lo impide el lint) |
+
+**Por qué el `Text` propio en móvil:** en React Native cada peso de una fuente personalizada es una familia distinta (`Inter_600SemiBold`), no un `fontWeight`. `components/ui/Text.tsx` traduce `font-semibold` o `fontWeight: '600'` a la familia correcta (lógica en `lib/tipografia.ts`, con pruebas) y fuerza `fontWeight: 'normal'` para que Android no duplique la negrita. Si un estilo trae su propia `fontFamily`, se respeta.
+
+| Clase | Peso | Familia móvil |
+|---|---|---|
+| *(sin clase)* / `font-normal` | 400 | `Inter_400Regular` |
+| `font-medium` | 500 | `Inter_500Medium` |
+| `font-semibold` | 600 | `Inter_600SemiBold` |
+| `font-bold` | 700 | `Inter_700Bold` |
+| `font-extrabold` | 800 | `Inter_800ExtraBold` |
+
+- Fuera de `Text` (títulos de cabecera, etiquetas de pestañas, `Alert` nativo) la fuente se pone con `fontFamily: INTER[600]` (de `lib/tipografia.ts`), no con `fontWeight`.
+- Si necesitas otro peso (300, 900), agrégalo en tres sitios: la tabla `INTER` de `lib/tipografia.ts`, el `useFonts` de `app/_layout.tsx` y esta tabla.
+- Texto de cuerpo: `text-base`; secundario: `text-sm text-muted-foreground`; títulos: `font-semibold`/`font-bold`. No fijar tamaños en px sueltos; usar la escala de Tailwind.
+- Un texto que no pase por `Text` (librerías de terceros, texto nativo del sistema) seguirá en la fuente del dispositivo: es esperado.
 
 ## 4. Forma y espaciado
 
@@ -256,7 +274,7 @@ Reglas:
 - [ ] Sin `ActivityIndicator`, `Loader2`, texto "Cargando…", bloques de error armados a mano ni `Alert.alert` nuevos (§5.5).
 - [ ] Listas: skeleton al cargar, `ErrorState` (pasando `error`) con reintento, `EmptyState` si no hay datos.
 - [ ] Texto pequeño cumple contraste (§6).
-- [ ] Strings visibles por `t('clave')` en móvil.
+- [ ] Strings visibles por `t('clave')` en móvil; `Text`/`TextInput` de `@/components/ui/Text` (§3).
 - [ ] Móvil: `npm run type-check` y `npm run lint`. Web: `npm run build`.
 - [ ] Si cambiaste una regla de este documento, está actualizada aquí.
 
@@ -264,8 +282,8 @@ Reglas:
 
 ## 8. Deuda conocida (próximos pasos, por orden de impacto)
 
-1. **Hex sueltos restantes (~124 en móvil):** sobre todo `#000` (sombras), tintes claros (`#F1F5F9`, `#FEF3C7`, `#EFF6FF`), violetas (`#8B5CF6`, `#7C3AED`), `#475569`, y hex con alfa (`#6366F11A`). Decidir cuáles pasan a token y cuáles son de un solo uso.
-2. **Inter no se carga.** Web: añadir `@fontsource-variable/inter`. Móvil: `expo-font` + `useFonts`. Hasta entonces la tipografía varía por dispositivo.
+1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes y que el código compila, pero no se vio en pantalla: revisar que no haya texto cortado por la altura de línea de Inter, que la negrita de Android no salga doble y que el arranque no parpadee.
+2. **Hex sueltos restantes (~124 en móvil):** sobre todo `#000` (sombras), tintes claros (`#F1F5F9`, `#FEF3C7`, `#EFF6FF`), violetas (`#8B5CF6`, `#7C3AED`), `#475569`, y hex con alfa (`#6366F11A`). Decidir cuáles pasan a token y cuáles son de un solo uso.
 3. **Skeleton en más pantallas.** Faltan Nómina, Notificaciones, Historial de ganancias, Dashboard de asistencia y las páginas web de Nómina, Configuración y Admin (hoy usan `PageLoading`/`Spinner`).
 4. **Skeletons con forma propia.** Detalle de turno, perfil de trabajador y tarjetas de nómina usan spinner porque su forma no es la tarjeta genérica.
 5. **Contraste de marca.** Evaluar oscurecer ligeramente `primary` o usar `primary-600` en botones (4.09 → casi AA) sin perder identidad.

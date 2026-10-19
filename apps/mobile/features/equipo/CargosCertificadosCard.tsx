@@ -3,10 +3,11 @@
  * ya activo (trabajador_empresa existe). Estos cargos son los que filtran
  * qué ofertas ve el trabajador (ofertas.model.js → listarMultiEmpresa).
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Pressable, Modal, Alert, ScrollView } from 'react-native';
+import { View, TouchableOpacity, Pressable, Modal, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   useCargosTrabajador,

@@ -38,7 +38,7 @@ module.exports = {
         border: '#E2E8F0',
       },
       fontFamily: {
-        sans: ['System'],
+        sans: ['Inter_400Regular'], // el peso lo resuelve components/ui/Text.tsx (docs/DISENO.md §3)
       },
       borderRadius: {
         sm:   '4px',

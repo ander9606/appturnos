@@ -4,11 +4,12 @@
  *   - Asistencia: turnos por trabajador y días de nómina
  *   - Costos: costo de mano de obra (turnos + nómina)
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, Pressable, Platform,
+  View, ScrollView, Pressable, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';

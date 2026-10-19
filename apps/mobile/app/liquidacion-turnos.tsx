@@ -5,13 +5,13 @@
  * completados en el período seleccionado.  Cada card es expandible para
  * ver el desglose turno por turno (pago base + extra + total).
  */
+import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
-  Text,
   FlatList,
   TouchableOpacity,
   RefreshControl,

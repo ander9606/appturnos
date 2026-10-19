@@ -5,13 +5,13 @@
  * según empresas.tipo_liquidacion) con el total a cobrar, horas
  * trabajadas y badge de turno extendido.
  */
+import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
-  RefreshControl, Modal, Platform,
+  View, FlatList, TouchableOpacity, RefreshControl, Modal, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';

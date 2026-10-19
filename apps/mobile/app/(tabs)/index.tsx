@@ -7,12 +7,12 @@
  *
  * Colores: naranja (trabajador_turnos), verde (trabajador_nomina), azul (gestores).
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,

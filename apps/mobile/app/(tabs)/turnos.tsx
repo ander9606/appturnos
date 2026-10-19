@@ -1,14 +1,13 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
-  Text,
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

@@ -1,4 +1,5 @@
-import { View, Text } from 'react-native';
+import { Text } from '@/components/ui/Text';
+import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import type { Rol } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';

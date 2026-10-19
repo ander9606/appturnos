@@ -8,9 +8,10 @@
  *   • Resumen semanal
  */
 
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import { PeriodoBadge } from '../../PeriodoBadge';

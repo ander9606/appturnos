@@ -6,10 +6,11 @@
  * - Alerta nativa de hidratación/descanso cada 4 h trabajadas.
  */
 
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Alert, TouchableOpacity, ScrollView, Modal, TextInput, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Alert, TouchableOpacity, ScrollView, Modal, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

@@ -8,6 +8,9 @@
  */
 import { ActionSheet } from '@/components/ui/ActionSheet';
 import '../global.css';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
+import { INTER } from '@/lib/tipografia';
 
 import React, { useEffect } from 'react';
 import { LogBox } from 'react-native';
@@ -185,9 +188,18 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   );
 }
 
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 // ── Root layout ───────────────────────────────────────────────────────────
 
 function RootLayout() {
+  // Inter se carga una vez; la pantalla de arranque se retiene hasta que esté lista (sin parpadeo de fuente).
+  // Si la carga falla, la app sigue con la fuente del sistema en vez de quedarse en blanco.
+  const [fontsReady, fontError] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold });
+  const fontsDone = fontsReady || !!fontError;
+  useEffect(() => { if (fontsDone) SplashScreen.hideAsync(); }, [fontsDone]);
+  if (!fontsDone) return null;
+
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
@@ -203,7 +215,7 @@ function RootLayout() {
         <AuthGuard>
           {/* Default: header visible, slide from right.
               Only exceptions are registered explicitly. */}
-          <Stack screenOptions={{ headerShown: true, animation: 'slide_from_right', headerBackButtonDisplayMode: 'minimal', headerBackTitle: '' }}>
+          <Stack screenOptions={{ headerShown: true, headerTitleStyle: { fontFamily: INTER[600] }, animation: 'slide_from_right', headerBackButtonDisplayMode: 'minimal', headerBackTitle: '' }}>
             {/* Tab groups — sin header (cada tab lo gestiona) */}
             <Stack.Screen name="(auth)"  options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)"  options={{ headerShown: false }} />

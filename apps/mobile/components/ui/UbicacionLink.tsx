@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import { useState } from 'react';
-import { TouchableOpacity, Text, Linking } from 'react-native';
+import { TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { geocodingApi } from '@api-client';
 

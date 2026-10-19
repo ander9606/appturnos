@@ -1,11 +1,10 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';

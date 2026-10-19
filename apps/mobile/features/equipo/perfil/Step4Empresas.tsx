@@ -1,11 +1,10 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

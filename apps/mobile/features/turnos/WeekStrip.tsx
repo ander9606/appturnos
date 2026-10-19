@@ -2,9 +2,10 @@
  * WeekStrip — strip de fechas scrollable continuo.
  * Muestra ~7 semanas, auto-centra en hoy, dots en días con turnos.
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useRef, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { bogotaToday } from '@/lib/formatters';
 import type { WeekDay } from './turnosUtils';
 

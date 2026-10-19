@@ -7,13 +7,13 @@
  *  - Invitaciones recibidas de empresas (pendientes de aceptación)
  *  - Buscador para solicitar nuevas empresas
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   TouchableOpacity,

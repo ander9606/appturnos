@@ -1,6 +1,7 @@
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import { useState } from 'react';
-import { Modal, View, Text, Alert } from 'react-native';
+import { Modal, View, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useInvitacionFlotanteStore } from '@/lib/invitacionFlotante';
 import { useAceptar, useRechazarVinculo } from '@/features/empresas/useTrabajadorEmpresa';

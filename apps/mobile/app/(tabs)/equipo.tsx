@@ -9,16 +9,15 @@
  *  - FAB "+" para crear nuevo trabajador
  *  - Navegar al detalle con opciones de editar / desactivar
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
   ScrollView,
-  TextInput,
   Pressable,
   RefreshControl,
 } from 'react-native';

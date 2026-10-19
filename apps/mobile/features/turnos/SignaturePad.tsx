@@ -6,11 +6,11 @@
  *
  * Requiere: react-native-svg (expo install react-native-svg)
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
-  Text,
   Modal,
   PanResponder,
   LayoutChangeEvent,

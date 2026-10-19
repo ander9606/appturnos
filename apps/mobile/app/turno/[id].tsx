@@ -7,13 +7,13 @@
  *   completado  → resumen de horas y pago
  *   cancelado / no_presentado / pendiente → informativo
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Linking,
   Platform,

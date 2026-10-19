@@ -3,13 +3,13 @@
  * logiq360. Muestra una sugerencia de match por nombre y permite elegir manualmente.
  * Solo visible para admin_empresa.
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,

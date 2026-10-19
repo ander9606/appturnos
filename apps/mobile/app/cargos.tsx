@@ -1,12 +1,11 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   FlatList,
   Pressable,
-  TextInput,
   Alert,
   Modal,
   KeyboardAvoidingView,

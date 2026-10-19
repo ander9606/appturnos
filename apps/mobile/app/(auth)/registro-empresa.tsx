@@ -2,11 +2,11 @@
  * Pantalla: Registro de empresa nueva
  * POST /api/auth/registro-empresa → crea empresa + admin_empresa → auto-login
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,

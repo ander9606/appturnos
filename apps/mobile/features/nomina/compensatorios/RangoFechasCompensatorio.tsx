@@ -7,9 +7,10 @@
  * el backend, así el cliente nunca puede seleccionar una fecha fuera de ley.
  */
 
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { useRangoCompensatorio } from './useCompensatorios';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';
 

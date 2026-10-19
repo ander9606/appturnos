@@ -7,12 +7,12 @@
  *  - Completadas → turnos finalizados con pago calculado
  *  - Canceladas  → rechazadas, canceladas o no presentadas
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,

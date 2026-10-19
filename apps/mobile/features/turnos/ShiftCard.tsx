@@ -4,9 +4,10 @@
  * Muestra: barra de color (estado) | título | fecha/hora | lugar | badge estado
  * Tap → onPress (navegar al detalle o expandir)
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Asignacion } from '@api-client';
 import { Badge } from '@/components/ui/Badge';

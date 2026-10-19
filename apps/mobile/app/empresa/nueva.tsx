@@ -1,6 +1,7 @@
 /**
  * Crear nueva empresa — panel super_admin.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { confirm } from '@/lib/confirmDialog';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -8,10 +9,8 @@ import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';

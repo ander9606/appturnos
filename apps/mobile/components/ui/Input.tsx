@@ -1,10 +1,11 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { forwardRef, useState } from 'react';
 import {
   View,
-  TextInput,
-  Text,
   TouchableOpacity,
+  // eslint-disable-next-line no-restricted-imports -- solo el TIPO de la instancia nativa, para el ref
+  type TextInput as RNTextInput,
   type TextInputProps,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +18,7 @@ interface InputProps extends TextInputProps {
   isPassword?: boolean;
 }
 
-export const Input = forwardRef<TextInput, InputProps>(
+export const Input = forwardRef<RNTextInput, InputProps>(
   ({ label, error, hint, isPassword, secureTextEntry, style, ...rest }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
 

@@ -4,16 +4,15 @@
  * Pantalla de descubrimiento: buscar, filtrar por ciudad y solicitar vínculo.
  * Se accede desde mis-empresas.tsx al tocar "Buscar empresa".
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   FlatList,
   ScrollView,
   Pressable,
-  TextInput,
   TouchableOpacity,
   Alert,
   Modal,

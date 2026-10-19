@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Switch,
+  View, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Switch,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

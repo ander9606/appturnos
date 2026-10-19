@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Modal, Pressable, Text, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '@/lib/designTokens';

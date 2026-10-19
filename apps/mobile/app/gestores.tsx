@@ -2,12 +2,13 @@
  * Gestores — lista de gestores (admin_empresa, jefe_turnos, jefe_nomina, nomina)
  * de la empresa. Permite editar, activar/desactivar y eliminar usuarios gestores.
  */
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
-  View, Text, ScrollView, Pressable, } from 'react-native';
+  View, ScrollView, Pressable, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';

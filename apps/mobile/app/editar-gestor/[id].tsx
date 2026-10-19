@@ -3,11 +3,12 @@
  * admin_empresa (una empresa puede tener varios, p.ej. socios). El backend
  * bloquea quitarle el rol de admin al único administrador activo.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, ScrollView,
+  View, Pressable, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';

@@ -3,10 +3,11 @@
  * Compartido entre asignaciones-lugar.tsx (vista masiva) y trabajador/[id].tsx
  * (edición puntual), ambos guardan vía el mismo PATCH /trabajadores/:id/marcacion.
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
+import { View, TouchableOpacity, Modal, Pressable, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useActualizarMarcacion } from './useEquipo';
 import { confirm } from '@/lib/confirmDialog';

@@ -6,6 +6,7 @@
  * - Cambiar su contraseña
  * - Cerrar sesión
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { elegirFotoConMenu } from '@/lib/pickImage';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -13,10 +14,8 @@ import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
   Switch,

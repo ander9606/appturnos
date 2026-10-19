@@ -3,6 +3,7 @@
  * Campos: logo, razón social, NIT, ciudad, actividad, descripción,
  *         acepta_postulaciones (visible en directorio marketplace).
  */
+import { Text } from '@/components/ui/Text';
 import { elegirFotoConMenu } from '@/lib/pickImage';
 import { confirm } from '@/lib/confirmDialog';
 import { showAlert } from '@/lib/alertDialog';
@@ -10,8 +11,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, Switch, Pressable, Animated,
-  KeyboardAvoidingView, Platform, Image, } from 'react-native';
+  View, ScrollView, Switch, Pressable, Animated, KeyboardAvoidingView, Platform, Image, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';

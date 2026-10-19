@@ -1,8 +1,8 @@
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   KeyboardAvoidingView,
   Platform,
   ScrollView,

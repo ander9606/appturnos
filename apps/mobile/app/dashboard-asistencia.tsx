@@ -5,11 +5,12 @@
  * con horas acumuladas en la semana vs límite legal (Ley 2101).
  */
 
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, RefreshControl,
+  View, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';

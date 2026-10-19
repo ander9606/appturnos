@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
-import { View, Text, Image, Pressable, Modal } from 'react-native';
+import { View, Image, Pressable, Modal } from 'react-native';
 import { getInitials } from '@/lib/formatters';
 import { COLORS,avatarColorForId } from '@/lib/designTokens';
 

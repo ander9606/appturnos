@@ -5,15 +5,14 @@
  * identificación, información personal, seguridad social,
  * datos bancarios y contacto de emergencia.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Pressable,
   KeyboardAvoidingView,

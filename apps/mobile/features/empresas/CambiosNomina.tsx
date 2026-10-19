@@ -3,8 +3,9 @@
  * entre mis-empresas.tsx (tarjeta en la lista) y InvitacionFlotanteCard.tsx
  * (aviso invasivo al recibir la invitación), para que ambos digan lo mismo.
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export const CAMBIOS_NOMINA: { tipo: 'pierde' | 'gana'; texto: string }[] = [

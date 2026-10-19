@@ -3,9 +3,10 @@
  * Usado tanto al crear turnos (LugarInput) como al crear puntos de marcaje
  * de nómina (puntos-marcaje.tsx) — mismo componente, dos puntos de entrada.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, Modal } from 'react-native';
+import { View, Pressable, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Circle, type LatLng } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';

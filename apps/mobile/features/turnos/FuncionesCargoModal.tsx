@@ -2,9 +2,10 @@
  * FuncionesCargoModal — ver (todos) / diligenciar (admin, jefe_turnos) el
  * listado de funciones que un cargo tiene en la empresa actual.
  */
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, TextInput, Modal, FlatList, Alert } from 'react-native';
+import { View, Pressable, Modal, FlatList, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 

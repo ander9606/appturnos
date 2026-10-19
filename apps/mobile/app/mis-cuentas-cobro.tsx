@@ -1,9 +1,10 @@
+import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, RefreshControl, } from 'react-native';
+  View, FlatList, TouchableOpacity, RefreshControl, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';

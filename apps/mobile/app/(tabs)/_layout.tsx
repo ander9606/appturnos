@@ -1,3 +1,4 @@
+import { INTER } from '@/lib/tipografia';
 import { Tabs } from 'expo-router';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -58,7 +59,7 @@ export default function TabsLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '600',
+          fontFamily: INTER[600],
         },
       }}
     >

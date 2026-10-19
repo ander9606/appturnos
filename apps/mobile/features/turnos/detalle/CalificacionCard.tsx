@@ -1,6 +1,7 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View } from 'react-native';
 
 import { StarRating } from '../StarRating';
 import { Button } from '@/components/ui/Button';

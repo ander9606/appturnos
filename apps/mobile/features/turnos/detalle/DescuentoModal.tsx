@@ -1,7 +1,8 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, Alert,
+  View, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

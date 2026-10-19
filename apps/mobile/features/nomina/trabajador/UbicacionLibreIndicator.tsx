@@ -5,9 +5,10 @@
  * distancia — solo se necesita CUALQUIER fix de ubicación antes de marcar,
  * para dejar registro de dónde se marcó (ver useNominaTrabajador).
  */
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
-import { View, Text, TouchableOpacity, Linking } from 'react-native';
+import { View, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { EstadoUbicacionLibre } from './useNominaTrabajador';
 

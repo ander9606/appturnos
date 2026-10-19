@@ -1,8 +1,8 @@
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
-  RefreshControl,
+  View, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 

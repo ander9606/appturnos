@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import type { Asignacion } from '@api-client';
 import { fmtRange } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';

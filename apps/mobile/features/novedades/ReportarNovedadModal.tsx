@@ -1,9 +1,9 @@
+import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  Modal, View, Text, TextInput, TouchableOpacity,
-  ScrollView, Alert, Image, Platform,
+  Modal, View, TouchableOpacity, ScrollView, Alert, Image, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiError } from '@api-client';

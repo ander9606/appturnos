@@ -5,10 +5,11 @@
  * Se cierra sola cuando ya no quedan pendientes (visible && lista no vacía).
  */
 
+import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Modal, Pressable, Alert, TouchableOpacity } from 'react-native';
+import { View, ScrollView, Modal, Pressable, Alert, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 

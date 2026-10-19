@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import { useEffect, useRef } from 'react';
-import { Animated, View, Text } from 'react-native';
+import { Animated, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useToastStore } from '@/lib/toast';

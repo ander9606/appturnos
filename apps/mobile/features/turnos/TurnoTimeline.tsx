@@ -3,9 +3,10 @@
  *
  * pendiente → confirmado → en_progreso → completado
  */
+import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { EstadoAsignacion } from '@api-client';
 
