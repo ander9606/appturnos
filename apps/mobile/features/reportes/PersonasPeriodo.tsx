@@ -4,12 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 
 import { reportesApi } from '@api-client';
-import type { CargoTurnos, HorasPersona, PersonasResponse } from '@api-client';
+import type { CargoTurnos, ExtremoJornada, HorasPersona, PersonasResponse, ResumenJornadas } from '@api-client';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonStats } from '@/components/ui/Skeleton';
 import { COLORS, alpha } from '@/lib/designTokens';
-import { formatCOP } from '@/lib/formatters';
+import { formatCOP, formatDate } from '@/lib/formatters';
 import { Insight } from './ResumenPeriodo';
 
 const MAX_FILAS_CARGO = 6;
@@ -39,6 +39,36 @@ function FilaHoras({ p, max }: { p: HorasPersona; max: number }) {
         <View className="h-1.5 rounded-full" style={{ width: `${Math.min(100, (p.prom_semana / max) * 100)}%`, backgroundColor: COLORS.primary }} />
       </View>
       <Text className="text-xs text-muted-foreground mt-1">{p.prom_dia.toLocaleString('es-CO')} h por día trabajado · {p.dias} días</Text>
+    </View>
+  );
+}
+
+const horasTxt = (h: number) => `${h.toLocaleString('es-CO', { maximumFractionDigits: 1 })} h`;
+
+function Extremo({ label, e }: { label: string; e: ExtremoJornada | null }) {
+  return (
+    <View className="flex-1 bg-card border border-border rounded-2xl p-4 gap-1">
+      <Text className="text-xs text-muted-foreground">{label}</Text>
+      <Text className="text-xl font-bold text-foreground">{e ? horasTxt(e.horas) : '—'}</Text>
+      {e && <Text className="text-xs text-muted-foreground" numberOfLines={2}>{nombreDe(e)} · {formatDate(e.fecha)}</Text>}
+    </View>
+  );
+}
+
+function Jornadas({ titulo, j }: { titulo: string; j: ResumenJornadas | null }) {
+  if (!j) return null;
+  return (
+    <View className="mb-3">
+      <Text className="text-xs font-semibold text-foreground px-1 mb-2">{titulo}</Text>
+      <View className="flex-row gap-3">
+        <View className="flex-1 bg-card border border-border rounded-2xl p-4 gap-1">
+          <Text className="text-xs text-muted-foreground">Promedio</Text>
+          <Text className="text-xl font-bold text-foreground">{horasTxt(j.promedio)}</Text>
+          <Text className="text-xs text-muted-foreground">{j.jornadas.toLocaleString('es-CO')} jornadas</Text>
+        </View>
+        <Extremo label="Más larga" e={j.mas_larga} />
+        <Extremo label="Más corta" e={j.mas_corta} />
+      </View>
     </View>
   );
 }
@@ -121,14 +151,21 @@ export function PersonasPeriodo({ desde, hasta }: { desde: string; hasta: string
   if (q.isLoading) return <SkeletonStats style={{ paddingTop: 12 }} />;
   if (q.isError || !q.data) return <ErrorState compact error={q.error} onRetry={q.refetch} fallback="No se pudo cargar el análisis de personas" />;
 
-  const { horas, cargos, insights } = q.data;
-  if (!horas?.ranking.length && !cargos.length) return null;
+  const { horas, jornadas, cargos, insights } = q.data;
+  if (!horas?.ranking.length && !cargos.length && !jornadas.nomina && !jornadas.turnos) return null;
   return (
     <View>
       {insights.length > 0 && (
         <>
           <Titulo>Personas: para mirar</Titulo>
           <View className="gap-3">{insights.map((i) => <Insight key={i.id} nivel={i.nivel} texto={i.texto} />)}</View>
+        </>
+      )}
+      {(jornadas.nomina || jornadas.turnos) && (
+        <>
+          <Titulo>Duración de las jornadas</Titulo>
+          <Jornadas titulo="Nómina (por día trabajado)" j={jornadas.nomina} />
+          <Jornadas titulo="Turnos (por turno completado)" j={jornadas.turnos} />
         </>
       )}
       {horas && <Horas horas={horas} />}

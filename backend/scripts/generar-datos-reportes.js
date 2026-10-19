@@ -111,6 +111,7 @@ async function main() {
       if (idx === 4 && azar() < 0.22) { tipo = 'ausencia'; ord = 0; entrada = salida = null; }
       else if (idx < 4 && azar() < (reciente ? 0.7 : 0.45)) { ext = 1 + Math.floor(azar() * 3); salida = `${15 + ext}:00:00`; }
       else if (azar() < 0.04) { ext = 1; salida = '16:00:00'; }
+      if (tipo === 'ordinario' && ext === 0 && azar() < 0.05) { ord = 4; salida = '11:00:00'; } // medio día
       if (tipo === 'ordinario' && azar() < 0.1) entrada = '07:25:00'; // llegada tarde
       const sem = 40 + ext * 3;
       filas.push([eId, w.id, pid, iso(f), entrada, salida, ord, ext, tipo, w.salario ? w.salario / 210 : w.tarifa, w.salario, sem]);
@@ -172,7 +173,7 @@ async function main() {
         await pool.query(
           `INSERT INTO asignaciones_turno (empresa_id, oferta_id, puesto_id, trabajador_id, estado, pago_total, bono_monto, horas_trabajadas)
            VALUES (?,?,?,?,?,?,?,?)`,
-          [eId, oid, pid, t, !pasada ? 'confirmado' : falta ? 'no_presentado' : 'completado', falta || !pasada ? null : tarifas[codigo] + bono, bono, falta || !pasada ? null : 9]);
+          [eId, oid, pid, t, !pasada ? 'confirmado' : falta ? 'no_presentado' : 'completado', falta || !pasada ? null : tarifas[codigo] + bono, bono, falta || !pasada ? null : 5 + Math.floor(azar() * 8)]); // turnos de 5 a 12 h
         asignaciones++;
       }
     }

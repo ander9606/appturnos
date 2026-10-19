@@ -110,6 +110,22 @@ export interface CargoTurnos {
   rotable: boolean;
 }
 
+export interface ExtremoJornada {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string | null;
+  fecha: string;
+  horas: number;
+}
+
+export interface ResumenJornadas {
+  jornadas: number;
+  /** Horas promedio de una jornada (solo días/turnos con horas). */
+  promedio: number;
+  mas_larga: ExtremoJornada | null;
+  mas_corta: ExtremoJornada | null;
+}
+
 export interface PersonasResponse {
   rango: ReporteRango;
   /** null para quien no ve nómina (jefe_turnos). */
@@ -120,6 +136,8 @@ export interface PersonasResponse {
     mas: HorasPersona[];
     menos: HorasPersona[];
   } | null;
+  /** nomina: null para quien no ve nómina. Cada una es null si no hubo jornadas en el rango. */
+  jornadas: { nomina: ResumenJornadas | null; turnos: ResumenJornadas | null };
   cargos: CargoTurnos[];
   insights: ResumenInsight[];
 }

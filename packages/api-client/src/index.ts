@@ -151,6 +151,8 @@ export type {
   CostoNominaDetalle,
   ResumenPeriodoResponse,
   PersonasResponse,
+  ResumenJornadas,
+  ExtremoJornada,
   HorasPersona,
   PersonaCargo,
   CargoTurnos,

@@ -30,6 +30,14 @@ function rangoAnterior(desde, hasta) {
 const MIN_DIAS_HORAS = 3;          // días con horas para que el promedio cuente
 const VENTANA_BANCA_DIAS = 180;    // "ya hizo este cargo" = lo hizo en los últimos 6 meses
 
+/** Promedio, más larga y más corta; null si no hubo jornadas en el rango. */
+function formatearJornadas({ resumen, mayor, menor }) {
+  const n = Number(resumen.jornadas) || 0;
+  if (!n) return null;
+  const ext = (e) => e && { trabajador_id: e.trabajador_id, nombre: e.nombre, apellido: e.apellido, fecha: e.fecha, horas: redondear(Number(e.horas)) };
+  return { jornadas: n, promedio: redondear(Number(resumen.promedio)), mas_larga: ext(mayor), mas_corta: ext(menor) };
+}
+
 const ReportesService = {
   /** Asistencia por período: turnos (por estado) y días de nómina. */
   async asistencia(empresaId, { desde, hasta }) {
@@ -165,10 +173,13 @@ const ReportesService = {
     const dias = Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / DIA) + 1;
     const semanas = Math.max(1, dias / 7);
 
-    const [filasHoras, filasTurnos] = await Promise.all([
+    const [filasHoras, filasTurnos, jNomina, jTurnos] = await Promise.all([
       verPagos ? ReportesModel.horasTotalesPorTrabajador(empresaId, desde, hasta) : [],
       ReportesModel.turnosPorCargoYTrabajador(empresaId, desde, hasta, VENTANA_BANCA_DIAS),
+      verPagos ? ReportesModel.jornadas(empresaId, desde, hasta, 'nomina') : null,
+      ReportesModel.jornadas(empresaId, desde, hasta, 'turnos'),
     ]);
+    const jornadas = { nomina: jNomina && formatearJornadas(jNomina), turnos: formatearJornadas(jTurnos) };
 
     // Horas: con menos de MIN_DIAS_HORAS días trabajados el promedio no dice nada
     let horas = null;
@@ -208,7 +219,7 @@ const ReportesService = {
       };
     }).filter((c) => c.total_turnos > 0).sort((a, b) => b.total_pago - a.total_pago);
 
-    return { rango: { desde, hasta }, horas, cargos, insights: generarInsightsPersonas({ horas, cargos }) };
+    return { rango: { desde, hasta }, horas, jornadas, cargos, insights: generarInsightsPersonas({ horas, cargos }) };
   },
 
   /** Historial individual de un trabajador: turnos + registros de nómina. */

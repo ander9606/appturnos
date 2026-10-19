@@ -96,6 +96,11 @@ d('reportes con MySQL real', () => {
     expect(con.cargos[0].personas[0]).toMatchObject({ turnos: 1, pago: 100000 });
 
     const sin = await ReportesService.personas(empresaId, rango, { verPagos: false });
+    expect(con.jornadas.nomina).toMatchObject({ jornadas: 3, promedio: 8.67 });
+    expect(con.jornadas.nomina.mas_larga).toMatchObject({ horas: 10, fecha: '2026-03-02' });
+    expect(con.jornadas.nomina.mas_corta.horas).toBe(8);
+    expect(con.jornadas.turnos).toBeNull(); // el turno de prueba no tiene horas_trabajadas
+    expect(sin.jornadas.nomina).toBeNull();
     expect(sin.horas).toBeNull();
     expect(sin.cargos).toHaveLength(1); // el reparto de turnos lo ven también los jefes de turnos
   });

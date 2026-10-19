@@ -141,6 +141,36 @@ const ReportesModel = {
     return filas;
   },
 
+  /**
+   * Duración de las jornadas del rango: promedio, la más larga y la más corta (solo días con horas).
+   * `fuente` = 'nomina' (un día de registros_diarios) o 'turnos' (un turno completado).
+   */
+  async jornadas(empresaId, desde, hasta, fuente) {
+    const nomina = fuente === 'nomina';
+    const horas = nomina
+      ? '(r.horas_ordinarias + r.horas_extra_diurnas + r.horas_extra_nocturnas + r.horas_nocturnas + r.horas_festivo)'
+      : 'a.horas_trabajadas';
+    const desdeSql = nomina
+      ? `FROM registros_diarios r JOIN trabajadores t ON t.id = r.trabajador_id
+         WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND ${horas} > 0`
+      : `FROM asignaciones_turno a JOIN ofertas_turno o ON o.id = a.oferta_id
+         JOIN trabajadores t ON t.id = a.trabajador_id
+         WHERE a.empresa_id = ? AND a.estado = 'completado' AND o.fecha BETWEEN ? AND ? AND ${horas} > 0`;
+    const fecha = nomina ? 'r.fecha' : 'o.fecha';
+    const extremo = (orden) =>
+      pool.query(
+        `SELECT t.id AS trabajador_id, t.nombre, t.apellido, ${fecha} AS fecha, ${horas} AS horas
+         ${desdeSql} ORDER BY ${horas} ${orden}, ${fecha} DESC LIMIT 1`,
+        [empresaId, desde, hasta]
+      );
+    const [[[resumen]], [[mayor]], [[menor]]] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS jornadas, AVG(${horas}) AS promedio ${desdeSql}`, [empresaId, desde, hasta]),
+      extremo('DESC'),
+      extremo('ASC'),
+    ]);
+    return { resumen, mayor: mayor || null, menor: menor || null };
+  },
+
   async turnosDeTrabajador(empresaId, trabajadorId, desde, hasta) {
     const [filas] = await pool.query(
       `SELECT a.id, a.estado, a.horas_trabajadas, a.pago_total,
