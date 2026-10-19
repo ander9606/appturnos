@@ -645,6 +645,16 @@ export default function PerfilScreen() {
                   <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 <Pressable
+                  onPress={() => router.push('/integracion/estado')}
+                  className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
+                >
+                  <View className="flex-row items-center gap-3">
+                    <Ionicons name="pulse-outline" size={16} color={COLORS.mutedForeground} />
+                    <Text className="text-sm font-medium text-foreground">Estado de sincronización</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
+                </Pressable>
+                <Pressable
                   onPress={() => router.push('/puntos-marcaje')}
                   className="border-t border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
                 >
