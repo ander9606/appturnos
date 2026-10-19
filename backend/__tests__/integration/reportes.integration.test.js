@@ -8,7 +8,7 @@ const d = corre ? describe : describe.skip;
 
 d('reportes con MySQL real', () => {
   let pool, ReportesService, ctrl;
-  let empresaId, obreroId, turnistaId;
+  let empresaId, obreroId, turnistaId, ofertaId, puestoId, periodoId;
 
   beforeAll(async () => {
     ({ pool } = require('../../config/database'));
@@ -24,6 +24,7 @@ d('reportes con MySQL real', () => {
     turnistaId = await mk('turnos');
 
     const [p] = await pool.query("INSERT INTO periodos_nomina (empresa_id, fecha_inicio, fecha_fin) VALUES (?, '2026-03-01', '2026-03-15')", [empresaId]);
+    periodoId = p.insertId;
     await pool.query(
       `INSERT INTO registros_diarios (empresa_id, trabajador_id, periodo_id, fecha, horas_ordinarias, horas_extra_diurnas)
        VALUES (?,?,?,'2026-03-02',8,2), (?,?,?,'2026-03-03',8,0), (?,?,?,'2026-03-04',8,0)`,
@@ -32,7 +33,9 @@ d('reportes con MySQL real', () => {
     const [[cargo]] = await pool.query("SELECT id FROM cargos WHERE empresa_id IS NULL LIMIT 1");
     const [o] = await pool.query(
       "INSERT INTO ofertas_turno (empresa_id, titulo, fecha, hora_inicio, estado) VALUES (?, 'Evento', '2026-03-05', '08:00:00', 'completada')", [empresaId]);
+    ofertaId = o.insertId;
     const [pu] = await pool.query('INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, plazas_cubiertas, tarifa_dia) VALUES (?,?,2,1,90000)', [o.insertId, cargo.id]);
+    puestoId = pu.insertId;
     await pool.query(
       "INSERT INTO asignaciones_turno (empresa_id, oferta_id, puesto_id, trabajador_id, estado, pago_total, bono_monto) VALUES (?,?,?,?, 'completado', 100000, 10000)",
       [empresaId, o.insertId, pu.insertId, turnistaId]);
@@ -107,6 +110,34 @@ d('reportes con MySQL real', () => {
     const sin = await ReportesService.personas(empresaId, rango, { verPagos: false });
     expect(sin.nomina).toBeNull();
     expect(sin.turnos.cargos).toHaveLength(1); // el reparto de turnos lo ven también los jefes de turnos
+  });
+
+  it('el tipo del trabajador decide a qué lado cuenta (datos cruzados no se mezclan)', async () => {
+    const antesT = await ReportesService.resumen(empresaId, rango, { verPagos: true });
+    const antesP = await ReportesService.personas(empresaId, rango, { verPagos: true });
+
+    // Un trabajador de nómina con un turno completado y uno de turnos con registros diarios
+    const mk = async (tipo) => (await pool.query(
+      'INSERT INTO trabajadores (empresa_id, nombre, apellido, tipo, tarifa_hora, activo) VALUES (?,?,?,?,?,1)',
+      [empresaId, 'Cruzado', tipo, tipo, tipo === 'nomina' ? 10000 : null]))[0].insertId;
+    const nominaConTurno = await mk('nomina');
+    const turnosConRegistro = await mk('turnos');
+    await pool.query(
+      "INSERT INTO asignaciones_turno (empresa_id, oferta_id, puesto_id, trabajador_id, estado, pago_total, horas_trabajadas) VALUES (?,?,?,?, 'completado', 70000, 12)",
+      [empresaId, ofertaId, puestoId, nominaConTurno]);
+    await pool.query(
+      `INSERT INTO registros_diarios (empresa_id, trabajador_id, periodo_id, fecha, horas_ordinarias, horas_extra_diurnas)
+       VALUES (?,?,?,'2026-03-05',8,4)`, [empresaId, turnosConRegistro, periodoId]);
+
+    const t = await ReportesService.resumen(empresaId, rango, { verPagos: true });
+    const p = await ReportesService.personas(empresaId, rango, { verPagos: true });
+    expect(t.turnos).toEqual(antesT.turnos);
+    expect(t.nomina).toEqual(antesT.nomina);
+    expect(p.turnos).toEqual(antesP.turnos);
+    expect(p.nomina).toEqual(antesP.nomina);
+    const asis = await ReportesService.asistencia(empresaId, rango);
+    expect(JSON.stringify(asis.turnos)).not.toMatch(/Cruzado/);
+    expect(JSON.stringify(asis.nomina)).not.toMatch(/Cruzado/);
   });
 
   it('el índice (empresa_id, fecha) existe (migración 113)', async () => {

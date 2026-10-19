@@ -5,6 +5,8 @@ const { pool } = require('../../config/database');
 /**
  * Consultas de agregación para los reportes. Todas se acotan por empresa_id
  * y por un rango de fechas [desde, hasta].
+ * Turnos y nómina son poblaciones distintas: lo de turnos cuenta solo trabajadores tipo 'turnos' y
+ * lo de nómina solo tipo 'nomina' (el historial individual no filtra: es de una persona concreta).
  */
 const ReportesModel = {
   /** Asistencia a turnos por trabajador (cuenta por estado de la asignación). */
@@ -19,7 +21,7 @@ const ReportesModel = {
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN trabajadores t ON t.id = a.trabajador_id
-       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ?
+       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ? AND t.tipo = 'turnos'
        GROUP BY t.id, t.nombre, t.apellido
        ORDER BY t.apellido, t.nombre`,
       [empresaId, desde, hasta]
@@ -34,7 +36,7 @@ const ReportesModel = {
               COUNT(*) AS dias_registrados
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
-       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ?
+       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND t.tipo = 'nomina'
        GROUP BY t.id, t.nombre, t.apellido
        ORDER BY t.apellido, t.nombre`,
       [empresaId, desde, hasta]
@@ -48,7 +50,8 @@ const ReportesModel = {
       `SELECT COUNT(*) AS turnos_completados, COALESCE(SUM(a.pago_total), 0) AS costo
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
-       WHERE a.empresa_id = ? AND a.estado = 'completado'
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.tipo = 'turnos'
          AND o.fecha BETWEEN ? AND ?`,
       [empresaId, desde, hasta]
     );
@@ -66,7 +69,7 @@ const ReportesModel = {
               SUM(r.horas_festivo) AS horas_festivo
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
-       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ?
+       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND t.tipo = 'nomina'
        GROUP BY r.trabajador_id, t.nombre, t.apellido, t.salario_base, t.tarifa_hora`,
       [empresaId, desde, hasta]
     );
@@ -83,7 +86,8 @@ const ReportesModel = {
               COALESCE(SUM(CASE WHEN a.estado = 'completado' THEN a.bono_monto END), 0) AS bonos
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
-       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ?
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ? AND t.tipo = 'turnos'
          AND a.estado IN ('completado', 'no_presentado', 'confirmado', 'en_progreso')`,
       [empresaId, desde, hasta]
     );
@@ -112,7 +116,7 @@ const ReportesModel = {
               SUM((${total}) > 0) AS dias
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
-       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ?
+       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND t.tipo = 'nomina'
        GROUP BY r.trabajador_id, t.nombre, t.apellido`,
       [empresaId, desde, hasta]
     );
@@ -133,7 +137,7 @@ const ReportesModel = {
        JOIN oferta_puestos p ON p.id = a.puesto_id
        JOIN cargos c ON c.id = p.cargo_id
        JOIN trabajadores t ON t.id = a.trabajador_id
-       WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.activo = 1
+       WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.activo = 1 AND t.tipo = 'turnos'
          AND o.fecha BETWEEN DATE_SUB(?, INTERVAL ? DAY) AND ?
        GROUP BY p.cargo_id, c.nombre, a.trabajador_id, t.nombre, t.apellido`,
       [desde, desde, empresaId, desde, ventanaDias, hasta]
@@ -152,10 +156,10 @@ const ReportesModel = {
       : 'a.horas_trabajadas';
     const desdeSql = nomina
       ? `FROM registros_diarios r JOIN trabajadores t ON t.id = r.trabajador_id
-         WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND ${horas} > 0`
+         WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND t.tipo = 'nomina' AND ${horas} > 0`
       : `FROM asignaciones_turno a JOIN ofertas_turno o ON o.id = a.oferta_id
          JOIN trabajadores t ON t.id = a.trabajador_id
-         WHERE a.empresa_id = ? AND a.estado = 'completado' AND o.fecha BETWEEN ? AND ? AND ${horas} > 0`;
+         WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.tipo = 'turnos' AND o.fecha BETWEEN ? AND ? AND ${horas} > 0`;
     const fecha = nomina ? 'r.fecha' : 'o.fecha';
     const extremo = (orden) =>
       pool.query(
