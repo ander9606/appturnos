@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -95,7 +96,7 @@ export function TrabajadorPickerModal({ visible, seleccionados, onConfirm, onClo
               contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12 }}
               ItemSeparatorComponent={() => <View className="h-px bg-border" />}
               ListEmptyComponent={
-                <Text className="text-sm text-muted-foreground text-center py-8">Sin resultados</Text>
+                <EmptyState compact variant="search" title="Sin resultados" />
               }
               renderItem={({ item }) => {
                 const elegido = elegidoIds.has(item.id);

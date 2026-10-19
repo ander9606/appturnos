@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useMemo, useCallback } from 'react';
@@ -236,17 +237,10 @@ export function AsistenciaView({ selectedDate }: Props) {
         ) : null
       }
       ListEmptyComponent={
-        <View className="py-16 items-center gap-3 px-8">
-          <Text className="text-4xl">📋</Text>
-          <Text className="text-base font-semibold text-foreground text-center">
-            {periodo ? 'Sin registros este día' : 'Sin período activo'}
-          </Text>
-          <Text className="text-sm text-muted-foreground text-center">
-            {periodo
-              ? `No hay registros de asistencia el ${fmtFecha(selectedDate)}.`
-              : 'Este día no pertenece a ningún período de nómina abierto.'}
-          </Text>
-        </View>
+        <EmptyState
+          title={periodo ? 'Sin registros este día' : 'Sin período activo'}
+          message={periodo ? `No hay registros de asistencia el ${fmtFecha(selectedDate)}.` : 'Este día no pertenece a ningún período de nómina abierto.'}
+        />
       }
       ItemSeparatorComponent={() => <View className="h-2" />}
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}

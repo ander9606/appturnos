@@ -9,6 +9,7 @@
  *  - FAB "+" para crear nuevo trabajador
  *  - Navegar al detalle con opciones de editar / desactivar
  */
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
@@ -541,17 +542,11 @@ export default function EquipoScreen() {
             />
           )}
           ListEmptyComponent={
-            <View className="items-center justify-center py-16">
-              <Ionicons name="people-outline" size={48} color={COLORS.placeholder} style={{ marginBottom: 12 }} />
-              <Text className="text-base font-semibold text-foreground">
-                {term ? 'Sin resultados' : 'Sin trabajadores'}
-              </Text>
-              <Text className="text-sm text-muted-foreground mt-1 text-center">
-                {term
-                  ? `No hay trabajadores que coincidan con "${term}".`
-                  : 'No hay trabajadores registrados aún.'}
-              </Text>
-            </View>
+            <EmptyState
+              variant={term ? 'search' : 'empty'}
+              title={term ? 'Sin resultados' : 'Sin trabajadores'}
+              message={term ? `No hay trabajadores que coincidan con "${term}".` : 'No hay trabajadores registrados aún.'}
+            />
           }
           showsVerticalScrollIndicator={false}
         />

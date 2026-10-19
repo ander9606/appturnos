@@ -164,7 +164,8 @@ export function EquipoPage() {
         <ErrorState error={error} onRetry={refetch} />
       ) : trabajadores.length === 0 ? (
         <EmptyState
-          message={term ? 'Sin resultados para tu búsqueda' : 'No hay trabajadores'}
+          variant={term ? 'search' : 'empty'}
+          title={term ? 'Sin resultados para tu búsqueda' : 'No hay trabajadores'}
           action={!term && isAdmin ? { label: '+ Agregar el primero', onClick: () => setShowCrear(true) } : undefined}
         />
       ) : tipoFiltro === undefined ? (

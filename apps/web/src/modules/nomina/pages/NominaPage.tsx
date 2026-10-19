@@ -124,7 +124,7 @@ export function NominaPage() {
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : periodos.length === 0 ? (
-        <EmptyState message="No hay períodos" action={puedeGestionarNomina() ? { label: '+ Crear el primero', onClick: () => setShowModal(true) } : undefined} />
+        <EmptyState title="No hay períodos" action={puedeGestionarNomina() ? { label: '+ Crear el primero', onClick: () => setShowModal(true) } : undefined} />
       ) : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">

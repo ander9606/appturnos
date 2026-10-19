@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -94,9 +95,11 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
             ItemSeparatorComponent={() => <View className="h-px bg-border" />}
             ListEmptyComponent={
               nombreNuevo.length === 0 ? (
-                <Text className="text-sm text-muted-foreground text-center py-8">
-                  {usedIds.size === cargos.length ? 'Ya agregaste todos los cargos' : 'Sin resultados'}
-                </Text>
+                <EmptyState
+                  compact
+                  variant={usedIds.size === cargos.length ? 'done' : 'search'}
+                  title={usedIds.size === cargos.length ? 'Ya agregaste todos los cargos' : 'Sin resultados'}
+                />
               ) : null
             }
             renderItem={({ item }) => (

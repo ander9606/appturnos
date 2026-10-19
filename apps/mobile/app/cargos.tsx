@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
@@ -529,13 +530,7 @@ export default function CargosScreen() {
               );
             }}
             ListEmptyComponent={
-              <View className="p-8 items-center gap-2">
-                <Ionicons name="location-outline" size={32} color={COLORS.placeholder} />
-                <Text className="text-sm text-muted-foreground text-center">
-                  No hay puntos fijos creados.{'\n'}
-                  Ve a "Puntos de marcaje" para crear uno.
-                </Text>
-              </View>
+              <EmptyState compact title="No hay puntos fijos creados" message={'Ve a "Puntos de marcaje" para crear uno.'} />
             }
           />
         </SafeAreaView>

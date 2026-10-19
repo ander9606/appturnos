@@ -5,6 +5,7 @@
  * según empresas.tipo_liquidacion) con el total a cobrar, horas
  * trabajadas y badge de turno extendido.
  */
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
@@ -465,16 +466,10 @@ export function NominaTurnosView() {
           </View>
         }
         ListEmptyComponent={
-          <View className="py-16 items-center gap-3 px-8">
-            <Ionicons name="clipboard-outline" size={48} color={COLORS.placeholder} />
-            <Text className="text-base font-semibold text-foreground text-center">
-              Sin turnos completados
-            </Text>
-            <Text className="text-sm text-muted-foreground text-center">
-              No tienes turnos completados en el período{' '}
-              {periodo ? fmtPeriodo(periodo) : 'actual'}.
-            </Text>
-          </View>
+          <EmptyState
+            title="Sin turnos completados"
+            message={`No tienes turnos completados en el período ${periodo ? fmtPeriodo(periodo) : 'actual'}.`}
+          />
         }
         ItemSeparatorComponent={() => <View className="h-2" />}
         contentContainerStyle={{ paddingHorizontal: 20 }}

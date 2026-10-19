@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
@@ -343,25 +344,11 @@ export default function TurnosScreen() {
   // ── Empty states ──────────────────────────────────────────────────────
 
   const EmptyMiosTurnos = () => (
-    <View className="flex-1 items-center justify-center py-16 gap-3">
-      <Ionicons name="calendar-outline" size={48} color={COLORS.placeholder} />
-      <Text className="text-base font-semibold text-foreground">Sin turnos este día</Text>
-      <Text className="text-sm text-muted-foreground text-center px-8">
-        No tienes turnos asignados el{' '}
-        {formatShortDate(selectedDate)}.
-      </Text>
-    </View>
+    <EmptyState title="Sin turnos este día" message={`No tienes turnos asignados el ${formatShortDate(selectedDate)}.`} />
   );
 
   const EmptyOfertas = () => (
-    <View className="flex-1 items-center justify-center py-16 gap-3">
-      <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
-      <Text className="text-base font-semibold text-foreground">Sin ofertas este día</Text>
-      <Text className="text-sm text-muted-foreground text-center px-8">
-        No hay turnos disponibles el{' '}
-        {formatShortDate(selectedDate)}. Prueba con otra fecha.
-      </Text>
-    </View>
+    <EmptyState title="Sin ofertas este día" message={`No hay turnos disponibles el ${formatShortDate(selectedDate)}. Prueba con otra fecha.`} />
   );
 
   // ── Main render ───────────────────────────────────────────────────────
@@ -726,12 +713,7 @@ export default function TurnosScreen() {
                 }
                 ListEmptyComponent={
                   searchOfertas.trim() ? (
-                    <View className="items-center justify-center py-16 gap-2">
-                      <Ionicons name="search-outline" size={40} color={COLORS.placeholder} />
-                      <Text className="text-sm text-muted-foreground text-center">
-                        Sin resultados para "{searchOfertas}"
-                      </Text>
-                    </View>
+                    <EmptyState variant="search" title="Sin resultados" message={`No hay ofertas que coincidan con "${searchOfertas}".`} />
                   ) : <EmptyOfertas />
                 }
                 refreshControl={

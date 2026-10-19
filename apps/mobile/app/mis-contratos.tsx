@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -72,17 +73,11 @@ export default function MisContratosScreen() {
           isLoading ? (
             <Spinner size="large" color={theme.primary} style={{ marginTop: 48 }} />
           ) : (
-            <View className="items-center justify-center py-16 gap-3">
-              <Ionicons name="document-text-outline" size={48} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground">
-                {soloPendientes ? 'Sin contratos pendientes' : 'Sin contratos'}
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                {soloPendientes
-                  ? 'Ya firmaste todos tus contratos.'
-                  : 'Tus contratos de turno aparecerán aquí una vez seas asignado.'}
-              </Text>
-            </View>
+            <EmptyState
+              variant={soloPendientes ? 'done' : 'empty'}
+              title={soloPendientes ? 'Sin contratos pendientes' : 'Sin contratos'}
+              message={soloPendientes ? 'Ya firmaste todos tus contratos.' : 'Tus contratos de turno aparecerán aquí una vez seas asignado.'}
+            />
           )
         }
         renderItem={({ item: c }) => <ContratoCard contrato={c} onPress={() => router.push(`/contrato/${c.id}`)} />}

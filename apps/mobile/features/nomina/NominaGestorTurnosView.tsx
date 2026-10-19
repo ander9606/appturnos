@@ -1,13 +1,12 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View, FlatList, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useLiquidacionTurnos } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
@@ -129,15 +128,10 @@ export function NominaGestorTurnosView() {
           </View>
         }
         ListEmptyComponent={
-          <View className="py-16 items-center gap-3 px-8">
-            <Ionicons name="clipboard-outline" size={48} color={COLORS.placeholder} />
-            <Text className="text-base font-semibold text-foreground text-center">
-              Sin turnos completados
-            </Text>
-            <Text className="text-sm text-muted-foreground text-center">
-              No hay turnos completados en el período {periodo ? fmtPeriodo(periodo) : 'actual'}.
-            </Text>
-          </View>
+          <EmptyState
+            title="Sin turnos completados"
+            message={`No hay turnos completados en el período ${periodo ? fmtPeriodo(periodo) : 'actual'}.`}
+          />
         }
         ItemSeparatorComponent={() => <View className="h-2" />}
         contentContainerStyle={{ paddingHorizontal: 20 }}

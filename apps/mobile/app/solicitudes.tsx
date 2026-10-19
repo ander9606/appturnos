@@ -7,6 +7,7 @@
  *
  * Acciones disponibles: Aprobar / Rechazar
  */
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -440,12 +441,7 @@ export default function SolicitudesScreen() {
           keyExtractor={(c) => String(c.id)}
           contentContainerStyle={{ padding: 20, paddingBottom: 8 }}
           ListEmptyComponent={
-            <View className="items-center gap-2 py-10">
-              <Ionicons name="briefcase-outline" size={32} color={COLORS.placeholder} />
-              <Text className="text-sm text-muted-foreground text-center">
-                Tu empresa no tiene cargos creados todavía.{'\n'}Creá uno primero en "Gestión de cargos".
-              </Text>
-            </View>
+            <EmptyState compact title="Tu empresa no tiene cargos creados todavía" message={'Creá uno primero en "Gestión de cargos".'} />
           }
           renderItem={({ item }) => {
             const selected = selectedCargoIds.includes(item.id);

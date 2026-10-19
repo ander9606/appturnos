@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -461,13 +462,7 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien, puedeGestionar
       )}
       contentContainerClassName="px-5 py-4 gap-3"
       ListEmptyComponent={
-        <View className="flex-1 items-center justify-center py-16 gap-3">
-          <Text className="text-4xl">📋</Text>
-          <Text className="text-base font-semibold text-foreground">Sin turnos este día</Text>
-          <Text className="text-sm text-muted-foreground text-center px-8">
-            No hay turnos publicados para este día.
-          </Text>
-        </View>
+        <EmptyState title="Sin turnos este día" message="No hay turnos publicados para este día." />
       }
       refreshControl={
         <RefreshControl

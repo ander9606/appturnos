@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -156,13 +157,11 @@ export default function BancoTalentoScreen() {
               />
             )}
             ListEmptyComponent={
-              <View className="items-center justify-center py-16">
-                <Ionicons name="people-outline" size={48} color={COLORS.placeholder} style={{ marginBottom: 12 }} />
-                <Text className="text-base font-semibold text-foreground">Sin resultados</Text>
-                <Text className="text-sm text-muted-foreground mt-1 text-center">
-                  {q ? `No hay trabajadores libres que coincidan con "${q}".` : 'No hay trabajadores libres registrados todavía.'}
-                </Text>
-              </View>
+              <EmptyState
+                variant={q ? 'search' : 'empty'}
+                title={q ? 'Sin resultados' : 'Sin trabajadores libres'}
+                message={q ? `No hay trabajadores libres que coincidan con "${q}".` : 'No hay trabajadores libres registrados todavía.'}
+              />
             }
             showsVerticalScrollIndicator={false}
           />

@@ -2,6 +2,7 @@
  * FuncionesCargoModal — ver (todos) / diligenciar (admin, jefe_turnos) el
  * listado de funciones que un cargo tiene en la empresa actual.
  */
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useState } from 'react';
@@ -92,14 +93,11 @@ export function FuncionesCargoModal({ visible, onClose, cargoId, cargoNombre, ed
               </View>
             )}
             ListEmptyComponent={
-              <View className="items-center gap-2 py-12">
-                <Ionicons name="list-outline" size={32} color={COLORS.placeholder} />
-                <Text className="text-sm text-muted-foreground text-center">
-                  {editable
-                    ? 'Aún no hay funciones registradas para este cargo.\nAgrega la primera abajo.'
-                    : 'La empresa todavía no registró funciones para este cargo.'}
-                </Text>
-              </View>
+              <EmptyState
+                compact
+                title={editable ? 'Aún no hay funciones' : 'Sin funciones'}
+                message={editable ? 'Agrega la primera abajo.' : 'La empresa todavía no registró funciones para este cargo.'}
+              />
             }
             ListFooterComponent={
               editable ? (

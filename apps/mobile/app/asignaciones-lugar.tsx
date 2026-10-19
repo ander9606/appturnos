@@ -6,6 +6,7 @@
  * Fijo   → debe estar dentro del radio del punto_marcaje asignado.
  */
 
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -140,14 +141,7 @@ export default function AsignacionesLugarScreen() {
               </View>
             </View>
           }
-          ListEmptyComponent={
-            <View className="py-16 items-center gap-3 px-8">
-              <Ionicons name="people-outline" size={40} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin trabajadores de nómina activos
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyState title="Sin trabajadores de nómina activos" />}
         />
       )}
     </SafeAreaView>

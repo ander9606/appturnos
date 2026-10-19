@@ -5,6 +5,7 @@
  * Toda la lógica de negocio vive en useNominaTrabajador + nominaTrabajadorUtils.
  */
 
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
@@ -351,15 +352,7 @@ export function NominaTrabajadorView() {
                 <Spinner color={theme.primary} />
               </View>
             ) : (
-              <View className="py-12 items-center gap-3 px-8">
-                <Ionicons name="clipboard-outline" size={40} color={COLORS.placeholder} />
-                <Text className="text-base font-semibold text-foreground text-center">
-                  Sin registros aún
-                </Text>
-                <Text className="text-sm text-muted-foreground text-center">
-                  Marca tu entrada para comenzar a registrar horas.
-                </Text>
-              </View>
+              <EmptyState title="Sin registros aún" message="Marca tu entrada para comenzar a registrar horas." />
             )
           }
           ItemSeparatorComponent={() => <View className="h-2" />}

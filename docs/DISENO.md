@@ -114,7 +114,7 @@ En móvil, `const theme = useTheme()` (de `lib/theme.ts`) devuelve la paleta seg
 
 ---
 
-## 5. Estados de carga y de error
+## 5. Estados de carga, de error y vacíos
 
 Hay **tres** herramientas. Elige según qué estás esperando:
 
@@ -241,6 +241,39 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 1. **Archivos con un `<Modal>` de React Native** (19 archivos, ~75 llamadas). En iOS un `Modal` abierto puede impedir que se muestre otro desde el layout raíz, y no se pudo comprobar en dispositivo. Mientras tanto, ahí se conserva el nativo, que siempre aparece encima.
    Pendientes ahí: `oferta/[id]` ("Hay trabajadores sin marcar salida", ideal para `actionSheet`), `ReportarNovedadModal` ("Adjuntar foto", ideal para `elegirFotoConMenu`) y `nomina-ingreso`.
 
+### 5.6 Estados vacíos
+
+El mismo planeta del logo, pero con el **anillo en su órbita** (en los errores aparece caído o torcido). Hay tres tipos:
+
+| `variant` | Cuándo | Ilustración | Ejemplo |
+|---|---|---|---|
+| `empty` *(por defecto)* | Nada todavía: aún no hay datos | Planeta sereno en órbita | "Sin trabajadores", "Sin notificaciones" |
+| `search` | Una búsqueda o filtro no devolvió nada | Planeta con **lupa** | "Sin resultados", "Sin resultados para este filtro" |
+| `done` | No queda nada por hacer: todo al día | Planeta con **visto verde** | "Sin solicitudes pendientes", "Ya firmaste todos tus contratos" |
+
+| | Móvil | Web |
+|---|---|---|
+| Componente | `components/ui/EmptyState.tsx` | `shared/components/EmptyState.tsx` |
+| Dibujo | `PlanetIllustration` (`orbit`, `search`, `done`) | `PlanetIllustration` (igual) |
+| Props | `title`, `message?`, `variant?`, `action?: { label, onPress }`, `compact?` | `title`, `message?`, `variant?`, `action?: { label, onClick }` |
+
+```tsx
+// Móvil: como ListEmptyComponent, o en lugar de la lista
+<FlatList ListEmptyComponent={<EmptyState title="Sin trabajadores" message="Agrega al primero con el botón +." />} … />
+<EmptyState variant={term ? 'search' : 'empty'} title={term ? 'Sin resultados' : 'Sin trabajadores'} />
+<EmptyState compact title="Sin cargos" />      // selectores, modales y tarjetas pequeñas
+
+// Web
+<EmptyState title="No hay ofertas" action={{ label: '+ Crear la primera', onClick: abrirCrear }} />
+```
+
+- **Elige el tipo por lo que le pasó al usuario**, no por la pantalla: la misma lista es `search` cuando hay texto de búsqueda y `empty` cuando no.
+- **`title` corto y en afirmativo** ("Sin turnos este día"); **`message`** dice qué hará aparecer datos ("Cuando completes turnos, aparecerán aquí…") o qué hacer. Si no aporta nada nuevo, omítelo.
+- **`action`** solo si el usuario puede resolverlo desde ahí (y tiene permiso); un vacío sin salida lleva solo texto.
+- `compact` para listas pequeñas (selectores en `Modal`, tarjetas): ilustración de 110 px en vez de 170.
+- El vacío va **después** de cargando y de error: `cargando → error → vacío → contenido` (§5.3).
+- Los dos `PlanetIllustration` dibujan lo mismo con las mismas coordenadas: si cambias uno, cambia el otro.
+
 ---
 
 ## 6. Accesibilidad
@@ -275,7 +308,7 @@ Reglas:
 - [ ] Sin hex literales nuevos (busca `#[0-9A-Fa-f]{6}` en lo que tocaste).
 - [ ] Si agregaste un color: está en `tailwind.config.js`, `designTokens.ts`, `index.css` **y** en §2.2.
 - [ ] Sin `ActivityIndicator`, `Loader2`, texto "Cargando…", bloques de error armados a mano ni `Alert.alert` nuevos (§5.5).
-- [ ] Listas: skeleton al cargar, `ErrorState` (pasando `error`) con reintento, `EmptyState` si no hay datos.
+- [ ] Listas: skeleton al cargar, `ErrorState` (pasando `error`) con reintento, `EmptyState` (tipo según el caso) si no hay datos.
 - [ ] Texto pequeño cumple contraste (§6).
 - [ ] Strings visibles por `t('clave')` en móvil; `Text`/`TextInput` de `@/components/ui/Text` (§3).
 - [ ] Móvil: `npm run type-check` y `npm run lint`. Web: `npm run build`.
@@ -302,6 +335,7 @@ Reglas:
 15. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
 ---
+16. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: solo 3 pantallas usan `EmptyState`; unos 28 vacíos más son un texto gris en tablas y tarjetas.
 
 ## 9. Referencias
 

@@ -5,6 +5,7 @@
  * con horas acumuladas en la semana vs límite legal (Ley 2101).
  */
 
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -262,12 +263,10 @@ export default function DashboardAsistenciaScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View className="py-16 items-center gap-3 px-8">
-            <Ionicons name="people-outline" size={40} color={COLORS.placeholder} />
-            <Text className="text-base font-semibold text-foreground text-center">
-              {filtro === 'todos' ? 'Sin trabajadores de nómina' : 'Sin resultados para este filtro'}
-            </Text>
-          </View>
+          <EmptyState
+            variant={filtro === 'todos' ? 'empty' : 'search'}
+            title={filtro === 'todos' ? 'Sin trabajadores de nómina' : 'Sin resultados para este filtro'}
+          />
         }
       />
     </SafeAreaView>

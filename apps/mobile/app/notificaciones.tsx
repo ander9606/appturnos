@@ -3,6 +3,7 @@
  * Accesible desde la campana del header en cualquier tab.
  */
 
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -309,17 +310,7 @@ export default function NotificacionesScreen() {
               colors={[theme.primary]}
             />
           }
-          ListEmptyComponent={
-            <View className="flex-1 items-center justify-center gap-3 py-20 px-8">
-              <Ionicons name="notifications-off-outline" size={48} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin notificaciones
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                Aquí aparecerán confirmaciones de turnos, cambios de período y más.
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyState title="Sin notificaciones" message="Aquí aparecerán confirmaciones de turnos, cambios de período y más." />}
         />
       )}
     </SafeAreaView>

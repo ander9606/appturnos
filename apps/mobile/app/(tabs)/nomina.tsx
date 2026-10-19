@@ -10,6 +10,7 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -486,12 +487,7 @@ function NominaGestorView() {
               <Spinner color={theme.primary} />
             </View>
           ) : (
-            <View className="py-12 items-center gap-3 px-8">
-              <Ionicons name="bar-chart-outline" size={40} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin registros en este período
-              </Text>
-            </View>
+            <EmptyState title="Sin registros en este período" />
           )
         }
         ItemSeparatorComponent={() => <View className="h-2" />}

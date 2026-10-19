@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -85,10 +86,7 @@ export default function AusenciasScreen() {
           isLoading ? (
             <Spinner size="large" color={theme.primary} style={{ marginTop: 48 }} />
           ) : (
-            <View className="items-center justify-center py-16 gap-3">
-              <Ionicons name="calendar-clear-outline" size={48} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground">Sin ausencias</Text>
-            </View>
+            <EmptyState title="Sin ausencias" />
           )
         }
         renderItem={({ item: a }) => (

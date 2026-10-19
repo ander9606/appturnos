@@ -3,6 +3,7 @@
  * para admin_empresa / jefe_nomina.
  */
 
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -119,12 +120,10 @@ export default function GestorCompensatoriosScreen() {
             </View>
           }
           ListEmptyComponent={
-            <View className="py-16 items-center gap-3 px-8">
-              <Ionicons name="calendar-outline" size={40} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground text-center">
-                {filtro === 'todos' ? 'Sin descansos registrados' : `Sin descansos ${filtro === 'pendiente' ? 'pendientes' : 'asignados'}`}
-              </Text>
-            </View>
+            <EmptyState
+              variant={filtro === 'todos' ? 'empty' : filtro === 'pendiente' ? 'done' : 'search'}
+              title={filtro === 'todos' ? 'Sin descansos registrados' : `Sin descansos ${filtro === 'pendiente' ? 'pendientes' : 'asignados'}`}
+            />
           }
         />
       )}

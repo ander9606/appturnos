@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -73,17 +74,11 @@ export default function MisCuentasCobroScreen() {
           isLoading ? (
             <Spinner size="large" color={theme.primary} style={{ marginTop: 48 }} />
           ) : (
-            <View className="items-center justify-center py-16 gap-3">
-              <Ionicons name="document-text-outline" size={48} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground">
-                {soloPendientes ? 'Sin cuentas de cobro pendientes' : 'Sin cuentas de cobro'}
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                {soloPendientes
-                  ? 'Ya firmaste todas tus cuentas de cobro.'
-                  : 'Tus cuentas de cobro aparecerán aquí cuando se cierre un período con turnos tuyos.'}
-              </Text>
-            </View>
+            <EmptyState
+              variant={soloPendientes ? 'done' : 'empty'}
+              title={soloPendientes ? 'Sin cuentas de cobro pendientes' : 'Sin cuentas de cobro'}
+              message={soloPendientes ? 'Ya firmaste todas tus cuentas de cobro.' : 'Tus cuentas de cobro aparecerán aquí cuando se cierre un período con turnos tuyos.'}
+            />
           )
         }
         renderItem={({ item: c }) => (

@@ -5,6 +5,7 @@
  * completados en el período seleccionado.  Cada card es expandible para
  * ver el desglose turno por turno (pago base + extra + total).
  */
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
@@ -504,15 +505,10 @@ export default function LiquidacionTurnosScreen() {
             )}
             ItemSeparatorComponent={() => <View className="h-0" />}
             ListEmptyComponent={
-              <View className="py-20 items-center gap-3 px-8">
-                <Ionicons name="receipt-outline" size={48} color={COLORS.borderStrong} />
-                <Text className="text-base font-semibold text-foreground text-center">
-                  Sin turnos completados
-                </Text>
-                <Text className="text-sm text-muted-foreground text-center">
-                  No hay asignaciones completadas en el período{periodo ? ` ${fmtPeriodo(periodo)}` : ''}.
-                </Text>
-              </View>
+              <EmptyState
+                title="Sin turnos completados"
+                message={`No hay asignaciones completadas en el período${periodo ? ` ${fmtPeriodo(periodo)}` : ''}.`}
+              />
             }
           />
         )}

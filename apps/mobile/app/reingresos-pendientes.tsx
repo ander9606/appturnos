@@ -1,14 +1,13 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
 import { ApiError, type SolicitudReingreso } from '@api-client';
@@ -132,17 +131,7 @@ export default function ReingresosPendientesScreen() {
               colors={[theme.primary]}
             />
           }
-          ListEmptyComponent={
-            <View className="flex-1 items-center justify-center gap-3 pt-20">
-              <Ionicons name="checkmark-circle-outline" size={48} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin solicitudes pendientes
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                Aquí aparecerán las solicitudes de reingreso cuando los trabajadores las envíen.
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyState variant="done" title="Sin solicitudes pendientes" message="Aquí aparecerán las solicitudes de reingreso cuando los trabajadores las envíen." />}
         />
       )}
     </SafeAreaView>

@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -203,15 +204,10 @@ export default function LiquidacionEventualScreen() {
             renderItem={({ item }) => <LineaRow item={item} />}
             ItemSeparatorComponent={() => <View className="h-0" />}
             ListEmptyComponent={
-              <View className="py-20 items-center gap-3 px-8">
-                <Ionicons name="briefcase-outline" size={48} color={COLORS.borderStrong} />
-                <Text className="text-base font-semibold text-foreground text-center">Sin turnos eventuales</Text>
-                <Text className="text-sm text-muted-foreground text-center">
-                  {esTrabajador
-                    ? 'Aún no tienes turnos eventuales completados en este período.'
-                    : 'No hay turnos completados en este período.'}
-                </Text>
-              </View>
+              <EmptyState
+                title="Sin turnos eventuales"
+                message={esTrabajador ? 'Aún no tienes turnos eventuales completados en este período.' : 'No hay turnos completados en este período.'}
+              />
             }
             ListFooterComponent={
               puedeL ? (

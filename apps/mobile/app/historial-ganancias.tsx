@@ -6,6 +6,7 @@
  *                        se muestra aparte; lo que varía período a período son
  *                        las horas con recargo)
  */
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
@@ -322,13 +323,7 @@ function HistorialTurnos() {
         }}
         ListEmptyComponent={
           rangoActivo ? null : (
-            <View className="py-16 items-center gap-3 px-8">
-              <Ionicons name="bar-chart-outline" size={48} color={COLORS.placeholder} />
-              <Text className="text-base font-semibold text-foreground text-center">Sin historial aún</Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                Cuando completes turnos, aparecerán aquí agrupados por período.
-              </Text>
-            </View>
+            <EmptyState title="Sin historial aún" message="Cuando completes turnos, aparecerán aquí agrupados por período." />
           )
         }
       />
@@ -440,13 +435,7 @@ function HistorialNomina() {
           </View>
         )}
         ListEmptyComponent={
-          <View className="py-16 items-center gap-3 px-8">
-            <Ionicons name="bar-chart-outline" size={48} color={COLORS.placeholder} />
-            <Text className="text-base font-semibold text-foreground text-center">Sin historial aún</Text>
-            <Text className="text-sm text-muted-foreground text-center">
-              Cuando se cierren períodos con registros tuyos, aparecerán aquí.
-            </Text>
-          </View>
+          <EmptyState title="Sin historial aún" message="Cuando se cierren períodos con registros tuyos, aparecerán aquí." />
         }
       />
     </SafeAreaView>

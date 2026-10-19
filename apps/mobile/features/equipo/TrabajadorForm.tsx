@@ -2,6 +2,7 @@
  * TrabajadorForm — shared create/edit form.
  * Uses React Hook Form + Zod. Caller owns the submit handler.
  */
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -504,12 +505,7 @@ export function TrabajadorForm({
                         );
                       }}
                       ListEmptyComponent={
-                        <View className="p-8 items-center gap-2">
-                          <Ionicons name="briefcase-outline" size={32} color={COLORS.placeholder} />
-                          <Text className="text-sm text-muted-foreground text-center">
-                            No hay cargos creados todavía.{'\n'}Creá uno primero en "Gestión de cargos".
-                          </Text>
-                        </View>
+                        <EmptyState compact title="No hay cargos creados todavía" message={'Creá uno primero en "Gestión de cargos".'} />
                       }
                     />
                   </View>
