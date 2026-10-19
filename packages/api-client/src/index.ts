@@ -149,6 +149,9 @@ export type {
   AsistenciaNomina,
   CostosResponse,
   CostoNominaDetalle,
+  ResumenPeriodoResponse,
+  ResumenInsight,
+  NivelInsight,
   HistorialTrabajadorResponse,
 } from './reportes';
 export type {

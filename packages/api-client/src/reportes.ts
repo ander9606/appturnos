@@ -41,8 +41,44 @@ export interface CostoNominaDetalle {
 export interface CostosResponse {
   rango: ReporteRango;
   turnos: { turnos_completados: number; costo: number };
-  nomina: { trabajadores: number; costo: number; detalle: CostoNominaDetalle[] };
+  /** null para quien no ve pagos individuales (jefe_turnos). */
+  nomina: { trabajadores: number; costo: number; detalle: CostoNominaDetalle[] } | null;
   costo_total: number;
+}
+
+export type NivelInsight = 'alerta' | 'aviso' | 'info' | 'ok';
+
+export interface ResumenInsight {
+  id: string;
+  nivel: NivelInsight;
+  texto: string;
+}
+
+export interface ResumenPeriodoResponse {
+  rango: ReporteRango;
+  /** Período anterior de igual duración, contra el que se compara. */
+  previo: ReporteRango;
+  costo: {
+    total: number;
+    previo: number;
+    /** null si el período anterior no tuvo costo (no hay base de comparación). */
+    delta_pct: number | null;
+    turnos: number;
+    /** null para quien no ve nómina (jefe_turnos). */
+    nomina: number | null;
+  };
+  /** ordinario/nocturno/extras/festivo solo vienen para quien ve nómina. */
+  desglose: {
+    ordinario?: number;
+    nocturno?: number;
+    extras?: number;
+    festivo?: number;
+    turnos: number;
+    bonos: number;
+  };
+  turnos: { convocados: number; completados: number; no_presentados: number };
+  cobertura: { plazas: number; cubiertas: number; pct: number | null };
+  insights: ResumenInsight[];
 }
 
 export interface TurnoHistorial {
@@ -89,6 +125,11 @@ export const reportesApi = {
   asistencia(params: ReporteParams): Promise<AsistenciaResponse> {
     const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
     return api.get<AsistenciaResponse>(`/api/reportes/asistencia?${qs}`);
+  },
+
+  resumen(params: ReporteParams): Promise<ResumenPeriodoResponse> {
+    const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
+    return api.get<ResumenPeriodoResponse>(`/api/reportes/resumen?${qs}`);
   },
 
   costos(params: ReporteParams): Promise<CostosResponse> {

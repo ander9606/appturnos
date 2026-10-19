@@ -1,6 +1,7 @@
 'use strict';
 
 const ReportesService = require('./reportes.service');
+const { ROLES } = require('../../config/constants');
 
 // Rango por defecto cuando no se envían fechas (cubre cualquier dato real).
 const RANGO_MIN = '1900-01-01';
@@ -18,9 +19,17 @@ async function asistencia(req, res) {
   res.json({ success: true, data, message: 'Reporte de asistencia' });
 }
 
+// Cuánto se le paga a cada persona solo lo ven admin y jefe de nómina.
+const verPagos = (req) => [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA].includes(req.usuario.rol);
+
 async function costos(req, res) {
-  const data = await ReportesService.costos(req.empresa_id, rango(req));
+  const data = await ReportesService.costos(req.empresa_id, rango(req), { verPagos: verPagos(req) });
   res.json({ success: true, data, message: 'Reporte de costos de mano de obra' });
+}
+
+async function resumen(req, res) {
+  const data = await ReportesService.resumen(req.empresa_id, rango(req), { verPagos: verPagos(req) });
+  res.json({ success: true, data, message: 'Resumen del período' });
 }
 
 async function trabajador(req, res) {
@@ -32,4 +41,4 @@ async function trabajador(req, res) {
   res.json({ success: true, data, message: 'Historial del trabajador' });
 }
 
-module.exports = { asistencia, costos, trabajador };
+module.exports = { asistencia, costos, resumen, trabajador };

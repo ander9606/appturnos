@@ -23,6 +23,19 @@ const reglasRango = [
 
 router.use(verificarToken);
 
+// GET /api/reportes/resumen — el período se compara con el anterior de igual duración,
+// así que aquí desde y hasta son obligatorios.
+router.get(
+  '/resumen',
+  verificarRol(VER),
+  [query('desde').isISO8601().withMessage('desde requerida (YYYY-MM-DD)'),
+   query('hasta').isISO8601().withMessage('hasta requerida (YYYY-MM-DD)')
+     .custom((hasta, { req }) => hasta >= req.query.desde).withMessage('hasta no puede ser anterior a desde'),
+   rangoFechasMax(366)],
+  validar,
+  ctrl.resumen
+);
+
 // GET /api/reportes/asistencia
 router.get('/asistencia', verificarRol(VER), reglasRango, validar, ctrl.asistencia);
 

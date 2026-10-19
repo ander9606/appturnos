@@ -42,10 +42,52 @@ jobs:
         # que haya una versión de exceljs que la resuelva sin downgrade.
         run: npm audit --omit=dev --audit-level=critical
 
+  # ── Integración con MySQL 8 real (el resto de los tests mockea la DB) ──
+  mysql:
+    name: Integración MySQL 8
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: app_turnos_ci
+      JWT_SECRET: ci-secret
+      RUN_DB_TESTS: '1'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+
+      - name: Aplicar migraciones
+        run: npm run migrate
+
+      - name: Tests de integración
+        run: npx jest __tests__/integration
+
   # ── Deploy (solo en push a main, solo si CI pasó) ─────────────
   deploy:
     name: Deploy al VPS
-    needs: ci
+    needs: [ci, mysql]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     # Mismo grupo que web.yml — un solo deploy al VPS a la vez. cancel-in-progress:

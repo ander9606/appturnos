@@ -1,8 +1,8 @@
 /**
  * Reportes — resumen de asistencia y costos para admin_empresa, jefe_turnos, jefe_nomina.
  * Permite seleccionar un rango de fechas y consultar:
+ *   - Resumen: costo vs período anterior, desglose y avisos (solo admin y jefe de nómina ven nómina)
  *   - Asistencia: turnos por trabajador y días de nómina
- *   - Costos: costo de mano de obra (turnos + nómina)
  */
 import { SkeletonStats } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
@@ -22,6 +22,7 @@ import type { AsistenciaTurno, AsistenciaNomina, CostoNominaDetalle } from '@api
 import { useTheme } from '@/lib/theme';
 import { formatDate, formatCOP, toISODate } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
+import { ResumenPeriodo } from '@/features/reportes/ResumenPeriodo';
 
 // ── Rango presets ─────────────────────────────────────────────────────────
 
@@ -248,33 +249,15 @@ export default function ReportesScreen() {
           <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : (
           <>
-            {/* ── Resumen costos ───────────────────────────────── */}
-            <SectionTitle title="Costos de mano de obra" />
-            <View className="flex-row gap-3 mb-3">
-              <StatCard
-                label="Total período"
-                value={formatCOP(costos.data?.costo_total ?? 0)}
-              />
-            </View>
-            <View className="flex-row gap-3">
-              <StatCard
-                label="Turnos"
-                value={formatCOP(costos.data?.turnos.costo ?? 0)}
-                sub={`${costos.data?.turnos.turnos_completados ?? 0} completados`}
-              />
-              <StatCard
-                label="Nómina"
-                value={formatCOP(costos.data?.nomina.costo ?? 0)}
-                sub={`${costos.data?.nomina.trabajadores ?? 0} trabajadores`}
-              />
-            </View>
+            {/* ── Resumen del período: costo vs anterior, desglose y avisos ── */}
+            <ResumenPeriodo desde={desde} hasta={hasta} />
 
             {/* Detalle nómina */}
-            {(costos.data?.nomina.detalle ?? []).length > 0 && (
+            {(costos.data?.nomina?.detalle ?? []).length > 0 && (
               <>
                 <SectionTitle title="Nómina por trabajador" />
                 <View className="bg-card border border-border rounded-2xl overflow-hidden">
-                  {costos.data!.nomina.detalle.map((d) => (
+                  {costos.data!.nomina!.detalle.map((d) => (
                     <CostoRow key={d.trabajador_id} d={d} />
                   ))}
                 </View>

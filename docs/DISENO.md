@@ -347,6 +347,7 @@ Reglas:
 - Todo spinner/skeleton lleva `accessibilityRole="progressbar"` (móvil) o `role="status"` (web) con etiqueta "Cargando". Ya incluido en los componentes.
 - El foco por teclado en web es global (`:focus-visible` en `index.css`): no lo anules.
 - La información nunca va *solo* en color (añade ícono o texto).
+- Semáforos de avisos (p. ej. "Para mirar" en reportes, `features/reportes/ResumenPeriodo.tsx`): fondo `*Light` + texto `*Text` + ícono propio por nivel (alerta/aviso/info/ok). Una variación de costo que **sube** es aviso (ámbar), no "positivo".
 
 ---
 

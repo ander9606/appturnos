@@ -73,6 +73,36 @@ const ReportesModel = {
     return filas;
   },
 
+  /** Totales de turnos del rango: asistencia y costo (el bono ya viene dentro de pago_total). */
+  async resumenTurnos(empresaId, desde, hasta) {
+    const [[fila]] = await pool.query(
+      `SELECT COUNT(*) AS convocados,
+              COALESCE(SUM(a.estado = 'completado'), 0) AS completados,
+              COALESCE(SUM(a.estado = 'no_presentado'), 0) AS no_presentados,
+              COALESCE(SUM(CASE WHEN a.estado = 'completado' THEN a.pago_total END), 0) AS costo,
+              COALESCE(SUM(CASE WHEN a.estado = 'completado' THEN a.bono_monto END), 0) AS bonos
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ?
+         AND a.estado IN ('completado', 'no_presentado', 'confirmado', 'en_progreso')`,
+      [empresaId, desde, hasta]
+    );
+    return fila;
+  },
+
+  /** Plazas pedidas vs cubiertas en las ofertas del rango (sin las canceladas ni borradores). */
+  async coberturaTurnos(empresaId, desde, hasta) {
+    const [[fila]] = await pool.query(
+      `SELECT COALESCE(SUM(p.plazas), 0) AS plazas, COALESCE(SUM(p.plazas_cubiertas), 0) AS cubiertas
+       FROM oferta_puestos p
+       JOIN ofertas_turno o ON o.id = p.oferta_id
+       WHERE o.empresa_id = ? AND o.fecha BETWEEN ? AND ?
+         AND o.estado NOT IN ('borrador', 'cancelada')`,
+      [empresaId, desde, hasta]
+    );
+    return fila;
+  },
+
   async turnosDeTrabajador(empresaId, trabajadorId, desde, hasta) {
     const [filas] = await pool.query(
       `SELECT a.id, a.estado, a.horas_trabajadas, a.pago_total,
