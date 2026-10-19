@@ -1,9 +1,12 @@
+import { Text } from '@/components/ui/Text';
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { COLORS } from '@/lib/designTokens';
 import { isClientError } from '@/lib/apiErrorMessage';
 
 /**
@@ -49,12 +52,18 @@ export function StatusBanner() {
   const showQueryError = hasQueryError && isAuth; // sin sesión no hay datos "propios" que hayan fallado
   if (!offline && !showQueryError) return null;
 
+  // Oscuro para el aviso de red (17:1) y rojo oscuro para el de error (4.8:1): el blanco sobre
+  // ámbar que había antes medía 2.15:1 y no se leía (docs/DISENO.md §6).
   return (
-    <View className={offline ? 'bg-warning px-4 py-2' : 'bg-danger px-4 py-2'}>
+    <View
+      accessibilityRole="alert"
+      className={offline ? 'bg-foreground px-4 py-2 flex-row items-center justify-center gap-2' : 'bg-danger-dark px-4 py-2'}
+    >
+      {offline && <Ionicons name="cloud-offline-outline" size={14} color={COLORS.white} />}
       <Text className="text-white text-xs text-center font-medium">
         {offline
-          ? 'Sin conexión — mostrando la última información guardada'
-          : 'No se pudo cargar todo. Desliza para reintentar.'}
+          ? 'Sin conexión · mostrando lo último que guardamos'
+          : 'No pudimos cargar todo. Desliza para reintentar.'}
       </Text>
     </View>
   );

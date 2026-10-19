@@ -1,9 +1,11 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
-  ActivityIndicator,
   Pressable,
   RefreshControl,
 } from 'react-native';
@@ -76,11 +78,11 @@ function LineaRow({ item }: { item: LineaLiquidacionEventual }) {
       </View>
       <View className="flex-row gap-4">
         <View className="flex-row items-center gap-1">
-          <Ionicons name="briefcase-outline" size={12} color="#94A3B8" />
+          <Ionicons name="briefcase-outline" size={12} color={COLORS.placeholder} />
           <Text className="text-xs text-muted-foreground">{item.turnos} turno{item.turnos !== 1 ? 's' : ''}</Text>
         </View>
         <View className="flex-row items-center gap-1">
-          <Ionicons name="time-outline" size={12} color="#94A3B8" />
+          <Ionicons name="time-outline" size={12} color={COLORS.placeholder} />
           <Text className="text-xs text-muted-foreground">{item.horas.toFixed(1)}h</Text>
         </View>
       </View>
@@ -127,7 +129,7 @@ export default function LiquidacionEventualScreen() {
           headerTitle: 'Turnos eventuales',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerTintColor: '#7C3AED',
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />
@@ -135,12 +137,10 @@ export default function LiquidacionEventualScreen() {
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {!esTrabajador && <SegmentoToggle value={segmento} onChange={setSegmento} />}
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#7C3AED" />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : !periodo ? (
           <View className="flex-1 items-center justify-center gap-3 px-8">
-            <Ionicons name="calendar-outline" size={48} color="#CBD5E1" />
+            <Ionicons name="calendar-outline" size={48} color={COLORS.borderStrong} />
             <Text className="text-base font-semibold text-foreground text-center">Sin período activo</Text>
             <Text className="text-sm text-muted-foreground text-center">No hay un período abierto para tu empresa.</Text>
           </View>
@@ -202,15 +202,10 @@ export default function LiquidacionEventualScreen() {
             renderItem={({ item }) => <LineaRow item={item} />}
             ItemSeparatorComponent={() => <View className="h-0" />}
             ListEmptyComponent={
-              <View className="py-20 items-center gap-3 px-8">
-                <Ionicons name="briefcase-outline" size={48} color="#CBD5E1" />
-                <Text className="text-base font-semibold text-foreground text-center">Sin turnos eventuales</Text>
-                <Text className="text-sm text-muted-foreground text-center">
-                  {esTrabajador
-                    ? 'Aún no tienes turnos eventuales completados en este período.'
-                    : 'No hay turnos completados en este período.'}
-                </Text>
-              </View>
+              <EmptyState
+                title="Sin turnos eventuales"
+                message={esTrabajador ? 'Aún no tienes turnos eventuales completados en este período.' : 'No hay turnos completados en este período.'}
+              />
             }
             ListFooterComponent={
               puedeL ? (

@@ -6,8 +6,11 @@
  * Rojo   → fuera de rango (> 200 m)
  * Gris   → calculando / sin GPS
  */
+import { Text } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Linking, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Linking, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { formatDistance, type GeofenceStatus } from '@/lib/geo';
@@ -91,7 +94,7 @@ export function GeoFenceIndicator({
     <View className={`${cfg.bg} rounded-2xl px-4 py-3 flex-row ${cfg.hint ? 'items-start' : 'items-center'} gap-3`}>
       <View className="relative w-8 h-8 items-center justify-center">
         {key === 'loading'
-          ? <ActivityIndicator size="small" color="#94A3B8" />
+          ? <Spinner size="small" color={COLORS.placeholder} />
           : <View className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />}
       </View>
 

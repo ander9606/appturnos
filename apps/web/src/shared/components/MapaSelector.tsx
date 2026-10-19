@@ -1,3 +1,4 @@
+import { Spinner } from '@/shared/components/Spinner';
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -5,7 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-import { X, Loader2, Search } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { Modal } from './Modal';
 import { SugerenciasDropdown } from './SugerenciasDropdown';
 import { useGeocodingSearch } from '../hooks/useGeocodingSearch';
@@ -119,7 +120,7 @@ export function MapaSelector({ initialLat, initialLng, radiusM, onConfirm, onClo
             placeholder="Buscar dirección o lugar…"
             className="flex-1 text-sm focus:outline-none"
           />
-          {buscando && <Loader2 size={14} className="animate-spin text-muted-foreground flex-shrink-0" />}
+          {buscando && <Spinner size={14} className="text-muted-foreground flex-shrink-0" />}
         </div>
         <SugerenciasDropdown
           sugerencias={sugerencias}
@@ -134,7 +135,7 @@ export function MapaSelector({ initialLat, initialLng, radiusM, onConfirm, onClo
       <div style={{ height: 360 }} className="flex-shrink-0 bg-muted">
         {loading ? (
           <div className="h-full flex items-center justify-center">
-            <Loader2 size={28} className="text-info animate-spin" />
+            <Spinner size={28} className="text-info" />
           </div>
         ) : (
           <MapContainer center={pin} zoom={16} style={{ height: '100%', width: '100%' }} scrollWheelZoom>

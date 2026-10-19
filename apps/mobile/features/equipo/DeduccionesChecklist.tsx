@@ -3,8 +3,10 @@
  * mientras se digita el salario/tarifa en el formulario de trabajador.
  * Solo se renderiza si la empresa contrata por nómina laboral.
  */
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useWatch, type Control } from 'react-hook-form';
@@ -61,7 +63,7 @@ export function DeduccionesChecklist({ control }: Props) {
           <Ionicons
             name={item.aplica ? 'checkmark-circle' : 'ellipse-outline'}
             size={16}
-            color={item.aplica ? '#10B981' : '#CBD5E1'}
+            color={item.aplica ? '#10B981' : COLORS.borderStrong}
           />
           <Text className={`text-sm flex-1 ${item.aplica ? 'text-foreground' : 'text-muted-foreground'}`}>
             {item.label}{item.hint && !item.aplica ? ` — ${item.hint}` : ''}

@@ -3,8 +3,10 @@
  * Usado tanto al crear turnos (LugarInput) como al crear puntos de marcaje
  * de nómina (puntos-marcaje.tsx) — mismo componente, dos puntos de entrada.
  */
+import { Text, TextInput } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, Modal, ActivityIndicator } from 'react-native';
+import { View, Pressable, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Circle, type LatLng } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
@@ -91,23 +93,23 @@ export function MapaSelector({ visible, initialLat, initialLng, radiusM, onConfi
         <View className="flex-row items-center justify-between px-5 py-3 border-b border-border">
           <Text className="text-base font-bold text-foreground">Ajustar ubicación</Text>
           <Pressable onPress={onClose} hitSlop={8}>
-            <Ionicons name="close" size={24} color="#64748B" />
+            <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
           </Pressable>
         </View>
 
         {/* Buscador de dirección */}
         <View className="px-5 py-2 border-b border-border">
           <View className="flex-row items-center bg-muted rounded-2xl px-4 gap-2">
-            <Ionicons name="search-outline" size={16} color="#64748B" />
+            <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} />
             <TextInput
               className="flex-1 py-2.5 text-sm text-foreground"
               placeholder="Buscar dirección o lugar…"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               value={query}
               onChangeText={handleChangeText}
               returnKeyType="search"
             />
-            {buscando && <ActivityIndicator size="small" color="#94A3B8" />}
+            {buscando && <Spinner size="small" color={COLORS.placeholder} />}
           </View>
           <View className="mt-1">
             <SugerenciasDropdown sugerencias={sugerencias} searched={searched} onSelect={handleSelect} />
@@ -118,7 +120,7 @@ export function MapaSelector({ visible, initialLat, initialLng, radiusM, onConfi
         <View className="flex-1">
           {loading ? (
             <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" color={COLORS.info} />
+              <Spinner size="large" color={COLORS.info} />
             </View>
           ) : (
             <MapView

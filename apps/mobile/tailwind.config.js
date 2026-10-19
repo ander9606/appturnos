@@ -22,9 +22,11 @@ module.exports = {
         },
         // Semantic
         success: { DEFAULT: '#059669', foreground: '#FFFFFF', light: '#D1FAE5' },
-        warning: { DEFAULT: '#F59E0B', foreground: '#FFFFFF', light: '#FEF3C7' },
-        danger:  { DEFAULT: '#EF4444', foreground: '#FFFFFF', light: '#FEE2E2' },
+        warning: { DEFAULT: '#F59E0B', foreground: '#FFFFFF', light: '#FEF3C7', dark: '#D97706' },
+        danger:  { DEFAULT: '#EF4444', foreground: '#FFFFFF', light: '#FEE2E2', dark: '#DC2626' },
         info:    { DEFAULT: '#3B82F6', foreground: '#FFFFFF', light: '#DBEAFE' },
+        // Módulo logiq360 (integración)
+        integracion: { DEFAULT: '#6366F1', light: '#E0E7FF' },
         // Background
         background: '#F8FAFC',
         card:       '#FFFFFF',
@@ -35,8 +37,19 @@ module.exports = {
         // Border
         border: '#E2E8F0',
       },
+      // Inter mide 1.21× su tamaño de alto natural; el interlineado de Tailwind en 3xl+ (1.2 → 1.0) es
+      // menor y recorta tildes y emojis en Android. Mantener >= 1.25 (lo comprueba lib/__tests__/tailwindFontSize.test.ts).
+      fontSize: {
+        '3xl': ['1.875rem', { lineHeight: '2.375rem' }],
+        '4xl': ['2.25rem',  { lineHeight: '2.8125rem' }],
+        '5xl': ['3rem',     { lineHeight: '3.75rem' }],
+        '6xl': ['3.75rem',  { lineHeight: '4.6875rem' }],
+        '7xl': ['4.5rem',   { lineHeight: '5.625rem' }],
+        '8xl': ['6rem',     { lineHeight: '7.5rem' }],
+        '9xl': ['8rem',     { lineHeight: '10rem' }],
+      },
       fontFamily: {
-        sans: ['System'],
+        sans: ['Inter_400Regular'], // el peso lo resuelve components/ui/Text.tsx (docs/DISENO.md §3)
       },
       borderRadius: {
         sm:   '4px',

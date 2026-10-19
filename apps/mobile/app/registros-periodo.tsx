@@ -5,11 +5,12 @@
  * Permite editar tipo_dia y novedad de registros existentes, y crear
  * registros nuevos para días sin marcaje.
  */
+import { Text, TextInput } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, SectionList, TouchableOpacity, ActivityIndicator,
-  Modal, Pressable, TextInput, Alert, KeyboardAvoidingView, Platform,
-  ScrollView,
+  View, SectionList, TouchableOpacity, Modal, Pressable, Alert, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -43,13 +44,13 @@ import type { RegistroDiario, TipoDia, DescansoCompensatorio } from '@api-client
 // ── Constantes ────────────────────────────────────────────────────────────
 
 const TIPOS_DIA: { v: TipoDia; label: string; color: string }[] = [
-  { v: 'ordinario',     label: 'Ordinario',     color: '#64748B' },
-  { v: 'descanso',      label: 'Descanso',      color: '#3B82F6' },
-  { v: 'vacacion',      label: 'Vacación',      color: '#059669' },
-  { v: 'incapacidad',   label: 'Incapacidad',   color: '#F59E0B' },
+  { v: 'ordinario',     label: 'Ordinario',     color: COLORS.mutedForeground },
+  { v: 'descanso',      label: 'Descanso',      color: COLORS.info },
+  { v: 'vacacion',      label: 'Vacación',      color: COLORS.success },
+  { v: 'incapacidad',   label: 'Incapacidad',   color: COLORS.warning },
   { v: 'compensatorio', label: 'Compensatorio', color: '#8B5CF6' },
   { v: 'licencia',      label: 'Licencia',      color: '#EC4899' },
-  { v: 'ausencia',      label: 'Ausencia (no vino)', color: '#EF4444' },
+  { v: 'ausencia',      label: 'Ausencia (no vino)', color: COLORS.danger },
 ];
 
 // 'ausencia' se maneja aparte (mensaje y color distinto) — estos son los
@@ -191,7 +192,7 @@ function EditarRegistroModal({
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -202,7 +203,7 @@ function EditarRegistroModal({
 
           {sinHorario ? (
             <View className={`rounded-xl px-4 py-3 flex-row items-center gap-2 ${esAusencia ? 'bg-danger-light' : 'bg-info-light'}`}>
-              <Ionicons name="information-circle-outline" size={16} color={esAusencia ? '#EF4444' : '#3B82F6'} />
+              <Ionicons name="information-circle-outline" size={16} color={esAusencia ? COLORS.danger : COLORS.info} />
               <Text className={`text-xs flex-1 leading-relaxed ${esAusencia ? 'text-danger' : 'text-info'}`}>
                 {esAusencia
                   ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
@@ -222,7 +223,7 @@ function EditarRegistroModal({
                     {fmtTime(horaEntrada)}
                   </Text>
                 </TouchableOpacity>
-                <Ionicons name="arrow-forward" size={16} color="#94A3B8" />
+                <Ionicons name="arrow-forward" size={16} color={COLORS.placeholder} />
                 <TouchableOpacity
                   onPress={() => setShowSalida(true)}
                   className="flex-1 bg-muted rounded-xl px-4 py-3"
@@ -277,7 +278,7 @@ function EditarRegistroModal({
               value={novedad}
               onChangeText={setNovedad}
               placeholder="Ej: Incapacidad médica radicada, compensatorio aprobado…"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               multiline
               numberOfLines={3}
               className="text-sm text-foreground"
@@ -366,7 +367,7 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -380,7 +381,7 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
                     <Text className="text-xs text-muted-foreground mb-1">Entrada</Text>
                     <Text className="text-2xl font-bold text-foreground">{fmtTime(s.entrada)}</Text>
                   </TouchableOpacity>
-                  <Ionicons name="arrow-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="arrow-forward" size={16} color={COLORS.placeholder} />
                   <TouchableOpacity
                     onPress={() => setPicker({ i, campo: 'salida' })}
                     className="flex-1 bg-muted rounded-xl px-4 py-3"
@@ -411,7 +412,7 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
           )}
 
           <View className="rounded-xl px-4 py-3 flex-row items-center gap-2 bg-info-light">
-            <Ionicons name="information-circle-outline" size={16} color="#3B82F6" />
+            <Ionicons name="information-circle-outline" size={16} color={COLORS.info} />
             <Text className="text-xs flex-1 leading-relaxed text-info">
               Al guardar se recalculan las horas de todo el día. Las sesiones deben ir en orden y sin solaparse.
               {ultimaAbierta ? ' Si la última quedó sin salida, ponle la hora para cerrarla.' : ''}
@@ -480,7 +481,7 @@ function ReasignarCompensatorioModal({
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -495,7 +496,7 @@ function ReasignarCompensatorioModal({
             className="h-14 bg-foreground rounded-2xl items-center justify-center active:opacity-80 disabled:opacity-40"
           >
             {reasignar.isPending
-              ? <ActivityIndicator color="#fff" />
+              ? <Spinner color={COLORS.white} />
               : <Text className="text-base font-semibold text-white">
                   {fecha ? `Mover a ${fmtFechaCorta(fecha)}` : 'Elige una fecha'}
                 </Text>
@@ -673,7 +674,7 @@ function CrearRegistroModal({
               <Text className="text-sm text-muted-foreground">{creando.nombre}</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -684,7 +685,7 @@ function CrearRegistroModal({
               onPress={() => setShowFecha(true)}
               className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
             >
-              <Ionicons name="calendar-outline" size={16} color="#64748B" />
+              <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
               <Text className="text-sm text-foreground">
                 {fmtFechaCorta(toISODate(fecha))}
               </Text>
@@ -714,7 +715,7 @@ function CrearRegistroModal({
                 onPress={() => setShowFechaHasta(true)}
                 className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
               >
-                <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="text-sm text-foreground">
                   {fmtFechaCorta(toISODate(fechaHasta))}
                 </Text>
@@ -745,7 +746,7 @@ function CrearRegistroModal({
 
           {sinHorario ? (
             <View className={`rounded-xl px-4 py-3 flex-row items-center gap-2 ${esAusencia ? 'bg-danger-light' : 'bg-info-light'}`}>
-              <Ionicons name="information-circle-outline" size={16} color={esAusencia ? '#EF4444' : '#3B82F6'} />
+              <Ionicons name="information-circle-outline" size={16} color={esAusencia ? COLORS.danger : COLORS.info} />
               <Text className={`text-xs flex-1 ${esAusencia ? 'text-danger' : 'text-info'}`}>
                 {esAusencia
                   ? 'Se registrará como falta, sin horas trabajadas ni pago para este día.'
@@ -831,7 +832,7 @@ function CrearRegistroModal({
               value={novedad}
               onChangeText={setNovedad}
               placeholder="Ej: Permiso médico, llegada tardía…"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               multiline
               numberOfLines={2}
               className="bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground"
@@ -845,7 +846,7 @@ function CrearRegistroModal({
             className={`h-14 rounded-2xl items-center justify-center active:opacity-80 disabled:opacity-40 ${esAusencia ? 'bg-danger' : 'bg-foreground'}`}
           >
             {crear.isPending || crearRango.isPending
-              ? <ActivityIndicator color="#fff" />
+              ? <Spinner color={COLORS.white} />
               : <Text className="text-base font-semibold text-white">{esAusencia ? 'Marcar ausencia' : esRango ? 'Crear registros' : 'Crear registro'}</Text>
             }
           </TouchableOpacity>
@@ -882,7 +883,7 @@ function UbicacionMarcajeModal({
               </Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Ionicons name="close" size={22} color="#64748B" />
+              <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
           <View className="gap-3">
@@ -978,12 +979,12 @@ function RegistroRow({
               accessibilityRole="button"
               accessibilityLabel="Ver ubicación de marcaje"
             >
-              <Ionicons name="location-outline" size={16} color="#3B82F6" />
+              <Ionicons name="location-outline" size={16} color={COLORS.info} />
             </TouchableOpacity>
           )}
           {canEdit && (
             <TouchableOpacity onPress={() => onEdit(registro)} hitSlop={8}>
-              <Ionicons name="pencil-outline" size={16} color="#64748B" />
+              <Ionicons name="pencil-outline" size={16} color={COLORS.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -1083,7 +1084,7 @@ export default function RegistrosPeriodoScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
         <Stack.Screen options={{ title: numTrabId ? 'Registros del trabajador' : 'Registros del equipo', headerShown: true }} />
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Spinner size="large" color={theme.primary} />
       </SafeAreaView>
     );
   }
@@ -1117,7 +1118,7 @@ export default function RegistrosPeriodoScreen() {
 
       {sections.length === 0 ? (
         <View className="flex-1 items-center justify-center gap-3 px-8">
-          <Ionicons name="calendar-outline" size={48} color="#94A3B8" />
+          <Ionicons name="calendar-outline" size={48} color={COLORS.placeholder} />
           <Text className="text-base font-semibold text-foreground text-center">
             Sin registros en este período
           </Text>
@@ -1160,7 +1161,7 @@ export default function RegistrosPeriodoScreen() {
                     accessibilityLabel={`${replegado ? 'Desplegar' : 'Replegar'} registros de ${section.title}`}
                   >
                     <View className="w-7 h-7 rounded-full bg-success/20 items-center justify-center">
-                      <Ionicons name="person-outline" size={14} color="#059669" />
+                      <Ionicons name="person-outline" size={14} color={COLORS.success} />
                     </View>
                     <View className="flex-1">
                       <Text className="text-sm font-bold text-emerald-800" numberOfLines={1}>{section.title}</Text>
@@ -1170,7 +1171,7 @@ export default function RegistrosPeriodoScreen() {
                       </Text>
                     </View>
                     <Text className="text-xs text-emerald-700">· {section.totalDias} días</Text>
-                    <Ionicons name={replegado ? 'chevron-down' : 'chevron-up'} size={16} color="#059669" />
+                    <Ionicons name={replegado ? 'chevron-down' : 'chevron-up'} size={16} color={COLORS.success} />
                   </TouchableOpacity>
                   {canEdit && (
                     <TouchableOpacity
@@ -1178,7 +1179,7 @@ export default function RegistrosPeriodoScreen() {
                       hitSlop={8}
                       className="w-7 h-7 rounded-full bg-white items-center justify-center"
                     >
-                      <Ionicons name="add" size={16} color="#059669" />
+                      <Ionicons name="add" size={16} color={COLORS.success} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1190,7 +1191,7 @@ export default function RegistrosPeriodoScreen() {
                     className="flex-row items-center justify-end gap-1 px-3.5 py-2 border-t border-success/20"
                   >
                     <Text className="text-[11px] text-emerald-700">Por semana (cuenta para extra)</Text>
-                    <Ionicons name={abiertas ? 'chevron-up' : 'chevron-down'} size={14} color="#059669" />
+                    <Ionicons name={abiertas ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.success} />
                   </TouchableOpacity>
                 )}
                 {abiertas && (

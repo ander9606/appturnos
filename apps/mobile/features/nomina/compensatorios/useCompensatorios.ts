@@ -1,5 +1,6 @@
+import { showAlert } from '@/lib/alertDialog';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert } from 'react-native';
+import {} from 'react-native';
 import { nominaApi, ApiError } from '@api-client';
 import { t } from '@/lib/i18n';
 
@@ -9,7 +10,7 @@ import { t } from '@/lib/i18n';
  * cambiar entre que se cargó el rango y que se confirmó, por una carrera con
  * otro gestor). Sin esto, un rechazo del servidor quedaba silencioso. */
 function alertarErrorCompensatorio(err: unknown) {
-  Alert.alert('Error', err instanceof ApiError ? err.message : t('common.error'));
+  showAlert('Error', err instanceof ApiError ? err.message : t('common.error'));
 }
 
 /** Compensatorios propios del trabajador_nomina (pendientes y asignados) — no solo pendientes,

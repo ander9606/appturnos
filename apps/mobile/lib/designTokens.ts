@@ -17,6 +17,11 @@ export const COLORS = {
   border:          '#E2E8F0',
   card:            '#FFFFFF',
   background:      '#F8FAFC',
+  white:           '#FFFFFF', // texto/íconos sobre fondos de color
+  borderStrong:    '#CBD5E1', // slate-300 — bordes marcados, controles deshabilitados
+  warningDark:     '#D97706', // amber-600 — íconos/texto grande de alerta sobre fondo claro (3.2:1, no sirve para texto pequeño)
+  dangerDark:      '#DC2626', // red-600 — texto de error sobre fondo claro (4.8:1, pasa AA)
+  integracion:     '#6366F1', // indigo-500 — acento del módulo logiq360 (app/integracion/*)
   starFilled:      '#F59E0B', // warning — estrella rellena
   starEmpty:       '#CBD5E1', // slate-300 — estrella vacía
   shadow:          '#000000',

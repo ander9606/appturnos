@@ -2,10 +2,14 @@
  * Gestores — lista de gestores (admin_empresa, jefe_turnos, jefe_nomina, nomina)
  * de la empresa. Permite editar, activar/desactivar y eliminar usuarios gestores.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
-  View, Text, ScrollView, Pressable, Alert, ActivityIndicator,
-} from 'react-native';
+  View, ScrollView, Pressable, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,8 +32,8 @@ const ROL_LABELS: Record<string, string> = {
 };
 
 const ROL_COLORS: Record<string, string> = {
-  admin_empresa: '#DC2626',
-  jefe_turnos:   '#3B82F6',
+  admin_empresa: COLORS.dangerDark,
+  jefe_turnos:   COLORS.info,
   jefe_nomina:   '#8B5CF6',
   nomina:        '#10B981',
 };
@@ -67,7 +71,7 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
   const router = useRouter();
   const toggleMutation = useSetActivoGestor();
   const eliminarMutation = useEliminarGestor();
-  const rolColor = ROL_COLORS[gestor.rol] ?? '#64748B';
+  const rolColor = ROL_COLORS[gestor.rol] ?? COLORS.mutedForeground;
 
   const handleToggle = async () => {
     const accion = gestor.activo ? 'desactivar' : 'activar';
@@ -81,7 +85,7 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
     if (!ok) return;
     toggleMutation.mutate(
       { id: gestor.id, activo: !gestor.activo },
-      { onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el estado.')) }
+      { onError: (err) => showAlert('Error', apiErrorMessage(err, 'No se pudo actualizar el estado.')) }
     );
   };
 
@@ -94,7 +98,7 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
     });
     if (!ok) return;
     eliminarMutation.mutate(gestor.id, {
-      onError: (err) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo eliminar el gestor.')),
+      onError: (err) => showAlert('Error', apiErrorMessage(err, 'No se pudo eliminar el gestor.')),
     });
   };
 
@@ -146,20 +150,20 @@ function GestorCard({ gestor }: { gestor: Gestor }) {
               })}
               className="px-2.5 py-1.5 rounded-lg border border-border active:opacity-60"
             >
-              <Ionicons name="pencil-outline" size={14} color="#64748B" />
+              <Ionicons name="pencil-outline" size={14} color={COLORS.mutedForeground} />
             </Pressable>
             {eliminarMutation.isPending ? (
-              <ActivityIndicator size="small" color="#64748B" />
+              <Spinner size="small" color={COLORS.mutedForeground} />
             ) : (
               <Pressable
                 onPress={handleEliminar}
                 className="px-2.5 py-1.5 rounded-lg border border-border active:opacity-60"
               >
-                <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                <Ionicons name="trash-outline" size={14} color={COLORS.danger} />
               </Pressable>
             )}
             {toggleMutation.isPending ? (
-              <ActivityIndicator size="small" color="#64748B" />
+              <Spinner size="small" color={COLORS.mutedForeground} />
             ) : (
               <Pressable
                 onPress={handleToggle}
@@ -194,9 +198,9 @@ export default function GestoresScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Gestores', headerShown: true }} />
-        <ActivityIndicator size="large" color={theme.primary} />
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -211,7 +215,7 @@ export default function GestoresScreen() {
       >
         {gestores.length === 0 ? (
           <View className="items-center justify-center py-20 gap-3 px-8">
-            <Ionicons name="people-outline" size={48} color="#CBD5E1" />
+            <Ionicons name="people-outline" size={48} color={COLORS.borderStrong} />
             <Text className="text-base font-semibold text-muted-foreground text-center">
               Sin gestores creados
             </Text>
@@ -256,14 +260,14 @@ export default function GestoresScreen() {
         className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center active:opacity-80"
         style={{
           backgroundColor: theme.primary,
-          shadowColor: '#FF5A3C',
+          shadowColor: COLORS.primary,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.35,
           shadowRadius: 8,
           elevation: 8,
         }}
       >
-        <Ionicons name="person-add" size={22} color="#fff" />
+        <Ionicons name="person-add" size={22} color={COLORS.white} />
       </Pressable>
     </SafeAreaView>
   );

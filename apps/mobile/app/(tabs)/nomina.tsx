@@ -10,11 +10,13 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, FlatList, ScrollView, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Alert,
-} from 'react-native';
+  View, FlatList, ScrollView, TouchableOpacity, RefreshControl, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -30,7 +32,7 @@ import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
 import { MonthCalendar }          from '@/components/ui/MonthCalendar';
 import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
-import { HOUR_TYPE_COLORS }       from '@/lib/designTokens';
+import { COLORS,HOUR_TYPE_COLORS }       from '@/lib/designTokens';
 import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { bogotaToday } from '@/lib/formatters';
 import {
@@ -173,14 +175,14 @@ function NominaGestorView() {
       showToast('Período liquidado correctamente.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al liquidar';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
   if (loadingPeriodos) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -248,7 +250,7 @@ function NominaGestorView() {
                     accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
                     className="p-1"
                   >
-                    <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={20} color="#fff" />
+                    <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={20} color={COLORS.white} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -331,7 +333,7 @@ function NominaGestorView() {
                         : 'checkmark-circle-outline'
                       }
                       size={14}
-                      color="#64748B"
+                      color={COLORS.mutedForeground}
                     />
                     <Text className="text-xs text-muted-foreground">
                       {activePeriodo.estado === 'abierto'
@@ -376,10 +378,10 @@ function NominaGestorView() {
                   className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
                 >
                   <View className="flex-row items-center gap-2">
-                    <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                    <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm font-medium text-foreground">Registros del equipo</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </TouchableOpacity>
               )}
 
@@ -391,10 +393,10 @@ function NominaGestorView() {
                     className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
                   >
                     <View className="flex-row items-center gap-2">
-                      <Ionicons name="people-outline" size={16} color="#64748B" />
+                      <Ionicons name="people-outline" size={16} color={COLORS.mutedForeground} />
                       <Text className="text-sm font-medium text-foreground">Asistencia hoy</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -402,10 +404,10 @@ function NominaGestorView() {
                     className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
                   >
                     <View className="flex-row items-center gap-2">
-                      <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+                      <Ionicons name="briefcase-outline" size={16} color={COLORS.mutedForeground} />
                       <Text className="text-sm font-medium text-foreground">Turnos eventuales (extra)</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                   </TouchableOpacity>
 
                   <Text className="text-xs font-bold text-muted-foreground uppercase tracking-widest px-1">Aprobaciones</Text>
@@ -415,12 +417,12 @@ function NominaGestorView() {
                     className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
                   >
                     <View className="flex-row items-center gap-2">
-                      <Ionicons name="enter-outline" size={16} color="#64748B" />
+                      <Ionicons name="enter-outline" size={16} color={COLORS.mutedForeground} />
                       <Text className="text-sm font-medium text-foreground">Reingresos pendientes</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
                       {reingresosPendientes.length > 0 && <ConteoPendientes n={reingresosPendientes.length} />}
-                      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                      <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                     </View>
                   </TouchableOpacity>
 
@@ -429,12 +431,12 @@ function NominaGestorView() {
                     className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
                   >
                     <View className="flex-row items-center gap-2">
-                      <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                      <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
                       <Text className="text-sm font-medium text-foreground">Descansos compensatorios</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
                       {compPendientes > 0 && <ConteoPendientes n={compPendientes} />}
-                      <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                      <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                     </View>
                   </TouchableOpacity>
 
@@ -445,10 +447,10 @@ function NominaGestorView() {
                     className="flex-row items-center justify-between bg-card border border-border rounded-2xl px-4 py-3"
                   >
                     <View className="flex-row items-center gap-2">
-                      <Ionicons name="location-outline" size={16} color="#64748B" />
+                      <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
                       <Text className="text-sm font-medium text-foreground">Asignaciones de lugar</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                    <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                   </TouchableOpacity>
                 </>
               )}
@@ -481,16 +483,9 @@ function NominaGestorView() {
         }
         ListEmptyComponent={
           loadingLiq ? (
-            <View className="py-12 items-center">
-              <ActivityIndicator color={theme.primary} />
-            </View>
+            <SkeletonList count={3} />
           ) : (
-            <View className="py-12 items-center gap-3 px-8">
-              <Ionicons name="bar-chart-outline" size={40} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin registros en este período
-              </Text>
-            </View>
+            <EmptyState title="Sin registros en este período" />
           )
         }
         ItemSeparatorComponent={() => <View className="h-2" />}

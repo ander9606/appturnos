@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useAsignarCompensatorio, useReasignarCompensatorio, useRangoCompensatorio } from '../hooks/useNomina';
@@ -27,7 +28,7 @@ function RangoCompensatorioPicker({
   const disponibles = dias.filter(d => d.disponible);
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground py-4 text-center">Cargando fechas disponibles...</p>;
+    return <SkeletonList count={3} />;
   }
   if (isError) {
     return (

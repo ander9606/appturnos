@@ -4,8 +4,9 @@
  * null si no activó acepta_extras o todavía no hay período (autocreado on-demand
  * por el backend en cuanto el trabajador consulta, así que solo falta mientras carga).
  */
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';

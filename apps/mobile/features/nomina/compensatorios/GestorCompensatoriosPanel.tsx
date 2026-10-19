@@ -4,8 +4,10 @@
  * dentro del rango de 28 días que calcula el backend (RangoFechasCompensatorio).
  */
 
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';
@@ -38,7 +40,7 @@ export function GestorCompensatoriosPanel({ compensatorios }: Props) {
   return (
     <View className="bg-card border border-border rounded-2xl overflow-hidden">
       <View className="px-4 py-3 border-b border-border flex-row items-center gap-2">
-        <Ionicons name="calendar-outline" size={16} color="#64748B" />
+        <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
         <Text className="text-sm font-semibold text-foreground">
           Descansos compensatorios
         </Text>
@@ -107,7 +109,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
           onPress={() => setShowPicker(true)}
           className="self-start bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
         >
-          <Ionicons name="calendar-outline" size={14} color="#64748B" />
+          <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
           <Text className="text-sm text-foreground">Elegir fecha</Text>
         </TouchableOpacity>
       ) : (

@@ -9,11 +9,12 @@
  *   5. Selector de período
  */
 
+import { Text } from '@/components/ui/Text';
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
-import { HOUR_TYPE_COLORS } from '@/lib/designTokens';
+import { COLORS,HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { Badge } from '@/components/ui/Badge';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import {
@@ -112,7 +113,7 @@ export function ResumenCards({
               {pendientes.length > 0 && <View className="w-2 h-2 rounded-full bg-warning" />}
               <Text className="text-sm font-semibold text-foreground">Detalle de pago</Text>
             </View>
-            <Ionicons name={expandedPago ? 'chevron-up' : 'chevron-down'} size={16} color="#64748B" />
+            <Ionicons name={expandedPago ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
           </View>
 
           {!expandedPago && pendientes.length > 0 && (
@@ -208,7 +209,7 @@ export function ResumenCards({
                 Novedades del período
               </Text>
             </View>
-            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#64748B" />
+            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
           </View>
 
           {/* Resumen comprimido */}
@@ -428,7 +429,7 @@ export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorH
       <View className="relative h-1.5 rounded-full bg-muted overflow-hidden">
         <View
           className="h-full rounded-full"
-          style={{ width: `${pct}%`, backgroundColor: excede ? '#059669' : '#CBD5E1' }}
+          style={{ width: `${pct}%`, backgroundColor: excede ? COLORS.success : COLORS.borderStrong }}
         />
         <MarcaPeriodoAnterior horas={semana.horasPrevias ?? 0} limite={semana.limiteHoras} color="#334155" />
       </View>

@@ -2,6 +2,8 @@
  * Layout del panel de super_admin.
  * Tabs: Dashboard, Empresas, Reportes.
  */
+import { INTER } from '@/lib/tipografia';
+import { COLORS } from '@/lib/designTokens';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +15,7 @@ function TabIcon({ name, focused }: { name: IoniconsName; focused: boolean }) {
     <Ionicons
       name={focused ? name.replace('-outline', '') as IoniconsName : name}
       size={22}
-      color={focused ? '#6366F1' : '#94A3B8'}
+      color={focused ? COLORS.integracion : COLORS.placeholder}
     />
   );
 }
@@ -24,11 +26,11 @@ export default function AdminLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#6366F1',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: COLORS.integracion,
+        tabBarInactiveTintColor: COLORS.placeholder,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
+          backgroundColor: COLORS.white,
+          borderTopColor: COLORS.border,
           borderTopWidth: 1,
           // Con edge-to-edge, el contenido dibuja detrás de la barra de navegación
           // de Android — insets.bottom es 0 sin botones (ocupa toda la pantalla),
@@ -40,7 +42,7 @@ export default function AdminLayout() {
         },
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '600',
+          fontFamily: INTER[600],
         },
       }}
     >

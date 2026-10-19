@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 'use strict';
 
 export type NivelRanking = 'nuevo' | 'critico' | 'bajo' | 'medio' | 'alto' | 'elite';
@@ -30,10 +31,10 @@ export function rankingLabel(nivel: NivelRanking): string {
 export function rankingColor(nivel: NivelRanking): string {
   const colors: Record<NivelRanking, string> = {
     nuevo:   '#6B7280', // gray
-    critico: '#EF4444', // red
+    critico: COLORS.danger, // red
     bajo:    '#F97316', // orange
     medio:   '#EAB308', // yellow
-    alto:    '#22C55E', // green
+    alto:    COLORS.success, // green
     elite:   '#8B5CF6', // purple
   };
   return colors[nivel];

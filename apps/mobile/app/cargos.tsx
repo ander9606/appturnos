@@ -1,13 +1,14 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text, TextInput } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   FlatList,
   Pressable,
-  TextInput,
   Alert,
-  ActivityIndicator,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -171,9 +172,7 @@ export default function CargosScreen() {
       />
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={COLORS.info} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : (
           <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
 
@@ -188,9 +187,9 @@ export default function CargosScreen() {
                   onPress={() => setFuncionesCargo(c)}
                   className="flex-row items-center gap-1.5 bg-card border border-border rounded-xl px-3 py-2 active:opacity-70"
                 >
-                  <Ionicons name="briefcase-outline" size={13} color="#64748B" />
+                  <Ionicons name="briefcase-outline" size={13} color={COLORS.mutedForeground} />
                   <Text className="text-sm text-foreground">{c.nombre}</Text>
-                  <Ionicons name="list-outline" size={13} color="#94A3B8" />
+                  <Ionicons name="list-outline" size={13} color={COLORS.placeholder} />
                 </Pressable>
               ))}
               {sistemaCargos.length === 0 && (
@@ -205,7 +204,7 @@ export default function CargosScreen() {
 
             {empresaCargos.length === 0 ? (
               <View className="bg-card border border-dashed border-border rounded-2xl p-6 items-center gap-3">
-                <Ionicons name="briefcase-outline" size={32} color="#94A3B8" />
+                <Ionicons name="briefcase-outline" size={32} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground text-center">
                   Aún no tienes cargos personalizados.{'\n'}Crea uno con el botón +
                 </Text>
@@ -254,7 +253,7 @@ export default function CargosScreen() {
                         accessibilityLabel="Funciones del cargo"
                         className="w-8 h-8 rounded-full bg-muted items-center justify-center active:opacity-70"
                       >
-                        <Ionicons name="list-outline" size={15} color="#64748B" />
+                        <Ionicons name="list-outline" size={15} color={COLORS.mutedForeground} />
                       </Pressable>
                       <Pressable
                         onPress={() => openEdit(cargo)}
@@ -262,7 +261,7 @@ export default function CargosScreen() {
                         accessibilityLabel="Editar cargo"
                         className="w-8 h-8 rounded-full bg-muted items-center justify-center active:opacity-70"
                       >
-                        <Ionicons name="pencil-outline" size={15} color="#64748B" />
+                        <Ionicons name="pencil-outline" size={15} color={COLORS.mutedForeground} />
                       </Pressable>
                       <Pressable
                         onPress={() => handleEliminar(cargo)}
@@ -288,14 +287,14 @@ export default function CargosScreen() {
           className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center active:opacity-80"
           style={{
             backgroundColor: COLORS.info,
-            shadowColor: '#3B82F6',
+            shadowColor: COLORS.info,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,
             shadowRadius: 8,
             elevation: 8,
           }}
         >
-          <Ionicons name="add" size={28} color="#fff" />
+          <Ionicons name="add" size={28} color={COLORS.white} />
         </Pressable>
       </SafeAreaView>
 
@@ -320,7 +319,7 @@ export default function CargosScreen() {
                 {editingCargo ? 'Editar cargo' : 'Nuevo cargo'}
               </Text>
               <Pressable onPress={() => setModalVisible(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color="#64748B" />
+                <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
               </Pressable>
             </View>
 
@@ -427,7 +426,7 @@ export default function CargosScreen() {
                   className="bg-card border border-border rounded-2xl px-4 h-14 flex-row items-center justify-between active:opacity-70"
                 >
                   <View className="flex-row items-center gap-2 flex-1">
-                    <Ionicons name="location-outline" size={16} color="#64748B" />
+                    <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
                     <Text
                       className={`text-base flex-1 ${puntoSeleccionado ? 'text-foreground' : 'text-muted-foreground'}`}
                       numberOfLines={1}
@@ -435,7 +434,7 @@ export default function CargosScreen() {
                       {puntoSeleccionado ? puntoSeleccionado.nombre : 'Seleccionar punto…'}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
                 {puntosFijos.length === 0 && (
                   <Text className="text-xs text-muted-foreground mt-1.5 px-1">
@@ -455,7 +454,7 @@ export default function CargosScreen() {
               style={{ backgroundColor: COLORS.info }}
             >
               {isSaving ? (
-                <ActivityIndicator color="#fff" />
+                <Spinner color={COLORS.white} />
               ) : (
                 <Text className="text-base font-semibold text-white">
                   {editingCargo ? 'Guardar cambios' : 'Crear cargo'}
@@ -477,7 +476,7 @@ export default function CargosScreen() {
           <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
             <Text className="text-base font-bold text-foreground">Seleccionar punto</Text>
             <Pressable onPress={() => setPuntoModal(false)} hitSlop={8}>
-              <Ionicons name="close" size={24} color="#64748B" />
+              <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
             </Pressable>
           </View>
 
@@ -490,7 +489,7 @@ export default function CargosScreen() {
             className="flex-row items-center gap-3 px-5 py-4 border-b border-border active:opacity-70"
           >
             <View className="w-8 h-8 rounded-full bg-muted items-center justify-center">
-              <Ionicons name="close" size={14} color="#64748B" />
+              <Ionicons name="close" size={14} color={COLORS.mutedForeground} />
             </View>
             <Text className="text-sm text-muted-foreground flex-1">Sin punto asignado</Text>
             {form.punto_marcaje_id === null && (
@@ -512,7 +511,7 @@ export default function CargosScreen() {
                   className="flex-row items-center gap-3 px-5 py-4 border-b border-border active:opacity-70"
                 >
                   <View className="w-8 h-8 rounded-full bg-warning/10 items-center justify-center flex-shrink-0">
-                    <Ionicons name="location-outline" size={14} color="#D97706" />
+                    <Ionicons name="location-outline" size={14} color={COLORS.warningDark} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-sm font-medium text-foreground">{p.nombre}</Text>
@@ -530,13 +529,7 @@ export default function CargosScreen() {
               );
             }}
             ListEmptyComponent={
-              <View className="p-8 items-center gap-2">
-                <Ionicons name="location-outline" size={32} color="#94A3B8" />
-                <Text className="text-sm text-muted-foreground text-center">
-                  No hay puntos fijos creados.{'\n'}
-                  Ve a "Puntos de marcaje" para crear uno.
-                </Text>
-              </View>
+              <EmptyState compact title="No hay puntos fijos creados" message={'Ve a "Puntos de marcaje" para crear uno.'} />
             }
           />
         </SafeAreaView>

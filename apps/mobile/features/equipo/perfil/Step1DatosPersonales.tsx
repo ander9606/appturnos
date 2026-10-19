@@ -1,11 +1,11 @@
+import { Text, TextInput } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   Pressable,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Input } from '@/components/ui/Input';
@@ -34,7 +34,7 @@ function SegInput({
         onChangeText={(t) => onChange(t.replace(/\D/g, '').slice(0, maxLength))}
         keyboardType="number-pad"
         placeholder={placeholder}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={COLORS.placeholder}
         maxLength={maxLength}
       />
     </View>
@@ -85,7 +85,7 @@ export function Step1DatosPersonales({ data, onChange, onNext }: Props) {
 
   const handleNext = async () => {
     const err = validateStep1(data);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
 
     if (data.cedula.length >= 4) {
       try {

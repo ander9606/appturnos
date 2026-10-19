@@ -4,8 +4,9 @@
  *  - Banner verde si tiene días compensatorios ASIGNADOS próximos.
  */
 
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { DescansoCompensatorio } from '@api-client';
 import { fmtFechaCorta } from '../trabajador/nominaTrabajadorUtils';

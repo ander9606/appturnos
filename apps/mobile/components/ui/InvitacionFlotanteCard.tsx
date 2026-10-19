@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import { useState } from 'react';
-import { Modal, View, Text, Alert } from 'react-native';
+import { Modal, View, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useInvitacionFlotanteStore } from '@/lib/invitacionFlotante';
 import { useAceptar, useRechazarVinculo } from '@/features/empresas/useTrabajadorEmpresa';
@@ -67,7 +69,7 @@ export function InvitacionFlotanteCard() {
         >
           <View className="flex-row items-center gap-3 px-5 pt-5 pb-3">
             <View className={`w-11 h-11 rounded-xl items-center justify-center ${esNomina ? 'bg-warning/10' : 'bg-primary-50'}`}>
-              <Ionicons name={esNomina ? 'briefcase' : 'mail'} size={20} color={esNomina ? '#D97706' : '#FF5A3C'} />
+              <Ionicons name={esNomina ? 'briefcase' : 'mail'} size={20} color={esNomina ? COLORS.warningDark : COLORS.primary} />
             </View>
             <View className="flex-1">
               <Text className="text-base font-bold text-foreground">{vinculo.empresa_nombre}</Text>

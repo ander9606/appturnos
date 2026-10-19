@@ -1,8 +1,9 @@
+import { Text } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   TouchableOpacity,
-  Text,
-  ActivityIndicator,
   type TouchableOpacityProps,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -71,13 +72,13 @@ export function Button({
   };
 
   const shadow = variant === 'primary' && !isDisabled ? {
-    shadowColor: '#FF5A3C',
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   } : variant === 'danger' && !isDisabled ? {
-    shadowColor: '#EF4444',
+    shadowColor: COLORS.danger,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -102,12 +103,12 @@ export function Button({
       accessibilityState={{ disabled: isDisabled, busy: enCarga }}
     >
       {enCarga ? (
-        <ActivityIndicator
+        <Spinner
           size="small"
           color={
-            variant === 'primary' || variant === 'danger' || variant === 'success' ? '#fff'
-            : variant === 'successOutline' ? '#059669'
-            : '#FF5A3C'
+            variant === 'primary' || variant === 'danger' || variant === 'success' ? COLORS.white
+            : variant === 'successOutline' ? COLORS.success
+            : COLORS.primary
           }
         />
       ) : (

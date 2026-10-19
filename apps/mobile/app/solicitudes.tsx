@@ -7,17 +7,18 @@
  *
  * Acciones disponibles: Aprobar / Rechazar
  */
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text, TextInput } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   RefreshControl,
-  TextInput,
   Pressable,
   Modal,
 } from 'react-native';
@@ -115,11 +116,11 @@ function SolicitudCard({
   const loading   = loadingId === solicitud.id;
 
   const estadoConfig: Record<string, { label: string; color: string; bg: string }> = {
-    solicitado_por_trabajador: { label: 'Solicita unirse',    color: '#D97706', bg: '#FEF3C7' },
-    solicitado_por_empresa:    { label: 'Invitación enviada', color: '#3B82F6', bg: '#EFF6FF' },
-    activo:                    { label: 'Activo',             color: '#059669', bg: '#D1FAE5' },
-    rechazado:                 { label: 'Rechazado',          color: '#EF4444', bg: '#FEE2E2' },
-    archivado:                 { label: 'Archivado',          color: '#94A3B8', bg: '#F1F5F9' },
+    solicitado_por_trabajador: { label: 'Solicita unirse',    color: COLORS.warningDark, bg: '#FEF3C7' },
+    solicitado_por_empresa:    { label: 'Invitación enviada', color: COLORS.info, bg: '#EFF6FF' },
+    activo:                    { label: 'Activo',             color: COLORS.success, bg: '#D1FAE5' },
+    rechazado:                 { label: 'Rechazado',          color: COLORS.danger, bg: '#FEE2E2' },
+    archivado:                 { label: 'Archivado',          color: COLORS.placeholder, bg: '#F1F5F9' },
   };
 
   const cfg = estadoConfig[solicitud.estado] ?? estadoConfig.archivado;
@@ -210,7 +211,7 @@ function SolicitudCard({
               className="flex-1 h-10 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <Spinner size="small" color={COLORS.white} />
               ) : (
                 <Text className="text-sm font-semibold text-white">Aprobar</Text>
               )}
@@ -353,18 +354,18 @@ export default function SolicitudesScreen() {
         {/* Search */}
         <View className="px-5 mb-4">
           <View className="flex-row items-center bg-card border border-border rounded-xl px-3 h-10 gap-2">
-            <Ionicons name="search-outline" size={16} color="#64748B" />
+            <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} />
             <TextInput
               className="flex-1 text-sm text-foreground"
               placeholder="Buscar por nombre o email…"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               value={search}
               onChangeText={setSearch}
               autoCorrect={false}
             />
             {search.length > 0 && (
               <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                <Ionicons name="close-circle" size={16} color={COLORS.placeholder} />
               </Pressable>
             )}
           </View>
@@ -381,7 +382,7 @@ export default function SolicitudesScreen() {
         {!isLoading && solicitudes.length === 0 && (
           <View className="items-center justify-center px-8 py-16 gap-3">
             <View className="w-16 h-16 rounded-2xl bg-muted items-center justify-center">
-              <Ionicons name="people-outline" size={32} color="#94A3B8" />
+              <Ionicons name="people-outline" size={32} color={COLORS.placeholder} />
             </View>
             <Text className="text-lg font-bold text-foreground text-center">
               {tab === 'pendientes' ? 'Sin solicitudes pendientes' : 'Sin vínculos aprobados'}
@@ -425,7 +426,7 @@ export default function SolicitudesScreen() {
             )}
           </View>
           <Pressable onPress={() => setCargoModalId(null)} hitSlop={8} disabled={asignandoCargo}>
-            <Ionicons name="close" size={24} color="#64748B" />
+            <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
           </Pressable>
         </View>
 
@@ -440,12 +441,7 @@ export default function SolicitudesScreen() {
           keyExtractor={(c) => String(c.id)}
           contentContainerStyle={{ padding: 20, paddingBottom: 8 }}
           ListEmptyComponent={
-            <View className="items-center gap-2 py-10">
-              <Ionicons name="briefcase-outline" size={32} color="#94A3B8" />
-              <Text className="text-sm text-muted-foreground text-center">
-                Tu empresa no tiene cargos creados todavía.{'\n'}Creá uno primero en "Gestión de cargos".
-              </Text>
-            </View>
+            <EmptyState compact title="Tu empresa no tiene cargos creados todavía" message={'Creá uno primero en "Gestión de cargos".'} />
           }
           renderItem={({ item }) => {
             const selected = selectedCargoIds.includes(item.id);
@@ -457,7 +453,7 @@ export default function SolicitudesScreen() {
                 }`}
               >
                 <View className="w-9 h-9 rounded-full bg-info/10 items-center justify-center">
-                  <Ionicons name="briefcase-outline" size={16} color="#3B82F6" />
+                  <Ionicons name="briefcase-outline" size={16} color={COLORS.info} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-sm font-semibold text-foreground">{item.nombre}</Text>
@@ -472,7 +468,7 @@ export default function SolicitudesScreen() {
                     </Text>
                   )}
                 </View>
-                {selected && <Ionicons name="checkmark-circle" size={20} color="#6366F1" />}
+                {selected && <Ionicons name="checkmark-circle" size={20} color={COLORS.integracion} />}
               </Pressable>
             );
           }}
@@ -485,7 +481,7 @@ export default function SolicitudesScreen() {
             className="h-14 rounded-2xl items-center justify-center bg-primary-500 active:opacity-80 disabled:opacity-40"
           >
             {asignandoCargo ? (
-              <ActivityIndicator color="#fff" />
+              <Spinner color={COLORS.white} />
             ) : (
               <Text className="text-base font-semibold text-white">
                 {vinculoAprobadoId ? 'Reintentar asignación' : `Aprobar y certificar (${selectedCargoIds.length})`}

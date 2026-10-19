@@ -1,3 +1,4 @@
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
@@ -136,11 +137,11 @@ export function TurnosPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <SkeletonTable />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : ofertas.length === 0 ? (
-        <EmptyState message="No hay ofertas" action={puedeGestionar ? { label: '+ Crear la primera', onClick: () => setShowCrear(true) } : undefined} />
+        <EmptyState title="No hay ofertas" action={puedeGestionar ? { label: '+ Crear la primera', onClick: () => setShowCrear(true) } : undefined} />
       ) : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">

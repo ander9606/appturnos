@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export function TurnoDescripcionCard({
@@ -42,7 +44,7 @@ export function TurnoDescripcionCard({
           {i > 0 && <View className="border-t border-border" />}
           <View className="gap-1">
             <View className="flex-row items-center gap-2">
-              <Ionicons name={s.icon} size={14} color="#64748B" />
+              <Ionicons name={s.icon} size={14} color={COLORS.mutedForeground} />
               <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 {s.label}
               </Text>

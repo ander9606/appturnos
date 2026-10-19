@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { formatCOP } from '@/lib/formatters';
@@ -37,7 +39,7 @@ export function LiquidacionTrabajadorCard({ trabajador, primaryColor }: Props) {
               )}
               {trabajador.ranking != null && (
                 <View className="flex-row items-center gap-0.5">
-                  <Ionicons name="star" size={10} color="#F59E0B" />
+                  <Ionicons name="star" size={10} color={COLORS.warning} />
                   <Text className="text-[10px] font-semibold text-amber-600">
                     {Number(trabajador.ranking).toFixed(1)}
                   </Text>
@@ -48,7 +50,7 @@ export function LiquidacionTrabajadorCard({ trabajador, primaryColor }: Props) {
               )}
               {trabajador.turnos_pendientes_firma > 0 && (
                 <View className="flex-row items-center gap-0.5">
-                  <Ionicons name="warning" size={10} color="#D97706" />
+                  <Ionicons name="warning" size={10} color={COLORS.warningDark} />
                   <Text className="text-[10px] font-medium text-warning">
                     {trabajador.turnos_pendientes_firma} sin firmar
                   </Text>
@@ -56,7 +58,7 @@ export function LiquidacionTrabajadorCard({ trabajador, primaryColor }: Props) {
               )}
             </View>
           </View>
-          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#94A3B8" />
+          <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.placeholder} />
         </View>
 
         {/* Totales */}

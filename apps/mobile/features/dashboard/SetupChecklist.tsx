@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Step {
@@ -42,12 +44,12 @@ export function SetupChecklist({ steps }: SetupChecklistProps) {
             <Ionicons
               name={step.done ? 'checkmark-circle' : 'ellipse-outline'}
               size={20}
-              color={step.done ? '#16A34A' : '#94A3B8'}
+              color={step.done ? COLORS.success : COLORS.placeholder}
             />
             <Text className={`text-sm flex-1 ${step.done ? 'text-muted-foreground line-through' : 'text-foreground font-medium'}`}>
               {step.label}
             </Text>
-            {!step.done && <Ionicons name="chevron-forward" size={16} color="#94A3B8" />}
+            {!step.done && <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />}
           </Pressable>
         ))}
       </View>

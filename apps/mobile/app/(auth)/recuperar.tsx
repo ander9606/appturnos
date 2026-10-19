@@ -5,10 +5,10 @@
  *   Paso 1 — email → envía OTP
  *   Paso 2 — código OTP + nueva contraseña → restablece y vuelve a login
  */
+import { Text } from '@/components/ui/Text';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,

@@ -14,7 +14,8 @@ export const useConfirmStore = createOverlayStore<ConfirmOptions>();
 /**
  * Reemplazo con estilo propio de Alert.alert para confirmaciones de 2 botones
  * (cancelar / confirmar). Resuelve `true` si el usuario confirma.
- * Para mensajes de solo-info o de más de 2 botones sigue usando Alert.alert.
+ * Para avisos de un botón usa showAlert() (lib/alertDialog.ts); para menús de más de 2 opciones
+ * todavía se usa Alert.alert (pendiente de un bottom sheet — docs/DISENO.md §5.5).
  */
 export function confirm(options: ConfirmOptions): Promise<boolean> {
   return useConfirmStore.getState().open(options);

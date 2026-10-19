@@ -3,13 +3,14 @@
  * Accesible desde la campana del header en cualquier tab.
  */
 
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
   Pressable,
-  ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
@@ -188,7 +189,7 @@ export default function NotificacionesScreen() {
         <Ionicons
           name={iconForTipo(item.tipo)}
           size={18}
-          color={item.leida ? '#94A3B8' : colorDeCategoria(categoriaDeTipo(item.tipo))}
+          color={item.leida ? COLORS.placeholder : colorDeCategoria(categoriaDeTipo(item.tipo))}
         />
       </View>
 
@@ -282,7 +283,7 @@ export default function NotificacionesScreen() {
                   className="px-3 py-1.5 rounded-full"
                   style={{ backgroundColor: active ? color : color + '18' }}
                 >
-                  <Text className="text-xs font-semibold" style={{ color: active ? '#FFFFFF' : color }}>
+                  <Text className="text-xs font-semibold" style={{ color: active ? COLORS.white : color }}>
                     {CATEGORIA_LABEL[c]}
                   </Text>
                 </TouchableOpacity>
@@ -292,9 +293,7 @@ export default function NotificacionesScreen() {
       )}
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : (
         <FlatList
           data={notificaciones}
@@ -309,17 +308,7 @@ export default function NotificacionesScreen() {
               colors={[theme.primary]}
             />
           }
-          ListEmptyComponent={
-            <View className="flex-1 items-center justify-center gap-3 py-20 px-8">
-              <Ionicons name="notifications-off-outline" size={48} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin notificaciones
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                Aquí aparecerán confirmaciones de turnos, cambios de período y más.
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyState title="Sin notificaciones" message="Aquí aparecerán confirmaciones de turnos, cambios de período y más." />}
         />
       )}
     </SafeAreaView>

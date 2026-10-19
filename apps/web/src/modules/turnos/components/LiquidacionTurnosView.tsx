@@ -1,6 +1,8 @@
+import { SkeletonStats } from '@/shared/components/Skeleton';
+import { Spinner } from '@/shared/components/Spinner';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { DollarSign, Calendar, Clock, ChevronDown, Download, Loader2, AlertTriangle } from 'lucide-react';
+import { DollarSign, Calendar, Clock, ChevronDown, Download, AlertTriangle } from 'lucide-react';
 import { useLiquidacionTurnos, usePeriodoActivoTurnos } from '../hooks/useTurnos';
 import { turnosApi } from '../api/turnosApi';
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -188,7 +190,7 @@ export function LiquidacionTurnosView() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <SkeletonStats />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : (
@@ -287,7 +289,7 @@ export function LiquidacionTurnosView() {
                                       className="mt-2 flex items-center gap-1.5 text-primary hover:underline disabled:opacity-60"
                                     >
                                       {descargando === t.asignacion_id
-                                        ? <Loader2 size={13} className="animate-spin" />
+                                        ? <Spinner size={13} />
                                         : <Download size={13} />}
                                       Descargar contrato
                                     </button>
@@ -360,7 +362,7 @@ export function LiquidacionTurnosView() {
                                   className="text-primary hover:underline disabled:opacity-60"
                                 >
                                   {descargando === l.asignacion_id
-                                    ? <Loader2 size={13} className="animate-spin" />
+                                    ? <Spinner size={13} />
                                     : <Download size={13} />}
                                 </button>
                               </span>

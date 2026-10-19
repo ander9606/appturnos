@@ -1,7 +1,12 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, Alert,
-} from 'react-native';
+  View, FlatList, TouchableOpacity, RefreshControl, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -68,19 +73,13 @@ export default function MisCuentasCobroScreen() {
         }
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 48 }} />
+            <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
           ) : (
-            <View className="items-center justify-center py-16 gap-3">
-              <Ionicons name="document-text-outline" size={48} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground">
-                {soloPendientes ? 'Sin cuentas de cobro pendientes' : 'Sin cuentas de cobro'}
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                {soloPendientes
-                  ? 'Ya firmaste todas tus cuentas de cobro.'
-                  : 'Tus cuentas de cobro aparecerán aquí cuando se cierre un período con turnos tuyos.'}
-              </Text>
-            </View>
+            <EmptyState
+              variant={soloPendientes ? 'done' : 'empty'}
+              title={soloPendientes ? 'Sin cuentas de cobro pendientes' : 'Sin cuentas de cobro'}
+              message={soloPendientes ? 'Ya firmaste todas tus cuentas de cobro.' : 'Tus cuentas de cobro aparecerán aquí cuando se cierre un período con turnos tuyos.'}
+            />
           )
         }
         renderItem={({ item: c }) => (
@@ -99,7 +98,7 @@ function CuentaCobroCard({ cuenta: c, onPress }: { cuenta: CuentaCobroResumen; o
     try {
       await descargarCuentaCobro(c.id);
     } catch {
-      Alert.alert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
     } finally {
       setDescargando(false);
     }
@@ -125,7 +124,7 @@ function CuentaCobroCard({ cuenta: c, onPress }: { cuenta: CuentaCobroResumen; o
       <View className="flex-row items-center justify-between mt-1">
         {!firmado ? (
           <View className="flex-row items-center gap-1">
-            <Ionicons name="pencil-outline" size={12} color="#D97706" />
+            <Ionicons name="pencil-outline" size={12} color={COLORS.warningDark} />
             <Text className="text-xs text-warning font-medium">Toca para firmar</Text>
           </View>
         ) : <View />}
@@ -137,9 +136,9 @@ function CuentaCobroCard({ cuenta: c, onPress }: { cuenta: CuentaCobroResumen; o
           className="flex-row items-center gap-1"
         >
           {descargando
-            ? <ActivityIndicator size="small" />
-            : <Ionicons name="download-outline" size={14} color="#FF5A3C" />}
-          <Text className="text-xs font-semibold" style={{ color: '#FF5A3C' }}>Descargar PDF</Text>
+            ? <Spinner size="small" />
+            : <Ionicons name="download-outline" size={14} color={COLORS.primary} />}
+          <Text className="text-xs font-semibold" style={{ color: COLORS.primary }}>Descargar PDF</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>

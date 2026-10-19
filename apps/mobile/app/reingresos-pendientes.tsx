@@ -1,11 +1,14 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
 import React from 'react';
 import {
-  View, Text, FlatList, ActivityIndicator,
-  TouchableOpacity, Alert, RefreshControl,
+  View, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
 import { ApiError, type SolicitudReingreso } from '@api-client';
@@ -33,7 +36,7 @@ function ReingresoItem({ item }: { item: SolicitudReingreso }) {
     try {
       await aprobarMutation.mutateAsync(item.id);
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'Error al aprobar');
+      showAlert('Error', err instanceof ApiError ? err.message : 'Error al aprobar');
     }
   };
 
@@ -48,7 +51,7 @@ function ReingresoItem({ item }: { item: SolicitudReingreso }) {
     try {
       await rechazarMutation.mutateAsync(item.id);
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'Error al rechazar');
+      showAlert('Error', err instanceof ApiError ? err.message : 'Error al rechazar');
     }
   };
 
@@ -92,7 +95,7 @@ function ReingresoItem({ item }: { item: SolicitudReingreso }) {
           className="flex-1 bg-success rounded-xl py-2.5 items-center"
         >
           {aprobarMutation.isPending
-            ? <ActivityIndicator size="small" color="white" />
+            ? <Spinner size="small" color="white" />
             : <Text className="text-sm font-semibold text-white">Aprobar</Text>}
         </TouchableOpacity>
       </View>
@@ -111,9 +114,7 @@ export default function ReingresosPendientesScreen() {
       <Stack.Screen options={{ title: 'Reingresos pendientes' }} />
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : (
         <FlatList
           data={data}
@@ -129,17 +130,7 @@ export default function ReingresosPendientesScreen() {
               colors={[theme.primary]}
             />
           }
-          ListEmptyComponent={
-            <View className="flex-1 items-center justify-center gap-3 pt-20">
-              <Ionicons name="checkmark-circle-outline" size={48} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin solicitudes pendientes
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                Aquí aparecerán las solicitudes de reingreso cuando los trabajadores las envíen.
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyState variant="done" title="Sin solicitudes pendientes" message="Aquí aparecerán las solicitudes de reingreso cuando los trabajadores las envíen." />}
         />
       )}
     </SafeAreaView>

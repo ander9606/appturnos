@@ -1,9 +1,11 @@
+import { Text, TextInput } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { forwardRef, useState } from 'react';
 import {
   View,
-  TextInput,
-  Text,
   TouchableOpacity,
+  // eslint-disable-next-line no-restricted-imports -- solo el TIPO de la instancia nativa, para el ref
+  type TextInput as RNTextInput,
   type TextInputProps,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +18,7 @@ interface InputProps extends TextInputProps {
   isPassword?: boolean;
 }
 
-export const Input = forwardRef<TextInput, InputProps>(
+export const Input = forwardRef<RNTextInput, InputProps>(
   ({ label, error, hint, isPassword, secureTextEntry, style, ...rest }, ref) => {
     const [showPassword, setShowPassword] = useState(false);
 
@@ -34,7 +36,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           <TextInput
             ref={ref}
             secureTextEntry={isPassword && !showPassword ? true : (secureTextEntry ?? false)}
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             className={[
               'w-full rounded-xl border bg-card px-4 py-3 text-base text-foreground',
               'min-h-[48px]',
@@ -54,7 +56,7 @@ export const Input = forwardRef<TextInput, InputProps>(
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={20}
-                color="#94A3B8"
+                color={COLORS.placeholder}
               />
             </TouchableOpacity>
           )}

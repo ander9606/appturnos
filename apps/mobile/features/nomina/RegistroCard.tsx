@@ -9,8 +9,9 @@
  *   • Día especial (descanso, vacación, etc.): badge amber, sin horario
  */
 
+import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import type { RegistroDiario } from '@api-client';
 import { recargoFestivo } from '@api-client';
 import {

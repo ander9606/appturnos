@@ -1,7 +1,10 @@
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, Alert, ActivityIndicator,
-  StyleSheet, TouchableOpacity,
+  View, ScrollView, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -66,14 +69,14 @@ export default function CuentaCobroScreen() {
       qc.invalidateQueries({ queryKey: ['cuentas-cobro-sin-firmar'] });
       setShowFirma(false);
     },
-    onError: () => Alert.alert('Error', 'No se pudo registrar la firma.'),
+    onError: () => showAlert('Error', 'No se pudo registrar la firma.'),
   });
 
   async function handleDescargar() {
     try {
       await descargarCuentaCobro(Number(id));
     } catch {
-      Alert.alert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo abrir el PDF. Intenta de nuevo.');
     }
   }
 
@@ -82,7 +85,7 @@ export default function CuentaCobroScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#FF5A3C" />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -90,8 +93,8 @@ export default function CuentaCobroScreen() {
   if (isError || !cuenta) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '600', color: '#0F172A' }}>Cuenta de cobro no encontrada</Text>
+        <Ionicons name="alert-circle-outline" size={48} color={COLORS.danger} />
+        <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '600', color: COLORS.foreground }}>Cuenta de cobro no encontrada</Text>
       </SafeAreaView>
     );
   }
@@ -116,7 +119,7 @@ export default function CuentaCobroScreen() {
               accessibilityLabel="Descargar PDF"
               style={{ marginRight: 4 }}
             >
-              <Ionicons name="download-outline" size={22} color="#FF5A3C" />
+              <Ionicons name="download-outline" size={22} color={COLORS.primary} />
             </TouchableOpacity>
           ),
         }}
@@ -233,13 +236,13 @@ export default function CuentaCobroScreen() {
                 <SvgXml xml={sigXml} width="100%" height={90} />
               ) : firmado ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                  <Ionicons name="checkmark-circle" size={28} color="#16A34A" />
-                  <Text style={{ color: '#16A34A', fontSize: 12 }}>Firmado digitalmente</Text>
+                  <Ionicons name="checkmark-circle" size={28} color={COLORS.success} />
+                  <Text style={{ color: COLORS.success, fontSize: 12 }}>Firmado digitalmente</Text>
                 </View>
               ) : (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                  <Ionicons name="create-outline" size={24} color="#D97706" />
-                  <Text style={{ color: '#D97706', fontSize: 12 }}>Pendiente de firma</Text>
+                  <Ionicons name="create-outline" size={24} color={COLORS.warningDark} />
+                  <Text style={{ color: COLORS.warningDark, fontSize: 12 }}>Pendiente de firma</Text>
                 </View>
               )}
             </View>
@@ -257,7 +260,7 @@ export default function CuentaCobroScreen() {
           </View>
 
           <TouchableOpacity onPress={handleDescargar} style={s.downloadButton} accessibilityRole="button">
-            <Ionicons name="download-outline" size={18} color="#FF5A3C" style={{ marginRight: 8 }} />
+            <Ionicons name="download-outline" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
             <Text style={s.downloadButtonLabel}>Descargar PDF</Text>
           </TouchableOpacity>
 
@@ -269,7 +272,7 @@ export default function CuentaCobroScreen() {
                   disabled={firmarM.isPending}
                   style={[s.signButton, firmarM.isPending && { opacity: 0.6 }]}
                 >
-                  <Ionicons name="checkmark-circle" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <Ionicons name="checkmark-circle" size={18} color={COLORS.white} style={{ marginRight: 8 }} />
                   <Text style={s.signButtonLabel}>
                     {firmarM.isPending ? 'Firmando…' : 'Firmar con mi firma guardada'}
                   </Text>
@@ -279,7 +282,7 @@ export default function CuentaCobroScreen() {
                   disabled={firmarM.isPending}
                   style={{ alignItems: 'center', paddingVertical: 4 }}
                 >
-                  <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>
+                  <Text style={{ color: COLORS.mutedForeground, fontSize: 13, fontWeight: '600' }}>
                     Firmar con una firma nueva
                   </Text>
                 </TouchableOpacity>
@@ -289,7 +292,7 @@ export default function CuentaCobroScreen() {
                 onPress={() => setShowFirma(true)}
                 style={s.signButton}
               >
-                <Ionicons name="pencil" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Ionicons name="pencil" size={18} color={COLORS.white} style={{ marginRight: 8 }} />
                 <Text style={s.signButtonLabel}>Firmar cuenta de cobro</Text>
               </TouchableOpacity>
             )
@@ -312,7 +315,7 @@ export default function CuentaCobroScreen() {
 // ── sub-components ────────────────────────────────────────────────────────
 
 function Divider() {
-  return <View style={{ height: 1, backgroundColor: '#CBD5E1', marginVertical: 18 }} />;
+  return <View style={{ height: 1, backgroundColor: COLORS.borderStrong, marginVertical: 18 }} />;
 }
 
 function SectionHeader({ label }: { label: string }) {
@@ -358,9 +361,9 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 1,
-    color: '#0F172A',
+    color: COLORS.foreground,
     textTransform: 'uppercase',
-    lineHeight: 17,
+    lineHeight: 18,
   },
   docMeta: {
     textAlign: 'center',
@@ -373,7 +376,7 @@ const s = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 2,
-    color: '#64748B',
+    color: COLORS.mutedForeground,
     textTransform: 'uppercase',
     marginBottom: 12,
   },
@@ -381,7 +384,7 @@ const s = StyleSheet.create({
   partyRole: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: COLORS.placeholder,
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 2,
@@ -389,7 +392,7 @@ const s = StyleSheet.create({
   partyName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   partyDetail: {
     fontSize: 12,
@@ -403,13 +406,13 @@ const s = StyleSheet.create({
     paddingBottom: 6,
     marginBottom: 2,
     borderBottomWidth: 1,
-    borderBottomColor: '#CBD5E1',
+    borderBottomColor: COLORS.borderStrong,
   },
   tableHeaderCell: {
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
-    color: '#94A3B8',
+    color: COLORS.placeholder,
     textTransform: 'uppercase',
   },
   tableRow: {
@@ -422,7 +425,7 @@ const s = StyleSheet.create({
   },
   tableCell: {
     fontSize: 12,
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   colFecha: { width: 38 },
   colTurno: { flex: 1 },
@@ -431,23 +434,23 @@ const s = StyleSheet.create({
   alignRight: { textAlign: 'right' },
   itemBreakdown: {
     fontSize: 10.5,
-    color: '#D97706',
+    color: COLORS.warningDark,
     marginTop: 2,
   },
   itemDesc: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   itemMeta: {
     fontSize: 11,
-    color: '#64748B',
+    color: COLORS.mutedForeground,
     marginTop: 2,
   },
   itemValor: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   totalsRow: {
     flexDirection: 'row',
@@ -456,17 +459,17 @@ const s = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#CBD5E1',
+    borderTopColor: COLORS.borderStrong,
   },
   totalsLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   totalsValor: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
 
   clauseBody: {
@@ -479,7 +482,7 @@ const s = StyleSheet.create({
   sigBox: {
     height: 110,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: COLORS.borderStrong,
     borderRadius: 8,
     marginTop: 8,
     overflow: 'hidden',
@@ -492,32 +495,32 @@ const s = StyleSheet.create({
   },
   sigUnderline: {
     height: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: COLORS.foreground,
     marginTop: 14,
     marginBottom: 6,
   },
   sigName: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   sigDetail: {
     fontSize: 11,
-    color: '#64748B',
+    color: COLORS.mutedForeground,
     marginTop: 2,
   },
 
   footer: {
     textAlign: 'center',
     fontSize: 10,
-    color: '#94A3B8',
+    color: COLORS.placeholder,
     marginTop: 24,
     letterSpacing: 0.3,
   },
 
   signButton: {
     marginTop: 14,
-    backgroundColor: '#FF5A3C',
+    backgroundColor: COLORS.primary,
     borderRadius: 14,
     paddingVertical: 15,
     flexDirection: 'row',
@@ -527,7 +530,7 @@ const s = StyleSheet.create({
   downloadButton: {
     marginTop: 14,
     borderWidth: 1.5,
-    borderColor: '#FF5A3C',
+    borderColor: COLORS.primary,
     borderRadius: 14,
     paddingVertical: 13,
     flexDirection: 'row',
@@ -535,12 +538,12 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   downloadButtonLabel: {
-    color: '#FF5A3C',
+    color: COLORS.primary,
     fontWeight: '700',
     fontSize: 15,
   },
   signButtonLabel: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '700',
     fontSize: 15,
   },

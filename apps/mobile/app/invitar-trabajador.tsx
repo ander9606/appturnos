@@ -1,11 +1,10 @@
+import { Text, TextInput } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   Pressable,
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -59,7 +58,7 @@ export default function InvitarTrabajadorScreen() {
         router.back();
       },
       onError: (err: unknown) => {
-        Alert.alert('Error', (err as ApiError).message ?? 'No se pudo enviar la invitación.');
+        showAlert('Error', (err as ApiError).message ?? 'No se pudo enviar la invitación.');
       },
     });
   }
@@ -95,7 +94,7 @@ export default function InvitarTrabajadorScreen() {
             </Text>
             <View className="bg-card border border-border rounded-2xl overflow-hidden mb-4">
               <View className="flex-row items-center px-4 h-14 gap-3">
-                <Ionicons name="card-outline" size={18} color="#64748B" />
+                <Ionicons name="card-outline" size={18} color={COLORS.mutedForeground} />
                 <TextInput
                   value={cedula}
                   onChangeText={setCedula}
@@ -108,11 +107,11 @@ export default function InvitarTrabajadorScreen() {
                   autoFocus
                 />
                 {isFetching && debouncedCedula.length >= 5 && (
-                  <ActivityIndicator size="small" color={COLORS.info} />
+                  <Spinner size="small" color={COLORS.info} />
                 )}
                 {cedula.length > 0 && !isFetching && (
                   <Pressable onPress={() => { setCedula(''); setDebouncedCedula(''); }} hitSlop={8}>
-                    <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                    <Ionicons name="close-circle" size={18} color={COLORS.placeholder} />
                   </Pressable>
                 )}
               </View>
@@ -166,7 +165,7 @@ export default function InvitarTrabajadorScreen() {
             </View>
             {tipo === 'nomina' && (
               <View className="bg-warning/10 rounded-2xl p-4 mb-6 flex-row gap-3">
-                <Ionicons name="warning-outline" size={20} color="#D97706" style={{ marginTop: 1 }} />
+                <Ionicons name="warning-outline" size={20} color={COLORS.warningDark} style={{ marginTop: 1 }} />
                 <Text className="text-sm text-foreground flex-1">
                   Nómina implica exclusividad: si el trabajador acepta, dejará de estar disponible para turnos en
                   otras empresas (sus demás vínculos se archivan automáticamente). Solo puedes invitar así a alguien
@@ -192,10 +191,10 @@ export default function InvitarTrabajadorScreen() {
               style={{ backgroundColor: COLORS.info }}
             >
               {invitar.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <Spinner color={COLORS.white} />
               ) : (
                 <View className="flex-row items-center gap-2">
-                  <Ionicons name="person-add-outline" size={18} color="#fff" />
+                  <Ionicons name="person-add-outline" size={18} color={COLORS.white} />
                   <Text className="text-base font-semibold text-white">Enviar invitación</Text>
                 </View>
               )}

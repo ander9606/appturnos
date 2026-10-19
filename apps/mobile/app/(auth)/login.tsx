@@ -7,10 +7,11 @@
  *   3. Si OK → Expo Router redirige automáticamente a (tabs) via _layout.tsx
  *   4. Si error → mensaje en pantalla
  */
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -96,7 +97,7 @@ export default function LoginScreen() {
 
           {serverError && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+              <Ionicons name="alert-circle-outline" size={16} color={COLORS.danger} />
               <Text style={styles.errorText}>{serverError}</Text>
             </View>
           )}
@@ -223,7 +224,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     minHeight: height * 0.32,
-    backgroundColor: '#FF5A3C',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 36,
@@ -252,31 +253,31 @@ const styles = StyleSheet.create({
   // Formulario
   form: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 32 },
 
-  formTitle: { fontSize: 22, fontWeight: '700', color: '#0F172A' },
-  formSub:   { fontSize: 14, color: '#64748B', marginTop: 4, marginBottom: 20 },
+  formTitle: { fontSize: 22, fontWeight: '700', color: COLORS.foreground },
+  formSub:   { fontSize: 14, color: COLORS.mutedForeground, marginTop: 4, marginBottom: 20 },
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
   },
-  errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: '#EF4444' },
+  errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: COLORS.danger },
 
   fields:     { gap: 14 },
   forgotWrap: { alignSelf: 'flex-end', marginTop: 10, marginBottom: 20 },
-  forgotText: { fontSize: 13, fontWeight: '600', color: '#FF5A3C' },
+  forgotText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
 
   // Links
   links:      { gap: 10, marginTop: 24 },
   linkRow:    { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap' },
-  linkLabel:  { fontSize: 13, color: '#94A3B8' },
-  linkAction: { fontSize: 13, fontWeight: '700', color: '#FF5A3C' },
+  linkLabel:  { fontSize: 13, color: COLORS.placeholder },
+  linkAction: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
 
   divider:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
-  dividerText: { fontSize: 12, color: '#94A3B8' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  dividerText: { fontSize: 12, color: COLORS.placeholder },
 
-  googleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 14, paddingVertical: 14, backgroundColor: 'white', marginBottom: 20 },
-  googleBtnText: { fontSize: 15, fontWeight: '600', color: '#0F172A' },
+  googleBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 14, paddingVertical: 14, backgroundColor: 'white', marginBottom: 20 },
+  googleBtnText: { fontSize: 15, fontWeight: '600', color: COLORS.foreground },
   appleBtn:      { height: 50, marginBottom: 12 },
 });

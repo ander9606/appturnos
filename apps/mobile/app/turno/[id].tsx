@@ -7,13 +7,14 @@
  *   completado  → resumen de horas y pago
  *   cancelado / no_presentado / pendiente → informativo
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  ActivityIndicator,
-  Alert,
   Linking,
   Platform,
 } from 'react-native';
@@ -190,10 +191,10 @@ export default function TurnoDetailScreen() {
     const label = h > 0 && m > 0 ? `${h}h ${m}m`
                 : h > 0            ? `${h}h`
                 :                    `${m} min`;
-    Alert.alert(
+    showAlert(
       'Muy pronto',
       `Falta ${label} para el ingreso.\nEl marcaje se habilita 30 min antes de la hora de entrada.`,
-      [{ text: 'Entendido', style: 'cancel' }],
+      'info',
     );
   }, [minutosParaIngreso]);
 
@@ -210,7 +211,7 @@ export default function TurnoDetailScreen() {
       showToast('Ingreso registrado — tu llegada ha sido confirmada.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar el ingreso.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -226,7 +227,7 @@ export default function TurnoDetailScreen() {
       showToast('Salida registrada — ¡turno completado, buen trabajo!');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -248,7 +249,7 @@ export default function TurnoDetailScreen() {
       showToast(acepta ? 'Participación reconfirmada.' : 'Declinaste el turno.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo procesar tu respuesta.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -264,7 +265,7 @@ export default function TurnoDetailScreen() {
       showToast('Calificación guardada.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo guardar la calificación.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -277,7 +278,7 @@ export default function TurnoDetailScreen() {
       await WebBrowser.openBrowserAsync(`${base}/api/contratos/asignacion/${id}/pdf?token=${token}`);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo abrir el contrato.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     } finally {
       setCargandoContrato(false);
     }
@@ -305,8 +306,8 @@ export default function TurnoDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -314,7 +315,7 @@ export default function TurnoDetailScreen() {
   if (!asignacion) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Ionicons name="search-outline" size={48} color="#94A3B8" />
+        <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground text-center">
           Turno no encontrado
         </Text>
@@ -338,7 +339,7 @@ export default function TurnoDetailScreen() {
           headerTitle: oferta_titulo,
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerTintColor: theme.primary,
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />
@@ -501,7 +502,7 @@ export default function TurnoDetailScreen() {
               una confirmación que no va a llegar así como está. ── */}
           {estado === 'pendiente' && (
             <View className="bg-warning-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
-              <Ionicons name="hourglass-outline" size={26} color="#D97706" />
+              <Ionicons name="hourglass-outline" size={26} color={COLORS.warningDark} />
               <View className="flex-1">
                 <Text className="text-sm font-semibold text-amber-700">
                   {cupoLleno ? 'Cupo lleno' : 'Esperando confirmación'}

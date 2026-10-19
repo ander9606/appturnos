@@ -8,13 +8,15 @@
  * realmente necesita acción); Rechazados se filtra client-side por
  * rechazado_por, porque comparte estado='cancelado' con las cancelaciones.
  */
+import { Text } from '@/components/ui/Text';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   SectionList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -176,7 +178,7 @@ function PostulanteItem({
       {isConfirmed && esPasado && (
         <View className="flex-row items-center gap-2">
           <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
-            <Ionicons name="checkmark-circle" size={14} color="#059669" />
+            <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
             <Text className="text-xs font-semibold text-success">Aceptado</Text>
           </View>
           <Button label={isMarkingNP ? '…' : 'No vino'} variant="danger" size="sm"
@@ -189,7 +191,7 @@ function PostulanteItem({
       {isConfirmed && !esPasado && (
         <View className="flex-row items-center gap-2 flex-wrap">
           <View className="flex-row items-center gap-1 bg-success-light px-3 py-1.5 rounded-xl">
-            <Ionicons name="checkmark-circle" size={14} color="#059669" />
+            <Ionicons name="checkmark-circle" size={14} color={COLORS.success} />
             <Text className="text-xs font-semibold text-success">Aceptado</Text>
           </View>
           <Button label={isCancelling ? '…' : 'Cancelar turno'} variant="danger" size="sm"
@@ -204,7 +206,7 @@ function PostulanteItem({
       {/* En progreso → solo chip informativo, se resuelve solo al cerrar la jornada */}
       {isEnProgreso && (
         <View className="flex-row items-center gap-1 self-start bg-info/10 px-3 py-1.5 rounded-xl">
-          <Ionicons name="time-outline" size={14} color="#3B82F6" />
+          <Ionicons name="time-outline" size={14} color={COLORS.info} />
           <Text className="text-xs font-semibold text-info">En curso</Text>
         </View>
       )}
@@ -212,13 +214,13 @@ function PostulanteItem({
       {/* Completado / No presentado → historial de lo aceptado, sin acciones */}
       {isCompletado && (
         <View className="flex-row items-center gap-1 self-start bg-muted px-3 py-1.5 rounded-xl">
-          <Ionicons name="checkmark-done-circle" size={14} color="#64748B" />
+          <Ionicons name="checkmark-done-circle" size={14} color={COLORS.mutedForeground} />
           <Text className="text-xs font-semibold text-muted-foreground">Completado</Text>
         </View>
       )}
       {isNoPresentado && (
         <View className="flex-row items-center gap-1 self-start bg-danger-light px-3 py-1.5 rounded-xl">
-          <Ionicons name="alert-circle" size={14} color="#EF4444" />
+          <Ionicons name="alert-circle" size={14} color={COLORS.danger} />
           <Text className="text-xs font-semibold text-danger">No se presentó</Text>
         </View>
       )}
@@ -226,7 +228,7 @@ function PostulanteItem({
       {/* Rechazado → solo chip, es un estado final sin acciones */}
       {isRechazado && (
         <View className="flex-row items-center gap-1 self-start bg-danger-light px-3 py-1.5 rounded-xl">
-          <Ionicons name="close-circle" size={14} color="#EF4444" />
+          <Ionicons name="close-circle" size={14} color={COLORS.danger} />
           <Text className="text-xs font-semibold text-danger">Rechazado</Text>
         </View>
       )}
@@ -272,11 +274,11 @@ function OfertaCard({
             {group.titulo}
           </Text>
           <View className="flex-row items-center gap-1 flex-wrap">
-            <Ionicons name="calendar-outline" size={11} color="#64748B" />
+            <Ionicons name="calendar-outline" size={11} color={COLORS.mutedForeground} />
             <Text className="text-xs text-muted-foreground">
               {fmtFecha(group.fecha)}
             </Text>
-            <Ionicons name="time-outline" size={11} color="#64748B" style={{ marginLeft: 6 }} />
+            <Ionicons name="time-outline" size={11} color={COLORS.mutedForeground} style={{ marginLeft: 6 }} />
             <Text className="text-xs text-muted-foreground">
               {fmtHora(group.horaInicio)}
             </Text>
@@ -291,7 +293,7 @@ function OfertaCard({
           ) : null}
         </View>
         <View className="items-center justify-center pr-3">
-          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+          <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
         </View>
       </TouchableOpacity>
 
@@ -326,7 +328,7 @@ export default function PostulacionesScreen() {
   const pendientesQuery  = usePostulacionesPendientes();
   const aceptadosQuery   = useAsignacionesConfirmadas({ enabled: tab === 'aceptados' });
   const rechazadosQuery  = useAsignacionesRechazadas({ enabled: tab === 'rechazados' });
-  const { data: resp, isLoading, isRefetching, isError, refetch } =
+  const { data: resp, isLoading, isRefetching, isError, error, refetch } =
     tab === 'pendientes' ? pendientesQuery : tab === 'aceptados' ? aceptadosQuery : rechazadosQuery;
 
   const confirmarMutation    = useConfirmar();
@@ -400,7 +402,7 @@ export default function PostulacionesScreen() {
           <Text className="text-lg font-bold text-foreground">Postulaciones</Text>
         </View>
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
+          <Spinner size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
@@ -415,11 +417,7 @@ export default function PostulacionesScreen() {
           </TouchableOpacity>
           <Text className="text-lg font-bold text-foreground">Postulaciones</Text>
         </View>
-        <View className="flex-1 items-center justify-center gap-4 px-8">
-          <Ionicons name="warning-outline" size={48} color="#94A3B8" />
-          <Text className="text-base font-semibold text-foreground text-center">Error al cargar postulaciones</Text>
-          <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
-        </View>
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar postulaciones" />
       </SafeAreaView>
     );
   }

@@ -1,3 +1,4 @@
+import { SkeletonDetail, SkeletonTable } from '@/shared/components/Skeleton';
 import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -143,7 +144,7 @@ function EmpresaTab() {
   const [form, setForm] = useState<Record<string, string> | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!empresa) return null;
 
@@ -402,7 +403,7 @@ function PuntosTab() {
           <Plus size={16} /> Nuevo punto
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
+      {isLoading ? <SkeletonTable /> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -560,7 +561,7 @@ function CargosTab() {
           <Plus size={16} /> Nuevo cargo
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
+      {isLoading ? <SkeletonTable /> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -701,7 +702,7 @@ function GestoresTab() {
           <Plus size={16} /> Nuevo gestor
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
+      {isLoading ? <SkeletonTable /> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -923,7 +924,7 @@ function PlanTab() {
     }
   };
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!s) return null;
 

@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';
@@ -77,7 +79,7 @@ export function CTAEnProgresoCard({
             onPress={onCorregir}
             className="flex-row items-center justify-center gap-1.5 py-2"
           >
-            <Ionicons name="time-outline" size={14} color="#64748B" />
+            <Ionicons name="time-outline" size={14} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground">Corregir ingreso/egreso</Text>
           </TouchableOpacity>
         </>
@@ -96,7 +98,7 @@ export function CTAEnProgresoCard({
 
               {!canMark && distanceM !== null && (
                 <View className="flex-row items-start gap-2">
-                  <Ionicons name="information-circle-outline" size={16} color="#64748B" style={{ marginTop: 1 }} />
+                  <Ionicons name="information-circle-outline" size={16} color={COLORS.mutedForeground} style={{ marginTop: 1 }} />
                   <Text className="flex-1 text-xs text-muted-foreground">
                     Acércate al punto de trabajo para habilitar el marcaje de salida.
                   </Text>

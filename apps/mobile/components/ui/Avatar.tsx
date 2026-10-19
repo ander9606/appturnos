@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
-import { View, Text, Image, Pressable, Modal } from 'react-native';
+import { View, Image, Pressable, Modal } from 'react-native';
 import { getInitials } from '@/lib/formatters';
-import { avatarColorForId } from '@/lib/designTokens';
+import { COLORS,avatarColorForId } from '@/lib/designTokens';
 
 interface Props {
   id?: number;
@@ -35,7 +36,7 @@ export function Avatar({ id = 0, nombre, apellido, fotoB64, size = 48, textClass
         justifyContent: 'center',
       }}
     >
-      <Text style={{ color: '#fff', fontWeight: '700', fontSize }} className={textClassName}>
+      <Text style={{ color: COLORS.white, fontWeight: '700', fontSize }} className={textClassName}>
         {getInitials(nombre ?? '', apellido ?? '')}
       </Text>
     </View>

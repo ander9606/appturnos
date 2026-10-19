@@ -1,6 +1,10 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useMemo, useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl,
+  View, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -67,19 +71,13 @@ export default function MisContratosScreen() {
         }
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 48 }} />
+            <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
           ) : (
-            <View className="items-center justify-center py-16 gap-3">
-              <Ionicons name="document-text-outline" size={48} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground">
-                {soloPendientes ? 'Sin contratos pendientes' : 'Sin contratos'}
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                {soloPendientes
-                  ? 'Ya firmaste todos tus contratos.'
-                  : 'Tus contratos de turno aparecerán aquí una vez seas asignado.'}
-              </Text>
-            </View>
+            <EmptyState
+              variant={soloPendientes ? 'done' : 'empty'}
+              title={soloPendientes ? 'Sin contratos pendientes' : 'Sin contratos'}
+              message={soloPendientes ? 'Ya firmaste todos tus contratos.' : 'Tus contratos de turno aparecerán aquí una vez seas asignado.'}
+            />
           )
         }
         renderItem={({ item: c }) => <ContratoCard contrato={c} onPress={() => router.push(`/contrato/${c.id}`)} />}
@@ -107,7 +105,7 @@ function ContratoCard({ contrato: c, onPress }: { contrato: ContratoResumen; onP
       </View>
       {!firmado && (
         <View className="flex-row items-center gap-1 mt-1">
-          <Ionicons name="pencil-outline" size={12} color="#D97706" />
+          <Ionicons name="pencil-outline" size={12} color={COLORS.warningDark} />
           <Text className="text-xs text-warning font-medium">Toca para firmar</Text>
         </View>
       )}

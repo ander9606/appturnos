@@ -1,7 +1,8 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   Pressable,
   TouchableOpacity,
   Dimensions,
@@ -110,18 +111,18 @@ function OptionCard({
       style={[styles.card, filled ? styles.cardFilled : styles.cardOutline]}
     >
       <View style={[styles.iconWrap, filled ? styles.iconWrapFilled : styles.iconWrapOutline]}>
-        <Ionicons name={icon} size={26} color={filled ? 'white' : '#FF5A3C'} />
+        <Ionicons name={icon} size={26} color={filled ? 'white' : COLORS.primary} />
       </View>
       <View style={styles.cardText}>
-        <Text style={[styles.cardTitle, { color: filled ? 'white' : '#0F172A' }]}>{title}</Text>
-        <Text style={[styles.cardDesc, { color: filled ? 'rgba(255,255,255,0.76)' : '#64748B' }]}>
+        <Text style={[styles.cardTitle, { color: filled ? 'white' : COLORS.foreground }]}>{title}</Text>
+        <Text style={[styles.cardDesc, { color: filled ? 'rgba(255,255,255,0.76)' : COLORS.mutedForeground }]}>
           {description}
         </Text>
       </View>
       <Ionicons
         name="chevron-forward"
         size={20}
-        color={filled ? 'rgba(255,255,255,0.6)' : '#CBD5E1'}
+        color={filled ? 'rgba(255,255,255,0.6)' : COLORS.borderStrong}
       />
     </TouchableOpacity>
   );
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
 
   hero: {
     minHeight: height * 0.46,
-    backgroundColor: '#FF5A3C',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 44,
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   question: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -206,8 +207,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   cardFilled: {
-    backgroundColor: '#FF5A3C',
-    shadowColor: '#FF5A3C',
+    backgroundColor: COLORS.primary,
+    shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.32,
     shadowRadius: 14,
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
   cardOutline: {
     backgroundColor: 'white',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
 
   footer: { alignItems: 'center', paddingTop: 8, gap: 10 },
   footerRow: { alignItems: 'center' },
-  footerText: { fontSize: 14, color: '#94A3B8' },
-  footerLink: { fontSize: 15, fontWeight: '700', color: '#FF5A3C', marginTop: 4 },
+  footerText: { fontSize: 14, color: COLORS.placeholder },
+  footerLink: { fontSize: 15, fontWeight: '700', color: COLORS.primary, marginTop: 4 },
 
 });

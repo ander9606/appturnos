@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface StatCardProps {
@@ -31,7 +33,7 @@ export function StatCard({ value, label, color = 'text-primary', alert = false, 
       <View className="flex-row items-start justify-between">
         <Text className={`text-2xl font-extrabold flex-1 ${color}`}>{value}</Text>
         {alert && (
-          <Ionicons name="alert-circle" size={20} color="#EF4444" style={{ marginTop: 2 }} />
+          <Ionicons name="alert-circle" size={20} color={COLORS.danger} style={{ marginTop: 2 }} />
         )}
       </View>
       <Text className="text-xs text-muted-foreground">{label}</Text>

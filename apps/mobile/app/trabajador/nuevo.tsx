@@ -1,5 +1,7 @@
+import { confirm } from '@/lib/confirmDialog';
+import { showAlert } from '@/lib/alertDialog';
 import React, { useState } from 'react';
-import { Alert } from 'react-native';
+import {} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 
@@ -78,13 +80,11 @@ export default function NuevoTrabajadorScreen() {
           : 'Ocurrió un error. Intenta de nuevo.';
       // 402 = tope de trabajadores del plan (trabajadores.service.js) — ofrecer ampliarlo.
       if (err instanceof ApiError && err.status === 402) {
-        Alert.alert('Llegaste al tope de tu plan', msg, [
-          { text: 'Cerrar', style: 'cancel' },
-          { text: 'Ampliar plan', onPress: () => router.push('/mi-plan') },
-        ]);
+        confirm({ title: 'Llegaste al tope de tu plan', message: msg, cancelLabel: 'Cerrar', confirmLabel: 'Ampliar plan' })
+          .then((ok) => { if (ok) router.push('/mi-plan'); });
         return;
       }
-      Alert.alert('Error al crear', msg);
+      showAlert('Error al crear', msg);
     }
   };
 

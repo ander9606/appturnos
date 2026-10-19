@@ -1,11 +1,13 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, Modal, Linking } from 'react-native';
+import { View, Image, TouchableOpacity, Modal, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Novedad, TipoNovedad } from '@api-client';
 
 const TIPO_CONFIG: Record<TipoNovedad, { icon: React.ComponentProps<typeof Ionicons>['name']; color: string; label: string }> = {
-  retraso:   { icon: 'time-outline',          color: '#D97706', label: 'Retraso' },
-  ausencia:  { icon: 'person-remove-outline', color: '#DC2626', label: 'Ausencia' },
+  retraso:   { icon: 'time-outline',          color: COLORS.warningDark, label: 'Retraso' },
+  ausencia:  { icon: 'person-remove-outline', color: COLORS.dangerDark, label: 'Ausencia' },
   incidente: { icon: 'warning-outline',       color: '#7C3AED', label: 'Incidente' },
   otro:      { icon: 'chatbubble-outline',    color: '#0284C7', label: 'Novedad' },
 };
@@ -36,7 +38,7 @@ export function NovedadCard({ novedad }: { novedad: Novedad }) {
           <View className="flex-row items-center gap-3 mt-0.5">
             {novedad.hora_evento && (
               <View className="flex-row items-center gap-1">
-                <Ionicons name="time-outline" size={11} color="#94A3B8" />
+                <Ionicons name="time-outline" size={11} color={COLORS.placeholder} />
                 <Text className="text-xs text-muted-foreground">{fmtTs(novedad.hora_evento)}</Text>
               </View>
             )}

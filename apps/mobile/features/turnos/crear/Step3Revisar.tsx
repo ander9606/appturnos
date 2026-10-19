@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';
@@ -19,7 +21,7 @@ type Props = {
 function SummaryRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <View className="flex-row items-start gap-3 py-2.5 border-b border-border">
-      <Ionicons name={icon as any} size={16} color="#64748B" style={{ marginTop: 1 }} />
+      <Ionicons name={icon as any} size={16} color={COLORS.mutedForeground} style={{ marginTop: 1 }} />
       <View className="flex-1">
         <Text className="text-xs text-muted-foreground">{label}</Text>
         <Text className="text-sm font-medium text-foreground">{value}</Text>
@@ -99,7 +101,7 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublishe
       </View>
 
       <View className="flex-row items-start gap-3 bg-info-light rounded-2xl px-4 py-3">
-        <Ionicons name="notifications-outline" size={18} color="#3B82F6" style={{ marginTop: 1 }} />
+        <Ionicons name="notifications-outline" size={18} color={COLORS.info} style={{ marginTop: 1 }} />
         <Text className="flex-1 text-sm text-info">
           {data.visibilidad === 'dirigida'
             ? `Al publicar, se notificará solo a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''} que elegiste.`

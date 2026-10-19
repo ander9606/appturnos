@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import type { Asignacion } from '@api-client';
 import { fmtTime } from '@/features/turnos/turnosUtils';
 

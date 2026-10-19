@@ -2,8 +2,11 @@
  * Vista semanal de asistencia para trabajador_nomina.
  * Muestra los 7 días de la semana con entrada/salida de cada registro.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
-import { View, Text, ActivityIndicator, ScrollView, RefreshControl } from 'react-native';
+import { View, ScrollView, RefreshControl } from 'react-native';
 
 import { usePeriodos, useRegistros } from '@/features/nomina/useNomina';
 import { useTheme } from '@/lib/theme';
@@ -46,10 +49,10 @@ function DayRow({ isoDate, dayLabel, dayNum, monthLabel, isToday, registro, prim
   const completado   = tieneEntrada && tieneSalida;
 
   const dotColor = completado
-    ? '#059669'   // success
+    ? COLORS.success   // success
     : enTurno
     ? primaryColor
-    : '#CBD5E1';  // muted
+    : COLORS.borderStrong;  // muted
 
   return (
     <View
@@ -59,7 +62,7 @@ function DayRow({ isoDate, dayLabel, dayNum, monthLabel, isToday, registro, prim
       {/* Indicador lateral */}
       <View
         className="w-1 self-stretch"
-        style={{ backgroundColor: completado ? '#059669' : enTurno ? primaryColor : '#E2E8F0' }}
+        style={{ backgroundColor: completado ? COLORS.success : enTurno ? primaryColor : COLORS.border }}
       />
 
       {/* Día */}
@@ -69,19 +72,19 @@ function DayRow({ isoDate, dayLabel, dayNum, monthLabel, isToday, registro, prim
       >
         <Text
           className="text-[10px] font-semibold uppercase"
-          style={{ color: isToday ? primaryColor : '#64748B' }}
+          style={{ color: isToday ? primaryColor : COLORS.mutedForeground }}
         >
           {dayLabel}
         </Text>
         <Text
           className="text-lg font-bold"
-          style={{ color: isToday ? primaryColor : '#0F172A' }}
+          style={{ color: isToday ? primaryColor : COLORS.foreground }}
         >
           {dayNum}
         </Text>
         <Text
           className="text-[9px]"
-          style={{ color: isToday ? primaryColor + 'AA' : '#94A3B8' }}
+          style={{ color: isToday ? primaryColor + 'AA' : COLORS.placeholder }}
         >
           {monthLabel}
         </Text>
@@ -191,9 +194,7 @@ export function NominaAsistenciaSemanalView({ selectedDate, weekDays }: Props) {
 
   if (loadingPeriodos || loadingRegistros) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
+      <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
     );
   }
 

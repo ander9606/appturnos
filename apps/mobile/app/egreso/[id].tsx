@@ -5,13 +5,14 @@
  * Muestra el tiempo transcurrido desde el ingreso y captura
  * la firma digital para confirmar la salida.
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  ActivityIndicator,
-  Alert,
   TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
@@ -136,7 +137,7 @@ export default function EgresoScreen() {
       router.back();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar la salida.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -144,8 +145,8 @@ export default function EgresoScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color="#FF5A3C" />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -153,7 +154,7 @@ export default function EgresoScreen() {
   if (!asignacion) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Ionicons name="search-outline" size={48} color="#94A3B8" />
+        <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground text-center">Turno no encontrado</Text>
         <Button label="Volver" onPress={() => router.back()} variant="secondary" />
       </SafeAreaView>
@@ -163,7 +164,7 @@ export default function EgresoScreen() {
   if (asignacion.estado !== 'en_progreso') {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Ionicons name="warning-outline" size={52} color="#F59E0B" />
+        <Ionicons name="warning-outline" size={52} color={COLORS.warning} />
         <Text className="text-base font-semibold text-foreground text-center">
           Debes registrar el ingreso antes de marcar la salida
         </Text>
@@ -184,8 +185,8 @@ export default function EgresoScreen() {
           headerShown: true,
           headerTitle: t('egreso.title'),
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
-          headerTintColor: '#FF5A3C',
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerTintColor: COLORS.primary,
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />
@@ -220,7 +221,7 @@ export default function EgresoScreen() {
               </View>
               {asignacion.lugar && (
                 <View className="flex-row items-center gap-2">
-                  <Ionicons name="location-outline" size={16} color="#64748B" />
+                  <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
                   <Text className="text-sm text-muted-foreground flex-1" numberOfLines={1}>
                     {asignacion.lugar}
                   </Text>
@@ -298,7 +299,7 @@ export default function EgresoScreen() {
             <Text className="text-sm text-muted-foreground">{t('egreso.firmaHint')}</Text>
 
             <View className="flex-row items-center gap-2 bg-info/10 rounded-xl px-4 py-3">
-              <Ionicons name="document-text-outline" size={16} color="#3B82F6" />
+              <Ionicons name="document-text-outline" size={16} color={COLORS.info} />
               <Text className="text-xs text-info flex-1">
                 Tu firma confirma la salida y queda registrada en el contrato diario de este turno.
               </Text>

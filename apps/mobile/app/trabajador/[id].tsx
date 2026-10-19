@@ -7,14 +7,15 @@
  *   jefe_nomina   → edita la ficha (nómina y turnos); el sueldo y la hora de entrada solo en nómina; no el tipo ni los datos de pago
  *   nomina        → solo lectura
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text, TextInput } from '@/components/ui/Text';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
-  ActivityIndicator,
   Alert,
   Linking,
   Modal,
@@ -125,7 +126,7 @@ function InfoRow({
             accessibilityLabel={`Llamar a ${label}`}
             className="w-7 h-7 rounded-full bg-success/10 items-center justify-center active:opacity-70"
           >
-            <Ionicons name="call" size={14} color="#16A34A" />
+            <Ionicons name="call" size={14} color={COLORS.success} />
           </Pressable>
         )}
       </View>
@@ -150,7 +151,7 @@ export default function TrabajadorDetailScreen() {
   const [ratingStars,    setRatingStars]    = useState(5);
   const [ratingComment,  setRatingComment]  = useState('');
 
-  const { data: t, isLoading, isError, refetch } = useTrabajador(numId);
+  const { data: t, isLoading, isError, error, refetch } = useTrabajador(numId);
   const { data: puntosMarcaje = [] } = usePuntosMarcaje(isAdmin && t?.tipo !== 'turnos');
   const actualizar  = useActualizarTrabajador(numId);
   const invitar     = useInvitar();
@@ -410,9 +411,9 @@ export default function TrabajadorDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Trabajador', headerShown: true, headerRight }} />
-        <ActivityIndicator color="#FF5A3C" />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -421,11 +422,7 @@ export default function TrabajadorDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-8" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Trabajador', headerShown: true }} />
-        <Ionicons name="warning-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
-        <Text className="text-base font-semibold text-foreground">No se pudo cargar</Text>
-        <Pressable onPress={() => refetch()} className="mt-4">
-          <Text className="text-primary font-semibold">Reintentar</Text>
-        </Pressable>
+        <ErrorState error={error} onRetry={refetch} fallback="No se pudo cargar" />
       </SafeAreaView>
     );
   }
@@ -540,7 +537,7 @@ export default function TrabajadorDetailScreen() {
         {/* Pending activation banner — shown to admin when worker hasn't set up login yet */}
         {isAdmin && t.usuario_id === null && (
           <View className="mx-4 mb-3 bg-warning/10 border border-warning/30 rounded-2xl p-4 flex-row gap-3">
-            <Ionicons name="time-outline" size={20} color="#D97706" style={{ marginTop: 1 }} />
+            <Ionicons name="time-outline" size={20} color={COLORS.warningDark} style={{ marginTop: 1 }} />
             <View className="flex-1 gap-1">
               <Text className="text-sm font-semibold" style={{ color: '#B45309' }}>Cuenta sin activar</Text>
               <Text className="text-xs text-muted-foreground">
@@ -720,7 +717,7 @@ export default function TrabajadorDetailScreen() {
                         }`}
                       >
                         {calificar.isPending ? (
-                          <ActivityIndicator color="white" size="small" />
+                          <Spinner color="white" size="small" />
                         ) : (
                           <Text className="text-white font-bold text-sm">
                             Confirmar calificación
@@ -744,7 +741,7 @@ export default function TrabajadorDetailScreen() {
               className="h-12 rounded-xl items-center justify-center border border-warning active:bg-warning/10 disabled:opacity-50"
             >
               {bloquearOfertas.isPending ? (
-                <ActivityIndicator size="small" color="#D97706" />
+                <Spinner size="small" color={COLORS.warningDark} />
               ) : (
                 <Text className="text-warning font-semibold">Dejar de ofrecerle turnos</Text>
               )}
@@ -785,7 +782,7 @@ export default function TrabajadorDetailScreen() {
               <Text className="text-xs text-muted-foreground">Registro de auditoría. No se puede editar ni borrar.</Text>
             </View>
             {historialSalario.isLoading ? (
-              <ActivityIndicator />
+              <Spinner />
             ) : (historialSalario.data ?? []).length === 0 ? (
               <Text className="text-sm text-muted-foreground">Sin cambios registrados.</Text>
             ) : (

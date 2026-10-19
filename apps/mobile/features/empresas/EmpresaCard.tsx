@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text, Image } from 'react-native';
+import { View, Image } from 'react-native';
 import type { EmpresaDirectorio } from '@api-client';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';

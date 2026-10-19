@@ -8,10 +8,11 @@
  *   3. Si OK → queda autenticado, _layout.tsx redirige a (tabs)
  *   4. Si error → mensaje en pantalla
  */
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -116,7 +117,7 @@ export default function ActivarCuentaScreen() {
         <View style={styles.form}>
           {serverError && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+              <Ionicons name="alert-circle-outline" size={16} color={COLORS.danger} />
               <Text style={styles.errorText}>{serverError}</Text>
             </View>
           )}
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   // Header
   header: {
     minHeight: height * 0.30,
-    backgroundColor: '#FF5A3C',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 32,
@@ -299,14 +300,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
   },
-  errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: '#EF4444' },
+  errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: COLORS.danger },
 
   fields:     { gap: 14 },
   submitWrap: { marginTop: 24 },
 
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 16 },
-  footerText: { fontSize: 14, color: '#94A3B8' },
-  footerLink: { fontSize: 14, fontWeight: '700', color: '#FF5A3C' },
+  footerText: { fontSize: 14, color: COLORS.placeholder },
+  footerLink: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
 
   invitacionBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,

@@ -1,6 +1,10 @@
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, Switch, Alert, ActivityIndicator, TouchableOpacity,
+  View, ScrollView, Switch, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -57,7 +61,7 @@ export default function DisponibilidadScreen() {
       qc.invalidateQueries({ queryKey: ['disponibilidad'] });
       showToast('Tu disponibilidad fue actualizada.');
     },
-    onError: () => Alert.alert('Error', 'No se pudo guardar la disponibilidad.'),
+    onError: () => showAlert('Error', 'No se pudo guardar la disponibilidad.'),
   });
 
   function toggleActivo(idx: number) {
@@ -89,8 +93,8 @@ export default function DisponibilidadScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -116,7 +120,7 @@ export default function DisponibilidadScreen() {
               value={slot.activo}
               onValueChange={() => toggleActivo(idx)}
               trackColor={{ true: theme.primary }}
-              thumbColor="#fff"
+              thumbColor={COLORS.white}
             />
 
             {slot.activo && (

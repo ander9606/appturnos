@@ -8,8 +8,10 @@
  *   • Resumen semanal
  */
 
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import { PeriodoBadge } from '../../PeriodoBadge';
@@ -244,7 +246,7 @@ export function PeriodoHeaderCard({
               {pctExtra > 0 && (
                 <View
                   className="h-full"
-                  style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }}
+                  style={{ width: `${pctExtra}%`, backgroundColor: COLORS.warning }}
                 />
               )}
               <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color="rgba(15,23,42,0.7)" />

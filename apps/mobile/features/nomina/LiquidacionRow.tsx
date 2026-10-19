@@ -1,13 +1,16 @@
 /**
  * LiquidacionRow — fila de trabajador en la vista de liquidación (jefe/admin)
  */
+import { Text, TextInput } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { LiquidacionLinea, DescansoCompensatorio, DescuentoNomina, TipoDescuento } from '@api-client';
 import { getInitials } from '@/lib/formatters';
-import { avatarColorForId, HOUR_TYPE_COLORS } from '@/lib/designTokens';
+import { COLORS,avatarColorForId, HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { CompositionBar } from '@/components/ui/CompositionBar';
 import { Badge } from '@/components/ui/Badge';
 import { useCrearDescuento } from './descuentos/useDescuentos';
@@ -58,8 +61,8 @@ export function LiquidacionRow({
 
   const handleGuardarDescuento = async () => {
     const montoNum = Number(monto);
-    if (!motivo.trim()) { Alert.alert('Falta el motivo', 'Escribe una razón breve para el descuento.'); return; }
-    if (!montoNum || montoNum <= 0) { Alert.alert('Monto inválido', 'El monto debe ser mayor a 0.'); return; }
+    if (!motivo.trim()) { showAlert('Falta el motivo', 'Escribe una razón breve para el descuento.', 'warning'); return; }
+    if (!montoNum || montoNum <= 0) { showAlert('Monto inválido', 'El monto debe ser mayor a 0.', 'warning'); return; }
     if (!periodoId) return;
     try {
       await crearDescuento.mutateAsync({
@@ -71,7 +74,7 @@ export function LiquidacionRow({
       });
       setMotivo(''); setMonto(''); setTipo('prestamo'); setMostrarForm(false);
     } catch {
-      Alert.alert('Error', 'No se pudo registrar el descuento.');
+      showAlert('Error', 'No se pudo registrar el descuento.');
     }
   };
 
@@ -279,14 +282,14 @@ export function LiquidacionRow({
                   value={motivo}
                   onChangeText={setMotivo}
                   placeholder="Motivo (ej. Préstamo del 12 de marzo)"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={COLORS.placeholder}
                   className="text-sm text-foreground border border-border rounded-lg px-3 py-2 bg-card"
                 />
                 <TextInput
                   value={monto}
                   onChangeText={setMonto}
                   placeholder="Monto (COP)"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={COLORS.placeholder}
                   keyboardType="numeric"
                   className="text-sm text-foreground border border-border rounded-lg px-3 py-2 bg-card"
                 />
@@ -303,7 +306,7 @@ export function LiquidacionRow({
                     className="flex-1 h-9 rounded-lg bg-primary-500 items-center justify-center active:opacity-80"
                   >
                     {crearDescuento.isPending
-                      ? <ActivityIndicator size="small" color="#fff" />
+                      ? <Spinner size="small" color={COLORS.white} />
                       : <Text className="text-xs font-semibold text-white">Guardar</Text>}
                   </TouchableOpacity>
                 </View>
@@ -314,7 +317,7 @@ export function LiquidacionRow({
                   onPress={() => setMostrarForm(true)}
                   className="flex-row items-center gap-1.5 mt-0.5"
                 >
-                  <Ionicons name="add-circle-outline" size={14} color="#6366F1" />
+                  <Ionicons name="add-circle-outline" size={14} color={COLORS.integracion} />
                   <Text className="text-xs font-semibold text-primary">Agregar descuento</Text>
                 </TouchableOpacity>
               )
@@ -322,7 +325,7 @@ export function LiquidacionRow({
           </View>
 
           <View className="flex-row items-center gap-2 mt-3 pt-3 border-t border-border">
-            <Ionicons name="card-outline" size={14} color="#94A3B8" />
+            <Ionicons name="card-outline" size={14} color={COLORS.placeholder} />
             {linea.numero_cuenta ? (
               <Text className="text-xs text-foreground flex-1">
                 <Text className="font-semibold">{linea.banco}</Text>
@@ -341,9 +344,9 @@ export function LiquidacionRow({
               )}
               className="flex-row items-center gap-1 mt-3"
             >
-              <Ionicons name="calendar-outline" size={13} color="#6366F1" />
+              <Ionicons name="calendar-outline" size={13} color={COLORS.integracion} />
               <Text className="text-xs font-semibold text-primary">Ver registros del período</Text>
-              <Ionicons name="chevron-forward" size={12} color="#6366F1" />
+              <Ionicons name="chevron-forward" size={12} color={COLORS.integracion} />
             </TouchableOpacity>
           )}
         </View>

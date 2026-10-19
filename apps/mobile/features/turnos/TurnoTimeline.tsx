@@ -3,8 +3,10 @@
  *
  * pendiente → confirmado → en_progreso → completado
  */
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { EstadoAsignacion } from '@api-client';
 
@@ -44,7 +46,7 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
   if (estado === 'cancelado') {
     return (
       <View className="bg-danger-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
-        <Ionicons name="close-circle-outline" size={26} color="#EF4444" />
+        <Ionicons name="close-circle-outline" size={26} color={COLORS.danger} />
         <View>
           <Text className="text-sm font-semibold text-danger">Turno cancelado</Text>
           <Text className="text-xs text-danger/70 mt-0.5">
@@ -58,7 +60,7 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
   if (estado === 'por_reconfirmar') {
     return (
       <View className="bg-warning-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
-        <Ionicons name="alert-circle-outline" size={26} color="#D97706" />
+        <Ionicons name="alert-circle-outline" size={26} color={COLORS.warningDark} />
         <View>
           <Text className="text-sm font-semibold text-amber-700">El turno cambió — reconfirma tu participación</Text>
           <Text className="text-xs text-amber-600 mt-0.5">
@@ -72,7 +74,7 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
   if (estado === 'no_presentado') {
     return (
       <View className="bg-warning-light rounded-2xl px-4 py-4 flex-row items-center gap-3">
-        <Ionicons name="alarm-outline" size={26} color="#D97706" />
+        <Ionicons name="alarm-outline" size={26} color={COLORS.warningDark} />
         <View>
           <Text className="text-sm font-semibold text-amber-700">No presentaste asistencia</Text>
           <Text className="text-xs text-amber-600 mt-0.5">
@@ -111,7 +113,7 @@ export function TurnoTimeline({ estado, ingresoTime, egresoTime }: TurnoTimeline
                   isFuture  ? 'bg-muted border-2 border-border' : '',
                 ].join(' ')}
               >
-                {isDone && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                {isDone && <Ionicons name="checkmark" size={14} color={COLORS.white} />}
                 {isCurrent && <View className="w-2.5 h-2.5 bg-white rounded-full" />}
               </View>
 
