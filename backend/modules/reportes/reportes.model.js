@@ -5,6 +5,8 @@ const { pool } = require('../../config/database');
 /**
  * Consultas de agregación para los reportes. Todas se acotan por empresa_id
  * y por un rango de fechas [desde, hasta].
+ * Turnos y nómina son poblaciones distintas: lo de turnos cuenta solo trabajadores tipo 'turnos' y
+ * lo de nómina solo tipo 'nomina' (el historial individual no filtra: es de una persona concreta).
  */
 const ReportesModel = {
   /** Asistencia a turnos por trabajador (cuenta por estado de la asignación). */
@@ -19,7 +21,7 @@ const ReportesModel = {
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        JOIN trabajadores t ON t.id = a.trabajador_id
-       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ?
+       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ? AND t.tipo = 'turnos'
        GROUP BY t.id, t.nombre, t.apellido
        ORDER BY t.apellido, t.nombre`,
       [empresaId, desde, hasta]
@@ -34,7 +36,7 @@ const ReportesModel = {
               COUNT(*) AS dias_registrados
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
-       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ?
+       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND t.tipo = 'nomina'
        GROUP BY t.id, t.nombre, t.apellido
        ORDER BY t.apellido, t.nombre`,
       [empresaId, desde, hasta]
@@ -48,7 +50,8 @@ const ReportesModel = {
       `SELECT COUNT(*) AS turnos_completados, COALESCE(SUM(a.pago_total), 0) AS costo
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
-       WHERE a.empresa_id = ? AND a.estado = 'completado'
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.tipo = 'turnos'
          AND o.fecha BETWEEN ? AND ?`,
       [empresaId, desde, hasta]
     );
@@ -66,11 +69,110 @@ const ReportesModel = {
               SUM(r.horas_festivo) AS horas_festivo
        FROM registros_diarios r
        JOIN trabajadores t ON t.id = r.trabajador_id
-       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ?
+       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND t.tipo = 'nomina'
        GROUP BY r.trabajador_id, t.nombre, t.apellido, t.salario_base, t.tarifa_hora`,
       [empresaId, desde, hasta]
     );
     return filas;
+  },
+
+  /** Totales de turnos del rango: asistencia y costo (el bono ya viene dentro de pago_total). */
+  async resumenTurnos(empresaId, desde, hasta) {
+    const [[fila]] = await pool.query(
+      `SELECT COUNT(*) AS convocados,
+              COALESCE(SUM(a.estado = 'completado'), 0) AS completados,
+              COALESCE(SUM(a.estado = 'no_presentado'), 0) AS no_presentados,
+              COALESCE(SUM(CASE WHEN a.estado = 'completado' THEN a.pago_total END), 0) AS costo,
+              COALESCE(SUM(CASE WHEN a.estado = 'completado' THEN a.bono_monto END), 0) AS bonos
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.empresa_id = ? AND o.fecha BETWEEN ? AND ? AND t.tipo = 'turnos'
+         AND a.estado IN ('completado', 'no_presentado', 'confirmado', 'en_progreso')`,
+      [empresaId, desde, hasta]
+    );
+    return fila;
+  },
+
+  /** Plazas pedidas vs cubiertas en las ofertas del rango (sin las canceladas ni borradores). */
+  async coberturaTurnos(empresaId, desde, hasta) {
+    const [[fila]] = await pool.query(
+      `SELECT COALESCE(SUM(p.plazas), 0) AS plazas, COALESCE(SUM(p.plazas_cubiertas), 0) AS cubiertas
+       FROM oferta_puestos p
+       JOIN ofertas_turno o ON o.id = p.oferta_id
+       WHERE o.empresa_id = ? AND o.fecha BETWEEN ? AND ?
+         AND o.estado NOT IN ('borrador', 'cancelada')`,
+      [empresaId, desde, hasta]
+    );
+    return fila;
+  },
+
+  /** Horas totales (todos los baldes, que son disjuntos) y días con horas por trabajador de nómina. */
+  async horasTotalesPorTrabajador(empresaId, desde, hasta) {
+    const total = 'r.horas_ordinarias + r.horas_extra_diurnas + r.horas_extra_nocturnas + r.horas_nocturnas + r.horas_festivo';
+    const [filas] = await pool.query(
+      `SELECT r.trabajador_id, t.nombre, t.apellido,
+              SUM(${total}) AS horas,
+              SUM((${total}) > 0) AS dias
+       FROM registros_diarios r
+       JOIN trabajadores t ON t.id = r.trabajador_id
+       WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND t.tipo = 'nomina'
+       GROUP BY r.trabajador_id, t.nombre, t.apellido`,
+      [empresaId, desde, hasta]
+    );
+    return filas;
+  },
+
+  /**
+   * Turnos completados y pago por cargo y trabajador. Mira también `ventanaDias` antes de `desde`
+   * para encontrar a quienes ya hicieron ese cargo pero no tuvieron turnos en el rango (turnos = 0).
+   */
+  async turnosPorCargoYTrabajador(empresaId, desde, hasta, ventanaDias) {
+    const [filas] = await pool.query(
+      `SELECT p.cargo_id, c.nombre AS cargo, a.trabajador_id, t.nombre, t.apellido,
+              COALESCE(SUM(o.fecha >= ?), 0) AS turnos,
+              COALESCE(SUM(CASE WHEN o.fecha >= ? THEN a.pago_total END), 0) AS pago
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN oferta_puestos p ON p.id = a.puesto_id
+       JOIN cargos c ON c.id = p.cargo_id
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.activo = 1 AND t.tipo = 'turnos'
+         AND o.fecha BETWEEN DATE_SUB(?, INTERVAL ? DAY) AND ?
+       GROUP BY p.cargo_id, c.nombre, a.trabajador_id, t.nombre, t.apellido`,
+      [desde, desde, empresaId, desde, ventanaDias, hasta]
+    );
+    return filas;
+  },
+
+  /**
+   * Duración de las jornadas del rango: promedio, la más larga y la más corta (solo días con horas).
+   * `fuente` = 'nomina' (un día de registros_diarios) o 'turnos' (un turno completado).
+   */
+  async jornadas(empresaId, desde, hasta, fuente) {
+    const nomina = fuente === 'nomina';
+    const horas = nomina
+      ? '(r.horas_ordinarias + r.horas_extra_diurnas + r.horas_extra_nocturnas + r.horas_nocturnas + r.horas_festivo)'
+      : 'a.horas_trabajadas';
+    const desdeSql = nomina
+      ? `FROM registros_diarios r JOIN trabajadores t ON t.id = r.trabajador_id
+         WHERE r.empresa_id = ? AND r.fecha BETWEEN ? AND ? AND t.tipo = 'nomina' AND ${horas} > 0`
+      : `FROM asignaciones_turno a JOIN ofertas_turno o ON o.id = a.oferta_id
+         JOIN trabajadores t ON t.id = a.trabajador_id
+         WHERE a.empresa_id = ? AND a.estado = 'completado' AND t.tipo = 'turnos' AND o.fecha BETWEEN ? AND ? AND ${horas} > 0`;
+    const fecha = nomina ? 'r.fecha' : 'o.fecha';
+    const extremo = (orden) =>
+      pool.query(
+        `SELECT t.id AS trabajador_id, t.nombre, t.apellido, ${fecha} AS fecha, ${horas} AS horas
+         ${desdeSql} ORDER BY ${horas} ${orden}, ${fecha} DESC LIMIT 1`,
+        [empresaId, desde, hasta]
+      );
+    const [[[resumen]], [[mayor]], [[menor]]] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS jornadas, AVG(${horas}) AS promedio ${desdeSql}`, [empresaId, desde, hasta]),
+      extremo('DESC'),
+      extremo('ASC'),
+    ]);
+    return { resumen, mayor: mayor || null, menor: menor || null };
   },
 
   async turnosDeTrabajador(empresaId, trabajadorId, desde, hasta) {

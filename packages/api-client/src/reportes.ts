@@ -41,8 +41,119 @@ export interface CostoNominaDetalle {
 export interface CostosResponse {
   rango: ReporteRango;
   turnos: { turnos_completados: number; costo: number };
-  nomina: { trabajadores: number; costo: number; detalle: CostoNominaDetalle[] };
+  /** null para quien no ve pagos individuales (jefe_turnos). */
+  nomina: { trabajadores: number; costo: number; detalle: CostoNominaDetalle[] } | null;
   costo_total: number;
+}
+
+export type NivelInsight = 'alerta' | 'aviso' | 'info' | 'ok';
+
+export interface ResumenInsight {
+  id: string;
+  nivel: NivelInsight;
+  texto: string;
+}
+
+/** Costo de un lado (turnos o nómina) contra el período anterior de ese mismo lado. */
+export interface CostoComparado {
+  total: number;
+  previo: number;
+  /** null si el período anterior no tuvo costo (no hay base de comparación). */
+  delta_pct: number | null;
+}
+
+export interface ResumenTurnos {
+  costo: CostoComparado;
+  desglose: { tarifas: number; bonos: number };
+  convocados: number;
+  completados: number;
+  no_presentados: number;
+  cobertura: { plazas: number; cubiertas: number; pct: number | null };
+  insights: ResumenInsight[];
+}
+
+export interface ResumenNomina {
+  costo: CostoComparado;
+  desglose: { ordinario: number; nocturno: number; extras: number; festivo: number };
+  insights: ResumenInsight[];
+}
+
+/** Turnos y nómina se analizan por separado y no se suman. */
+export interface ResumenPeriodoResponse {
+  rango: ReporteRango;
+  /** Período anterior de igual duración, contra el que se compara. */
+  previo: ReporteRango;
+  turnos: ResumenTurnos;
+  /** null para quien no ve nómina (jefe_turnos). */
+  nomina: ResumenNomina | null;
+}
+
+export interface HorasPersona {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string | null;
+  horas: number;
+  dias: number;
+  prom_dia: number;
+  prom_semana: number;
+}
+
+export interface PersonaCargo {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string | null;
+  turnos: number;
+  pago: number;
+}
+
+export interface CargoTurnos {
+  cargo_id: number;
+  cargo: string;
+  /** Ordenadas por pago, de más a menos. turnos = 0 → ya hizo este cargo (últimos 6 meses) pero no tuvo turnos. */
+  personas: PersonaCargo[];
+  total_turnos: number;
+  total_pago: number;
+  /** false con menos de 4 personas: no tiene sentido pedir rotación (jefes, encargados). */
+  rotable: boolean;
+}
+
+export interface ExtremoJornada {
+  trabajador_id: number;
+  nombre: string;
+  apellido: string | null;
+  fecha: string;
+  horas: number;
+}
+
+export interface ResumenJornadas {
+  jornadas: number;
+  /** Horas promedio de una jornada (solo días/turnos con horas). */
+  promedio: number;
+  mas_larga: ExtremoJornada | null;
+  mas_corta: ExtremoJornada | null;
+}
+
+export interface PersonasResponse {
+  rango: ReporteRango;
+  turnos: {
+    /** Duración de los turnos completados; null si no hubo. */
+    jornadas: ResumenJornadas | null;
+    cargos: CargoTurnos[];
+    insights: ResumenInsight[];
+  };
+  /** null para quien no ve nómina (jefe_turnos). */
+  nomina: {
+    /** Duración de los días trabajados; null si no hubo. */
+    jornadas: ResumenJornadas | null;
+    horas: {
+      prom_semana_equipo: number | null;
+      /** Solo quienes tienen 3 o más días con horas. */
+      ranking: HorasPersona[];
+      mas: HorasPersona[];
+      menos: HorasPersona[];
+    };
+    insights: ResumenInsight[];
+  } | null;
 }
 
 export interface TurnoHistorial {
@@ -89,6 +200,16 @@ export const reportesApi = {
   asistencia(params: ReporteParams): Promise<AsistenciaResponse> {
     const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
     return api.get<AsistenciaResponse>(`/api/reportes/asistencia?${qs}`);
+  },
+
+  resumen(params: ReporteParams): Promise<ResumenPeriodoResponse> {
+    const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
+    return api.get<ResumenPeriodoResponse>(`/api/reportes/resumen?${qs}`);
+  },
+
+  personas(params: ReporteParams): Promise<PersonasResponse> {
+    const qs = new URLSearchParams({ desde: params.desde, hasta: params.hasta });
+    return api.get<PersonasResponse>(`/api/reportes/personas?${qs}`);
   },
 
   costos(params: ReporteParams): Promise<CostosResponse> {

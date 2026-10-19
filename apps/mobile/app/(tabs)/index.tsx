@@ -75,6 +75,7 @@ export default function DashboardScreen() {
   const isAdmin       = usuario?.rol === 'admin_empresa';
   const isNomina      = usuario?.rol === 'trabajador_nomina';
   const isJefeNomina  = usuario?.rol === 'jefe_nomina';
+  const isJefeTurnos  = usuario?.rol === 'jefe_turnos';
   // Backend restringe GET /nomina/periodos a admin_empresa/jefe_nomina/nomina/trabajador_nomina (no jefe_turnos).
   const puedeVerPeriodos = ['admin_empresa', 'jefe_nomina', 'nomina', 'trabajador_nomina'].includes(usuario?.rol ?? '');
   // Backend restringe GET /ofertas a todos los roles gestores menos 'nomina'.
@@ -281,6 +282,7 @@ export default function DashboardScreen() {
         { icon: 'briefcase-outline',     label: 'Trim. eventual',onPress: () => router.push('/liquidacion-eventual') },
         { icon: 'calendar-outline',      label: 'Registros',     onPress: () => router.push('/registros-periodo') },
         { icon: 'time-outline',          label: 'Compensatorios', onPress: () => router.push('/gestor-compensatorios') },
+        { icon: 'bar-chart-outline',     label: 'Reportes',      onPress: () => router.push('/reportes') },
       ]
     : [
         { icon: 'calendar-outline',      label: 'Turnos',      onPress: () => router.push('/(tabs)/turnos') },
@@ -292,11 +294,15 @@ export default function DashboardScreen() {
               { icon: 'person-add-outline'  as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') },
               { icon: 'briefcase-outline'   as IoniconsName, label: 'Cargos',       onPress: () => router.push('/cargos') },
               { icon: 'location-outline'    as IoniconsName, label: 'Puntos marcaje', onPress: () => router.push('/puntos-marcaje') },
-              { icon: 'link-outline'        as IoniconsName, label: 'logiq360',     onPress: () => router.push('/integracion/config') },
+              { icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') },
             ]
-          : [
-              { icon: 'pulse-outline'       as IoniconsName, label: 'Estado sync',  onPress: () => router.push('/integracion/estado') },
-            ]),
+          : isJefeTurnos
+            ? [{ icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') }]
+            // Rol 'nomina' (solo lectura): ve Reportes y conserva el estado de la sincronización
+            : [
+                { icon: 'bar-chart-outline' as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') },
+                { icon: 'pulse-outline'     as IoniconsName, label: 'Estado sync',  onPress: () => router.push('/integracion/estado') },
+              ]),
       ];
 
   const actions: Action[] = isWorker ? workerActions : managerActions;

@@ -251,7 +251,7 @@ Single locale `es-CO`. All user-visible strings go through `t('key')` from `lib/
 | `admin_empresa` | Full access: CRUD workers, close/liquidate periods |
 | `jefe_turnos` | Manage shifts and offers |
 | `jefe_nomina` | Manage payroll periods |
-| `nomina` | View payroll, read-only team |
+| `nomina` | View payroll and reports (incl. pay per worker), read-only team |
 | `trabajador_turnos` | See own shifts, mark ingreso/egreso |
 | `trabajador_nomina` | See own payroll records |
 

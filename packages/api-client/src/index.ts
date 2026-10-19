@@ -149,6 +149,18 @@ export type {
   AsistenciaNomina,
   CostosResponse,
   CostoNominaDetalle,
+  ResumenPeriodoResponse,
+  ResumenTurnos,
+  ResumenNomina,
+  CostoComparado,
+  PersonasResponse,
+  ResumenJornadas,
+  ExtremoJornada,
+  HorasPersona,
+  PersonaCargo,
+  CargoTurnos,
+  ResumenInsight,
+  NivelInsight,
   HistorialTrabajadorResponse,
 } from './reportes';
 export type {
