@@ -58,7 +58,7 @@ const CuentasCobroModel = {
               t.firma_guardada AS trabajador_firma_guardada,
               t.banco AS trabajador_banco, t.tipo_cuenta AS trabajador_tipo_cuenta,
               t.numero_cuenta AS trabajador_numero_cuenta,
-              e.nombre AS empresa_nombre, e.nit AS empresa_nit
+              e.nombre AS empresa_nombre, e.nit AS empresa_nit, e.logo_url AS empresa_logo_url
        FROM cuentas_cobro cc
        JOIN trabajadores t ON t.id = cc.trabajador_id
        JOIN empresas e     ON e.id = cc.empresa_id
