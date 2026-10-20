@@ -35,6 +35,9 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Lint (hex literales y hooks)
+        run: npm run lint
+
       - name: Build
         run: npm run build
         env:
