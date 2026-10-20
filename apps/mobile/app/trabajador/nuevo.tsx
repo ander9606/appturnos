@@ -46,6 +46,7 @@ export default function NuevoTrabajadorScreen() {
         sexo:     data.sexo     || undefined,
         telefono: data.telefono || undefined,
         email:    data.email    || undefined,
+        direccion: data.direccion || undefined,
         contacto_emergencia_nombre: data.emergencia_nombre || undefined,
         contacto_emergencia_tel:    data.emergencia_tel    || undefined,
         eps:          data.eps          || undefined,

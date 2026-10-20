@@ -283,6 +283,7 @@ interface FormState {
   sexo: SexoTrabajador | '';
   telefono: string;
   descripcion: string;
+  direccion: string;
   eps: string;
   afp: string;
   banco: string;
@@ -302,6 +303,7 @@ function buildForm(t: Trabajador | undefined): FormState {
     sexo:                        t?.sexo ?? '',
     telefono:                    t?.telefono ?? '',
     descripcion:                 t?.descripcion ?? '',
+    direccion:                   t?.direccion ?? '',
     eps:                         t?.eps ?? '',
     afp:                         t?.afp ?? '',
     banco:                       t?.banco ?? '',
@@ -363,6 +365,7 @@ export default function MiPerfilLaboralScreen() {
         sexo:                       (form.sexo as SexoTrabajador) || undefined,
         telefono:                   form.telefono || undefined,
         descripcion:                form.descripcion || undefined,
+        direccion:                  form.direccion || undefined,
         eps:                        form.eps || undefined,
         afp:                        form.afp || undefined,
         banco:                      form.banco || undefined,
@@ -534,6 +537,12 @@ export default function MiPerfilLaboralScreen() {
                   value={form.telefono}
                   onChangeText={set('telefono')}
                   keyboardType="phone-pad"
+                />
+                <FieldInput
+                  label="Dirección"
+                  value={form.direccion}
+                  onChangeText={set('direccion')}
+                  placeholder="Se imprime en tu contrato de prestación de servicios"
                   last
                 />
               </>
@@ -548,7 +557,8 @@ export default function MiPerfilLaboralScreen() {
                       : null
                   }
                 />
-                <InfoRow label="Teléfono" value={perfil.telefono} last />
+                <InfoRow label="Teléfono" value={perfil.telefono} />
+                <InfoRow label="Dirección" value={perfil.direccion} last />
               </>
             )}
           </View>

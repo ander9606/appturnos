@@ -4,6 +4,11 @@ export interface Empresa {
   id: number;
   nombre: string;
   nit: string | null;
+  /** Nombre y cédula de quien firma por la empresa — se imprimen en el contrato de cada trabajador. */
+  representante_nombre: string | null;
+  representante_cedula: string | null;
+  /** Firma guardada del representante — se estampa en todos los contratos. Solo admin_empresa la carga. */
+  firma_representante_b64: string | null;
   direccion: string | null;
   telefono: string | null;
   email: string | null;

@@ -211,6 +211,13 @@ export function Step1DatosPersonales({ data, onChange, onNext }: Props) {
           keyboardType="email-address"
           autoCapitalize="none"
         />
+        <Input
+          label="Dirección"
+          placeholder="Se imprime en el contrato de prestación de servicios"
+          value={data.direccion}
+          onChangeText={(t) => onChange({ direccion: t })}
+          autoCapitalize="words"
+        />
       </View>
 
       {/* Contacto de emergencia */}

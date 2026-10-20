@@ -59,10 +59,16 @@ const ContratosModel = {
               a.trabajador_id, a.estado AS asignacion_estado,
               a.bono_monto, a.bono_motivo,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
-              t.cedula AS trabajador_cedula, t.usuario_id AS trabajador_usuario_id,
+              t.cedula AS trabajador_cedula, t.tipo_documento AS trabajador_tipo_documento,
+              t.direccion AS trabajador_direccion, t.eps AS trabajador_eps, t.afp AS trabajador_afp,
+              t.usuario_id AS trabajador_usuario_id,
               t.firma_guardada AS trabajador_firma_guardada,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
-              e.nombre AS empresa_nombre, e.nit AS empresa_nit
+              e.nombre AS empresa_nombre, e.nit AS empresa_nit, e.ciudad AS empresa_ciudad,
+              e.direccion AS empresa_direccion,
+              e.representante_nombre AS empresa_representante_nombre,
+              e.representante_cedula AS empresa_representante_cedula,
+              e.firma_representante_b64 AS empresa_firma_representante_b64
        FROM contratos_diarios c
        JOIN asignaciones_turno a ON a.id = c.asignacion_id
        JOIN trabajadores t ON t.id = a.trabajador_id
@@ -104,10 +110,16 @@ const ContratosModel = {
               a.trabajador_id, a.estado AS asignacion_estado,
               a.bono_monto, a.bono_motivo,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
-              t.cedula AS trabajador_cedula, t.usuario_id AS trabajador_usuario_id,
+              t.cedula AS trabajador_cedula, t.tipo_documento AS trabajador_tipo_documento,
+              t.direccion AS trabajador_direccion, t.eps AS trabajador_eps, t.afp AS trabajador_afp,
+              t.usuario_id AS trabajador_usuario_id,
               t.firma_guardada AS trabajador_firma_guardada,
               o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
-              e.nombre AS empresa_nombre, e.nit AS empresa_nit
+              e.nombre AS empresa_nombre, e.nit AS empresa_nit, e.ciudad AS empresa_ciudad,
+              e.direccion AS empresa_direccion,
+              e.representante_nombre AS empresa_representante_nombre,
+              e.representante_cedula AS empresa_representante_cedula,
+              e.firma_representante_b64 AS empresa_firma_representante_b64
        FROM contratos_diarios c
        JOIN asignaciones_turno a ON a.id = c.asignacion_id
        JOIN trabajadores t ON t.id = a.trabajador_id

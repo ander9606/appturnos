@@ -24,7 +24,7 @@ const TIPO_BADGE: Record<TipoTrabajador, string> = {
 // quedan solo para admin_empresa. Sueldo y hora de entrada solo son de nómina.
 const CAMPOS_JEFE = [
   'nombre', 'apellido', 'cedula', 'tipo_documento', 'email', 'telefono', 'sexo', 'fecha_nacimiento',
-  'cargo', 'tarifa_hora', 'salario_base', 'hora_entrada_esperada', 'eps', 'afp',
+  'cargo', 'tarifa_hora', 'salario_base', 'hora_entrada_esperada', 'eps', 'afp', 'direccion',
 ];
 // Turnos: sin sueldo ni hora de entrada, y sin los datos de persona que se copian a sus otras empresas (solo admin).
 const CAMPOS_JEFE_TURNOS = ['nombre', 'apellido', 'telefono', 'email', 'cargo'];
@@ -39,6 +39,7 @@ type FormState = {
   tipo: TipoTrabajador; cargo: string; tarifa_hora: string; salario_base: string;
   hora_entrada_esperada: string;
   eps: string; afp: string; banco: string; tipo_cuenta: TipoCuenta | ''; numero_cuenta: string;
+  direccion: string;
 };
 
 function fromTrabajador(t: Trabajador): FormState {
@@ -61,6 +62,7 @@ function fromTrabajador(t: Trabajador): FormState {
     banco: t.banco ?? '',
     tipo_cuenta: t.tipo_cuenta ?? '',
     numero_cuenta: t.numero_cuenta ?? '',
+    direccion: t.direccion ?? '',
   };
 }
 
@@ -85,7 +87,7 @@ export function TrabajadorDetailPage() {
     nombre: '', apellido: '', cedula: '', tipo_documento: 'CC',
     email: '', telefono: '', sexo: '', fecha_nacimiento: '',
     tipo: 'nomina', cargo: '', tarifa_hora: '', salario_base: '', hora_entrada_esperada: '',
-    eps: '', afp: '', banco: '', tipo_cuenta: '', numero_cuenta: '',
+    eps: '', afp: '', banco: '', tipo_cuenta: '', numero_cuenta: '', direccion: '',
   });
 
   useEffect(() => {
@@ -116,6 +118,7 @@ export function TrabajadorDetailPage() {
         banco: form.banco || undefined,
         tipo_cuenta: form.tipo_cuenta || undefined,
         numero_cuenta: form.numero_cuenta || undefined,
+        direccion: form.direccion || undefined,
       });
     } catch {
       // El backend rechaza cualquier otro intento de tocar tipo/rol por acá
@@ -281,6 +284,11 @@ export function TrabajadorDetailPage() {
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Fecha nacimiento</label>
               <input type="date" {...inp('fecha_nacimiento')} />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-foreground mb-1">Dirección</label>
+              <input type="text" {...inp('direccion')} />
+              <p className="text-xs text-muted-foreground mt-1">Se imprime en el contrato de prestación de servicios.</p>
             </div>
           </div>
         </section>

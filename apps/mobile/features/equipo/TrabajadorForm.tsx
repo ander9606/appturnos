@@ -343,6 +343,27 @@ export function TrabajadorForm({
           )}
         </View>
 
+        {/* Dirección — se imprime en el contrato de prestación de servicios */}
+        <View className="mb-4">
+          {visible('direccion') && (
+          <Controller
+            control={control}
+            name="direccion"
+            render={({ field }) => (
+              <Input
+                label="Dirección"
+                error={errors.direccion?.message}
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="Se imprime en el contrato de prestación de servicios"
+                autoCapitalize="words"
+              />
+            )}
+          />
+          )}
+        </View>
+
         {/* Tipo de documento + fecha de nacimiento + sexo */}
         {visible('tipo_documento') && (
         <Controller

@@ -72,6 +72,8 @@ export function ConfiguracionPage() {
 const EMPRESA_FIELDS: { key: string; label: string; type?: string; full?: boolean; textarea?: boolean }[] = [
   { key: 'nombre',         label: 'Nombre de la empresa *' },
   { key: 'nit',            label: 'NIT' },
+  { key: 'representante_nombre', label: 'Representante legal' },
+  { key: 'representante_cedula', label: 'Cédula del representante' },
   { key: 'ciudad',         label: 'Ciudad' },
   { key: 'actividad',      label: 'Actividad económica' },
   { key: 'descripcion',    label: 'Descripción', textarea: true, full: true },
@@ -137,12 +139,58 @@ function LogoUploader({ logoUrl, uploading, onUpload, onRemove }: { logoUrl: str
   );
 }
 
+/** Firma del representante legal: se guarda una sola vez y se estampa en todos los contratos (ver contratoPdf.js) — solo admin_empresa la ve/edita, nunca gestores. */
+function FirmaUploader({ firmaB64, uploading, onUpload, onRemove }: { firmaB64: string | null; uploading: boolean; onUpload: (dataUri: string) => void; onRemove: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Selecciona un archivo de imagen'); return; }
+    try {
+      onUpload(await fileToLogoDataUri(file));
+    } catch {
+      toast.error('No se pudo procesar la imagen');
+    }
+  };
+
+  return (
+    <div className="mt-6 pt-6 border-t border-border">
+      <h3 className="text-sm font-semibold text-foreground">Firma del representante legal</h3>
+      <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+        Se imprime en todos los contratos de prestación de servicios de la empresa. Sube una foto o captura de tu firma.
+      </p>
+      <div className="flex items-center gap-4">
+        <div className="w-40 h-20 rounded-xl bg-muted border border-border flex items-center justify-center overflow-hidden shrink-0">
+          {firmaB64 && firmaB64.startsWith('data:')
+            ? <img src={firmaB64} alt="Firma del representante legal" className="w-full h-full object-contain" />
+            : <span className="text-xs text-muted-foreground/60 px-2 text-center">Sin firma cargada</span>}
+        </div>
+        <div className="flex flex-col gap-2">
+          <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+          <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className="flex items-center gap-1.5 text-sm border border-border rounded-lg px-3 py-1.5 hover:bg-muted disabled:opacity-50 w-fit">
+            <Upload size={14} /> {uploading ? 'Subiendo...' : firmaB64 ? 'Cambiar firma' : 'Subir firma'}
+          </button>
+          {firmaB64 && (
+            <button type="button" onClick={onRemove} disabled={uploading} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-danger disabled:opacity-50 w-fit">
+              <X size={12} /> Quitar firma
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmpresaTab() {
+  const isAdmin = useAuthStore(s => s.usuario?.rol) === 'admin_empresa';
   const { data, isLoading, isError, error, refetch } = useEmpresa();
   const update = useUpdateEmpresa();
   const empresa = data?.data;
   const [form, setForm] = useState<Record<string, string> | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFirma, setUploadingFirma] = useState(false);
 
   if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
@@ -151,6 +199,11 @@ function EmpresaTab() {
   const withLogoUpload = async (logo_url: string) => {
     setUploadingLogo(true);
     try { await update.mutateAsync({ logo_url }); } finally { setUploadingLogo(false); }
+  };
+
+  const withFirmaUpload = async (firma_representante_b64: string) => {
+    setUploadingFirma(true);
+    try { await update.mutateAsync({ firma_representante_b64 }); } finally { setUploadingFirma(false); }
   };
 
   const editing = form !== null;
@@ -230,6 +283,14 @@ function EmpresaTab() {
         </div>
       </div>
       <RecargosSection editing={editing} val={val} setForm={setForm} />
+      {isAdmin && (
+        <FirmaUploader
+          firmaB64={empresa.firma_representante_b64}
+          uploading={uploadingFirma}
+          onUpload={dataUri => withFirmaUpload(dataUri)}
+          onRemove={() => withFirmaUpload('')}
+        />
+      )}
     </div>
   );
 }

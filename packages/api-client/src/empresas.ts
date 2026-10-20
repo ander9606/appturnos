@@ -57,6 +57,11 @@ export type TipoContrato = 'laboral' | 'prestacion_servicios';
 /** Vista completa que solo ve el admin_empresa de esa empresa */
 export interface Empresa extends EmpresaDirectorio {
   nit: string | null;
+  /** Nombre y cédula de quien firma por la empresa — se imprimen en el contrato de cada trabajador. */
+  representante_nombre: string | null;
+  representante_cedula: string | null;
+  /** Firma guardada del representante — SVG de trazos (mobile) o imagen subida (web). Se estampa en todos los contratos. Solo admin_empresa la carga. */
+  firma_representante_b64: string | null;
   plan: string;
   tipo_liquidacion: TipoLiquidacion;
   tipo_contrato: TipoContrato;
@@ -69,6 +74,9 @@ export interface Empresa extends EmpresaDirectorio {
 export interface ActualizarMiEmpresaPayload {
   nombre?: string;
   nit?: string;
+  representante_nombre?: string;
+  representante_cedula?: string;
+  firma_representante_b64?: string;
   ciudad?: string;
   descripcion?: string;
   actividad?: string;

@@ -45,7 +45,7 @@ const COLUMNAS = `t.id, t.empresa_id, t.usuario_id, t.nombre, t.apellido, t.cedu
   t.tipo_documento, t.fecha_nacimiento, t.sexo,
   t.contacto_emergencia_nombre, t.contacto_emergencia_tel,
   t.telefono, t.email, t.tipo, t.cargo, t.descripcion, t.tarifa_hora, t.salario_base, t.acepta_extras,
-  t.eps, t.afp, t.banco, t.tipo_cuenta, t.numero_cuenta,
+  t.eps, t.afp, t.banco, t.tipo_cuenta, t.numero_cuenta, t.direccion,
   t.ant_judiciales_fecha, t.ant_disciplinarios_fecha,
   t.tipo_marcacion, t.punto_marcaje_id, t.hora_entrada_esperada,
   t.activo, t.external_ref, t.ranking, t.total_calificaciones, t.created_at,
@@ -56,7 +56,7 @@ const COLUMNAS_BARE = `id, empresa_id, usuario_id, nombre, apellido, cedula,
   tipo_documento, fecha_nacimiento, sexo,
   contacto_emergencia_nombre, contacto_emergencia_tel,
   telefono, email, tipo, cargo, descripcion, tarifa_hora, salario_base, acepta_extras,
-  eps, afp, banco, tipo_cuenta, numero_cuenta,
+  eps, afp, banco, tipo_cuenta, numero_cuenta, direccion,
   ant_judiciales_fecha, ant_disciplinarios_fecha,
   tipo_marcacion, punto_marcaje_id, hora_entrada_esperada,
   activo, external_ref, ranking, total_calificaciones, created_at`;
@@ -67,7 +67,7 @@ const CAMPOS_EDITABLES = [
   'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
   'telefono', 'email', 'tipo', 'cargo', 'descripcion', 'tarifa_hora', 'salario_base',
   'contacto_emergencia_nombre', 'contacto_emergencia_tel',
-  'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
+  'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta', 'direccion',
   'ant_judiciales_fecha', 'ant_disciplinarios_fecha',
   'external_ref', 'hora_entrada_esperada',
 ];
@@ -414,10 +414,10 @@ const TrabajadoresModel = {
            (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo,
             telefono, email, tipo, cargo, tarifa_hora, salario_base,
             contacto_emergencia_nombre, contacto_emergencia_tel,
-            eps, afp, banco, tipo_cuenta, numero_cuenta,
+            eps, afp, banco, tipo_cuenta, numero_cuenta, direccion,
             ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada,
             empresas_postulacion, cargos_iniciales, external_ref, creado_por)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           empresaId,
           datos.nombre,
@@ -439,6 +439,7 @@ const TrabajadoresModel = {
           datos.banco ?? null,
           datos.tipo_cuenta ?? null,
           datos.numero_cuenta ?? null,
+          datos.direccion ?? null,
           datos.ant_judiciales_fecha ?? null,
           datos.ant_disciplinarios_fecha ?? null,
           datos.hora_entrada_esperada ?? null,
@@ -671,7 +672,7 @@ const TrabajadoresModel = {
     const CAMPOS_ME = [
       'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo', 'telefono', 'descripcion',
       'contacto_emergencia_nombre', 'contacto_emergencia_tel',
-      'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta',
+      'eps', 'afp', 'banco', 'tipo_cuenta', 'numero_cuenta', 'direccion',
       'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'acepta_extras',
     ];
     const sets = [];

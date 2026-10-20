@@ -22,6 +22,7 @@ function crearDocMock(x = 50, y = 100) {
     lineWidth: jest.fn(() => doc),
     stroke: jest.fn(() => doc),
     restore: jest.fn(() => doc),
+    image: jest.fn(() => doc),
   };
   return { doc, pathsDibujados };
 }
@@ -66,5 +67,16 @@ describe('dibujarFirma', () => {
     const { doc } = crearDocMock();
 
     expect(() => dibujarFirma(doc, svgBase64(svg))).toThrow();
+  });
+
+  test('imagen subida (data:image/png;base64,...) se dibuja con doc.image(), no como paths', () => {
+    const pngB64 = Buffer.from('contenido-png-falso').toString('base64');
+    const { doc, pathsDibujados } = crearDocMock(50, 100);
+
+    dibujarFirma(doc, `data:image/png;base64,${pngB64}`, { width: 180, height: 80 });
+
+    expect(pathsDibujados).toEqual([]);
+    expect(doc.image).toHaveBeenCalledWith(Buffer.from(pngB64, 'base64'), 50, 100, { fit: [180, 80] });
+    expect(doc.y).toBe(180);
   });
 });
