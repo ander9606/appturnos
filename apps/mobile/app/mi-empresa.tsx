@@ -193,7 +193,7 @@ export default function MiEmpresaScreen() {
       await actualizar.mutateAsync({ firma_representante_b64: b64 });
       showToast('Firma del representante actualizada.');
     } catch {
-      Alert.alert('Error', 'No se pudo guardar la firma. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo guardar la firma. Intenta de nuevo.');
     } finally {
       setUploadingFirma(false);
     }
@@ -205,7 +205,7 @@ export default function MiEmpresaScreen() {
       await actualizar.mutateAsync({ firma_representante_b64: '' });
       showToast('Firma eliminada.');
     } catch {
-      Alert.alert('Error', 'No se pudo eliminar la firma.');
+      showAlert('Error', 'No se pudo eliminar la firma.');
     } finally {
       setUploadingFirma(false);
     }
@@ -408,14 +408,14 @@ export default function MiEmpresaScreen() {
               className="h-24 rounded-2xl border border-dashed border-border items-center justify-center bg-card active:opacity-70 overflow-hidden"
             >
               {uploadingFirma ? (
-                <ActivityIndicator color={theme.primary} />
+                <Spinner color={theme.primary} />
               ) : firmaSvgXml ? (
                 <SvgXml xml={firmaSvgXml} width="90%" height={70} />
               ) : firmaB64 ? (
                 <Image source={{ uri: firmaB64 }} style={{ width: '90%', height: 70 }} resizeMode="contain" />
               ) : (
                 <View className="items-center gap-1">
-                  <Ionicons name="create-outline" size={20} color="#94A3B8" />
+                  <Ionicons name="create-outline" size={20} color={COLORS.placeholder} />
                   <Text className="text-xs text-muted-foreground">Toca para firmar</Text>
                 </View>
               )}
