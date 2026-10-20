@@ -130,6 +130,8 @@ export interface LiquidacionTurnosTrabajador {
   pago_total: number;
   /** Turnos completados sin firma del trabajador, excluidos de los totales de pago. */
   turnos_pendientes_firma: number;
+  /** Cuenta de cobro ya generada para este rango exacto (fecha_inicio/fecha_fin) — null si el rango no coincide con un ciclo generado. */
+  cuenta_cobro_id: number | null;
   turnos: LiquidacionTurno[];
 }
 

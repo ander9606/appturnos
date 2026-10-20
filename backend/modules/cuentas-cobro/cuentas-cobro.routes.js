@@ -11,7 +11,9 @@ const ctrl = require('./cuentas-cobro.controller');
 
 const router = express.Router();
 
-const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.TRABAJADOR_TURNOS];
+// jefe_turnos ve la Liquidación de turnos en web y ahora puede descargar la cuenta
+// de cobro de ahí — mismos roles que gestionan turnos (ver TurnosPage.tsx, descuentos-turno.routes.js).
+const VER = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA, ROLES.JEFE_TURNOS, ROLES.TRABAJADOR_TURNOS];
 const GESTIONAR = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_NOMINA];
 const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 
