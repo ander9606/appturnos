@@ -10,6 +10,7 @@ import { StatCard } from '@/shared/components/StatCard';
 import { fmtCOP, fmtHrs, fmtDate, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 import { descargarBlob } from '@/shared/lib/download';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurno } from '../types';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 async function descargarContrato(asignacionId: number) {
   const blob = await turnosApi.descargarContratoPorAsignacion(asignacionId);
@@ -203,7 +204,7 @@ export function LiquidacionTurnosView() {
 
           {vista === 'trabajador' ? (
           trabajadores.length === 0 ? (
-            <p className="text-muted-foreground text-sm py-8 text-center">Sin turnos completados en este rango</p>
+            <EmptyState title="Sin turnos completados en este rango" />
           ) : (
             <div className="flex flex-col gap-2">
               {trabajadores.map(w => {
@@ -307,7 +308,7 @@ export function LiquidacionTurnosView() {
             </div>
           )
           ) : turnosAgrupados.length === 0 ? (
-            <p className="text-muted-foreground text-sm py-8 text-center">Sin turnos completados en este rango</p>
+            <EmptyState title="Sin turnos completados en este rango" />
           ) : (
             <div className="flex flex-col gap-2">
               {turnosAgrupados.map(g => {

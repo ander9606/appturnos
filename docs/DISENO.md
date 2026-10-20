@@ -400,13 +400,13 @@ Reglas:
 8. **Spinner a nivel de marca.** Evaluar una animación con la forma del logo (Lottie) para el splash y la carga inicial.
 9. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
 10. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
-11. **Más ilustraciones de marca.** Reutilizar el planeta en estados vacíos (sin turnos, sin equipo) y en el 404 de la web.
+11. **Más ilustraciones de marca.** Hecho en la web: el 404 y los vacíos de página completa usan el planeta. Falta móvil (sin turnos, sin equipo) donde aún haya texto suelto.
 12. **`Alert.alert` restantes en móvil (~85 llamadas).** Probar en un iPhone si un diálogo del layout raíz aparece sobre un `Modal` abierto; si funciona, migrar los 19 archivos con `Modal` (mismo script; ahí se estrenan `actionSheet` y `elegirFotoConMenu` en `oferta/[id]` y `ReportarNovedadModal`). El `ActionSheet` también es un `Modal`, así que tiene la misma restricción. Si no, montar el diálogo dentro de cada `Modal` o sustituir esos `Modal` por pantallas/`bottom sheet`.
 13. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
 14. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
 ---
-15. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: solo 3 pantallas usan `EmptyState`; unos 28 vacíos más son un texto gris en tablas y tarjetas.
+15. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: los vacíos de página completa ya usan `EmptyState`; quedan textos grises dentro de celdas de tabla y tarjetas pequeñas ("Sin cargos", "Sin gestores"…), donde una ilustración de 170 px no cabe.
 
 ## 9. Referencias
 

@@ -11,6 +11,7 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import type { TipoTrabajador, TipoDocumento, Sexo, TipoCuenta, Trabajador, CambioSalario } from '../types';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 /** Mismo código de colores que el resto de la app: Turnos = naranja, Nómina = verde, Ambos = azul. */
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
@@ -207,7 +208,7 @@ export function TrabajadorDetailPage() {
 
   if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
-  if (!trabajador) return <p className="text-muted-foreground text-sm py-8 text-center">Trabajador no encontrado</p>;
+  if (!trabajador) return <EmptyState title="Trabajador no encontrado" variant="search" />;
 
   return (
     <div>

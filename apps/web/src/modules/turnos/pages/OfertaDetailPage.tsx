@@ -38,6 +38,7 @@ import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto, Oferta, DescuentoTurno, DescuentosAsignacion } from '../types';
 import { fmtDate, fmtCOP, bogotaToday } from '@/shared/lib/format';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 const ESTADO_OFERTA_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -367,7 +368,7 @@ export function OfertaDetailPage() {
           {loadingAsig ? (
             <SkeletonTable rows={4} />
           ) : asignaciones.length === 0 ? (
-            <p className="text-muted-foreground text-sm py-8 text-center">Sin asignaciones</p>
+            <EmptyState title="Sin asignaciones" />
           ) : (
             <div className="bg-card border border-border rounded-xl overflow-auto flex-1">
               <table className="w-full text-sm">

@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router';
 import { LayoutDashboard, Users, Calendar, CalendarDays, Settings, DollarSign, LogOut, Plug, Building2, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '@/modules/auth/authStore';
 import type { Rol } from '@/modules/auth/authStore';
+import logoMark from '@/assets/logo-mark.png';
 
 type NavItem = {
   label: string;
@@ -80,9 +81,7 @@ export function Sidebar() {
       {/* Brand header */}
       <div className="px-5 pt-5 pb-4 bg-primary rounded-br-3xl mb-2">
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-            <Calendar size={16} className="text-white" />
-          </div>
+          <img src={logoMark} alt="" aria-hidden="true" className="w-8 h-8" />
           <span className="font-bold text-white text-base tracking-tight">Zaturno</span>
         </div>
         {usuario && (

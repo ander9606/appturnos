@@ -16,6 +16,7 @@ import { CorregirModal } from '../components/CorregirModal';
 import { CrearRegistroModal } from '../components/CrearRegistroModal';
 import { DescuentoModal } from '../components/DescuentoModal';
 import { AsignarCompensatorioModal, ReasignarCompensatorioModal } from '../components/CompensatorioAsignarModals';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 export function PeriodoDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -105,9 +106,7 @@ export function PeriodoDetailPage() {
     return (
       <div>
         {volverBtn}
-        <p className="text-muted-foreground text-sm py-8 text-center">
-          Este período no existe o fue eliminado.
-        </p>
+        <EmptyState title="Este período no existe o fue eliminado." variant="search" />
       </div>
     );
   }
