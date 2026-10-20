@@ -25,6 +25,7 @@ import { NominaSeccion, TurnosSeccion } from '@/features/reportes/SeccionesRepor
 import { HeroMarca } from '@/features/reportes/marca';
 import { ReportePager } from '@/features/reportes/ReportePager';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Rango presets ─────────────────────────────────────────────────────────
 
@@ -257,12 +258,12 @@ export default function ReportesScreen() {
         )}
 
         {(asistencia.isError || costos.isError) && (
-          <View className="mx-5 mt-3 bg-danger/10 border border-danger/30 rounded-2xl p-4 flex-row items-center gap-3">
-            <Ionicons name="warning-outline" size={20} color={COLORS.danger} />
-            <Text className="text-sm text-danger flex-1">
-              No se pudieron cargar algunos datos. Comprueba tu conexión.
-            </Text>
-          </View>
+          <ErrorState
+            compact
+            error={asistencia.error ?? costos.error}
+            onRetry={() => Promise.all([asistencia.refetch(), costos.refetch()])}
+            fallback="No se pudieron cargar algunos datos. Comprueba tu conexión."
+          />
         )}
 
         {/* ── Turnos y nómina: dos páginas que se deslizan, nunca mezcladas ── */}

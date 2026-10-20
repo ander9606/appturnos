@@ -21,6 +21,7 @@ import { useTheme } from '@/lib/theme';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { ConteoEstado } from '@api-client';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ export default function EstadoIntegracionScreen() {
   // Backend (VER_ESTADO) permite admin_empresa y jefe_turnos — no 'nomina', que también llega aquí desde el dashboard.
   const rol = useAuthStore((s) => s.usuario?.rol);
   const puedeVer = rol === 'admin_empresa' || rol === 'jefe_turnos';
-  const { data, isLoading, isRefetching, refetch, isError } = useEstadoIntegracion(puedeVer);
+  const { data, isLoading, isRefetching, refetch, isError, error } = useEstadoIntegracion(puedeVer);
   const reintentarM = useReintentarFallidos();
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
@@ -77,18 +78,8 @@ export default function EstadoIntegracionScreen() {
 
   if (isError || !data) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-8">
-        <Ionicons name="cloud-offline-outline" size={48} color={COLORS.placeholder} />
-        <Text className="text-muted-foreground text-center">
-          No se pudo cargar el estado de la integración
-        </Text>
-        <Pressable
-          onPress={() => refetch()}
-          className="px-5 py-2.5 rounded-xl"
-          style={{ backgroundColor: alpha(theme.primary, 0.1) }}
-        >
-          <Text className="font-semibold" style={{ color: theme.primary }}>Reintentar</Text>
-        </Pressable>
+      <SafeAreaView className="flex-1 bg-background">
+        <ErrorState error={error} onRetry={refetch} fallback="No se pudo cargar el estado de la integración" />
       </SafeAreaView>
     );
   }

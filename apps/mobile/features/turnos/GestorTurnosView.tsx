@@ -21,6 +21,7 @@ import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { confirm } from '@/lib/confirmDialog';
 import { alertError } from '@/lib/alertDialog';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -434,13 +435,7 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien, puedeGestionar
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center gap-3 px-6">
-        <Text className="text-4xl">⚠️</Text>
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar turnos')}
-        </Text>
-        <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
-      </View>
+      <ErrorState error={error} onRetry={refetch} fallback="Error al cargar turnos" />
     );
   }
 

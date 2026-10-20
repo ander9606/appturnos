@@ -9,13 +9,13 @@ import React, { useState } from 'react';
 import {
   View,
   ScrollView,
-  Pressable,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useReportesGlobales } from '@/features/admin/useAdmin';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -65,7 +65,7 @@ function CardTitle({ title, emoji }: { title: string; emoji: string }) {
 
 export default function ReportesScreen() {
   const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
-  const { data, isLoading, isError, refetch } = useReportesGlobales(isSuperAdmin);
+  const { data, isLoading, isError, error, refetch } = useReportesGlobales(isSuperAdmin);
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = async () => {
@@ -99,13 +99,7 @@ export default function ReportesScreen() {
         )}
 
         {isError && (
-          <View className="mx-4 bg-danger/10 border border-danger/30 rounded-2xl p-4 items-center gap-2">
-            <Text className="text-2xl">⚠️</Text>
-            <Text className="text-danger font-semibold">Error al cargar reportes</Text>
-            <Pressable onPress={() => refetch()}>
-              <Text className="text-primary text-sm font-semibold">Reintentar</Text>
-            </Pressable>
-          </View>
+          <ErrorState compact error={error} onRetry={refetch} fallback="Error al cargar reportes" />
         )}
 
         {data && (

@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { formatCOP } from '@/lib/formatters';
 import { showToast } from '@/lib/toast';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // Tamaños de empresa para la vista previa de "cuánto pagaría".
 const EJEMPLOS_TRABAJADORES = [5, 25, 100];
@@ -129,7 +130,7 @@ function PlanCard({ plan }: { plan: PlanConfig }) {
 export default function PlanesScreen() {
   const router = useRouter();
   const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
-  const { data: planes, isLoading, isError, refetch, isRefetching } = usePlanes(isSuperAdmin);
+  const { data: planes, isLoading, isError, error, refetch, isRefetching } = usePlanes(isSuperAdmin);
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['top']}>
@@ -153,12 +154,7 @@ export default function PlanesScreen() {
           <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
         {isError && (
-          <View className="mx-4 bg-danger/10 border border-danger/30 rounded-2xl p-4 items-center gap-2">
-            <Text className="text-danger font-semibold">Error al cargar planes</Text>
-            <Pressable onPress={() => refetch()} accessibilityRole="button">
-              <Text className="text-primary text-sm font-semibold">Reintentar</Text>
-            </Pressable>
-          </View>
+          <ErrorState compact error={error} onRetry={refetch} fallback="Error al cargar planes" />
         )}
         {/* key incluye updated_at: tras guardar, la tarjeta se reinicia con los valores del servidor. */}
         {planes?.map((p) => <PlanCard key={`${p.codigo}-${p.updated_at}`} plan={p} />)}

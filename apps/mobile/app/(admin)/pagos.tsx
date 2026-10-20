@@ -23,6 +23,7 @@ import { useWompiEventos, useReintentarWompiEvento } from '@/features/admin/useA
 import { formatCOP } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import type { WompiEstado, WompiEvento } from '@api-client';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -133,7 +134,7 @@ export default function PagosScreen() {
 
   const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
 
-  const { data, isLoading, isError, refetch } = useWompiEventos({
+  const { data, isLoading, isError, error, refetch } = useWompiEventos({
     estado: filtro !== 'todos' ? filtro : undefined,
     limit: 50,
   }, isSuperAdmin);
@@ -207,13 +208,7 @@ export default function PagosScreen() {
         )}
 
         {isError && (
-          <View className="mx-4 mt-4 bg-danger/10 border border-danger/30 rounded-2xl p-4 items-center gap-2">
-            <Text className="text-2xl">⚠️</Text>
-            <Text className="text-danger font-semibold">Error al cargar pagos</Text>
-            <Pressable onPress={() => refetch()}>
-              <Text className="text-primary text-sm font-semibold">Reintentar</Text>
-            </Pressable>
-          </View>
+          <ErrorState compact error={error} onRetry={refetch} fallback="Error al cargar pagos" />
         )}
 
         {!isLoading && !isError && eventos.length === 0 && (

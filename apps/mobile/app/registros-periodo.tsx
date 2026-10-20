@@ -41,6 +41,7 @@ import { isChronological } from '@/lib/dateValidation';
 import { ApiError } from '@api-client';
 import type { ResumenPeriodoNomina } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import type { RegistroDiario, TipoDia, DescansoCompensatorio } from '@api-client';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Constantes ────────────────────────────────────────────────────────────
 
@@ -1015,7 +1016,7 @@ export default function RegistrosPeriodoScreen() {
   const rol          = useAuthStore((s) => s.usuario?.rol);
   const canEdit      = rol !== 'nomina';
 
-  const { data, isLoading, isError, refetch } = useRegistros({
+  const { data, isLoading, isError, error, refetch } = useRegistros({
     periodo_id:    numId,
     trabajador_id: numTrabId,
     limit:         500,
@@ -1092,12 +1093,9 @@ export default function RegistrosPeriodoScreen() {
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center px-8" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: numTrabId ? 'Registros del trabajador' : 'Registros del equipo', headerShown: true }} />
-        <Text className="text-base font-semibold text-foreground">No se pudieron cargar los registros</Text>
-        <TouchableOpacity onPress={() => refetch()} className="mt-4">
-          <Text className="text-primary font-semibold">Reintentar</Text>
-        </TouchableOpacity>
+        <ErrorState error={error} onRetry={refetch} fallback="No se pudieron cargar los registros" />
       </SafeAreaView>
     );
   }
