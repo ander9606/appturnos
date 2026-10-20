@@ -40,7 +40,7 @@ async function pdf(req, res) {
     'Content-Disposition',
     `inline; filename="cuenta-cobro-${cuenta.numero_cuenta}.pdf"`
   );
-  generarCuentaCobroPdf(cuenta, res);
+  await generarCuentaCobroPdf(cuenta, res);
 }
 
 module.exports = { listar, listarSinFirmar, obtener, firmar, regenerarParaPeriodo, pdf };
