@@ -23,6 +23,26 @@ function fmtHora(dt: string | null): string {
 
 type Vista = 'trabajador' | 'turno';
 
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Período inmediatamente anterior al activo, según el ciclo de la empresa. */
+function periodoAnterior(tipo: string, inicio: string): { fecha_inicio: string; fecha_fin: string } {
+  const [y, m, d] = inicio.split('-').map(Number);
+  const fin = (anio: number, mes: number) => ymd(new Date(Date.UTC(anio, mes, 0))); // último día del mes `mes` (1-12)
+  if (tipo === 'semanal') {
+    return { fecha_inicio: ymd(new Date(Date.UTC(y, m - 1, d - 7))), fecha_fin: ymd(new Date(Date.UTC(y, m - 1, d - 1))) };
+  }
+  if (tipo === 'quincenal') {
+    if (d >= 16) return { fecha_inicio: `${inicio.slice(0, 7)}-01`, fecha_fin: `${inicio.slice(0, 7)}-15` };
+    const prev = new Date(Date.UTC(y, m - 2, 1));
+    return { fecha_inicio: `${ymd(prev).slice(0, 7)}-16`, fecha_fin: fin(y, m - 1) };
+  }
+  const meses = tipo === 'trimestral' ? 3 : 1;
+  return { fecha_inicio: ymd(new Date(Date.UTC(y, m - 1 - meses, 1))), fecha_fin: fin(y, m - 1) };
+}
+
+const NOMBRE_CICLO: Record<string, string> = { quincenal: 'Quincena', mensual: 'Mes', semanal: 'Semana', trimestral: 'Trimestre' };
+
 interface TurnoGrupo {
   oferta_id: number;
   oferta_titulo: string;
@@ -114,6 +134,18 @@ export function LiquidacionTurnosView() {
     setFechaFin(v);
   }
 
+  function irARango(r: { fecha_inicio: string; fecha_fin: string }) {
+    setFechaTocada(true);
+    setFechaInicio(r.fecha_inicio);
+    setFechaFin(r.fecha_fin);
+  }
+  const ciclos = periodoTurnos
+    ? [
+        { label: `${NOMBRE_CICLO[periodoTurnos.tipo] ?? 'Período'} actual`, rango: periodoTurnos },
+        { label: `${NOMBRE_CICLO[periodoTurnos.tipo] ?? 'Período'} anterior`, rango: periodoAnterior(periodoTurnos.tipo, periodoTurnos.fecha_inicio) },
+      ]
+    : [];
+
   const { data, isLoading, isError, error, refetch } = useLiquidacionTurnos({ fecha_inicio: fechaInicio, fecha_fin: fechaFin });
   const trabajadores: LiquidacionTurnosTrabajador[] = data?.data ?? [];
   const turnosAgrupados = useMemo(() => agruparPorTurno(trabajadores), [trabajadores]);
@@ -153,7 +185,21 @@ export function LiquidacionTurnosView() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        {ciclos.map(c => {
+          const activo = fechaInicio === c.rango.fecha_inicio && fechaFin === c.rango.fecha_fin;
+          return (
+            <button
+              key={c.label}
+              onClick={() => irARango(c.rango)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+                activo ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {c.label}
+            </button>
+          );
+        })}
         <label className="text-sm text-muted-foreground">
           Desde
           <input
