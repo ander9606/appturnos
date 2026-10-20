@@ -37,14 +37,28 @@ const EmpresasService = {
     return empresa;
   },
 
-  async actualizarMiEmpresa(empresaId, datos, usuarioId) {
+  /** Auditoría legal de cambios a la firma del representante — solo admin_empresa (ver routes). */
+  async historialFirma(empresaId) {
+    return EmpresasModel.listarHistorialFirma(empresaId);
+  },
+
+  /** auditoria: { usuario_id, usuario_nombre, usuario_rol, ip } — ver controller. */
+  async actualizarMiEmpresa(empresaId, datos, auditoria) {
+    const { firma_representante_b64, ...resto } = datos;
     const antes = await EmpresasModel.obtenerParaAdmin(empresaId);
-    await EmpresasModel.actualizarPorAdmin(empresaId, datos);
+    if (Object.keys(resto).length > 0) {
+      await EmpresasModel.actualizarPorAdmin(empresaId, resto);
+    }
+    // Aparte: se cifra y audita (quién/cuándo/desde dónde), nunca pasa por la
+    // allowlist genérica de arriba.
+    if (firma_representante_b64 !== undefined) {
+      await EmpresasModel.actualizarFirmaConAuditoria(empresaId, firma_representante_b64, auditoria);
+    }
     const empresa = await EmpresasModel.obtenerParaAdmin(empresaId);
 
     // Pasar a 'sin recargos' queda registrado: quién lo hizo y cuándo (evidencia del aviso aceptado).
     if (datos.sumar_nocturnas_festivo === 0 && antes && Number(antes.sumar_nocturnas_festivo) === 1) {
-      await EmpresasModel.registrarAvisoRecargos(empresaId, usuarioId);
+      await EmpresasModel.registrarAvisoRecargos(empresaId, auditoria.usuario_id);
     }
 
     // El ciclo (tipo_liquidacion) es lo que determina los límites de cada
@@ -58,7 +72,7 @@ const EmpresasService = {
       antes &&
       datos.tipo_liquidacion !== antes.tipo_liquidacion
     ) {
-      await PeriodosService.recalcularPorCambioDeCiclo(empresaId, usuarioId)
+      await PeriodosService.recalcularPorCambioDeCiclo(empresaId, auditoria.usuario_id)
         .catch((err) => logger.error(`[empresas] no se pudo recalcular el período tras cambiar tipo_liquidacion (empresa ${empresaId}):`, err.message));
     }
 

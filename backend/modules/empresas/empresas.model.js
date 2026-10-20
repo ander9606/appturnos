@@ -1,7 +1,11 @@
 'use strict';
 
+const crypto = require('crypto');
 const { pool } = require('../../config/database');
 const { ahoraColombiaSQL } = require('../../utils/fechaColombia');
+const { cifrar, descifrar } = require('../../utils/firmaCrypto');
+
+const hashFirma = (v) => (v ? crypto.createHash('sha256').update(v).digest('hex') : null);
 
 // Ventana de referencia para "actividad reciente" del directorio — se mide
 // sobre created_at (cuándo se publicó la oferta), no la fecha del turno:
@@ -137,11 +141,17 @@ const EmpresasModel = {
       `SELECT ${COLUMNAS_ADMIN} FROM empresas WHERE id = ? AND activo = 1 LIMIT 1`,
       [empresaId]
     );
-    return filas[0] || null;
+    const fila = filas[0];
+    if (fila) fila.firma_representante_b64 = descifrar(fila.firma_representante_b64);
+    return fila || null;
   },
 
+  /**
+   * firma_representante_b64 queda fuera de esta allowlist a propósito: solo se
+   * escribe cifrada y con auditoría, vía actualizarFirmaConAuditoria.
+   */
   async actualizarPorAdmin(empresaId, datos) {
-    const CAMPOS = ['nombre', 'nit', 'representante_nombre', 'representante_cedula', 'firma_representante_b64', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual'];
+    const CAMPOS = ['nombre', 'nit', 'representante_nombre', 'representante_cedula', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual'];
     const sets = [];
     const params = [];
     for (const campo of CAMPOS) {
@@ -157,6 +167,69 @@ const EmpresasModel = {
       params
     );
     return res.affectedRows;
+  },
+
+  /**
+   * Cambia la firma del representante legal en una sola transacción: se
+   * guarda cifrada (empresaId, SELECT...FOR UPDATE evita una carrera con otra
+   * escritura simultánea) y se deja un registro de auditoría con un hash de
+   * antes/después — nunca la firma en claro — para poder detectar un cambio
+   * sin tener que exponer el valor. firmaB64 vacío/null = quitar la firma.
+   */
+  async actualizarFirmaConAuditoria(empresaId, firmaB64, auditoria) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [[actual]] = await conn.query(
+        'SELECT firma_representante_b64 FROM empresas WHERE id = ? AND activo = 1 FOR UPDATE',
+        [empresaId]
+      );
+      if (!actual) {
+        await conn.rollback();
+        return null;
+      }
+
+      const valorAnterior = descifrar(actual.firma_representante_b64) || null;
+      const valorNuevo = firmaB64 || null;
+      if (valorAnterior === valorNuevo) {
+        await conn.commit();
+        return { cambio: false };
+      }
+
+      const hashAnterior = hashFirma(valorAnterior);
+      const hashNueva = hashFirma(valorNuevo);
+      const accion = !hashAnterior ? 'creada' : !hashNueva ? 'eliminada' : 'actualizada';
+
+      await conn.query(
+        'UPDATE empresas SET firma_representante_b64 = ? WHERE id = ? AND activo = 1',
+        [cifrar(valorNuevo), empresaId]
+      );
+      await conn.query(
+        `INSERT INTO empresas_firma_auditoria
+           (empresa_id, accion, hash_anterior, hash_nueva, usuario_id, usuario_nombre, usuario_rol, ip)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [empresaId, accion, hashAnterior, hashNueva, auditoria.usuario_id, auditoria.usuario_nombre, auditoria.usuario_rol, auditoria.ip ?? null]
+      );
+      await conn.commit();
+      return { cambio: true, accion };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
+  /** Historial de auditoría de la firma del representante — solo admin_empresa (ver routes). */
+  async listarHistorialFirma(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id, accion, usuario_nombre, usuario_rol, ip, created_at
+       FROM empresas_firma_auditoria
+       WHERE empresa_id = ?
+       ORDER BY created_at DESC, id DESC`,
+      [empresaId]
+    );
+    return filas;
   },
 
   async obtenerTipoContrato(empresaId) {

@@ -1,7 +1,20 @@
 'use strict';
 
+const crypto = require('crypto');
 const { pool } = require('../../config/database');
 const { TRIAL_DIAS_GRATIS } = require('../../config/constants');
+
+/**
+ * Nunca se guarda el refresh token en claro (migración 116): si alguien lee
+ * la tabla directo (backup filtrado, inyección SQL), el hash no le sirve
+ * para hacerse pasar por el usuario — necesita el token original, que solo
+ * conoce quien lo recibió al hacer login. No es HMAC (eso es para verificar
+ * autenticidad con un secreto compartido, ver utils/hmac.js): el token ya es
+ * aleatorio de alta entropía, un hash simple alcanza.
+ */
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 /**
  * Acceso a datos del módulo de autenticación.
@@ -52,8 +65,8 @@ const AuthModel = {
 
   async guardarRefreshToken({ usuario_id, token, expira_at }) {
     await pool.query(
-      'INSERT INTO refresh_tokens (usuario_id, token, expira_at) VALUES (?, ?, ?)',
-      [usuario_id, token, expira_at]
+      'INSERT INTO refresh_tokens (usuario_id, token_hash, expira_at) VALUES (?, ?, ?)',
+      [usuario_id, hashToken(token), expira_at]
     );
   },
 
@@ -71,16 +84,16 @@ const AuthModel = {
        FROM refresh_tokens rt
        INNER JOIN usuarios u ON u.id = rt.usuario_id
        LEFT JOIN empresas e ON e.id = u.empresa_id
-       WHERE rt.token = ? LIMIT 1`,
-      [token]
+       WHERE rt.token_hash = ? LIMIT 1`,
+      [hashToken(token)]
     );
     return filas[0] || null;
   },
 
   async revocarRefreshToken(token) {
     await pool.query(
-      'UPDATE refresh_tokens SET revocado = 1 WHERE token = ?',
-      [token]
+      'UPDATE refresh_tokens SET revocado = 1 WHERE token_hash = ?',
+      [hashToken(token)]
     );
   },
 

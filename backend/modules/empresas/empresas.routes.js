@@ -80,7 +80,7 @@ router.patch(
     body('representante_nombre').optional({ values: 'falsy' }).isString().trim().isLength({ max: 150 }),
     body('representante_cedula').optional({ values: 'falsy' }).isString().trim().isLength({ max: 20 }),
     // Acepta tanto el SVG de trazos (mobile, como trabajadores.firma_guardada) como una imagen subida (web, como logo_url).
-    body('firma_representante_b64').optional({ values: 'falsy' }).isString().withMessage('firma_representante_b64 inválida'),
+    body('firma_representante_b64').optional({ values: 'falsy' }).isString().isLength({ max: 500000 }).withMessage('firma_representante_b64 inválida o demasiado grande'),
     body('ciudad').optional({ values: 'falsy' }).isString().trim(),
     body('descripcion').optional({ values: 'falsy' }).isString().trim(),
     body('actividad').optional({ values: 'falsy' }).isString().trim(),
@@ -99,6 +99,9 @@ router.patch(
   validar,
   ctrl.actualizarMiEmpresa
 );
+
+// GET /api/empresas/me/historial-firma — auditoría legal de cambios a la firma del representante
+router.get('/me/historial-firma', verificarToken, verificarRol(SOLO_ADMIN), ctrl.historialFirma);
 
 // POST /api/empresas/reprocesar-recargos — reclasifica el período abierto con
 // la config de recargos actual (ver RegistrosService.reprocesarPeriodoAbierto).

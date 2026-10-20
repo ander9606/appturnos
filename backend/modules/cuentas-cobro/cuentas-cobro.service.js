@@ -17,6 +17,14 @@ function verificarAcceso(cuenta, usuario) {
   }
 }
 
+/** trabajador_firma_guardada solo le sirve (y solo debe vérselo) al propio trabajador — ver contratos.service.js. */
+function limpiarCamposSensibles(cuenta, usuario) {
+  if (cuenta.trabajador_usuario_id !== usuario.sub) {
+    cuenta.trabajador_firma_guardada = null;
+  }
+  return cuenta;
+}
+
 const redondear = (n) => Math.round(Number(n) * 100) / 100;
 
 const fechaCorta = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
@@ -230,7 +238,7 @@ const CuentasCobroService = {
     const cuenta = await CuentasCobroModel.obtenerPorId(empresaId, id);
     if (!cuenta) throw new AppError('Cuenta de cobro no encontrada', 404);
     verificarAcceso(cuenta, usuario);
-    return cuenta;
+    return limpiarCamposSensibles(cuenta, usuario);
   },
 
   async firmar(empresaId, id, usuario, firmaB64) {

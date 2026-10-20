@@ -30,6 +30,7 @@ const ORDEN_BORRADO_EMPRESA = [
   'DELETE FROM descansos_compensatorios WHERE empresa_id = ?',
   'DELETE FROM descuentos_nomina WHERE empresa_id = ?',
   'DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?',
+  'DELETE FROM empresas_firma_auditoria WHERE empresa_id = ?',
   'DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)',
   'DELETE FROM integracion_config WHERE empresa_id = ?',
   'DELETE FROM integration_events_in WHERE empresa_id = ?',

@@ -65,6 +65,7 @@ jobs:
       DB_PASSWORD: root
       DB_NAME: app_turnos_ci
       JWT_SECRET: ci-secret
+      FIRMA_ENCRYPTION_KEY: '1e307b0cccfa3f3c759291df3b8dc09d49325845672911ab77f707f8372729c2'
       RUN_DB_TESTS: '1'
 
     steps:

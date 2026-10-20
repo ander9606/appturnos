@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
+const { descifrar } = require('../../utils/firmaCrypto');
 
 /** Acceso a datos de contratos diarios (tabla contratos_diarios). */
 const ContratosModel = {
@@ -77,7 +78,9 @@ const ContratosModel = {
        WHERE c.id = ?${empresaId != null ? ' AND c.empresa_id = ?' : ''} LIMIT 1`,
       empresaId != null ? [id, empresaId] : [id]
     );
-    return filas[0] || null;
+    const fila = filas[0];
+    if (fila) fila.empresa_firma_representante_b64 = descifrar(fila.empresa_firma_representante_b64);
+    return fila || null;
   },
 
   /** Todos los contratos del usuario, a través de todas sus empresas activas. */
@@ -128,7 +131,9 @@ const ContratosModel = {
        WHERE c.asignacion_id = ?${empresaId != null ? ' AND c.empresa_id = ?' : ''} LIMIT 1`,
       empresaId != null ? [asignacionId, empresaId] : [asignacionId]
     );
-    return filas[0] || null;
+    const fila = filas[0];
+    if (fila) fila.empresa_firma_representante_b64 = descifrar(fila.empresa_firma_representante_b64);
+    return fila || null;
   },
 
   async firmar(empresaId, id, firmaB64) {
