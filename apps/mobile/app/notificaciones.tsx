@@ -3,13 +3,14 @@
  * Accesible desde la campana del header en cualquier tab.
  */
 
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
   Pressable,
-  ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
@@ -24,7 +25,7 @@ import {
 } from '@/features/notificaciones/useNotificaciones';
 import { destino } from '@/features/notificaciones/destino';
 import { useTheme } from '@/lib/theme';
-import { THEME_COLORS, COLORS } from '@/lib/designTokens';
+import { COLORS, THEME_COLORS, alpha } from '@/lib/designTokens';
 import type { Notificacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -44,6 +45,8 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'nomina.periodo_abierto':      'folder-open-outline',
   'nomina.periodo_liquidado':    'cash-outline',
   'cuenta_cobro.pendiente_firma': 'document-text-outline',
+  'cuenta_cobro.bloqueada_sin_firma': 'alert-circle-outline',
+  'cuenta_cobro.trabajadores_sin_firma': 'alert-circle-outline',
   'nomina.sospechoso':           'alert-circle-outline',
   'oferta.creada':               'add-circle-outline',
   'oferta.nueva':                'megaphone-outline',
@@ -101,7 +104,7 @@ function categoriaDeTipo(tipo: string): Exclude<Categoria, 'todas'> {
   if (
     tipo.startsWith('turno.') || tipo.startsWith('asignacion.') || tipo.startsWith('postulacion.') ||
     tipo.startsWith('oferta.') || tipo === 'novedad_turno' || tipo === 'contrato.pendiente_firma' ||
-    tipo === 'calificacion.recibida' || tipo === 'cuenta_cobro.pendiente_firma'
+    tipo === 'calificacion.recibida' || tipo.startsWith('cuenta_cobro.')
   ) {
     return 'turnos';
   }
@@ -181,12 +184,12 @@ export default function NotificacionesScreen() {
       {/* Icono del tipo — coloreado por módulo (turnos/nómina/general) */}
       <View
         className="w-9 h-9 rounded-full items-center justify-center shrink-0 mt-0.5"
-        style={{ backgroundColor: item.leida ? '#E2E8F022' : colorDeCategoria(categoriaDeTipo(item.tipo)) + '18' }}
+        style={{ backgroundColor: item.leida ? alpha(COLORS.border, 0.13) : alpha(colorDeCategoria(categoriaDeTipo(item.tipo)), 0.09) }}
       >
         <Ionicons
           name={iconForTipo(item.tipo)}
           size={18}
-          color={item.leida ? '#94A3B8' : colorDeCategoria(categoriaDeTipo(item.tipo))}
+          color={item.leida ? COLORS.placeholder : colorDeCategoria(categoriaDeTipo(item.tipo))}
         />
       </View>
 
@@ -278,9 +281,9 @@ export default function NotificacionesScreen() {
                   key={c}
                   onPress={() => setCategoria(c)}
                   className="px-3 py-1.5 rounded-full"
-                  style={{ backgroundColor: active ? color : color + '18' }}
+                  style={{ backgroundColor: active ? color : alpha(color, 0.09) }}
                 >
-                  <Text className="text-xs font-semibold" style={{ color: active ? '#FFFFFF' : color }}>
+                  <Text className="text-xs font-semibold" style={{ color: active ? COLORS.white : color }}>
                     {CATEGORIA_LABEL[c]}
                   </Text>
                 </TouchableOpacity>
@@ -290,9 +293,7 @@ export default function NotificacionesScreen() {
       )}
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : (
         <FlatList
           data={notificaciones}
@@ -307,17 +308,7 @@ export default function NotificacionesScreen() {
               colors={[theme.primary]}
             />
           }
-          ListEmptyComponent={
-            <View className="flex-1 items-center justify-center gap-3 py-20 px-8">
-              <Ionicons name="notifications-off-outline" size={48} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground text-center">
-                Sin notificaciones
-              </Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                Aquí aparecerán confirmaciones de turnos, cambios de período y más.
-              </Text>
-            </View>
-          }
+          ListEmptyComponent={<EmptyState title="Sin notificaciones" message="Aquí aparecerán confirmaciones de turnos, cambios de período y más." />}
         />
       )}
     </SafeAreaView>

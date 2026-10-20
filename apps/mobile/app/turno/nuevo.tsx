@@ -1,5 +1,9 @@
+import type { IconName } from '@/components/ui/Icon';
+import { actionSheet } from '@/lib/actionSheet';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
-import { KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -74,21 +78,22 @@ export default function NuevoTurnoScreen() {
         // El botón de acción depende del rol: banco de talento es admin/jefe_turnos,
         // Mi plan es solo admin_empresa. jefe_nomina (también puede crear turnos) se
         // queda con el texto solo — no tiene acceso a ninguna de las dos pantallas.
-        const botones: Parameters<typeof Alert.alert>[2] = [{ text: 'Más tarde', style: 'cancel' }];
+        const acciones: { key: string; label: string; icon: IconName; ir: () => void }[] = [];
         if (oferta.cupo_lleno) {
           if (usuario?.rol === 'admin_empresa') {
-            botones.push({ text: 'Ir a Mi plan', onPress: () => router.push('/mi-plan') });
+            acciones.push({ key: 'plan', label: 'Ir a Mi plan', icon: 'rocket-outline', ir: () => router.push('/mi-plan') });
           }
         } else if (usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos') {
-          botones.push({ text: 'Banco de talento', onPress: () => router.push('/banco-talento') });
+          acciones.push({ key: 'banco', label: 'Banco de talento', icon: 'people-outline', ir: () => router.push('/banco-talento') });
         }
-        Alert.alert('Revisa tu turno', oferta.advertencias.join('\n\n'), botones);
+        actionSheet({ title: 'Revisa tu turno', message: oferta.advertencias.join('\n\n'), items: acciones, cancelLabel: 'Más tarde' })
+          .then((key) => acciones.find((a) => a.key === key)?.ir());
       }
       // No navega sola: el botón pasa a "Cerrar" para que quede claro que
       // ya se publicó, en vez de cerrar la pantalla de golpe tras la espera.
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo publicar el turno.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -105,7 +110,7 @@ export default function NuevoTurnoScreen() {
           headerTitle: TITLES[step - 1],
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerTintColor: theme.primary,
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />

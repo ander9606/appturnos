@@ -1,13 +1,14 @@
+import { showAlert } from '@/lib/alertDialog';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text, TextInput } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
   View,
-  Text,
   Modal,
   FlatList,
-  TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Cargo } from '@api-client';
@@ -43,7 +44,7 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
       { nombre: nombreNuevo },
       {
         onSuccess: (cargo) => { onSelect(cargo); onClose(); setSearch(''); },
-        onError: () => Alert.alert('Error', 'No se pudo crear el cargo.'),
+        onError: () => showAlert('Error', 'No se pudo crear el cargo.'),
       },
     );
   }
@@ -55,16 +56,16 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
           <View className="flex-row items-center justify-between px-5 pt-5 pb-3">
             <Text className="text-base font-bold text-foreground">Seleccionar rol</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#64748B" />
+              <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
             </TouchableOpacity>
           </View>
 
           <View className="mx-5 mb-3 flex-row items-center bg-muted rounded-2xl px-3 gap-2">
-            <Ionicons name="search-outline" size={16} color="#64748B" />
+            <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} />
             <TextInput
               className="flex-1 py-3 text-sm text-foreground"
               placeholder="Buscar cargo…"
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={COLORS.placeholder}
               value={search}
               onChangeText={setSearch}
             />
@@ -77,9 +78,9 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
               disabled={crearCargo.isPending}
             >
               {crearCargo.isPending ? (
-                <ActivityIndicator size="small" color="#FF5A3C" />
+                <Spinner size="small" color={COLORS.primary} />
               ) : (
-                <Ionicons name="add-circle" size={20} color="#FF5A3C" />
+                <Ionicons name="add-circle" size={20} color={COLORS.primary} />
               )}
               <Text className="text-sm font-semibold text-primary-600 flex-1">
                 Crear cargo "{nombreNuevo}"
@@ -94,9 +95,11 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
             ItemSeparatorComponent={() => <View className="h-px bg-border" />}
             ListEmptyComponent={
               nombreNuevo.length === 0 ? (
-                <Text className="text-sm text-muted-foreground text-center py-8">
-                  {usedIds.size === cargos.length ? 'Ya agregaste todos los cargos' : 'Sin resultados'}
-                </Text>
+                <EmptyState
+                  compact
+                  variant={usedIds.size === cargos.length ? 'done' : 'search'}
+                  title={usedIds.size === cargos.length ? 'Ya agregaste todos los cargos' : 'Sin resultados'}
+                />
               ) : null
             }
             renderItem={({ item }) => (
@@ -105,7 +108,7 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
                 onPress={() => { onSelect(item); onClose(); setSearch(''); }}
               >
                 <View className="w-8 h-8 bg-primary-100 rounded-xl items-center justify-center">
-                  <Ionicons name="briefcase-outline" size={16} color="#FF5A3C" />
+                  <Ionicons name="briefcase-outline" size={16} color={COLORS.primary} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-sm font-semibold text-foreground">{item.nombre}</Text>
@@ -115,7 +118,7 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
                     </Text>
                   )}
                 </View>
-                <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
               </TouchableOpacity>
             )}
           />

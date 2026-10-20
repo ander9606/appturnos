@@ -4,17 +4,17 @@
  * Pantalla de descubrimiento: buscar, filtrar por ciudad y solicitar vínculo.
  * Se accede desde mis-empresas.tsx al tocar "Buscar empresa".
  */
+import { showAlert } from '@/lib/alertDialog';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { Text, TextInput } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
   FlatList,
   ScrollView,
   Pressable,
-  TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -69,7 +69,7 @@ function EmpresaCard({
     >
       {/* Icon */}
       <View className="w-12 h-12 rounded-xl bg-muted items-center justify-center mt-0.5">
-        <Ionicons name="business-outline" size={22} color="#64748B" />
+        <Ionicons name="business-outline" size={22} color={COLORS.mutedForeground} />
       </View>
 
       {/* Info */}
@@ -86,7 +86,7 @@ function EmpresaCard({
             {emp.actividad && emp.ciudad ? <Text className="text-xs text-muted-foreground">·</Text> : null}
             {emp.ciudad ? (
               <View className="flex-row items-center gap-1">
-                <Ionicons name="location-outline" size={12} color="#94A3B8" />
+                <Ionicons name="location-outline" size={12} color={COLORS.placeholder} />
                 <Text className="text-xs text-muted-foreground">{emp.ciudad}</Text>
               </View>
             ) : null}
@@ -96,7 +96,7 @@ function EmpresaCard({
         {/* Lo que más importa de un vistazo: cuánto paga y con qué frecuencia */}
         {emp.pago_promedio != null && (
           <View className="flex-row items-center gap-1 mt-1.5 bg-success/10 self-start rounded-lg px-2 py-1">
-            <Ionicons name="cash-outline" size={12} color="#059669" />
+            <Ionicons name="cash-outline" size={12} color={COLORS.success} />
             <Text className="text-xs font-bold text-success">
               ${Math.round(emp.pago_promedio).toLocaleString('es-CO')}/turno
             </Text>
@@ -124,9 +124,9 @@ function EmpresaCard({
         {estado === 'disponible' || estado === 'archivada' ? (
           <Text className={`text-xs font-semibold ${s.labelColor}`}>{s.label}</Text>
         ) : estado === 'activa' ? (
-          <Ionicons name="checkmark-circle" size={18} color="#059669" />
+          <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
         ) : estado === 'solicitada' ? (
-          <Ionicons name="time-outline" size={18} color="#059669" />
+          <Ionicons name="time-outline" size={18} color={COLORS.success} />
         ) : (
           <Text className={`text-xs font-semibold ${s.labelColor}`}>{s.label}</Text>
         )}
@@ -217,7 +217,7 @@ export default function DirectorioEmpresasScreen() {
       const msg = err && typeof err === 'object' && 'message' in err
         ? String((err as { message: string }).message)
         : 'No se pudo enviar la solicitud';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }, [solicitar, qc]);
 
@@ -256,11 +256,11 @@ export default function DirectorioEmpresasScreen() {
       {/* Search bar */}
       <View className="px-4 pt-3 pb-1">
         <View className="flex-row items-center bg-muted rounded-2xl px-4 gap-2">
-          <Ionicons name="search-outline" size={16} color="#64748B" />
+          <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} />
           <TextInput
             className="flex-1 py-3 text-base text-foreground"
             placeholder="Nombre de la empresa…"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             value={busqueda}
             onChangeText={setBusqueda}
             returnKeyType="search"
@@ -268,7 +268,7 @@ export default function DirectorioEmpresasScreen() {
           />
           {busqueda.length > 0 && (
             <Pressable onPress={() => setBusqueda('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={16} color="#94A3B8" />
+              <Ionicons name="close-circle" size={16} color={COLORS.placeholder} />
             </Pressable>
           )}
         </View>
@@ -289,12 +289,10 @@ export default function DirectorioEmpresasScreen() {
 
       {/* List */}
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#FF5A3C" />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : empresas.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8 gap-3">
-          <Ionicons name="search-outline" size={48} color="#CBD5E1" />
+          <Ionicons name="search-outline" size={48} color={COLORS.borderStrong} />
           <Text className="text-base font-semibold text-foreground text-center">
             {busqueda || ciudad ? 'Sin resultados' : 'No hay empresas disponibles'}
           </Text>
@@ -353,7 +351,7 @@ export default function DirectorioEmpresasScreen() {
             )}
           </View>
           <Pressable onPress={() => setCargoModalEmp(null)} hitSlop={8}>
-            <Ionicons name="close" size={24} color="#64748B" />
+            <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
           </Pressable>
         </View>
 
@@ -371,7 +369,7 @@ export default function DirectorioEmpresasScreen() {
                 }`}
               >
                 <Text className="flex-1 text-sm font-semibold text-foreground">{item.nombre}</Text>
-                {selected && <Ionicons name="checkmark-circle" size={20} color="#6366F1" />}
+                {selected && <Ionicons name="checkmark-circle" size={20} color={COLORS.integracion} />}
               </Pressable>
             );
           }}

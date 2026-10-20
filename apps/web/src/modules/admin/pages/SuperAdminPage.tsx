@@ -1,3 +1,4 @@
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
@@ -11,6 +12,7 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'short' }).format(new Date(s));
@@ -176,11 +178,11 @@ export function SuperAdminPage() {
         <p className="text-xs text-muted-foreground -mt-1">{total} empresa{total !== 1 ? 's' : ''}</p>
 
         {isLoading ? (
-          <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+          <SkeletonTable />
         ) : isError ? (
           <ErrorState error={error} onRetry={refetch} />
         ) : empresas.length === 0 ? (
-          <p className="text-muted-foreground text-sm py-8 text-center">Sin resultados</p>
+          <EmptyState title="Sin resultados" variant="search" />
         ) : (
           <div className="bg-card border border-border rounded-2xl overflow-hidden flex-1">
             <table className="w-full text-sm">

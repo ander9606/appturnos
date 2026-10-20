@@ -105,6 +105,7 @@ La regla sale de la **fecha del registro**: un registro viejo se sigue clasifica
 - Antes de clasificar, se suman las horas ordinarias y nocturnas ya registradas esa semana (lunes hasta ayer), más las horas del festivo acreditadas por un compensatorio tomado esa semana.
 - Lo que falte para 42 h es ordinario; el resto del turno es extra. Un día de 12 h puede ser todo ordinario si la semana va corta.
 - Las horas festivas no consumen el cupo de la semana.
+- El cupo **no se reinicia al cambiar de período**: si un período cierra a mitad de semana, las horas de esa semana en el período anterior cuentan en el siguiente. Si ya se llegó a 42 h antes del corte, el primer día del período nuevo puede salir todo como extra.
 
 ### Almuerzo
 
@@ -323,9 +324,11 @@ La liquidación de turnos suma por trabajador los turnos **completados** (o **fa
 
 ### Cuentas de cobro
 
-- Al cerrarse un período de nómina, se genera una cuenta de cobro por trabajador de turnos con los turnos completados **y con contrato firmado** en esas fechas (un turno fallido por fuerza mayor entra igual, sin necesitar firma — no tiene contrato).
+- Al cerrarse un período de nómina, se genera una cuenta de cobro por trabajador de turnos con sus turnos completados en esas fechas (un turno fallido por fuerza mayor entra igual, sin necesitar firma — no tiene contrato).
+- **Solo se genera si el trabajador firmó todos los contratos de sus turnos del período.** Si falta alguno, no se genera: se avisa al trabajador cuántos turnos le faltan por firmar y a los gestores qué trabajadores quedaron sin cuenta. Cuando firma el último, la cuenta se genera sola.
 - Cada ítem muestra valor base, bono, descuentos aceptados y total neto; el número es `CC-{período}-{trabajador}`.
-- Se notifica al trabajador para que la firme. Mientras no esté firmada, se puede regenerar para incluir contratos firmados después del cierre.
+- Se notifica al trabajador para que la firme. Mientras no esté firmada, se refresca sola con los cambios del turno.
+- **Una cuenta firmada no se modifica** (puede estar ya pagada). Si después un turno cambia (por ejemplo un bono, con lo que el trabajador vuelve a firmar el contrato) o se firma un turno tarde, se genera **otra cuenta complementaria** del mismo período (`CC-{período}-{trabajador}-2`, `-3`…) solo por el valor de la **diferencia**. Si la diferencia es negativa o cero no se genera cuenta.
 - Los turnos no descuentan salud ni pensión: se tratan como prestación de servicios.
 
 ## 8. Descansos compensatorios

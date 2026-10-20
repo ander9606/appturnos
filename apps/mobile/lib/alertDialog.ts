@@ -1,9 +1,11 @@
 import { create } from 'zustand';
+import type { FeedbackVariant } from '@/components/ui/feedback';
 
 export interface AlertOptions {
   title: string;
   message?: string;
   okLabel?: string; // default 'Entendido'
+  variant?: FeedbackVariant; // default 'error'
 }
 
 interface AlertState {
@@ -28,9 +30,15 @@ export const useAlertStore = create<AlertState>((set, get) => ({
 }));
 
 /**
- * Reemplazo con estilo propio de Alert.alert para errores de un solo botón.
- * Para confirmaciones de 2 botones usa confirm() (lib/confirmDialog.ts).
+ * Reemplazo con estilo propio de Alert.alert para avisos de un solo botón.
+ * `variant` cambia ícono y color: 'error' (falló algo), 'warning' (falta o está mal un dato),
+ * 'info' o 'success'. Para confirmaciones de 2 botones usa confirm() (lib/confirmDialog.ts).
  */
+export function showAlert(title: string, message?: string, variant: FeedbackVariant = 'error'): Promise<void> {
+  return useAlertStore.getState().open({ title, message, variant });
+}
+
+/** Atajo de showAlert(..., 'error'). */
 export function alertError(title: string, message: string): Promise<void> {
-  return useAlertStore.getState().open({ title, message });
+  return showAlert(title, message, 'error');
 }

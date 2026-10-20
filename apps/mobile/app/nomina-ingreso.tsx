@@ -6,8 +6,13 @@
  * - Alerta nativa de hidratación/descanso cada 4 h trabajadas.
  */
 
+import { showAlert } from '@/lib/alertDialog';
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text, TextInput } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Alert, ActivityIndicator, TouchableOpacity, ScrollView, Modal, TextInput, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, TouchableOpacity, ScrollView, Modal, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +27,7 @@ import { fmtHora } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { GeoFenceIndicator } from '@/features/turnos/GeoFenceIndicator';
 import { UbicacionLibreIndicator } from '@/features/nomina/trabajador/UbicacionLibreIndicator';
 import { useTheme } from '@/lib/theme';
+import { useSingleFlight } from '@/lib/useSingleFlight';
 import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 
@@ -62,6 +68,12 @@ export default function NominaIngresoScreen() {
     valorHora,
   } = useNominaTrabajador();
 
+  // Entrada y salida pasan por diálogos y GPS antes de la mutación (isMutating aún es false):
+  // la guarda evita el doble toque en ese tramo y se libera sola si la acción falla.
+  const entrada = useSingleFlight(handleEntrada);
+  const salida  = useSingleFlight(handleSalida);
+  const ocupado = isMutating || entrada.busy || salida.busy;
+
   // El sueldo es fijo por período — no tiene sentido mostrar "ganaste $X hoy" para
   // horas ordinarias. Lo único que sí varía día a día y vale la pena mostrar es el
   // recargo de horas extra, si las hubo.
@@ -97,10 +109,10 @@ export default function NominaIngresoScreen() {
     if (threshold > 0 && threshold !== lastBreakThreshold.current) {
       lastBreakThreshold.current = threshold;
       const horas = threshold * 4;
-      Alert.alert(
+      showAlert(
         `Llevas ${horas}h trabajando`,
         '¡Tómate un descanso breve y recuerda hidratarte! Tu bienestar importa.',
-        [{ text: 'Gracias', style: 'default' }],
+        'info',
       );
     }
   }, [tick, estadoHoy, registroHoy]);
@@ -118,8 +130,8 @@ export default function NominaIngresoScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -153,7 +165,7 @@ export default function NominaIngresoScreen() {
         {/* ── Estado sin período ────────────────────────────── */}
         {estadoHoy === 'sin_periodo' && (
           <View className="bg-card border border-border rounded-2xl p-6 items-center gap-3">
-            <Ionicons name="calendar-outline" size={40} color="#94A3B8" />
+            <Ionicons name="calendar-outline" size={40} color={COLORS.placeholder} />
             <Text className="text-base font-semibold text-foreground text-center">
               Sin período activo
             </Text>
@@ -171,7 +183,7 @@ export default function NominaIngresoScreen() {
               <>
                 <View
                   className="w-44 h-44 rounded-full items-center justify-center"
-                  style={{ backgroundColor: theme.primary + '18', borderWidth: 3, borderColor: theme.primary + '44' }}
+                  style={{ backgroundColor: alpha(theme.primary, 0.09), borderWidth: 3, borderColor: alpha(theme.primary, 0.27) }}
                 >
                   <Text className="text-4xl font-extrabold" style={{ color: theme.primary }}>
                     {elapsed ?? '—'}
@@ -185,39 +197,39 @@ export default function NominaIngresoScreen() {
             ) : estadoHoy === 'jornada_completa' ? (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#16a34a18', borderWidth: 3, borderColor: '#16a34a44' }}
+                style={{ backgroundColor: alpha(COLORS.success, 0.09), borderWidth: 3, borderColor: alpha(COLORS.success, 0.27) }}
               >
-                <Ionicons name="checkmark-circle" size={48} color="#16a34a" />
+                <Ionicons name="checkmark-circle" size={48} color={COLORS.success} />
                 <Text className="text-sm font-bold text-success mt-1">Jornada completa</Text>
               </View>
             ) : estadoHoy === 'reingreso_pendiente' ? (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#f59e0b18', borderWidth: 3, borderColor: '#f59e0b44' }}
+                style={{ backgroundColor: alpha(COLORS.warning, 0.09), borderWidth: 3, borderColor: alpha(COLORS.warning, 0.27) }}
               >
-                <Ionicons name="hourglass-outline" size={48} color="#f59e0b" />
+                <Ionicons name="hourglass-outline" size={48} color={COLORS.warning} />
                 <Text className="text-sm font-bold text-warning mt-1">Pendiente</Text>
               </View>
             ) : estadoHoy === 'reingreso_aprobado' ? (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#16a34a18', borderWidth: 3, borderColor: '#16a34a44' }}
+                style={{ backgroundColor: alpha(COLORS.success, 0.09), borderWidth: 3, borderColor: alpha(COLORS.success, 0.27) }}
               >
-                <Ionicons name="enter-outline" size={48} color="#16a34a" />
+                <Ionicons name="enter-outline" size={48} color={COLORS.success} />
                 <Text className="text-sm font-bold text-success mt-1">Reingreso ok</Text>
               </View>
             ) : estadoHoy === 'compensatorio' ? (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: '#8B5CF618', borderWidth: 3, borderColor: '#8B5CF644' }}
+                style={{ backgroundColor: alpha(ACCENT.violeta, 0.09), borderWidth: 3, borderColor: alpha(ACCENT.violeta, 0.27) }}
               >
-                <Ionicons name="bed-outline" size={48} color="#8B5CF6" />
-                <Text className="text-sm font-bold mt-1" style={{ color: '#8B5CF6' }}>Compensatorio</Text>
+                <Ionicons name="bed-outline" size={48} color={ACCENT.violeta} />
+                <Text className="text-sm font-bold mt-1" style={{ color: ACCENT.violeta }}>Compensatorio</Text>
               </View>
             ) : (
               <View
                 className="w-44 h-44 rounded-full items-center justify-center"
-                style={{ backgroundColor: theme.primary + '12', borderWidth: 3, borderColor: theme.primary + '30' }}
+                style={{ backgroundColor: alpha(theme.primary, 0.07), borderWidth: 3, borderColor: alpha(theme.primary, 0.19) }}
               >
                 <Ionicons name="log-in-outline" size={48} color={theme.primary} />
                 <Text className="text-sm font-semibold mt-1" style={{ color: theme.primary }}>
@@ -238,7 +250,7 @@ export default function NominaIngresoScreen() {
               <Text className="text-xs text-muted-foreground">Entrada</Text>
             </View>
             <View className="items-center justify-center">
-              <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+              <Ionicons name="arrow-forward" size={18} color={COLORS.placeholder} />
             </View>
             <View className="items-center gap-1">
               <Text className="text-xl font-extrabold text-foreground">
@@ -272,8 +284,8 @@ export default function NominaIngresoScreen() {
 
         {/* ── Día de descanso compensatorio — no debe marcar entrada ──── */}
         {estadoHoy === 'compensatorio' && (
-          <View className="rounded-2xl py-4 px-4 items-center gap-1" style={{ backgroundColor: '#8B5CF618' }}>
-            <Text className="font-semibold text-center" style={{ color: '#8B5CF6' }}>
+          <View className="rounded-2xl py-4 px-4 items-center gap-1" style={{ backgroundColor: alpha(ACCENT.violeta, 0.09) }}>
+            <Text className="font-semibold text-center" style={{ color: ACCENT.violeta }}>
               Hoy es tu descanso compensatorio
             </Text>
             <Text className="text-sm text-muted-foreground text-center">
@@ -285,37 +297,37 @@ export default function NominaIngresoScreen() {
         {/* ── Botón de marcaje ──────────────────────────────── */}
         {estadoHoy === 'sin_registro' && periodoAbierto && (
           <TouchableOpacity
-            onPress={handleEntrada}
-            disabled={isMutating || marcajeBloqueado}
+            onPress={entrada.run}
+            disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
-            style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
+            style={{ backgroundColor: COLORS.success, elevation: 3, shadowColor: COLORS.shadow, shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar entrada"
           >
-            {isMutating
-              ? <ActivityIndicator color="white" />
+            {ocupado
+              ? <Spinner color="white" />
               : <Text className="text-white text-lg font-bold">Marcar entrada</Text>}
           </TouchableOpacity>
         )}
 
         {estadoHoy === 'en_jornada' && periodoAbierto && (
           <TouchableOpacity
-            onPress={handleSalida}
-            disabled={isMutating || marcajeBloqueado}
+            onPress={salida.run}
+            disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
-            style={{ backgroundColor: '#dc2626', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
+            style={{ backgroundColor: COLORS.dangerDark, elevation: 3, shadowColor: COLORS.shadow, shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar salida"
           >
-            {isMutating
-              ? <ActivityIndicator color="white" />
+            {ocupado
+              ? <Spinner color="white" />
               : <Text className="text-white text-lg font-bold">Marcar salida</Text>}
           </TouchableOpacity>
         )}
 
         {estadoHoy === 'jornada_completa' && (
           <>
-            <View className="rounded-2xl py-4 items-center gap-1" style={{ backgroundColor: '#16a34a20' }}>
+            <View className="rounded-2xl py-4 items-center gap-1" style={{ backgroundColor: alpha(COLORS.success, 0.13) }}>
               <Text className="text-success font-semibold">
                 Jornada completada{registroHoy?.hora_salida ? ` · Salida ${fmtHora(registroHoy.hora_salida)}` : ''}
               </Text>
@@ -328,7 +340,7 @@ export default function NominaIngresoScreen() {
             {periodoAbierto && (
               <TouchableOpacity
                 onPress={() => setShowReingresoModal(true)}
-                disabled={isMutating}
+                disabled={ocupado}
                 className="rounded-2xl py-4 items-center border border-border"
                 accessibilityRole="button"
                 accessibilityLabel="Solicitar reingreso"
@@ -340,7 +352,7 @@ export default function NominaIngresoScreen() {
         )}
 
         {estadoHoy === 'reingreso_pendiente' && (
-          <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: '#f59e0b20' }}>
+          <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: alpha(COLORS.warning, 0.13) }}>
             <Text className="text-warning font-semibold text-center">Solicitud de reingreso enviada</Text>
             <Text className="text-xs text-muted-foreground text-center">Esperando aprobación del gestor</Text>
           </View>
@@ -348,15 +360,15 @@ export default function NominaIngresoScreen() {
 
         {estadoHoy === 'reingreso_aprobado' && periodoAbierto && (
           <TouchableOpacity
-            onPress={handleEntrada}
-            disabled={isMutating || marcajeBloqueado}
+            onPress={entrada.run}
+            disabled={ocupado || marcajeBloqueado}
             className="rounded-2xl py-5 items-center"
-            style={{ backgroundColor: '#16a34a', elevation: 3, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8 }}
+            style={{ backgroundColor: COLORS.success, elevation: 3, shadowColor: COLORS.shadow, shadowOpacity: 0.12, shadowRadius: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Marcar entrada (reingreso)"
           >
-            {isMutating
-              ? <ActivityIndicator color="white" />
+            {ocupado
+              ? <Spinner color="white" />
               : <Text className="text-white text-lg font-bold">Marcar entrada (reingreso)</Text>}
           </TouchableOpacity>
         )}
@@ -365,7 +377,7 @@ export default function NominaIngresoScreen() {
         {periodoActivo && periodoActivo.estado !== 'abierto' && (
           <View className="bg-card border border-border rounded-2xl px-4 py-3 gap-1">
             <View className="flex-row items-center gap-2">
-              <Ionicons name="information-circle-outline" size={15} color="#64748B" />
+              <Ionicons name="information-circle-outline" size={15} color={COLORS.mutedForeground} />
               <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Período {periodoActivo.estado}
               </Text>
@@ -405,7 +417,7 @@ export default function NominaIngresoScreen() {
                   value={motivoReingreso}
                   onChangeText={setMotivoReingreso}
                   placeholder="Ej. Olvidé unos documentos, debo volver por ellos"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={COLORS.placeholder}
                   multiline
                   numberOfLines={3}
                   className="bg-card border border-border rounded-2xl px-4 py-3 text-base text-foreground"

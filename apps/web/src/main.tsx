@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Toaster, toast } from 'sonner';
 import App from './App';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import '@fontsource-variable/inter';
 import './index.css';
 
 function getErrMsg(err: unknown) {

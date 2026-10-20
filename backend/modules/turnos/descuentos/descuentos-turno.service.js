@@ -50,7 +50,14 @@ async function exigirCuentaSinFirmar(asignacion) {
   const cuenta = await CuentasCobroModel.obtenerPorOfertaYTrabajador(
     asignacion.empresa_id, asignacion.oferta_id, asignacion.trabajador_id
   );
-  if (cuenta?.firmado_trabajador) {
+  if (!cuenta) return null;
+  // Con cuentas complementarias puede haber una firmada y otra sin firmar en el mismo período:
+  // lo que importa es si ESTE turno ya fue cobrado en una cuenta firmada.
+  const cuentas = await CuentasCobroModel.listarPorPeriodoYTrabajador(
+    asignacion.empresa_id, cuenta.periodo_id, asignacion.trabajador_id
+  );
+  const cobrado = cuentas.some((c) => c.firmado_trabajador && c.items.some((i) => i.asignacion_id === asignacion.id));
+  if (cobrado) {
     throw new AppError('La cuenta de cobro de este turno ya fue firmada, sus descuentos no se pueden cambiar', 409);
   }
   return cuenta;

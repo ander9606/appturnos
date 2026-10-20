@@ -200,11 +200,13 @@ export function useAplicar() {
   return useMutation({
     mutationFn: ({ ofertaId, puestoId }: { ofertaId: number; puestoId: number }) =>
       turnosApi.aplicar(ofertaId, puestoId),
-    onSuccess: (data, { ofertaId }) => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
-      qc.invalidateQueries({ queryKey: ['ofertas'] });
-    },
+    // Se devuelve la promesa: la mutación sigue "pendiente" hasta que el refetch trae el estado nuevo,
+    // así el botón no reaparece pulsable con red lenta mientras la pantalla aún muestra el estado viejo.
+    onSuccess: (data, { ofertaId }) => Promise.all([
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos }),
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) }),
+      qc.invalidateQueries({ queryKey: ['ofertas'] }),
+    ]),
   });
 }
 
@@ -214,11 +216,11 @@ export function useRetirar() {
   return useMutation({
     mutationFn: ({ ofertaId, puestoId }: { ofertaId: number; puestoId: number }) =>
       turnosApi.retirar(ofertaId, puestoId),
-    onSuccess: (_, { ofertaId }) => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
-      qc.invalidateQueries({ queryKey: ['ofertas'] });
-    },
+    onSuccess: (_, { ofertaId }) => Promise.all([
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos }),
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) }),
+      qc.invalidateQueries({ queryKey: ['ofertas'] }),
+    ]),
   });
 }
 
@@ -248,10 +250,10 @@ export function useMarcarIngreso() {
   return useMutation({
     mutationFn: async ({ id, lat, lng }: { id: number; lat?: number; lng?: number }) =>
       turnosApi.marcarIngreso(id, lat, lng, await getDeviceId()),
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
-    },
+    onSuccess: (_, { id }) => Promise.all([
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos }),
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) }),
+    ]),
   });
 }
 
@@ -261,10 +263,10 @@ export function useMarcarEgreso() {
   return useMutation({
     mutationFn: ({ id, firma, lat, lng }: { id: number; firma: string; lat?: number; lng?: number }) =>
       turnosApi.marcarEgreso(id, firma, lat, lng),
-    onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
-    },
+    onSuccess: (_, { id }) => Promise.all([
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos }),
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) }),
+    ]),
   });
 }
 
@@ -521,11 +523,12 @@ export function useActualizarOferta() {
 }
 
 /** Descuentos del turno (pendientes, aceptados y rechazados). */
-export function useDescuentosAsignacion(asignacionId: number) {
+export function useDescuentosAsignacion(asignacionId: number, opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId),
     queryFn:  () => turnosApi.listarDescuentosAsignacion(asignacionId),
     staleTime: 30_000,
+    enabled:  (opts.enabled ?? true) && asignacionId > 0,
   });
 }
 
@@ -538,6 +541,32 @@ export function useResponderDescuento() {
     onSuccess: (_data, { asignacionId }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId) });
       // Puede reiniciar la firma del contrato: la tarjeta del turno tiene que reflejarlo.
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: ['liquidacion-turnos'] });
+    },
+  });
+}
+
+/** El gestor registra un descuento sobre un turno completado (CST art. 113: tope 1/5 tarifa día). */
+export function useCrearDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ asignacionId, monto, motivo }: { asignacionId: number; monto: number; motivo: string }) =>
+      turnosApi.crearDescuento(asignacionId, { monto, motivo }),
+    onSuccess: (_data, { asignacionId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId) });
+    },
+  });
+}
+
+/** El gestor retira un descuento registrado por error. */
+export function useEliminarDescuento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: number; asignacionId: number }) => turnosApi.eliminarDescuento(id),
+    onSuccess: (_data, { asignacionId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.descuentosAsignacion(asignacionId) });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(asignacionId) });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
       qc.invalidateQueries({ queryKey: ['liquidacion-turnos'] });

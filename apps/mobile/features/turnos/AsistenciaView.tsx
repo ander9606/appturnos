@@ -1,7 +1,10 @@
+import { COLORS, ACCENT } from '@/lib/designTokens';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl,
+  View, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -53,14 +56,14 @@ function AsistenciaRow({ registro, primaryColor }: { registro: RegistroDiario; p
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       <TouchableOpacity
         className="flex-row"
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.75}
       >
-        <View className="w-1.5" style={{ backgroundColor: registro.es_festivo ? '#F97316' : primaryColor }} />
+        <View className="w-1.5" style={{ backgroundColor: registro.es_festivo ? ACCENT.naranja : primaryColor }} />
 
         <View className="flex-1 px-4 py-3 gap-1">
           <View className="flex-row items-center justify-between">
@@ -170,9 +173,7 @@ export function AsistenciaView({ selectedDate }: Props) {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
+      <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
     );
   }
 
@@ -235,17 +236,10 @@ export function AsistenciaView({ selectedDate }: Props) {
         ) : null
       }
       ListEmptyComponent={
-        <View className="py-16 items-center gap-3 px-8">
-          <Text className="text-4xl">📋</Text>
-          <Text className="text-base font-semibold text-foreground text-center">
-            {periodo ? 'Sin registros este día' : 'Sin período activo'}
-          </Text>
-          <Text className="text-sm text-muted-foreground text-center">
-            {periodo
-              ? `No hay registros de asistencia el ${fmtFecha(selectedDate)}.`
-              : 'Este día no pertenece a ningún período de nómina abierto.'}
-          </Text>
-        </View>
+        <EmptyState
+          title={periodo ? 'Sin registros este día' : 'Sin período activo'}
+          message={periodo ? `No hay registros de asistencia el ${fmtFecha(selectedDate)}.` : 'Este día no pertenece a ningún período de nómina abierto.'}
+        />
       }
       ItemSeparatorComponent={() => <View className="h-2" />}
       contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16 }}

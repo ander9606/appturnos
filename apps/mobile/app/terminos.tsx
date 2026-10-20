@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
@@ -20,7 +22,7 @@ export default function TerminosScreen() {
       await rehydrate();
       router.replace('/(tabs)');
     },
-    onError: () => Alert.alert('Error', 'No se pudo registrar la aceptación. Intenta de nuevo.'),
+    onError: () => showAlert('Error', 'No se pudo registrar la aceptación. Intenta de nuevo.'),
   });
 
   return (

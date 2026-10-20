@@ -43,7 +43,7 @@ export function RecuperarPasswordPage() {
   const form1 = useForm<EmailForm>({ resolver: zodResolver(emailSchema) });
   const onSubmitEmail = async (data: EmailForm) => {
     try {
-      await api.post('/auth/enviar-otp', { tipo: 'email', destino: data.email });
+      await api.post('/auth/enviar-otp', { tipo: 'email', destino: data.email, proposito: 'recuperacion' });
       setEmail(data.email);
       setStep('reset');
     } catch (err) {
@@ -73,7 +73,7 @@ export function RecuperarPasswordPage() {
   const reenviarCodigo = async () => {
     setResending(true);
     try {
-      await api.post('/auth/enviar-otp', { tipo: 'email', destino: email });
+      await api.post('/auth/enviar-otp', { tipo: 'email', destino: email, proposito: 'recuperacion' });
     } finally {
       setResending(false);
     }
@@ -84,7 +84,7 @@ export function RecuperarPasswordPage() {
       <div className="w-full max-w-sm">
         <div
           className="relative overflow-hidden rounded-3xl px-6 pb-16 pt-10 text-center"
-          style={{ background: 'linear-gradient(160deg, #FF7150 0%, #FF5A3C 50%, #E83E1F 100%)' }}
+          style={{ background: 'linear-gradient(160deg, var(--color-primary-400) 0%, var(--color-primary) 50%, var(--color-primary-600) 100%)' }}
         >
           <div className="pointer-events-none absolute -top-14 -right-10 h-40 w-40 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-10 -left-8 h-28 w-28 rounded-full bg-white/10" />

@@ -1,5 +1,7 @@
+import { COLORS } from '@/lib/designTokens';
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 
 import { UbicacionLink } from '@/components/ui/UbicacionLink';
 import type { Asignacion } from '@api-client';
@@ -13,7 +15,7 @@ export function TurnoUbicacionMarcada({ asignacion }: { asignacion: Asignacion }
   return (
     <View
       className="bg-card rounded-2xl px-5 py-4 gap-2"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}
     >
       <Text className="text-xs text-muted-foreground uppercase tracking-wide font-semibold mb-1">
         Ubicación marcada

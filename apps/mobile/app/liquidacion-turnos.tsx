@@ -5,13 +5,16 @@
  * completados en el período seleccionado.  Cada card es expandible para
  * ver el desglose turno por turno (pago base + extra + total).
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
-  Text,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,7 +26,6 @@ import { usePeriodos } from '@/features/nomina/useNomina';
 import { PeriodoSelector } from '@/features/nomina/PeriodoSelector';
 import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
 import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
-import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurnoLinea } from '@api-client';
@@ -104,11 +106,13 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
   const router = useRouter();
   const hasExtra = t.pago_extra > 0;
   const hasBono = t.bono_monto > 0;
+  const sinFirmar = !t.firmado_trabajador;
   return (
     <TouchableOpacity
       onPress={() => router.push(`/turno/${t.asignacion_id}`)}
       activeOpacity={0.7}
       className="py-3 border-b border-border last:border-b-0"
+      style={sinFirmar ? { opacity: 0.6 } : undefined}
     >
       {/* Fila 1: fecha + monto */}
       <View className="flex-row items-start justify-between gap-2">
@@ -121,20 +125,33 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
             {t.lugar ? `  ·  ${t.lugar}` : ''}
           </Text>
         </View>
-        <Text className="text-sm font-bold text-foreground">{cop(t.pago_total)}</Text>
+        <Text
+          className="text-sm font-bold text-foreground"
+          style={sinFirmar ? { textDecorationLine: 'line-through' } : undefined}
+        >
+          {cop(t.pago_total)}
+        </Text>
       </View>
+      {sinFirmar && (
+        <View className="flex-row items-center gap-1 mt-1">
+          <Ionicons name="alert-circle-outline" size={12} color={COLORS.warningDark} />
+          <Text className="text-[11px] font-semibold text-warning">
+            Sin firmar — no suma al total a pagar
+          </Text>
+        </View>
+      )}
 
       {/* Fila 2: horas + desglose pago */}
       <View className="flex-row items-center gap-3 mt-1.5 flex-wrap">
         <View className="flex-row items-center gap-1">
-          <Ionicons name="time-outline" size={12} color="#64748B" />
+          <Ionicons name="time-outline" size={12} color={COLORS.mutedForeground} />
           <Text className="text-xs text-muted-foreground">
             {fmtHora(t.hora_ingreso_real)} – {fmtHora(t.hora_egreso_real)}
             {'  '}({t.horas_trabajadas.toFixed(1)}h)
           </Text>
         </View>
         <View className="flex-row items-center gap-1">
-          <Ionicons name="cash-outline" size={12} color="#64748B" />
+          <Ionicons name="cash-outline" size={12} color={COLORS.mutedForeground} />
           <Text className="text-xs text-muted-foreground">
             Base: {cop(t.pago_total - t.pago_extra - t.bono_monto)}
           </Text>
@@ -155,12 +172,12 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
         )}
         {t.calificacion != null ? (
           <View className="flex-row items-center gap-0.5">
-            <Ionicons name="star" size={11} color="#F59E0B" />
+            <Ionicons name="star" size={11} color={COLORS.warning} />
             <Text className="text-xs text-muted-foreground">{t.calificacion}</Text>
           </View>
         ) : (
           <View className="flex-row items-center gap-0.5">
-            <Ionicons name="star-outline" size={11} color="#94A3B8" />
+            <Ionicons name="star-outline" size={11} color={COLORS.placeholder} />
             <Text className="text-xs text-muted-foreground">Calificar</Text>
           </View>
         )}
@@ -181,11 +198,14 @@ function TrabajadorCard({
   const [expanded, setExpanded] = useState(false);
   const hasExtra = item.pago_extra > 0;
   const hasBono = item.bono_monto > 0;
+  const pendientes = item.turnos_pendientes_firma;
+  const turnosPagables = item.total_turnos - pendientes;
+  const montoPendiente = item.turnos.reduce((s, t) => (t.firmado_trabajador ? s : s + t.pago_total), 0);
 
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+      style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
     >
       {/* ── Header: nombre + monto a pagar, visibles sin expandir ─────── */}
       <TouchableOpacity
@@ -208,14 +228,22 @@ function TrabajadorCard({
               )}
               {item.ranking != null && (
                 <View className="flex-row items-center gap-0.5">
-                  <Ionicons name="star" size={11} color="#F59E0B" />
+                  <Ionicons name="star" size={11} color={COLORS.warning} />
                   <Text className="text-xs text-muted-foreground">{Number(item.ranking).toFixed(1)}</Text>
                 </View>
               )}
               <Text className="text-xs text-muted-foreground">
-                {item.total_turnos} turno{item.total_turnos !== 1 ? 's' : ''} · {item.total_horas.toFixed(1)}h
+                {turnosPagables} turno{turnosPagables !== 1 ? 's' : ''} · {item.total_horas.toFixed(1)}h
               </Text>
             </View>
+            {pendientes > 0 && (
+              <View className="bg-warning/10 self-start px-2 py-0.5 rounded-full mt-0.5 flex-row items-center gap-1">
+                <Ionicons name="alert-circle-outline" size={11} color={COLORS.warningDark} />
+                <Text className="text-[10px] font-semibold text-warning">
+                  {pendientes} sin firmar · no incluido{pendientes !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            )}
             {hasExtra && (
               <View className="bg-amber-100 self-start px-2 py-0.5 rounded-full mt-0.5">
                 <Text className="text-[10px] font-semibold text-amber-700">
@@ -242,7 +270,7 @@ function TrabajadorCard({
               <Ionicons
                 name={expanded ? 'chevron-up' : 'chevron-down'}
                 size={14}
-                color="#94A3B8"
+                color={COLORS.placeholder}
               />
             </View>
           </View>
@@ -261,12 +289,17 @@ function TrabajadorCard({
           {/* Totales */}
           <View className="flex-row justify-end items-center gap-6 pt-3 border-t border-border mt-1">
             <Text className="text-xs text-muted-foreground">
-              {item.total_turnos} turnos · {item.total_horas.toFixed(1)}h
+              {turnosPagables} firmado{turnosPagables !== 1 ? 's' : ''} · {item.total_horas.toFixed(1)}h
             </Text>
             <Text className="text-base font-bold text-foreground">
               {cop(item.pago_total)}
             </Text>
           </View>
+          {pendientes > 0 && (
+            <Text className="text-[11px] text-warning font-medium text-right mt-1">
+              Pendiente de firma: {cop(montoPendiente)} ({pendientes} turno{pendientes !== 1 ? 's' : ''}) — se suma cuando el trabajador firme
+            </Text>
+          )}
         </View>
       )}
     </View>
@@ -282,7 +315,7 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
   return (
     <View
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+      style={{ elevation: 2, shadowColor: COLORS.shadow, shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
     >
       <TouchableOpacity onPress={() => setExpanded((v) => !v)} activeOpacity={0.75} className="flex-row">
         <View className="w-1.5" style={{ backgroundColor: primary }} />
@@ -302,7 +335,7 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
             </View>
             {item.pendientes_firma > 0 && (
               <View className="bg-warning/10 self-start px-2 py-0.5 rounded-full mt-0.5 flex-row items-center gap-1">
-                <Ionicons name="alert-circle-outline" size={11} color="#D97706" />
+                <Ionicons name="alert-circle-outline" size={11} color={COLORS.warningDark} />
                 <Text className="text-[10px] font-semibold text-warning">
                   {item.pendientes_firma} sin firmar
                 </Text>
@@ -313,7 +346,7 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
             <Text className="text-lg font-bold" style={{ color: primary }}>{cop(item.total_pago)}</Text>
             <View className="flex-row items-center gap-0.5">
               <Text className="text-[10px] text-muted-foreground">Costo total</Text>
-              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color="#94A3B8" />
+              <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.placeholder} />
             </View>
           </View>
         </View>
@@ -340,7 +373,7 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
                   <Text className="text-xs text-muted-foreground">{l.horas_trabajadas.toFixed(1)}h</Text>
                   {!l.firmado_trabajador && (
                     <View className="flex-row items-center gap-0.5">
-                      <Ionicons name="alert-circle-outline" size={11} color="#D97706" />
+                      <Ionicons name="alert-circle-outline" size={11} color={COLORS.warningDark} />
                       <Text className="text-[10px] font-semibold text-warning">Sin firmar</Text>
                     </View>
                   )}
@@ -373,6 +406,7 @@ export default function LiquidacionTurnosScreen() {
     data,
     isLoading,
     isError,
+    error,
     refetch,
     isRefetching,
   } = useLiquidacionTurnos(
@@ -403,24 +437,16 @@ export default function LiquidacionTurnosScreen() {
           headerTitle: 'Liquidación',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerTintColor: theme.primary,
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />
 
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={theme.primary} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : isError ? (
-          <View className="flex-1 items-center justify-center gap-3 px-6">
-            <Ionicons name="warning-outline" size={48} color="#94A3B8" />
-            <Text className="text-base font-semibold text-foreground text-center">
-              Error al cargar la liquidación
-            </Text>
-            <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
-          </View>
+          <ErrorState error={error} onRetry={refetch} fallback="Error al cargar la liquidación" />
         ) : (
           <FlatList
             data={listData}
@@ -464,7 +490,7 @@ export default function LiquidacionTurnosScreen() {
                         className="flex-1 h-9 rounded-xl items-center justify-center border"
                         style={{
                           backgroundColor: active ? theme.primary : 'transparent',
-                          borderColor: active ? theme.primary : '#E2E8F0',
+                          borderColor: active ? theme.primary : COLORS.border,
                         }}
                       >
                         <Text className={`text-sm font-semibold ${active ? 'text-white' : 'text-muted-foreground'}`}>
@@ -479,10 +505,10 @@ export default function LiquidacionTurnosScreen() {
                 {trabajadores.length > 0 && (
                   <View
                     className="rounded-2xl px-5 py-4 flex-row items-center justify-between"
-                    style={{ backgroundColor: theme.primary + '15' }}
+                    style={{ backgroundColor: alpha(theme.primary, 0.08) }}
                   >
                     <View className="gap-0.5">
-                      <Text className="text-xs font-medium" style={{ color: theme.primary + 'AA' }}>
+                      <Text className="text-xs font-medium" style={{ color: alpha(theme.primary, 0.67) }}>
                         Total a pagar
                       </Text>
                       <Text className="text-2xl font-bold" style={{ color: theme.primary }}>
@@ -494,7 +520,7 @@ export default function LiquidacionTurnosScreen() {
                         {trabajadores.length} trabajador{trabajadores.length !== 1 ? 'es' : ''}
                       </Text>
                       <Text className="text-xs text-muted-foreground">
-                        {trabajadores.reduce((s, w) => s + w.total_turnos, 0)} turnos completados
+                        {trabajadores.reduce((s, w) => s + w.total_turnos - w.turnos_pendientes_firma, 0)} turnos firmados
                       </Text>
                     </View>
                   </View>
@@ -508,15 +534,10 @@ export default function LiquidacionTurnosScreen() {
             )}
             ItemSeparatorComponent={() => <View className="h-0" />}
             ListEmptyComponent={
-              <View className="py-20 items-center gap-3 px-8">
-                <Ionicons name="receipt-outline" size={48} color="#CBD5E1" />
-                <Text className="text-base font-semibold text-foreground text-center">
-                  Sin turnos completados
-                </Text>
-                <Text className="text-sm text-muted-foreground text-center">
-                  No hay asignaciones completadas en el período{periodo ? ` ${fmtPeriodo(periodo)}` : ''}.
-                </Text>
-              </View>
+              <EmptyState
+                title="Sin turnos completados"
+                message={`No hay asignaciones completadas en el período${periodo ? ` ${fmtPeriodo(periodo)}` : ''}.`}
+              />
             }
           />
         )}

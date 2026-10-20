@@ -1,3 +1,4 @@
+import { COLORS } from '@/lib/designTokens';
 import type { EstadoAsignacion } from '@api-client';
 import { bogotaToday, BOGOTA_OFFSET_MS } from '@/lib/formatters';
 
@@ -85,14 +86,14 @@ export interface EstadoConfig {
 }
 
 const ESTADO_CONFIG: Record<EstadoAsignacion, EstadoConfig> = {
-  pendiente:      { label: 'Pendiente',    badgeVariant: 'warning', accentColor: '#F59E0B' },
-  confirmado:     { label: 'Confirmado',   badgeVariant: 'info',    accentColor: '#3B82F6' },
-  en_progreso:    { label: 'En curso',     badgeVariant: 'success', accentColor: '#059669' },
-  completado:     { label: 'Completado',   badgeVariant: 'default', accentColor: '#64748B' },
-  no_presentado:  { label: 'No presentado',badgeVariant: 'danger',  accentColor: '#EF4444' },
-  cancelado:      { label: 'Cancelado',    badgeVariant: 'danger',  accentColor: '#EF4444' },
-  por_reconfirmar: { label: 'Por reconfirmar', badgeVariant: 'warning', accentColor: '#F59E0B' },
-  fallido:        { label: 'Turno fallido', badgeVariant: 'warning', accentColor: '#F59E0B' },
+  pendiente:      { label: 'Pendiente',    badgeVariant: 'warning', accentColor: COLORS.warning },
+  confirmado:     { label: 'Confirmado',   badgeVariant: 'info',    accentColor: COLORS.info },
+  en_progreso:    { label: 'En curso',     badgeVariant: 'success', accentColor: COLORS.success },
+  completado:     { label: 'Completado',   badgeVariant: 'default', accentColor: COLORS.mutedForeground },
+  no_presentado:  { label: 'No presentado',badgeVariant: 'danger',  accentColor: COLORS.danger },
+  cancelado:      { label: 'Cancelado',    badgeVariant: 'danger',  accentColor: COLORS.danger },
+  por_reconfirmar: { label: 'Por reconfirmar', badgeVariant: 'warning', accentColor: COLORS.warning },
+  fallido:        { label: 'Turno fallido', badgeVariant: 'warning', accentColor: COLORS.warning },
 };
 
 export function getEstadoConfig(estado: EstadoAsignacion): EstadoConfig {

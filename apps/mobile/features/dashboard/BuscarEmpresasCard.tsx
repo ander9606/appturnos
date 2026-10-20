@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -15,7 +17,7 @@ export function BuscarEmpresasCard() {
       className="mx-4 mt-4 bg-primary-500 rounded-2xl p-5 items-center gap-2 active:opacity-90"
     >
       <View className="w-14 h-14 rounded-full bg-white/20 items-center justify-center">
-        <Ionicons name="search" size={26} color="#fff" />
+        <Ionicons name="search" size={26} color={COLORS.white} />
       </View>
       <Text className="text-base font-bold text-white">Aún no tienes empresa</Text>
       <Text className="text-sm text-white/90 text-center">
@@ -23,7 +25,7 @@ export function BuscarEmpresasCard() {
       </Text>
       <View className="flex-row items-center gap-1.5 mt-2 bg-white rounded-xl px-4 py-2.5">
         <Text className="text-sm font-bold text-primary-600">Buscar empresas</Text>
-        <Ionicons name="arrow-forward" size={14} color="#E83E1F" />
+        <Ionicons name="arrow-forward" size={14} color={COLORS.primary600} />
       </View>
     </Pressable>
   );

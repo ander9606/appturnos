@@ -9,15 +9,16 @@
  *  - FAB "+" para crear nuevo trabajador
  *  - Navegar al detalle con opciones de editar / desactivar
  */
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text, TextInput } from '@/components/ui/Text';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { SkeletonDetail, SkeletonList } from '@/components/ui/Skeleton';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   FlatList,
   ScrollView,
-  TextInput,
   Pressable,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,8 +32,7 @@ import { useMisEmpresas, useSolicitudes } from '@/features/empresas/useTrabajado
 import { useAusenciasPendientesCount } from '@/features/ausencias/useAusencias';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
-import { COLORS, THEME_COLORS } from '@/lib/designTokens';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
+import { COLORS, THEME_COLORS, alpha } from '@/lib/designTokens';
 import { useTheme } from '@/lib/theme';
 import { TrabajadorCard } from '@/features/equipo/TrabajadorCard';
 import type { Trabajador, TipoTrabajador } from '@api-client';
@@ -48,8 +48,8 @@ function MiEmpresaNominaView() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator color="#64748B" />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -76,7 +76,7 @@ function MiEmpresaNominaView() {
         {/* Empresa */}
         <View className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center gap-4">
           <View className="w-12 h-12 rounded-2xl bg-primary/10 items-center justify-center">
-            <Ionicons name="business-outline" size={22} color="#FF5A3C" />
+            <Ionicons name="business-outline" size={22} color={COLORS.primary} />
           </View>
           <View className="flex-1">
             <Text className="text-base font-bold text-foreground">
@@ -91,7 +91,7 @@ function MiEmpresaNominaView() {
           <View className="bg-card rounded-2xl border border-border px-5 py-4 gap-3">
             <View className="flex-row items-center gap-4">
               <View className="w-12 h-12 rounded-2xl bg-violet-50 items-center justify-center">
-                <Ionicons name="location-outline" size={22} color="#7C3AED" />
+                <Ionicons name="location-outline" size={22} color={COLORS.eventual} />
               </View>
               <View className="flex-1">
                 <Text className="text-base font-semibold text-foreground">
@@ -104,7 +104,7 @@ function MiEmpresaNominaView() {
             {perfil.tipo_marcacion === 'fijo' && (
               perfil.punto_marcaje ? (
                 <View className="flex-row items-center gap-2 pl-1">
-                  <Ionicons name="pin-outline" size={14} color="#64748B" />
+                  <Ionicons name="pin-outline" size={14} color={COLORS.mutedForeground} />
                   <Text className="text-sm text-foreground flex-1">{perfil.punto_marcaje.nombre}</Text>
                 </View>
               ) : (
@@ -117,7 +117,7 @@ function MiEmpresaNominaView() {
                 <View className="gap-1.5">
                   {perfil.puntos_zonales.map((p) => (
                     <View key={p.id} className="flex-row items-center gap-2 pl-1">
-                      <Ionicons name="pin-outline" size={14} color="#64748B" />
+                      <Ionicons name="pin-outline" size={14} color={COLORS.mutedForeground} />
                       <Text className="text-sm text-foreground flex-1">{p.nombre}</Text>
                     </View>
                   ))}
@@ -133,7 +133,7 @@ function MiEmpresaNominaView() {
         {cargoTexto && (
           <View className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center gap-4">
             <View className="w-12 h-12 rounded-2xl bg-blue-50 items-center justify-center">
-              <Ionicons name="briefcase-outline" size={22} color="#3B82F6" />
+              <Ionicons name="briefcase-outline" size={22} color={COLORS.info} />
             </View>
             <View className="flex-1">
               <Text className="text-base font-semibold text-foreground">{cargoTexto}</Text>
@@ -155,7 +155,7 @@ function MiEmpresaNominaView() {
                 key={c.id}
                 className={`px-5 py-3 flex-row items-center gap-3 ${i > 0 ? 'border-t border-border' : ''}`}
               >
-                <Ionicons name="checkmark-circle-outline" size={16} color="#22C55E" />
+                <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.success} />
                 <View className="flex-1">
                   <Text className="text-sm font-medium text-foreground">{c.nombre}</Text>
                   {c.codigo && (
@@ -188,8 +188,8 @@ function WorkerView() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -217,7 +217,7 @@ function WorkerView() {
           {/* Ranking */}
           {perfil?.ranking != null && (
             <View className="flex-row items-center gap-1 bg-white/15 px-3 py-1.5 rounded-full">
-              <Ionicons name="star" size={14} color="#FCD34D" />
+              <Ionicons name="star" size={14} color={COLORS.warningSoft} />
               <Text className="text-sm font-bold text-white">{Number(perfil.ranking).toFixed(1)}</Text>
               <Text className="text-xs text-white/70">· {perfil.total_calificaciones} calif.</Text>
             </View>
@@ -250,7 +250,7 @@ function WorkerView() {
               </View>
               {cargos.map((c, i) => (
                 <View key={c.id} className={`px-5 py-3 flex-row items-center gap-3 ${i > 0 ? 'border-t border-border' : ''}`}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color="#22C55E" />
+                  <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.success} />
                   <View className="flex-1">
                     <Text className="text-sm font-medium text-foreground">{c.nombre}</Text>
                     {c.codigo && <Text className="text-xs text-muted-foreground">{c.codigo}</Text>}
@@ -305,7 +305,7 @@ function WorkerView() {
               { label: 'Banco',      value: perfil?.banco,          icon: 'card-outline' as const },
             ].filter((r) => r.value).map((row, i) => (
               <View key={row.label} className={`px-5 py-3 flex-row items-center gap-3 ${i > 0 ? 'border-t border-border' : ''}`}>
-                <Ionicons name={row.icon} size={16} color="#94A3B8" />
+                <Ionicons name={row.icon} size={16} color={COLORS.placeholder} />
                 <Text className="text-xs text-muted-foreground w-20">{row.label}</Text>
                 <Text className="text-sm text-foreground flex-1">{row.value}</Text>
               </View>
@@ -318,7 +318,7 @@ function WorkerView() {
             className="bg-card rounded-2xl border border-border px-5 py-4 flex-row items-center justify-between active:opacity-70"
           >
             <View className="flex-row items-center gap-3">
-              <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: theme.primary + '18' }}>
+              <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: alpha(theme.primary, 0.09) }}>
                 <Ionicons name="business-outline" size={20} color={theme.primary} />
               </View>
               <View>
@@ -326,7 +326,7 @@ function WorkerView() {
                 <Text className="text-xs text-muted-foreground mt-0.5">Vínculos, solicitudes e invitaciones</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={18} color={COLORS.placeholder} />
           </Pressable>
 
         </View>
@@ -343,7 +343,7 @@ function SolicitudesBadge({ count, onPress }: { count: number; onPress: () => vo
       onPress={onPress}
       className="flex-row items-center gap-1 rounded-full px-3 py-1.5 border border-border bg-card mt-1 active:opacity-70"
     >
-      <Ionicons name="people-outline" size={14} color="#64748B" />
+      <Ionicons name="people-outline" size={14} color={COLORS.mutedForeground} />
       <Text className="text-xs font-semibold text-muted-foreground">Solicitudes</Text>
       {count > 0 && (
         <View className="bg-primary-500 rounded-full min-w-[16px] h-[16px] items-center justify-center px-0.5">
@@ -451,7 +451,7 @@ export default function EquipoScreen() {
               onPress={() => router.push('/ausencias')}
               className="flex-row items-center gap-1.5 bg-warning/10 border border-warning/30 rounded-full px-3 py-1.5"
             >
-              <Ionicons name="calendar-clear-outline" size={13} color="#D97706" />
+              <Ionicons name="calendar-clear-outline" size={13} color={COLORS.warningDark} />
               <Text className="text-xs font-semibold text-warning">
                 {ausenciasCount} ausencia{ausenciasCount > 1 ? 's' : ''} pendiente{ausenciasCount > 1 ? 's' : ''}
               </Text>
@@ -463,7 +463,7 @@ export default function EquipoScreen() {
       {/* Search bar */}
       <View className="px-4 pb-3">
         <View className="flex-row items-center bg-card border border-border rounded-xl px-3 h-10">
-          <Ionicons name="search-outline" size={16} color="#64748B" style={{ marginRight: 8 }} />
+          <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} style={{ marginRight: 8 }} />
           <TextInput
             className="flex-1 text-sm text-foreground"
             placeholder="Nombre, cédula, cargo…"
@@ -522,19 +522,9 @@ export default function EquipoScreen() {
 
       {/* List */}
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#FF5A3C" />
-        </View>
+        <SkeletonList count={6} style={{ paddingHorizontal: 16, paddingTop: 8 }} />
       ) : isError ? (
-        <View className="flex-1 items-center justify-center px-8">
-          <Ionicons name="warning-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
-          <Text className="text-base font-semibold text-foreground">
-            {apiErrorMessage(error, 'Error al cargar')}
-          </Text>
-          <Pressable onPress={() => refetch()} className="mt-4">
-            <Text className="text-primary font-semibold">Reintentar</Text>
-          </Pressable>
-        </View>
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar" />
       ) : (
         <FlatList
           data={trabajadores}
@@ -542,7 +532,7 @@ export default function EquipoScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#FF5A3C" />
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={COLORS.primary} />
           }
           renderItem={({ item }: { item: Trabajador }) => (
             <TrabajadorCard
@@ -551,17 +541,11 @@ export default function EquipoScreen() {
             />
           )}
           ListEmptyComponent={
-            <View className="items-center justify-center py-16">
-              <Ionicons name="people-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
-              <Text className="text-base font-semibold text-foreground">
-                {term ? 'Sin resultados' : 'Sin trabajadores'}
-              </Text>
-              <Text className="text-sm text-muted-foreground mt-1 text-center">
-                {term
-                  ? `No hay trabajadores que coincidan con "${term}".`
-                  : 'No hay trabajadores registrados aún.'}
-              </Text>
-            </View>
+            <EmptyState
+              variant={term ? 'search' : 'empty'}
+              title={term ? 'Sin resultados' : 'Sin trabajadores'}
+              message={term ? `No hay trabajadores que coincidan con "${term}".` : 'No hay trabajadores registrados aún.'}
+            />
           }
           showsVerticalScrollIndicator={false}
         />
@@ -574,7 +558,7 @@ export default function EquipoScreen() {
           accessibilityLabel="Nuevo trabajador"
           className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-lg active:bg-primary/80"
           style={{
-            shadowColor: '#FF5A3C',
+            shadowColor: COLORS.primary,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,
             shadowRadius: 8,
@@ -590,14 +574,14 @@ export default function EquipoScreen() {
           accessibilityLabel="Invitar trabajador por cédula"
           className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-info items-center justify-center shadow-lg active:opacity-80"
           style={{
-            shadowColor: '#3B82F6',
+            shadowColor: COLORS.info,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,
             shadowRadius: 8,
             elevation: 8,
           }}
         >
-          <Ionicons name="person-add-outline" size={22} color="#fff" />
+          <Ionicons name="person-add-outline" size={22} color={COLORS.white} />
         </Pressable>
       )}
     </SafeAreaView>

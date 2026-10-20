@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -8,7 +10,7 @@ export function NoShiftCard() {
   return (
     <View className="mx-4 mt-4 bg-card rounded-2xl p-5 border border-border items-center gap-3">
       <View className="w-14 h-14 rounded-full bg-muted items-center justify-center">
-        <Ionicons name="calendar-clear-outline" size={28} color="#94A3B8" />
+        <Ionicons name="calendar-clear-outline" size={28} color={COLORS.placeholder} />
       </View>
       <Text className="text-base font-semibold text-foreground">Sin turno activo hoy</Text>
       <Text className="text-sm text-muted-foreground text-center">
@@ -19,7 +21,7 @@ export function NoShiftCard() {
         className="flex-row items-center gap-1.5 mt-1 active:opacity-70"
       >
         <Text className="text-sm font-semibold text-primary">Ver turnos disponibles</Text>
-        <Ionicons name="arrow-forward" size={14} color="#FF5A3C" />
+        <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
       </Pressable>
     </View>
   );

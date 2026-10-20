@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { RefreshCw, AlertCircle, CheckCircle2, Clock, MinusCircle, XCircle } from 'lucide-react';
@@ -138,7 +139,7 @@ export function WompiEventosPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Cargando...</td></tr>
+              <tr><td colSpan={9} className="p-4"><SkeletonList count={4} /></td></tr>
             ) : isError ? (
               <tr><td colSpan={9}><ErrorState error={error} onRetry={refetch} /></td></tr>
             ) : eventos.length === 0 ? (

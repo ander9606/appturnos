@@ -1,10 +1,11 @@
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS } from '@api-client';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  Alert,
 } from 'react-native';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -50,7 +51,7 @@ type Props = {
 export function Step2SeguridadSocial({ data, onChange, onBack, onNext }: Props) {
   const handleNext = () => {
     const err = validateStep2(data);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
     onNext();
   };
 
@@ -136,7 +137,7 @@ export function Step2SeguridadSocial({ data, onChange, onBack, onNext }: Props) 
         <Input
           label="Salario base mensual (COP)"
           placeholder="Ej. 1300000"
-          hint="Se divide entre 210 (jornada de 42 h) para obtener el valor/hora."
+          hint={`Se divide entre ${HORAS_MES_NOMINA} (jornada de ${JORNADA_SEMANAL_HORAS} h) para obtener el valor/hora.`}
           value={data.salario_base}
           onChangeText={(t) => onChange({ salario_base: t })}
           keyboardType="numeric"

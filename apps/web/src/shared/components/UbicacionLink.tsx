@@ -1,5 +1,6 @@
+import { Spinner } from '@/shared/components/Spinner';
 import { useState } from 'react';
-import { MapPin, Loader2 } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 // Nominatim solo permite ~1 req/seg y pide no golpearlo en bloque — por eso esto
 // resuelve la dirección al toque (bajo demanda), no de una para todas las filas
@@ -48,7 +49,7 @@ export function UbicacionLink({ lat, lng, label }: Props) {
         disabled={loading}
         className="flex items-center gap-1 text-xs text-info hover:text-primary-600 font-medium disabled:opacity-60"
       >
-        {loading ? <Loader2 size={11} className="animate-spin flex-shrink-0" /> : <MapPin size={11} className="flex-shrink-0" />}
+        {loading ? <Spinner size={11} className="flex-shrink-0" /> : <MapPin size={11} className="flex-shrink-0" />}
         {label}: {loading ? 'Buscando…' : 'Ver ubicación'}
       </button>
     );

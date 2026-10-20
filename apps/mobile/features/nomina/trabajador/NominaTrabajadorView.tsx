@@ -5,23 +5,27 @@
  * Toda la lógica de negocio vive en useNominaTrabajador + nominaTrabajadorUtils.
  */
 
-import React, { useState, useMemo } from 'react';
-import { View, Text, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { COLORS } from '@/lib/designTokens';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/lib/theme';
 import { formatShortDate } from '@/lib/formatters';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
-import { Button } from '@/components/ui/Button';
 import { RegistroCard } from '../RegistroCard';
 import { PeriodoHeaderCard } from './components/PeriodoHeaderCard';
 import { ResumenCards } from './components/ResumenCards';
+import { DescuentosPendientesModal } from './components/DescuentosPendientesModal';
 import { TurnosEventualCard } from './components/TurnosEventualCard';
 import { IngresoHoyTab } from './components/IngresoHoyTab';
 import { useNominaTrabajador } from './useNominaTrabajador';
-import { calcularResumenPeriodo, analizarDia } from './nominaTrabajadorUtils';
+import { analizarDia } from './nominaTrabajadorUtils';
 import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
 import { useRegistrosHistorial } from '../useNomina';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
@@ -79,6 +83,8 @@ export function NominaTrabajadorView() {
     setPeriodoSeleccionado,
     registros,
     resumen,
+    resumenSemana,
+    horasSemanaPeriodoAnterior,
     registroHoy,
     estadoHoy,
     todayISO,
@@ -96,28 +102,29 @@ export function NominaTrabajadorView() {
     error,
   } = useNominaTrabajador();
 
-  // Resumen solo de esta semana (para la card semanal del header)
-  const resumenSemana = useMemo(() => {
-    const hoy = new Date();
-    const lunes = new Date(hoy);
-    const diaSemana = hoy.getDay();
-    lunes.setDate(hoy.getDate() - (diaSemana === 0 ? 6 : diaSemana - 1));
-    lunes.setHours(0, 0, 0, 0);
-    const semana = registros.filter((r) => new Date(`${r.fecha}T00:00:00`) >= lunes);
-    return calcularResumenPeriodo(semana, valorHora);
-  }, [registros, valorHora]);
-
   const analisisHoy = useMemo(
     () => (registroHoy ? analizarDia(registroHoy, valorHora) : null),
     [registroHoy, valorHora],
   );
 
   const todayLabel = formatShortDate(todayISO);
+  const pendientesLista = useMemo(() => misDescuentos.filter((d) => d.estado === 'pendiente'), [misDescuentos]);
+  const descuentosPendientes = pendientesLista.length;
+
+  // Emergente de descuentos: sale sola la primera vez que hay pendientes; luego se reabre a mano.
+  const [modalDescuentos, setModalDescuentos] = useState(false);
+  const [modalYaAbierto, setModalYaAbierto] = useState(false);
+  useEffect(() => {
+    if (descuentosPendientes > 0 && !modalYaAbierto) {
+      setModalDescuentos(true);
+      setModalYaAbierto(true);
+    }
+  }, [descuentosPendientes, modalYaAbierto]);
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -125,11 +132,7 @@ export function NominaTrabajadorView() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color="#94A3B8" />
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar tu nómina')}
-        </Text>
-        <Button label="Reintentar" onPress={onRefresh} variant="secondary" />
+        <ErrorState error={error} onRetry={onRefresh} fallback="Error al cargar tu nómina" />
       </SafeAreaView>
     );
   }
@@ -137,7 +140,7 @@ export function NominaTrabajadorView() {
   if (periodos.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-8" edges={['top']}>
-        <Ionicons name="clipboard-outline" size={48} color="#94A3B8" />
+        <Ionicons name="clipboard-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground text-center">
           Sin período activo
         </Text>
@@ -163,13 +166,42 @@ export function NominaTrabajadorView() {
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
             >
-              <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
-                {label}
-              </Text>
+              <View className="flex-row items-center gap-1.5">
+                <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                  {label}
+                </Text>
+                {tab === 'nomina' && descuentosPendientes > 0 && (
+                  <View className="min-w-[18px] h-[18px] px-1 rounded-full bg-warning items-center justify-center">
+                    <Text className="text-[10px] font-bold text-white">{descuentosPendientes}</Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           );
         })}
       </View>
+
+      {/* Aviso de descuentos por aceptar — abre la ventana emergente para responderlos */}
+      {activeTab === 'hoy' && descuentosPendientes > 0 && (
+        <TouchableOpacity
+          onPress={() => setModalDescuentos(true)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Responder los descuentos pendientes"
+          className="mx-5 mt-3 flex-row items-center gap-3 rounded-2xl bg-warning/10 px-4 py-3"
+        >
+          <Ionicons name="alert-circle-outline" size={20} color={theme.primary} />
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-foreground">
+              {descuentosPendientes} descuento{descuentosPendientes > 1 ? 's' : ''} por aceptar
+            </Text>
+            <Text className="text-xs text-muted-foreground">
+              Toca para aceptarlos o rechazarlos
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.mutedForeground} />
+        </TouchableOpacity>
+      )}
 
       {/* ── Tab: Hoy ───────────────────────────────────────── */}
       {activeTab === 'hoy' ? (
@@ -181,6 +213,7 @@ export function NominaTrabajadorView() {
           estadoHoy={estadoHoy}
           periodoAbierto={periodoActivo?.estado === 'abierto'}
           resumenSemana={resumenSemana}
+          horasPeriodoAnterior={horasSemanaPeriodoAnterior}
           registroHoy={registroHoy}
           compensatorios={compensatorios}
           isRefetching={isRefetching}
@@ -194,7 +227,7 @@ export function NominaTrabajadorView() {
           data={viewMode === 'mes' ? [] : registros}
           keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
-            <RegistroCard registro={item} valorHora={valorHora} />
+            <RegistroCard registro={item} valorHora={valorHora} periodoInicio={periodoActivo?.fecha_inicio} />
           )}
           contentContainerClassName="gap-2 pb-8"
           showsVerticalScrollIndicator={false}
@@ -214,6 +247,7 @@ export function NominaTrabajadorView() {
                 estadoHoy={estadoHoy}
                 resumen={resumen}
                 resumenSemana={resumenSemana}
+                horasPeriodoAnterior={horasSemanaPeriodoAnterior}
                 salarioBase={salarioBase}
                 valorHora={valorHora}
                 color={theme.primary}
@@ -237,6 +271,7 @@ export function NominaTrabajadorView() {
                   miLiquidacion={miLiquidacion}
                   tipoContrato={tipoContrato}
                   misDescuentos={misDescuentos}
+                  onRevisarDescuentos={() => setModalDescuentos(true)}
                 />
                 <View className="flex-row items-center justify-between mt-1">
                   <Text className="text-sm font-semibold text-foreground">
@@ -313,25 +348,21 @@ export function NominaTrabajadorView() {
           }
           ListEmptyComponent={
             viewMode === 'mes' ? null : loadingRegistros ? (
-              <View className="py-12 items-center">
-                <ActivityIndicator color={theme.primary} />
-              </View>
+              <SkeletonList count={3} />
             ) : (
-              <View className="py-12 items-center gap-3 px-8">
-                <Ionicons name="clipboard-outline" size={40} color="#94A3B8" />
-                <Text className="text-base font-semibold text-foreground text-center">
-                  Sin registros aún
-                </Text>
-                <Text className="text-sm text-muted-foreground text-center">
-                  Marca tu entrada para comenzar a registrar horas.
-                </Text>
-              </View>
+              <EmptyState title="Sin registros aún" message="Marca tu entrada para comenzar a registrar horas." />
             )
           }
           ItemSeparatorComponent={() => <View className="h-2" />}
           contentContainerStyle={{ paddingHorizontal: 20 }}
         />
       )}
+
+      <DescuentosPendientesModal
+        visible={modalDescuentos}
+        descuentos={pendientesLista}
+        onClose={() => setModalDescuentos(false)}
+      />
     </SafeAreaView>
   );
 }

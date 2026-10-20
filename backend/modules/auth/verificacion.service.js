@@ -4,8 +4,10 @@ const jwt      = require('jsonwebtoken');
 const { pool } = require('../../config/database');
 const AppError = require('../../utils/AppError');
 const { enviarEmail } = require('../../utils/mailer');
+const { plantillaCorreo, bloqueCodigo } = require('../../utils/plantillaCorreo');
 const { enviarSms }   = require('../../utils/sms');
 const logger = require('../../utils/logger');
+const AuthModel = require('./auth.model');
 
 const OTP_TTL_MIN  = 10;
 const MAX_INTENTOS = 5;
@@ -42,22 +44,35 @@ async function enviarOtp(tipo, destino) {
       });
       await enviarEmail({
         to:      destino,
-        subject: `Tu código de verificación (${horaEnvio}) — Zaturnos`,
-        html: `
-          <p>Tu código de verificación es:</p>
-          <h2 style="letter-spacing:6px;font-size:36px;">${codigo}</h2>
-          <p>Válido por ${OTP_TTL_MIN} minutos. No lo compartas con nadie.</p>
-        `,
+        subject: `Tu código de verificación (${horaEnvio}) — Zaturno`,
+        html: plantillaCorreo({
+          titulo: 'Tu código de verificación',
+          cuerpo: `<p style="margin:0">Usa este código para continuar:</p>${bloqueCodigo(codigo)}`,
+          nota: `Válido por ${OTP_TTL_MIN} minutos. No lo compartas con nadie.`,
+        }),
       });
     } else {
       await enviarSms({
         to:   destino,
-        body: `Tu código Zaturnos: ${codigo}. Válido ${OTP_TTL_MIN} min.`,
+        body: `Tu código Zaturno: ${codigo}. Válido ${OTP_TTL_MIN} min.`,
       });
     }
   } finally {
     conn.release();
   }
+}
+
+/**
+ * Código para recuperar contraseña: solo se envía si el email pertenece a una
+ * cuenta activa. Quien lo llama responde siempre lo mismo exista o no, para no
+ * revelar qué correos están registrados, y no espera el envío — así tampoco se
+ * distingue por tiempo de respuesta.
+ */
+async function enviarOtpRecuperacion(email) {
+  const usuario = await AuthModel.buscarUsuarioPorEmail(email);
+  if (!usuario || !usuario.activo) return;
+  enviarOtp('email', email).catch((err) =>
+    logger.error(`[verificacion] no se pudo enviar OTP de recuperación: ${err.message}`));
 }
 
 async function verificarOtp(tipo, destino, codigo) {
@@ -118,4 +133,4 @@ function validarTokenVerificacion(token, tipo, destino) {
   }
 }
 
-module.exports = { enviarOtp, verificarOtp, validarTokenVerificacion };
+module.exports = { enviarOtp, enviarOtpRecuperacion, verificarOtp, validarTokenVerificacion };

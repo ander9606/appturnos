@@ -3,10 +3,12 @@
  * admin_empresa (una empresa puede tener varios, p.ej. socios). El backend
  * bloquea quitarle el rol de admin al único administrador activo.
  */
+import { Text, TextInput } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, ActivityIndicator, Alert,
-  KeyboardAvoidingView, Platform, ScrollView,
+  View, Pressable, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -47,7 +49,7 @@ export default function EditarGestorScreen() {
       qc.invalidateQueries({ queryKey: ['gestores'] });
       router.back();
     },
-    onError: (err: unknown) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo actualizar el gestor.')),
+    onError: (err: unknown) => showAlert('Error', apiErrorMessage(err, 'No se pudo actualizar el gestor.')),
   });
 
   const denied = useRoleGuard(['admin_empresa']);
@@ -55,11 +57,11 @@ export default function EditarGestorScreen() {
 
   function handleGuardar() {
     if (!nombre.trim()) {
-      Alert.alert('Campo requerido', 'El nombre es obligatorio.');
+      showAlert('Campo requerido', 'El nombre es obligatorio.', 'warning');
       return;
     }
     if (!email.trim()) {
-      Alert.alert('Campo requerido', 'El email es obligatorio.');
+      showAlert('Campo requerido', 'El email es obligatorio.', 'warning');
       return;
     }
     mutation.mutate({ nombre: nombre.trim(), apellido: apellido.trim() || undefined, email: email.trim(), rol });
@@ -129,7 +131,7 @@ export default function EditarGestorScreen() {
                     className={`flex-row items-center justify-between p-4 rounded-2xl border active:opacity-70 ${
                       active ? 'border-info' : 'bg-card border-border'
                     }`}
-                    style={active ? { backgroundColor: '#EFF6FF' } : {}}
+                    style={active ? { backgroundColor: COLORS.infoLight } : {}}
                   >
                     <Text className={`text-sm font-semibold ${active ? 'text-info' : 'text-foreground'}`}>
                       {opt.label}
@@ -147,7 +149,7 @@ export default function EditarGestorScreen() {
               style={{ backgroundColor: COLORS.info }}
             >
               {mutation.isPending ? (
-                <ActivityIndicator color="#fff" />
+                <Spinner color={COLORS.white} />
               ) : (
                 <Text className="text-base font-semibold text-white">Guardar cambios</Text>
               )}

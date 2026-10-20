@@ -2,6 +2,10 @@
 
 const ExcelJS = require('exceljs');
 
+// Nota de celda (no ocupa espacio): se lee al pasar el cursor por el encabezado "H. extra diurna".
+const NOTA_TOPE_SEMANAL =
+  'El tope de 42 h es semanal (lunes a domingo) y cruza períodos: si un período cierra a mitad de semana, las horas de esa semana en el período anterior cuentan en este; por eso un período puede empezar con horas extra.';
+
 const AVISO_SIN_RECARGOS =
   'Sin recargos automáticos: las horas de noche y festivo cuentan como normales hasta 42 h a la semana; después, extra diurna.';
 
@@ -65,6 +69,7 @@ async function generarLiquidacionExcel(liquidacion, marcajes) {
 
   const cabecera = ws.addRow(columnas.map((c) => c.header));
   cabecera.font = { bold: true };
+  cabecera.getCell(columnas.findIndex((c) => c.header === 'H. extra diurna') + 1).note = NOTA_TOPE_SEMANAL;
 
   for (const l of liquidacion.lineas) {
     ws.addRow(columnas.map((c) => c.valor(l)));

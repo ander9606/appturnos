@@ -3,8 +3,10 @@
  * trabajador, mostrado al gestor en el detalle de turno (confirmado / en
  * curso) en vez del CTA de marcaje que no le corresponde.
  */
+import { Text } from '@/components/ui/Text';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, TouchableOpacity, Linking } from 'react-native';
+import { View, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { StarRating } from '../StarRating';
@@ -31,7 +33,7 @@ export function TrabajadorInfoGestor({
           <>
             <View className="flex-row items-center gap-2">
               <StarRating mode="display" value={Number(ranking)} size="sm" />
-              <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: `${color}20` }}>
+              <View className="rounded-full px-2 py-0.5" style={{ backgroundColor: alpha(color, 0.13) }}>
                 <Text className="text-xs font-semibold" style={{ color }}>{rankingLabel(nivel)}</Text>
               </View>
             </View>
@@ -51,7 +53,7 @@ export function TrabajadorInfoGestor({
           accessibilityLabel="Llamar al trabajador"
           hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         >
-          <Ionicons name="call-outline" size={16} color="#3B82F6" />
+          <Ionicons name="call-outline" size={16} color={COLORS.info} />
           <Text className="text-sm font-semibold text-info">Llamar al trabajador</Text>
         </TouchableOpacity>
       )}

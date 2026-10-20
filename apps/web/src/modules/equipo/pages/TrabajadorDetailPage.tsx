@@ -1,3 +1,4 @@
+import { SkeletonDetail, SkeletonTable } from '@/shared/components/Skeleton';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
@@ -10,6 +11,7 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import type { TipoTrabajador, TipoDocumento, Sexo, TipoCuenta, Trabajador, CambioSalario } from '../types';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 /** Mismo código de colores que el resto de la app: Turnos = naranja, Nómina = verde, Ambos = azul. */
 const TIPO_BADGE: Record<TipoTrabajador, string> = {
@@ -18,12 +20,14 @@ const TIPO_BADGE: Record<TipoTrabajador, string> = {
   ambos: 'bg-info-light text-info',
 };
 
-// Lo que jefe_nomina puede editar de una ficha de nómina. Tipo y datos de pago
-// (banco, cuenta) quedan solo para admin_empresa.
+// Lo que jefe_nomina puede editar de una ficha. Tipo y datos de pago (banco, cuenta)
+// quedan solo para admin_empresa. Sueldo y hora de entrada solo son de nómina.
 const CAMPOS_JEFE = [
   'nombre', 'apellido', 'cedula', 'tipo_documento', 'email', 'telefono', 'sexo', 'fecha_nacimiento',
   'cargo', 'tarifa_hora', 'salario_base', 'hora_entrada_esperada', 'eps', 'afp', 'direccion',
 ];
+// Turnos: sin sueldo ni hora de entrada, y sin los datos de persona que se copian a sus otras empresas (solo admin).
+const CAMPOS_JEFE_TURNOS = ['nombre', 'apellido', 'telefono', 'email', 'cargo'];
 
 function getInitials(nombre: string, apellido: string) {
   return `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
@@ -72,7 +76,7 @@ export function TrabajadorDetailPage() {
 
   const { data, isLoading, isError, error, refetch } = useTrabajador(trabajadorId);
   const trabajador: Trabajador | null = data?.data ?? null;
-  const jefeEdita = usuario?.rol === 'jefe_nomina' && (trabajador?.tipo === 'nomina' || trabajador?.tipo === 'ambos');
+  const jefeEdita = usuario?.rol === 'jefe_nomina';
   const puedeEditarFicha = isAdmin || jefeEdita;
   const actualizar = useActualizarTrabajador();
   const historialSalario = useHistorialSalario(trabajadorId, puedeVerSalario);
@@ -130,10 +134,10 @@ export function TrabajadorDetailPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // jefe_nomina: solo los campos de CAMPOS_JEFE; el sueldo también se audita en el PUT.
+    // jefe_nomina: solo los campos permitidos para el tipo (CAMPOS_JEFE / CAMPOS_JEFE_TURNOS);
+    // el sueldo también se audita en el PUT. Lo que no se permite no se manda: el backend responde 403.
     if (!isAdmin) {
-      await actualizar.mutateAsync({
-        id: trabajadorId,
+      const datos = {
         nombre: form.nombre,
         apellido: form.apellido,
         cedula: form.cedula || undefined,
@@ -148,6 +152,11 @@ export function TrabajadorDetailPage() {
         hora_entrada_esperada: form.hora_entrada_esperada || undefined,
         eps: form.eps || undefined,
         afp: form.afp || undefined,
+      };
+      const campos = trabajador?.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE;
+      await actualizar.mutateAsync({
+        id: trabajadorId,
+        ...Object.fromEntries(Object.entries(datos).filter(([k]) => campos.includes(k))),
       });
       return;
     }
@@ -189,7 +198,8 @@ export function TrabajadorDetailPage() {
     await guardar(form.tipo);
   };
 
-  const editable = (key: keyof FormState) => isAdmin || (jefeEdita && CAMPOS_JEFE.includes(key));
+  const camposJefe = trabajador?.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE;
+  const editable = (key: keyof FormState) => isAdmin || (jefeEdita && camposJefe.includes(key));
   const inp = (key: keyof FormState) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -199,9 +209,9 @@ export function TrabajadorDetailPage() {
       'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground',
   });
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
-  if (!trabajador) return <p className="text-muted-foreground text-sm py-8 text-center">Trabajador no encontrado</p>;
+  if (!trabajador) return <EmptyState title="Trabajador no encontrado" variant="search" />;
 
   return (
     <div>
@@ -362,7 +372,7 @@ export function TrabajadorDetailPage() {
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-1">Historial de sueldo</h2>
           <p className="text-xs text-muted-foreground mb-4">Registro de auditoría: quién cambió tarifa o salario y cuándo. No se puede editar ni borrar.</p>
           {historialSalario.isLoading ? (
-            <p className="text-muted-foreground text-sm">Cargando...</p>
+            <SkeletonTable rows={3} />
           ) : (historialSalario.data?.data ?? []).length === 0 ? (
             <p className="text-muted-foreground text-sm">Sin cambios registrados.</p>
           ) : (

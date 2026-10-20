@@ -1,6 +1,7 @@
 'use strict';
 
 const PDFDocument = require('pdfkit');
+const { piePdfMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
 
 /**
@@ -16,6 +17,10 @@ function generarCuentaCobroPdf(cuenta, stream) {
   doc.fontSize(16).font('Helvetica-Bold').text('CUENTA DE COBRO', { align: 'center' });
   doc.moveDown(0.3);
   doc.fontSize(10).font('Helvetica').text(`N.º ${cuenta.numero_cuenta}`, { align: 'center' });
+  if (cuenta.secuencia > 1) {
+    doc.fontSize(9).font('Helvetica-Oblique')
+      .text('Cuenta complementaria: diferencia de valores respecto a cuentas anteriores del período', { align: 'center' });
+  }
   doc.moveDown(1.2);
 
   const linea = (etiqueta, valor) => {
@@ -144,6 +149,7 @@ function generarCuentaCobroPdf(cuenta, stream) {
     .text(`${cuenta.trabajador_nombre} ${cuenta.trabajador_apellido}`);
   doc.text(`C.C. ${cuenta.trabajador_cedula}`);
 
+  piePdfMarca(doc);
   doc.end();
 }
 

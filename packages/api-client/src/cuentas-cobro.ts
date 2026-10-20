@@ -19,6 +19,8 @@ export interface CuentaCobroItem {
 export interface CuentaCobroResumen {
   id: number;
   numero_cuenta: string;
+  /** 1 = cuenta original; 2+ = complementaria por la diferencia de un turno que cambió. */
+  secuencia: number;
   fecha_inicio: string;
   fecha_fin: string;
   total_turnos: number;

@@ -1,5 +1,7 @@
+import { Text, TextInput } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View } from 'react-native';
 
 import { StarRating } from '../StarRating';
 import { Button } from '@/components/ui/Button';
@@ -41,7 +43,7 @@ export function CalificacionCard({
             value={comentario}
             onChangeText={onComentarioChange}
             className="text-sm text-foreground border border-border rounded-xl px-3 py-2.5"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={COLORS.placeholder}
             maxLength={500}
             multiline
           />

@@ -3,10 +3,13 @@
  * para admin_empresa / jefe_nomina.
  */
 
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, ActivityIndicator,
-  TouchableOpacity, RefreshControl,
+  View, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
@@ -57,9 +60,7 @@ export default function GestorCompensatoriosScreen() {
       <Stack.Screen options={{ title: 'Descansos compensatorios', headerShown: true }} />
 
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : (
         <FlatList
           data={lista}
@@ -117,12 +118,10 @@ export default function GestorCompensatoriosScreen() {
             </View>
           }
           ListEmptyComponent={
-            <View className="py-16 items-center gap-3 px-8">
-              <Ionicons name="calendar-outline" size={40} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground text-center">
-                {filtro === 'todos' ? 'Sin descansos registrados' : `Sin descansos ${filtro === 'pendiente' ? 'pendientes' : 'asignados'}`}
-              </Text>
-            </View>
+            <EmptyState
+              variant={filtro === 'todos' ? 'empty' : filtro === 'pendiente' ? 'done' : 'search'}
+              title={filtro === 'todos' ? 'Sin descansos registrados' : `Sin descansos ${filtro === 'pendiente' ? 'pendientes' : 'asignados'}`}
+            />
           }
         />
       )}
@@ -149,7 +148,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
   return (
     <View
       className="bg-card rounded-2xl px-4 py-3 gap-3"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       <View className="flex-row items-start justify-between">
         <View className="flex-1">
@@ -173,7 +172,7 @@ function CompensatorioRow({ compensatorio: c }: { compensatorio: DescansoCompens
           onPress={() => setShowPicker(true)}
           className="self-start bg-muted rounded-xl px-3 py-2 flex-row items-center gap-2"
         >
-          <Ionicons name="calendar-outline" size={14} color="#64748B" />
+          <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
           <Text className="text-sm text-foreground">Elegir fecha</Text>
         </TouchableOpacity>
       ) : (

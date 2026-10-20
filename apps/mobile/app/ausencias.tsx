@@ -1,7 +1,11 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator,
-} from 'react-native';
+  View, FlatList, TouchableOpacity, RefreshControl, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -81,12 +85,9 @@ export default function AusenciasScreen() {
         }
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 48 }} />
+            <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
           ) : (
-            <View className="items-center justify-center py-16 gap-3">
-              <Ionicons name="calendar-clear-outline" size={48} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground">Sin ausencias</Text>
-            </View>
+            <EmptyState title="Sin ausencias" />
           )
         }
         renderItem={({ item: a }) => (
@@ -115,7 +116,7 @@ export default function AusenciasScreen() {
                     className="flex-1 items-center py-2 rounded-xl bg-danger/10 disabled:opacity-40"
                   >
                     {resolvingThis
-                      ? <ActivityIndicator size="small" color="#DC2626" />
+                      ? <Spinner size="small" color={COLORS.dangerDark} />
                       : <Text className="text-xs font-semibold text-danger">Rechazar</Text>}
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -124,7 +125,7 @@ export default function AusenciasScreen() {
                     className="flex-1 items-center py-2 rounded-xl bg-success/10 disabled:opacity-40"
                   >
                     {resolvingThis
-                      ? <ActivityIndicator size="small" color="#16A34A" />
+                      ? <Spinner size="small" color={COLORS.success} />
                       : <Text className="text-xs font-semibold text-success">Aprobar</Text>}
                   </TouchableOpacity>
                 </View>

@@ -1,15 +1,17 @@
+import { SkeletonList } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import { useCompensatorios } from '../hooks/useNomina';
 import type { DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { PendientesCompensatoriosBanner } from './PendientesCompensatoriosBanner';
 import { AsignarCompensatorioModal } from './CompensatorioAsignarModals';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 export function CompensatoriosTab() {
   const { data, isLoading, isError, error, refetch } = useCompensatorios();
   const [asignando, setAsignando] = useState<DescansoCompensatorio | null>(null);
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonList count={3} />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const todos: DescansoCompensatorio[] = data?.data ?? [];
@@ -18,7 +20,7 @@ export function CompensatoriosTab() {
   return (
     <>
       {pendientes.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No hay compensatorios pendientes de asignar.</p>
+        <EmptyState title="No hay compensatorios pendientes de asignar." />
       ) : (
         <PendientesCompensatoriosBanner pendientes={pendientes} onAsignar={setAsignando} />
       )}

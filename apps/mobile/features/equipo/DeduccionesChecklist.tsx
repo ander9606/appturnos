@@ -3,12 +3,14 @@
  * mientras se digita el salario/tarifa en el formulario de trabajador.
  * Solo se renderiza si la empresa contrata por nómina laboral.
  */
+import { Text } from '@/components/ui/Text';
+import { COLORS, ACCENT } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useWatch, type Control } from 'react-hook-form';
-import { empresasApi, calcularDeducciones, HORAS_MES_NOMINA } from '@api-client';
+import { empresasApi, calcularDeducciones, HORAS_MES_NOMINA, DEDUCCION_SALUD, DEDUCCION_PENSION } from '@api-client';
 import { formatCOP } from '@/lib/formatters';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import type { TrabajadorFormValues } from './schemas';
@@ -41,8 +43,8 @@ export function DeduccionesChecklist({ control }: Props) {
 
   const d = calcularDeducciones(ibc);
   const items = [
-    { label: 'Salud (4%)', valor: d.salud, aplica: true },
-    { label: 'Pensión (4%)', valor: d.pension - d.fondoSolidaridadTasa * ibc, aplica: true },
+    { label: `Salud (${Math.round(DEDUCCION_SALUD * 100)}%)`, valor: d.salud, aplica: true },
+    { label: `Pensión (${Math.round(DEDUCCION_PENSION * 100)}%)`, valor: d.pension - d.fondoSolidaridadTasa * ibc, aplica: true },
     {
       label: `Fondo de solidaridad pensional (+${(d.fondoSolidaridadTasa * 100).toFixed(1)}%)`,
       valor: d.fondoSolidaridadTasa * ibc,
@@ -61,7 +63,7 @@ export function DeduccionesChecklist({ control }: Props) {
           <Ionicons
             name={item.aplica ? 'checkmark-circle' : 'ellipse-outline'}
             size={16}
-            color={item.aplica ? '#10B981' : '#CBD5E1'}
+            color={item.aplica ? ACCENT.esmeralda : COLORS.borderStrong}
           />
           <Text className={`text-sm flex-1 ${item.aplica ? 'text-foreground' : 'text-muted-foreground'}`}>
             {item.label}{item.hint && !item.aplica ? ` — ${item.hint}` : ''}

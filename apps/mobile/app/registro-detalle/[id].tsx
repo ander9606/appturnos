@@ -5,15 +5,17 @@
  * de los registros de nómina de los trabajadores.
  */
 
+import { showAlert } from '@/lib/alertDialog';
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   KeyboardAvoidingView,
@@ -111,7 +113,7 @@ export default function RegistroDetalleScreen() {
       setShowModal(false);
       router.back();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo corregir el registro');
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo corregir el registro');
     }
   };
 
@@ -121,7 +123,7 @@ export default function RegistroDetalleScreen() {
       await descartarSospechoso(registro.id);
       showToast('Marcaje ya no está marcado como sospechoso');
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo descartar el marcaje');
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo descartar el marcaje');
     }
   };
 
@@ -129,8 +131,8 @@ export default function RegistroDetalleScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center">
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background">
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -138,7 +140,7 @@ export default function RegistroDetalleScreen() {
   if (!registro) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-4 px-6">
-        <Ionicons name="search-outline" size={48} color="#94A3B8" />
+        <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground text-center">
           Registro no encontrado
         </Text>
@@ -160,7 +162,7 @@ export default function RegistroDetalleScreen() {
           headerTitle: 'Detalle de Registro',
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
           headerTintColor: theme.primary,
-          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerStyle: { backgroundColor: COLORS.white },
           headerShadowVisible: true,
         }}
       />
@@ -173,7 +175,7 @@ export default function RegistroDetalleScreen() {
           {/* Sospechoso — mismo dispositivo y ubicación que otro trabajador (posible buddy punching) */}
           {puedeCorregir && registro.sospechoso === 1 && (
             <View className="flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3">
-              <Ionicons name="warning-outline" size={20} color="#d97706" />
+              <Ionicons name="warning-outline" size={20} color={COLORS.warningDark} />
               <Text className="flex-1 text-warning text-xs">
                 Marcaje sospechoso: mismo dispositivo y ubicación que otro trabajador.
               </Text>
@@ -184,7 +186,7 @@ export default function RegistroDetalleScreen() {
                 accessibilityRole="button"
               >
                 {isDescartando ? (
-                  <ActivityIndicator size="small" color="#d97706" />
+                  <Spinner size="small" color={COLORS.warningDark} />
                 ) : (
                   <Text className="text-warning text-xs font-semibold">Descartar</Text>
                 )}
@@ -234,7 +236,7 @@ export default function RegistroDetalleScreen() {
                   </View>
 
                   <View className="items-center justify-center">
-                    <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+                    <Ionicons name="arrow-forward" size={18} color={COLORS.placeholder} />
                   </View>
 
                   <View className="flex-1 bg-muted rounded-xl px-4 py-3">
@@ -270,7 +272,7 @@ export default function RegistroDetalleScreen() {
             )}
             {verDetalle && explicacionExtra && (
               <Text className="text-xs text-muted-foreground">
-                Llevaba {explicacionExtra.acumuladoSemana.toFixed(1)}h esta semana → {explicacionExtra.cupoUsado.toFixed(1)}h
+                Llevaba {explicacionExtra.acumuladoSemana.toFixed(1)}h desde el {explicacionExtra.desdeLunes} → {explicacionExtra.cupoUsado.toFixed(1)}h
                 de su cupo ({explicacionExtra.topeSemanal}h) + {explicacionExtra.horasExtra.toFixed(1)}h extra.
               </Text>
             )}

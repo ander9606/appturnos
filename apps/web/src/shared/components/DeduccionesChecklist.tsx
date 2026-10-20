@@ -6,7 +6,7 @@
 import { CheckCircle2, Circle } from 'lucide-react';
 import { useEmpresa } from '@/modules/configuracion/hooks/useConfiguracion';
 import { useAuthStore } from '@/modules/auth/authStore';
-import { calcularDeducciones, HORAS_MES_NOMINA } from '../laboral';
+import { calcularDeducciones, HORAS_MES_NOMINA, DEDUCCION_SALUD, DEDUCCION_PENSION } from '../laboral';
 import { fmtCOP } from '../lib/format';
 
 interface Props {
@@ -27,8 +27,8 @@ export function DeduccionesChecklist({ tarifaHora, salarioBase }: Props) {
 
   const d = calcularDeducciones(ibc);
   const items = [
-    { label: 'Salud (4%)', valor: d.salud, aplica: true },
-    { label: 'Pensión (4%)', valor: d.pension - d.fondoSolidaridadTasa * ibc, aplica: true },
+    { label: `Salud (${Math.round(DEDUCCION_SALUD * 100)}%)`, valor: d.salud, aplica: true },
+    { label: `Pensión (${Math.round(DEDUCCION_PENSION * 100)}%)`, valor: d.pension - d.fondoSolidaridadTasa * ibc, aplica: true },
     {
       label: `Fondo de solidaridad pensional (+${(d.fondoSolidaridadTasa * 100).toFixed(1)}%)`,
       valor: d.fondoSolidaridadTasa * ibc,

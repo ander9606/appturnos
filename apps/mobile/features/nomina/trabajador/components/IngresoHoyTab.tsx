@@ -1,11 +1,14 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Linking, Platform, RefreshControl } from 'react-native';
+import { View, TouchableOpacity, ScrollView, Linking, Platform, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import type { PuntoMarcaje, DescansoCompensatorio } from '@api-client';
 import type { RegistroDiario } from '@api-client';
+import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import { CompensatorioBanner } from '../../compensatorios/CompensatorioBanner';
-import { fmtHora, calcularElapsedLabel, horaEntradaMostrada, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
+import { fmtHora, calcularElapsedLabel, horaEntradaMostrada, getJornadaLegalSemanal, type EstadoHoy, type ResumenPeriodoNomina } from '../nominaTrabajadorUtils';
 
 interface Props {
   cargo:          string | null;
@@ -15,6 +18,7 @@ interface Props {
   estadoHoy:      EstadoHoy;
   periodoAbierto: boolean;
   resumenSemana:  ResumenPeriodoNomina;
+  horasPeriodoAnterior: number;
   registroHoy:    RegistroDiario | null;
   compensatorios: DescansoCompensatorio[];
   isRefetching:   boolean;
@@ -38,6 +42,7 @@ export function IngresoHoyTab({
   estadoHoy,
   periodoAbierto,
   resumenSemana,
+  horasPeriodoAnterior,
   registroHoy,
   compensatorios,
   isRefetching,
@@ -60,7 +65,7 @@ export function IngresoHoyTab({
       {tipoMarcacion === 'fijo' && puntoMarcaje && (
         <View className="bg-card rounded-2xl p-4 gap-3 border border-border">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="location-outline" size={16} color="#64748B" />
+            <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Dónde ir
             </Text>
@@ -75,7 +80,7 @@ export function IngresoHoyTab({
             accessibilityRole="button"
             accessibilityLabel="Abrir en mapas"
           >
-            <Ionicons name="navigate-outline" size={13} color="#3B82F6" />
+            <Ionicons name="navigate-outline" size={13} color={COLORS.info} />
             <Text className="text-xs font-semibold text-info">Cómo llegar</Text>
           </TouchableOpacity>
         </View>
@@ -84,7 +89,7 @@ export function IngresoHoyTab({
       {tipoMarcacion === 'zonal' && puntosZonales.length > 0 && (
         <View className="bg-card rounded-2xl p-4 gap-3 border border-border">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="location-outline" size={16} color="#64748B" />
+            <Ionicons name="location-outline" size={16} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Puedes marcar en cualquiera de estas zonas
             </Text>
@@ -98,7 +103,7 @@ export function IngresoHoyTab({
                 accessibilityRole="button"
                 accessibilityLabel={`Abrir ${p.nombre} en mapas`}
               >
-                <Ionicons name="navigate-outline" size={13} color="#3B82F6" />
+                <Ionicons name="navigate-outline" size={13} color={COLORS.info} />
                 <Text className="text-xs font-semibold text-info">Cómo llegar</Text>
               </TouchableOpacity>
             </View>
@@ -110,7 +115,7 @@ export function IngresoHoyTab({
       {cargo ? (
         <View className="bg-card rounded-2xl p-4 gap-2 border border-border">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="briefcase-outline" size={16} color="#64748B" />
+            <Ionicons name="briefcase-outline" size={16} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Tu cargo
             </Text>
@@ -123,7 +128,7 @@ export function IngresoHoyTab({
       {registroHoy ? (
         <View className="bg-card rounded-2xl p-4 gap-3 border border-border">
           <View className="flex-row items-center gap-2">
-            <Ionicons name="time-outline" size={16} color="#64748B" />
+            <Ionicons name="time-outline" size={16} color={COLORS.mutedForeground} />
             <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Hoy
             </Text>
@@ -202,8 +207,9 @@ export function IngresoHoyTab({
       {/* ── Barra de horas semanales ─────────────────────── */}
       {(() => {
         const semana   = resumenSemana.semanas[0];
-        const limite   = semana?.limiteHoras ?? 40;
-        const totalH   = resumenSemana.totalHoras;
+        const limite   = semana?.limiteHoras ?? getJornadaLegalSemanal(new Date().getFullYear());
+        const festivoH = resumenSemana.horasFestivo;
+        const totalH   = resumenSemana.totalHoras - festivoH; // el festivo habitual no cuenta para las 42 h
         const extraH   = resumenSemana.horasExtraDiurnas + resumenSemana.horasExtraNocturnas;
         const ordinH   = Math.max(0, totalH - extraH);
         const pctOrdin = Math.min(100, (ordinH / limite) * 100);
@@ -235,12 +241,12 @@ export function IngresoHoyTab({
                 hitSlop={6}
               >
                 <Text className="text-xs font-semibold text-muted-foreground">Ver detalles</Text>
-                <Ionicons name="chevron-forward" size={11} color="#64748B" />
+                <Ionicons name="chevron-forward" size={11} color={COLORS.mutedForeground} />
               </TouchableOpacity>
             </View>
 
             {/* Barra dos colores */}
-            <View className="h-3 bg-muted rounded-full overflow-hidden flex-row">
+            <View className="relative h-3 bg-muted rounded-full overflow-hidden flex-row">
               {pctOrdin > 0 && (
                 <View
                   className="h-full rounded-full"
@@ -250,10 +256,22 @@ export function IngresoHoyTab({
               {pctExtra > 0 && (
                 <View
                   className="h-full"
-                  style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }}
+                  style={{ width: `${pctExtra}%`, backgroundColor: COLORS.warning }}
                 />
               )}
+              <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color={COLORS.slate700} />
             </View>
+            {horasPeriodoAnterior > 0 && (
+              <Text className="text-[10px] text-muted-foreground">
+                La raya marca dónde termina el período anterior ({horasPeriodoAnterior.toFixed(1)}h antes de la raya).
+              </Text>
+            )}
+
+            {festivoH > 0 && (
+              <Text className="text-xs text-danger font-medium">
+                +{festivoH.toFixed(1)}h festivo (recargo, no cuenta para las {limite}h)
+              </Text>
+            )}
 
             {hayExtra ? (
               <Text className="text-xs text-amber-600 font-medium">
@@ -277,10 +295,10 @@ export function IngresoHoyTab({
           </Text>
         </View>
       ) : estadoHoy === 'compensatorio' ? (
-        <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: '#8B5CF618' }}>
+        <View className="rounded-2xl py-4 items-center px-4 gap-1" style={{ backgroundColor: alpha(ACCENT.violeta, 0.09) }}>
           <View className="flex-row items-center gap-2">
-            <Ionicons name="bed-outline" size={20} color="#8B5CF6" />
-            <Text className="text-sm font-semibold text-center" style={{ color: '#8B5CF6' }}>
+            <Ionicons name="bed-outline" size={20} color={ACCENT.violeta} />
+            <Text className="text-sm font-semibold text-center" style={{ color: ACCENT.violeta }}>
               Hoy es tu descanso compensatorio
             </Text>
           </View>

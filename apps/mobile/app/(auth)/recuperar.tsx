@@ -5,10 +5,10 @@
  *   Paso 1 — email → envía OTP
  *   Paso 2 — código OTP + nueva contraseña → restablece y vuelve a login
  */
+import { Text } from '@/components/ui/Text';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -50,7 +50,7 @@ export default function RecuperarScreen() {
   const onSubmitEmail = async (data: RecuperarEmailFormData) => {
     setServerError(null);
     try {
-      await authApi.enviarOtp({ tipo: 'email', destino: data.email });
+      await authApi.enviarOtp({ tipo: 'email', destino: data.email, proposito: 'recuperacion' });
       emailRef.current = data.email;
       setStep('reset');
     } catch (err) {
@@ -87,7 +87,7 @@ export default function RecuperarScreen() {
   const reenviarCodigo = async () => {
     setResending(true);
     try {
-      await authApi.enviarOtp({ tipo: 'email', destino: emailRef.current });
+      await authApi.enviarOtp({ tipo: 'email', destino: emailRef.current, proposito: 'recuperacion' });
     } finally {
       setResending(false);
     }

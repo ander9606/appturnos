@@ -7,13 +7,14 @@
  *  - Completadas → turnos finalizados con pago calculado
  *  - Canceladas  → rechazadas, canceladas o no presentadas
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,15 +42,15 @@ function fmtPago(n: number | null | undefined) {
 const ESTADO_CFG: Record<string, {
   label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>['name'];
 }> = {
-  pendiente:      { label: 'Pendiente',    color: '#D97706', bg: '#FEF3C7', icon: 'time-outline' },
-  confirmado:     { label: 'Confirmado',   color: '#3B82F6', bg: '#DBEAFE', icon: 'checkmark-circle-outline' },
-  en_progreso:    { label: 'En progreso',  color: '#059669', bg: '#D1FAE5', icon: 'play-circle-outline' },
-  completado:     { label: 'Completado',   color: '#059669', bg: '#D1FAE5', icon: 'checkmark-done-outline' },
-  cancelado:      { label: 'Cancelado',    color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
-  rechazado:      { label: 'Rechazado',    color: '#EF4444', bg: '#FEE2E2', icon: 'ban-outline' },
-  no_presentado:  { label: 'No presentado',color: '#94A3B8', bg: '#F1F5F9', icon: 'alert-circle-outline' },
-  por_reconfirmar: { label: 'Reconfirma', color: '#D97706', bg: '#FEF3C7', icon: 'alert-circle-outline' },
-  fallido:        { label: 'Turno fallido', color: '#D97706', bg: '#FEF3C7', icon: 'warning-outline' },
+  pendiente:      { label: 'Pendiente',    color: COLORS.warningDark, bg: COLORS.warningLight, icon: 'time-outline' },
+  confirmado:     { label: 'Confirmado',   color: COLORS.info, bg: COLORS.infoLight, icon: 'checkmark-circle-outline' },
+  en_progreso:    { label: 'En progreso',  color: COLORS.success, bg: COLORS.successLight, icon: 'play-circle-outline' },
+  completado:     { label: 'Completado',   color: COLORS.success, bg: COLORS.successLight, icon: 'checkmark-done-outline' },
+  cancelado:      { label: 'Cancelado',    color: COLORS.danger, bg: COLORS.dangerLight, icon: 'close-circle-outline' },
+  rechazado:      { label: 'Rechazado',    color: COLORS.danger, bg: COLORS.dangerLight, icon: 'ban-outline' },
+  no_presentado:  { label: 'No presentado',color: COLORS.placeholder, bg: COLORS.muted, icon: 'alert-circle-outline' },
+  por_reconfirmar: { label: 'Reconfirma', color: COLORS.warningDark, bg: COLORS.warningLight, icon: 'alert-circle-outline' },
+  fallido:        { label: 'Turno fallido', color: COLORS.warningDark, bg: COLORS.warningLight, icon: 'warning-outline' },
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -140,15 +141,13 @@ export default function MisPostulacionesScreen() {
         contentContainerStyle={{ paddingVertical: 16, paddingBottom: 40 }}
       >
         {isLoading && (
-          <View className="py-16 items-center">
-            <ActivityIndicator color="#FF5A3C" />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
 
         {!isLoading && grupos.length === 0 && (
           <View className="items-center justify-center px-8 py-16 gap-3">
             <View className="w-16 h-16 rounded-2xl bg-muted items-center justify-center">
-              <Ionicons name="calendar-outline" size={32} color="#94A3B8" />
+              <Ionicons name="calendar-outline" size={32} color={COLORS.placeholder} />
             </View>
             <Text className="text-lg font-bold text-foreground text-center">
               Sin postulaciones

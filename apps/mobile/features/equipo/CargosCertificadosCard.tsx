@@ -3,8 +3,12 @@
  * ya activo (trabajador_empresa existe). Estos cargos son los que filtran
  * qué ofertas ve el trabajador (ofertas.model.js → listarMultiEmpresa).
  */
+import { showAlert } from '@/lib/alertDialog';
+import { Text } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Pressable, ActivityIndicator, Modal, Alert, ScrollView } from 'react-native';
+import { View, TouchableOpacity, Pressable, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   useCargosTrabajador,
@@ -41,7 +45,7 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
     if (!ok) return;
     desasignar.mutate(cargoId, {
       onError: (err: unknown) =>
-        Alert.alert('Error', (err as ApiError)?.message ?? 'No se pudo quitar el cargo.'),
+        showAlert('Error', (err as ApiError)?.message ?? 'No se pudo quitar el cargo.'),
     });
   }
 
@@ -49,7 +53,7 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
     setPickerVisible(false);
     asignar.mutate(cargoId, {
       onError: (err: unknown) =>
-        Alert.alert('Error', (err as ApiError)?.message ?? 'No se pudo certificar el cargo.'),
+        showAlert('Error', (err as ApiError)?.message ?? 'No se pudo certificar el cargo.'),
     });
   }
 
@@ -61,13 +65,13 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
           onPress={() => setPickerVisible(true)}
           className="flex-row items-center gap-1 px-2.5 py-1 bg-primary-50 rounded-lg"
         >
-          <Ionicons name="add" size={14} color="#FF5A3C" />
+          <Ionicons name="add" size={14} color={COLORS.primary} />
           <Text className="text-xs font-semibold text-primary-500">Agregar</Text>
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
-        <ActivityIndicator size="small" color="#FF5A3C" />
+        <Spinner size="small" color={COLORS.primary} />
       ) : certificados.length === 0 ? (
         <Text className="text-xs text-muted-foreground">
           Sin cargos certificados — no verá ninguna oferta hasta que le asignes al menos uno.
@@ -85,7 +89,7 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
                 hitSlop={8}
                 disabled={desasignar.isPending}
               >
-                <Ionicons name="close-circle" size={16} color="#FF5A3C" />
+                <Ionicons name="close-circle" size={16} color={COLORS.primary} />
               </Pressable>
             </View>
           ))}
@@ -101,7 +105,7 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
           <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}>
             {disponibles.length === 0 ? (
               <View className="py-8 items-center gap-2">
-                <Ionicons name="briefcase-outline" size={32} color="#94A3B8" />
+                <Ionicons name="briefcase-outline" size={32} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground text-center">
                   {catalogo.length === 0
                     ? 'Tu empresa no tiene cargos creados todavía.'
@@ -116,7 +120,7 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
                   disabled={asignar.isPending}
                   className="flex-row items-center gap-3 px-4 py-3 rounded-2xl border bg-card border-border active:opacity-70"
                 >
-                  <Ionicons name="briefcase-outline" size={18} color="#64748B" />
+                  <Ionicons name="briefcase-outline" size={18} color={COLORS.mutedForeground} />
                   <View className="flex-1">
                     <Text className="text-sm font-semibold text-foreground">{c.nombre}</Text>
                     {!!c.descripcion && (

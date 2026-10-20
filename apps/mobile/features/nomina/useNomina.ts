@@ -49,7 +49,7 @@ export function useRegistros(params: {
 
 /** Últimos registros del trabajador autenticado, sin filtrar por período — para el historial de
  *  ganancias y para el calendario mensual (que sí acota por fecha_desde/fecha_hasta). */
-export function useRegistrosHistorial(opts: { enabled?: boolean; fechaDesde?: string; fechaHasta?: string } = {}) {
+export function useRegistrosHistorial(opts: { enabled?: boolean; fechaDesde?: string; fechaHasta?: string; refetchInterval?: number } = {}) {
   return useQuery({
     queryKey: ['registros', 'historial', opts.fechaDesde, opts.fechaHasta] as const,
     queryFn:  () => nominaApi.listarRegistros({
@@ -59,6 +59,7 @@ export function useRegistrosHistorial(opts: { enabled?: boolean; fechaDesde?: st
     }),
     staleTime: 60_000,
     enabled: opts.enabled ?? true,
+    refetchInterval: opts.refetchInterval,
   });
 }
 
@@ -181,9 +182,8 @@ export function useMarcarEntrada() {
   return useMutation({
     mutationFn: async (datos?: { latitud?: number; longitud?: number }) =>
       nominaApi.marcarEntrada({ ...datos, device_id: await getDeviceId() }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['registros'] });
-    },
+    // Se devuelve la promesa: el botón no vuelve a estar pulsable hasta que el refetch trae el registro nuevo.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
   });
 }
 
@@ -210,9 +210,7 @@ export function useMarcarSalida() {
       longitud?: number;
       jornada_continua?: boolean;
     }) => nominaApi.marcarSalida(registroId, { latitud, longitud, jornada_continua, device_id: await getDeviceId() }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['registros'] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['registros'] }),
   });
 }
 

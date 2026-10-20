@@ -1,3 +1,4 @@
+import { SkeletonDetail, SkeletonList, SkeletonStats } from '@/shared/components/Skeleton';
 import { useState } from 'react';
 import {
   Plug, CheckCircle, XCircle, AlertCircle, RefreshCw,
@@ -75,7 +76,7 @@ function TabEstado({ conectado, onGoConfig }: { conectado: boolean; onGoConfig: 
   const estado = estadoData?.data;
   const cfg = cfgData?.data;
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonStats />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const salientes = estado?.eventos?.salientes ?? [];
@@ -208,7 +209,7 @@ function TabConfiguracion() {
   const [editingUrl, setEditingUrl] = useState(false);
   const [codigo, setCodigo] = useState('');
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   const activo = Boolean(cfg?.activo);
@@ -353,7 +354,7 @@ function TabConciliacion() {
     return t?.sugerencia?.id ?? null;
   };
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonList count={3} />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
 
   if (pendientes.length === 0) {

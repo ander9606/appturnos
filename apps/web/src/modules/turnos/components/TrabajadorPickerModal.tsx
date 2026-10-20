@@ -1,3 +1,4 @@
+import { SkeletonList } from '@/shared/components/Skeleton';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Check, X } from 'lucide-react';
@@ -5,6 +6,7 @@ import { equipoApi } from '@/modules/equipo/api/equipoApi';
 import { Modal } from '@/shared/components/Modal';
 import type { Trabajador } from '@/modules/equipo/types';
 import type { ParaQuienOferta } from '../types';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 export interface DestinatarioSeleccionado {
   id: number;
@@ -77,9 +79,9 @@ export function TrabajadorPickerModal({ seleccionados, onConfirm, onClose, paraQ
 
         <div className="flex-1 overflow-y-auto px-5">
           {isLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Cargando…</p>
+            <SkeletonList count={3} />
           ) : filtrados.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Sin resultados</p>
+            <EmptyState title="Sin resultados" variant="search" />
           ) : (
             filtrados.map(t => {
               const elegido = elegidoIds.has(t.id);

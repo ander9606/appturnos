@@ -1,3 +1,4 @@
+import { SkeletonDetail, SkeletonTable } from '@/shared/components/Skeleton';
 import { useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -16,6 +17,7 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { fmtCOP } from '@/shared/lib/format';
+import { DEDUCCION_SALUD, DEDUCCION_PENSION } from '@/shared/laboral';
 import type { PuntoMarcaje, AlcancePunto, Cargo, Gestor, GestorCreado, LinkPago, PlanCodigo, PlanOpcion } from '../types';
 
 type Tab = 'empresa' | 'puntos' | 'cargos' | 'gestores' | 'plan';
@@ -190,7 +192,7 @@ function EmpresaTab() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFirma, setUploadingFirma] = useState(false);
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!empresa) return null;
 
@@ -276,7 +278,7 @@ function EmpresaTab() {
           <p className="text-xs text-muted-foreground mt-1">
             {val.tipo_contrato === 'prestacion_servicios'
               ? 'La liquidación no calcula descuentos (el independiente se autoliquida salud/pensión).'
-              : 'La liquidación descuenta salud (4%) y pensión (4%, + fondo de solidaridad si aplica) del pago de cada trabajador.'}
+              : `La liquidación descuenta salud (${Math.round(DEDUCCION_SALUD * 100)}%) y pensión (${Math.round(DEDUCCION_PENSION * 100)}%, + fondo de solidaridad si aplica) del pago de cada trabajador.`}
           </p>
         </div>
       </div>
@@ -462,7 +464,7 @@ function PuntosTab() {
           <Plus size={16} /> Nuevo punto
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
+      {isLoading ? <SkeletonTable /> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -620,7 +622,7 @@ function CargosTab() {
           <Plus size={16} /> Nuevo cargo
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
+      {isLoading ? <SkeletonTable /> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -761,7 +763,7 @@ function GestoresTab() {
           <Plus size={16} /> Nuevo gestor
         </button>
       </div>
-      {isLoading ? <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
+      {isLoading ? <SkeletonTable /> : isError ? <ErrorState error={error} onRetry={refetch} /> : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -983,7 +985,7 @@ function PlanTab() {
     }
   };
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   if (!s) return null;
 

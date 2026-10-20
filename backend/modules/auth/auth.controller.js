@@ -117,8 +117,9 @@ async function setActivoGestor(req, res) {
 }
 
 async function enviarOtp(req, res) {
-  const { tipo, destino } = req.body;
-  await VerificacionSvc.enviarOtp(tipo, destino);
+  const { tipo, destino, proposito } = req.body;
+  if (proposito === 'recuperacion') await VerificacionSvc.enviarOtpRecuperacion(destino);
+  else await VerificacionSvc.enviarOtp(tipo, destino);
   res.json({ success: true, data: null, message: 'Código enviado' });
 }
 

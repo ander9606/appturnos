@@ -3,11 +3,16 @@
  * Campos: logo, razón social, NIT, ciudad, actividad, descripción,
  *         acepta_postulaciones (visible en directorio marketplace).
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { elegirFotoConMenu } from '@/lib/pickImage';
+import { confirm } from '@/lib/confirmDialog';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, Switch, Alert, Pressable, Animated,
-  KeyboardAvoidingView, Platform, Image, ActivityIndicator,
-} from 'react-native';
+  View, ScrollView, Switch, Pressable, Animated, KeyboardAvoidingView, Platform, Image, } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
@@ -111,7 +116,7 @@ function useReprocesarRecargos() {
           : 'No había registros por recalcular en el período abierto.',
       );
     },
-    onError: () => Alert.alert('Error', 'No se pudo reprocesar el período. Intenta de nuevo.'),
+    onError: () => showAlert('Error', 'No se pudo reprocesar el período. Intenta de nuevo.'),
   });
 }
 
@@ -208,31 +213,9 @@ export default function MiEmpresaScreen() {
 
   // ── Logo — mismo flujo de cámara/galería que la foto de perfil de usuario ──
 
-  const handleCambiarLogo = () => {
-    Alert.alert('Logo de la empresa', undefined, [
-      {
-        text: 'Tomar foto',
-        onPress: async () => {
-          const ImagePicker = await import('expo-image-picker');
-          const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la cámara.'); return; }
-          const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
-          if (!result.canceled && result.assets[0]?.base64) _subirLogo(result.assets[0].base64);
-        },
-      },
-      {
-        text: 'Galería',
-        onPress: async () => {
-          const ImagePicker = await import('expo-image-picker');
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert('Permiso requerido', 'Permite el acceso a la galería.'); return; }
-          const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true, allowsEditing: true, aspect: [1, 1] });
-          if (!result.canceled && result.assets[0]?.base64) _subirLogo(result.assets[0].base64);
-        },
-      },
-      logoUrl ? { text: 'Quitar logo', style: 'destructive' as const, onPress: () => _subirLogo(null) } : null,
-      { text: 'Cancelar', style: 'cancel' as const },
-    ].filter(Boolean) as any[]);
+  const handleCambiarLogo = async () => {
+    const logo = await elegirFotoConMenu({ title: 'Logo de la empresa', quitarLabel: logoUrl ? 'Quitar logo' : undefined });
+    if (logo !== undefined) _subirLogo(logo);
   };
 
   const _subirLogo = async (b64: string | null) => {
@@ -241,7 +224,7 @@ export default function MiEmpresaScreen() {
       await actualizar.mutateAsync({ logo_url: b64 ? `data:image/jpeg;base64,${b64}` : '' });
       showToast(b64 ? 'Logo actualizado.' : 'Logo eliminado.');
     } catch {
-      Alert.alert('Error', 'No se pudo actualizar el logo. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo actualizar el logo. Intenta de nuevo.');
     } finally {
       setUploadingLogo(false);
     }
@@ -286,15 +269,15 @@ export default function MiEmpresaScreen() {
       });
       showToast('Datos de la empresa actualizados.');
     } catch {
-      Alert.alert('Error', 'No se pudo guardar. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo guardar. Intenta de nuevo.');
     }
   };
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Mi empresa', headerShown: true }} />
-        <ActivityIndicator size="large" color={theme.primary} />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -324,14 +307,14 @@ export default function MiEmpresaScreen() {
                     onError={() => {}}
                   />
                 ) : (
-                  <Ionicons name="business-outline" size={40} color="#94A3B8" />
+                  <Ionicons name="business-outline" size={40} color={COLORS.placeholder} />
                 )}
               </View>
               <View className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary items-center justify-center border-2 border-background">
                 {uploadingLogo ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <Spinner size="small" color={COLORS.white} />
                 ) : (
-                  <Ionicons name="camera" size={14} color="#fff" />
+                  <Ionicons name="camera" size={14} color={COLORS.white} />
                 )}
               </View>
             </Pressable>
@@ -600,14 +583,12 @@ export default function MiEmpresaScreen() {
                     const active = value === opt.value;
                     const elegir = () => {
                       if (opt.value || !value) return onChange(opt.value);
-                      Alert.alert(
-                        'Dejar de sumar recargos',
-                        'Zaturno dejará de calcular el recargo nocturno y festivo. Las horas son normales hasta 42 h a la semana y, después, extra diurna. La empresa calcula esos recargos y responde por la liquidación. ¿Confirmas?',
-                        [
-                          { text: 'Cancelar', style: 'cancel' },
-                          { text: 'Sí, dejar de sumar', style: 'destructive', onPress: () => onChange(false) },
-                        ],
-                      );
+                      confirm({
+                        title: 'Dejar de sumar recargos',
+                        message: 'Zaturno dejará de calcular el recargo nocturno y festivo. Las horas son normales hasta 42 h a la semana y, después, extra diurna. La empresa calcula esos recargos y responde por la liquidación. ¿Confirmas?',
+                        confirmLabel: 'Sí, dejar de sumar',
+                        destructive: true,
+                      }).then((ok) => { if (ok) onChange(false); });
                     };
                     return (
                       <Pressable
@@ -713,7 +694,7 @@ export default function MiEmpresaScreen() {
                   value={value}
                   onValueChange={onChange}
                   trackColor={{ true: theme.primary }}
-                  thumbColor="#fff"
+                  thumbColor={COLORS.white}
                 />
               )}
             />
@@ -735,7 +716,7 @@ export default function MiEmpresaScreen() {
               <Text className="text-sm font-semibold text-foreground">Cómo calculamos los pagos</Text>
               <Text className="text-xs text-muted-foreground">Horas, recargos, descuentos y turnos · PDF</Text>
             </View>
-            <Ionicons name="download-outline" size={18} color="#94A3B8" />
+            <Ionicons name="download-outline" size={18} color={COLORS.placeholder} />
           </Pressable>
 
           {/* Guardar */}

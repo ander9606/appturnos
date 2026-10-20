@@ -7,15 +7,16 @@
  *
  * Colores: naranja (trabajador_turnos), verde (trabajador_nomina), azul (gestores).
  */
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,
   Linking,
-  Alert,
   Platform,
 } from 'react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -74,6 +75,7 @@ export default function DashboardScreen() {
   const isAdmin       = usuario?.rol === 'admin_empresa';
   const isNomina      = usuario?.rol === 'trabajador_nomina';
   const isJefeNomina  = usuario?.rol === 'jefe_nomina';
+  const isJefeTurnos  = usuario?.rol === 'jefe_turnos';
   // Backend restringe GET /nomina/periodos a admin_empresa/jefe_nomina/nomina/trabajador_nomina (no jefe_turnos).
   const puedeVerPeriodos = ['admin_empresa', 'jefe_nomina', 'nomina', 'trabajador_nomina'].includes(usuario?.rol ?? '');
   // Backend restringe GET /ofertas a todos los roles gestores menos 'nomina'.
@@ -165,7 +167,7 @@ export default function DashboardScreen() {
     // Link hospedado por Wompi, se abre en el navegador del sistema — no un webview embebido.
     onSuccess: (data) => Linking.openURL(data.url),
     onError: (error: ApiError) =>
-      Alert.alert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
+      showAlert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
   });
 
   function iniciarRenovacion() {
@@ -280,6 +282,7 @@ export default function DashboardScreen() {
         { icon: 'briefcase-outline',     label: 'Trim. eventual',onPress: () => router.push('/liquidacion-eventual') },
         { icon: 'calendar-outline',      label: 'Registros',     onPress: () => router.push('/registros-periodo') },
         { icon: 'time-outline',          label: 'Compensatorios', onPress: () => router.push('/gestor-compensatorios') },
+        { icon: 'bar-chart-outline',     label: 'Reportes',      onPress: () => router.push('/reportes') },
       ]
     : [
         { icon: 'calendar-outline',      label: 'Turnos',      onPress: () => router.push('/(tabs)/turnos') },
@@ -291,11 +294,15 @@ export default function DashboardScreen() {
               { icon: 'person-add-outline'  as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') },
               { icon: 'briefcase-outline'   as IoniconsName, label: 'Cargos',       onPress: () => router.push('/cargos') },
               { icon: 'location-outline'    as IoniconsName, label: 'Puntos marcaje', onPress: () => router.push('/puntos-marcaje') },
-              { icon: 'link-outline'        as IoniconsName, label: 'logiq360',     onPress: () => router.push('/integracion/config') },
+              { icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') },
             ]
-          : [
-              { icon: 'pulse-outline'       as IoniconsName, label: 'Estado sync',  onPress: () => router.push('/integracion/estado') },
-            ]),
+          : isJefeTurnos
+            ? [{ icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') }]
+            // Rol 'nomina' (solo lectura): ve Reportes y conserva el estado de la sincronización
+            : [
+                { icon: 'bar-chart-outline' as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') },
+                { icon: 'pulse-outline'     as IoniconsName, label: 'Estado sync',  onPress: () => router.push('/integracion/estado') },
+              ]),
       ];
 
   const actions: Action[] = isWorker ? workerActions : managerActions;
@@ -324,7 +331,7 @@ export default function DashboardScreen() {
             className="mx-4 mt-4 flex-row items-center gap-3 bg-danger-light border border-danger/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
-            <Ionicons name="alert-circle" size={20} color="#ef4444" />
+            <Ionicons name="alert-circle" size={20} color={COLORS.danger} />
             <View className="flex-1">
               <Text className="text-danger text-sm font-semibold">Suscripción vencida</Text>
               <Text className="text-danger/80 text-xs mt-0.5">
@@ -335,7 +342,7 @@ export default function DashboardScreen() {
                   : 'Tienes 3 días de gracia. Toca aquí para renovar.'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#ef4444" />
+            <Ionicons name="chevron-forward" size={16} color={COLORS.danger} />
           </Pressable>
         )}
 
@@ -347,14 +354,14 @@ export default function DashboardScreen() {
             className="mx-4 mt-4 flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
-            <Ionicons name="time-outline" size={20} color="#d97706" />
+            <Ionicons name="time-outline" size={20} color={COLORS.warningDark} />
             <View className="flex-1">
               <Text className="text-warning text-sm font-semibold">Tu suscripción vence pronto</Text>
               <Text className="text-warning/80 text-xs mt-0.5">
                 Quedan {suscData?.dias_restantes} día{suscData?.dias_restantes === 1 ? '' : 's'}. Toca aquí para renovar.
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#d97706" />
+            <Ionicons name="chevron-forward" size={16} color={COLORS.warningDark} />
           </Pressable>
         )}
 
@@ -363,7 +370,7 @@ export default function DashboardScreen() {
           <View
             className="mx-4 mt-4 flex-row items-center gap-3 bg-success-light border border-success/30 rounded-2xl px-4 py-3"
           >
-            <Ionicons name="link" size={20} color="#16a34a" />
+            <Ionicons name="link" size={20} color={COLORS.success} />
             <Text className="text-success text-sm font-medium flex-1">
               Usas Zaturno gratis por tu integración activa con logiq360.
             </Text>
@@ -451,11 +458,11 @@ export default function DashboardScreen() {
           <Pressable
             onPress={() => router.push('/(tabs)/nomina')}
             className="mx-4 mt-4 flex-row items-center gap-3 rounded-2xl px-4 py-4 active:opacity-80 border"
-            style={{ backgroundColor: theme.primaryLight, borderColor: theme.primary + '4D' }}
+            style={{ backgroundColor: theme.primaryLight, borderColor: alpha(theme.primary, 0.3) }}
           >
             <View
               className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: theme.primary + '22' }}
+              style={{ backgroundColor: alpha(theme.primary, 0.13) }}
             >
               <Ionicons name="time-outline" size={22} color={theme.primary} />
             </View>
@@ -463,7 +470,7 @@ export default function DashboardScreen() {
               <Text className="text-sm font-semibold" style={{ color: theme.primary }}>
                 Marcaje de jornada
               </Text>
-              <Text className="text-xs" style={{ color: theme.primary + 'BB' }}>
+              <Text className="text-xs" style={{ color: alpha(theme.primary, 0.73) }}>
                 Toca para marcar entrada / salida →
               </Text>
             </View>
@@ -523,7 +530,7 @@ export default function DashboardScreen() {
               >
                 <View
                   className="w-10 h-10 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: theme.primary + '1A' }}
+                  style={{ backgroundColor: alpha(theme.primary, 0.1) }}
                 >
                   <Ionicons name={a.icon} size={20} color={theme.primary} />
                 </View>
@@ -544,7 +551,7 @@ export default function DashboardScreen() {
             className="flex-row items-center justify-center gap-1.5 mx-4 mt-4 py-2 rounded-full bg-card border border-border active:opacity-60"
             accessibilityRole="button"
           >
-            <Ionicons name="checkmark-circle-outline" size={13} color="#9CA3AF" />
+            <Ionicons name="checkmark-circle-outline" size={13} color={COLORS.placeholder} />
             <Text className="text-xs text-muted-foreground">
               Suscripción activa
               {suscData.vigente_hasta ? ` · vence el ${formatShortDate(suscData.vigente_hasta)}` : ''}

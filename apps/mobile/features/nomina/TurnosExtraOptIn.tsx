@@ -1,5 +1,8 @@
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useActualizarExtras } from '@/features/nomina/useNomina';
@@ -25,13 +28,13 @@ export function TurnosExtraOptIn() {
   const handleActivar = () => {
     mutation.mutate(true, {
       onSuccess: () => showToast('Turnos extra activados'),
-      onError: (err) => Alert.alert('Error', (err as ApiError).message ?? t('common.error')),
+      onError: (err) => showAlert('Error', (err as ApiError).message ?? t('common.error')),
     });
   };
 
   return (
     <View className="flex-1 items-center justify-center gap-3 px-8 py-16">
-      <Ionicons name="briefcase-outline" size={48} color="#94A3B8" />
+      <Ionicons name="briefcase-outline" size={48} color={COLORS.placeholder} />
       <Text className="text-base font-semibold text-foreground text-center">
         Activa turnos extra para ver esto
       </Text>

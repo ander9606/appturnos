@@ -1,5 +1,10 @@
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text, TextInput } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, ActivityIndicator, FlatList, Alert } from 'react-native';
+import { View, Pressable, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +51,7 @@ function TrabajadorRow({ trabajador, invitado, onInvitar, invitando }: {
         )}
         {trabajador.ranking != null && (
           <View className="flex-row items-center gap-1 mt-1">
-            <Ionicons name="star" size={12} color="#F59E0B" />
+            <Ionicons name="star" size={12} color={COLORS.warning} />
             <Text className="text-xs font-medium text-foreground">
               {trabajador.ranking.toFixed(1)} ({trabajador.total_calificaciones})
             </Text>
@@ -67,7 +72,7 @@ function TrabajadorRow({ trabajador, invitado, onInvitar, invitando }: {
         className={`h-9 px-3 rounded-xl items-center justify-center flex-row gap-1 ${invitado ? 'bg-success/10' : 'bg-info'}`}
       >
         {invitando ? (
-          <ActivityIndicator size="small" color={invitado ? COLORS.success : '#fff'} />
+          <Spinner size="small" color={invitado ? COLORS.success : COLORS.white} />
         ) : invitado ? (
           <>
             <Ionicons name="checkmark" size={14} color={COLORS.success} />
@@ -108,7 +113,7 @@ export default function BancoTalentoScreen() {
         setInvitados((prev) => new Set(prev).add(t.id));
         showToast(`${t.nombre} ${t.apellido} recibirá una notificación para unirse a tu empresa.`);
       },
-      onError: (err: unknown) => Alert.alert('Error', apiErrorMessage(err, 'No se pudo enviar la invitación.')),
+      onError: (err: unknown) => showAlert('Error', apiErrorMessage(err, 'No se pudo enviar la invitación.')),
     });
   }
 
@@ -122,7 +127,7 @@ export default function BancoTalentoScreen() {
             manos para cubrir turnos.
           </Text>
           <View className="flex-row items-center bg-card border border-border rounded-xl px-3 h-11">
-            <Ionicons name="search-outline" size={16} color="#64748B" style={{ marginRight: 8 }} />
+            <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} style={{ marginRight: 8 }} />
             <TextInput
               className="flex-1 text-sm text-foreground"
               placeholder="Nombre o cargo…"
@@ -131,14 +136,12 @@ export default function BancoTalentoScreen() {
               onChangeText={setBusqueda}
               autoCorrect={false}
             />
-            {isFetching && <ActivityIndicator size="small" color={COLORS.info} />}
+            {isFetching && <Spinner size="small" color={COLORS.info} />}
           </View>
         </View>
 
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator color={COLORS.info} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : (
           <FlatList
             data={trabajadores}
@@ -153,13 +156,11 @@ export default function BancoTalentoScreen() {
               />
             )}
             ListEmptyComponent={
-              <View className="items-center justify-center py-16">
-                <Ionicons name="people-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
-                <Text className="text-base font-semibold text-foreground">Sin resultados</Text>
-                <Text className="text-sm text-muted-foreground mt-1 text-center">
-                  {q ? `No hay trabajadores libres que coincidan con "${q}".` : 'No hay trabajadores libres registrados todavía.'}
-                </Text>
-              </View>
+              <EmptyState
+                variant={q ? 'search' : 'empty'}
+                title={q ? 'Sin resultados' : 'Sin trabajadores libres'}
+                message={q ? `No hay trabajadores libres que coincidan con "${q}".` : 'No hay trabajadores libres registrados todavía.'}
+              />
             }
             showsVerticalScrollIndicator={false}
           />

@@ -5,7 +5,10 @@
  * distancia — solo se necesita CUALQUIER fix de ubicación antes de marcar,
  * para dejar registro de dónde se marcó (ver useNominaTrabajador).
  */
-import { View, Text, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
+import { Text } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
+import { View, TouchableOpacity, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { EstadoUbicacionLibre } from './useNominaTrabajador';
 
@@ -19,7 +22,7 @@ export function UbicacionLibreIndicator({
   if (estado === 'obteniendo') {
     return (
       <View className="bg-muted rounded-2xl px-4 py-3 flex-row items-center gap-3">
-        <ActivityIndicator size="small" color="#94A3B8" />
+        <Spinner size="small" color={COLORS.placeholder} />
         <Text className="text-sm font-semibold text-muted-foreground flex-1">Obteniendo tu ubicación…</Text>
       </View>
     );
@@ -37,7 +40,7 @@ export function UbicacionLibreIndicator({
   if (estado === 'denegada') {
     return (
       <View className="bg-warning-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
-        <Ionicons name="warning-outline" size={20} color="#92400E" />
+        <Ionicons name="warning-outline" size={20} color={COLORS.warningText} />
         <View className="flex-1">
           <Text className="text-sm font-semibold text-amber-700">Permiso de ubicación requerido</Text>
           <Text className="text-xs text-amber-600 mt-0.5">
@@ -53,7 +56,7 @@ export function UbicacionLibreIndicator({
 
   return (
     <View className="bg-danger-light rounded-2xl px-4 py-3 flex-row items-center gap-3">
-      <Ionicons name="warning-outline" size={20} color="#991B1B" />
+      <Ionicons name="warning-outline" size={20} color={COLORS.dangerText} />
       <View className="flex-1">
         <Text className="text-sm font-semibold text-danger">No se pudo obtener tu ubicación</Text>
         <Text className="text-xs text-danger opacity-80 mt-0.5">Verifica que el GPS esté activado.</Text>

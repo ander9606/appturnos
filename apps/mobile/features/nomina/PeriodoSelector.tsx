@@ -1,5 +1,6 @@
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import type { PeriodoNomina } from '@api-client';
 import { fmtPeriodo } from './trabajador/nominaTrabajadorUtils';
 

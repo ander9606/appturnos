@@ -5,10 +5,14 @@
  * según empresas.tipo_liquidacion) con el total a cobrar, horas
  * trabajadas y badge de turno extendido.
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
-  ActivityIndicator, RefreshControl, Modal, Platform,
+  View, FlatList, TouchableOpacity, RefreshControl, Modal, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,8 +22,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 import { useTheme } from '@/lib/theme';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
-import { Button } from '@/components/ui/Button';
 import { usePeriodos } from './useNomina';
 import { TipoPeriodoBadge } from './TipoPeriodoBadge';
 import { PeriodoSelector } from './PeriodoSelector';
@@ -198,7 +200,7 @@ export function NominaTurnosView() {
       <TouchableOpacity
         onPress={() => router.push(`/turno/${item.id}`)}
         className="bg-card rounded-2xl px-4 py-4 gap-2"
-        style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+        style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
         activeOpacity={0.7}
       >
         <View className="flex-row items-start justify-between gap-2">
@@ -223,20 +225,20 @@ export function NominaTurnosView() {
 
         <View className="flex-row items-center gap-3 flex-wrap">
           <View className="flex-row items-center gap-1">
-            <Ionicons name="calendar-outline" size={11} color="#64748B" />
+            <Ionicons name="calendar-outline" size={11} color={COLORS.mutedForeground} />
             <Text className="text-xs text-muted-foreground">
               {fmtFecha(item.oferta_fecha)}
             </Text>
           </View>
           <View className="flex-row items-center gap-1">
-            <Ionicons name="time-outline" size={11} color="#64748B" />
+            <Ionicons name="time-outline" size={11} color={COLORS.mutedForeground} />
             <Text className="text-xs text-muted-foreground">
               {fmtHora(item.hora_inicio)} – {fmtHora(item.hora_egreso_real?.slice(11, 19) ?? null)}
             </Text>
           </View>
           {item.horas_trabajadas != null && (
             <View className="flex-row items-center gap-1">
-              <Ionicons name="stopwatch-outline" size={11} color="#64748B" />
+              <Ionicons name="stopwatch-outline" size={11} color={COLORS.mutedForeground} />
               <Text className="text-xs text-muted-foreground">
                 {Number(item.horas_trabajadas).toFixed(1)}h
               </Text>
@@ -301,7 +303,7 @@ export function NominaTurnosView() {
 
         {item.contrato_firmado === 0 && (
           <View className="flex-row items-center gap-1 mt-0.5">
-            <Ionicons name="warning" size={11} color="#D97706" />
+            <Ionicons name="warning" size={11} color={COLORS.warningDark} />
             <Text className="text-xs text-warning font-medium">
               Falta tu firma — no cuenta en el total todavía
             </Text>
@@ -313,8 +315,8 @@ export function NominaTurnosView() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -322,11 +324,7 @@ export function NominaTurnosView() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color="#94A3B8" />
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar turnos')}
-        </Text>
-        <Button label="Reintentar" onPress={() => refetch()} variant="secondary" />
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar turnos" />
       </SafeAreaView>
     );
   }
@@ -407,11 +405,11 @@ export function NominaTurnosView() {
                 onPress={() => router.push('/mis-contratos?pendientes=1')}
                 className="mx-5 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3 flex-row items-center gap-2.5"
               >
-                <Ionicons name="warning" size={18} color="#D97706" />
+                <Ionicons name="warning" size={18} color={COLORS.warningDark} />
                 <Text className="flex-1 text-xs text-warning font-medium">
                   Tienes {totales.pendientesFirma} turno{totales.pendientesFirma !== 1 ? 's' : ''} sin firmar — fírmalo{totales.pendientesFirma !== 1 ? 's' : ''} para que cuente{totales.pendientesFirma !== 1 ? 'n' : ''} en tu pago
                 </Text>
-                <Ionicons name="chevron-forward" size={14} color="#D97706" />
+                <Ionicons name="chevron-forward" size={14} color={COLORS.warningDark} />
               </TouchableOpacity>
             )}
 
@@ -421,13 +419,27 @@ export function NominaTurnosView() {
                 onPress={() => router.push('/mis-cuentas-cobro?pendientes=1')}
                 className="mx-5 bg-info-light border border-info/30 rounded-2xl px-4 py-3 flex-row items-center gap-2.5"
               >
-                <Ionicons name="document-text" size={18} color="#3B82F6" />
+                <Ionicons name="document-text" size={18} color={COLORS.info} />
                 <Text className="flex-1 text-xs text-info font-medium">
                   Tienes {cuentasSinFirmar!.length} cuenta{cuentasSinFirmar!.length !== 1 ? 's' : ''} de cobro por firmar
                 </Text>
-                <Ionicons name="chevron-forward" size={14} color="#3B82F6" />
+                <Ionicons name="chevron-forward" size={14} color={COLORS.info} />
               </TouchableOpacity>
             )}
+
+            {/* Acceso permanente: las cuentas de cobro firmadas se descargan siempre desde aquí */}
+            <TouchableOpacity
+              onPress={() => router.push('/mis-cuentas-cobro')}
+              className="mx-5 bg-card border border-border rounded-2xl px-4 py-3 flex-row items-center gap-2.5"
+              accessibilityRole="button"
+            >
+              <Ionicons name="document-text-outline" size={18} color={theme.primary} />
+              <Text className="flex-1 text-sm font-semibold text-foreground">
+                Mis cuentas de cobro
+              </Text>
+              <Text className="text-xs text-muted-foreground">Ver y descargar PDF</Text>
+              <Ionicons name="chevron-forward" size={14} color={COLORS.placeholder} />
+            </TouchableOpacity>
 
             {/* Desglose por empresa */}
             {porEmpresa.length > 0 && (
@@ -454,16 +466,10 @@ export function NominaTurnosView() {
           </View>
         }
         ListEmptyComponent={
-          <View className="py-16 items-center gap-3 px-8">
-            <Ionicons name="clipboard-outline" size={48} color="#94A3B8" />
-            <Text className="text-base font-semibold text-foreground text-center">
-              Sin turnos completados
-            </Text>
-            <Text className="text-sm text-muted-foreground text-center">
-              No tienes turnos completados en el período{' '}
-              {periodo ? fmtPeriodo(periodo) : 'actual'}.
-            </Text>
-          </View>
+          <EmptyState
+            title="Sin turnos completados"
+            message={`No tienes turnos completados en el período ${periodo ? fmtPeriodo(periodo) : 'actual'}.`}
+          />
         }
         ItemSeparatorComponent={() => <View className="h-2" />}
         contentContainerStyle={{ paddingHorizontal: 20 }}

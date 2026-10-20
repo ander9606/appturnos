@@ -4,18 +4,19 @@
  * Roles:
  *   admin_empresa → puede editar, desactivar y calificar turnos
  *   jefe_turnos   → puede calificar turnos (solo lectura para datos del trabajador)
- *   jefe_nomina   → puede editar el sueldo (tarifa/salario), no el resto de la ficha
+ *   jefe_nomina   → edita la ficha (nómina y turnos); el sueldo y la hora de entrada solo en nómina; no el tipo ni los datos de pago
  *   nomina        → solo lectura
  */
+import { showAlert } from '@/lib/alertDialog';
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text, TextInput } from '@/components/ui/Text';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
-  ActivityIndicator,
-  Alert,
   Linking,
   Modal,
 } from 'react-native';
@@ -54,8 +55,8 @@ import { Button } from '@/components/ui/Button';
 import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
 
-// Lo que jefe_nomina puede editar de una ficha de nómina. Mismo criterio que el
-// backend (CAMPOS_JEFE_NOMINA en trabajadores.service.js): sin tipo ni datos de pago.
+// Lo que jefe_nomina puede editar de una ficha. Mismo criterio que el backend
+// (CAMPOS_JEFE_NOMINA / CAMPOS_JEFE_TURNOS en trabajadores.service.js): sin tipo ni datos de pago.
 const CAMPOS_JEFE = [
   'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
   'telefono', 'email', 'cargo', 'descripcion', 'eps', 'afp', 'direccion',
@@ -63,6 +64,8 @@ const CAMPOS_JEFE = [
   'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'hora_entrada_esperada',
   'tarifa_hora', 'salario_base',
 ];
+// Turnos: sin sueldo ni hora de entrada, y sin los datos de persona que se copian a sus otras empresas (solo admin).
+const CAMPOS_JEFE_TURNOS = ['nombre', 'apellido', 'telefono', 'email', 'cargo'];
 
 function filtrarCampos<T extends object>(obj: T, campos: readonly string[]): Partial<T> {
   return Object.fromEntries(Object.entries(obj).filter(([k]) => campos.includes(k))) as Partial<T>;
@@ -123,7 +126,7 @@ function InfoRow({
             accessibilityLabel={`Llamar a ${label}`}
             className="w-7 h-7 rounded-full bg-success/10 items-center justify-center active:opacity-70"
           >
-            <Ionicons name="call" size={14} color="#16A34A" />
+            <Ionicons name="call" size={14} color={COLORS.success} />
           </Pressable>
         )}
       </View>
@@ -148,7 +151,7 @@ export default function TrabajadorDetailScreen() {
   const [ratingStars,    setRatingStars]    = useState(5);
   const [ratingComment,  setRatingComment]  = useState('');
 
-  const { data: t, isLoading, isError, refetch } = useTrabajador(numId);
+  const { data: t, isLoading, isError, error, refetch } = useTrabajador(numId);
   const { data: puntosMarcaje = [] } = usePuntosMarcaje(isAdmin && t?.tipo !== 'turnos');
   const actualizar  = useActualizarTrabajador(numId);
   const invitar     = useInvitar();
@@ -159,7 +162,7 @@ export default function TrabajadorDetailScreen() {
   const actualizarSalario = useActualizarSalario(numId);
   const puedeVerSalario = isAdmin || usuario?.rol === 'jefe_nomina';
   const historialSalario  = useHistorialSalario(numId, puedeVerSalario);
-  const canEditSalario = isAdmin || usuario?.rol === 'jefe_nomina';
+  const canEditSalario = isAdmin || (usuario?.rol === 'jefe_nomina' && (t?.tipo === 'nomina' || t?.tipo === 'ambos'));
   const [salarioModal, setSalarioModal] = useState(false);
   const [tarifaInput,  setTarifaInput]  = useState('');
   const [salarioInput, setSalarioInput] = useState('');
@@ -220,7 +223,7 @@ export default function TrabajadorDetailScreen() {
     setEditing((v) => !v);
   }
 
-  const puedeEditarFicha = isAdmin || (usuario?.rol === 'jefe_nomina' && (t?.tipo === 'nomina' || t?.tipo === 'ambos'));
+  const puedeEditarFicha = isAdmin || usuario?.rol === 'jefe_nomina';
   const headerRight = puedeEditarFicha && t && t.activo
     ? () => (
         <Pressable
@@ -254,10 +257,10 @@ export default function TrabajadorDetailScreen() {
 
     if (pasaANomina) {
       if (!rawData.cedula) {
-        Alert.alert(
+        showAlert(
           'Falta la cédula',
           'Este trabajador no tiene cédula registrada. Agrégala y guarda antes de invitarlo a nómina.'
-        );
+        , 'warning');
         return;
       }
       const ok = await confirm({
@@ -301,7 +304,7 @@ export default function TrabajadorDetailScreen() {
         ant_judiciales_fecha:     data.ant_judiciales_fecha     || undefined,
         ant_disciplinarios_fecha: data.ant_disciplinarios_fecha || undefined,
       };
-      await actualizar.mutateAsync(isAdmin ? payload : filtrarCampos(payload, CAMPOS_JEFE));
+      await actualizar.mutateAsync(isAdmin ? payload : filtrarCampos(payload, t.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE));
       if (pasaANomina && rawData.cedula) {
         // Invitar DESPUÉS de guardar: invitar() busca la ficha por cédula en la
         // BD, y si la cédula nueva aún no está persistida crea una ficha fantasma.
@@ -310,7 +313,7 @@ export default function TrabajadorDetailScreen() {
           invitacionEnviada = true;
         } catch (err: unknown) {
           const msg = err instanceof ApiError ? err.message : 'No se pudo enviar la invitación.';
-          Alert.alert('Error', msg);
+          showAlert('Error', msg);
         }
       }
       setEditing(false);
@@ -324,7 +327,7 @@ export default function TrabajadorDetailScreen() {
         err && typeof err === 'object' && 'message' in err
           ? String((err as { message: string }).message)
           : 'Ocurrió un error al guardar.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 
@@ -347,7 +350,7 @@ export default function TrabajadorDetailScreen() {
         err && typeof err === 'object' && 'message' in err
           ? String((err as { message: string }).message)
           : 'No se pudo guardar la calificación.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 
@@ -363,7 +366,7 @@ export default function TrabajadorDetailScreen() {
     if (!ok) return;
     desactivar.mutate(numId, {
       onSuccess: () => router.back(),
-      onError: () => Alert.alert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
+      onError: () => showAlert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
     });
   }
 
@@ -381,7 +384,7 @@ export default function TrabajadorDetailScreen() {
       onSuccess: () => showToast('Ya no se le ofrecerán turnos.'),
       onError: (err: unknown) => {
         const msg = err instanceof ApiError ? err.message : 'No se pudo completar la acción';
-        Alert.alert('Error', msg);
+        showAlert('Error', msg);
       },
     });
   }
@@ -400,7 +403,7 @@ export default function TrabajadorDetailScreen() {
       onSuccess: () => router.back(),
       onError: (err: unknown) => {
         const msg = err instanceof ApiError ? err.message : 'No se pudo eliminar. Intenta de nuevo.';
-        Alert.alert('Error', msg);
+        showAlert('Error', msg);
       },
     });
   }
@@ -409,9 +412,9 @@ export default function TrabajadorDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Trabajador', headerShown: true, headerRight }} />
-        <ActivityIndicator color="#FF5A3C" />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -420,11 +423,7 @@ export default function TrabajadorDetailScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-8" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Trabajador', headerShown: true }} />
-        <Ionicons name="warning-outline" size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
-        <Text className="text-base font-semibold text-foreground">No se pudo cargar</Text>
-        <Pressable onPress={() => refetch()} className="mt-4">
-          <Text className="text-primary font-semibold">Reintentar</Text>
-        </Pressable>
+        <ErrorState error={error} onRetry={refetch} fallback="No se pudo cargar" />
       </SafeAreaView>
     );
   }
@@ -470,7 +469,7 @@ export default function TrabajadorDetailScreen() {
           defaultValues={defaults}
           onSubmit={handleUpdate}
           submitLabel="Guardar cambios"
-          soloCampos={isAdmin ? undefined : CAMPOS_JEFE}
+          soloCampos={isAdmin ? undefined : t.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE}
           submittingLabel="Guardando…"
           onDirtyChange={setFormDirty}
         />
@@ -540,9 +539,9 @@ export default function TrabajadorDetailScreen() {
         {/* Pending activation banner — shown to admin when worker hasn't set up login yet */}
         {isAdmin && t.usuario_id === null && (
           <View className="mx-4 mb-3 bg-warning/10 border border-warning/30 rounded-2xl p-4 flex-row gap-3">
-            <Ionicons name="time-outline" size={20} color="#D97706" style={{ marginTop: 1 }} />
+            <Ionicons name="time-outline" size={20} color={COLORS.warningDark} style={{ marginTop: 1 }} />
             <View className="flex-1 gap-1">
-              <Text className="text-sm font-semibold" style={{ color: '#B45309' }}>Cuenta sin activar</Text>
+              <Text className="text-sm font-semibold" style={{ color: COLORS.warningText }}>Cuenta sin activar</Text>
               <Text className="text-xs text-muted-foreground">
                 {t.cedula
                   ? `Pídele que descargue la app y use "Activar cuenta" con la cédula ${t.cedula}.`
@@ -727,7 +726,7 @@ export default function TrabajadorDetailScreen() {
                         }`}
                       >
                         {calificar.isPending ? (
-                          <ActivityIndicator color="white" size="small" />
+                          <Spinner color="white" size="small" />
                         ) : (
                           <Text className="text-white font-bold text-sm">
                             Confirmar calificación
@@ -751,7 +750,7 @@ export default function TrabajadorDetailScreen() {
               className="h-12 rounded-xl items-center justify-center border border-warning active:bg-warning/10 disabled:opacity-50"
             >
               {bloquearOfertas.isPending ? (
-                <ActivityIndicator size="small" color="#D97706" />
+                <Spinner size="small" color={COLORS.warningDark} />
               ) : (
                 <Text className="text-warning font-semibold">Dejar de ofrecerle turnos</Text>
               )}
@@ -792,7 +791,7 @@ export default function TrabajadorDetailScreen() {
               <Text className="text-xs text-muted-foreground">Registro de auditoría. No se puede editar ni borrar.</Text>
             </View>
             {historialSalario.isLoading ? (
-              <ActivityIndicator />
+              <Spinner />
             ) : (historialSalario.data ?? []).length === 0 ? (
               <Text className="text-sm text-muted-foreground">Sin cambios registrados.</Text>
             ) : (

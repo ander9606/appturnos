@@ -1,5 +1,7 @@
+import { COLORS } from '@/lib/designTokens';
+import { Text } from '@/components/ui/Text';
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { NovedadCard } from '@/features/novedades/NovedadCard';
@@ -14,7 +16,7 @@ export function NovedadesCard({
   return (
     <View
       className="bg-card rounded-2xl px-5 py-4"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}
     >
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-sm font-semibold text-foreground">Novedades</Text>
@@ -23,7 +25,7 @@ export function NovedadesCard({
           className="flex-row items-center gap-1.5 px-3 py-1.5 bg-muted rounded-xl"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="add" size={16} color="#0284C7" />
+          <Ionicons name="add" size={16} color={COLORS.info} />
           <Text className="text-xs font-semibold text-info">Reportar</Text>
         </TouchableOpacity>
       </View>

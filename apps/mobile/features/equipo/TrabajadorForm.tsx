@@ -2,15 +2,18 @@
  * TrabajadorForm — shared create/edit form.
  * Uses React Hook Form + Zod. Caller owns the submit handler.
  */
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
+import { HORAS_MES_NOMINA, JORNADA_SEMANAL_HORAS } from '@api-client';
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
   Pressable,
   ScrollView,
   FlatList,
   Modal,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -94,7 +97,7 @@ function DateField({
           <Text className={`text-base flex-1 ${value ? 'text-foreground' : 'text-muted-foreground'}`}>
             {value ? formatDate(value) : 'Sin definir'}
           </Text>
-          <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+          <Ionicons name="calendar-outline" size={18} color={COLORS.placeholder} />
         </Pressable>
         {!!value && (
           <Pressable
@@ -102,7 +105,7 @@ function DateField({
             hitSlop={8}
             className="w-11 h-11 rounded-xl bg-muted items-center justify-center active:opacity-70"
           >
-            <Ionicons name="close" size={18} color="#64748B" />
+            <Ionicons name="close" size={18} color={COLORS.mutedForeground} />
           </Pressable>
         )}
       </View>
@@ -470,7 +473,7 @@ export function TrabajadorForm({
                   <Text className={`text-base flex-1 ${field.value ? 'text-foreground' : 'text-muted-foreground'}`}>
                     {field.value || 'Seleccionar cargo…'}
                   </Text>
-                  <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                  <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                 </Pressable>
 
                 <Modal
@@ -483,7 +486,7 @@ export function TrabajadorForm({
                     <View className="flex-row items-center justify-between px-5 py-4 border-b border-border">
                       <Text className="text-base font-bold text-foreground">Seleccionar cargo</Text>
                       <Pressable onPress={() => setCargoModalVisible(false)} hitSlop={8}>
-                        <Ionicons name="close" size={24} color="#64748B" />
+                        <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
                       </Pressable>
                     </View>
 
@@ -495,10 +498,10 @@ export function TrabajadorForm({
                       className="flex-row items-center gap-3 px-5 py-4 border-b border-border active:opacity-70"
                     >
                       <View className="w-8 h-8 rounded-full bg-muted items-center justify-center">
-                        <Ionicons name="close" size={14} color="#64748B" />
+                        <Ionicons name="close" size={14} color={COLORS.mutedForeground} />
                       </View>
                       <Text className="text-sm text-muted-foreground flex-1">Sin cargo asignado</Text>
-                      {!field.value && <Ionicons name="checkmark" size={18} color="#6366F1" />}
+                      {!field.value && <Ionicons name="checkmark" size={18} color={COLORS.integracion} />}
                     </Pressable>
 
                     <FlatList
@@ -515,20 +518,15 @@ export function TrabajadorForm({
                             className="flex-row items-center gap-3 px-5 py-4 border-b border-border active:opacity-70"
                           >
                             <View className="w-8 h-8 rounded-full bg-info/10 items-center justify-center">
-                              <Ionicons name="briefcase-outline" size={14} color="#3B82F6" />
+                              <Ionicons name="briefcase-outline" size={14} color={COLORS.info} />
                             </View>
                             <Text className="text-sm font-medium text-foreground flex-1">{item.nombre}</Text>
-                            {selected && <Ionicons name="checkmark" size={18} color="#6366F1" />}
+                            {selected && <Ionicons name="checkmark" size={18} color={COLORS.integracion} />}
                           </Pressable>
                         );
                       }}
                       ListEmptyComponent={
-                        <View className="p-8 items-center gap-2">
-                          <Ionicons name="briefcase-outline" size={32} color="#94A3B8" />
-                          <Text className="text-sm text-muted-foreground text-center">
-                            No hay cargos creados todavía.{'\n'}Creá uno primero en "Gestión de cargos".
-                          </Text>
-                        </View>
+                        <EmptyState compact title="No hay cargos creados todavía" message={'Creá uno primero en "Gestión de cargos".'} />
                       }
                     />
                   </View>
@@ -589,7 +587,7 @@ export function TrabajadorForm({
                   <Input
                     label="Salario base mensual (COP)"
                     error={errors.salario_base?.message}
-                    hint="Se divide entre 210 (jornada de 42 h) para obtener el valor/hora."
+                    hint={`Se divide entre ${HORAS_MES_NOMINA} (jornada de ${JORNADA_SEMANAL_HORAS} h) para obtener el valor/hora.`}
                     value={field.value != null ? String(field.value) : ''}
                     onChangeText={field.onChange}
                     onBlur={field.onBlur}
@@ -619,7 +617,7 @@ export function TrabajadorForm({
                         <Text className={`text-base flex-1 ${field.value ? 'text-foreground' : 'text-muted-foreground'}`}>
                           {field.value || 'Sin definir'}
                         </Text>
-                        <Ionicons name="time-outline" size={18} color="#94A3B8" />
+                        <Ionicons name="time-outline" size={18} color={COLORS.placeholder} />
                       </Pressable>
                       {!!field.value && (
                         <Pressable
@@ -627,7 +625,7 @@ export function TrabajadorForm({
                           hitSlop={8}
                           className="w-11 h-11 rounded-xl bg-muted items-center justify-center active:opacity-70"
                         >
-                          <Ionicons name="close" size={18} color="#64748B" />
+                          <Ionicons name="close" size={18} color={COLORS.mutedForeground} />
                         </Pressable>
                       )}
                     </View>
@@ -815,7 +813,7 @@ export function TrabajadorForm({
           }`}
         >
           {isSubmitting ? (
-            <ActivityIndicator color="white" />
+            <Spinner color="white" />
           ) : (
             <Text className="text-white font-bold text-base">{submitLabel}</Text>
           )}

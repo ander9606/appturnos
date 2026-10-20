@@ -9,22 +9,25 @@
  *   5. Selector de período
  */
 
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { Text } from '@/components/ui/Text';
+import React, { useEffect, useState } from 'react';
+import { View, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCOP } from '@/lib/formatters';
-import { HOUR_TYPE_COLORS } from '@/lib/designTokens';
+import { COLORS, HOUR_TYPE_COLORS } from '@/lib/designTokens';
 import { Badge } from '@/components/ui/Badge';
-import { useAceptarDescuento, useRechazarDescuento } from '../../descuentos/useDescuentos';
+import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import {
   fmtPeriodo,
   getJornadaLegalSemanal,
+  estimarExtraSemanaCOP,
+  RECARGO_EXTRA,
   type ResumenPeriodoNomina,
   type ResumenSemana,
 } from '../nominaTrabajadorUtils';
 import type { PeriodoNomina, LiquidacionLinea, TipoContrato, DescuentoNomina, TipoDescuento } from '@api-client';
 
-const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
+export const TIPO_DESCUENTO_LABELS: Record<TipoDescuento, string> = {
   prestamo: 'Préstamo',
   inasistencia: 'Inasistencia',
   dano_equipo: 'Daño a equipo',
@@ -43,6 +46,8 @@ interface Props {
   tipoContrato?:  TipoContrato;
   /** Descuentos manuales propios del período (pendientes, aceptados, rechazados). */
   misDescuentos?: DescuentoNomina[];
+  /** Abre la ventana emergente donde se aceptan / rechazan los descuentos pendientes. */
+  onRevisarDescuentos?: () => void;
 }
 
 export function ResumenCards({
@@ -54,14 +59,16 @@ export function ResumenCards({
   miLiquidacion,
   tipoContrato,
   misDescuentos = [],
+  onRevisarDescuentos,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const pendientes = misDescuentos.filter((d) => d.estado === 'pendiente');
   const rechazados = misDescuentos.filter((d) => d.estado === 'rechazado');
   const [expandedPago, setExpandedPago] = useState(pendientes.length > 0);
-  const [respondiendoId, setRespondiendoId] = useState<number | null>(null);
-  const aceptarDescuento = useAceptarDescuento();
-  const rechazarDescuento = useRechazarDescuento();
+  // El estado inicial se calcula antes de que lleguen los descuentos: ábrelo cuando aparezcan pendientes.
+  useEffect(() => {
+    if (pendientes.length > 0) setExpandedPago(true);
+  }, [pendientes.length]);
 
   const tieneDeduccionLegal = tipoContrato === 'laboral' && miLiquidacion && miLiquidacion.neto !== miLiquidacion.total;
   const tieneDescuentos = tieneDeduccionLegal || pendientes.length > 0 || rechazados.length > 0;
@@ -72,26 +79,6 @@ export function ResumenCards({
     ? Number(miLiquidacion.pago_nocturno) + Number(miLiquidacion.pago_extra_diurno) +
       Number(miLiquidacion.pago_extra_nocturno) + Number(miLiquidacion.pago_festivo)
     : resumen.valorExtraCOP;
-
-  const handleResponder = async (id: number, aceptar: boolean) => {
-    if (!aceptar) {
-      const ok = await new Promise<boolean>((resolve) =>
-        Alert.alert('Rechazar descuento', 'Tu empleador verá que lo rechazaste. ¿Confirmas?', [
-          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Rechazar', style: 'destructive', onPress: () => resolve(true) },
-        ])
-      );
-      if (!ok) return;
-    }
-    setRespondiendoId(id);
-    try {
-      await (aceptar ? aceptarDescuento : rechazarDescuento).mutateAsync(id);
-    } catch {
-      Alert.alert('Error', 'No se pudo registrar tu respuesta. Intenta de nuevo.');
-    } finally {
-      setRespondiendoId(null);
-    }
-  };
 
   const tieneExtras    = resumen.horasExtraDiurnas > 0 || resumen.horasExtraNocturnas > 0 ||
                          resumen.horasNocturnas > 0    || resumen.horasFestivo > 0;
@@ -126,7 +113,7 @@ export function ResumenCards({
               {pendientes.length > 0 && <View className="w-2 h-2 rounded-full bg-warning" />}
               <Text className="text-sm font-semibold text-foreground">Detalle de pago</Text>
             </View>
-            <Ionicons name={expandedPago ? 'chevron-up' : 'chevron-down'} size={16} color="#64748B" />
+            <Ionicons name={expandedPago ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
           </View>
 
           {!expandedPago && pendientes.length > 0 && (
@@ -174,33 +161,19 @@ export function ResumenCards({
                 <View className="gap-2 pt-1 border-t border-border">
                   <Text className="text-xs font-semibold text-foreground mt-2">Por tu aceptación</Text>
                   {pendientes.map((d) => (
-                    <View key={d.id} className="bg-warning/10 rounded-xl p-3 gap-2">
-                      <View className="flex-row items-center justify-between">
-                        <Text className="text-xs font-semibold text-foreground flex-1">
-                          {TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}
-                        </Text>
-                        <Text className="text-xs font-bold text-danger">-{formatCOP(d.monto)}</Text>
-                      </View>
-                      <View className="flex-row gap-2">
-                        <TouchableOpacity
-                          onPress={() => handleResponder(d.id, false)}
-                          disabled={respondiendoId === d.id}
-                          className="flex-1 h-8 rounded-lg border border-border items-center justify-center"
-                        >
-                          <Text className="text-xs font-semibold text-muted-foreground">Rechazar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => handleResponder(d.id, true)}
-                          disabled={respondiendoId === d.id}
-                          className="flex-1 h-8 rounded-lg bg-primary-500 items-center justify-center active:opacity-80"
-                        >
-                          {respondiendoId === d.id
-                            ? <ActivityIndicator size="small" color="#fff" />
-                            : <Text className="text-xs font-semibold text-white">Aceptar</Text>}
-                        </TouchableOpacity>
-                      </View>
+                    <View key={d.id} className="flex-row items-center justify-between">
+                      <Text className="text-xs text-muted-foreground flex-1">
+                        {TIPO_DESCUENTO_LABELS[d.tipo]} · {d.motivo}
+                      </Text>
+                      <Text className="text-xs font-bold text-danger">-{formatCOP(d.monto)}</Text>
                     </View>
                   ))}
+                  <TouchableOpacity
+                    onPress={onRevisarDescuentos}
+                    className="h-9 rounded-lg bg-primary-500 items-center justify-center active:opacity-80"
+                  >
+                    <Text className="text-xs font-semibold text-white">Revisar y responder</Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
@@ -236,7 +209,7 @@ export function ResumenCards({
                 Novedades del período
               </Text>
             </View>
-            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#64748B" />
+            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.mutedForeground} />
           </View>
 
           {/* Resumen comprimido */}
@@ -309,10 +282,10 @@ export function ResumenCards({
                       <FilaConcepto label={`${Number(miLiquidacion.horas_nocturnas).toFixed(1)}h nocturnas × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_nocturno}`} valor={Number(miLiquidacion.pago_nocturno)} />
                     )}
                     {Number(miLiquidacion.horas_extra_diurnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna × ${formatCOP(miLiquidacion.valor_hora)} × 1.25`} valor={Number(miLiquidacion.pago_extra_diurno)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_diurnas).toFixed(1)}h extra diurna × ${formatCOP(miLiquidacion.valor_hora)} × ${RECARGO_EXTRA.EXTRA_DIURNA}`} valor={Number(miLiquidacion.pago_extra_diurno)} />
                     )}
                     {Number(miLiquidacion.horas_extra_nocturnas) > 0 && (
-                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna × ${formatCOP(miLiquidacion.valor_hora)} × 1.75`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
+                      <FilaConcepto label={`${Number(miLiquidacion.horas_extra_nocturnas).toFixed(1)}h extra nocturna × ${formatCOP(miLiquidacion.valor_hora)} × ${RECARGO_EXTRA.EXTRA_NOCTURNA}`} valor={Number(miLiquidacion.pago_extra_nocturno)} />
                     )}
                     {Number(miLiquidacion.horas_festivo) > 0 && (
                       <FilaConcepto label={`${Number(miLiquidacion.horas_festivo).toFixed(1)}h festivo/dominical × ${formatCOP(miLiquidacion.valor_hora)} × ${miLiquidacion.recargo_festivo}`} valor={Number(miLiquidacion.pago_festivo)} />
@@ -395,7 +368,7 @@ function StatCard({ label, value, valueClass }: { label: string; value: string; 
   return (
     <View
       className="flex-1 bg-card rounded-2xl px-3 py-3 gap-0.5"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
     >
       <Text className={`text-base font-extrabold ${valueClass}`}>{value}</Text>
       <Text className="text-[10px] text-muted-foreground">{label}</Text>
@@ -430,7 +403,7 @@ function fmtLunes(iso: string): string {
 
 export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorHora: number }) {
   const excede = semana.horasExtra > 0;
-  const extra$ = excede ? Math.round(semana.horasExtra * 1.25 * valorHora) : 0;
+  const extra$ = estimarExtraSemanaCOP(semana, valorHora);
   const pct = Math.min(100, (semana.horasTotales / semana.limiteHoras) * 100);
 
   return (
@@ -453,12 +426,23 @@ export function SemanaRow({ semana, valorHora }: { semana: ResumenSemana; valorH
       </View>
       {/* excede = trabajó más del límite legal = generó extra — es buena noticia
           para el trabajador, por eso va en success y no en un color de alerta. */}
-      <View className="h-1.5 rounded-full bg-muted overflow-hidden">
+      <View className="relative h-1.5 rounded-full bg-muted overflow-hidden">
         <View
           className="h-full rounded-full"
-          style={{ width: `${pct}%`, backgroundColor: excede ? '#059669' : '#CBD5E1' }}
+          style={{ width: `${pct}%`, backgroundColor: excede ? COLORS.success : COLORS.borderStrong }}
         />
+        <MarcaPeriodoAnterior horas={semana.horasPrevias ?? 0} limite={semana.limiteHoras} color={COLORS.slate700} />
       </View>
+      {!!semana.horasFestivo && (
+        <Text className="text-[10px] text-danger">
+          +{semana.horasFestivo.toFixed(1)}h festivo (recargo, no cuenta para las {semana.limiteHoras}h)
+        </Text>
+      )}
+      {!!semana.horasPrevias && (
+        <Text className="text-[10px] text-muted-foreground">
+          {semana.horasPrevias.toFixed(1)}h de esta semana son del período anterior (a la izquierda de la raya).
+        </Text>
+      )}
     </View>
   );
 }

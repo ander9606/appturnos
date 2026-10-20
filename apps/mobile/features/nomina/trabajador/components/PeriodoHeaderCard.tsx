@@ -8,9 +8,12 @@
  *   • Resumen semanal
  */
 
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { MarcaPeriodoAnterior } from './MarcaPeriodoAnterior';
 import { PeriodoBadge } from '../../PeriodoBadge';
 import { TipoPeriodoBadge } from '../../TipoPeriodoBadge';
 import { formatCOP } from '@/lib/formatters';
@@ -20,6 +23,7 @@ import {
   calcularElapsedLabel,
   analizarDia,
   horaEntradaMostrada,
+  getJornadaLegalSemanal,
   TIPO_PERIODO_LABEL_SALARIO,
   type EstadoHoy,
   type ResumenPeriodoNomina,
@@ -32,6 +36,7 @@ interface Props {
   estadoHoy:   EstadoHoy;
   resumen:     ResumenPeriodoNomina;
   resumenSemana: ResumenPeriodoNomina;
+  horasPeriodoAnterior: number;
   salarioBase: number | null;
   valorHora:   number;
   color:       string;  // theme.primary
@@ -48,6 +53,7 @@ export function PeriodoHeaderCard({
   estadoHoy,
   resumen,
   resumenSemana,
+  horasPeriodoAnterior,
   salarioBase,
   valorHora,
   color,
@@ -192,8 +198,9 @@ export function PeriodoHeaderCard({
       {/* ── Barra de horas semanales ────────────────────────── */}
       {(() => {
         const semana      = resumenSemana.semanas[0];
-        const limite      = semana?.limiteHoras ?? 40;
-        const totalH      = resumenSemana.totalHoras;
+        const limite      = semana?.limiteHoras ?? getJornadaLegalSemanal(new Date().getFullYear());
+        const festivoH    = resumenSemana.horasFestivo;
+        const totalH      = resumenSemana.totalHoras - festivoH; // el festivo habitual no cuenta para las 42 h
         const extraH      = resumenSemana.horasExtraDiurnas + resumenSemana.horasExtraNocturnas;
         const ordinH      = Math.max(0, totalH - extraH);
         const pctOrdin    = Math.min(100, (ordinH / limite) * 100);
@@ -229,7 +236,7 @@ export function PeriodoHeaderCard({
             </View>
 
             {/* Barra dos colores */}
-            <View className="h-2.5 bg-white/20 rounded-full overflow-hidden flex-row">
+            <View className="relative h-2.5 bg-white/20 rounded-full overflow-hidden flex-row">
               {pctOrdin > 0 && (
                 <View
                   className="h-full rounded-full"
@@ -239,10 +246,22 @@ export function PeriodoHeaderCard({
               {pctExtra > 0 && (
                 <View
                   className="h-full"
-                  style={{ width: `${pctExtra}%`, backgroundColor: '#F59E0B' }}
+                  style={{ width: `${pctExtra}%`, backgroundColor: COLORS.warning }}
                 />
               )}
+              <MarcaPeriodoAnterior horas={horasPeriodoAnterior} limite={limite} color="rgba(15,23,42,0.7)" />
             </View>
+            {horasPeriodoAnterior > 0 && (
+              <Text className="text-white/60 text-[9px]">
+                La raya marca dónde termina el período anterior ({horasPeriodoAnterior.toFixed(1)}h)
+              </Text>
+            )}
+
+            {festivoH > 0 && (
+              <Text className="text-white/70 text-[10px]">
+                +{festivoH.toFixed(1)}h festivo (recargo, no cuenta para las {limite}h)
+              </Text>
+            )}
 
             {/* Extras en pesos si hay */}
             {hayExtras && resumenSemana.valorExtraCOP > 0 && (

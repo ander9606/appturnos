@@ -1,11 +1,8 @@
 import type { Registro } from './types';
+import { JORNADA_SEMANAL_HORAS } from '@/shared/laboral';
 
 // Espejo de JORNADA_CONTINUA_UMBRAL_HORAS en backend/config/constants.js.
 const UMBRAL_JORNADA_CONTINUA_MIN = 6 * 60;
-
-// Tope semanal FIJO que usa calcularHoras() en el backend para clasificar
-// ordinaria vs extra (JORNADA_SEMANAL_HORAS en backend/config/constants.js).
-const JORNADA_SEMANAL_HORAS = 42;
 
 interface SesionSimple {
   hora_entrada: string | null;
@@ -85,6 +82,10 @@ export interface ResumenSemana {
   horasTotales: number;
   limiteHoras: number;
   horasExtra: number;
+  /** Horas de esta semana que cayeron en el período anterior y ya están sumadas en horasTotales. */
+  horasPrevias?: number;
+  /** Horas de festivo habitual (3.º en adelante): fuera del cupo de 42 h, con recargo; no están en horasTotales. */
+  horasFestivo?: number;
 }
 
 /** ISO del lunes de la semana a la que pertenece `fecha`. */
@@ -108,24 +109,54 @@ function lunesDeSemana(fecha: string): string {
  * (ya congelado por calcularHoras en el backend) — upgrade path: portar
  * getJornadaLegalSemanal() si hace falta exactitud histórica aquí también.
  */
-export function agruparPorSemana(registros: Registro[]): ResumenSemana[] {
+export function agruparPorSemana(
+  registros: Registro[],
+  /** Horas que el trabajador ya llevaba esa semana en el período anterior (el tope de 42 h cruza períodos). */
+  previas?: { lunes: string; horas: number },
+): ResumenSemana[] {
   const horasPorSemana = new Map<string, number>();
+  const festivoPorSemana = new Map<string, number>();
   for (const r of registros) {
-    const total = [
-      r.horas_ordinarias, r.horas_extra_diurnas, r.horas_extra_nocturnas,
-      r.horas_nocturnas, r.horas_festivo,
-    ].reduce((a, b) => a + Number(b), 0);
     const lunes = lunesDeSemana(r.fecha);
-    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + total);
+    horasPorSemana.set(lunes, (horasPorSemana.get(lunes) ?? 0) + horasDeRegistro(r));
+    const fest = Number(r.horas_festivo);
+    if (fest > 0) festivoPorSemana.set(lunes, (festivoPorSemana.get(lunes) ?? 0) + fest);
   }
   return Array.from(horasPorSemana.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([inicioSemana, horasTotales]) => ({
-      inicioSemana,
-      horasTotales,
-      limiteHoras: JORNADA_SEMANAL_HORAS,
-      horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
-    }));
+    .map(([inicioSemana, horasPeriodo]) => {
+      const horasPrevias = previas && previas.lunes === inicioSemana && previas.horas > 0 ? previas.horas : 0;
+      const horasTotales = horasPeriodo + horasPrevias;
+      return {
+        inicioSemana,
+        horasTotales,
+        limiteHoras: JORNADA_SEMANAL_HORAS,
+        horasExtra: Math.max(0, horasTotales - JORNADA_SEMANAL_HORAS),
+        ...(horasPrevias > 0 ? { horasPrevias } : {}),
+        ...(festivoPorSemana.get(inicioSemana) ? { horasFestivo: festivoPorSemana.get(inicioSemana) } : {}),
+      };
+    });
+}
+
+/**
+ * Horas de un registro que cuentan para el cupo semanal: todas menos el festivo habitual (horas_festivo).
+ * El festivo ocasional (1.º y 2.º del mes) ya viene como horas normales y sí suma.
+ */
+export function horasDeRegistro(r: Registro): number {
+  return [r.horas_ordinarias, r.horas_extra_diurnas, r.horas_extra_nocturnas, r.horas_nocturnas]
+    .reduce((a, b) => a + Number(b), 0);
+}
+
+/**
+ * Tramo de la primera semana del período que cayó ANTES de `primeraFecha` (la fecha más temprana
+ * con registros): [lunes, día anterior]. null si ya es lunes — no hay semana partida.
+ */
+export function tramoSemanaPrevia(primeraFecha: string): { desde: string; hasta: string } | null {
+  const lunes = lunesDeSemana(primeraFecha);
+  if (lunes === primeraFecha) return null;
+  const d = new Date(`${primeraFecha}T00:00:00`);
+  d.setDate(d.getDate() - 1);
+  return { desde: lunes, hasta: d.toISOString().slice(0, 10) };
 }
 
 export interface ExplicacionHorasExtra {
@@ -137,6 +168,8 @@ export interface ExplicacionHorasExtra {
   horasExtra: number;
   /** Tope semanal usado (JORNADA_SEMANAL_HORAS) — para el texto. */
   topeSemanal: number;
+  /** ISO del lunes que abre la semana contada; puede caer en el período anterior. */
+  lunesSemana: string;
 }
 
 /**
@@ -152,5 +185,6 @@ export function explicarHorasExtra(r: Registro): ExplicacionHorasExtra | null {
     cupoUsado: Number(r.horas_ordinarias) + Number(r.horas_nocturnas),
     horasExtra,
     topeSemanal: JORNADA_SEMANAL_HORAS,
+    lunesSemana: lunesDeSemana(r.fecha),
   };
 }

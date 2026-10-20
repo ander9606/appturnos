@@ -2,10 +2,11 @@
  * Pantalla: Registro de empresa nueva
  * POST /api/auth/registro-empresa → crea empresa + admin_empresa → auto-login
  */
+import { Text } from '@/components/ui/Text';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -176,7 +177,7 @@ export default function RegistroEmpresaScreen() {
         <View style={styles.form}>
           {serverError && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
+              <Ionicons name="alert-circle-outline" size={16} color={COLORS.danger} />
               <Text style={styles.errorText}>{serverError}</Text>
             </View>
           )}
@@ -378,7 +379,7 @@ export default function RegistroEmpresaScreen() {
           {step === 'otp' && (
             <View style={styles.otpBox}>
               <View style={styles.otpIconWrap}>
-                <Ionicons name="mail-unread-outline" size={28} color="#FF5A3C" />
+                <Ionicons name="mail-unread-outline" size={28} color={COLORS.primary} />
               </View>
               <Text style={styles.otpTitle}>Verifica tu correo</Text>
               <Text style={styles.otpSubtitle}>
@@ -406,7 +407,7 @@ export default function RegistroEmpresaScreen() {
 
               <View style={styles.otpActions}>
                 <TouchableOpacity onPress={reenviarCodigo} disabled={isResending || resendCooldown > 0}>
-                  <Text style={[styles.footerLink, resendCooldown > 0 && { color: '#94A3B8' }]}>
+                  <Text style={[styles.footerLink, resendCooldown > 0 && { color: COLORS.placeholder }]}>
                     {isResending ? 'Reenviando…' : resendCooldown > 0 ? `Reenviar código (${resendCooldown}s)` : 'Reenviar código'}
                   </Text>
                 </TouchableOpacity>
@@ -433,7 +434,7 @@ function Section({ label, icon }: { label: string; icon: React.ComponentProps<ty
   return (
     <View style={styles.section}>
       <View style={styles.sectionIcon}>
-        <Ionicons name={icon} size={14} color="#FF5A3C" />
+        <Ionicons name={icon} size={14} color={COLORS.primary} />
       </View>
       <Text style={styles.sectionLabel}>{label}</Text>
     </View>
@@ -441,13 +442,13 @@ function Section({ label, icon }: { label: string; icon: React.ComponentProps<ty
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#F8FAFC' },
+  root:   { flex: 1, backgroundColor: COLORS.background },
   scroll: { flexGrow: 1 },
 
   // Header
   header: {
     minHeight: height * 0.26,
-    backgroundColor: '#FF5A3C',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: 32,
@@ -478,10 +479,10 @@ const styles = StyleSheet.create({
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
+    backgroundColor: alpha(COLORS.danger, 0.07), borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
     borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
   },
-  errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: '#EF4444' },
+  errorText: { flex: 1, fontSize: 13, fontWeight: '500', color: COLORS.danger },
 
   // Section header
   section: {
@@ -490,11 +491,11 @@ const styles = StyleSheet.create({
   },
   sectionIcon: {
     width: 24, height: 24, borderRadius: 8,
-    backgroundColor: '#FFF1EE',
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
   sectionLabel: {
-    fontSize: 11, fontWeight: '700', color: '#64748B',
+    fontSize: 11, fontWeight: '700', color: COLORS.mutedForeground,
     textTransform: 'uppercase', letterSpacing: 0.8,
   },
 
@@ -507,16 +508,16 @@ const styles = StyleSheet.create({
   otpBox: { alignItems: 'center', gap: 14, paddingVertical: 8 },
   otpIconWrap: {
     width: 56, height: 56, borderRadius: 18,
-    backgroundColor: '#FFF1EE',
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  otpTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
-  otpSubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 19 },
+  otpTitle: { fontSize: 18, fontWeight: '800', color: COLORS.foreground },
+  otpSubtitle: { fontSize: 13, color: COLORS.mutedForeground, textAlign: 'center', lineHeight: 19 },
   otpActions: {
     flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginTop: 4,
   },
 
   footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 4 },
-  footerText: { fontSize: 14, color: '#94A3B8' },
-  footerLink: { fontSize: 14, fontWeight: '700', color: '#FF5A3C' },
+  footerText: { fontSize: 14, color: COLORS.placeholder },
+  footerLink: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
 });

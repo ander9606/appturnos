@@ -41,6 +41,13 @@ function errorHandler(err, req, res, _next) {
     error = mysqlErr || error;
   }
 
+  // Errores de body-parser (JSON malformado, body demasiado grande): son del cliente, no un 500.
+  if (!(error instanceof AppError) && error?.type === 'entity.too.large') {
+    error = new AppError('El archivo o la foto es demasiado pesada. Intenta con una más liviana.', 413);
+  } else if (!(error instanceof AppError) && error?.type === 'entity.parse.failed') {
+    error = new AppError('JSON inválido en la petición', 400);
+  }
+
   const esOperacional = error instanceof AppError;
   const statusCode = esOperacional ? error.statusCode : 500;
 

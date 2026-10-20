@@ -5,16 +5,17 @@
  * identificación, información personal, seguridad social,
  * datos bancarios y contacto de emergencia.
  */
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text, TextInput } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Pressable,
-  ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -72,7 +73,7 @@ function MiniField({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? label}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={COLORS.placeholder}
         keyboardType={keyboardType ?? 'default'}
         className="text-sm text-foreground border border-border rounded-xl px-3 py-2"
         autoCorrect={false}
@@ -126,14 +127,14 @@ function DateField({
         onPress={() => (Platform.OS === 'android' ? abrirAndroid() : setShow(true))}
         className="flex-1 flex-row items-center gap-1.5 py-0.5"
       >
-        <Ionicons name="calendar-outline" size={14} color="#94A3B8" />
+        <Ionicons name="calendar-outline" size={14} color={COLORS.placeholder} />
         <Text className={`text-sm ${value ? 'text-foreground' : 'text-muted-foreground'}`}>
           {value ? fmtFecha(value) : (placeholder ?? 'Seleccionar fecha')}
         </Text>
       </TouchableOpacity>
       {value ? (
         <TouchableOpacity onPress={() => onChange('')} hitSlop={8}>
-          <Ionicons name="close-circle" size={16} color="#94A3B8" />
+          <Ionicons name="close-circle" size={16} color={COLORS.placeholder} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -259,7 +260,7 @@ function FieldInput({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder ?? label}
-        placeholderTextColor="#94A3B8"
+        placeholderTextColor={COLORS.placeholder}
         keyboardType={keyboardType ?? 'default'}
         className="text-sm text-foreground"
         autoCorrect={false}
@@ -352,7 +353,7 @@ export default function MiPerfilLaboralScreen() {
     ];
     for (const [valor, label] of fechas) {
       if (valor && (!isValidISODate(valor) || valor > bogotaToday())) {
-        Alert.alert('Fecha inválida', `${label} debe tener formato AAAA-MM-DD y no puede ser futura.`);
+        showAlert('Fecha inválida', `${label} debe tener formato AAAA-MM-DD y no puede ser futura.`, 'warning');
         return;
       }
     }
@@ -382,7 +383,7 @@ export default function MiPerfilLaboralScreen() {
         err && typeof err === 'object' && 'message' in err
           ? String((err as { message: string }).message)
           : 'Error al guardar';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 
@@ -393,15 +394,15 @@ export default function MiPerfilLaboralScreen() {
 
   const handleAddExperiencia = async () => {
     if (!newExp.empresa_nombre || !newExp.cargo || !newExp.fecha_inicio) {
-      Alert.alert('Campos requeridos', 'Empresa, cargo y fecha de inicio son obligatorios');
+      showAlert('Campos requeridos', 'Empresa, cargo y fecha de inicio son obligatorios', 'warning');
       return;
     }
     if (!isValidISODate(newExp.fecha_inicio)) {
-      Alert.alert('Fecha inválida', 'La fecha de inicio debe tener formato AAAA-MM-DD.');
+      showAlert('Fecha inválida', 'La fecha de inicio debe tener formato AAAA-MM-DD.', 'warning');
       return;
     }
     if (newExp.fecha_fin && (!isValidISODate(newExp.fecha_fin) || newExp.fecha_fin < newExp.fecha_inicio)) {
-      Alert.alert('Fecha inválida', 'La fecha de fin debe ser AAAA-MM-DD y no puede ser antes que la de inicio.');
+      showAlert('Fecha inválida', 'La fecha de fin debe ser AAAA-MM-DD y no puede ser antes que la de inicio.', 'warning');
       return;
     }
     try {
@@ -414,7 +415,7 @@ export default function MiPerfilLaboralScreen() {
       setNewExp(EMPTY_EXP);
       setShowAddExp(false);
     } catch {
-      Alert.alert('Error', 'No se pudo guardar la experiencia');
+      showAlert('Error', 'No se pudo guardar la experiencia');
     }
   };
 
@@ -425,7 +426,7 @@ export default function MiPerfilLaboralScreen() {
 
   const handleAddDiploma = async () => {
     if (!newDip.titulo || !newDip.institucion) {
-      Alert.alert('Campos requeridos', 'Título e institución son obligatorios');
+      showAlert('Campos requeridos', 'Título e institución son obligatorios', 'warning');
       return;
     }
     try {
@@ -437,7 +438,7 @@ export default function MiPerfilLaboralScreen() {
       setNewDip(EMPTY_DIP);
       setShowAddDip(false);
     } catch {
-      Alert.alert('Error', 'No se pudo guardar el diploma');
+      showAlert('Error', 'No se pudo guardar el diploma');
     }
   };
 
@@ -448,9 +449,9 @@ export default function MiPerfilLaboralScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
+      <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Perfil laboral', headerShown: true }} />
-        <ActivityIndicator color="#FF5A3C" />
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -459,7 +460,7 @@ export default function MiPerfilLaboralScreen() {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center px-8" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Perfil laboral', headerShown: true }} />
-        <Ionicons name="person-outline" size={48} color="#94A3B8" />
+        <Ionicons name="person-outline" size={48} color={COLORS.placeholder} />
         <Text className="text-base font-semibold text-foreground mt-4 text-center">
           Perfil no encontrado
         </Text>
@@ -709,7 +710,7 @@ export default function MiPerfilLaboralScreen() {
                   onPress={() => handleDeleteExperiencia(exp.id)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                  <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -746,7 +747,7 @@ export default function MiPerfilLaboralScreen() {
                     className="flex-1 h-9 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
                   >
                     {crearExp.isPending
-                      ? <ActivityIndicator size="small" color="#fff" />
+                      ? <Spinner size="small" color={COLORS.white} />
                       : <Text className="text-xs font-semibold text-white">Guardar</Text>}
                   </TouchableOpacity>
                 </View>
@@ -756,7 +757,7 @@ export default function MiPerfilLaboralScreen() {
                 onPress={() => setShowAddExp(true)}
                 className="h-11 rounded-2xl border border-dashed border-border items-center justify-center flex-row gap-2 active:opacity-70"
               >
-                <Ionicons name="add-circle-outline" size={16} color="#64748B" />
+                <Ionicons name="add-circle-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="text-sm text-muted-foreground">Agregar experiencia</Text>
               </TouchableOpacity>
             )}
@@ -777,7 +778,7 @@ export default function MiPerfilLaboralScreen() {
                   onPress={() => handleDeleteDiploma(dip.id)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                  <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -800,7 +801,7 @@ export default function MiPerfilLaboralScreen() {
                     className="flex-1 h-9 rounded-xl bg-primary-500 items-center justify-center active:opacity-80"
                   >
                     {crearDip.isPending
-                      ? <ActivityIndicator size="small" color="#fff" />
+                      ? <Spinner size="small" color={COLORS.white} />
                       : <Text className="text-xs font-semibold text-white">Guardar</Text>}
                   </TouchableOpacity>
                 </View>
@@ -810,7 +811,7 @@ export default function MiPerfilLaboralScreen() {
                 onPress={() => setShowAddDip(true)}
                 className="h-11 rounded-2xl border border-dashed border-border items-center justify-center flex-row gap-2 active:opacity-70"
               >
-                <Ionicons name="add-circle-outline" size={16} color="#64748B" />
+                <Ionicons name="add-circle-outline" size={16} color={COLORS.mutedForeground} />
                 <Text className="text-sm text-muted-foreground">Agregar diploma o certificado</Text>
               </TouchableOpacity>
             )}
@@ -846,7 +847,7 @@ export default function MiPerfilLaboralScreen() {
                   className="flex-1 h-12 rounded-2xl bg-primary-500 items-center justify-center active:opacity-80 disabled:opacity-50"
                 >
                   {update.isPending ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <Spinner size="small" color={COLORS.white} />
                   ) : (
                     <Text className="text-sm font-semibold text-white">Guardar cambios</Text>
                   )}
@@ -857,7 +858,7 @@ export default function MiPerfilLaboralScreen() {
                 onPress={() => setEditing(true)}
                 className="h-12 rounded-2xl border border-primary-500 items-center justify-center flex-row gap-2 active:opacity-70"
               >
-                <Ionicons name="pencil-outline" size={16} color="#FF5A3C" />
+                <Ionicons name="pencil-outline" size={16} color={COLORS.primary} />
                 <Text className="text-sm font-semibold text-primary-500">Editar perfil laboral</Text>
               </TouchableOpacity>
             )}

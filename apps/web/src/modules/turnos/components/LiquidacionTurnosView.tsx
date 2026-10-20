@@ -1,6 +1,8 @@
+import { SkeletonStats } from '@/shared/components/Skeleton';
+import { Spinner } from '@/shared/components/Spinner';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { DollarSign, Calendar, Clock, ChevronDown, Download, Loader2, AlertTriangle } from 'lucide-react';
+import { DollarSign, Calendar, Clock, ChevronDown, Download, AlertTriangle } from 'lucide-react';
 import { useLiquidacionTurnos, usePeriodoActivoTurnos } from '../hooks/useTurnos';
 import { turnosApi } from '../api/turnosApi';
 import { ErrorState } from '@/shared/components/ErrorState';
@@ -8,6 +10,7 @@ import { StatCard } from '@/shared/components/StatCard';
 import { fmtCOP, fmtHrs, fmtDate, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 import { descargarBlob } from '@/shared/lib/download';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurno } from '../types';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 async function descargarContrato(asignacionId: number) {
   const blob = await turnosApi.descargarContratoPorAsignacion(asignacionId);
@@ -19,6 +22,26 @@ function fmtHora(dt: string | null): string {
 }
 
 type Vista = 'trabajador' | 'turno';
+
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+/** Período inmediatamente anterior al activo, según el ciclo de la empresa. */
+function periodoAnterior(tipo: string, inicio: string): { fecha_inicio: string; fecha_fin: string } {
+  const [y, m, d] = inicio.split('-').map(Number);
+  const fin = (anio: number, mes: number) => ymd(new Date(Date.UTC(anio, mes, 0))); // último día del mes `mes` (1-12)
+  if (tipo === 'semanal') {
+    return { fecha_inicio: ymd(new Date(Date.UTC(y, m - 1, d - 7))), fecha_fin: ymd(new Date(Date.UTC(y, m - 1, d - 1))) };
+  }
+  if (tipo === 'quincenal') {
+    if (d >= 16) return { fecha_inicio: `${inicio.slice(0, 7)}-01`, fecha_fin: `${inicio.slice(0, 7)}-15` };
+    const prev = new Date(Date.UTC(y, m - 2, 1));
+    return { fecha_inicio: `${ymd(prev).slice(0, 7)}-16`, fecha_fin: fin(y, m - 1) };
+  }
+  const meses = tipo === 'trimestral' ? 3 : 1;
+  return { fecha_inicio: ymd(new Date(Date.UTC(y, m - 1 - meses, 1))), fecha_fin: fin(y, m - 1) };
+}
+
+const NOMBRE_CICLO: Record<string, string> = { quincenal: 'Quincena', mensual: 'Mes', semanal: 'Semana', trimestral: 'Trimestre' };
 
 interface TurnoGrupo {
   oferta_id: number;
@@ -111,6 +134,18 @@ export function LiquidacionTurnosView() {
     setFechaFin(v);
   }
 
+  function irARango(r: { fecha_inicio: string; fecha_fin: string }) {
+    setFechaTocada(true);
+    setFechaInicio(r.fecha_inicio);
+    setFechaFin(r.fecha_fin);
+  }
+  const ciclos = periodoTurnos
+    ? [
+        { label: `${NOMBRE_CICLO[periodoTurnos.tipo] ?? 'Período'} actual`, rango: periodoTurnos },
+        { label: `${NOMBRE_CICLO[periodoTurnos.tipo] ?? 'Período'} anterior`, rango: periodoAnterior(periodoTurnos.tipo, periodoTurnos.fecha_inicio) },
+      ]
+    : [];
+
   const { data, isLoading, isError, error, refetch } = useLiquidacionTurnos({ fecha_inicio: fechaInicio, fecha_fin: fechaFin });
   const trabajadores: LiquidacionTurnosTrabajador[] = data?.data ?? [];
   const turnosAgrupados = useMemo(() => agruparPorTurno(trabajadores), [trabajadores]);
@@ -150,7 +185,21 @@ export function LiquidacionTurnosView() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        {ciclos.map(c => {
+          const activo = fechaInicio === c.rango.fecha_inicio && fechaFin === c.rango.fecha_fin;
+          return (
+            <button
+              key={c.label}
+              onClick={() => irARango(c.rango)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+                activo ? 'bg-primary text-white border-primary' : 'border-border text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              {c.label}
+            </button>
+          );
+        })}
         <label className="text-sm text-muted-foreground">
           Desde
           <input
@@ -188,7 +237,7 @@ export function LiquidacionTurnosView() {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <SkeletonStats />
       ) : isError ? (
         <ErrorState error={error} onRetry={refetch} />
       ) : (
@@ -201,7 +250,7 @@ export function LiquidacionTurnosView() {
 
           {vista === 'trabajador' ? (
           trabajadores.length === 0 ? (
-            <p className="text-muted-foreground text-sm py-8 text-center">Sin turnos completados en este rango</p>
+            <EmptyState title="Sin turnos completados en este rango" />
           ) : (
             <div className="flex flex-col gap-2">
               {trabajadores.map(w => {
@@ -287,7 +336,7 @@ export function LiquidacionTurnosView() {
                                       className="mt-2 flex items-center gap-1.5 text-primary hover:underline disabled:opacity-60"
                                     >
                                       {descargando === t.asignacion_id
-                                        ? <Loader2 size={13} className="animate-spin" />
+                                        ? <Spinner size={13} />
                                         : <Download size={13} />}
                                       Descargar contrato
                                     </button>
@@ -305,7 +354,7 @@ export function LiquidacionTurnosView() {
             </div>
           )
           ) : turnosAgrupados.length === 0 ? (
-            <p className="text-muted-foreground text-sm py-8 text-center">Sin turnos completados en este rango</p>
+            <EmptyState title="Sin turnos completados en este rango" />
           ) : (
             <div className="flex flex-col gap-2">
               {turnosAgrupados.map(g => {
@@ -360,7 +409,7 @@ export function LiquidacionTurnosView() {
                                   className="text-primary hover:underline disabled:opacity-60"
                                 >
                                   {descargando === l.asignacion_id
-                                    ? <Loader2 size={13} className="animate-spin" />
+                                    ? <Spinner size={13} />
                                     : <Download size={13} />}
                                 </button>
                               </span>

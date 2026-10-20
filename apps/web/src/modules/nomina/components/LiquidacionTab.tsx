@@ -1,3 +1,4 @@
+import { SkeletonStats } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Download, Plus, Pencil, CalendarClock, BedDouble, ChevronDown, X, Users, Wallet, DollarSign, Landmark, AlertTriangle, Zap } from 'lucide-react';
@@ -10,12 +11,14 @@ import { fmtCOP, fmtHrs, fmtDiaSemana, fmtHora } from '@/shared/lib/format';
 import { TIPO_DIA_LABELS, TIPO_DESCUENTO_LABELS, ESTADO_DESCUENTO_BADGE } from '../constants';
 import { AlmuerzoIndicator, ExtraIndicator } from './DiaIndicators';
 import { Renglon } from './Renglon';
+import { RECARGO_EXTRA_DIURNA, RECARGO_EXTRA_NOCTURNA } from '@/shared/laboral';
 
 export function LiquidacionTab({
   periodoEstado, liqData, loading, error, onRetry, registros, descuentos,
-  compensatorioDe, onExport, onCorregir, onReasignar, onAbrirDescuentos,
+  compensatorioDe, onExport, onCorregir, onReasignar, onAbrirDescuentos, periodoInicio,
 }: {
   periodoEstado: EstadoPeriodo | undefined;
+  periodoInicio?: string;
   liqData: LiquidacionData | undefined;
   loading: boolean;
   error: unknown;
@@ -55,7 +58,7 @@ export function LiquidacionTab({
         </div>
       )}
       {loading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <SkeletonStats />
       ) : error ? (
         <ErrorState error={error} onRetry={onRetry} />
       ) : liqData ? (
@@ -158,10 +161,10 @@ export function LiquidacionTab({
                               <Renglon label={`${fmtHrs(l.horas_nocturnas)} h nocturnas × ${fmtCOP(l.valor_hora)} × ${l.recargo_nocturno}`} valor={fmtCOP(l.pago_nocturno)} />
                             )}
                             {Number(l.horas_extra_diurnas) > 0 && (
-                              <Renglon label={`${fmtHrs(l.horas_extra_diurnas)} h extra diurna × ${fmtCOP(l.valor_hora)} × 1.25`} valor={fmtCOP(l.pago_extra_diurno)} />
+                              <Renglon label={`${fmtHrs(l.horas_extra_diurnas)} h extra diurna × ${fmtCOP(l.valor_hora)} × ${RECARGO_EXTRA_DIURNA}`} valor={fmtCOP(l.pago_extra_diurno)} />
                             )}
                             {Number(l.horas_extra_nocturnas) > 0 && (
-                              <Renglon label={`${fmtHrs(l.horas_extra_nocturnas)} h extra nocturna × ${fmtCOP(l.valor_hora)} × 1.75`} valor={fmtCOP(l.pago_extra_nocturno)} />
+                              <Renglon label={`${fmtHrs(l.horas_extra_nocturnas)} h extra nocturna × ${fmtCOP(l.valor_hora)} × ${RECARGO_EXTRA_NOCTURNA}`} valor={fmtCOP(l.pago_extra_nocturno)} />
                             )}
                             {Number(l.horas_festivo) > 0 && (
                               <Renglon label={`${fmtHrs(l.horas_festivo)} h festivo/dominical × ${fmtCOP(l.valor_hora)} × ${l.recargo_festivo}`} valor={fmtCOP(l.pago_festivo)} />
@@ -262,7 +265,7 @@ export function LiquidacionTab({
                                 {fmtHrs(r.horas_ordinarias)} h
                                 {Number(r.horas_nocturnas) > 0 && ` + ${fmtHrs(r.horas_nocturnas)} h noct.`}
                                 {Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas) > 0 && (
-                                  <> + {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra <ExtraIndicator r={r} /></>
+                                  <> + {fmtHrs(Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas))} h extra <ExtraIndicator r={r} periodoInicio={periodoInicio} /></>
                                 )}
                                 {Number(r.horas_festivo) > 0 && ` + ${fmtHrs(r.horas_festivo)} h festivo`}
                               </span>

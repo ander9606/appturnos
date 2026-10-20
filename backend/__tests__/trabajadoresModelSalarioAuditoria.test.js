@@ -75,7 +75,7 @@ test('trabajador de otra empresa o inexistente → null, sin escrituras', async 
   const r = await TrabajadoresModel.actualizarSalarioConAuditoria(1, 999, { salario_base: 1 }, auditoria);
 
   expect(r).toBeNull();
-  expect(conn.query).toHaveBeenCalledTimes(1);
-  expect(conn.rollback).toHaveBeenCalled();
+  expect(conn.query).toHaveBeenCalledTimes(1); // solo el SELECT: no escribe nada
+  expect(conn.rollback).not.toHaveBeenCalled();
   expect(pool.query).not.toHaveBeenCalled();
 });

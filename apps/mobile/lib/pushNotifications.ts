@@ -7,6 +7,19 @@ import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 
 const KEY_PUSH_TOKEN = 'appturnos.push_token';
 
+// Intenta `fn`; si falla, espera cada valor de `esperas` (ms) y reintenta.
+// Total de intentos = esperas.length + 1. El último error se propaga al caller.
+async function reintentar<T>(fn: () => Promise<T>, esperas = [3000, 10000]): Promise<T> {
+  for (const espera of esperas) {
+    try {
+      return await fn();
+    } catch {
+      await new Promise((r) => setTimeout(r, espera));
+    }
+  }
+  return fn();
+}
+
 // ponytail: setNotificationHandler sí funciona en Expo Go (solo aplica a notificaciones locales)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -45,13 +58,19 @@ export async function registerPushNotifications(): Promise<void> {
     }
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-    const { data: token } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
-    await SecureStore.setItemAsync(KEY_PUSH_TOKEN, token);
-    await notificacionesApi.registrarExpoToken(token);
+    // ponytail: este efecto corre justo al autenticar (cold start) — la red del
+    // dispositivo a veces no está lista aún. Reintentos con espera creciente cubren esa carrera.
+    await reintentar(async () => {
+      const { data: token } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+      await SecureStore.setItemAsync(KEY_PUSH_TOKEN, token);
+      await notificacionesApi.registrarExpoToken(token);
+    });
   } catch (err) {
     // Push notifications son no-críticas para el flujo — no se propaga el error,
     // pero se reporta para poder diagnosticar por qué no llegan tokens en producción.
-    Sentry.captureException(err, { tags: { flow: 'push-registration' } });
+    // SERVICE_NOT_AVAILABLE = FCM/Google inalcanzable (fallo transitorio, no nuestro): warning, no error.
+    const transitorio = String((err as Error)?.message).includes('SERVICE_NOT_AVAILABLE');
+    Sentry.captureException(err, { level: transitorio ? 'warning' : 'error', tags: { flow: 'push-registration' } });
   }
 }
 

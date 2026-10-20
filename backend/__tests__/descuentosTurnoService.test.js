@@ -10,7 +10,9 @@ jest.mock('../modules/turnos/descuentos/descuentos-turno.model', () => ({
 }));
 jest.mock('../modules/turnos/asignaciones/asignaciones.consultas.model', () => ({ obtenerConDetalles: jest.fn() }));
 jest.mock('../modules/contratos/contratos.model', () => ({ obtenerPorAsignacion: jest.fn(), resetearFirma: jest.fn() }));
-jest.mock('../modules/cuentas-cobro/cuentas-cobro.model', () => ({ obtenerPorOfertaYTrabajador: jest.fn() }));
+jest.mock('../modules/cuentas-cobro/cuentas-cobro.model', () => ({
+  obtenerPorOfertaYTrabajador: jest.fn(), listarPorPeriodoYTrabajador: jest.fn(),
+}));
 jest.mock('../modules/cuentas-cobro/cuentas-cobro.service', () => ({ generarParaPeriodo: jest.fn() }));
 jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificar: jest.fn().mockResolvedValue(undefined),
@@ -41,6 +43,7 @@ const gestor = { sub: 1, rol: ROLES.JEFE_TURNOS };
 beforeEach(() => {
   AsignacionesModel.obtenerConDetalles.mockResolvedValue(asignacion);
   CuentasCobroModel.obtenerPorOfertaYTrabajador.mockResolvedValue(null);
+  CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([]);
   DescuentosTurnoModel.obtenerPorId.mockResolvedValue(descuento);
   DescuentosTurnoModel.sumaComprometida.mockResolvedValue(0);
   DescuentosTurnoModel.crear.mockResolvedValue(501);
@@ -105,7 +108,31 @@ test('aceptar refresca solo la cuenta sin firmar de ese trabajador, sin volver a
 
 test('no mueve descuentos de un turno cuya cuenta de cobro ya fue firmada', async () => {
   CuentasCobroModel.obtenerPorOfertaYTrabajador.mockResolvedValue({ id: 5, periodo_id: 2, firmado_trabajador: 1 });
+  CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+    { id: 5, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 10, valor: 100000 }] },
+  ]);
 
   await expect(DescuentosTurnoService.eliminar(7, 500)).rejects.toThrow('ya fue firmada');
   expect(DescuentosTurnoModel.eliminar).not.toHaveBeenCalled();
+});
+
+test('con cuenta firmada + complementaria sin firmar, un turno ya cobrado en la firmada sigue bloqueado', async () => {
+  // La más reciente (complementaria) está sin firmar, pero ESTE turno ya se cobró en la cuenta 1 firmada.
+  CuentasCobroModel.obtenerPorOfertaYTrabajador.mockResolvedValue({ id: 6, periodo_id: 2, firmado_trabajador: 0 });
+  CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+    { id: 5, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 10, valor: 100000 }] },
+    { id: 6, secuencia: 2, firmado_trabajador: 0, items: [{ asignacion_id: 11, valor: 20000 }] },
+  ]);
+
+  await expect(DescuentosTurnoService.eliminar(7, 500)).rejects.toThrow('ya fue firmada');
+});
+
+test('un turno que NO está en ninguna cuenta firmada sí admite cambios aunque el período ya tenga una firmada', async () => {
+  CuentasCobroModel.obtenerPorOfertaYTrabajador.mockResolvedValue({ id: 5, periodo_id: 2, firmado_trabajador: 1 });
+  CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+    { id: 5, secuencia: 1, firmado_trabajador: 1, items: [{ asignacion_id: 11, valor: 100000 }] }, // otro turno
+  ]);
+
+  await expect(DescuentosTurnoService.eliminar(7, 500)).resolves.not.toThrow();
+  expect(DescuentosTurnoModel.eliminar).toHaveBeenCalled();
 });

@@ -1,12 +1,12 @@
+import { Text, TextInput } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Switch,
-  Alert,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,7 +48,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
 
   const handleNext = () => {
     const err = validateStep1(data);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
     onNext();
   };
 
@@ -62,7 +62,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         <TextInput
           className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
           placeholder="Ej: Montaje feria Corferias — auxiliares"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.placeholder}
           value={data.titulo}
           onChangeText={(t) => onChange({ titulo: t })}
           returnKeyType="next"
@@ -74,7 +74,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         <TextInput
           className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
           placeholder="Instrucciones, requisitos, qué llevar… (opcional)"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.placeholder}
           value={data.descripcion}
           onChangeText={(t) => onChange({ descripcion: t })}
           multiline
@@ -86,7 +86,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
 
       <View className="gap-1.5">
         <View className="flex-row items-center gap-1.5">
-          <Ionicons name="information-circle-outline" size={14} color="#64748B" />
+          <Ionicons name="information-circle-outline" size={14} color={COLORS.mutedForeground} />
           <Text className="text-sm font-semibold text-foreground">Detalles adicionales</Text>
         </View>
         <Text className="text-xs text-muted-foreground">
@@ -95,7 +95,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         <TextInput
           className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
           placeholder="Detalles adicionales para el trabajador (opcional)"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.placeholder}
           value={data.notas_adicionales}
           onChangeText={(t) => onChange({ notas_adicionales: t })}
           multiline
@@ -111,7 +111,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
           onPress={() => setShowFecha(true)}
           className="bg-muted rounded-2xl px-4 py-3 flex-row items-center gap-2"
         >
-          <Ionicons name="calendar-outline" size={16} color="#64748B" />
+          <Ionicons name="calendar-outline" size={16} color={COLORS.mutedForeground} />
           <Text className="text-base text-foreground">
             {data.fecha ? formatShortDate(toISODate(data.fecha)) : 'Seleccionar fecha'}
           </Text>
@@ -207,7 +207,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
           value={data.ubicacion_libre}
           onValueChange={(v) => onChange({ ubicacion_libre: v })}
           trackColor={{ true: theme.primary }}
-          thumbColor="#fff"
+          thumbColor={COLORS.white}
         />
       </View>
 
@@ -231,7 +231,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         <TextInput
           className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
           placeholder="Nombre del encargado"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.placeholder}
           value={data.encargado_nombre}
           onChangeText={(t) => onChange({ encargado_nombre: t })}
           returnKeyType="next"
@@ -239,7 +239,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
         <TextInput
           className="bg-muted rounded-2xl px-4 py-3 text-base text-foreground"
           placeholder="Teléfono del encargado"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.placeholder}
           value={data.encargado_telefono}
           onChangeText={(t) => onChange({ encargado_telefono: t })}
           keyboardType="phone-pad"
@@ -313,7 +313,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
                 ? 'Elegir personas'
                 : `${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''} elegida${data.destinatarios.length !== 1 ? 's' : ''}`}
             </Text>
-            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
           </TouchableOpacity>
         )}
       </View>

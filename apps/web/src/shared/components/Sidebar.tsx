@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from 'react-router';
-import { LayoutDashboard, Users, Calendar, CalendarDays, Settings, DollarSign, LogOut, Plug, Building2 } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, CalendarDays, Settings, DollarSign, LogOut, Plug, Building2, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '@/modules/auth/authStore';
 import type { Rol } from '@/modules/auth/authStore';
+import logoMark from '@/assets/logo-mark.png';
 
 type NavItem = {
   label: string;
@@ -23,6 +24,7 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Turnos',         to: '/turnos',         icon: Calendar },
     { label: 'Nómina',         to: '/nomina',         icon: DollarSign, accent: 'success' },
     { label: 'Equipo',         to: '/equipo',         icon: Users },
+    { label: 'Reportes',       to: '/reportes',       icon: BarChart3 },
     { label: 'Configuración',  to: '/configuracion',  icon: Settings, bottom: true },
     { label: 'logiq360',       to: '/integracion',    icon: Plug, bottom: true },
   ],
@@ -32,18 +34,21 @@ const NAV_BY_ROL: Record<Rol, NavItem[]> = {
     { label: 'Turnos',      to: '/turnos',      icon: Calendar },
     { label: 'Nómina',      to: '/nomina',      icon: DollarSign, accent: 'success' },
     { label: 'Equipo',      to: '/equipo',      icon: Users },
+    { label: 'Reportes',    to: '/reportes',    icon: BarChart3 },
   ],
   jefe_turnos: [
     { label: 'Inicio',        to: '/dashboard',     icon: LayoutDashboard },
     { label: 'Calendario',    to: '/calendario',    icon: CalendarDays },
     { label: 'Turnos',        to: '/turnos',        icon: Calendar },
     { label: 'Equipo',        to: '/equipo',        icon: Users },
+    { label: 'Reportes',      to: '/reportes',      icon: BarChart3 },
     { label: 'Configuración', to: '/configuracion', icon: Settings, bottom: true },
   ],
   nomina: [
     { label: 'Inicio',      to: '/dashboard',  icon: LayoutDashboard },
     { label: 'Calendario',  to: '/calendario', icon: CalendarDays },
     { label: 'Nómina',      to: '/nomina',     icon: DollarSign, accent: 'success' },
+    { label: 'Reportes',    to: '/reportes',   icon: BarChart3 },
   ],
 };
 
@@ -76,9 +81,7 @@ export function Sidebar() {
       {/* Brand header */}
       <div className="px-5 pt-5 pb-4 bg-primary rounded-br-3xl mb-2">
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-            <Calendar size={16} className="text-white" />
-          </div>
+          <img src={logoMark} alt="" aria-hidden="true" className="w-8 h-8" />
           <span className="font-bold text-white text-base tracking-tight">Zaturno</span>
         </div>
         {usuario && (

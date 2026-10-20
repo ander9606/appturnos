@@ -2,14 +2,15 @@
  * Dashboard del super_admin.
  * Muestra las métricas globales del sistema en tiempo real.
  */
+import { SkeletonStats } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -25,7 +26,7 @@ function MetricCard({
   value,
   label,
   sub,
-  accent = '#6366F1',
+  accent = COLORS.integracion,
 }: {
   icon: string;
   value: string | number;
@@ -83,15 +84,15 @@ export default function AdminDashboard() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#6366F1"
-            colors={['#6366F1']}
+            tintColor={COLORS.integracion}
+            colors={[COLORS.integracion]}
           />
         }
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View
           className="pt-4 pb-8 px-6 rounded-b-[32px] gap-1"
-          style={{ backgroundColor: '#6366F1' }}
+          style={{ backgroundColor: COLORS.integracion }}
         >
           <Text className="text-white/80 text-sm font-medium">{saludo} 👋</Text>
           <View className="flex-row items-center justify-between">
@@ -107,10 +108,7 @@ export default function AdminDashboard() {
 
         {/* ── Loading / Error ───────────────────────────────────────── */}
         {isLoading && (
-          <View className="items-center justify-center py-16">
-            <ActivityIndicator size="large" color="#6366F1" />
-            <Text className="text-muted-foreground mt-3 text-sm">Cargando métricas…</Text>
-          </View>
+          <SkeletonStats style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         )}
 
         {isError && (
@@ -165,14 +163,14 @@ export default function AdminDashboard() {
                 value={formatCOP(data.ingresos?.mes_actual)}
                 label="Ingresos este mes"
                 sub={`${data.integraciones.pago_directo} empresa${data.integraciones.pago_directo === 1 ? '' : 's'} pagando`}
-                accent="#22C55E"
+                accent={COLORS.success}
               />
               <MetricCard
                 icon="💰"
                 value={formatCOP(data.ingresos?.ganado_mes_pasado)}
                 label="Mes pasado"
                 sub="Pagos Wompi procesados"
-                accent="#22C55E"
+                accent={COLORS.success}
               />
             </View>
 
@@ -239,7 +237,7 @@ export default function AdminDashboard() {
             style={{ width: '47%' }}
           >
             <View className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F110' }}>
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.06) }}>
               <Text className="text-xl">🏢</Text>
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">
@@ -253,7 +251,7 @@ export default function AdminDashboard() {
             style={{ width: '47%' }}
           >
             <View className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F110' }}>
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.06) }}>
               <Text className="text-xl">📈</Text>
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">
@@ -267,7 +265,7 @@ export default function AdminDashboard() {
             style={{ width: '47%' }}
           >
             <View className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F110' }}>
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.06) }}>
               <Text className="text-xl">💳</Text>
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">
@@ -282,7 +280,7 @@ export default function AdminDashboard() {
             accessibilityRole="button"
           >
             <View className="w-10 h-10 rounded-xl items-center justify-center"
-              style={{ backgroundColor: '#6366F110' }}>
+              style={{ backgroundColor: alpha(COLORS.integracion, 0.06) }}>
               <Text className="text-xl">🏷️</Text>
             </View>
             <Text className="text-xs font-semibold text-foreground text-center">

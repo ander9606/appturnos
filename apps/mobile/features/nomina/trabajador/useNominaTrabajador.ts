@@ -4,8 +4,9 @@
  * geofence y mutaciones de marcaje.
  */
 
+import { showAlert } from '@/lib/alertDialog';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { Alert, AppState } from 'react-native';
+import { AppState } from 'react-native';
 import { ApiError } from '@api-client';
 import type { RegistroDiario, PeriodoNomina, PuntoMarcaje, LiquidacionLinea, TipoContrato, DescuentoNomina, LineaLiquidacionEventual, PeriodoTurnoEventual } from '@api-client';
 import { bogotaToday } from '@/lib/formatters';
@@ -16,6 +17,7 @@ import { usePeriodosEventual, useLiquidacionEventual } from '@/features/turnos/u
 import {
   usePeriodos,
   useRegistros,
+  useRegistrosHistorial,
   useNominaPerfil,
   useLiquidacion,
   useMarcarEntrada,
@@ -23,9 +25,13 @@ import {
   useSolicitarReingreso,
 } from '../useNomina';
 import { useMisDescuentos } from '../descuentos/useDescuentos';
+import { useHorasPreviasSemana } from '../useHorasPreviasSemana';
 import {
   getValorHora,
   calcularResumenPeriodo,
+  aplicarHorasPrevias,
+  sumarHoras,
+  lunesDeSemana,
   encontrarRegistroActivo,
   getEstadoHoy,
   debePreguntarJornadaContinua,
@@ -134,6 +140,10 @@ export interface NominaTrabajadorState {
   // Registros
   registros:     RegistroDiario[];
   resumen:       ResumenPeriodoNomina;
+  /** Lunes → hoy, sin importar el período: el tope de 42 h cruza períodos. */
+  resumenSemana: ResumenPeriodoNomina;
+  /** Parte de resumenSemana.totalHoras que cayó antes del inicio del período activo. */
+  horasSemanaPeriodoAnterior: number;
   registroHoy:   RegistroDiario | null;
   estadoHoy:     EstadoHoy;
   todayISO:      string;
@@ -188,7 +198,10 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     refetch: refetchPeriodos,
   } = usePeriodos('abierto');
 
-  const periodos = periodosResp?.data ?? [];
+  // Períodos vencidos pero aún sin liquidar: siguen mostrando descuentos por aceptar.
+  const { data: cerradosResp } = usePeriodos('cerrado');
+  const periodos = [...(periodosResp?.data ?? []), ...(cerradosResp?.data ?? [])]
+    .sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio));
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState<number | undefined>();
   const periodoActivo = periodos.find((p) => p.id === (periodoSeleccionado ?? periodos[0]?.id)) ?? periodos[0];
 
@@ -203,13 +216,39 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const registros = registrosResp?.data ?? [];
 
   // ── Cálculos derivados ─────────────────────────────────────────────────
+  const previas = useHorasPreviasSemana(registros);
   const resumen = useMemo(
-    () => calcularResumenPeriodo(registros, valorHora),
-    [registros, valorHora],
+    () => aplicarHorasPrevias(calcularResumenPeriodo(registros, valorHora), previas.lunes,
+      registros[0] ? previas.porTrabajador.get(registros[0].trabajador_id) : undefined),
+    [registros, valorHora, previas],
   );
 
   // Sin useMemo: con la app abierta pasada la medianoche, "hoy" tiene que cambiar solo.
   const todayISO = bogotaToday();
+
+  // Semana lunes → hoy, consultada por fechas y no por período: si el período cambió a mitad
+  // de semana, los días previos están en el período anterior pero siguen contando para las 42 h.
+  const lunesISO = lunesDeSemana(todayISO);
+  const { data: semanaResp, refetch: refetchSemana } = useRegistrosHistorial({
+    fechaDesde: lunesISO,
+    fechaHasta: todayISO,
+    refetchInterval: 60_000,
+  });
+  const registrosSemana = useMemo(
+    // Mientras carga, el filtro local del período activo evita que la barra parpadee en 0.
+    () => semanaResp?.data ?? registros.filter((r) => r.fecha >= lunesISO),
+    [semanaResp, registros, lunesISO],
+  );
+  const resumenSemana = useMemo(
+    () => calcularResumenPeriodo(registrosSemana, valorHora),
+    [registrosSemana, valorHora],
+  );
+  // Horas de esta semana que quedaron en el período anterior: la barra pinta una raya donde terminan.
+  const horasSemanaPeriodoAnterior = useMemo(() => {
+    const inicio = periodoActivo?.fecha_inicio;
+    if (!inicio) return 0;
+    return sumarHoras(registrosSemana.filter((r) => r.fecha < inicio));
+  }, [registrosSemana, periodoActivo?.fecha_inicio]);
 
   // El registro en curso: el de hoy, o el de ayer si el turno cruzó la medianoche y sigue abierto.
   const registroHoy = useMemo(
@@ -282,7 +321,7 @@ export function useNominaTrabajador(): NominaTrabajadorState {
       await entradaMutation.mutateAsync(coords);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar entrada';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }, [obtenerCoordsParaMarcaje, entradaMutation]);
 
@@ -310,10 +349,10 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     try {
       const coords = await obtenerCoordsParaMarcaje();
       const result = await salidaMutation.mutateAsync({ registroId: registroHoy.id, jornada_continua: jornadaContinua, ...coords });
-      if (result?.advertencia) Alert.alert('Horas extra', result.advertencia);
+      if (result?.advertencia) showAlert('Horas extra', result.advertencia, 'warning');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al marcar salida';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }, [registroHoy, obtenerCoordsParaMarcaje, salidaMutation]);
 
@@ -322,10 +361,10 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const handleReingreso = useCallback(async (motivo?: string) => {
     try {
       await reingresoMutation.mutateAsync(motivo);
-      Alert.alert('Solicitud enviada', 'El gestor recibirá una notificación para aprobarte.');
+      showAlert('Solicitud enviada', 'El gestor recibirá una notificación para aprobarte.', 'success');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al enviar la solicitud';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }, [reingresoMutation]);
 
@@ -333,7 +372,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
   const onRefresh = useCallback(() => {
     refetchPeriodos();
     refetchRegistros();
-  }, [refetchPeriodos, refetchRegistros]);
+    refetchSemana();
+  }, [refetchPeriodos, refetchRegistros, refetchSemana]);
 
   return {
     valorHora,
@@ -347,6 +387,8 @@ export function useNominaTrabajador(): NominaTrabajadorState {
     setPeriodoSeleccionado,
     registros,
     resumen,
+    resumenSemana,
+    horasSemanaPeriodoAnterior,
     registroHoy,
     estadoHoy,
     todayISO,

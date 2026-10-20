@@ -9,9 +9,12 @@
  *   • Día especial (descanso, vacación, etc.): badge amber, sin horario
  */
 
+import { COLORS } from '@/lib/designTokens';
+import { Text } from '@/components/ui/Text';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import type { RegistroDiario } from '@api-client';
+import { recargoFestivo } from '@api-client';
 import {
   analizarDia,
   fmtHora,
@@ -22,6 +25,7 @@ import {
   esJornadaLarga,
   fmtDuracionMin,
   explicarHorasExtra,
+  RECARGO_EXTRA,
 } from './trabajador/nominaTrabajadorUtils';
 import { formatCOP } from '@/lib/formatters';
 
@@ -30,9 +34,11 @@ const SHORT_DAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 interface RegistroCardProps {
   registro:   RegistroDiario;
   valorHora?: number;
+  /** Inicio del período mostrado: permite avisar si las horas previas de la semana son del período anterior. */
+  periodoInicio?: string;
 }
 
-export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
+export function RegistroCard({ registro, valorHora = 0, periodoInicio }: RegistroCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const analisis     = analizarDia(registro, valorHora);
@@ -97,7 +103,10 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
         )}
         {analisis.esFestivo && (
           <View className="bg-danger-light px-2 py-0.5 rounded-full">
-            <Text className="text-[10px] font-semibold text-danger">Festivo</Text>
+            {/* horas_festivo > 0 ⇒ habitual (recargo); si no, sus horas se clasificaron como normales (ocasional). */}
+            <Text className="text-[10px] font-semibold text-danger">
+              {Number(registro.horas_festivo) > 0 ? 'Festivo habitual' : 'Festivo · horas normales'}
+            </Text>
           </View>
         )}
       </View>
@@ -109,7 +118,7 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
       onPress={() => canExpand && setExpanded((v) => !v)}
       activeOpacity={canExpand ? 0.8 : 1}
       className="bg-card rounded-2xl overflow-hidden"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } }}
       accessibilityRole="button"
       accessibilityLabel={`Registro ${fmtFechaCorta(registro.fecha)}`}
     >
@@ -183,8 +192,9 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
           )}
           {explicacionExtra && (
             <Text className="text-xs text-muted-foreground">
-              Llevabas {explicacionExtra.acumuladoSemana.toFixed(1)}h esta semana → {explicacionExtra.cupoUsado.toFixed(1)}h
+              Llevabas {explicacionExtra.acumuladoSemana.toFixed(1)}h desde el {explicacionExtra.desdeLunes} → {explicacionExtra.cupoUsado.toFixed(1)}h
               de tu cupo ({explicacionExtra.topeSemanal}h) + {explicacionExtra.horasExtra.toFixed(1)}h extra
+              {periodoInicio && explicacionExtra.lunesISO < periodoInicio ? '. Las horas previas son del período anterior.' : ''}
             </Text>
           )}
           {analisis.tieneExtras && (
@@ -196,22 +206,22 @@ export function RegistroCard({ registro, valorHora = 0 }: RegistroCardProps) {
               )}
               {Number(registro.horas_nocturnas) > 0 && (
                 <Text className="text-xs text-info">
-                  {Number(registro.horas_nocturnas).toFixed(1)}h noct. (+135 %)
+                  {Number(registro.horas_nocturnas).toFixed(1)}h noct. (recargo +{Math.round(RECARGO_EXTRA.NOCTURNA * 100)} %)
                 </Text>
               )}
               {Number(registro.horas_extra_diurnas) > 0 && (
                 <Text className="text-xs text-primary-500 font-medium">
-                  +{Number(registro.horas_extra_diurnas).toFixed(1)}h ext. diurna (+125 %)
+                  +{Number(registro.horas_extra_diurnas).toFixed(1)}h ext. diurna (×{RECARGO_EXTRA.EXTRA_DIURNA.toFixed(2)})
                 </Text>
               )}
               {Number(registro.horas_extra_nocturnas) > 0 && (
                 <Text className="text-xs text-primary-600 font-medium">
-                  +{Number(registro.horas_extra_nocturnas).toFixed(1)}h ext. noct. (+175 %)
+                  +{Number(registro.horas_extra_nocturnas).toFixed(1)}h ext. noct. (×{RECARGO_EXTRA.EXTRA_NOCTURNA.toFixed(2)})
                 </Text>
               )}
               {Number(registro.horas_festivo) > 0 && (
                 <Text className="text-xs text-danger font-medium">
-                  {Number(registro.horas_festivo).toFixed(1)}h festivo (+175 %)
+                  {Number(registro.horas_festivo).toFixed(1)}h festivo (×{recargoFestivo(registro.fecha).toFixed(2)})
                 </Text>
               )}
             </View>

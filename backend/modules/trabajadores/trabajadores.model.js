@@ -2,6 +2,39 @@
 
 const { pool } = require('../../config/database');
 const { CAMPOS_PERSONALES_TRABAJADOR } = require('../../config/constants');
+const AppError = require('../../utils/AppError');
+
+// Fechas llegan como 'YYYY-MM-DD' (dateStrings) y '' equivale a NULL.
+const norm = (v) => (v == null || v === '' ? null : String(v));
+
+/** ¿El trabajador (usuario) tiene otra ficha activa, en otra empresa? */
+async function tieneOtraFichaActiva(c, usuarioId, id) {
+  const [otras] = await c.query(
+    'SELECT 1 FROM trabajadores WHERE usuario_id = ? AND id != ? AND activo = 1 LIMIT 1',
+    [usuarioId, id]
+  );
+  return otras.length > 0;
+}
+
+/**
+ * Corre fn dentro de una transacción. Si viene una conexión (conn), la usa sin
+ * commit: la transacción la abre y la cierra quien llamó. Si no, abre la suya.
+ */
+async function enTransaccion(conn, fn) {
+  if (conn) return fn(conn);
+  const propia = await pool.getConnection();
+  try {
+    await propia.beginTransaction();
+    const resultado = await fn(propia);
+    await propia.commit();
+    return resultado;
+  } catch (err) {
+    await propia.rollback();
+    throw err;
+  } finally {
+    propia.release();
+  }
+}
 
 /**
  * Acceso a datos de trabajadores.
@@ -154,20 +187,16 @@ const TrabajadoresModel = {
   /**
    * Cambia tarifa/salario y su registro de auditoría en UNA transacción: si no
    * se puede dejar el rastro, el sueldo tampoco cambia.
+   * Si viene conn, corre dentro de la transacción de quien llama (ver enTransaccion).
    * @returns {Promise<null|{cambio: boolean, trabajadorId?, usuarioId?, nombre?}>} null si no existe.
    */
-  async actualizarSalarioConAuditoria(empresaId, id, { tarifa_hora, salario_base }, auditoria) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
-      const [[actual]] = await conn.query(
+  async actualizarSalarioConAuditoria(empresaId, id, { tarifa_hora, salario_base }, auditoria, conn) {
+    return enTransaccion(conn, async (c) => {
+      const [[actual]] = await c.query(
         'SELECT usuario_id, nombre, apellido, tarifa_hora, salario_base FROM trabajadores WHERE id = ? AND empresa_id = ? FOR UPDATE',
         [id, empresaId]
       );
-      if (!actual) {
-        await conn.rollback();
-        return null;
-      }
+      if (!actual) return null;
 
       const nuevaTarifa = tarifa_hora === undefined ? actual.tarifa_hora : tarifa_hora;
       const nuevoSalario = salario_base === undefined ? actual.salario_base : salario_base;
@@ -175,16 +204,13 @@ const TrabajadoresModel = {
       const cambio =
         num(actual.tarifa_hora) !== num(nuevaTarifa) || num(actual.salario_base) !== num(nuevoSalario);
       const nombre = `${actual.nombre} ${actual.apellido}`.trim();
-      if (!cambio) {
-        await conn.commit();
-        return { cambio: false };
-      }
+      if (!cambio) return { cambio: false };
 
-      await conn.query(
+      await c.query(
         'UPDATE trabajadores SET tarifa_hora = ?, salario_base = ? WHERE id = ? AND empresa_id = ?',
         [nuevaTarifa, nuevoSalario, id, empresaId]
       );
-      await conn.query(
+      await c.query(
         `INSERT INTO trabajadores_salario_auditoria
            (empresa_id, trabajador_id, trabajador_nombre, tarifa_hora_anterior, tarifa_hora_nueva,
             salario_base_anterior, salario_base_nueva, usuario_id, usuario_nombre, usuario_rol, ip)
@@ -195,14 +221,8 @@ const TrabajadoresModel = {
           auditoria.usuario_id, auditoria.usuario_nombre, auditoria.usuario_rol, auditoria.ip ?? null,
         ]
       );
-      await conn.commit();
       return { cambio: true, trabajadorId: id, usuarioId: actual.usuario_id, nombre };
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   async listarHistorialSalario(empresaId, id) {
@@ -481,42 +501,60 @@ const TrabajadoresModel = {
     await pool.query('UPDATE trabajadores SET empresa_id = ? WHERE id = ?', [empresaId, trabajadorId]);
   },
 
-  async actualizar(empresaId, id, datos) {
+  /**
+   * La cédula no se cambia desde una empresa si el trabajador tiene ficha activa
+   * en otra: es su documento y choca con UNIQUE(empresa_id, cedula) — la cambia él
+   * en actualizarPorUsuarioId. El resto de datos de la persona sí se copia a sus
+   * otras fichas activas, para que queden iguales en todas sus empresas.
+   */
+  async actualizar(empresaId, id, datos, conn) {
     const sets = [];
     const params = [];
-    const personalesActualizados = {};
+    const personales = {};
     for (const campo of CAMPOS_EDITABLES) {
       if (datos[campo] !== undefined) {
         // '' se guarda como NULL — cedula '' no debe chocar con el UNIQUE(empresa_id, cedula).
         const valor = campo === 'cedula' && datos[campo] === '' ? null : datos[campo];
         sets.push(`${campo} = ?`);
         params.push(valor);
-        if (CAMPOS_PERSONALES_TRABAJADOR.includes(campo)) personalesActualizados[campo] = valor;
+        if (CAMPOS_PERSONALES_TRABAJADOR.includes(campo)) personales[campo] = valor;
       }
     }
     if (sets.length === 0) return 0;
 
-    params.push(id, empresaId);
-    const [res] = await pool.query(
-      `UPDATE trabajadores SET ${sets.join(', ')} WHERE id = ? AND empresa_id = ?`,
-      params
-    );
-
-    // Propagar los campos de la PERSONA (no del vínculo) a sus demás fichas
-    // activas — sin esto, un gestor corrigiendo la cédula/banco de un trabajador
-    // solo lo arreglaba en SU empresa, quedando desincronizado en las otras.
-    if (res.affectedRows && Object.keys(personalesActualizados).length > 0) {
-      const [[fila]] = await pool.query('SELECT usuario_id FROM trabajadores WHERE id = ?', [id]);
-      if (fila?.usuario_id) {
-        const propSets = Object.keys(personalesActualizados).map((c) => `${c} = ?`);
-        await pool.query(
-          `UPDATE trabajadores SET ${propSets.join(', ')} WHERE usuario_id = ? AND id != ? AND activo = 1`,
-          [...Object.values(personalesActualizados), fila.usuario_id, id]
+    return enTransaccion(conn, async (c) => {
+      const [[actual]] = await c.query(
+        'SELECT usuario_id, cedula FROM trabajadores WHERE id = ? AND empresa_id = ?',
+        [id, empresaId]
+      );
+      if (
+        personales.cedula !== undefined &&
+        actual?.usuario_id &&
+        norm(actual.cedula) !== norm(personales.cedula) &&
+        (await tieneOtraFichaActiva(c, actual.usuario_id, id))
+      ) {
+        throw new AppError(
+          'No se puede cambiar la cédula desde aquí: el trabajador tiene ficha en otra empresa y su cédula la actualiza él desde su perfil.',
+          409
         );
       }
-    }
 
-    return res.affectedRows;
+      params.push(id, empresaId);
+      const [res] = await c.query(
+        `UPDATE trabajadores SET ${sets.join(', ')} WHERE id = ? AND empresa_id = ?`,
+        params
+      );
+
+      // Datos de la persona (menos la cédula, ya validada arriba) a sus otras fichas activas.
+      const copiar = Object.keys(personales).filter((col) => col !== 'cedula');
+      if (res.affectedRows && copiar.length > 0 && actual?.usuario_id) {
+        await c.query(
+          `UPDATE trabajadores SET ${copiar.map((col) => `${col} = ?`).join(', ')} WHERE usuario_id = ? AND id != ? AND activo = 1`,
+          [...copiar.map((col) => personales[col]), actual.usuario_id, id]
+        );
+      }
+      return res.affectedRows;
+    });
   },
 
   async desactivar(empresaId, id) {
@@ -647,11 +685,19 @@ const TrabajadoresModel = {
     }
     if (sets.length === 0) return 0;
     params.push(usuarioId);
-    const [res] = await pool.query(
-      `UPDATE trabajadores SET ${sets.join(', ')} WHERE usuario_id = ? AND activo = 1`,
-      params
-    );
-    return res.affectedRows;
+    // Una sola sentencia para todas sus fichas: MySQL la deshace entera si una choca.
+    try {
+      const [res] = await pool.query(
+        `UPDATE trabajadores SET ${sets.join(', ')} WHERE usuario_id = ? AND activo = 1`,
+        params
+      );
+      return res.affectedRows;
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY') {
+        throw new AppError('Esa cédula ya está registrada en una de las empresas donde tienes ficha.', 409);
+      }
+      throw err;
+    }
   },
 
   async actualizarExtras(usuarioId, acepta) {

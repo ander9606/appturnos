@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/Button';
@@ -19,7 +21,7 @@ type Props = {
 function SummaryRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <View className="flex-row items-start gap-3 py-2.5 border-b border-border">
-      <Ionicons name={icon as any} size={16} color="#64748B" style={{ marginTop: 1 }} />
+      <Ionicons name={icon as any} size={16} color={COLORS.mutedForeground} style={{ marginTop: 1 }} />
       <View className="flex-1">
         <Text className="text-xs text-muted-foreground">{label}</Text>
         <Text className="text-sm font-medium text-foreground">{value}</Text>
@@ -40,7 +42,7 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublishe
     <ScrollView contentContainerClassName="px-5 py-4 gap-5 pb-10">
       <View
         className="bg-card rounded-2xl px-4 py-2"
-        style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+        style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
       >
         <SummaryRow icon="text-outline"     label="Título"   value={data.titulo} />
         <SummaryRow icon="calendar-outline" label="Fecha"    value={fecha} />
@@ -69,7 +71,7 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublishe
 
       <View
         className="bg-card rounded-2xl px-4 py-3 gap-2"
-        style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+        style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
       >
         <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
           Puestos ({totalPlazas} plazas en total)
@@ -99,7 +101,7 @@ export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublishe
       </View>
 
       <View className="flex-row items-start gap-3 bg-info-light rounded-2xl px-4 py-3">
-        <Ionicons name="notifications-outline" size={18} color="#3B82F6" style={{ marginTop: 1 }} />
+        <Ionicons name="notifications-outline" size={18} color={COLORS.info} style={{ marginTop: 1 }} />
         <Text className="flex-1 text-sm text-info">
           {data.visibilidad === 'dirigida'
             ? `Al publicar, se notificará solo a ${data.destinatarios.length} persona${data.destinatarios.length !== 1 ? 's' : ''} que elegiste.`

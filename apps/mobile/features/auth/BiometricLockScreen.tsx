@@ -1,5 +1,7 @@
+import { alpha } from '@/lib/designTokens';
+import { Text } from '@/components/ui/Text';
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/lib/theme';
 
@@ -30,7 +32,7 @@ export function BiometricLockScreen({ onUnlock, onLogout, authenticating }: Prop
   return (
     <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]} className="bg-background items-center justify-center px-8">
       <View className="bg-card border border-border rounded-3xl p-8 items-center gap-4 w-full">
-        <View className="w-16 h-16 rounded-full items-center justify-center" style={{ backgroundColor: theme.primary + '1A' }}>
+        <View className="w-16 h-16 rounded-full items-center justify-center" style={{ backgroundColor: alpha(theme.primary, 0.1) }}>
           <Ionicons name="lock-closed" size={32} color={theme.primary} />
         </View>
 

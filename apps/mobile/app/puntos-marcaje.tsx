@@ -1,12 +1,12 @@
+import { showAlert } from '@/lib/alertDialog';
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { Text, TextInput } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
   Pressable,
-  TextInput,
-  Alert,
-  ActivityIndicator,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -101,7 +101,7 @@ export default function PuntosMarcajeScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso requerido', 'Activa el permiso de ubicación para autocompletar las coordenadas del punto de marcaje.');
+        showAlert('Permiso requerido', 'Activa el permiso de ubicación para autocompletar las coordenadas del punto de marcaje.', 'warning');
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -111,7 +111,7 @@ export default function PuntosMarcajeScreen() {
         longitud: formatCoord(loc.coords.longitude),
       }));
     } catch {
-      Alert.alert('No se pudo obtener el GPS', 'Revisa que el GPS esté activado e intenta de nuevo, o ingresa las coordenadas manualmente.');
+      showAlert('No se pudo obtener el GPS', 'Revisa que el GPS esté activado e intenta de nuevo, o ingresa las coordenadas manualmente.');
     } finally {
       setLocating(false);
     }
@@ -124,19 +124,19 @@ export default function PuntosMarcajeScreen() {
     const radio   = parseInt(form.radio_metros, 10);
 
     if (!nombre) {
-      Alert.alert('Campo requerido', 'El nombre del punto es obligatorio.');
+      showAlert('Campo requerido', 'El nombre del punto es obligatorio.', 'warning');
       return;
     }
     if (isNaN(lat) || lat < -90 || lat > 90) {
-      Alert.alert('Coordenada inválida', 'La latitud debe ser un número entre -90 y 90.');
+      showAlert('Coordenada inválida', 'La latitud debe ser un número entre -90 y 90.', 'warning');
       return;
     }
     if (isNaN(lng) || lng < -180 || lng > 180) {
-      Alert.alert('Coordenada inválida', 'La longitud debe ser un número entre -180 y 180.');
+      showAlert('Coordenada inválida', 'La longitud debe ser un número entre -180 y 180.', 'warning');
       return;
     }
     if (isNaN(radio) || radio < 10 || radio > 5000) {
-      Alert.alert('Radio inválido', 'El radio debe estar entre 10 y 5000 metros.');
+      showAlert('Radio inválido', 'El radio debe estar entre 10 y 5000 metros.', 'warning');
       return;
     }
 
@@ -157,7 +157,7 @@ export default function PuntosMarcajeScreen() {
         {
           onSuccess: () => setModalVisible(false),
           onError: (err: unknown) =>
-            Alert.alert('Error', (err as ApiError).message ?? 'No se pudo actualizar.'),
+            showAlert('Error', (err as ApiError).message ?? 'No se pudo actualizar.'),
         },
       );
     } else {
@@ -173,7 +173,7 @@ export default function PuntosMarcajeScreen() {
         {
           onSuccess: () => setModalVisible(false),
           onError: (err: unknown) =>
-            Alert.alert('Error', (err as ApiError).message ?? 'No se pudo crear el punto.'),
+            showAlert('Error', (err as ApiError).message ?? 'No se pudo crear el punto.'),
         },
       );
     }
@@ -192,12 +192,12 @@ export default function PuntosMarcajeScreen() {
       onError: (err: unknown) => {
         const apiErr = err as ApiError;
         if (apiErr.status === 409) {
-          Alert.alert(
+          showAlert(
             'Punto en uso',
-            apiErr.message ?? 'Este punto está asignado a uno o más cargos. Reasígnalos antes de eliminarlo.',
+            apiErr.message ?? 'Este punto está asignado a uno o más cargos. Reasígnalos antes de eliminarlo.', 'warning',
           );
         } else {
-          Alert.alert('Error', apiErr.message ?? 'No se pudo eliminar.');
+          showAlert('Error', apiErr.message ?? 'No se pudo eliminar.');
         }
       },
     });
@@ -211,12 +211,12 @@ export default function PuntosMarcajeScreen() {
       <View className="px-4 py-4 flex-row items-center gap-3">
         <View
           className="w-9 h-9 rounded-full items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: isZonal ? '#DBEAFE' : '#FEF3C7' }}
+          style={{ backgroundColor: isZonal ? COLORS.infoLight : COLORS.warningLight }}
         >
           <Ionicons
             name="location-outline"
             size={16}
-            color={isZonal ? COLORS.info : '#D97706'}
+            color={isZonal ? COLORS.info : COLORS.warningDark}
           />
         </View>
 
@@ -225,11 +225,11 @@ export default function PuntosMarcajeScreen() {
             <Text className="text-sm font-semibold text-foreground">{punto.nombre}</Text>
             <View
               className="px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: isZonal ? '#DBEAFE' : '#FEF3C7' }}
+              style={{ backgroundColor: isZonal ? COLORS.infoLight : COLORS.warningLight }}
             >
               <Text
                 className="text-xs font-medium"
-                style={{ color: isZonal ? COLORS.info : '#D97706' }}
+                style={{ color: isZonal ? COLORS.info : COLORS.warningDark }}
               >
                 {isZonal ? 'Zonal' : 'Fijo'}
               </Text>
@@ -260,7 +260,7 @@ export default function PuntosMarcajeScreen() {
             accessibilityLabel="Editar punto de marcaje"
             className="w-8 h-8 rounded-full bg-muted items-center justify-center active:opacity-70"
           >
-            <Ionicons name="pencil-outline" size={15} color="#64748B" />
+            <Ionicons name="pencil-outline" size={15} color={COLORS.mutedForeground} />
           </Pressable>
           <Pressable
             onPress={() => handleEliminar(punto)}
@@ -283,9 +283,7 @@ export default function PuntosMarcajeScreen() {
       />
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {isLoading ? (
-          <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color={COLORS.info} />
-          </View>
+          <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : (
           <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 96 }}>
 
@@ -303,7 +301,7 @@ export default function PuntosMarcajeScreen() {
             </Text>
             {fijosPuntos.length === 0 ? (
               <View className="bg-card border border-dashed border-border rounded-2xl p-5 items-center gap-2 mb-6">
-                <Ionicons name="location-outline" size={28} color="#94A3B8" />
+                <Ionicons name="location-outline" size={28} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground text-center">
                   Sin puntos fijos. Crea uno con el botón +
                 </Text>
@@ -324,7 +322,7 @@ export default function PuntosMarcajeScreen() {
             </Text>
             {zonalesPuntos.length === 0 ? (
               <View className="bg-card border border-dashed border-border rounded-2xl p-5 items-center gap-2">
-                <Ionicons name="map-outline" size={28} color="#94A3B8" />
+                <Ionicons name="map-outline" size={28} color={COLORS.placeholder} />
                 <Text className="text-sm text-muted-foreground text-center">
                   Sin puntos zonales. Los puntos zonales aceptan marcaje desde cualquiera de sus ubicaciones.
                 </Text>
@@ -348,14 +346,14 @@ export default function PuntosMarcajeScreen() {
           className="absolute bottom-6 right-6 w-14 h-14 rounded-full items-center justify-center active:opacity-80"
           style={{
             backgroundColor: COLORS.info,
-            shadowColor: '#3B82F6',
+            shadowColor: COLORS.info,
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.35,
             shadowRadius: 8,
             elevation: 8,
           }}
         >
-          <Ionicons name="add" size={28} color="#fff" />
+          <Ionicons name="add" size={28} color={COLORS.white} />
         </Pressable>
       </SafeAreaView>
 
@@ -380,7 +378,7 @@ export default function PuntosMarcajeScreen() {
                 {editingPunto ? 'Editar punto' : 'Nuevo punto'}
               </Text>
               <Pressable onPress={() => setModalVisible(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color="#64748B" />
+                <Ionicons name="close" size={24} color={COLORS.mutedForeground} />
               </Pressable>
             </View>
 
@@ -437,7 +435,7 @@ export default function PuntosMarcajeScreen() {
                   className="flex-row items-center gap-1.5 active:opacity-70"
                 >
                   {locating ? (
-                    <ActivityIndicator size="small" color={COLORS.info} />
+                    <Spinner size="small" color={COLORS.info} />
                   ) : (
                     <Ionicons name="navigate-outline" size={14} color={COLORS.info} />
                   )}
@@ -553,7 +551,7 @@ export default function PuntosMarcajeScreen() {
               style={{ backgroundColor: COLORS.info }}
             >
               {isSaving ? (
-                <ActivityIndicator color="#fff" />
+                <Spinner color={COLORS.white} />
               ) : (
                 <Text className="text-base font-semibold text-white">
                   {editingPunto ? 'Guardar cambios' : 'Crear punto'}

@@ -22,10 +22,32 @@
   --color-success-light:    #D1FAE5;
   --color-warning:          #F59E0B;
   --color-warning-light:    #FEF3C7;
+  --color-warning-dark:     #D97706;
   --color-danger:           #EF4444;
   --color-danger-light:     #FEE2E2;
+  --color-danger-dark:      #DC2626;
   --color-info:             #3B82F6;
   --color-info-light:       #DBEAFE;
+
+  /* Texto fuerte SOBRE los fondos *-light (avisos, badges): AA (6.3 · 6.4 · 6.8 · 8.5 : 1).
+     Mismos valores que successText/warningText/dangerText/infoText de mobile/lib/designTokens.ts. */
+  --color-success-text:     #166534;
+  --color-warning-text:     #92400E;
+  --color-danger-text:      #991B1B;
+  --color-info-text:        #1E3A8A;
+
+  /* Gráficos de horas y desgloses de nómina — validados contra daltonismo; mismos valores que
+     HOUR_TYPE_COLORS en mobile (ordinarias es el neutro de base) y ACCENT.violeta (bonos). */
+  --color-hora-ordinaria:   #94A3B8;
+  --color-hora-extra:       #E87BA4;
+  --color-hora-extra-nocturna: #4A3AA7;
+  --color-hora-nocturna:    #1BAF7A;
+  --color-hora-festivo:     #EB6834;
+  --color-bonos:            #8B5CF6;
+
+  /* Módulo logiq360 (integración) */
+  --color-integracion:      #6366F1;
+  --color-integracion-light:#E0E7FF;
 
   /* Surfaces */
   --color-background:       #F8FAFC;
@@ -40,7 +62,7 @@
   --color-border:           #E2E8F0;
 
   /* Font */
-  --font-family-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-family-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, sans-serif;
 
   /* Radius */
   --radius-sm:  4px;

@@ -6,8 +6,13 @@
  *                        se muestra aparte; lo que varía período a período son
  *                        las horas con recargo)
  */
+import { SkeletonList } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Text } from '@/components/ui/Text';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { COLORS } from '@/lib/designTokens';
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, Pressable, Platform } from 'react-native';
+import { View, FlatList, RefreshControl, TouchableOpacity, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,8 +21,6 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme } from '@/lib/theme';
 import { formatCOP, formatDate, toISODate } from '@/lib/formatters';
-import { apiErrorMessage } from '@/lib/apiErrorMessage';
-import { Button } from '@/components/ui/Button';
 import { PeriodoBadge } from '@/features/nomina/PeriodoBadge';
 import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
@@ -86,7 +89,7 @@ function TablaTurnosPorEmpresa({ turnos, primaryColor, onPressTurno }: {
   if (grupos.length === 0) {
     return (
       <View className="py-10 items-center gap-2">
-        <Ionicons name="document-text-outline" size={32} color="#94A3B8" />
+        <Ionicons name="document-text-outline" size={32} color={COLORS.placeholder} />
         <Text className="text-sm text-muted-foreground">Sin turnos completados en este rango.</Text>
       </View>
     );
@@ -206,8 +209,8 @@ function HistorialTurnos() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -215,11 +218,7 @@ function HistorialTurnos() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color="#94A3B8" />
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar el historial')}
-        </Text>
-        <Button label="Reintentar" onPress={() => refetch()} variant="secondary" />
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar el historial" />
       </SafeAreaView>
     );
   }
@@ -252,19 +251,19 @@ function HistorialTurnos() {
                   onPress={() => setPickerAbierto('desde')}
                   className="flex-1 h-10 rounded-xl bg-muted items-center justify-center flex-row gap-1.5"
                 >
-                  <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                  <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
                   <Text className="text-xs text-foreground">Desde {formatDate(desdeISO)}</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => setPickerAbierto('hasta')}
                   className="flex-1 h-10 rounded-xl bg-muted items-center justify-center flex-row gap-1.5"
                 >
-                  <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                  <Ionicons name="calendar-outline" size={14} color={COLORS.mutedForeground} />
                   <Text className="text-xs text-foreground">Hasta {formatDate(hastaISO)}</Text>
                 </Pressable>
                 {rangoActivo && (
                   <TouchableOpacity onPress={() => setRangoActivo(false)} hitSlop={8} accessibilityLabel="Limpiar filtro de fecha">
-                    <Ionicons name="close-circle" size={20} color="#94A3B8" />
+                    <Ionicons name="close-circle" size={20} color={COLORS.placeholder} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -310,7 +309,7 @@ function HistorialTurnos() {
                   <Text className="text-base font-bold text-foreground">
                     {formatCOP(item.totales.pago)}
                   </Text>
-                  <Ionicons name={expandido ? 'chevron-up' : 'chevron-down'} size={16} color="#94A3B8" />
+                  <Ionicons name={expandido ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.placeholder} />
                 </View>
               </TouchableOpacity>
 
@@ -324,13 +323,7 @@ function HistorialTurnos() {
         }}
         ListEmptyComponent={
           rangoActivo ? null : (
-            <View className="py-16 items-center gap-3 px-8">
-              <Ionicons name="bar-chart-outline" size={48} color="#94A3B8" />
-              <Text className="text-base font-semibold text-foreground text-center">Sin historial aún</Text>
-              <Text className="text-sm text-muted-foreground text-center">
-                Cuando completes turnos, aparecerán aquí agrupados por período.
-              </Text>
-            </View>
+            <EmptyState title="Sin historial aún" message="Cuando completes turnos, aparecerán aquí agrupados por período." />
           )
         }
       />
@@ -378,8 +371,8 @@ function HistorialNomina() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['top']}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+        <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
@@ -387,11 +380,7 @@ function HistorialNomina() {
   if (isError) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center gap-3 px-6" edges={['top']}>
-        <Ionicons name="warning-outline" size={48} color="#94A3B8" />
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar el historial')}
-        </Text>
-        <Button label="Reintentar" onPress={() => refetch()} variant="secondary" />
+        <ErrorState error={error} onRetry={refetch} fallback="Error al cargar el historial" />
       </SafeAreaView>
     );
   }
@@ -446,13 +435,7 @@ function HistorialNomina() {
           </View>
         )}
         ListEmptyComponent={
-          <View className="py-16 items-center gap-3 px-8">
-            <Ionicons name="bar-chart-outline" size={48} color="#94A3B8" />
-            <Text className="text-base font-semibold text-foreground text-center">Sin historial aún</Text>
-            <Text className="text-sm text-muted-foreground text-center">
-              Cuando se cierren períodos con registros tuyos, aparecerán aquí.
-            </Text>
-          </View>
+          <EmptyState title="Sin historial aún" message="Cuando se cierren períodos con registros tuyos, aparecerán aquí." />
         }
       />
     </SafeAreaView>

@@ -1,3 +1,4 @@
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { DollarSign, Calendar, Clock, Gift } from 'lucide-react';
 import { useConfirm } from '@/shared/hooks/useConfirm';
@@ -7,6 +8,7 @@ import { StatCard } from '@/shared/components/StatCard';
 import { fmtCOP, fmtHrs, fmtDate, bogotaToday } from '@/shared/lib/format';
 import { usePeriodoActivoEventual, useLiquidacionEventual, useLiquidarEventual } from '../hooks/useNomina';
 import type { PeriodoTurnoEventual, LineaLiquidacionEventual } from '@/modules/turnos/types';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 /**
  * Turnos eventuales (extra) de trabajadores de nómina — segmento 'nomina' de
@@ -27,9 +29,9 @@ export function LiquidacionEventualView() {
   const puedeLiquidar = periodo && periodo.estado === 'abierto' && periodo.fecha_fin < hoy;
   const isLoading = loadingPeriodo || loadingLiq;
 
-  if (isLoading) return <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>;
+  if (isLoading) return <SkeletonTable />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
-  if (!periodo) return <p className="text-muted-foreground text-sm py-8 text-center">Sin período activo</p>;
+  if (!periodo) return <EmptyState title="Sin período activo" />;
 
   return (
     <div>
@@ -68,7 +70,7 @@ export function LiquidacionEventualView() {
       </div>
 
       {lineas.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Sin turnos extra completados en este período</p>
+        <EmptyState title="Sin turnos extra completados en este período" />
       ) : (
         <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <table className="w-full text-sm">

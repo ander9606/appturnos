@@ -1,6 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Switch,
+  View, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Switch,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -135,7 +138,7 @@ export function CorregirIngresoEgresoModal({
   async function handleGuardar() {
     if (!asignacion) return;
     if (ingreso && egreso && egreso <= ingreso) {
-      Alert.alert('Error', 'La hora de egreso debe ser posterior al ingreso.');
+      showAlert('Error', 'La hora de egreso debe ser posterior al ingreso.');
       return;
     }
     try {
@@ -156,7 +159,7 @@ export function CorregirIngresoEgresoModal({
       } else if (typeof err === 'object' && err !== null && 'message' in err) {
         msg = String(err.message);
       }
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 
@@ -179,7 +182,7 @@ export function CorregirIngresoEgresoModal({
                 </Text>
               </View>
               <Pressable onPress={onClose} hitSlop={10}>
-                <Ionicons name="close" size={22} color="#64748B" />
+                <Ionicons name="close" size={22} color={COLORS.mutedForeground} />
               </Pressable>
             </View>
 
@@ -191,7 +194,7 @@ export function CorregirIngresoEgresoModal({
                     onPress={abrirIngreso}
                     className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
                   >
-                    <Ionicons name="log-in-outline" size={16} color="#64748B" />
+                    <Ionicons name="log-in-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm text-foreground">{ingreso ? fmtDateTime(ingreso) : 'Sin definir'}</Text>
                   </TouchableOpacity>
                   {showIngreso && Platform.OS === 'ios' && (
@@ -215,7 +218,7 @@ export function CorregirIngresoEgresoModal({
                     onPress={abrirEgreso}
                     className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center gap-2"
                   >
-                    <Ionicons name="log-out-outline" size={16} color="#64748B" />
+                    <Ionicons name="log-out-outline" size={16} color={COLORS.mutedForeground} />
                     <Text className="text-sm text-foreground">{egreso ? fmtDateTime(egreso) : 'Sin definir'}</Text>
                   </TouchableOpacity>
                   {showEgreso && Platform.OS === 'ios' && (
@@ -239,7 +242,7 @@ export function CorregirIngresoEgresoModal({
                       value={egresoSiguienteDia}
                       onValueChange={toggleEgresoSiguienteDia}
                       trackColor={{ true: theme.primary }}
-                      thumbColor="#fff"
+                      thumbColor={COLORS.white}
                     />
                   </View>
                 </View>

@@ -1,12 +1,12 @@
+import { Text, TextInput } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState, useMemo } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
-  Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -65,7 +65,7 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
 
   const handleNext = () => {
     const err = validateStep2(data.puestos);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
     onNext();
   };
 
@@ -86,12 +86,12 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
         <View
           key={p.key}
           className="bg-card rounded-2xl px-4 py-4 gap-3"
-          style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6 }}
+          style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 6 }}
         >
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2 flex-1">
               <View className="w-7 h-7 bg-primary-100 rounded-xl items-center justify-center">
-                <Ionicons name="briefcase-outline" size={14} color="#FF5A3C" />
+                <Ionicons name="briefcase-outline" size={14} color={COLORS.primary} />
               </View>
               <Text className="text-sm font-bold text-foreground flex-1" numberOfLines={1}>
                 {p.cargo_nombre}
@@ -101,7 +101,7 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
               onPress={() => removePuesto(p.key)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="trash-outline" size={18} color="#EF4444" />
+              <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
             </TouchableOpacity>
           </View>
 
@@ -113,7 +113,7 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
                   className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
                   onPress={() => updatePuesto(p.key, { plazas: Math.max(1, p.plazas - 1) })}
                 >
-                  <Ionicons name="remove" size={16} color="#64748B" />
+                  <Ionicons name="remove" size={16} color={COLORS.mutedForeground} />
                 </TouchableOpacity>
                 <Text className="text-base font-bold text-foreground w-6 text-center">
                   {p.plazas}
@@ -122,7 +122,7 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
                   className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
                   onPress={() => updatePuesto(p.key, { plazas: p.plazas + 1 })}
                 >
-                  <Ionicons name="add" size={16} color="#64748B" />
+                  <Ionicons name="add" size={16} color={COLORS.mutedForeground} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -134,7 +134,7 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
                 <TextInput
                   className="flex-1 py-2 text-sm font-semibold text-foreground"
                   placeholder="120.000"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={COLORS.placeholder}
                   value={p.tarifa_dia}
                   onChangeText={(t) => updatePuesto(p.key, { tarifa_dia: t.replace(/[^\d.,]/g, '') })}
                   keyboardType="numeric"
@@ -151,8 +151,8 @@ export function Step2Puestos({ data, onChange, onNext, onBack }: Props) {
         disabled={isLoading}
       >
         {isLoading
-          ? <ActivityIndicator size="small" color="#94A3B8" />
-          : <Ionicons name="add-circle-outline" size={20} color="#64748B" />}
+          ? <Spinner size="small" color={COLORS.placeholder} />
+          : <Ionicons name="add-circle-outline" size={20} color={COLORS.mutedForeground} />}
         <Text className="text-sm font-semibold text-muted-foreground">
           {isLoading ? 'Cargando roles…' : 'Agregar rol'}
         </Text>

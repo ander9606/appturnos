@@ -32,6 +32,8 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `asignacion.correccion` | Tu horario fue modificado | Gestor corrige ingreso/egreso real de una asignación de turno | `asignaciones.service.js:590` |
 | `nomina.correccion` | Tu horario fue modificado | Gestor corrige hora_entrada/hora_salida de un registro diario | `registros.service.js:298` |
 | `contrato.pendiente_firma` | Falta firmar tu contrato | Gestor corrige un turno ya completado y el minicontrato queda por firmar | `asignaciones.service.js:623` |
+| `cuenta_cobro.bloqueada_sin_firma` | Aún no podemos generar tu cuenta de cobro | Al cerrar el período, el trabajador de turnos tiene turnos sin contrato firmado (la cuenta exige todos firmados) | `cuentas-cobro.service.js` |
+| `cuenta_cobro.trabajadores_sin_firma` | Cuentas de cobro sin generar | Mismo evento, resumen para `admin_empresa` / `jefe_nomina` con los trabajadores sin cuenta | `cuentas-cobro.service.js` |
 | `nomina.recordatorio_ingreso` | Tu turno está por empezar | Cron 15 min, `trabajador_nomina` con horario fijo dentro de los 15 min previos a su hora de entrada y sin marcar aún | `recordatorioIngreso.worker.js:41` |
 | `nomina.descuento_pendiente` | Tienes un descuento por aceptar | Gestor registra un descuento de nómina | `descuentos.service.js:27` |
 | `nomina.ciclo_cambiado` | Cambió el ciclo de nómina | Cambia `empresas.tipo_liquidacion`; también llega a gestores | `periodos.service.js:171` |

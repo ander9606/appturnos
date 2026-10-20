@@ -227,6 +227,8 @@ Silent JWT refresh is handled inside `client.ts`: a single `isRefreshing` flag +
 New full-screen stack screens (e.g. `turno/[id]`, `trabajador/[id]`) must be registered in `app/_layout.tsx` under the root `<Stack>`.
 
 ### Styling
+**Antes de tocar colores, spinners/skeletons o componentes UI, lee `docs/DISENO.md`** (fuente de verdad del diseño; actualízalo si cambias una regla). Resumen: `Text`/`TextInput` de `@/components/ui/Text` (Inter; el lint prohíbe los de `react-native`), sin hex literales (tokens de `designTokens.ts`: `COLORS`, `ACCENT`, `alpha()`; el lint lo impide), sin `ActivityIndicator` ni `Loader2` (usar `Spinner`), listas, tablas y fichas con skeleton (`SkeletonList`/`SkeletonTable`/`SkeletonDetail`/`SkeletonStats`), errores con `ErrorState` (planeta con el anillo caído; no armar bloques de error a mano), listas vacías con `EmptyState` (planeta en órbita), avisos con `showAlert`/`confirm`/`showToast`/`actionSheet` (no `Alert.alert` nativo; ver §5.5).
+
 NativeWind v4 (Tailwind for React Native). All tokens are defined in `apps/mobile/tailwind.config.js`. Use semantic color names — `text-foreground`, `bg-card`, `border-border`, `text-muted-foreground`, `text-primary`, `text-danger`, `text-success`, `text-warning`, `text-info` — rather than raw hex.
 
 ### Forms
@@ -249,7 +251,7 @@ Single locale `es-CO`. All user-visible strings go through `t('key')` from `lib/
 | `admin_empresa` | Full access: CRUD workers, close/liquidate periods |
 | `jefe_turnos` | Manage shifts and offers |
 | `jefe_nomina` | Manage payroll periods |
-| `nomina` | View payroll, read-only team |
+| `nomina` | View payroll and reports (incl. pay per worker), read-only team |
 | `trabajador_turnos` | See own shifts, mark ingreso/egreso |
 | `trabajador_nomina` | See own payroll records |
 

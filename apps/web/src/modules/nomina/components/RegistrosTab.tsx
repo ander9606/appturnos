@@ -1,3 +1,4 @@
+import { SkeletonTable } from '@/shared/components/Skeleton';
 import { puedeGestionarNomina } from '../permisos';
 import { useState } from 'react';
 import { Plus, Pencil, CalendarClock, MapPin, ChevronDown, X, AlertTriangle } from 'lucide-react';
@@ -6,12 +7,13 @@ import type { Registro, DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { fmtDiaSemana, fmtHora, fmtHrs } from '@/shared/lib/format';
 import { TIPO_DIA_LABELS } from '../constants';
-import { AlmuerzoIndicator, EnVivoIndicator } from './DiaIndicators';
+import { AlmuerzoIndicator, EnVivoIndicator, ExtraIndicator } from './DiaIndicators';
 import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
 import { agruparPorSemana, explicarHorasExtra } from '../utils';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 export function RegistrosTab({
-  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear,
+  registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio, horasPrevias,
 }: {
   registros: Registro[];
   loading: boolean;
@@ -21,6 +23,9 @@ export function RegistrosTab({
   onCorregir: (id: number) => void;
   onReasignar: (c: DescansoCompensatorio) => void;
   onShowCrear: () => void;
+  periodoInicio?: string;
+  /** Horas por trabajador de la semana partida (período anterior), para el desglose por semana. */
+  horasPrevias?: { lunes: string | null; porTrabajador: Map<number, number> };
 }) {
   const [filtroTrabajador, setFiltroTrabajador] = useState<number | undefined>(undefined);
   const [soloSospechosos, setSoloSospechosos] = useState(false);
@@ -94,11 +99,11 @@ export function RegistrosTab({
       </div>
 
       {loading ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Cargando...</p>
+        <SkeletonTable />
       ) : error ? (
         <ErrorState error={error} onRetry={onRetry} />
       ) : gruposPorTrabajador.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Sin registros</p>
+        <EmptyState title="Sin registros" />
       ) : (
         <div className="flex flex-col gap-2">
           {gruposPorTrabajador.map(g => {
@@ -107,7 +112,10 @@ export function RegistrosTab({
             const totalExtra = g.registros.reduce((s, r) => s + Number(r.horas_extra_diurnas) + Number(r.horas_extra_nocturnas), 0);
             const totalNoct = g.registros.reduce((s, r) => s + Number(r.horas_nocturnas), 0);
             const totalFestivo = g.registros.reduce((s, r) => s + Number(r.horas_festivo), 0);
-            const semanas = agruparPorSemana(g.registros);
+            const semanas = agruparPorSemana(
+              g.registros,
+              horasPrevias?.lunes ? { lunes: horasPrevias.lunes, horas: horasPrevias.porTrabajador.get(g.trabajadorId) ?? 0 } : undefined,
+            );
             return (
               <div key={g.trabajadorId} className="bg-card border border-border rounded-xl overflow-hidden">
                 <button
@@ -144,6 +152,12 @@ export function RegistrosTab({
                           ) : (
                             <span className="text-foreground">{fmtHrs(s.horasTotales)} / {s.limiteHoras}h</span>
                           )}
+                          {s.horasFestivo ? (
+                            <span className="text-danger"> · +{fmtHrs(s.horasFestivo)}h festivo (recargo, fuera de las {s.limiteHoras}h)</span>
+                          ) : null}
+                          {s.horasPrevias ? (
+                            <span className="text-muted-foreground"> · {fmtHrs(s.horasPrevias)}h del período anterior</span>
+                          ) : null}
                         </span>
                       ))}
                     </div>
@@ -197,6 +211,7 @@ export function RegistrosTab({
                                 return explicacion ? (
                                   <span className="text-[10px] text-muted-foreground/70 whitespace-nowrap">
                                     {fmtHrs(explicacion.cupoUsado)}h cupo + {fmtHrs(explicacion.horasExtra)}h extra
+                                    {' '}<ExtraIndicator r={r} periodoInicio={periodoInicio} />
                                   </span>
                                 ) : null;
                               })()}

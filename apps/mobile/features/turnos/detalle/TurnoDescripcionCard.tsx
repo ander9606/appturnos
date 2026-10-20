@@ -1,5 +1,7 @@
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export function TurnoDescripcionCard({
@@ -35,14 +37,14 @@ export function TurnoDescripcionCard({
   return (
     <View
       className="bg-card rounded-2xl px-5 py-4 gap-3"
-      style={{ elevation: 1, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8 }}
+      style={{ elevation: 1, shadowColor: COLORS.shadow, shadowOpacity: 0.04, shadowRadius: 8 }}
     >
       {secciones.map((s, i) => (
         <React.Fragment key={s.key}>
           {i > 0 && <View className="border-t border-border" />}
           <View className="gap-1">
             <View className="flex-row items-center gap-2">
-              <Ionicons name={s.icon} size={14} color="#64748B" />
+              <Ionicons name={s.icon} size={14} color={COLORS.mutedForeground} />
               <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 {s.label}
               </Text>

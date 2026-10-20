@@ -1,11 +1,11 @@
+import { Text, TextInput } from '@/components/ui/Text';
+import { Spinner } from '@/components/ui/Spinner';
+import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  TextInput,
   Pressable,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -72,25 +72,25 @@ export function Step4Empresas({ data, onChange, onBack, onSubmit }: Props) {
 
       {/* Buscador */}
       <View className="flex-row items-center bg-muted rounded-2xl px-4 gap-2">
-        <Ionicons name="search-outline" size={16} color="#64748B" />
+        <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} />
         <TextInput
           className="flex-1 py-3 text-base text-foreground"
           placeholder="Buscar empresa por nombre…"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={COLORS.placeholder}
           value={busqueda}
           onChangeText={setBusqueda}
           returnKeyType="search"
         />
         {busqueda.length > 0 && (
           <Pressable onPress={() => setBusqueda('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close-circle" size={16} color="#94A3B8" />
+            <Ionicons name="close-circle" size={16} color={COLORS.placeholder} />
           </Pressable>
         )}
       </View>
 
       {/* Lista */}
       {isLoading ? (
-        <ActivityIndicator size="small" color="#FF5A3C" />
+        <Spinner size="small" color={COLORS.primary} />
       ) : empresas.length === 0 ? (
         <Text className="text-sm text-muted-foreground text-center py-4">
           {busqueda ? 'Sin resultados para esa búsqueda' : 'No hay empresas en el directorio'}
@@ -114,9 +114,9 @@ export function Step4Empresas({ data, onChange, onBack, onSubmit }: Props) {
                   }`}
                 >
                   {selected ? (
-                    <Ionicons name="checkmark" size={20} color="#fff" />
+                    <Ionicons name="checkmark" size={20} color={COLORS.white} />
                   ) : (
-                    <Ionicons name="business-outline" size={18} color="#64748B" />
+                    <Ionicons name="business-outline" size={18} color={COLORS.mutedForeground} />
                   )}
                 </View>
 
@@ -143,7 +143,7 @@ export function Step4Empresas({ data, onChange, onBack, onSubmit }: Props) {
       {/* Selección actual */}
       {data.empresa_ids.length > 0 && (
         <View className="flex-row items-center gap-2 bg-primary-50 rounded-xl px-4 py-3">
-          <Ionicons name="checkmark-circle" size={16} color="#FF5A3C" />
+          <Ionicons name="checkmark-circle" size={16} color={COLORS.primary} />
           <Text className="text-sm text-primary-600 font-medium">
             {data.empresa_ids.length} empresa{data.empresa_ids.length !== 1 ? 's' : ''} seleccionada{data.empresa_ids.length !== 1 ? 's' : ''}
           </Text>
