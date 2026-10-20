@@ -1,17 +1,28 @@
 'use strict';
 
-const NARANJA = '#FF5A3C';
-const NARANJA_700 = '#C32D14';
+const path = require('path');
 
-// ponytail: wordmark de texto en vez de logo PNG — upgrade path: doc.image(logo) cuando haya un asset en backend/assets
-/** Franja naranja superior + wordmark "Zaturno". Se llama justo tras crear el doc. */
-function bandaMarca(doc) {
-  doc.save().rect(0, 0, doc.page.width, 8).fill(NARANJA).restore();
-  doc.save().font('Helvetica-Bold').fontSize(10).fillColor(NARANJA_700)
-    .text('Zaturno', 56, 22, { width: doc.page.width - 112, align: 'right', lineBreak: false })
-    .restore();
-  doc.fillColor('#000000').font('Helvetica');
-  doc.y = 56;
+const LOGO_GRIS = path.join(__dirname, '..', 'assets', 'logo-gris.png');
+const GRIS = '#94A3B8';
+
+/**
+ * Pie discreto: logo gris + "Generado por Zaturno" centrados al fondo de la
+ * última página. Se llama justo antes de `doc.end()`. Se escribe dentro del
+ * margen inferior, así que no provoca una página nueva.
+ */
+function piePdfMarca(doc) {
+  const { width, height, margins } = doc.page;
+  const y = height - margins.bottom + 14;
+  const ancho = 120;
+  const x = (width - ancho) / 2;
+  const prevBottom = margins.bottom;
+  margins.bottom = 0; // evita el salto de página al escribir en la zona del margen
+  doc.save();
+  doc.image(LOGO_GRIS, x, y, { width: 14, height: 14 });
+  doc.font('Helvetica').fontSize(8).fillColor(GRIS)
+    .text('Generado por Zaturno', x + 18, y + 3, { width: ancho - 18, lineBreak: false });
+  doc.restore();
+  margins.bottom = prevBottom;
 }
 
-module.exports = { bandaMarca, NARANJA, NARANJA_700 };
+module.exports = { piePdfMarca };

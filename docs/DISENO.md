@@ -343,9 +343,9 @@ Referencia móvil: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`). Refe
 ### 5.9 Correos y PDFs
 
 - **Correos:** todos pasan por `backend/utils/plantillaCorreo.js` (`plantillaCorreo`, `bloqueCodigo`, `tablaDatos`): cabecera naranja `#FF5A3C`, tarjeta blanca, botón naranja. Los correos no pueden usar tokens (van en HTML con estilos en línea), así que los hex viven solo ahí. Todo dato de usuario se escapa con `esc()`.
-- **PDFs de pdfkit** (contrato, cuenta de cobro, comprobante): `bandaMarca(doc)` de `backend/utils/marcaPdf.js` justo tras crear el documento (franja naranja + wordmark). Sobrio: el documento es del trabajador y la empresa, no publicidad.
+- **PDFs de pdfkit** (contrato, cuenta de cobro, comprobante): `piePdfMarca(doc)` de `backend/utils/marcaPdf.js` antes de `doc.end()` — logo gris (`backend/assets/logo-gris.png`) + "Generado por Zaturno" en gris, centrado al pie de la última página. Sin franjas ni color: el documento es del trabajador y la empresa, no publicidad.
 - **PDF de reglas de pago:** `scripts/generar-pdf-reglas.js` usa la familia de marca (`#FF5A3C`, `#FFF1EE`, `#C32D14`); regenerar el PDF al cambiarlo.
-- Deuda: wordmark de texto en lugar del logo real (los correos necesitan una URL pública `EMAIL_LOGO_URL`; los PDFs un PNG en `backend/assets`).
+- Deuda: los correos usan wordmark de texto; para el logo real necesitan una URL pública (`EMAIL_LOGO_URL`).
 
 ## 6. Accesibilidad
 

@@ -1,7 +1,7 @@
 'use strict';
 
 const PDFDocument = require('pdfkit');
-const { bandaMarca } = require('./marcaPdf');
+const { piePdfMarca } = require('./marcaPdf');
 
 const cop = (n) => `$ ${Number(n).toLocaleString('es-CO')}`;
 
@@ -16,7 +16,6 @@ function generarFacturaPdf({ numero, fecha, emisor, cliente, concepto, montoCop 
     doc.on('data', (c) => chunks.push(c));
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
-    bandaMarca(doc);
 
     const linea = (etiqueta, valor) =>
       doc.font('Helvetica-Bold').text(`${etiqueta}: `, { continued: true })
@@ -50,6 +49,7 @@ function generarFacturaPdf({ numero, fecha, emisor, cliente, concepto, montoCop 
       'Pago recibido a través de Wompi. Documento emitido por persona natural no responsable de IVA.',
       { align: 'justify' }
     );
+    piePdfMarca(doc);
     doc.end();
   });
 }
