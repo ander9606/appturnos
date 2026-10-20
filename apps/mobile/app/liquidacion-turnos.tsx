@@ -106,11 +106,13 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
   const router = useRouter();
   const hasExtra = t.pago_extra > 0;
   const hasBono = t.bono_monto > 0;
+  const sinFirmar = !t.firmado_trabajador;
   return (
     <TouchableOpacity
       onPress={() => router.push(`/turno/${t.asignacion_id}`)}
       activeOpacity={0.7}
       className="py-3 border-b border-border last:border-b-0"
+      style={sinFirmar ? { opacity: 0.6 } : undefined}
     >
       {/* Fila 1: fecha + monto */}
       <View className="flex-row items-start justify-between gap-2">
@@ -123,8 +125,21 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
             {t.lugar ? `  ·  ${t.lugar}` : ''}
           </Text>
         </View>
-        <Text className="text-sm font-bold text-foreground">{cop(t.pago_total)}</Text>
+        <Text
+          className="text-sm font-bold text-foreground"
+          style={sinFirmar ? { textDecorationLine: 'line-through' } : undefined}
+        >
+          {cop(t.pago_total)}
+        </Text>
       </View>
+      {sinFirmar && (
+        <View className="flex-row items-center gap-1 mt-1">
+          <Ionicons name="alert-circle-outline" size={12} color={COLORS.warningDark} />
+          <Text className="text-[11px] font-semibold text-warning">
+            Sin firmar — no suma al total a pagar
+          </Text>
+        </View>
+      )}
 
       {/* Fila 2: horas + desglose pago */}
       <View className="flex-row items-center gap-3 mt-1.5 flex-wrap">
@@ -183,6 +198,9 @@ function TrabajadorCard({
   const [expanded, setExpanded] = useState(false);
   const hasExtra = item.pago_extra > 0;
   const hasBono = item.bono_monto > 0;
+  const pendientes = item.turnos_pendientes_firma;
+  const turnosPagables = item.total_turnos - pendientes;
+  const montoPendiente = item.turnos.reduce((s, t) => (t.firmado_trabajador ? s : s + t.pago_total), 0);
 
   return (
     <View
@@ -215,9 +233,17 @@ function TrabajadorCard({
                 </View>
               )}
               <Text className="text-xs text-muted-foreground">
-                {item.total_turnos} turno{item.total_turnos !== 1 ? 's' : ''} · {item.total_horas.toFixed(1)}h
+                {turnosPagables} turno{turnosPagables !== 1 ? 's' : ''} · {item.total_horas.toFixed(1)}h
               </Text>
             </View>
+            {pendientes > 0 && (
+              <View className="bg-warning/10 self-start px-2 py-0.5 rounded-full mt-0.5 flex-row items-center gap-1">
+                <Ionicons name="alert-circle-outline" size={11} color={COLORS.warningDark} />
+                <Text className="text-[10px] font-semibold text-warning">
+                  {pendientes} sin firmar · no incluido{pendientes !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            )}
             {hasExtra && (
               <View className="bg-amber-100 self-start px-2 py-0.5 rounded-full mt-0.5">
                 <Text className="text-[10px] font-semibold text-amber-700">
@@ -263,12 +289,17 @@ function TrabajadorCard({
           {/* Totales */}
           <View className="flex-row justify-end items-center gap-6 pt-3 border-t border-border mt-1">
             <Text className="text-xs text-muted-foreground">
-              {item.total_turnos} turnos · {item.total_horas.toFixed(1)}h
+              {turnosPagables} firmado{turnosPagables !== 1 ? 's' : ''} · {item.total_horas.toFixed(1)}h
             </Text>
             <Text className="text-base font-bold text-foreground">
               {cop(item.pago_total)}
             </Text>
           </View>
+          {pendientes > 0 && (
+            <Text className="text-[11px] text-warning font-medium text-right mt-1">
+              Pendiente de firma: {cop(montoPendiente)} ({pendientes} turno{pendientes !== 1 ? 's' : ''}) — se suma cuando el trabajador firme
+            </Text>
+          )}
         </View>
       )}
     </View>
@@ -489,7 +520,7 @@ export default function LiquidacionTurnosScreen() {
                         {trabajadores.length} trabajador{trabajadores.length !== 1 ? 'es' : ''}
                       </Text>
                       <Text className="text-xs text-muted-foreground">
-                        {trabajadores.reduce((s, w) => s + w.total_turnos, 0)} turnos completados
+                        {trabajadores.reduce((s, w) => s + w.total_turnos - w.turnos_pendientes_firma, 0)} turnos firmados
                       </Text>
                     </View>
                   </View>
