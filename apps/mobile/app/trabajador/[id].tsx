@@ -7,6 +7,7 @@
  *   jefe_nomina   → edita la ficha (nómina y turnos); el sueldo y la hora de entrada solo en nómina; no el tipo ni los datos de pago
  *   nomina        → solo lectura
  */
+import { showAlert } from '@/lib/alertDialog';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -16,7 +17,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  Alert,
   Linking,
   Modal,
 } from 'react-native';
@@ -257,10 +257,10 @@ export default function TrabajadorDetailScreen() {
 
     if (pasaANomina) {
       if (!rawData.cedula) {
-        Alert.alert(
+        showAlert(
           'Falta la cédula',
           'Este trabajador no tiene cédula registrada. Agrégala y guarda antes de invitarlo a nómina.'
-        );
+        , 'warning');
         return;
       }
       const ok = await confirm({
@@ -312,7 +312,7 @@ export default function TrabajadorDetailScreen() {
           invitacionEnviada = true;
         } catch (err: unknown) {
           const msg = err instanceof ApiError ? err.message : 'No se pudo enviar la invitación.';
-          Alert.alert('Error', msg);
+          showAlert('Error', msg);
         }
       }
       setEditing(false);
@@ -326,7 +326,7 @@ export default function TrabajadorDetailScreen() {
         err && typeof err === 'object' && 'message' in err
           ? String((err as { message: string }).message)
           : 'Ocurrió un error al guardar.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 
@@ -349,7 +349,7 @@ export default function TrabajadorDetailScreen() {
         err && typeof err === 'object' && 'message' in err
           ? String((err as { message: string }).message)
           : 'No se pudo guardar la calificación.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 
@@ -365,7 +365,7 @@ export default function TrabajadorDetailScreen() {
     if (!ok) return;
     desactivar.mutate(numId, {
       onSuccess: () => router.back(),
-      onError: () => Alert.alert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
+      onError: () => showAlert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
     });
   }
 
@@ -383,7 +383,7 @@ export default function TrabajadorDetailScreen() {
       onSuccess: () => showToast('Ya no se le ofrecerán turnos.'),
       onError: (err: unknown) => {
         const msg = err instanceof ApiError ? err.message : 'No se pudo completar la acción';
-        Alert.alert('Error', msg);
+        showAlert('Error', msg);
       },
     });
   }
@@ -402,7 +402,7 @@ export default function TrabajadorDetailScreen() {
       onSuccess: () => router.back(),
       onError: (err: unknown) => {
         const msg = err instanceof ApiError ? err.message : 'No se pudo eliminar. Intenta de nuevo.';
-        Alert.alert('Error', msg);
+        showAlert('Error', msg);
       },
     });
   }

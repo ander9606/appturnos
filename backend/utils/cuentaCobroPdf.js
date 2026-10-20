@@ -1,6 +1,7 @@
 'use strict';
 
 const PDFDocument = require('pdfkit');
+const { piePdfMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
 
 /**
@@ -148,6 +149,7 @@ function generarCuentaCobroPdf(cuenta, stream) {
     .text(`${cuenta.trabajador_nombre} ${cuenta.trabajador_apellido}`);
   doc.text(`C.C. ${cuenta.trabajador_cedula}`);
 
+  piePdfMarca(doc);
   doc.end();
 }
 

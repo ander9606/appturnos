@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
@@ -8,7 +9,6 @@ import {
   Modal,
   FlatList,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Cargo } from '@api-client';
@@ -44,7 +44,7 @@ export function CargoModal({ visible, cargos, usedIds, onSelect, onClose }: Prop
       { nombre: nombreNuevo },
       {
         onSuccess: (cargo) => { onSelect(cargo); onClose(); setSearch(''); },
-        onError: () => Alert.alert('Error', 'No se pudo crear el cargo.'),
+        onError: () => showAlert('Error', 'No se pudo crear el cargo.'),
       },
     );
   }

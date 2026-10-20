@@ -1,8 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
-  View, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Switch,
+  View, ScrollView, Modal, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Switch,
 } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid, type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -137,7 +138,7 @@ export function CorregirIngresoEgresoModal({
   async function handleGuardar() {
     if (!asignacion) return;
     if (ingreso && egreso && egreso <= ingreso) {
-      Alert.alert('Error', 'La hora de egreso debe ser posterior al ingreso.');
+      showAlert('Error', 'La hora de egreso debe ser posterior al ingreso.');
       return;
     }
     try {
@@ -158,7 +159,7 @@ export function CorregirIngresoEgresoModal({
       } else if (typeof err === 'object' && err !== null && 'message' in err) {
         msg = String(err.message);
       }
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 

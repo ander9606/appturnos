@@ -7,6 +7,7 @@
  *
  * Acciones disponibles: Aprobar / Rechazar
  */
+import { showAlert } from '@/lib/alertDialog';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
@@ -17,7 +18,6 @@ import {
   ScrollView,
   FlatList,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   Pressable,
   Modal,
@@ -327,7 +327,7 @@ export default function SolicitudesScreen() {
     try {
       await rechazar.mutateAsync({ id });
     } catch {
-      Alert.alert('Error', 'No se pudo rechazar la solicitud');
+      showAlert('Error', 'No se pudo rechazar la solicitud');
     } finally {
       setLoadingId(null);
     }

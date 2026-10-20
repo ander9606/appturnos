@@ -275,9 +275,7 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 - `elegirFotoConMenu` resuelve `string` (base64) si eligió imagen, `null` si eligió quitarla y `undefined` si canceló o no dio permiso: `if (r !== undefined) subir(r)` cubre los tres casos. Reutilízalo en vez de repetir el flujo de `expo-image-picker`.
 - Los diálogos comparten el marco `components/ui/DialogCard.tsx` (fondo oscuro + tarjeta con entrada de resorte).
 
-**Excepción que sigue con `Alert.alert` nativo** (pendiente, ver §8):
-1. **Archivos con un `<Modal>` de React Native** (19 archivos, ~75 llamadas). En iOS un `Modal` abierto puede impedir que se muestre otro desde el layout raíz, y no se pudo comprobar en dispositivo. Mientras tanto, ahí se conserva el nativo, que siempre aparece encima.
-   Pendientes ahí: `oferta/[id]` ("Hay trabajadores sin marcar salida", ideal para `actionSheet`), `ReportarNovedadModal` ("Adjuntar foto", ideal para `elegirFotoConMenu`) y `nomina-ingreso`.
+**Sin excepciones:** ya no queda ningún `Alert.alert` nativo en la app. Se comprobó en iPhone que el diálogo del layout raíz aparece sobre un `Modal` abierto, así que `showAlert`, `confirm` y `actionSheet` se usan también dentro de modales. Los avisos de 3+ botones usan `actionSheet`.
 
 ### 5.6 Estados vacíos
 
@@ -340,6 +338,13 @@ Referencia móvil: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`). Refe
 
 ---
 
+### 5.9 Correos y PDFs
+
+- **Correos:** todos pasan por `backend/utils/plantillaCorreo.js` (`plantillaCorreo`, `bloqueCodigo`, `tablaDatos`): cabecera naranja `#FF5A3C`, tarjeta blanca, botón naranja. Los correos no pueden usar tokens (van en HTML con estilos en línea), así que los hex viven solo ahí. Todo dato de usuario se escapa con `esc()`.
+- **PDFs de pdfkit** (contrato, cuenta de cobro, comprobante): `piePdfMarca(doc)` de `backend/utils/marcaPdf.js` antes de `doc.end()` — logo gris (`backend/assets/logo-gris.png`) + "Generado por Zaturno" en gris, centrado al pie de la última página. Sin franjas ni color: el documento es del trabajador y la empresa, no publicidad.
+- **PDF de reglas de pago:** `scripts/generar-pdf-reglas.js` usa la familia de marca (`#FF5A3C`, `#FFF1EE`, `#C32D14`); regenerar el PDF al cambiarlo.
+- Deuda: los correos usan wordmark de texto; para el logo real necesitan una URL pública (`EMAIL_LOGO_URL`).
+
 ## 6. Accesibilidad
 
 Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 px en negrita, y elementos gráficos):
@@ -393,13 +398,13 @@ Reglas:
 8. **Spinner a nivel de marca.** Evaluar una animación con la forma del logo (Lottie) para el splash y la carga inicial.
 9. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
 10. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
-11. **Más ilustraciones de marca.** Reutilizar el planeta en estados vacíos (sin turnos, sin equipo) y en el 404 de la web.
-12. **`Alert.alert` restantes en móvil (~85 llamadas).** Probar en un iPhone si un diálogo del layout raíz aparece sobre un `Modal` abierto; si funciona, migrar los 19 archivos con `Modal` (mismo script; ahí se estrenan `actionSheet` y `elegirFotoConMenu` en `oferta/[id]` y `ReportarNovedadModal`). El `ActionSheet` también es un `Modal`, así que tiene la misma restricción. Si no, montar el diálogo dentro de cada `Modal` o sustituir esos `Modal` por pantallas/`bottom sheet`.
+11. **Más ilustraciones de marca.** Hecho en la web: el 404 y los vacíos de página completa usan el planeta. Falta móvil (sin turnos, sin equipo) donde aún haya texto suelto.
+12. **Probar `actionSheet` sobre un `Modal` en Android.** En iPhone se verificó que los diálogos aparecen sobre un `Modal`; falta repetirlo en Android.
 13. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
 14. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
 ---
-15. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: solo 3 pantallas usan `EmptyState`; unos 28 vacíos más son un texto gris en tablas y tarjetas.
+15. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: los vacíos de página completa ya usan `EmptyState`; quedan textos grises dentro de celdas de tabla y tarjetas pequeñas ("Sin cargos", "Sin gestores"…), donde una ilustración de 170 px no cabe.
 
 ## 9. Referencias
 

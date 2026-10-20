@@ -8,6 +8,7 @@ const AuthModel = require('../auth/auth.model');
 const AppError = require('../../utils/AppError');
 const logger = require('../../utils/logger');
 const { enviarEmail } = require('../../utils/mailer');
+const { plantillaCorreo, esc, tablaDatos } = require('../../utils/plantillaCorreo');
 const { ROLES } = require('../../config/constants');
 const { PlanesModel } = require('../suscripciones/planes.model');
 
@@ -20,20 +21,14 @@ function generarPasswordTemporal() {
 }
 
 function credencialesHtml({ nombre, empresa, email, password }) {
-  return `
-    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px 24px;color:#1e293b">
-      <h2 style="margin:0 0 8px">Zaturno</h2>
-      <p style="color:#64748b;margin:0 0 24px">Gestión de turnos y nómina</p>
-      <p>Hola <strong>${nombre}</strong>,</p>
-      <p>Se creó tu cuenta de administrador para <strong>${empresa}</strong> en Zaturno. Estas son tus credenciales de acceso:</p>
-      <table style="margin:16px 0;font-size:14px">
-        <tr><td style="color:#64748b;padding:4px 12px 4px 0">Email</td><td><strong>${email}</strong></td></tr>
-        <tr><td style="color:#64748b;padding:4px 12px 4px 0">Contraseña</td><td><strong>${password}</strong></td></tr>
-      </table>
-      <p style="color:#64748b;font-size:13px">
-        Por seguridad, cambia esta contraseña apenas ingreses.
-      </p>
-    </div>`;
+  return plantillaCorreo({
+    titulo: 'Tu cuenta de administrador está lista',
+    cuerpo:
+      `<p style="margin:0 0 12px">Hola <strong>${esc(nombre)}</strong>,</p>` +
+      `<p style="margin:0">Se creó tu cuenta de administrador para <strong>${esc(empresa)}</strong> en Zaturno. Estas son tus credenciales de acceso:</p>` +
+      tablaDatos([['Email', email], ['Contraseña', password]]),
+    nota: 'Por seguridad, cambia esta contraseña apenas ingreses.',
+  });
 }
 
 const AdminService = {

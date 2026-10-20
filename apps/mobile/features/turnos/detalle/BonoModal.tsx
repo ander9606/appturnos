@@ -1,9 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
-  View, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, Alert,
-} from 'react-native';
+  View, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -38,7 +38,7 @@ export function BonoModal({
   async function handleGuardar() {
     const montoNum = Number(monto.replace(/[^0-9.]/g, '')) || 0;
     if (montoNum > 0 && !motivo.trim()) {
-      Alert.alert('Falta el motivo', 'Escribe por qué se le da este bono al trabajador.');
+      showAlert('Falta el motivo', 'Escribe por qué se le da este bono al trabajador.', 'warning');
       return;
     }
     try {
@@ -47,7 +47,7 @@ export function BonoModal({
       onClose();
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo guardar el bono.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 

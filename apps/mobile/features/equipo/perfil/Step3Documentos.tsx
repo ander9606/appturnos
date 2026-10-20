@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -7,7 +8,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Pressable,
-  Alert,
   Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -213,7 +213,7 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
 
   const handleNext = () => {
     const err = validateStep3(data);
-    if (err) { Alert.alert('Datos incompletos', err); return; }
+    if (err) { showAlert('Datos incompletos', err, 'warning'); return; }
     onNext();
   };
 
@@ -269,7 +269,7 @@ export function Step3Documentos({ data, onChange, onBack, onNext }: Props) {
         err && typeof err === 'object' && 'message' in err
           ? String((err as { message: string }).message)
           : 'No se pudo crear el cargo.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   };
 

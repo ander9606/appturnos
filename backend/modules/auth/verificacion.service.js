@@ -4,6 +4,7 @@ const jwt      = require('jsonwebtoken');
 const { pool } = require('../../config/database');
 const AppError = require('../../utils/AppError');
 const { enviarEmail } = require('../../utils/mailer');
+const { plantillaCorreo, bloqueCodigo } = require('../../utils/plantillaCorreo');
 const { enviarSms }   = require('../../utils/sms');
 const logger = require('../../utils/logger');
 const AuthModel = require('./auth.model');
@@ -43,17 +44,17 @@ async function enviarOtp(tipo, destino) {
       });
       await enviarEmail({
         to:      destino,
-        subject: `Tu código de verificación (${horaEnvio}) — Zaturnos`,
-        html: `
-          <p>Tu código de verificación es:</p>
-          <h2 style="letter-spacing:6px;font-size:36px;">${codigo}</h2>
-          <p>Válido por ${OTP_TTL_MIN} minutos. No lo compartas con nadie.</p>
-        `,
+        subject: `Tu código de verificación (${horaEnvio}) — Zaturno`,
+        html: plantillaCorreo({
+          titulo: 'Tu código de verificación',
+          cuerpo: `<p style="margin:0">Usa este código para continuar:</p>${bloqueCodigo(codigo)}`,
+          nota: `Válido por ${OTP_TTL_MIN} minutos. No lo compartas con nadie.`,
+        }),
       });
     } else {
       await enviarSms({
         to:   destino,
-        body: `Tu código Zaturnos: ${codigo}. Válido ${OTP_TTL_MIN} min.`,
+        body: `Tu código Zaturno: ${codigo}. Válido ${OTP_TTL_MIN} min.`,
       });
     }
   } finally {

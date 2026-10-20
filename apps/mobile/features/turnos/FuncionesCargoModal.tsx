@@ -2,12 +2,13 @@
  * FuncionesCargoModal — ver (todos) / diligenciar (admin, jefe_turnos) el
  * listado de funciones que un cargo tiene en la empresa actual.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useEffect, useState } from 'react';
-import { View, Pressable, Modal, FlatList, Alert } from 'react-native';
+import { View, Pressable, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -53,7 +54,7 @@ export function FuncionesCargoModal({ visible, onClose, cargoId, cargoNombre, ed
       {
         onSuccess: onClose,
         onError: (err: unknown) =>
-          Alert.alert('Error', (err as ApiError).message ?? 'No se pudieron guardar las funciones.'),
+          showAlert('Error', (err as ApiError).message ?? 'No se pudieron guardar las funciones.'),
       },
     );
   }

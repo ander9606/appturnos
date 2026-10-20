@@ -4,6 +4,7 @@
  * Pantalla de descubrimiento: buscar, filtrar por ciudad y solicitar vínculo.
  * Se accede desde mis-empresas.tsx al tocar "Buscar empresa".
  */
+import { showAlert } from '@/lib/alertDialog';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
@@ -14,7 +15,6 @@ import {
   ScrollView,
   Pressable,
   TouchableOpacity,
-  Alert,
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -217,7 +217,7 @@ export default function DirectorioEmpresasScreen() {
       const msg = err && typeof err === 'object' && 'message' in err
         ? String((err as { message: string }).message)
         : 'No se pudo enviar la solicitud';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }, [solicitar, qc]);
 

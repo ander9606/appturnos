@@ -1,6 +1,7 @@
 'use strict';
 
 const PDFDocument = require('pdfkit');
+const { piePdfMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
 
 /**
@@ -88,6 +89,7 @@ function generarContratoPdf(contrato, stream) {
     .fontSize(10)
     .text(`${contrato.trabajador_nombre} ${contrato.trabajador_apellido}`);
 
+  piePdfMarca(doc);
   doc.end();
 }
 

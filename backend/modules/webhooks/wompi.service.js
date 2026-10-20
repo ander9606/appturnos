@@ -6,6 +6,7 @@ const logger   = require('../../utils/logger');
 const { PlanesModel, precioPlanCop, planParaTrabajadores } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const { enviarEmail } = require('../../utils/mailer');
+const { plantillaCorreo, esc } = require('../../utils/plantillaCorreo');
 const { generarFacturaPdf } = require('../../utils/facturaPdf');
 
 const ESTADOS_RECHAZO = ['DECLINED', 'VOIDED', 'ERROR'];
@@ -95,7 +96,10 @@ async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
     await enviarEmail({
       to: emp.email,
       subject: `Comprobante de pago ${numero} — Zaturno`,
-      html: `<p>Gracias por tu pago. Adjuntamos el comprobante de: ${concepto}.</p>`,
+      html: plantillaCorreo({
+        titulo: '¡Gracias por tu pago!',
+        cuerpo: `<p style="margin:0">Adjuntamos el comprobante de: <strong>${esc(concepto)}</strong>.</p>`,
+      }),
       attachments: [{ filename: `${numero}.pdf`, content: pdf }],
     });
   } catch (err) {

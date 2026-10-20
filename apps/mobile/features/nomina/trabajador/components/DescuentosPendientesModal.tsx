@@ -5,11 +5,13 @@
  * Se cierra sola cuando ya no quedan pendientes (visible && lista no vacía).
  */
 
+import { confirm } from '@/lib/confirmDialog';
+import { showAlert } from '@/lib/alertDialog';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, ScrollView, Modal, Pressable, Alert, TouchableOpacity } from 'react-native';
+import { View, ScrollView, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -36,19 +38,19 @@ export function DescuentosPendientesModal({ visible, descuentos, onClose }: Prop
 
   const handleResponder = async (id: number, acepta: boolean) => {
     if (!acepta) {
-      const ok = await new Promise<boolean>((resolve) =>
-        Alert.alert('Rechazar descuento', 'Tu empleador verá que lo rechazaste. ¿Confirmas?', [
-          { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Rechazar', style: 'destructive', onPress: () => resolve(true) },
-        ])
-      );
+      const ok = await confirm({
+        title: 'Rechazar descuento',
+        message: 'Tu empleador verá que lo rechazaste. ¿Confirmas?',
+        confirmLabel: 'Rechazar',
+        destructive: true,
+      });
       if (!ok) return;
     }
     setRespondiendoId(id);
     try {
       await (acepta ? aceptar : rechazar).mutateAsync(id);
     } catch {
-      Alert.alert('Error', 'No se pudo registrar tu respuesta. Intenta de nuevo.');
+      showAlert('Error', 'No se pudo registrar tu respuesta. Intenta de nuevo.');
     } finally {
       setRespondiendoId(null);
     }

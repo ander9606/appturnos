@@ -10,6 +10,7 @@ import { TIPO_DIA_LABELS } from '../constants';
 import { AlmuerzoIndicator, EnVivoIndicator, ExtraIndicator } from './DiaIndicators';
 import { UbicacionMarcajeModal } from './UbicacionMarcajeModal';
 import { agruparPorSemana, explicarHorasExtra } from '../utils';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 export function RegistrosTab({
   registros, loading, error, onRetry, compensatorioDe, onCorregir, onReasignar, onShowCrear, periodoInicio, horasPrevias,
@@ -102,7 +103,7 @@ export function RegistrosTab({
       ) : error ? (
         <ErrorState error={error} onRetry={onRetry} />
       ) : gruposPorTrabajador.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">Sin registros</p>
+        <EmptyState title="Sin registros" />
       ) : (
         <div className="flex flex-col gap-2">
           {gruposPorTrabajador.map(g => {

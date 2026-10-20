@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
@@ -8,7 +9,6 @@ import {
   ScrollView,
   FlatList,
   Pressable,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -104,7 +104,7 @@ export default function CargosScreen() {
   function handleGuardar() {
     const nombre = form.nombre.trim();
     if (!nombre) {
-      Alert.alert('Campo requerido', 'El nombre del cargo es obligatorio.');
+      showAlert('Campo requerido', 'El nombre del cargo es obligatorio.', 'warning');
       return;
     }
 
@@ -120,7 +120,7 @@ export default function CargosScreen() {
         {
           onSuccess: () => setModalVisible(false),
           onError: (err: unknown) =>
-            Alert.alert('Error', (err as ApiError).message ?? 'No se pudo actualizar.'),
+            showAlert('Error', (err as ApiError).message ?? 'No se pudo actualizar.'),
         },
       );
     } else {
@@ -136,7 +136,7 @@ export default function CargosScreen() {
       crearMutation.mutate(payload, {
         onSuccess: () => setModalVisible(false),
         onError: (err: unknown) =>
-          Alert.alert('Error', (err as ApiError).message ?? 'No se pudo crear el cargo.'),
+          showAlert('Error', (err as ApiError).message ?? 'No se pudo crear el cargo.'),
       });
     }
   }
@@ -152,14 +152,14 @@ export default function CargosScreen() {
     eliminarMutation.mutate(cargo.id, {
       onSuccess: (result) => {
         if (result.desactivado) {
-          Alert.alert(
+          showAlert(
             'Cargo desactivado',
             `"${cargo.nombre}" estaba asignado a ${result.usos} trabajador(es) y fue desactivado.`,
           );
         }
       },
       onError: (err: unknown) =>
-        Alert.alert('Error', (err as ApiError).message ?? 'No se pudo eliminar.'),
+        showAlert('Error', (err as ApiError).message ?? 'No se pudo eliminar.'),
     });
   }
 

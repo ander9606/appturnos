@@ -5,6 +5,7 @@ import type { DescansoCompensatorio } from '../types';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { PendientesCompensatoriosBanner } from './PendientesCompensatoriosBanner';
 import { AsignarCompensatorioModal } from './CompensatorioAsignarModals';
+import { EmptyState } from '@/shared/components/EmptyState';
 
 export function CompensatoriosTab() {
   const { data, isLoading, isError, error, refetch } = useCompensatorios();
@@ -19,7 +20,7 @@ export function CompensatoriosTab() {
   return (
     <>
       {pendientes.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No hay compensatorios pendientes de asignar.</p>
+        <EmptyState title="No hay compensatorios pendientes de asignar." />
       ) : (
         <PendientesCompensatoriosBanner pendientes={pendientes} onAsignar={setAsignando} />
       )}
