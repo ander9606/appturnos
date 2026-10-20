@@ -1,3 +1,4 @@
+import { showAlert } from '@/lib/alertDialog';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
@@ -6,7 +7,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -101,7 +101,7 @@ export default function PuntosMarcajeScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso requerido', 'Activa el permiso de ubicación para autocompletar las coordenadas del punto de marcaje.');
+        showAlert('Permiso requerido', 'Activa el permiso de ubicación para autocompletar las coordenadas del punto de marcaje.', 'warning');
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -111,7 +111,7 @@ export default function PuntosMarcajeScreen() {
         longitud: formatCoord(loc.coords.longitude),
       }));
     } catch {
-      Alert.alert('No se pudo obtener el GPS', 'Revisa que el GPS esté activado e intenta de nuevo, o ingresa las coordenadas manualmente.');
+      showAlert('No se pudo obtener el GPS', 'Revisa que el GPS esté activado e intenta de nuevo, o ingresa las coordenadas manualmente.');
     } finally {
       setLocating(false);
     }
@@ -124,19 +124,19 @@ export default function PuntosMarcajeScreen() {
     const radio   = parseInt(form.radio_metros, 10);
 
     if (!nombre) {
-      Alert.alert('Campo requerido', 'El nombre del punto es obligatorio.');
+      showAlert('Campo requerido', 'El nombre del punto es obligatorio.', 'warning');
       return;
     }
     if (isNaN(lat) || lat < -90 || lat > 90) {
-      Alert.alert('Coordenada inválida', 'La latitud debe ser un número entre -90 y 90.');
+      showAlert('Coordenada inválida', 'La latitud debe ser un número entre -90 y 90.', 'warning');
       return;
     }
     if (isNaN(lng) || lng < -180 || lng > 180) {
-      Alert.alert('Coordenada inválida', 'La longitud debe ser un número entre -180 y 180.');
+      showAlert('Coordenada inválida', 'La longitud debe ser un número entre -180 y 180.', 'warning');
       return;
     }
     if (isNaN(radio) || radio < 10 || radio > 5000) {
-      Alert.alert('Radio inválido', 'El radio debe estar entre 10 y 5000 metros.');
+      showAlert('Radio inválido', 'El radio debe estar entre 10 y 5000 metros.', 'warning');
       return;
     }
 
@@ -157,7 +157,7 @@ export default function PuntosMarcajeScreen() {
         {
           onSuccess: () => setModalVisible(false),
           onError: (err: unknown) =>
-            Alert.alert('Error', (err as ApiError).message ?? 'No se pudo actualizar.'),
+            showAlert('Error', (err as ApiError).message ?? 'No se pudo actualizar.'),
         },
       );
     } else {
@@ -173,7 +173,7 @@ export default function PuntosMarcajeScreen() {
         {
           onSuccess: () => setModalVisible(false),
           onError: (err: unknown) =>
-            Alert.alert('Error', (err as ApiError).message ?? 'No se pudo crear el punto.'),
+            showAlert('Error', (err as ApiError).message ?? 'No se pudo crear el punto.'),
         },
       );
     }
@@ -192,12 +192,12 @@ export default function PuntosMarcajeScreen() {
       onError: (err: unknown) => {
         const apiErr = err as ApiError;
         if (apiErr.status === 409) {
-          Alert.alert(
+          showAlert(
             'Punto en uso',
-            apiErr.message ?? 'Este punto está asignado a uno o más cargos. Reasígnalos antes de eliminarlo.',
+            apiErr.message ?? 'Este punto está asignado a uno o más cargos. Reasígnalos antes de eliminarlo.', 'warning',
           );
         } else {
-          Alert.alert('Error', apiErr.message ?? 'No se pudo eliminar.');
+          showAlert('Error', apiErr.message ?? 'No se pudo eliminar.');
         }
       },
     });

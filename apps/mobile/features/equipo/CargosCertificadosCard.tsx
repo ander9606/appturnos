@@ -3,11 +3,12 @@
  * ya activo (trabajador_empresa existe). Estos cargos son los que filtran
  * qué ofertas ve el trabajador (ofertas.model.js → listarMultiEmpresa).
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
-import { View, TouchableOpacity, Pressable, Modal, Alert, ScrollView } from 'react-native';
+import { View, TouchableOpacity, Pressable, Modal, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   useCargosTrabajador,
@@ -44,7 +45,7 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
     if (!ok) return;
     desasignar.mutate(cargoId, {
       onError: (err: unknown) =>
-        Alert.alert('Error', (err as ApiError)?.message ?? 'No se pudo quitar el cargo.'),
+        showAlert('Error', (err as ApiError)?.message ?? 'No se pudo quitar el cargo.'),
     });
   }
 
@@ -52,7 +53,7 @@ export function CargosCertificadosCard({ trabajadorId, nombre }: Props) {
     setPickerVisible(false);
     asignar.mutate(cargoId, {
       onError: (err: unknown) =>
-        Alert.alert('Error', (err as ApiError)?.message ?? 'No se pudo certificar el cargo.'),
+        showAlert('Error', (err as ApiError)?.message ?? 'No se pudo certificar el cargo.'),
     });
   }
 

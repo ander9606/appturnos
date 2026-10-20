@@ -1,9 +1,9 @@
+import { showAlert } from '@/lib/alertDialog';
 import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, Alert,
-} from 'react-native';
+  View, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -44,18 +44,18 @@ export function DescuentoModal({
   async function handleGuardar() {
     const montoNum = Number(monto.replace(/[^0-9.]/g, '')) || 0;
     if (montoNum <= 0) {
-      Alert.alert('Falta el monto', 'Escribe cuánto se le descuenta al trabajador.');
+      showAlert('Falta el monto', 'Escribe cuánto se le descuenta al trabajador.', 'warning');
       return;
     }
     if (montoNum > disponible) {
-      Alert.alert(
+      showAlert(
         'Supera el tope legal',
         `El art. 113 del CST solo permite descontar hasta la quinta parte de la tarifa del día. Disponible: ${formatCOP(disponible)}.`
       );
       return;
     }
     if (!motivo.trim()) {
-      Alert.alert('Falta el motivo', 'Escribe por qué se le hace este descuento al trabajador.');
+      showAlert('Falta el motivo', 'Escribe por qué se le hace este descuento al trabajador.', 'warning');
       return;
     }
     try {
@@ -65,7 +65,7 @@ export function DescuentoModal({
       setMotivo('');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo registrar el descuento.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 
@@ -75,7 +75,7 @@ export function DescuentoModal({
       showToast('Descuento eliminado.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo eliminar el descuento.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 

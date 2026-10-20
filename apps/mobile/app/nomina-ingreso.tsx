@@ -6,12 +6,13 @@
  * - Alerta nativa de hidratación/descanso cada 4 h trabajadas.
  */
 
+import { showAlert } from '@/lib/alertDialog';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Alert, TouchableOpacity, ScrollView, Modal, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, TouchableOpacity, ScrollView, Modal, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -108,10 +109,10 @@ export default function NominaIngresoScreen() {
     if (threshold > 0 && threshold !== lastBreakThreshold.current) {
       lastBreakThreshold.current = threshold;
       const horas = threshold * 4;
-      Alert.alert(
+      showAlert(
         `Llevas ${horas}h trabajando`,
         '¡Tómate un descanso breve y recuerda hidratarte! Tu bienestar importa.',
-        [{ text: 'Gracias', style: 'default' }],
+        'info',
       );
     }
   }, [tick, estadoHoy, registroHoy]);

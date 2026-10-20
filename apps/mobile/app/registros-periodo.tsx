@@ -5,12 +5,13 @@
  * Permite editar tipo_dia y novedad de registros existentes, y crear
  * registros nuevos para días sin marcaje.
  */
+import { showAlert } from '@/lib/alertDialog';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS, ACCENT, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, SectionList, TouchableOpacity, Modal, Pressable, Alert, KeyboardAvoidingView, Platform, ScrollView,
+  View, SectionList, TouchableOpacity, Modal, Pressable, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -152,7 +153,7 @@ function EditarRegistroModal({
 
   const handleGuardar = async () => {
     if (!sinHorario && horaEntrada && horaSalida && fmtTime(horaSalida) === fmtTime(horaEntrada)) {
-      Alert.alert('La hora de salida no puede ser igual a la de entrada.');
+      showAlert('La hora de salida no puede ser igual a la de entrada.');
       return;
     }
     try {
@@ -167,7 +168,7 @@ function EditarRegistroModal({
       });
       onClose();
     } catch {
-      Alert.alert('Error', 'No se pudo guardar el registro.');
+      showAlert('Error', 'No se pudo guardar el registro.');
     }
   };
 
@@ -332,7 +333,7 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
   async function handleGuardar() {
     const incompleta = sesiones.some((s, i) => !s.entrada || (!(ultimaAbierta && i === sesiones.length - 1) && !s.salida));
     if (incompleta) {
-      Alert.alert('Completa todas las horas');
+      showAlert('Completa todas las horas');
       return;
     }
     try {
@@ -347,7 +348,7 @@ function EditarSesionesModal({ registro, onClose }: { registro: RegistroDiario; 
       onClose();
     } catch (e) {
       // El backend explica qué falló (sesiones solapadas, período cerrado, etc.).
-      Alert.alert('No se pudo guardar', e instanceof ApiError ? e.message : 'Intenta de nuevo.');
+      showAlert('No se pudo guardar', e instanceof ApiError ? e.message : 'Intenta de nuevo.');
     }
   }
 
@@ -456,7 +457,7 @@ function ReasignarCompensatorioModal({
   function confirmar() {
     if (!fecha || !compensatorio) return;
     if (fecha === compensatorio.fecha_asignada) {
-      Alert.alert('Esa ya es la fecha asignada actual.');
+      showAlert('Esa ya es la fecha asignada actual.');
       return;
     }
     reasignar.mutate({ id: compensatorio.id, fecha }, { onSuccess: onClose });
@@ -591,15 +592,15 @@ function CrearRegistroModal({
       const desdeISO = toISODate(fecha);
       const hastaISO = toISODate(fechaHasta);
       if (hastaISO < desdeISO) {
-        Alert.alert('"Hasta" no puede ser anterior a "Desde".');
+        showAlert('"Hasta" no puede ser anterior a "Desde".');
         return;
       }
       if (fechaInicio && fechaFin && !(desdeISO >= fechaInicio && hastaISO <= fechaFin)) {
-        Alert.alert('Fecha fuera del período', `El rango debe estar entre ${fechaInicio} y ${fechaFin}.`);
+        showAlert('Fecha fuera del período', `El rango debe estar entre ${fechaInicio} y ${fechaFin}.`, 'warning');
         return;
       }
       if (hastaISO > bogotaToday()) {
-        Alert.alert('Fecha inválida', 'No puedes registrar un día que aún no ha ocurrido.');
+        showAlert('Fecha inválida', 'No puedes registrar un día que aún no ha ocurrido.', 'warning');
         return;
       }
       try {
@@ -611,32 +612,32 @@ function CrearRegistroModal({
           tipo_dia:      tipoDia,
           novedad:       novedad.trim() || undefined,
         });
-        Alert.alert('Listo', existentes > 0
+        showAlert('Listo', existentes > 0
           ? `${creados} de ${total} días creados (${existentes} ya tenían registro).`
-          : `${creados} día${creados === 1 ? '' : 's'} creado${creados === 1 ? '' : 's'}.`);
+          : `${creados} día${creados === 1 ? '' : 's'} creado${creados === 1 ? '' : 's'}.`, 'success');
         onClose();
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'No se pudo crear el registro.';
-        Alert.alert('Error', msg);
+        showAlert('Error', msg);
       }
       return;
     }
 
     if (!sinHorario && !horaEntrada) {
-      Alert.alert('Falta la hora de entrada');
+      showAlert('Falta la hora de entrada', undefined, 'warning');
       return;
     }
     if (!sinHorario && horaEntrada && horaSalida && isChronological(fmtTime(horaSalida), fmtTime(horaEntrada))) {
-      Alert.alert('La hora de salida debe ser después de la de entrada.');
+      showAlert('La hora de salida debe ser después de la de entrada.');
       return;
     }
     const fechaISO = toISODate(fecha);
     if (fechaInicio && fechaFin && !(fechaISO >= fechaInicio && fechaISO <= fechaFin)) {
-      Alert.alert('Fecha fuera del período', `La fecha debe estar entre ${fechaInicio} y ${fechaFin}.`);
+      showAlert('Fecha fuera del período', `La fecha debe estar entre ${fechaInicio} y ${fechaFin}.`, 'warning');
       return;
     }
     if (fechaISO > bogotaToday()) {
-      Alert.alert('Fecha inválida', 'No puedes registrar un día que aún no ha ocurrido.');
+      showAlert('Fecha inválida', 'No puedes registrar un día que aún no ha ocurrido.', 'warning');
       return;
     }
     try {
@@ -652,7 +653,7 @@ function CrearRegistroModal({
       onClose();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'No se pudo crear el registro.';
-      Alert.alert('Error', msg);
+      showAlert('Error', msg);
     }
   }
 

@@ -5,6 +5,7 @@
  * de los registros de nómina de los trabajadores.
  */
 
+import { showAlert } from '@/lib/alertDialog';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
@@ -15,7 +16,6 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Modal,
   Platform,
   KeyboardAvoidingView,
@@ -113,7 +113,7 @@ export default function RegistroDetalleScreen() {
       setShowModal(false);
       router.back();
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo corregir el registro');
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo corregir el registro');
     }
   };
 
@@ -123,7 +123,7 @@ export default function RegistroDetalleScreen() {
       await descartarSospechoso(registro.id);
       showToast('Marcaje ya no está marcado como sospechoso');
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'No se pudo descartar el marcaje');
+      showAlert('Error', err instanceof Error ? err.message : 'No se pudo descartar el marcaje');
     }
   };
 

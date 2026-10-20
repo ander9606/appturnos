@@ -275,9 +275,7 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 - `elegirFotoConMenu` resuelve `string` (base64) si eligió imagen, `null` si eligió quitarla y `undefined` si canceló o no dio permiso: `if (r !== undefined) subir(r)` cubre los tres casos. Reutilízalo en vez de repetir el flujo de `expo-image-picker`.
 - Los diálogos comparten el marco `components/ui/DialogCard.tsx` (fondo oscuro + tarjeta con entrada de resorte).
 
-**Excepción que sigue con `Alert.alert` nativo** (pendiente, ver §8):
-1. **Archivos con un `<Modal>` de React Native** (19 archivos, ~75 llamadas). En iOS un `Modal` abierto puede impedir que se muestre otro desde el layout raíz, y no se pudo comprobar en dispositivo. Mientras tanto, ahí se conserva el nativo, que siempre aparece encima.
-   Pendientes ahí: `oferta/[id]` ("Hay trabajadores sin marcar salida", ideal para `actionSheet`), `ReportarNovedadModal` ("Adjuntar foto", ideal para `elegirFotoConMenu`) y `nomina-ingreso`.
+**Sin excepciones:** ya no queda ningún `Alert.alert` nativo en la app. Se comprobó en iPhone que el diálogo del layout raíz aparece sobre un `Modal` abierto, así que `showAlert`, `confirm` y `actionSheet` se usan también dentro de modales. Los avisos de 3+ botones usan `actionSheet`.
 
 ### 5.6 Estados vacíos
 
@@ -401,7 +399,7 @@ Reglas:
 9. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
 10. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
 11. **Más ilustraciones de marca.** Hecho en la web: el 404 y los vacíos de página completa usan el planeta. Falta móvil (sin turnos, sin equipo) donde aún haya texto suelto.
-12. **`Alert.alert` restantes en móvil (~85 llamadas).** Probar en un iPhone si un diálogo del layout raíz aparece sobre un `Modal` abierto; si funciona, migrar los 19 archivos con `Modal` (mismo script; ahí se estrenan `actionSheet` y `elegirFotoConMenu` en `oferta/[id]` y `ReportarNovedadModal`). El `ActionSheet` también es un `Modal`, así que tiene la misma restricción. Si no, montar el diálogo dentro de cada `Modal` o sustituir esos `Modal` por pantallas/`bottom sheet`.
+12. **Probar `actionSheet` sobre un `Modal` en Android.** En iPhone se verificó que los diálogos aparecen sobre un `Modal`; falta repetirlo en Android.
 13. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
 14. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 

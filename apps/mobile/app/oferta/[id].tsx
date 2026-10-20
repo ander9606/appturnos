@@ -1,9 +1,10 @@
+import { showAlert } from '@/lib/alertDialog';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, ScrollView, TouchableOpacity, Alert, Linking, Platform, Switch, Modal, Pressable,
+  View, ScrollView, TouchableOpacity, Linking, Platform, Switch, Modal, Pressable,
 } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
@@ -12,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme }    from '@/lib/theme';
 import { confirm }     from '@/lib/confirmDialog';
+import { actionSheet } from '@/lib/actionSheet';
 import { showToast }   from '@/lib/toast';
 import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import { useAuthStore } from '@/features/auth/useAuthStore';
@@ -261,7 +263,7 @@ export default function OfertaDetailScreen() {
     try {
       await retirarM.mutateAsync({ ofertaId: id, puestoId: miAsignacion.puesto_id });
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo retirar la postulación.');
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo retirar la postulación.');
     }
   }
 
@@ -292,7 +294,7 @@ export default function OfertaDetailScreen() {
       await actualizarOfertaM.mutateAsync({ id: oferta.id, ubicacion_libre: value });
       showToast(value ? 'Turno marcado con ubicación libre.' : 'Ubicación libre desactivada.');
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar el turno.');
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar el turno.');
     }
   }
 
@@ -308,7 +310,7 @@ export default function OfertaDetailScreen() {
 
       showToast(`Has solicitado el turno como ${selectedPuesto.cargo_nombre}. El gestor revisará tu solicitud.`);
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo aplicar.');
     }
   }
 
@@ -330,7 +332,7 @@ export default function OfertaDetailScreen() {
           : `"${oferta.titulo}" marcado como completado.`
       );
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo completar la oferta.');
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo completar la oferta.');
     }
   }
 
@@ -706,15 +708,15 @@ export default function OfertaDetailScreen() {
                   const hayEnProgreso = oferta.asignaciones.some((a) => a.estado === 'en_progreso');
 
                   if (hayEnProgreso) {
-                    Alert.alert(
-                      'Hay trabajadores sin marcar salida',
-                      'Si el turno ya lleva más de 2 días sin resolver, esto los cerrará automáticamente. ¿Cómo calculamos sus horas?',
-                      [
-                        { text: 'Cancelar', style: 'cancel' },
-                        { text: 'Horario estipulado', onPress: () => ejecutarCompletar(true) },
-                        { text: 'Cerrar ahora', onPress: () => ejecutarCompletar(false) },
-                      ]
-                    );
+                    const eleccion = await actionSheet({
+                      title: 'Hay trabajadores sin marcar salida',
+                      message: 'Si el turno ya lleva más de 2 días sin resolver, esto los cerrará automáticamente. ¿Cómo calculamos sus horas?',
+                      items: [
+                        { key: 'estipulado', label: 'Horario estipulado' },
+                        { key: 'ahora', label: 'Cerrar ahora' },
+                      ],
+                    });
+                    if (eleccion) ejecutarCompletar(eleccion === 'estipulado');
                     return;
                   }
 
@@ -749,7 +751,7 @@ export default function OfertaDetailScreen() {
                     showAnuncioTurno(`"${oferta.titulo}" cancelado.`, 'cancelado');
                     router.back();
                   } catch (err) {
-                    Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
+                    showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo cancelar la oferta.');
                   }
                 }}
               />
@@ -848,7 +850,7 @@ function DuplicarOfertaModal({
       onClose();
       showToast(`"${nueva.titulo}" creada para el ${fmtDate(toISODate(fecha))}.`);
     } catch {
-      Alert.alert('Error', 'No se pudo duplicar la oferta.');
+      showAlert('Error', 'No se pudo duplicar la oferta.');
     }
   }
 
@@ -1002,22 +1004,22 @@ function EditarOfertaModal({
     || lugar !== (oferta.lugar ?? '');
 
   async function handleAgregarVacante() {
-    if (!vacante.cargo) { Alert.alert('Datos incompletos', 'Elige un rol para la vacante.'); return; }
+    if (!vacante.cargo) { showAlert('Datos incompletos', 'Elige un rol para la vacante.', 'warning'); return; }
     const tarifa = parseTarifa(vacante.tarifa);
-    if (tarifa <= 0) { Alert.alert('Datos incompletos', 'Ingresa la tarifa por turno.'); return; }
+    if (tarifa <= 0) { showAlert('Datos incompletos', 'Ingresa la tarifa por turno.', 'warning'); return; }
     try {
       await crearPuestoM.mutateAsync({ ofertaId: oferta.id, cargo_id: vacante.cargo.id, plazas: vacante.plazas, tarifa_dia: tarifa });
       setAgregandoVacante(false);
       setVacante({ cargo: null, plazas: 1, tarifa: '' });
       showToast('Vacante agregada.');
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo agregar la vacante.');
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo agregar la vacante.');
     }
   }
 
   async function handleGuardar() {
     if (horaFin && formatTimeObj(horaFin) <= formatTimeObj(horaInicio)) {
-      Alert.alert('Error', 'La hora de fin debe ser posterior a la hora de inicio');
+      showAlert('Error', 'La hora de fin debe ser posterior a la hora de inicio');
       return;
     }
     try {
@@ -1038,7 +1040,7 @@ function EditarOfertaModal({
       onClose();
       showToast('Turno actualizado.');
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar el turno.');
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar el turno.');
     }
   }
 
@@ -1311,7 +1313,7 @@ function TurnoFallidoModal({
 
   async function handleConfirmar() {
     if (!motivo.trim()) {
-      Alert.alert('Falta el motivo', 'Escribe por qué este turno es fuerza mayor.');
+      showAlert('Falta el motivo', 'Escribe por qué este turno es fuerza mayor.', 'warning');
       return;
     }
     const compensaciones = enProgreso.map((a) => ({
@@ -1322,7 +1324,7 @@ function TurnoFallidoModal({
       await marcarFallidaM.mutateAsync({ ofertaId: oferta.id, motivo: motivo.trim(), compensaciones });
       onDone();
     } catch (err) {
-      Alert.alert('Error', err instanceof ApiError ? err.message : 'No se pudo marcar el turno como fallido.');
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo marcar el turno como fallido.');
     }
   }
 

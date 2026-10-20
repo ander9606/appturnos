@@ -1,9 +1,11 @@
+import { actionSheet } from '@/lib/actionSheet';
+import { showAlert } from '@/lib/alertDialog';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  Modal, View, TouchableOpacity, ScrollView, Alert, Image, Platform,
+  Modal, View, TouchableOpacity, ScrollView, Image, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiError } from '@api-client';
@@ -40,7 +42,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
     const ImagePicker = await import('expo-image-picker');
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permiso requerido', 'Permite el acceso a la galería para adjuntar una foto.');
+      showAlert('Permiso requerido', 'Permite el acceso a la galería para adjuntar una foto.', 'warning');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -57,7 +59,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
     const ImagePicker = await import('expo-image-picker');
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Permiso requerido', 'Permite el acceso a la cámara para tomar una foto.');
+      showAlert('Permiso requerido', 'Permite el acceso a la cámara para tomar una foto.', 'warning');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -70,19 +72,23 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
     }
   };
 
-  const handleFoto = () => {
-    Alert.alert('Adjuntar foto', undefined, [
-      { text: 'Tomar foto', onPress: handleTakePhoto },
-      { text: 'Galería', onPress: handlePickFoto },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+  const handleFoto = async () => {
+    const eleccion = await actionSheet({
+      title: 'Adjuntar foto',
+      items: [
+        { key: 'camara', label: 'Tomar foto', icon: 'camera-outline' },
+        { key: 'galeria', label: 'Galería', icon: 'images-outline' },
+      ],
+    });
+    if (eleccion === 'camara') handleTakePhoto();
+    else if (eleccion === 'galeria') handlePickFoto();
   };
 
   const handleUsarAhora = () => setHoraEvento(toLocalIso(new Date()));
 
   const handleEnviar = async () => {
     if (!descripcion.trim()) {
-      Alert.alert('Campo requerido', 'Escribe una descripción de la novedad.');
+      showAlert('Campo requerido', 'Escribe una descripción de la novedad.', 'warning');
       return;
     }
     try {
@@ -102,7 +108,7 @@ export function ReportarNovedadModal({ visible, asignacionId, onClose }: Props) 
       onClose();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'No se pudo reportar la novedad. Intenta de nuevo.';
-      Alert.alert('Error', message);
+      showAlert('Error', message);
     }
   };
 
