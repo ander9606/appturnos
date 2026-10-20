@@ -24,6 +24,11 @@ module.exports = {
     if (fechaInicio) { where.push('o.fecha >= ?'); params.push(fechaInicio); }
     if (fechaFin)    { where.push('o.fecha <= ?'); params.push(fechaFin); }
 
+    // La cuenta de cobro solo existe si fechaInicio/fechaFin coinciden exacto con un
+    // ciclo ya generado (cuentas_cobro.fecha_inicio/fecha_fin) — un rango libre que el
+    // gestor arme a mano no tiene cuenta y el subquery simplemente no encuentra nada.
+    const cuentaCobroParams = [fechaInicio ?? null, fechaFin ?? null];
+
     const [filas] = await pool.query(
       `SELECT
          a.id          AS asignacion_id,
@@ -38,6 +43,10 @@ module.exports = {
                    WHERE d.asignacion_id = a.id AND d.estado = 'aceptado'), 0) AS descuento_monto,
          (SELECT GROUP_CONCAT(d.motivo SEPARATOR ' · ') FROM descuentos_turno d
           WHERE d.asignacion_id = a.id AND d.estado = 'aceptado') AS descuento_motivo,
+         (SELECT cc.id FROM cuentas_cobro cc
+          WHERE cc.empresa_id = a.empresa_id AND cc.trabajador_id = a.trabajador_id
+            AND cc.fecha_inicio = ? AND cc.fecha_fin = ?
+          ORDER BY cc.secuencia DESC LIMIT 1) AS cuenta_cobro_id,
          a.hora_ingreso_real,
          a.hora_egreso_real,
          o.id          AS oferta_id,
@@ -65,7 +74,7 @@ module.exports = {
        LEFT JOIN contratos_diarios cd     ON cd.asignacion_id = a.id
        WHERE ${where.join(' AND ')}
        ORDER BY t.apellido, t.nombre, o.fecha`,
-      params
+      [...cuentaCobroParams, ...params]
     );
 
     const workers = new Map();
@@ -80,6 +89,8 @@ module.exports = {
           cargo:              row.cargo_descripcion,
           ranking:            row.ranking ? Number(row.ranking) : null,
           total_calificaciones: row.total_calificaciones,
+          // Igual para todas las filas de este trabajador (depende solo del rango pedido, no del turno).
+          cuenta_cobro_id:    row.cuenta_cobro_id ?? null,
           total_turnos:       0,
           total_horas:        0,
           pago_base:          0,

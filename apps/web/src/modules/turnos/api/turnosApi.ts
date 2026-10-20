@@ -102,4 +102,8 @@ export const turnosApi = {
   // Contrato del turno (generado al completarse la asignación)
   descargarContratoPorAsignacion: (asignacionId: number) =>
     api.get(`/contratos/asignacion/${asignacionId}/pdf`, { responseType: 'blob' }).then(r => r.data),
+
+  // Cuenta de cobro del trabajador para el ciclo generado (endpoint vive en el módulo cuentas-cobro, no turnos).
+  descargarCuentaCobroPdf: (cuentaCobroId: number) =>
+    api.get(`/cuentas-cobro/${cuentaCobroId}/pdf`, { responseType: 'blob' }).then(r => r.data),
 };
