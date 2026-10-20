@@ -3,7 +3,8 @@ import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import React, { useState, useEffect } from 'react';
 import {
-  View, ScrollView, Modal, Pressable, KeyboardAvoidingView, Platform, } from 'react-native';
+  View, ScrollView, Modal, Pressable, KeyboardAvoidingView,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -54,7 +55,10 @@ export function BonoModal({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 bg-black/50 justify-end">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        {/* 'padding' en ambas plataformas — 'height' no empuja nada dentro de un
+            Modal transparente en Android porque este contenedor no tiene una
+            altura explícita que encoger, así que el teclado tapaba el modal. */}
+        <KeyboardAvoidingView behavior="padding">
           {/* maxHeight tope a la pantalla — sin esto, con teclado abierto y el
               aviso de refirma, el encabezado podía quedar empujado fuera del
               área visible tanto en iOS como en Android. El ScrollView interno

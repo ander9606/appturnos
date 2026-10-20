@@ -326,7 +326,7 @@ export default function TurnoDetailScreen() {
 
   const { estado, oferta_titulo, oferta_descripcion, oferta_notas_adicionales, oferta_externo_notas,
           hora_ingreso_real, hora_egreso_real, pago_total, compensacion_motivo,
-          bono_monto, calificacion, calificacion_comentario,
+          calificacion, calificacion_comentario,
           trabajador_telefono, trabajador_ranking, trabajador_total_calificaciones } = asignacion;
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -527,38 +527,54 @@ export default function TurnoDetailScreen() {
             />
           )}
 
-          {/* ── Gestor: Agregar/editar bono extra — solo turnos confirmados, en
-              progreso o completados (nunca cancelados/no-presentados/pendientes).
-              Si el contrato ya fue firmado, el backend revierte la firma y
-              pide al trabajador refirmar con el nuevo monto (ver aviso en
-              BonoModal) en vez de bloquear el cambio — el contrato se
-              autofirma al marcar salida, así que bloquear por firma lo
-              dejaba casi inutilizable. Mismo criterio que la versión web
-              (OfertaDetailPage.tsx). ── */}
-          {isGestor
-            && (estado === 'confirmado' || estado === 'en_progreso' || estado === 'completado') && (
-            <Button
-              label={Number(bono_monto) > 0 ? 'Editar bono extra' : 'Agregar bono extra'}
-              variant="secondary"
-              size="md"
-              fullWidth
-              onPress={() => setEditandoBono(true)}
-            />
-          )}
+          {/* ── Gestor: Bono / Descuento, uno al lado del otro. El contenedor se
+              muestra si aplica cualquiera de los dos — la condición de abajo ya
+              cubre ambos casos porque 'completado' (descuento) es subconjunto de
+              la condición del bono. ── */}
+          {isGestor && (estado === 'confirmado' || estado === 'en_progreso' || estado === 'completado') && (
+            <View className="flex-row gap-3">
+              {/* Bono extra — turnos confirmados, en progreso o completados (nunca
+                  cancelados/no-presentados/pendientes). Si el contrato ya fue firmado,
+                  el backend revierte la firma y pide al trabajador refirmar con el
+                  nuevo monto (ver aviso en BonoModal) en vez de bloquear el cambio — el
+                  contrato se autofirma al marcar salida, así que bloquear por firma lo
+                  dejaba casi inutilizable. Mismo criterio que la versión web
+                  (OfertaDetailPage.tsx). */}
+              {(estado === 'confirmado' || estado === 'en_progreso' || estado === 'completado') && (
+                <View className="flex-1">
+                  <Button
+                    label="Bono"
+                    variant="success"
+                    size="md"
+                    fullWidth
+                    icon={<Ionicons name="logo-usd" size={16} color={COLORS.white} />}
+                    onPress={() => setEditandoBono(true)}
+                  />
+                </View>
+              )}
 
-          {/* ── Gestor: Agregar descuento — solo turnos completados, a
-              diferencia del bono (el backend rechaza el resto de estados con
-              409). Queda pendiente hasta que el trabajador lo acepte, con el
-              mismo tope legal (art. 113 CST) que la versión web
-              (OfertaDetailPage.tsx). ── */}
-          {isGestor && estado === 'completado' && (
-            <Button
-              label="Agregar descuento"
-              variant="secondary"
-              size="md"
-              fullWidth
-              onPress={() => setEditandoDescuento(true)}
-            />
+              {/* Descuento — solo turnos completados, a diferencia del bono (el
+                  backend rechaza el resto de estados con 409). Queda pendiente
+                  hasta que el trabajador lo acepte, con el mismo tope legal
+                  (art. 113 CST) que la versión web (OfertaDetailPage.tsx). */}
+              {estado === 'completado' && (
+                <View className="flex-1">
+                  <Button
+                    label="Descuento"
+                    variant="danger"
+                    size="md"
+                    fullWidth
+                    icon={
+                      <View className="flex-row items-center">
+                        <Ionicons name="logo-usd" size={16} color={COLORS.white} />
+                        <Ionicons name="remove" size={16} color={COLORS.white} style={{ marginLeft: -2 }} />
+                      </View>
+                    }
+                    onPress={() => setEditandoDescuento(true)}
+                  />
+                </View>
+              )}
+            </View>
           )}
 
           {id != null && <DescuentosCard asignacionId={id} puedeResponder={!isGestor && !soloLectura} />}
