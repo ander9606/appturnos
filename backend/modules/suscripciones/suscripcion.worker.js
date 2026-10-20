@@ -2,6 +2,7 @@
 
 const { pool }        = require('../../config/database');
 const { enviarEmail } = require('../../utils/mailer');
+const { plantillaCorreo, esc } = require('../../utils/plantillaCorreo');
 const WompiService    = require('../webhooks/wompi.service');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const logger          = require('../../utils/logger');
@@ -83,23 +84,15 @@ function emailHtml({ empresa, admin, dias, url, monto }) {
     style: 'currency', currency: 'COP', maximumFractionDigits: 0,
   }).format(monto);
 
-  return `
-    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px 24px;color:#1e293b">
-      <h2 style="margin:0 0 8px">Zaturno</h2>
-      <p style="color:#64748b;margin:0 0 24px">Gestión de turnos y nómina</p>
-      <p>Hola <strong>${admin}</strong>,</p>
-      <p>La suscripción de <strong>${empresa}</strong> ${urgencia}.</p>
-      <p>Para continuar usando Zaturno sin interrupciones, renueva tu plan:</p>
-      <a href="${url}"
-         style="display:inline-block;margin:16px 0;padding:14px 28px;background:#2563eb;color:#fff;
-                border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
-        Renovar suscripción — ${montoFmt}
-      </a>
-      <p style="color:#64748b;font-size:13px">
-        Este link es de un solo uso y expira en 7 días.<br>
-        Si ya realizaste el pago, ignora este mensaje.
-      </p>
-    </div>`;
+  return plantillaCorreo({
+    titulo: 'Tu suscripción está por vencer',
+    cuerpo:
+      `<p style="margin:0 0 12px">Hola <strong>${esc(admin)}</strong>,</p>` +
+      `<p style="margin:0 0 12px">La suscripción de <strong>${esc(empresa)}</strong> ${urgencia}.</p>` +
+      `<p style="margin:0">Para continuar usando Zaturno sin interrupciones, renueva tu plan:</p>`,
+    boton: { texto: `Renovar suscripción — ${montoFmt}`, url },
+    nota: 'Este link es de un solo uso y expira en 7 días. Si ya realizaste el pago, ignora este mensaje.',
+  });
 }
 
 function iniciarWorker() {
