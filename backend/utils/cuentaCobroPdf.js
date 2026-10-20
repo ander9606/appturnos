@@ -1,6 +1,7 @@
 'use strict';
 
 const PDFDocument = require('pdfkit');
+const { bandaMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
 
 /**
@@ -12,6 +13,7 @@ const { dibujarFirma } = require('./firmaPdf');
 function generarCuentaCobroPdf(cuenta, stream) {
   const doc = new PDFDocument({ size: 'A4', margin: 56 });
   doc.pipe(stream);
+  bandaMarca(doc);
 
   doc.fontSize(16).font('Helvetica-Bold').text('CUENTA DE COBRO', { align: 'center' });
   doc.moveDown(0.3);

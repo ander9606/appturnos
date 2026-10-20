@@ -1,6 +1,7 @@
 'use strict';
 
 const PDFDocument = require('pdfkit');
+const { bandaMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
 
 /**
@@ -11,6 +12,7 @@ const { dibujarFirma } = require('./firmaPdf');
 function generarContratoPdf(contrato, stream) {
   const doc = new PDFDocument({ size: 'A4', margin: 56 });
   doc.pipe(stream);
+  bandaMarca(doc);
 
   doc
     .fontSize(16)

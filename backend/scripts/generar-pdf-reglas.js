@@ -55,7 +55,7 @@ const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
   th, td { border: 1px solid #cbd5e1; padding: 4pt 6pt; text-align: left; vertical-align: top; }
   th { background: #f1f5f9; }
   code { font-family: ui-monospace, Menlo, monospace; font-size: 9pt; background: #f1f5f9; padding: 0 3pt; border-radius: 3pt; }
-  blockquote { margin: 8pt 0; padding: 6pt 10pt; background: #fff7ed; border-left: 3pt solid #f97316; color: #7c2d12; }
+  blockquote { margin: 8pt 0; padding: 6pt 10pt; background: #FFF1EE; border-left: 3pt solid #FF5A3C; color: #C32D14; }
   blockquote p { margin: 0; }
 </style></head><body>${cuerpo}</body></html>`;
 
