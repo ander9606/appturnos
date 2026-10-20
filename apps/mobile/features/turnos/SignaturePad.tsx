@@ -15,10 +15,11 @@
  *
  * Requiere: react-native-svg (expo install react-native-svg)
  */
+import { Text } from '@/components/ui/Text';
+import { COLORS } from '@/lib/designTokens';
 import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
-  Text,
   Modal,
   PanResponder,
   LayoutChangeEvent,
@@ -37,7 +38,7 @@ type Stroke = Point[];
 interface SignaturePadProps {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (base64: string) => void;
+  onConfirm: (base64: string) => void | Promise<unknown>;
   loading?: boolean;
   confirmLabel?: string;
   title?: string;
@@ -75,11 +76,11 @@ function strokesToSvgBase64(
     .filter(Boolean)
     .map(
       (d) =>
-        `<path d="${d}" stroke="#0F172A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
+        `<path d="${d}" stroke="${COLORS.foreground}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
     )
     .join('');
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:#fff">${paths}</svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background:${COLORS.white}">${paths}</svg>`;
 
   // btoa is available in Hermes (React Native's JS engine)
   return btoa(unescape(encodeURIComponent(svg)));
@@ -176,7 +177,7 @@ export function SignaturePad({
     if (isEmpty) return;
     const base64 = strokesToSvgBase64(strokes, landscape.w, landscape.h);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onConfirm(base64);
+    return onConfirm(base64);
   };
 
   const handleClose = () => {
@@ -238,7 +239,7 @@ export function SignaturePad({
                   y1={landscape.h * 0.62}
                   x2={landscape.w * 0.92}
                   y2={landscape.h * 0.62}
-                  stroke="#CBD5E1"
+                  stroke={COLORS.borderStrong}
                   strokeWidth={1.5}
                   strokeDasharray="5,5"
                 />
@@ -249,7 +250,7 @@ export function SignaturePad({
                     <Path
                       key={i}
                       d={d}
-                      stroke="#0F172A"
+                      stroke={COLORS.foreground}
                       strokeWidth={2.5}
                       strokeLinecap="round"
                       strokeLinejoin="round"

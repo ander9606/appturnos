@@ -1,7 +1,10 @@
+import { SkeletonDetail } from '@/components/ui/Skeleton';
+import { Text } from '@/components/ui/Text';
+import { showAlert } from '@/lib/alertDialog';
+import { COLORS, DOCUMENT_COLORS } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, Alert, ActivityIndicator,
-  StyleSheet, TouchableOpacity, Image,
+  View, ScrollView, StyleSheet, TouchableOpacity, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -80,7 +83,7 @@ export default function ContratoScreen() {
       qc.invalidateQueries({ queryKey: ['asignacion', contrato?.asignacion_id] });
       setShowFirma(false);
     },
-    onError: () => Alert.alert('Error', 'No se pudo registrar la firma.'),
+    onError: () => showAlert('Error', 'No se pudo registrar la firma.'),
   });
 
   async function handleDescargar() {
@@ -93,17 +96,17 @@ export default function ContratoScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#FF5A3C" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted, alignItems: 'center', justifyContent: 'center' }}>
+        <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       </SafeAreaView>
     );
   }
 
   if (isError || !contrato) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-        <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '600', color: '#0F172A' }}>Contrato no encontrado</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Ionicons name="alert-circle-outline" size={48} color={COLORS.danger} />
+        <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '600', color: COLORS.foreground }}>Contrato no encontrado</Text>
       </SafeAreaView>
     );
   }
@@ -139,13 +142,13 @@ export default function ContratoScreen() {
               accessibilityLabel="Descargar PDF"
               style={{ marginRight: 4 }}
             >
-              <Ionicons name="download-outline" size={22} color="#FF5A3C" />
+              <Ionicons name="download-outline" size={22} color={COLORS.primary} />
             </TouchableOpacity>
           ),
         }}
       />
 
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#E8EEF4' }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: DOCUMENT_COLORS.canvas }} edges={['bottom']}>
         <ScrollView
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
@@ -153,7 +156,7 @@ export default function ContratoScreen() {
           {/* ── Resumen en lenguaje simple ─────────────────────── */}
           {!isGestor && (
             <View style={s.summaryBox}>
-              <Ionicons name="information-circle" size={18} color="#2563EB" style={{ marginTop: 1 }} />
+              <Ionicons name="information-circle" size={18} color={DOCUMENT_COLORS.infoIcon} style={{ marginTop: 1 }} />
               <Text style={s.summaryText}>
                 {firmado ? 'Firmaste un' : 'Vas a firmar un'} contrato por un día, el{' '}
                 <Text style={s.summaryEmphasized}>{fmtLegal(contrato.fecha)}</Text>, de{' '}
@@ -284,8 +287,8 @@ export default function ContratoScreen() {
                 <Image source={{ uri: empresaFirma }} style={{ width: '100%', height: 90 }} resizeMode="contain" />
               ) : (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                  <Ionicons name="time-outline" size={24} color="#94A3B8" />
-                  <Text style={{ color: '#94A3B8', fontSize: 12 }}>Pendiente de firma del representante legal</Text>
+                  <Ionicons name="time-outline" size={24} color={COLORS.placeholder} />
+                  <Text style={{ color: COLORS.placeholder, fontSize: 12 }}>Pendiente de firma del representante legal</Text>
                 </View>
               )}
             </View>
@@ -306,13 +309,13 @@ export default function ContratoScreen() {
               ) : firmado ? (
                 // Firmado pero sin imagen (fallback)
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                  <Ionicons name="checkmark-circle" size={28} color="#16A34A" />
-                  <Text style={{ color: '#16A34A', fontSize: 12 }}>Firmado digitalmente</Text>
+                  <Ionicons name="checkmark-circle" size={28} color={COLORS.success} />
+                  <Text style={{ color: COLORS.success, fontSize: 12 }}>Firmado digitalmente</Text>
                 </View>
               ) : (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                  <Ionicons name="create-outline" size={24} color="#D97706" />
-                  <Text style={{ color: '#D97706', fontSize: 12 }}>Pendiente de firma</Text>
+                  <Ionicons name="create-outline" size={24} color={COLORS.warningDark} />
+                  <Text style={{ color: COLORS.warningDark, fontSize: 12 }}>Pendiente de firma</Text>
                 </View>
               )}
             </View>
@@ -340,7 +343,7 @@ export default function ContratoScreen() {
                   disabled={firmarM.isPending}
                   style={[s.signButton, firmarM.isPending && { opacity: 0.6 }]}
                 >
-                  <Ionicons name="checkmark-circle" size={18} color="#fff" style={{ marginRight: 8 }} />
+                  <Ionicons name="checkmark-circle" size={18} color={COLORS.white} style={{ marginRight: 8 }} />
                   <Text style={s.signButtonLabel}>
                     {firmarM.isPending ? 'Firmando…' : 'Firmar con mi firma guardada'}
                   </Text>
@@ -350,7 +353,7 @@ export default function ContratoScreen() {
                   disabled={firmarM.isPending}
                   style={{ alignItems: 'center', paddingVertical: 4 }}
                 >
-                  <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>
+                  <Text style={{ color: COLORS.mutedForeground, fontSize: 13, fontWeight: '600' }}>
                     Firmar con una firma nueva
                   </Text>
                 </TouchableOpacity>
@@ -360,7 +363,7 @@ export default function ContratoScreen() {
                 onPress={() => setShowFirma(true)}
                 style={s.signButton}
               >
-                <Ionicons name="pencil" size={18} color="#fff" style={{ marginRight: 8 }} />
+                <Ionicons name="pencil" size={18} color={COLORS.white} style={{ marginRight: 8 }} />
                 <Text style={s.signButtonLabel}>Firmar contrato</Text>
               </TouchableOpacity>
             )
@@ -383,7 +386,7 @@ export default function ContratoScreen() {
 // ── sub-components ────────────────────────────────────────────────────────
 
 function Divider() {
-  return <View style={{ height: 1, backgroundColor: '#CBD5E1', marginVertical: 18 }} />;
+  return <View style={{ height: 1, backgroundColor: COLORS.borderStrong, marginVertical: 18 }} />;
 }
 
 function SectionHeader({ label }: { label: string }) {
@@ -419,9 +422,9 @@ const s = StyleSheet.create({
   summaryBox: {
     flexDirection: 'row',
     gap: 8,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: DOCUMENT_COLORS.infoBg,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: COLORS.infoBorder,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -430,18 +433,18 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     lineHeight: 19,
-    color: '#1E3A8A',
+    color: COLORS.infoText,
   },
   summaryEmphasized: {
     fontWeight: '700',
   },
 
   paper: {
-    backgroundColor: '#FFFEFB',
+    backgroundColor: DOCUMENT_COLORS.paper,
     borderRadius: 14,
     padding: 26,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: COLORS.shadow,
     shadowOpacity: 0.12,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 5 },
@@ -453,14 +456,14 @@ const s = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 1,
-    color: '#0F172A',
+    color: COLORS.foreground,
     textTransform: 'uppercase',
     lineHeight: 17,
   },
   docMeta: {
     textAlign: 'center',
     fontSize: 11.5,
-    color: '#475569',
+    color: COLORS.slate600,
     marginTop: 5,
   },
 
@@ -469,7 +472,7 @@ const s = StyleSheet.create({
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 2,
-    color: '#64748B',
+    color: COLORS.mutedForeground,
     textTransform: 'uppercase',
     marginBottom: 12,
   },
@@ -478,7 +481,7 @@ const s = StyleSheet.create({
   partyRole: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#94A3B8',
+    color: COLORS.placeholder,
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 2,
@@ -486,24 +489,24 @@ const s = StyleSheet.create({
   partyName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   partyDetail: {
     fontSize: 12,
-    color: '#475569',
+    color: COLORS.slate600,
     marginTop: 1,
   },
 
   // Tabla de datos del turno
   tabla: {
     borderTopWidth: 1,
-    borderTopColor: '#CBD5E1',
+    borderTopColor: COLORS.borderStrong,
   },
   tablaFila: {
     flexDirection: 'row',
     paddingVertical: 7,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: COLORS.border,
   },
   tablaFilaUltima: {
     borderBottomWidth: 0,
@@ -512,12 +515,12 @@ const s = StyleSheet.create({
     width: 92,
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   tablaValor: {
     flex: 1,
     fontSize: 11.5,
-    color: '#334155',
+    color: COLORS.slate700,
     lineHeight: 16,
   },
 
@@ -525,49 +528,46 @@ const s = StyleSheet.create({
   clauseHeader: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
     letterSpacing: 0.3,
     marginBottom: 4,
   },
   clauseBody: {
     fontSize: 12,
-    color: '#334155',
+    color: COLORS.slate700,
     lineHeight: 18,
-  },
-  clauseEmphasized: {
-    fontWeight: '700',
-    color: '#0F172A',
+    textAlign: 'justify',
   },
 
   // Firma
   sigBox: {
     height: 110,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: COLORS.borderStrong,
     borderRadius: 8,
     marginTop: 8,
     overflow: 'hidden',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.background,
   },
   sigBoxPending: {
     borderStyle: 'dashed',
-    borderColor: '#FCD34D',
-    backgroundColor: '#FFFBEB',
+    borderColor: COLORS.warningSoft,
+    backgroundColor: DOCUMENT_COLORS.warningBg,
   },
   sigUnderline: {
     height: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: COLORS.foreground,
     marginTop: 14,
     marginBottom: 6,
   },
   sigName: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
+    color: COLORS.foreground,
   },
   sigDetail: {
     fontSize: 11,
-    color: '#64748B',
+    color: COLORS.mutedForeground,
     marginTop: 2,
   },
 
@@ -575,7 +575,7 @@ const s = StyleSheet.create({
   footer: {
     textAlign: 'center',
     fontSize: 10,
-    color: '#94A3B8',
+    color: COLORS.placeholder,
     marginTop: 24,
     letterSpacing: 0.3,
   },
@@ -583,7 +583,7 @@ const s = StyleSheet.create({
   // Botón firmar
   signButton: {
     marginTop: 14,
-    backgroundColor: '#FF5A3C',
+    backgroundColor: COLORS.primary,
     borderRadius: 14,
     paddingVertical: 15,
     flexDirection: 'row',
@@ -591,7 +591,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   signButtonLabel: {
-    color: '#fff',
+    color: COLORS.white,
     fontWeight: '700',
     fontSize: 15,
   },
