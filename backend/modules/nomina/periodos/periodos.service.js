@@ -1,6 +1,5 @@
 'use strict';
 
-const { pool } = require('../../../config/database');
 const PeriodosModel = require('./periodos.model');
 const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
@@ -36,21 +35,9 @@ async function rellenarDescansoSiAplica(empresaId, periodo) {
   }
 }
 
-/** Obtiene usuario_id de todos los trabajador_nomina activos de la empresa. */
-async function listarUsuariosNomina(empresaId) {
-  const [filas] = await pool.query(
-    `SELECT u.id AS usuario_id
-     FROM trabajadores t
-     JOIN usuarios u ON u.id = t.usuario_id
-     WHERE t.empresa_id = ? AND t.activo = 1 AND u.rol = 'trabajador_nomina' AND u.activo = 1`,
-    [empresaId]
-  );
-  return filas.map((f) => f.usuario_id);
-}
-
 /** trabajador_nomina + gestores de nómina (jefe_nomina, admin_empresa, nomina) — "todos los involucrados". */
 async function listarInvolucradosNomina(empresaId) {
-  const trabajadores = await listarUsuariosNomina(empresaId);
+  const trabajadores = await NotificacionesModel.idsTrabajadoresNomina(empresaId);
   const gestoresIds = await NotificacionesModel.idsGestoresNomina(empresaId);
   return [...new Set([...trabajadores, ...gestoresIds])];
 }
@@ -110,7 +97,7 @@ const PeriodosService = {
 
     // Solo notificar si el período es VERDADERAMENTE NUEVO (no una race condition devolviendo uno existente).
     if (esNuevo) {
-      const destinatarios = await listarUsuariosNomina(empresaId);
+      const destinatarios = await NotificacionesModel.idsTrabajadoresNomina(empresaId);
       if (destinatarios.length > 0) {
         const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
           .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
@@ -234,7 +221,7 @@ const PeriodosService = {
     }
     await PeriodosModel.liquidar(empresaId, id);
 
-    const destinatarios = await listarUsuariosNomina(empresaId);
+    const destinatarios = await NotificacionesModel.idsTrabajadoresNomina(empresaId);
     if (destinatarios.length > 0) {
       const inicio = new Date(periodo.fecha_inicio + 'T00:00:00')
         .toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });

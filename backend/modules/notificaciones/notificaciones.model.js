@@ -110,6 +110,18 @@ const NotificacionesModel = {
     return filas.map((f) => f.id);
   },
 
+  /** usuario_id de los trabajador_nomina activos de la empresa. */
+  async idsTrabajadoresNomina(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT u.id AS usuario_id
+       FROM trabajadores t
+       JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.empresa_id = ? AND t.activo = 1 AND u.rol = 'trabajador_nomina' AND u.activo = 1`,
+      [empresaId]
+    );
+    return filas.map((f) => f.usuario_id);
+  },
+
   /** Gestores de turnos activos: jefe_turnos y admin_empresa. */
   async idsGestoresTurnos(empresaId) {
     const [filas] = await pool.query(

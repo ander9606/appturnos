@@ -18,6 +18,13 @@ test('idsGestoresNomina: jefe_nomina, admin_empresa y nomina activos de la empre
   expect(params()).toEqual([7]);
 });
 
+test('idsTrabajadoresNomina: usuario_id de los trabajador_nomina activos con ficha activa', async () => {
+  pool.query.mockResolvedValue([[{ usuario_id: 101 }, { usuario_id: 102 }]]);
+  await expect(NotificacionesModel.idsTrabajadoresNomina(7)).resolves.toEqual([101, 102]);
+  expect(sql()).toBe("SELECT u.id AS usuario_id FROM trabajadores t JOIN usuarios u ON u.id = t.usuario_id WHERE t.empresa_id = ? AND t.activo = 1 AND u.rol = 'trabajador_nomina' AND u.activo = 1");
+  expect(params()).toEqual([7]);
+});
+
 test('idsGestoresTurnos: jefe_turnos y admin_empresa activos de la empresa', async () => {
   await expect(NotificacionesModel.idsGestoresTurnos(7)).resolves.toEqual([3, 8]);
   expect(sql()).toBe("SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1");
