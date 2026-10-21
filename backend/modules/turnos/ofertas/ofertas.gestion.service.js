@@ -8,6 +8,7 @@ const CargosModel = require('../../cargos/cargos.model');
 const TrabajadoresService = require('../../trabajadores/trabajadores.service');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
 const GeocodingService = require('../../geocoding/geocoding.service');
@@ -244,12 +245,9 @@ async function notificarPoolPorPuestos(empresaId, oferta) {
  * co-gestores que asignaciones.marcaje.service.js usa para "sospechoso".
  */
 async function notificarCoGestores(empresaId, oferta, creadoPor) {
-  const [gestores] = await pool.query(
-    `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1 AND id != ?`,
-    [empresaId, creadoPor]
-  );
-  if (gestores.length === 0) return;
-  await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+  const gestoresIds = await NotificacionesModel.idsCoGestoresTurnos(empresaId, creadoPor);
+  if (gestoresIds.length === 0) return;
+  await NotificacionesService.notificarVarios(gestoresIds, {
     empresaId,
     tipo: 'oferta.creada',
     titulo: 'Nuevo turno creado',

@@ -39,6 +39,15 @@ const SolicitudesReingresoModel = {
     return filas;
   },
 
+  /** La solicitud con el usuario_id de su trabajador (undefined si no existe). */
+  async obtenerConUsuario(id) {
+    const [[sol]] = await pool.query(
+      'SELECT sr.*, t.usuario_id FROM solicitudes_reingreso sr JOIN trabajadores t ON t.id = sr.trabajador_id WHERE sr.id = ?',
+      [id]
+    );
+    return sol;
+  },
+
   async aprobar(empresaId, id, gestorId) {
     const [res] = await pool.query(
       `UPDATE solicitudes_reingreso

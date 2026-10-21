@@ -8,6 +8,7 @@ const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
 const { pool } = require('../../../config/database');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const IntegracionService = require('../../integracion/integracion.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
@@ -34,12 +35,9 @@ async function revisarIngresoSospechoso(empresaId, asignacionId, trabajador, hor
     await AsignacionesModel.marcarSospechoso(empresaId, [asignacionId, match.registro_id]);
 
     const otro = await TrabajadoresModel.obtenerPorId(empresaId, match.trabajador_id);
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestores.length > 0) {
-      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(empresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
         empresaId,
         tipo: 'turno.sospechoso',
         titulo: 'Posible marcaje fraudulento',
@@ -129,14 +127,10 @@ module.exports = {
     });
 
     // Notifica a jefes de turno y admin que el trabajador marcó ingreso (best-effort).
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios
-       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
-      [dbEmpresaId]
-    );
-    if (gestores.length > 0) {
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(dbEmpresaId);
+    if (gestoresIds.length > 0) {
       await NotificacionesService.notificarVarios(
-        gestores.map((g) => g.id),
+        gestoresIds,
         {
           empresaId: dbEmpresaId,
           tipo: 'turno.ingreso',
@@ -217,14 +211,10 @@ module.exports = {
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64, latitud, longitud);
 
     // Notifica a jefes de turno y admin que el trabajador marcó salida (best-effort).
-    const [gestoresEgreso] = await pool.query(
-      `SELECT id FROM usuarios
-       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
-      [dbEmpresaId]
-    );
-    if (gestoresEgreso.length > 0) {
+    const gestoresEgresoIds = await NotificacionesModel.idsGestoresTurnos(dbEmpresaId);
+    if (gestoresEgresoIds.length > 0) {
       await NotificacionesService.notificarVarios(
-        gestoresEgreso.map((g) => g.id),
+        gestoresEgresoIds,
         {
           empresaId: dbEmpresaId,
           tipo: 'turno.egreso',
