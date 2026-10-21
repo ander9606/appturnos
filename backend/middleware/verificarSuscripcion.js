@@ -1,8 +1,8 @@
 'use strict';
 
-const { pool } = require('../config/database');
 const AppError = require('../utils/AppError');
 const IntegracionModel = require('../modules/integracion/integracion.model');
+const EmpresasModel = require('../modules/empresas/empresas.model');
 
 /**
  * Middleware de suscripción. Aplica solo a rutas de escritura en endpoints protegidos.
@@ -16,10 +16,7 @@ async function verificarSuscripcion(req, _res, next) {
   try {
     if (await IntegracionModel.estaConectado(req.usuario.empresa_id)) return next();
 
-    const [[empresa]] = await pool.query(
-      'SELECT suscripcion_vigente_hasta FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
-      [req.usuario.empresa_id]
-    );
+    const empresa = await EmpresasModel.obtenerVigenciaSuscripcion(req.usuario.empresa_id);
     if (!empresa) return next(new AppError('Empresa no encontrada', 404));
     if (empresa.suscripcion_vigente_hasta === null) return next();
     // 3 días de gracia después del vencimiento

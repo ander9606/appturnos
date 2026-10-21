@@ -1,8 +1,8 @@
 'use strict';
 
-const { pool } = require('../config/database');
 const AppError = require('../utils/AppError');
 const logger = require('../utils/logger');
+const IntegracionModel = require('../modules/integracion/integracion.model');
 const { firmar, firmasCoinciden } = require('../utils/hmac');
 
 /**
@@ -23,18 +23,8 @@ async function verificarFirmaLogiq360(req, _res, next) {
 
   const tenantId = req.body?.tenant_id;
   if (tenantId) {
-    // Resolver por el mapeo del pairing; fallback a empresa_id == tenant_id (legacy).
-    // No filtra por activo: el secreto debe seguir siendo válido con la integración
-    // pausada, para poder verificar el propio evento integracion.activada que la reactiva.
-    const [rows] = await pool.query(
-      `SELECT incoming_secret FROM integracion_config
-       WHERE (logiq360_tenant_id = ? OR empresa_id = ?)
-       ORDER BY (logiq360_tenant_id = ?) DESC LIMIT 1`,
-      [tenantId, tenantId, tenantId]
-    );
-    if (rows.length && rows[0].incoming_secret) {
-      secreto = rows[0].incoming_secret;
-    }
+    // Mapeo del pairing, con fallback legacy a empresa_id == tenant_id (ver el model).
+    secreto = await IntegracionModel.incomingSecretDeTenant(tenantId);
   }
 
   if (!secreto) {
