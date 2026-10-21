@@ -6,7 +6,7 @@
  * - Cambiar su contraseña
  * - Cerrar sesión
  */
-import { Text, TextInput } from '@/components/ui/Text';
+import { Text } from '@/components/ui/Text';
 import { elegirFotoConMenu } from '@/lib/pickImage';
 import { showAlert } from '@/lib/alertDialog';
 import { Spinner } from '@/components/ui/Spinner';
@@ -38,6 +38,9 @@ import type { ApiError } from '@api-client';
 import { useTheme } from '@/lib/theme';
 import { useNominaPerfil, useActualizarExtras } from '@/features/nomina/useNomina';
 import { Avatar } from '@/components/ui/Avatar';
+import { EditProfileForm } from '@/features/perfil/EditProfileForm';
+import { ChangePasswordForm } from '@/features/perfil/ChangePasswordForm';
+import { DeleteAccountForm } from '@/features/perfil/DeleteAccountForm';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -83,217 +86,6 @@ function CardRow({
       </Text>
       {onPress && <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} style={{ marginLeft: 4 }} />}
     </Pressable>
-  );
-}
-
-// ── Edit Profile Modal (inline form) ─────────────────────────────────────
-
-function EditProfileForm({
-  initialNombre,
-  initialApellido,
-  initialEmail,
-  onSave,
-  onCancel,
-  loading,
-}: {
-  initialNombre: string;
-  initialApellido: string;
-  initialEmail: string;
-  onSave: (nombre: string, apellido: string, email: string) => void;
-  onCancel: () => void;
-  loading: boolean;
-}) {
-  const [nombre, setNombre]     = useState(initialNombre);
-  const [apellido, setApellido] = useState(initialApellido);
-  const [email, setEmail]       = useState(initialEmail);
-
-  return (
-    <View className="bg-card rounded-2xl mx-5 border border-border overflow-hidden">
-      <View className="px-5 py-4 border-b border-border">
-        <Text className="text-sm font-semibold text-foreground">{t('perfil.infoPersonal')}</Text>
-      </View>
-
-      {[
-        { label: t('perfil.nombre'),   value: nombre,   setter: setNombre,   key: 'nombre' },
-        { label: t('perfil.apellido'), value: apellido, setter: setApellido, key: 'apellido' },
-        { label: t('perfil.email'),    value: email,    setter: setEmail,    key: 'email' },
-      ].map(({ label, value, setter, key }, i, arr) => (
-        <View
-          key={key}
-          className={`px-5 py-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}
-        >
-          <Text className="text-xs text-muted-foreground mb-1">{label}</Text>
-          <TextInput
-            value={value}
-            onChangeText={setter}
-            className="text-sm text-foreground"
-            autoCapitalize={key === 'email' ? 'none' : 'words'}
-            keyboardType={key === 'email' ? 'email-address' : 'default'}
-            autoCorrect={false}
-            placeholder={label}
-            placeholderTextColor={COLORS.placeholder}
-          />
-        </View>
-      ))}
-
-      <View className="flex-row gap-3 px-5 py-4 border-t border-border">
-        <Pressable
-          onPress={onCancel}
-          className="flex-1 h-11 rounded-xl border border-border items-center justify-center active:opacity-70"
-        >
-          <Text className="text-sm font-semibold text-muted-foreground">{t('perfil.cancelar')}</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => onSave(nombre.trim(), apellido.trim(), email.trim())}
-          disabled={loading}
-          className="flex-1 h-11 rounded-xl bg-primary items-center justify-center active:opacity-80 disabled:opacity-50"
-        >
-          {loading ? (
-            <Spinner size="small" color={COLORS.white} />
-          ) : (
-            <Text className="text-sm font-semibold text-white">{t('perfil.guardarCambios')}</Text>
-          )}
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-// ── Change Password Form ──────────────────────────────────────────────────
-
-function ChangePasswordForm({
-  onSave,
-  onCancel,
-  loading,
-}: {
-  onSave: (actual: string, nueva: string) => void;
-  onCancel: () => void;
-  loading: boolean;
-}) {
-  const [actual, setActual]     = useState('');
-  const [nueva, setNueva]       = useState('');
-  const [confirmar, setConfirmar] = useState('');
-
-  const handleSave = () => {
-    if (nueva.length < 8) {
-      showAlert('Error', t('perfil.errorPasswordShort'));
-      return;
-    }
-    if (nueva !== confirmar) {
-      showAlert('Error', t('perfil.errorPasswordMatch'));
-      return;
-    }
-    onSave(actual, nueva);
-  };
-
-  return (
-    <View className="bg-card rounded-2xl mx-5 border border-border overflow-hidden">
-      <View className="px-5 py-4 border-b border-border">
-        <Text className="text-sm font-semibold text-foreground">{t('perfil.cambiarPassword')}</Text>
-      </View>
-
-      {[
-        { label: t('perfil.passwordActual'),  value: actual,    setter: setActual },
-        { label: t('perfil.passwordNueva'),   value: nueva,     setter: setNueva },
-        { label: t('perfil.passwordConfirm'), value: confirmar, setter: setConfirmar },
-      ].map(({ label, value, setter }, i, arr) => (
-        <View
-          key={label}
-          className={`px-5 py-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}
-        >
-          <Text className="text-xs text-muted-foreground mb-1">{label}</Text>
-          <TextInput
-            value={value}
-            onChangeText={setter}
-            secureTextEntry
-            className="text-sm text-foreground"
-            placeholder={t('perfil.passwordMin')}
-            placeholderTextColor={COLORS.placeholder}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-        </View>
-      ))}
-
-      <View className="flex-row gap-3 px-5 py-4 border-t border-border">
-        <Pressable
-          onPress={onCancel}
-          className="flex-1 h-11 rounded-xl border border-border items-center justify-center active:opacity-70"
-        >
-          <Text className="text-sm font-semibold text-muted-foreground">{t('perfil.cancelar')}</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleSave}
-          disabled={loading}
-          className="flex-1 h-11 rounded-xl bg-primary items-center justify-center active:opacity-80 disabled:opacity-50"
-        >
-          {loading ? (
-            <Spinner size="small" color={COLORS.white} />
-          ) : (
-            <Text className="text-sm font-semibold text-white">{t('perfil.actualizandoPwd')}</Text>
-          )}
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-// ── Delete Account Form ────────────────────────────────────────────────────
-
-function DeleteAccountForm({
-  onConfirm,
-  onCancel,
-  loading,
-}: {
-  onConfirm: (password: string) => void;
-  onCancel: () => void;
-  loading: boolean;
-}) {
-  const [password, setPassword] = useState('');
-
-  return (
-    <View className="bg-card rounded-2xl mx-5 border border-danger/30 overflow-hidden">
-      <View className="px-5 py-4 border-b border-border">
-        <Text className="text-sm font-semibold text-danger">Confirmar eliminación de cuenta</Text>
-        <Text className="text-xs text-muted-foreground mt-1">
-          Ingresa tu contraseña actual para confirmar. Esta acción no se puede deshacer.
-        </Text>
-      </View>
-
-      <View className="px-5 py-3">
-        <Text className="text-xs text-muted-foreground mb-1">Contraseña</Text>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          className="text-sm text-foreground"
-          placeholder="Tu contraseña actual"
-          placeholderTextColor={COLORS.placeholder}
-          autoCorrect={false}
-          autoCapitalize="none"
-        />
-      </View>
-
-      <View className="flex-row gap-3 px-5 py-4 border-t border-border">
-        <Pressable
-          onPress={onCancel}
-          className="flex-1 h-11 rounded-xl border border-border items-center justify-center active:opacity-70"
-        >
-          <Text className="text-sm font-semibold text-muted-foreground">{t('perfil.cancelar')}</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => onConfirm(password)}
-          disabled={loading || !password}
-          className="flex-1 h-11 rounded-xl bg-danger items-center justify-center active:opacity-80 disabled:opacity-50"
-        >
-          {loading ? (
-            <Spinner size="small" color={COLORS.white} />
-          ) : (
-            <Text className="text-sm font-semibold text-white">Eliminar cuenta</Text>
-          )}
-        </Pressable>
-      </View>
-    </View>
   );
 }
 
