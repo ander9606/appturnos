@@ -36,6 +36,7 @@ beforeEach(() => {
   conn.rollback.mockReset().mockResolvedValue(undefined);
   conn.release.mockReset();
   TrabajadoresModel.actualizar.mockReset().mockResolvedValue(1);
+  TrabajadoresModel.sincronizarRolUsuario.mockReset().mockResolvedValue(undefined);
   TrabajadoresModel.obtenerPorId.mockReset();
 });
 
@@ -47,10 +48,7 @@ describe('TrabajadoresService.actualizar — resincronizar rol de cuenta', () =>
 
     await TrabajadoresService.actualizar(1, 5, { tipo: 'turnos' });
 
-    expect(conn.query).toHaveBeenCalledWith(
-      'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
-      [ROLES.TRABAJADOR_TURNOS, 42, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
-    );
+    expect(TrabajadoresModel.sincronizarRolUsuario).toHaveBeenCalledWith(42, ROLES.TRABAJADOR_TURNOS, conn);
     expect(TrabajadoresModel.actualizar).toHaveBeenCalledWith(1, 5, { tipo: 'turnos' }, conn);
     expect(conn.commit).toHaveBeenCalled();
     expect(conn.rollback).not.toHaveBeenCalled();
@@ -63,10 +61,7 @@ describe('TrabajadoresService.actualizar — resincronizar rol de cuenta', () =>
 
     await TrabajadoresService.actualizar(1, 5, { tipo: 'ambos' });
 
-    expect(conn.query).toHaveBeenCalledWith(
-      'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
-      [ROLES.TRABAJADOR_TURNOS, 42, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
-    );
+    expect(TrabajadoresModel.sincronizarRolUsuario).toHaveBeenCalledWith(42, ROLES.TRABAJADOR_TURNOS, conn);
   });
 
   test('cambiar tipo de turnos a nomina se bloquea antes de escribir nada', async () => {
@@ -78,7 +73,7 @@ describe('TrabajadoresService.actualizar — resincronizar rol de cuenta', () =>
 
     expect(pool.getConnection).not.toHaveBeenCalled();
     expect(TrabajadoresModel.actualizar).not.toHaveBeenCalled();
-    expect(conn.query).not.toHaveBeenCalled();
+    expect(TrabajadoresModel.sincronizarRolUsuario).not.toHaveBeenCalled();
   });
 
   test('cambiar tipo de ambos a nomina también se bloquea', async () => {
@@ -88,7 +83,7 @@ describe('TrabajadoresService.actualizar — resincronizar rol de cuenta', () =>
       statusCode: 409,
     });
     expect(TrabajadoresModel.actualizar).not.toHaveBeenCalled();
-    expect(conn.query).not.toHaveBeenCalled();
+    expect(TrabajadoresModel.sincronizarRolUsuario).not.toHaveBeenCalled();
   });
 
   test('sin cambio real de tipo no toca usuarios', async () => {
@@ -96,7 +91,7 @@ describe('TrabajadoresService.actualizar — resincronizar rol de cuenta', () =>
 
     await TrabajadoresService.actualizar(1, 5, { tipo: 'turnos', telefono: '3000000000' });
 
-    expect(conn.query).not.toHaveBeenCalled();
+    expect(TrabajadoresModel.sincronizarRolUsuario).not.toHaveBeenCalled();
   });
 
   test('trabajador sin cuenta activada (usuario_id null) no toca usuarios', async () => {
@@ -104,6 +99,6 @@ describe('TrabajadoresService.actualizar — resincronizar rol de cuenta', () =>
 
     await TrabajadoresService.actualizar(1, 5, { tipo: 'nomina' });
 
-    expect(conn.query).not.toHaveBeenCalled();
+    expect(TrabajadoresModel.sincronizarRolUsuario).not.toHaveBeenCalled();
   });
 });

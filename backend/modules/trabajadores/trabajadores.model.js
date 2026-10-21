@@ -1,7 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
-const { CAMPOS_PERSONALES_TRABAJADOR } = require('../../config/constants');
+const { CAMPOS_PERSONALES_TRABAJADOR, ROLES } = require('../../config/constants');
 const AppError = require('../../utils/AppError');
 
 // Fechas llegan como 'YYYY-MM-DD' (dateStrings) y '' equivale a NULL.
@@ -752,6 +752,69 @@ const TrabajadoresModel = {
     } finally {
       conn.release();
     }
+  },
+
+  // ── Consultas de apoyo de TrabajadoresService (cupo, identidad, avisos) ──
+  // ponytail: tocan `usuarios`/`empresas`, pero solo las usa este flujo — upgrade path:
+  // moverlas a UsuariosModel/EmpresasModel si otro módulo las necesita.
+
+  /** ids de los admin_empresa activos de la empresa. */
+  async idsAdminsEmpresa(empresaId) {
+    const [admins] = await pool.query(
+      'SELECT id FROM usuarios WHERE empresa_id = ? AND rol = ? AND activo = 1',
+      [empresaId, ROLES.ADMIN_EMPRESA]
+    );
+    return admins.map((a) => a.id);
+  },
+
+  /** Plan de la empresa activa (undefined si no existe o está inactiva). */
+  async planDeEmpresa(empresaId) {
+    const [[empresa]] = await pool.query(
+      'SELECT plan FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return empresa;
+  },
+
+  async contarActivos(empresaId) {
+    const [[{ total }]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM trabajadores WHERE empresa_id = ? AND activo = 1',
+      [empresaId]
+    );
+    return total;
+  },
+
+  /** ¿Ese email ya es de un gestor (admin/jefe/nómina) de la empresa? */
+  async existeGestorConEmail(empresaId, email) {
+    const [filas] = await pool.query(
+      `SELECT 1 FROM usuarios
+       WHERE empresa_id = ? AND email = ? AND rol IN (?, ?, ?, ?) LIMIT 1`,
+      [empresaId, email.trim().toLowerCase(), ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA]
+    );
+    return filas.length > 0;
+  },
+
+  /** Rol de la cuenta ya asociada a esa cédula o email (undefined si no hay). Al menos uno es obligatorio. */
+  async buscarRolCuentaPorCedulaOEmail({ cedula, email }) {
+    const condiciones = [];
+    const valores = [];
+    if (cedula) { condiciones.push('t.cedula = ?'); valores.push(cedula); }
+    if (email)  { condiciones.push('t.email = ?');  valores.push(email.trim().toLowerCase()); }
+    const [filas] = await pool.query(
+      `SELECT u.rol FROM usuarios u
+       INNER JOIN trabajadores t ON t.usuario_id = u.id
+       WHERE ${condiciones.join(' OR ')} LIMIT 1`,
+      valores
+    );
+    return filas[0]?.rol;
+  },
+
+  /** Resincroniza usuarios.rol con el tipo de la ficha. Va dentro de la transacción de quien llama (conn). */
+  async sincronizarRolUsuario(usuarioId, rolNuevo, conn) {
+    await conn.query(
+      'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
+      [rolNuevo, usuarioId, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
+    );
   },
 };
 

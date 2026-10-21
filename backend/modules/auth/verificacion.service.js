@@ -1,13 +1,13 @@
 'use strict';
 const crypto   = require('crypto');
 const jwt      = require('jsonwebtoken');
-const { pool } = require('../../config/database');
 const AppError = require('../../utils/AppError');
 const { enviarEmail } = require('../../utils/mailer');
 const { plantillaCorreo, bloqueCodigo } = require('../../utils/plantillaCorreo');
 const { enviarSms }   = require('../../utils/sms');
 const logger = require('../../utils/logger');
 const AuthModel = require('./auth.model');
+const VerificacionModel = require('./verificacion.model');
 
 const OTP_TTL_MIN  = 10;
 const MAX_INTENTOS = 5;
@@ -17,48 +17,35 @@ function generarCodigo() {
 }
 
 async function enviarOtp(tipo, destino) {
-  const conn = await pool.getConnection();
-  try {
-    // Invalidate any existing unused codes for this destination
-    await conn.execute(
-      `UPDATE codigos_verificacion SET usado = 1
-       WHERE tipo = ? AND destino = ? AND usado = 0`,
-      [tipo, destino],
-    );
+  // Invalidate any existing unused codes for this destination
+  await VerificacionModel.invalidarCodigos(tipo, destino);
 
-    const codigo    = generarCodigo();
-    const expiresAt = new Date(Date.now() + OTP_TTL_MIN * 60 * 1000);
+  const codigo    = generarCodigo();
+  const expiresAt = new Date(Date.now() + OTP_TTL_MIN * 60 * 1000);
 
-    await conn.execute(
-      `INSERT INTO codigos_verificacion (tipo, destino, codigo, expires_at)
-       VALUES (?, ?, ?, ?)`,
-      [tipo, destino, codigo, expiresAt],
-    );
+  await VerificacionModel.crearCodigo(tipo, destino, codigo, expiresAt);
 
-    if (tipo === 'email') {
-      // Hora en el asunto: evita que Gmail/Outlook agrupen varios códigos en
-      // un mismo hilo y oculten el más reciente — cada envío se ve como
-      // mensaje nuevo y distinguible.
-      const horaEnvio = new Date().toLocaleTimeString('es-CO', {
-        hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota',
-      });
-      await enviarEmail({
-        to:      destino,
-        subject: `Tu código de verificación (${horaEnvio}) — Zaturno`,
-        html: plantillaCorreo({
-          titulo: 'Tu código de verificación',
-          cuerpo: `<p style="margin:0">Usa este código para continuar:</p>${bloqueCodigo(codigo)}`,
-          nota: `Válido por ${OTP_TTL_MIN} minutos. No lo compartas con nadie.`,
-        }),
-      });
-    } else {
-      await enviarSms({
-        to:   destino,
-        body: `Tu código Zaturno: ${codigo}. Válido ${OTP_TTL_MIN} min.`,
-      });
-    }
-  } finally {
-    conn.release();
+  if (tipo === 'email') {
+    // Hora en el asunto: evita que Gmail/Outlook agrupen varios códigos en
+    // un mismo hilo y oculten el más reciente — cada envío se ve como
+    // mensaje nuevo y distinguible.
+    const horaEnvio = new Date().toLocaleTimeString('es-CO', {
+      hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota',
+    });
+    await enviarEmail({
+      to:      destino,
+      subject: `Tu código de verificación (${horaEnvio}) — Zaturno`,
+      html: plantillaCorreo({
+        titulo: 'Tu código de verificación',
+        cuerpo: `<p style="margin:0">Usa este código para continuar:</p>${bloqueCodigo(codigo)}`,
+        nota: `Válido por ${OTP_TTL_MIN} minutos. No lo compartas con nadie.`,
+      }),
+    });
+  } else {
+    await enviarSms({
+      to:   destino,
+      body: `Tu código Zaturno: ${codigo}. Válido ${OTP_TTL_MIN} min.`,
+    });
   }
 }
 
@@ -76,48 +63,32 @@ async function enviarOtpRecuperacion(email) {
 }
 
 async function verificarOtp(tipo, destino, codigo) {
-  const conn = await pool.getConnection();
-  try {
-    const [rows] = await conn.execute(
-      `SELECT id, codigo, expires_at, intentos
-       FROM codigos_verificacion
-       WHERE tipo = ? AND destino = ? AND usado = 0
-       ORDER BY created_at DESC LIMIT 1`,
-      [tipo, destino],
-    );
+  const row = await VerificacionModel.obtenerVigente(tipo, destino);
 
-    if (!rows.length) {
-      throw new AppError('Ese código ya no es válido. Usa el del correo más reciente, o toca "Reenviar código".', 400);
-    }
-
-    const row = rows[0];
-
-    if (row.intentos >= MAX_INTENTOS) {
-      await conn.execute(`UPDATE codigos_verificacion SET usado = 1 WHERE id = ?`, [row.id]);
-      throw new AppError('Demasiados intentos fallidos. Solicita un nuevo código.', 429);
-    }
-
-    if (new Date() > new Date(row.expires_at)) {
-      await conn.execute(`UPDATE codigos_verificacion SET usado = 1 WHERE id = ?`, [row.id]);
-      throw new AppError('El código ha expirado. Solicita uno nuevo.', 400);
-    }
-
-    if (row.codigo !== codigo) {
-      await conn.execute(
-        `UPDATE codigos_verificacion SET intentos = intentos + 1 WHERE id = ?`,
-        [row.id],
-      );
-      throw new AppError('Código incorrecto.', 400);
-    }
-
-    await conn.execute(`UPDATE codigos_verificacion SET usado = 1 WHERE id = ?`, [row.id]);
-
-    // Short-lived token the registration endpoint will check
-    const token = jwt.sign({ tipo, destino }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    return token;
-  } finally {
-    conn.release();
+  if (!row) {
+    throw new AppError('Ese código ya no es válido. Usa el del correo más reciente, o toca "Reenviar código".', 400);
   }
+
+  if (row.intentos >= MAX_INTENTOS) {
+    await VerificacionModel.marcarUsado(row.id);
+    throw new AppError('Demasiados intentos fallidos. Solicita un nuevo código.', 429);
+  }
+
+  if (new Date() > new Date(row.expires_at)) {
+    await VerificacionModel.marcarUsado(row.id);
+    throw new AppError('El código ha expirado. Solicita uno nuevo.', 400);
+  }
+
+  if (row.codigo !== codigo) {
+    await VerificacionModel.sumarIntento(row.id);
+    throw new AppError('Código incorrecto.', 400);
+  }
+
+  await VerificacionModel.marcarUsado(row.id);
+
+  // Short-lived token the registration endpoint will check
+  const token = jwt.sign({ tipo, destino }, process.env.JWT_SECRET, { expiresIn: '15m' });
+  return token;
 }
 
 function validarTokenVerificacion(token, tipo, destino) {

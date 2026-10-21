@@ -102,11 +102,8 @@ const TrabajadoresService = {
 
   async notificarCambioSalario(empresaId, { trabajadorId, usuarioId, nombre }, actor) {
     if (actor.usuario_rol !== ROLES.ADMIN_EMPRESA) {
-      const [admins] = await pool.query(
-        'SELECT id FROM usuarios WHERE empresa_id = ? AND rol = ? AND activo = 1',
-        [empresaId, ROLES.ADMIN_EMPRESA]
-      );
-      await NotificacionesService.notificarVarios(admins.map((a) => a.id), {
+      const adminIds = await TrabajadoresModel.idsAdminsEmpresa(empresaId);
+      await NotificacionesService.notificarVarios(adminIds, {
         empresaId,
         tipo: 'nomina.salario_modificado',
         titulo: 'Sueldo modificado',
@@ -138,20 +135,14 @@ const TrabajadoresService = {
    * va a rebotar con 402).
    */
   async obtenerCupoPlan(empresaId) {
-    const [[empresa]] = await pool.query(
-      'SELECT plan FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
-      [empresaId]
-    );
+    const empresa = await TrabajadoresModel.planDeEmpresa(empresaId);
     if (!empresa) throw new AppError('Empresa no encontrada', 404);
 
     const planes = await PlanesModel.listar();
     const limite = planes.find((p) => p.codigo === empresa.plan)?.max_trabajadores ?? null;
     if (limite === null) return { plan: empresa.plan, limite: null, total: null, alTope: false };
 
-    const [[{ total }]] = await pool.query(
-      'SELECT COUNT(*) AS total FROM trabajadores WHERE empresa_id = ? AND activo = 1',
-      [empresaId]
-    );
+    const total = await TrabajadoresModel.contarActivos(empresaId);
     return { plan: empresa.plan, limite, total, alTope: total >= limite };
   },
 
@@ -180,12 +171,7 @@ const TrabajadoresService = {
    */
   async verificarNoEsGestor(empresaId, email) {
     if (!email) return;
-    const [filas] = await pool.query(
-      `SELECT 1 FROM usuarios
-       WHERE empresa_id = ? AND email = ? AND rol IN (?, ?, ?, ?) LIMIT 1`,
-      [empresaId, email.trim().toLowerCase(), ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA]
-    );
-    if (filas.length) {
+    if (await TrabajadoresModel.existeGestorConEmail(empresaId, email)) {
       throw new AppError('Ese email ya pertenece a un gestor de tu empresa; no puede ser también trabajador.', 409);
     }
   },
@@ -203,18 +189,9 @@ const TrabajadoresService = {
   async verificarIdentidadParaNomina(tipo, cedula, email) {
     if (!tipo || tipo === 'turnos') return; // 'turnos' es el default de la columna si no se envía
     if (!cedula && !email) return;
-    const condiciones = [];
-    const valores = [];
-    if (cedula) { condiciones.push('t.cedula = ?'); valores.push(cedula); }
-    if (email)  { condiciones.push('t.email = ?');  valores.push(email.trim().toLowerCase()); }
-    const [filas] = await pool.query(
-      `SELECT u.rol FROM usuarios u
-       INNER JOIN trabajadores t ON t.usuario_id = u.id
-       WHERE ${condiciones.join(' OR ')} LIMIT 1`,
-      valores
-    );
-    if (!filas.length) return;
-    if (filas[0].rol !== ROLES.TRABAJADOR_TURNOS) {
+    const rol = await TrabajadoresModel.buscarRolCuentaPorCedulaOEmail({ cedula, email });
+    if (!rol) return;
+    if (rol !== ROLES.TRABAJADOR_TURNOS) {
       throw new AppError('Esta persona ya tiene una cuenta con otro rol en la plataforma (por ejemplo, nómina de otra empresa) y no puede crearse así.', 409);
     }
     throw new AppError(
@@ -280,6 +257,7 @@ const TrabajadoresService = {
     // una sola transacción. Si cualquiera falla, no queda nada a medias.
     const { tarifa_hora, salario_base, ...resto } = datos;
     const cambiaSueldo = tarifa_hora !== undefined || salario_base !== undefined;
+    // ponytail: el service orquesta la transacción (conoce qué pasos son una unidad) — upgrade path: TrabajadoresModel.enTransaccion().
     const conn = await pool.getConnection();
     let resultadoSueldo = null;
     try {
@@ -299,10 +277,7 @@ const TrabajadoresService = {
         );
       }
       if (cambiaRol) {
-        await conn.query(
-          'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
-          [rolNuevo, actual.usuario_id, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
-        );
+        await TrabajadoresModel.sincronizarRolUsuario(actual.usuario_id, rolNuevo, conn);
       }
       await conn.commit();
     } catch (err) {

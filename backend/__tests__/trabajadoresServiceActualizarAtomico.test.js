@@ -38,6 +38,7 @@ beforeEach(() => {
   conn.release.mockReset();
   TrabajadoresModel.obtenerPorId.mockReset().mockResolvedValue(ficha);
   TrabajadoresModel.actualizar.mockReset().mockResolvedValue(1);
+  TrabajadoresModel.sincronizarRolUsuario.mockReset().mockResolvedValue(undefined);
   TrabajadoresModel.actualizarSalarioConAuditoria.mockReset().mockResolvedValue({ cambio: false });
   NotificacionesService.notificar.mockReset().mockResolvedValue(undefined);
   NotificacionesService.notificarVarios.mockReset().mockResolvedValue(undefined);
@@ -58,7 +59,7 @@ test('el sueldo falla después de escribir el perfil → rollback del perfil, si
 });
 
 test('el rol de la cuenta falla → rollback de ficha y sueldo, sin commit', async () => {
-  conn.query.mockRejectedValueOnce(new Error('db caída'));
+  TrabajadoresModel.sincronizarRolUsuario.mockRejectedValueOnce(new Error('db caída'));
 
   await expect(
     TrabajadoresService.actualizar(EMPRESA, ID, { tipo: 'turnos', salario_base: 1800000 }, admin)
