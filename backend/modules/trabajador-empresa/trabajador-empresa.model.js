@@ -2,6 +2,23 @@
 
 const { pool } = require('../../config/database');
 
+// ponytail: misma utilidad que trabajadores.model.js — upgrade path: moverla a utils/enTransaccion.js.
+/** Corre fn dentro de una transacción propia: commit si termina, rollback si lanza. */
+async function enTransaccion(fn) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const resultado = await fn(conn);
+    await conn.commit();
+    return resultado;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 /**
  * Acceso a datos de la relación trabajador ↔ empresa (tabla trabajador_empresa).
  * Implementa el doble opt-in: trabajador solicita → empresa aprueba,
@@ -133,7 +150,7 @@ const TrabajadorEmpresaModel = {
     return res.insertId;
   },
 
-  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto, activoAntesDeOferta, cargosInteres } = {}) {
+  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto, activoAntesDeOferta, cargosInteres } = {}, conn = pool) {
     const sets = ['estado = ?'];
     const params = [estado];
 
@@ -163,7 +180,7 @@ const TrabajadorEmpresaModel = {
     }
 
     params.push(id);
-    const [res] = await pool.query(
+    const [res] = await conn.query(
       `UPDATE trabajador_empresa SET ${sets.join(', ')} WHERE id = ?`,
       params
     );
@@ -175,8 +192,8 @@ const TrabajadorEmpresaModel = {
    * pendientes) al convertirse a nómina — exclusiva a una sola empresa. Deja
    * intactas las ya cerradas (rechazado/archivado), no hay nada que tocar ahí.
    */
-  async archivarOtrasRelacionesDeUsuario(usuarioId, exceptoId) {
-    const [filas] = await pool.query(
+  async archivarOtrasRelacionesDeUsuario(usuarioId, exceptoId, conn = pool) {
+    const [filas] = await conn.query(
       `SELECT id, empresa_id, trabajador_id FROM trabajador_empresa
        WHERE usuario_id = ? AND id != ?
          AND estado IN ('activo', 'solicitado_por_trabajador', 'solicitado_por_empresa')`,
@@ -184,13 +201,30 @@ const TrabajadorEmpresaModel = {
     );
     if (filas.length) {
       const ids = filas.map((f) => f.id);
-      await pool.query(
+      await conn.query(
         `UPDATE trabajador_empresa SET estado = 'archivado', fecha_resuelto = NOW()
          WHERE id IN (${ids.map(() => '?').join(',')})`,
         ids
       );
     }
     return filas;
+  },
+
+  /**
+   * El trabajador acepta una oferta de nómina. Los 4 cambios que sostienen la regla
+   * "nómina es exclusiva de una empresa" van en UNA transacción: estado de la relación,
+   * tipo de la ficha, rol de la cuenta y archivado de las demás relaciones. Si algo
+   * falla no queda nada aplicado y el trabajador puede reintentar.
+   * Devuelve las relaciones archivadas (el caller suspende sus fichas y notifica).
+   */
+  async aceptarConversionANomina({ relacionId, trabajadorId, usuarioId, empresaId, rolNomina }) {
+    return enTransaccion(async (conn) => {
+      await TrabajadorEmpresaModel.cambiarEstado(
+        relacionId, 'activo', { trabajadorId, activoAntesDeOferta: false }, conn
+      );
+      await TrabajadorEmpresaModel.convertirANomina(trabajadorId, usuarioId, empresaId, rolNomina, conn);
+      return TrabajadorEmpresaModel.archivarOtrasRelacionesDeUsuario(usuarioId, relacionId, conn);
+    });
   },
 
   // ponytail: consultas sobre `usuarios`/`trabajadores` que solo usa este flujo de vinculación,
@@ -262,9 +296,9 @@ const TrabajadorEmpresaModel = {
   },
 
   /** Fija el track de la ficha y cambia el rol global del usuario (nómina = exclusivo a una empresa). */
-  async convertirANomina(trabajadorId, usuarioId, empresaId, rolNomina) {
-    await pool.query('UPDATE trabajadores SET tipo = ? WHERE id = ?', ['nomina', trabajadorId]);
-    await pool.query(
+  async convertirANomina(trabajadorId, usuarioId, empresaId, rolNomina, conn = pool) {
+    await conn.query('UPDATE trabajadores SET tipo = ? WHERE id = ?', ['nomina', trabajadorId]);
+    await conn.query(
       'UPDATE usuarios SET rol = ?, empresa_id = ? WHERE id = ?',
       [rolNomina, empresaId, usuarioId]
     );

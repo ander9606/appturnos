@@ -37,14 +37,12 @@ beforeEach(() => {
     tipo_ofrecido: 'nomina',
     trabajador_id: 5,
   });
-  TrabajadorEmpresaModel.cambiarEstado.mockReset().mockResolvedValue(1);
-  TrabajadorEmpresaModel.archivarOtrasRelacionesDeUsuario.mockReset().mockResolvedValue([
+  TrabajadorEmpresaModel.aceptarConversionANomina.mockReset().mockResolvedValue([
     { id: 20, empresa_id: 2, trabajador_id: 77 }, // ficha existente en la otra empresa
     { id: 21, empresa_id: 3, trabajador_id: null }, // invitación pendiente, nunca llegó a crear ficha
   ]);
 
   TrabajadorEmpresaModel.obtenerUsuario.mockReset().mockResolvedValue({ nombre: 'Ana', apellido: 'Pérez', rol: ROLES.TRABAJADOR_TURNOS });
-  TrabajadorEmpresaModel.convertirANomina.mockReset().mockResolvedValue(undefined);
   // idsGestores, en orden: notificarGestores(empresa 2) → (empresa 3) → (empresa nueva, 'aceptada')
   TrabajadorEmpresaModel.idsGestores.mockReset()
     .mockResolvedValueOnce([501])
@@ -60,9 +58,15 @@ describe('TrabajadorEmpresaService.aceptar — conversión a nómina suspende ot
     expect(TrabajadoresModel.desactivar).toHaveBeenCalledWith(2, 77);
   });
 
-  test('convierte la ficha y la cuenta a nómina en la empresa que invitó', async () => {
+  test('activa la relación y convierte ficha y cuenta a nómina en la empresa que invitó (una sola operación)', async () => {
     await TrabajadorEmpresaService.aceptar(USUARIO_ID, RELACION_ID);
 
-    expect(TrabajadorEmpresaModel.convertirANomina).toHaveBeenCalledWith(5, USUARIO_ID, EMPRESA_NUEVA, ROLES.TRABAJADOR_NOMINA);
+    expect(TrabajadorEmpresaModel.aceptarConversionANomina).toHaveBeenCalledWith({
+      relacionId: RELACION_ID,
+      trabajadorId: 5,
+      usuarioId: USUARIO_ID,
+      empresaId: EMPRESA_NUEVA,
+      rolNomina: ROLES.TRABAJADOR_NOMINA,
+    });
   });
 });
