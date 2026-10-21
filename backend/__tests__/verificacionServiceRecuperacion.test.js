@@ -1,10 +1,8 @@
 'use strict';
 
 jest.mock('../modules/auth/auth.model');
-jest.mock('../config/database', () => {
-  const conn = { execute: jest.fn().mockResolvedValue([[]]), release: jest.fn() };
-  return { pool: { getConnection: jest.fn().mockResolvedValue(conn) }, __conn: conn };
-});
+jest.mock('../modules/auth/verificacion.model');
+jest.mock('../config/database', () => ({ pool: {} }));
 jest.mock('../utils/mailer', () => ({ enviarEmail: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('../utils/sms', () => ({ enviarSms: jest.fn() }));
 

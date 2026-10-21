@@ -17,7 +17,7 @@ beforeEach(() => {
 });
 
 test('crear trabajador con email de un gestor → 409', async () => {
-  pool.query.mockResolvedValueOnce([[{ 1: 1 }]]);
+  TrabajadoresModel.existeGestorConEmail.mockResolvedValueOnce(true);
   await expect(
     TrabajadoresService.crear(1, { nombre: 'Ana', apellido: 'P', email: 'Jefe@x.com' })
   ).rejects.toMatchObject({ statusCode: 409 });
@@ -25,7 +25,9 @@ test('crear trabajador con email de un gestor → 409', async () => {
 });
 
 test('crear trabajador con email libre sigue funcionando', async () => {
-  pool.query.mockResolvedValueOnce([[]]).mockResolvedValue([[{ plan: 'gratis' }]]);
+  TrabajadoresModel.existeGestorConEmail.mockResolvedValueOnce(false);
+  TrabajadoresModel.planDeEmpresa.mockResolvedValue({ plan: 'gratis' });
+  pool.query.mockResolvedValue([[{ plan: 'gratis' }]]); // PlanesModel (real) lista los planes
   TrabajadoresModel.crear.mockResolvedValue(7);
   TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 7 });
   await expect(TrabajadoresService.crear(1, { nombre: 'Ana', apellido: 'P', email: 'a@x.com' })).resolves.toEqual({ id: 7 });

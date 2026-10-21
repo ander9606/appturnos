@@ -13,14 +13,9 @@ const E = ESTADOS_TRABAJADOR_EMPRESA;
 
 /** admin_empresa + jefe_turnos activos de la empresa — gestionan solicitudes de vinculación. */
 async function notificarGestores(empresaId, base) {
-  const { pool } = require('../../config/database');
-  const [gestores] = await pool.query(
-    `SELECT id FROM usuarios
-     WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
-    [empresaId]
-  );
-  if (gestores.length > 0) {
-    await NotificacionesService.notificarVarios(gestores.map((g) => g.id), { empresaId, ...base });
+  const gestorIds = await TrabajadorEmpresaModel.idsGestores(empresaId);
+  if (gestorIds.length > 0) {
+    await NotificacionesService.notificarVarios(gestorIds, { empresaId, ...base });
   }
 }
 
@@ -29,14 +24,9 @@ async function notificarGestores(empresaId, base) {
  * Se llama al aprobar/aceptar una solicitud.
  */
 async function vincularTrabajador(usuarioId, empresaId) {
-  const { pool } = require('../../config/database');
-
   // Buscar si ya existe un trabajador con este usuario en la empresa.
-  const [filas] = await pool.query(
-    'SELECT id FROM trabajadores WHERE usuario_id = ? AND empresa_id = ? LIMIT 1',
-    [usuarioId, empresaId]
-  );
-  if (filas.length) return filas[0].id;
+  const existenteId = await TrabajadorEmpresaModel.idTrabajadorDeUsuario(usuarioId, empresaId);
+  if (existenteId != null) return existenteId;
 
   // A partir de acá SIEMPRE se suma un trabajador activo nuevo (reclamando
   // la ficha personal o creando una) — mismo cupo de plan que "Nuevo
@@ -53,12 +43,8 @@ async function vincularTrabajador(usuarioId, empresaId) {
   }
 
   // Obtener datos básicos del usuario para crear la ficha.
-  const [usuarioRows] = await pool.query(
-    'SELECT nombre, apellido, email FROM usuarios WHERE id = ? LIMIT 1',
-    [usuarioId]
-  );
-  if (!usuarioRows.length) return null;
-  const u = usuarioRows[0];
+  const u = await TrabajadorEmpresaModel.obtenerUsuario(usuarioId);
+  if (!u) return null;
 
   // Ya trabaja en otra(s) empresa(s) — copiar sus datos personales (cédula,
   // banco, descripción...) para que esta ficha nueva no arranque en blanco.
@@ -154,28 +140,15 @@ const TrabajadorEmpresaService = {
    * (ver query de usuariosRows) — implica exclusividad y requiere aceptación explícita.
    */
   async invitar(empresaId, cedula, tipo = 'turnos') {
-    const { pool } = require('../../config/database');
-
     // Buscar ficha en ESTA empresa (puede no tener cuenta aún).
-    const [trabajadoresRows] = await pool.query(
-      `SELECT t.id, t.usuario_id, t.empresa_id
-       FROM trabajadores t
-       WHERE t.cedula = ? AND t.empresa_id = ? LIMIT 1`,
-      [cedula, empresaId]
-    );
+    const ficha = await TrabajadorEmpresaModel.fichaPorCedula(cedula, empresaId);
 
     // Buscar cualquier cuenta YA asociada a esta cédula, sin importar en qué
     // empresa se creó la ficha ni el rol actual — necesario para poder rechazar
     // con un mensaje claro a alguien que ya es trabajador_nomina en otra parte
     // (rol trabajador_nomina = cuenta exclusiva a una sola empresa) en vez de
     // crear una ficha fantasma silenciosa.
-    const [cuentaRows] = await pool.query(
-      `SELECT u.id AS usuario_id, u.rol FROM usuarios u
-       INNER JOIN trabajadores t ON t.usuario_id = u.id
-       WHERE t.cedula = ? LIMIT 1`,
-      [cedula]
-    );
-    const cuenta = cuentaRows[0] || null;
+    const cuenta = (await TrabajadorEmpresaModel.cuentaPorCedula(cedula)) || null;
     if (cuenta && cuenta.rol !== ROLES.TRABAJADOR_TURNOS) {
       throw new AppError(
         'Esta cédula ya tiene una cuenta con otro rol en la plataforma (por ejemplo, nómina de otra empresa) y no puede ser invitada así.',
@@ -183,7 +156,7 @@ const TrabajadorEmpresaService = {
       );
     }
     let usuarioId = cuenta?.usuario_id || null;
-    let trabajadorId = trabajadoresRows[0]?.id || null;
+    let trabajadorId = ficha?.id || null;
 
     // Si no hay ficha en esta empresa, crearla — mismo cupo de plan que
     // "Nuevo trabajador": la ficha cuenta para el tope aunque la cuenta
@@ -207,12 +180,7 @@ const TrabajadorEmpresaService = {
           409
         );
       }
-      await pool.query(
-        `UPDATE trabajadores
-         SET empresas_invitacion = JSON_ARRAY_APPEND(COALESCE(empresas_invitacion, JSON_ARRAY()), '$', ?)
-         WHERE id = ?`,
-        [empresaId, trabajadorId]
-      );
+      await TrabajadorEmpresaModel.agregarEmpresaInvitacion(trabajadorId, empresaId);
       return {
         mensaje: 'Trabajador no tiene cuenta. Se creó la ficha. Al activar cuenta quedará vinculado.',
         trabajador_id: trabajadorId,
@@ -222,7 +190,7 @@ const TrabajadorEmpresaService = {
 
     // Ya tiene cuenta: vincular la ficha de esta empresa a su usuario
     // (si ya existía sin usuario_id, o si se acaba de crear el placeholder).
-    await pool.query('UPDATE trabajadores SET usuario_id = ? WHERE id = ? AND usuario_id IS NULL', [usuarioId, trabajadorId]);
+    await TrabajadorEmpresaModel.vincularUsuarioAFicha(trabajadorId, usuarioId);
 
     const notificarInvitacion = () => {
       if (tipo === 'nomina') {
@@ -296,8 +264,7 @@ const TrabajadorEmpresaService = {
       throw new AppError('Solo se pueden aprobar solicitudes pendientes del trabajador', 409);
     }
 
-    const { pool } = require('../../config/database');
-    const [[u]] = await pool.query('SELECT rol FROM usuarios WHERE id = ? LIMIT 1', [relacion.usuario_id]);
+    const u = await TrabajadorEmpresaModel.obtenerUsuario(relacion.usuario_id);
     if (u?.rol !== ROLES.TRABAJADOR_TURNOS) {
       // Pudo convertirse a nómina de otra empresa mientras esta solicitud quedó pendiente.
       throw new AppError('Este trabajador ya no está disponible para turnos (es nómina de otra empresa)', 409);
@@ -330,10 +297,9 @@ const TrabajadorEmpresaService = {
       throw new AppError('Solo se pueden aceptar invitaciones pendientes de la empresa', 409);
     }
 
-    const { pool } = require('../../config/database');
     const esNomina = relacion.tipo_ofrecido === 'nomina';
 
-    const [[u]] = await pool.query('SELECT nombre, apellido, rol FROM usuarios WHERE id = ? LIMIT 1', [usuarioId]);
+    const u = await TrabajadorEmpresaModel.obtenerUsuario(usuarioId);
     // Solo un trabajador_turnos puede ganar una relación nueva (nómina es exclusiva
     // a una empresa; si ya convirtió en otra parte mientras esto quedó pendiente, se corta acá).
     if (u?.rol !== ROLES.TRABAJADOR_TURNOS) {
@@ -354,11 +320,7 @@ const TrabajadorEmpresaService = {
       // usuario (nómina = exclusivo a una empresa) y archiva sus demás vínculos
       // (activos Y pendientes — una solicitud/invitación vieja no debe poder
       // reactivarse después y romper la exclusividad).
-      await pool.query('UPDATE trabajadores SET tipo = ? WHERE id = ?', ['nomina', trabajadorId]);
-      await pool.query(
-        'UPDATE usuarios SET rol = ?, empresa_id = ? WHERE id = ?',
-        [ROLES.TRABAJADOR_NOMINA, relacion.empresa_id, usuarioId]
-      );
+      await TrabajadorEmpresaModel.convertirANomina(trabajadorId, usuarioId, relacion.empresa_id, ROLES.TRABAJADOR_NOMINA);
 
       const archivadas = await TrabajadorEmpresaModel.archivarOtrasRelacionesDeUsuario(usuarioId, relacionId);
       for (const otra of archivadas) {

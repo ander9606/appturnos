@@ -33,11 +33,7 @@ const AusenciasService = {
     const id = await AusenciasModel.crear(empresaId, t.id, datos);
 
     // Notificar a gestores (best-effort)
-    const [gestores] = await require('../../config/database').pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('admin_empresa','jefe_turnos','jefe_nomina','nomina') AND activo = 1`,
-      [empresaId]
-    ).catch(() => [[]]);
-    const gestoraIds = gestores.map((g) => g.id);
+    const gestoraIds = await AusenciasModel.idsGestores(empresaId).catch(() => []);
     if (gestoraIds.length) {
       await NotificacionesService.notificarVarios(gestoraIds, {
         empresaId,

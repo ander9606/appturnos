@@ -57,6 +57,15 @@ const NovedadesModel = {
     if (asignacion.trabajador_usuario_id) ids.add(asignacion.trabajador_usuario_id);
     return [...ids];
   },
+
+  /** ¿El usuario es el trabajador dueño de esa asignación? */
+  async trabajadorEsUsuario(trabajadorId, usuarioId) {
+    const [[row]] = await pool.query(
+      'SELECT 1 FROM trabajadores WHERE id = ? AND usuario_id = ?',
+      [trabajadorId, usuarioId]
+    );
+    return !!row;
+  },
 };
 
 module.exports = NovedadesModel;

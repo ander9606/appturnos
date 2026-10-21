@@ -93,6 +93,11 @@ const NotificacionesModel = {
     );
     return res.affectedRows;
   },
+
+  async idsSuperAdmins() {
+    const [filas] = await pool.query(`SELECT id FROM usuarios WHERE rol = 'super_admin' AND activo = 1`);
+    return filas.map((f) => f.id);
+  },
 };
 
 module.exports = NotificacionesModel;

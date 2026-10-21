@@ -81,12 +81,8 @@ async function _validarAcceso(empresaId, asignacionId, usuario) {
 
   // Trabajador: solo si está asignado
   if (usuario.rol === ROLES.TRABAJADOR_TURNOS) {
-    const { pool } = require('../../config/database');
-    const [[row]] = await pool.query(
-      'SELECT 1 FROM trabajadores WHERE id = ? AND usuario_id = ?',
-      [asignacion.trabajador_id, usuario.sub]
-    );
-    if (!row) throw new AppError('No tienes acceso a este turno', 403);
+    const esDuenio = await NovedadesModel.trabajadorEsUsuario(asignacion.trabajador_id, usuario.sub);
+    if (!esDuenio) throw new AppError('No tienes acceso a este turno', 403);
     return asignacion;
   }
 

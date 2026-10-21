@@ -36,6 +36,9 @@ function cupoLleno() {
 
 beforeEach(() => {
   pool.query.mockReset();
+  for (const m of ['fichaPorCedula', 'cuentaPorCedula', 'obtenerUsuario', 'idTrabajadorDeUsuario']) {
+    TrabajadorEmpresaModel[m].mockReset();
+  }
   TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa.mockReset();
   TrabajadorEmpresaModel.obtenerPorId.mockReset();
   TrabajadorEmpresaModel.cambiarEstado.mockReset().mockResolvedValue(1);
@@ -46,9 +49,8 @@ beforeEach(() => {
 
 describe('invitar() — cupo de plan al crear ficha nueva', () => {
   test('empresa al tope + cédula sin ficha propia → 402, nunca crea la ficha', async () => {
-    pool.query
-      .mockResolvedValueOnce([[]]) // sin ficha en esta empresa
-      .mockResolvedValueOnce([[]]); // sin cuenta asociada a la cédula
+    TrabajadorEmpresaModel.fichaPorCedula.mockResolvedValue(undefined); // sin ficha en esta empresa
+    TrabajadorEmpresaModel.cuentaPorCedula.mockResolvedValue(undefined); // sin cuenta asociada a la cédula
     TrabajadoresService.verificarCupoPlan.mockRejectedValue(cupoLleno());
 
     await expect(
@@ -60,10 +62,8 @@ describe('invitar() — cupo de plan al crear ficha nueva', () => {
   });
 
   test('ficha ya existe en esta empresa (re-invitación / conversión) → no valida cupo', async () => {
-    pool.query
-      .mockResolvedValueOnce([[{ id: 5, usuario_id: USUARIO_ID, empresa_id: EMPRESA_ID }]]) // ficha propia
-      .mockResolvedValueOnce([[{ usuario_id: USUARIO_ID, rol: ROLES.TRABAJADOR_TURNOS }]])
-      .mockResolvedValueOnce([{ affectedRows: 0 }]);
+    TrabajadorEmpresaModel.fichaPorCedula.mockResolvedValue({ id: 5, usuario_id: USUARIO_ID, empresa_id: EMPRESA_ID }); // ficha propia
+    TrabajadorEmpresaModel.cuentaPorCedula.mockResolvedValue({ usuario_id: USUARIO_ID, rol: ROLES.TRABAJADOR_TURNOS });
     TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa.mockResolvedValue(null);
     TrabajadorEmpresaModel.crear = jest.fn().mockResolvedValue(RELACION_ID);
     TrabajadorEmpresaModel.obtenerPorId.mockResolvedValue({ id: RELACION_ID });
@@ -80,9 +80,8 @@ describe('aprobar() — cupo de plan al vincular una solicitud del trabajador', 
     TrabajadorEmpresaModel.obtenerPorId.mockResolvedValue({
       id: RELACION_ID, empresa_id: EMPRESA_ID, usuario_id: USUARIO_ID, estado: E.SOLICITADO_POR_TRABAJADOR,
     });
-    pool.query
-      .mockResolvedValueOnce([[{ rol: ROLES.TRABAJADOR_TURNOS }]]) // rol del usuario
-      .mockResolvedValueOnce([[]]); // vincularTrabajador: sin ficha existente en esta empresa
+    TrabajadorEmpresaModel.obtenerUsuario.mockResolvedValue({ rol: ROLES.TRABAJADOR_TURNOS }); // rol del usuario
+    TrabajadorEmpresaModel.idTrabajadorDeUsuario.mockResolvedValue(null); // vincularTrabajador: sin ficha existente en esta empresa
     TrabajadoresService.verificarCupoPlan.mockRejectedValue(cupoLleno());
 
     await expect(
@@ -99,10 +98,10 @@ describe('aprobar() — cupo de plan al vincular una solicitud del trabajador', 
     TrabajadorEmpresaModel.obtenerPorId.mockResolvedValue({
       id: RELACION_ID, empresa_id: EMPRESA_ID, usuario_id: USUARIO_ID, estado: E.SOLICITADO_POR_TRABAJADOR,
     });
-    pool.query
-      .mockResolvedValueOnce([[{ rol: ROLES.TRABAJADOR_TURNOS }]])
-      .mockResolvedValueOnce([[{ id: 7 }]]) // vincularTrabajador: ya existe
-      .mockResolvedValueOnce([[{ id: EMPRESA_ID, nombre: 'Acme' }]]); // EmpresasModel.obtenerDetalle para la notificación
+    TrabajadorEmpresaModel.obtenerUsuario.mockResolvedValue({ rol: ROLES.TRABAJADOR_TURNOS });
+    TrabajadorEmpresaModel.idTrabajadorDeUsuario.mockResolvedValue(7); // vincularTrabajador: ya existe
+    // EmpresasModel (real en este test) sigue consultando pool: obtenerDetalle para la notificación
+    pool.query.mockResolvedValueOnce([[{ id: EMPRESA_ID, nombre: 'Acme' }]]);
     TrabajadorEmpresaModel.obtenerPorId
       .mockResolvedValueOnce({ id: RELACION_ID, empresa_id: EMPRESA_ID, usuario_id: USUARIO_ID, estado: E.SOLICITADO_POR_TRABAJADOR })
       .mockResolvedValueOnce({ id: RELACION_ID, estado: E.ACTIVO });

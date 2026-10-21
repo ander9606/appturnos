@@ -16,7 +16,6 @@ jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
 }));
 
-const { pool } = require('../config/database');
 const { ROLES, ESTADOS_TRABAJADOR_EMPRESA: E } = require('../config/constants');
 const TrabajadorEmpresaModel = require('../modules/trabajador-empresa/trabajador-empresa.model');
 const TrabajadoresModel = require('../modules/trabajadores/trabajadores.model');
@@ -28,7 +27,6 @@ const RELACION_ID = 10;
 const EMPRESA_NUEVA = 1;
 
 beforeEach(() => {
-  pool.query.mockReset();
   TrabajadoresModel.desactivar.mockReset().mockResolvedValue(1);
   EmpresasModel.obtenerDetalle.mockReset().mockResolvedValue({ id: EMPRESA_NUEVA, nombre: 'Empresa Nómina' });
   TrabajadorEmpresaModel.obtenerPorId.mockReset().mockResolvedValue({
@@ -45,15 +43,13 @@ beforeEach(() => {
     { id: 21, empresa_id: 3, trabajador_id: null }, // invitación pendiente, nunca llegó a crear ficha
   ]);
 
-  // pool.query, en orden: SELECT usuarios (rol) → UPDATE tipo → UPDATE rol/empresa
-  // → notificarGestores(empresa 2) → notificarGestores(empresa 3) → notificarGestores(empresa nueva, 'aceptada')
-  pool.query
-    .mockResolvedValueOnce([[{ nombre: 'Ana', apellido: 'Pérez', rol: ROLES.TRABAJADOR_TURNOS }]])
-    .mockResolvedValueOnce([{ affectedRows: 1 }])
-    .mockResolvedValueOnce([{ affectedRows: 1 }])
-    .mockResolvedValueOnce([[{ id: 501 }]])
-    .mockResolvedValueOnce([[{ id: 502 }]])
-    .mockResolvedValueOnce([[{ id: 503 }]]);
+  TrabajadorEmpresaModel.obtenerUsuario.mockReset().mockResolvedValue({ nombre: 'Ana', apellido: 'Pérez', rol: ROLES.TRABAJADOR_TURNOS });
+  TrabajadorEmpresaModel.convertirANomina.mockReset().mockResolvedValue(undefined);
+  // idsGestores, en orden: notificarGestores(empresa 2) → (empresa 3) → (empresa nueva, 'aceptada')
+  TrabajadorEmpresaModel.idsGestores.mockReset()
+    .mockResolvedValueOnce([501])
+    .mockResolvedValueOnce([502])
+    .mockResolvedValueOnce([503]);
 });
 
 describe('TrabajadorEmpresaService.aceptar — conversión a nómina suspende otras empresas', () => {
@@ -62,5 +58,11 @@ describe('TrabajadorEmpresaService.aceptar — conversión a nómina suspende ot
 
     expect(TrabajadoresModel.desactivar).toHaveBeenCalledTimes(1);
     expect(TrabajadoresModel.desactivar).toHaveBeenCalledWith(2, 77);
+  });
+
+  test('convierte la ficha y la cuenta a nómina en la empresa que invitó', async () => {
+    await TrabajadorEmpresaService.aceptar(USUARIO_ID, RELACION_ID);
+
+    expect(TrabajadorEmpresaModel.convertirANomina).toHaveBeenCalledWith(5, USUARIO_ID, EMPRESA_NUEVA, ROLES.TRABAJADOR_NOMINA);
   });
 });

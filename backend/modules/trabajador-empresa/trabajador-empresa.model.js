@@ -192,6 +192,83 @@ const TrabajadorEmpresaModel = {
     }
     return filas;
   },
+
+  // ponytail: consultas sobre `usuarios`/`trabajadores` que solo usa este flujo de vinculación,
+  // viven aquí en vez de abrir un modelo nuevo — upgrade path: moverlas a UsuariosModel/TrabajadoresModel.
+
+  /** admin_empresa + jefe_turnos activos de la empresa — gestionan solicitudes de vinculación. */
+  async idsGestores(empresaId) {
+    const [gestores] = await pool.query(
+      `SELECT id FROM usuarios
+     WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
+      [empresaId]
+    );
+    return gestores.map((g) => g.id);
+  },
+
+  /** id de la ficha de trabajadores del usuario en la empresa, o null. */
+  async idTrabajadorDeUsuario(usuarioId, empresaId) {
+    const [filas] = await pool.query(
+      'SELECT id FROM trabajadores WHERE usuario_id = ? AND empresa_id = ? LIMIT 1',
+      [usuarioId, empresaId]
+    );
+    return filas.length ? filas[0].id : null;
+  },
+
+  /** Datos básicos y rol global del usuario (undefined si no existe). */
+  async obtenerUsuario(usuarioId) {
+    const [[u]] = await pool.query(
+      'SELECT nombre, apellido, email, rol FROM usuarios WHERE id = ? LIMIT 1',
+      [usuarioId]
+    );
+    return u;
+  },
+
+  /** Ficha con esa cédula en ESTA empresa (puede no tener cuenta aún). */
+  async fichaPorCedula(cedula, empresaId) {
+    const [[ficha]] = await pool.query(
+      `SELECT t.id, t.usuario_id, t.empresa_id
+       FROM trabajadores t
+       WHERE t.cedula = ? AND t.empresa_id = ? LIMIT 1`,
+      [cedula, empresaId]
+    );
+    return ficha;
+  },
+
+  /** Cualquier cuenta ya asociada a la cédula, sin importar empresa ni rol. */
+  async cuentaPorCedula(cedula) {
+    const [[cuenta]] = await pool.query(
+      `SELECT u.id AS usuario_id, u.rol FROM usuarios u
+       INNER JOIN trabajadores t ON t.usuario_id = u.id
+       WHERE t.cedula = ? LIMIT 1`,
+      [cedula]
+    );
+    return cuenta;
+  },
+
+  /** Deja la empresa anotada en la ficha para que activarCuenta la procese. */
+  async agregarEmpresaInvitacion(trabajadorId, empresaId) {
+    await pool.query(
+      `UPDATE trabajadores
+         SET empresas_invitacion = JSON_ARRAY_APPEND(COALESCE(empresas_invitacion, JSON_ARRAY()), '$', ?)
+         WHERE id = ?`,
+      [empresaId, trabajadorId]
+    );
+  },
+
+  /** Asocia la ficha a su usuario (solo si aún no tenía uno). */
+  async vincularUsuarioAFicha(trabajadorId, usuarioId) {
+    await pool.query('UPDATE trabajadores SET usuario_id = ? WHERE id = ? AND usuario_id IS NULL', [usuarioId, trabajadorId]);
+  },
+
+  /** Fija el track de la ficha y cambia el rol global del usuario (nómina = exclusivo a una empresa). */
+  async convertirANomina(trabajadorId, usuarioId, empresaId, rolNomina) {
+    await pool.query('UPDATE trabajadores SET tipo = ? WHERE id = ?', ['nomina', trabajadorId]);
+    await pool.query(
+      'UPDATE usuarios SET rol = ?, empresa_id = ? WHERE id = ?',
+      [rolNomina, empresaId, usuarioId]
+    );
+  },
 };
 
 module.exports = TrabajadorEmpresaModel;
