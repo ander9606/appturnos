@@ -300,6 +300,15 @@ const OfertasModel = {
     return !!oferta;
   },
 
+  /** Fecha y horario de la oferta (undefined si no existe en esa empresa). */
+  async obtenerHorario(empresaId, ofertaId) {
+    const [[fila]] = await pool.query(
+      `SELECT fecha, hora_inicio, hora_fin_estimada FROM ofertas_turno WHERE id = ? AND empresa_id = ?`,
+      [ofertaId, empresaId]
+    );
+    return fila;
+  },
+
   // ── Destinatarios de una oferta (validación y avisos) ──────────────────────────────
 
   /** Cuántos de esos trabajadores tienen vínculo activo con la empresa. */
