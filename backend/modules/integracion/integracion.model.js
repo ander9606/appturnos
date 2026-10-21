@@ -75,6 +75,35 @@ const IntegracionModel = {
     return !!(fila && fila.activo === 1 && fila.api_key);
   },
 
+  /** Empresa de una integración ACTIVA cuya logiq360_api_key coincide: { empresa_id } o undefined. */
+  async buscarActivaPorApiKeyLogiq360(apiKey) {
+    const [rows] = await pool.query(
+      `SELECT empresa_id
+         FROM integracion_config
+        WHERE logiq360_api_key = ?
+          AND activo = 1
+        LIMIT 1`,
+      [apiKey]
+    );
+    return rows[0];
+  },
+
+  /**
+   * incoming_secret del tenant de logiq360 (por el mapeo del pairing; fallback legacy
+   * empresa_id == tenantId), o null si no hay fila o no tiene secreto. No filtra por
+   * activo: el secreto debe seguir valiendo con la integración pausada, para poder
+   * verificar el evento integracion.activada que la reactiva.
+   */
+  async incomingSecretDeTenant(tenantId) {
+    const [rows] = await pool.query(
+      `SELECT incoming_secret FROM integracion_config
+       WHERE (logiq360_tenant_id = ? OR empresa_id = ?)
+       ORDER BY (logiq360_tenant_id = ?) DESC LIMIT 1`,
+      [tenantId, tenantId, tenantId]
+    );
+    return rows[0]?.incoming_secret || null;
+  },
+
   /**
    * Todas las integraciones ya emparejadas (con base_url y api_key), sin filtrar
    * por activo — la reconciliación periódica las necesita justo para detectar

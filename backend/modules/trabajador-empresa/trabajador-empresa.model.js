@@ -34,6 +34,17 @@ const COLUMNAS = `te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
   e.telefono AS empresa_telefono, e.email_empresa AS empresa_email`;
 
 const TrabajadorEmpresaModel = {
+  /** Ids de las empresas ACTIVAS donde el usuario tiene una relación activa. */
+  async empresaIdsActivas(usuarioId) {
+    const [filas] = await pool.query(
+      `SELECT te.empresa_id FROM trabajador_empresa te
+       JOIN empresas e ON e.id = te.empresa_id AND e.activo = 1
+       WHERE te.usuario_id = ? AND te.estado = 'activo'`,
+      [usuarioId]
+    );
+    return filas.map((f) => f.empresa_id);
+  },
+
   async obtenerPorId(id) {
     const [filas] = await pool.query(
       `SELECT ${COLUMNAS}

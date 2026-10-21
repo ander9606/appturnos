@@ -1,7 +1,7 @@
 'use strict';
 
-const { pool } = require('../config/database');
 const AppError = require('../utils/AppError');
+const IntegracionModel = require('../modules/integracion/integracion.model');
 
 /**
  * Middleware para endpoints que logiq360 consulta vía pull (GET).
@@ -23,20 +23,12 @@ async function verificarApiKeyLogiq360(req, res, next) {
     return next(new AppError('X-API-Key requerido', 401));
   }
 
-  const [rows] = await pool.query(
-    `SELECT empresa_id
-       FROM integracion_config
-      WHERE logiq360_api_key = ?
-        AND activo = 1
-      LIMIT 1`,
-    [apiKey]
-  );
-
-  if (!rows.length) {
+  const config = await IntegracionModel.buscarActivaPorApiKeyLogiq360(apiKey);
+  if (!config) {
     return next(new AppError('API key inválida o integración inactiva', 401));
   }
 
-  req.empresa_id = rows[0].empresa_id;
+  req.empresa_id = config.empresa_id;
   next();
 }
 

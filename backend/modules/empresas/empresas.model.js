@@ -197,6 +197,15 @@ const EmpresasModel = {
     );
   },
 
+  /** { suscripcion_vigente_hasta } de la empresa activa (NULL = acceso indefinido); undefined si no existe o está inactiva. */
+  async obtenerVigenciaSuscripcion(empresaId) {
+    const [[empresa]] = await pool.query(
+      'SELECT suscripcion_vigente_hasta FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return empresa;
+  },
+
   /** Opciones de la empresa que cambian cómo se clasifica y se paga un día trabajado. */
   async obtenerConfigRecargos(empresaId) {
     const [filas] = await pool.query(
