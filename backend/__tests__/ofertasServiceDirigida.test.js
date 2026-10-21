@@ -38,7 +38,7 @@ describe('OfertasService.crear — turno dirigido', () => {
   });
 
   test('con destinatarios válidos, notifica solo a esos usuarios (no al pool por cargo)', async () => {
-    pool.query.mockResolvedValueOnce([[{ id: 55 }, { id: 56 }]]); // validarDestinatarios: ambos pertenecen a la empresa
+    OfertasModel.contarTrabajadoresActivosDeEmpresa.mockResolvedValue(2); // validarDestinatarios: ambos pertenecen a la empresa
     OfertasModel.crear.mockResolvedValue(1);
     OfertasModel.obtenerPorId.mockResolvedValue({
       id: 1,

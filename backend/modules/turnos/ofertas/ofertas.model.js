@@ -3,7 +3,7 @@
 const { pool } = require('../../../config/database');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { horaAMinutos } = require('../../../utils/laboralUtils');
-const { DIAS_GRACIA_ASIGNACIONES_COLGADAS } = require('../../../config/constants');
+const { DIAS_GRACIA_ASIGNACIONES_COLGADAS, ROLES } = require('../../../config/constants');
 const { DELAY_RANKING_SQL_CASE } = require('../../../utils/rankingUtils');
 
 const MIN_POR_DIA = 24 * 60;
@@ -289,6 +289,93 @@ const OfertasModel = {
     );
 
     return { data: filas.map(parsearPuestos), total };
+  },
+
+  /** ¿La oferta existe y es de esa empresa? (más liviano que obtenerPorId, que arma los JSON de puestos). */
+  async perteneceAEmpresa(empresaId, ofertaId) {
+    const [[oferta]] = await pool.query(
+      'SELECT id FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
+      [ofertaId, empresaId]
+    );
+    return !!oferta;
+  },
+
+  /** Fecha y horario de la oferta (undefined si no existe en esa empresa). */
+  async obtenerHorario(empresaId, ofertaId) {
+    const [[fila]] = await pool.query(
+      `SELECT fecha, hora_inicio, hora_fin_estimada FROM ofertas_turno WHERE id = ? AND empresa_id = ?`,
+      [ofertaId, empresaId]
+    );
+    return fila;
+  },
+
+  // ── Destinatarios de una oferta (validación y avisos) ──────────────────────────────
+
+  /** Cuántos de esos trabajadores tienen vínculo activo con la empresa. */
+  async contarTrabajadoresActivosDeEmpresa(empresaId, trabajadorIds) {
+    const [filas] = await pool.query(
+      `SELECT t.id FROM trabajadores t
+     JOIN trabajador_empresa te ON te.trabajador_id = t.id
+     WHERE t.id IN (?) AND te.empresa_id = ? AND te.estado = 'activo'`,
+      [trabajadorIds, empresaId]
+    );
+    return filas.length;
+  },
+
+  /** Nombre y apellido de los trabajadores que no tienen NINGUNO de esos cargos certificados en la empresa. */
+  async nombresSinNingunCargo(empresaId, trabajadorIds, cargoIds) {
+    const [filas] = await pool.query(
+      `SELECT t.nombre, t.apellido FROM trabajadores t
+     WHERE t.id IN (?) AND NOT EXISTS (
+       SELECT 1 FROM trabajador_empresa te
+       JOIN trabajador_cargos tc ON tc.trabajador_empresa_id = te.id
+       WHERE te.trabajador_id = t.id AND te.empresa_id = ? AND tc.cargo_id IN (?)
+     )`,
+      [trabajadorIds, empresaId, cargoIds]
+    );
+    return filas;
+  },
+
+  /**
+   * Candidatos a avisar de un puesto: certificados para el cargo, con vínculo activo, que YA cumplieron su
+   * delay de ranking y que todavía no recibieron este aviso (el NOT EXISTS permite llamarlo varias veces
+   * para la misma oferta sin duplicar). Devuelve [{ usuario_id }].
+   */
+  async listarCandidatosPendientesDeAviso(empresaId, oferta, puesto, roles) {
+    const [filas] = await pool.query(
+      `SELECT DISTINCT u.id AS usuario_id
+     FROM trabajador_cargos tc
+     JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
+     JOIN trabajadores t        ON t.id  = te.trabajador_id
+     JOIN usuarios u            ON u.id  = t.usuario_id
+     WHERE te.empresa_id = ?
+       AND tc.cargo_id   = ?
+       AND te.estado     = 'activo'
+       AND u.activo      = 1
+       AND u.rol IN (?)
+       AND (u.rol != ? OR t.acepta_extras = 1)
+       AND TIMESTAMPDIFF(MINUTE, ?, NOW()) >= ${DELAY_RANKING_SQL_CASE}
+       AND NOT EXISTS (
+         SELECT 1 FROM notificaciones n
+         WHERE n.usuario_id = u.id AND n.tipo = 'oferta.nueva'
+           AND CAST(n.data->>'$.oferta_id' AS UNSIGNED) = ?
+           AND CAST(n.data->>'$.puesto_id' AS UNSIGNED) = ?
+       )`,
+      [empresaId, puesto.cargo_id, roles, ROLES.TRABAJADOR_NOMINA, oferta.created_at, oferta.id, puesto.id]
+    );
+    return filas;
+  },
+
+  /** ids de los trabajador_nomina (de entre esos) que no aceptan turnos extra. */
+  async trabajadorIdsNominaSinExtras(trabajadorIds) {
+    const [filas] = await pool.query(
+      `SELECT t.id AS trabajador_id
+       FROM trabajadores t
+       JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.id IN (?) AND u.rol = ? AND t.acepta_extras = 0`,
+      [trabajadorIds, ROLES.TRABAJADOR_NOMINA]
+    );
+    return filas.map((f) => f.trabajador_id);
   },
 
   /** Resuelve la empresa dueña de una oferta sin conocerla de antemano — usada

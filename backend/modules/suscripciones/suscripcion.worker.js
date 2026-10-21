@@ -1,6 +1,6 @@
 'use strict';
 
-const { pool }        = require('../../config/database');
+const EmpresasModel   = require('../empresas/empresas.model');
 const { enviarEmail } = require('../../utils/mailer');
 const { plantillaCorreo, esc } = require('../../utils/plantillaCorreo');
 const WompiService    = require('../webhooks/wompi.service');
@@ -15,20 +15,7 @@ const INTERVALO_MS = 24 * 60 * 60 * 1000; // cada 24h
  * logiq360 está excluido (suscripcion_origen = 'logiq360').
  */
 async function procesarRenovaciones() {
-  const [empresas] = await pool.query(
-    `SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta,
-            DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes,
-            u.email, u.nombre AS admin_nombre
-       FROM empresas e
-       JOIN usuarios u ON u.empresa_id = e.id
-                      AND u.rol = 'admin_empresa'
-                      AND u.activo = 1
-      WHERE e.activo = 1
-        AND e.suscripcion_origen != 'logiq360'
-        AND e.suscripcion_vigente_hasta IS NOT NULL
-        AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 0, -3)
-      LIMIT 100`
-  );
+  const empresas = await EmpresasModel.listarConRenovacionPendiente();
 
   if (empresas.length === 0) return;
 

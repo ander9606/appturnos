@@ -369,4 +369,41 @@ module.exports = {
     row.geofence_info = construirGeofenceInfo(row);
     return row;
   },
+
+  /** Fecha y horario de la oferta de una asignación (undefined si no existe en esa empresa). */
+  async obtenerHorarioDeAsignacion(empresaId, id) {
+    const [[fila]] = await pool.query(
+      `SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       WHERE a.id = ? AND a.empresa_id = ?`,
+      [id, empresaId]
+    );
+    return fila;
+  },
+
+  /**
+   * ¿El USUARIO tiene otro turno confirmado/en curso que se solape en horario, sin importar la empresa?
+   * `trabajador_id` es una fila por vínculo empresa-trabajador, así que el traslape de una sola empresa
+   * no alcanza a ver esto: un trabajador_turnos suele trabajar para varias empresas a la vez.
+   * `excluirAsignacionId` deja fuera la propia asignación (null/undefined → ninguna).
+   */
+  async existeSolapeDeUsuario(usuarioId, excluirAsignacionId, fecha, horaInicio, horaFinEstimada) {
+    const horaFin = horaFinEstimada || '23:59:59';
+    const [[fila]] = await pool.query(
+      `SELECT a.id
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       JOIN trabajadores t2 ON t2.id = a.trabajador_id
+       WHERE t2.usuario_id = ?
+         AND a.id != ?
+         AND a.estado IN ('confirmado', 'en_progreso')
+         AND o.fecha = ?
+         AND o.hora_inicio < ?
+         AND COALESCE(o.hora_fin_estimada, '23:59:59') > ?
+       LIMIT 1`,
+      [usuarioId, excluirAsignacionId ?? 0, fecha, horaFin, horaInicio]
+    );
+    return Boolean(fila);
+  },
 };

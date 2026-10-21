@@ -1,6 +1,5 @@
 'use strict';
 
-const { pool } = require('../../../config/database');
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const TrabajadorEmpresaModel = require('../../trabajador-empresa/trabajador-empresa.model');
@@ -51,12 +50,9 @@ module.exports = {
     // Resolver empresa real de la oferta (multi-empresa para TRABAJADOR_TURNOS).
     let empresaOfertaId = empresaId;
     if (!empresaId) {
-      const [[ofertaBase]] = await pool.query(
-        'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
-        [ofertaId]
-      );
-      if (!ofertaBase) throw new AppError('Oferta no encontrada', 404);
-      empresaOfertaId = ofertaBase.empresa_id;
+      const empresaDeLaOferta = await OfertasModel.obtenerEmpresaId(ofertaId);
+      if (!empresaDeLaOferta) throw new AppError('Oferta no encontrada', 404);
+      empresaOfertaId = empresaDeLaOferta;
 
       const ids = empresasActivas && empresasActivas.length
         ? empresasActivas
@@ -165,12 +161,9 @@ module.exports = {
 
     let empresaOfertaId = empresaId;
     if (!empresaId) {
-      const [[ofertaBase]] = await pool.query(
-        'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
-        [ofertaId]
-      );
-      if (!ofertaBase) throw new AppError('No estás postulado a esta oferta', 404);
-      empresaOfertaId = ofertaBase.empresa_id;
+      const empresaDeLaOferta = await OfertasModel.obtenerEmpresaId(ofertaId);
+      if (!empresaDeLaOferta) throw new AppError('No estás postulado a esta oferta', 404);
+      empresaOfertaId = empresaDeLaOferta;
     }
 
     const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);

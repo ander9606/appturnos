@@ -1,12 +1,12 @@
 'use strict';
 
 const AsignacionesModel = require('./asignaciones.model');
+const OfertasModel = require('../ofertas/ofertas.model');
 const ContratosModel    = require('../../contratos/contratos.model');
 const ContratosService  = require('../../contratos/contratos.service');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
-const { pool } = require('../../../config/database');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const IntegracionService = require('../../integracion/integracion.service');
@@ -435,30 +435,11 @@ module.exports = {
    */
   async cerrarMasivo(empresaId, ofertaId, excepcionesIds = [], { capearHoras = true } = {}) {
     // Verificar que la oferta pertenece a la empresa.
-    const [[oferta]] = await pool.query(
-      'SELECT id FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
-      [ofertaId, empresaId]
-    );
-    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    if (!(await OfertasModel.perteneceAEmpresa(empresaId, ofertaId))) throw new AppError('Oferta no encontrada', 404);
 
     // Recopilar usuarios a notificar (antes de mutar) — dos grupos distintos.
-    const excClause = excepcionesIds.length
-      ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
-      : '';
-    const [enProgreso] = await pool.query(
-      `SELECT a.id, t.usuario_id, t.tipo AS trabajador_tipo FROM asignaciones_turno a
-       JOIN trabajadores t ON t.id = a.trabajador_id
-       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
-         AND a.hora_ingreso_real IS NOT NULL ${excClause}`,
-      [ofertaId, empresaId, ...excepcionesIds]
-    );
-    const [confirmados] = await pool.query(
-      `SELECT t.usuario_id FROM asignaciones_turno a
-       JOIN trabajadores t ON t.id = a.trabajador_id
-       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'confirmado'
-         ${excClause}`,
-      [ofertaId, empresaId, ...excepcionesIds]
-    );
+    const enProgreso = await AsignacionesModel.listarEnProgresoParaCierre(empresaId, ofertaId, excepcionesIds);
+    const confirmados = await AsignacionesModel.listarConfirmadosParaCierre(empresaId, ofertaId, excepcionesIds);
 
     const { cerradas, noPresentados } = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds, { capearHoras });
 
