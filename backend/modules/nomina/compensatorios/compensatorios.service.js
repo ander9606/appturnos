@@ -91,7 +91,7 @@ const CompensatoriosService = {
    * Avisa al trabajador y, cuando el día lleva recargo, también a los
    * gestores de nómina. Domingo y festivo entre semana comparten el mismo
    * umbral ocasional/habitual (decisión de producto, ver clasificarDiaFestivo
-   * en registros.service.js): el 1º/2º día festivo o domingo del mes es
+   * en registros.helpers.js): el 1º/2º día festivo o domingo del mes es
    * ocasional (solo compensatorio); el 3º en adelante es habitual (recargo +
    * compensatorio) — sin importar si ese 3º es domingo o festivo entre semana.
    * - Ocasional: solo avisa al trabajador — no requiere ninguna acción de los

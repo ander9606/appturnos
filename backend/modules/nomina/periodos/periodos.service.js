@@ -53,7 +53,7 @@ const PeriodosService = {
 
     if (empresaId != null) {
       // Antes el período "de hoy" solo se auto-creaba/cerraba cuando un
-      // trabajador marcaba entrada (registros.service.js). Si nadie marcó
+      // trabajador marcaba entrada (registros.marcaje.service.js). Si nadie marcó
       // desde que venció el período anterior, el admin seguía viendo ese
       // período como "Abierto" indefinidamente. Al listar también se
       // dispara el mismo chequeo (best-effort, no debe romper el listado).

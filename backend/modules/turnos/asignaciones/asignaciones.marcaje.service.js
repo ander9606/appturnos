@@ -71,7 +71,7 @@ module.exports = {
 
     // Validación de geofence según tipo_geofence del cargo. 'libre' (ej.
     // camioneros, que no entran y salen del mismo punto) no exige ubicación
-    // — mismo criterio que validarGeofence en nomina/registros.service.js.
+    // — mismo criterio que validarGeofence en nomina/registros/registros.marcaje.service.js.
     const gf = asignacion.geofence_info;
     if (gf.tipo !== 'libre' && (latitud == null || longitud == null)) {
       throw new AppError('Debes enviar tu ubicación para registrar el ingreso', 422);
