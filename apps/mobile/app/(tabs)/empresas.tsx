@@ -22,13 +22,14 @@ import {
 } from '@/features/empresas/useTrabajadorEmpresa';
 import { EmpresaCard } from '@/features/empresas/EmpresaCard';
 import { VinculoCard } from '@/features/empresas/VinculoCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 type ActiveTab = 'mis_empresas' | 'directorio';
 
 // ── Mis empresas ──────────────────────────────────────────────────────────
 
 function MisEmpresasView() {
-  const { data, isLoading, isError, refetch, isRefetching } = useMisEmpresas();
+  const { data, isLoading, isError, error, refetch, isRefetching } = useMisEmpresas();
   const { mutate: aceptar, isPending: aceptando, variables: aceptandoId } = useAceptar();
   const { mutate: rechazar, isPending: rechazando, variables: rechazandoVars } = useRechazarVinculo();
 
@@ -56,9 +57,7 @@ function MisEmpresasView() {
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center px-6">
-        <Text className="text-danger text-center">{t('common.error')}</Text>
-      </View>
+      <ErrorState error={error} onRetry={refetch} />
     );
   }
 
@@ -112,7 +111,7 @@ function DirectorioView() {
   const [query, setQuery] = useState('');
 
   const { data: misEmpresas } = useMisEmpresas();
-  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['empresas-directorio', query],
     queryFn: () => empresasApi.directorio({ busqueda: query || undefined, limit: 50 }),
     staleTime: 60_000,
@@ -161,9 +160,7 @@ function DirectorioView() {
       {isLoading ? (
         <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : isError ? (
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-danger text-center">{t('common.error')}</Text>
-        </View>
+        <ErrorState error={error} onRetry={refetch} />
       ) : empresas.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />

@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/Button';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { formatCOP, formatDate } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 const OPCIONES_MESES = [1, 3, 6, 12];
 
@@ -40,7 +41,7 @@ export default function MiPlanScreen() {
   const [planElegido, setPlanElegido] = useState<PlanEmpresa | null>(null);
   const [meses, setMeses] = useState(1);
 
-  const { data: s, isLoading, isError, refetch } = useQuery({
+  const { data: s, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['empresa', 'suscripcion'],
     queryFn: () => empresasApi.obtenerSuscripcion(),
     staleTime: 60_000,
@@ -62,9 +63,7 @@ export default function MiPlanScreen() {
       <SafeAreaView className="flex-1 bg-background items-center justify-center" edges={['bottom']}>
         <Stack.Screen options={{ title: 'Mi plan', headerShown: true }} />
         {isError ? (
-          <Pressable onPress={() => refetch()} accessibilityRole="button" className="px-4 py-2">
-            <Text className="text-sm text-primary">No se pudo cargar. Toca para reintentar.</Text>
-          </Pressable>
+          <ErrorState error={error} onRetry={refetch} fallback="No se pudo cargar" />
         ) : (
           <Spinner size="large" color={theme.primary} />
         )}
