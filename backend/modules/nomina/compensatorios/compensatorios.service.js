@@ -4,8 +4,8 @@ const CompensatoriosModel = require('./compensatorios.model');
 const RegistrosModel      = require('../registros/registros.model');
 const TrabajadoresModel   = require('../../trabajadores/trabajadores.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const AppError            = require('../../../utils/AppError');
-const { pool }             = require('../../../config/database');
 const { ROLES, COMPENSATORIO_PLAZO_DIAS } = require('../../../config/constants');
 const { esDiaFestivo, esDomingo } = require('../../../utils/laboralUtils');
 const logger              = require('../../../utils/logger');
@@ -139,12 +139,9 @@ const CompensatoriosService = {
 
     if (!sumarNocturnasFestivo) return;
 
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestores.length > 0) {
-      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+    const gestoresIds = await NotificacionesModel.idsGestoresNomina(empresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
         empresaId,
         tipo: domingo ? 'nomina.domingo_habitual_gestor' : 'nomina.festivo_trabajado_gestor',
         titulo: 'Aplica recargo festivo',

@@ -4,6 +4,7 @@ const { pool } = require('../../../config/database');
 const PeriodosModel = require('./periodos.model');
 const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const LiquidacionService = require('../liquidacion/liquidacion.service');
 const CuentasCobroService = require('../../cuentas-cobro/cuentas-cobro.service');
 const RegistrosService = require('../registros/registros.service');
@@ -50,12 +51,8 @@ async function listarUsuariosNomina(empresaId) {
 /** trabajador_nomina + gestores de nómina (jefe_nomina, admin_empresa, nomina) — "todos los involucrados". */
 async function listarInvolucradosNomina(empresaId) {
   const trabajadores = await listarUsuariosNomina(empresaId);
-  const [gestores] = await pool.query(
-    `SELECT id FROM usuarios
-     WHERE empresa_id = ? AND activo = 1 AND rol IN ('jefe_nomina', 'admin_empresa', 'nomina')`,
-    [empresaId]
-  );
-  return [...new Set([...trabajadores, ...gestores.map((g) => g.id)])];
+  const gestoresIds = await NotificacionesModel.idsGestoresNomina(empresaId);
+  return [...new Set([...trabajadores, ...gestoresIds])];
 }
 
 /**

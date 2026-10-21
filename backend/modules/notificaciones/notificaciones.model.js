@@ -98,6 +98,35 @@ const NotificacionesModel = {
     const [filas] = await pool.query(`SELECT id FROM usuarios WHERE rol = 'super_admin' AND activo = 1`);
     return filas.map((f) => f.id);
   },
+
+  // Destinatarios de avisos a gestores de una empresa, por área.
+
+  /** Gestores de nómina activos: jefe_nomina, admin_empresa y nomina. */
+  async idsGestoresNomina(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
+      [empresaId]
+    );
+    return filas.map((f) => f.id);
+  },
+
+  /** Gestores de turnos activos: jefe_turnos y admin_empresa. */
+  async idsGestoresTurnos(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1`,
+      [empresaId]
+    );
+    return filas.map((f) => f.id);
+  },
+
+  /** Gestores de turnos activos salvo quien creó el turno (nunca "todos" si creadoPor falta). */
+  async idsCoGestoresTurnos(empresaId, creadoPor) {
+    const [filas] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1 AND id != ?`,
+      [empresaId, creadoPor]
+    );
+    return filas.map((f) => f.id);
+  },
 };
 
 module.exports = NotificacionesModel;

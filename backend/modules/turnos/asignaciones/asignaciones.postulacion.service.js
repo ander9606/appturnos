@@ -4,6 +4,7 @@ const AsignacionesModel = require('./asignaciones.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const { pool } = require('../../../config/database');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const IntegracionService = require('../../integracion/integracion.service');
 const CoberturaService = require('../../integracion/cobertura.service');
 const AppError = require('../../../utils/AppError');
@@ -198,12 +199,9 @@ module.exports = {
 
       // Best-effort: el cupo quedó libre, avisa a los gestores para que puedan
       // cubrirlo (banco de talento / nueva postulación) antes del turno.
-      const [gestores] = await pool.query(
-        `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1`,
-        [dbEmpresaId]
-      );
-      if (gestores.length > 0) {
-        await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+      const gestoresIds = await NotificacionesModel.idsGestoresTurnos(dbEmpresaId);
+      if (gestoresIds.length > 0) {
+        await NotificacionesService.notificarVarios(gestoresIds, {
           empresaId: dbEmpresaId,
           tipo: 'asignacion.reconfirmacion_rechazada',
           titulo: 'Un cupo quedó libre',

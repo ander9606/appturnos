@@ -9,6 +9,7 @@ const PuntosMarcajeModel        = require('../../puntos-marcaje/puntos-marcaje.m
 const EmpresasModel             = require('../../empresas/empresas.model');
 const CompensatoriosService     = require('../compensatorios/compensatorios.service');
 const NotificacionesService     = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const { pool }                  = require('../../../config/database');
 const { calcularHoras, esDomingo, esDiaFestivo, esDomingoHabitual, ventanaRachaDomingos } = require('../../../utils/laboralUtils');
 const { validarSesiones, calcularHorasSesiones } = require('../../../utils/sesionesUtils');
@@ -121,12 +122,9 @@ async function revisarMarcajeSospechoso(empresaId, registroId, trabajador, fecha
     await RegistrosModel.marcarSospechoso(empresaId, [registroId, match.registro_id]);
 
     const otro = await TrabajadoresModel.obtenerPorId(empresaId, match.trabajador_id);
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestores.length > 0) {
-      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+    const gestoresIds = await NotificacionesModel.idsGestoresNomina(empresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
         empresaId,
         tipo: 'nomina.sospechoso',
         titulo: 'Posible marcaje fraudulento',
@@ -684,12 +682,9 @@ const RegistrosService = {
     await revisarMarcajeSospechoso(empresaId, id, trabajador, hoy, 'entrada', horaEntrada, latitud, longitud, deviceId);
 
     // Notifica a gestores de nómina que el trabajador marcó entrada (best-effort).
-    const [gestoresEntrada] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestoresEntrada.length > 0) {
-      await NotificacionesService.notificarVarios(gestoresEntrada.map((g) => g.id), {
+    const gestoresEntradaIds = await NotificacionesModel.idsGestoresNomina(empresaId);
+    if (gestoresEntradaIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresEntradaIds, {
         empresaId,
         tipo: 'nomina.entrada',
         titulo: 'Entrada registrada',
@@ -780,12 +775,9 @@ const RegistrosService = {
     await revisarMarcajeSospechoso(empresaId, registroId, trabajador, registro.fecha, 'salida', horaSalida, latitud, longitud, deviceId);
 
     // Notifica a gestores de nómina que el trabajador marcó salida (best-effort).
-    const [gestoresSalida] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestoresSalida.length > 0) {
-      await NotificacionesService.notificarVarios(gestoresSalida.map((g) => g.id), {
+    const gestoresSalidaIds = await NotificacionesModel.idsGestoresNomina(empresaId);
+    if (gestoresSalidaIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresSalidaIds, {
         empresaId,
         tipo: 'nomina.salida',
         titulo: 'Salida registrada',
@@ -840,12 +832,9 @@ const RegistrosService = {
 
     // Notificar a gestores de nómina.
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestores.length > 0) {
-      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+    const gestoresIds = await NotificacionesModel.idsGestoresNomina(empresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
         empresaId,
         tipo: 'reingreso.solicitado',
         titulo: 'Solicitud de reingreso',

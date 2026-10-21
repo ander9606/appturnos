@@ -6,6 +6,7 @@ const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const TrabajadorEmpresaModel = require('../../trabajador-empresa/trabajador-empresa.model');
 const CargosModel = require('../../cargos/cargos.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const AppError = require('../../../utils/AppError');
 const { ROLES } = require('../../../config/constants');
 const { delayPorRanking } = require('../../../utils/rankingUtils');
@@ -140,14 +141,10 @@ module.exports = {
     );
 
     // Notifica a jefes de turno y admin que hay una postulación nueva (best-effort).
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios
-       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
-      [empresaOfertaId]
-    );
-    if (gestores.length > 0) {
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(empresaOfertaId);
+    if (gestoresIds.length > 0) {
       await NotificacionesService.notificarVarios(
-        gestores.map((g) => g.id),
+        gestoresIds,
         {
           empresaId: empresaOfertaId,
           tipo: 'postulacion.nueva',
