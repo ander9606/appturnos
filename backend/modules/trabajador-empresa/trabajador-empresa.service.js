@@ -310,19 +310,18 @@ const TrabajadorEmpresaService = {
     const trabajadorId =
       relacion.trabajador_id ||
       (await vincularTrabajador(usuarioId, relacion.empresa_id));
-    await TrabajadorEmpresaModel.cambiarEstado(relacionId, E.ACTIVO, {
-      trabajadorId,
-      activoAntesDeOferta: false,
-    });
-
     if (esNomina) {
-      // Conversión real: fija el track de la ficha, cambia el rol global del
-      // usuario (nómina = exclusivo a una empresa) y archiva sus demás vínculos
-      // (activos Y pendientes — una solicitud/invitación vieja no debe poder
-      // reactivarse después y romper la exclusividad).
-      await TrabajadorEmpresaModel.convertirANomina(trabajadorId, usuarioId, relacion.empresa_id, ROLES.TRABAJADOR_NOMINA);
-
-      const archivadas = await TrabajadorEmpresaModel.archivarOtrasRelacionesDeUsuario(usuarioId, relacionId);
+      // Conversión real: activa la relación, fija el track de la ficha, cambia el rol
+      // global del usuario (nómina = exclusivo a una empresa) y archiva sus demás
+      // vínculos (activos Y pendientes — una solicitud/invitación vieja no debe poder
+      // reactivarse después y romper la exclusividad). Todo en una transacción.
+      const archivadas = await TrabajadorEmpresaModel.aceptarConversionANomina({
+        relacionId,
+        trabajadorId,
+        usuarioId,
+        empresaId: relacion.empresa_id,
+        rolNomina: ROLES.TRABAJADOR_NOMINA,
+      });
       for (const otra of archivadas) {
         // Además de archivar la relación, se suspende la ficha en esa empresa
         // para que su Equipo deje de mostrarlo como disponible (misma bandera
@@ -351,6 +350,11 @@ const TrabajadorEmpresaService = {
           '(ahí ves tus registros diarios y pagos calculados según la ley laboral colombiana). Ya no verás ni ' +
           'podrás tomar ofertas de turnos de otras empresas — tu cuenta quedó exclusiva para esta empresa.',
         data: { empresa_id: relacion.empresa_id },
+      });
+    } else {
+      await TrabajadorEmpresaModel.cambiarEstado(relacionId, E.ACTIVO, {
+        trabajadorId,
+        activoAntesDeOferta: false,
       });
     }
 
