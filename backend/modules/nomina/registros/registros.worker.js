@@ -2,7 +2,7 @@
 
 const RegistrosModel = require('./registros.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
-const { pool } = require('../../../config/database');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const { calcularHoras } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
@@ -62,12 +62,9 @@ async function verificarHorasExtra() {
       });
     }
 
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
-      [r.empresa_id]
-    );
-    if (gestores.length > 0) {
-      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+    const gestorIds = await NotificacionesModel.idsGestoresNomina(r.empresa_id);
+    if (gestorIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestorIds, {
         empresaId: r.empresa_id,
         tipo: 'nomina.horas_extra_iniciadas',
         titulo: 'Horas extra en curso',

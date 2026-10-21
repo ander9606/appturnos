@@ -2,7 +2,7 @@
 
 const CompensatoriosModel = require('./compensatorios.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
-const { pool } = require('../../../config/database');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const logger = require('../../../utils/logger');
 
@@ -25,13 +25,10 @@ async function notificarCompensatoriosDeHoy() {
   }
 
   for (const [empresaId, filas] of porEmpresa) {
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestores.length > 0) {
+    const gestorIds = await NotificacionesModel.idsGestoresNomina(empresaId);
+    if (gestorIds.length > 0) {
       const nombres = filas.map((f) => `${f.nombre} ${f.apellido}`);
-      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+      await NotificacionesService.notificarVarios(gestorIds, {
         empresaId,
         tipo: 'nomina.compensatorios_hoy',
         titulo: filas.length === 1
