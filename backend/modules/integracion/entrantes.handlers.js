@@ -1,21 +1,12 @@
 'use strict';
 
-const { pool } = require('../../config/database');
 const OfertasModel = require('../turnos/ofertas/ofertas.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const IntegracionModel = require('./integracion.model');
+const EntrantesModel = require('./entrantes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const logger = require('../../utils/logger');
 const AppError = require('../../utils/AppError');
-
-/** admin_empresa activos de la empresa — destinatarios de avisos de facturación. */
-async function usuarioIdsAdminEmpresa(empresaId) {
-  const [filas] = await pool.query(
-    "SELECT id AS usuario_id FROM usuarios WHERE empresa_id = ? AND rol = 'admin_empresa' AND activo = 1",
-    [empresaId]
-  );
-  return filas.map((f) => f.usuario_id);
-}
 
 /**
  * Resuelve el id de un cargo de sistema por código (seeds de migraciones 012/052).
@@ -25,14 +16,11 @@ async function usuarioIdsAdminEmpresa(empresaId) {
 const _cargoSistemaIds = {};
 async function cargoSistemaId(codigo) {
   if (_cargoSistemaIds[codigo]) return _cargoSistemaIds[codigo];
-  const [[row]] = await pool.query(
-    'SELECT id FROM cargos WHERE empresa_id IS NULL AND codigo = ? LIMIT 1',
-    [codigo]
-  );
-  if (!row) {
+  const id = await EntrantesModel.idCargoSistema(codigo);
+  if (!id) {
     throw new Error(`Cargo de sistema '${codigo}' no encontrado (¿faltó la migración que lo crea?)`);
   }
-  _cargoSistemaIds[codigo] = row.id;
+  _cargoSistemaIds[codigo] = id;
   return _cargoSistemaIds[codigo];
 }
 const cargoAuxiliarId = () => cargoSistemaId('auxiliar');
@@ -51,13 +39,11 @@ async function ordenCreada(empresaId, data) {
   // Descripción: productos que se van a montar/desmontar
   let descripcion = null;
   if (Array.isArray(data.productos_resumen) && data.productos_resumen.length) {
-    const [[empresa]] = await pool.query(
-      'SELECT nombre FROM empresas WHERE id = ? LIMIT 1', [empresaId]
-    );
+    const nombreEmpresa = await EntrantesModel.nombreEmpresa(empresaId);
     const listaProductos = data.productos_resumen
       .map((p) => `${p.cantidad}× ${p.nombre}`)
       .join(', ');
-    descripcion = `${listaProductos} (${empresa?.nombre ?? 'logiq360'})`;
+    descripcion = `${listaProductos} (${nombreEmpresa ?? 'logiq360'})`;
   }
 
   // equipo_nomina: empleados de nómina de logiq360 ya asignados (backward-compat con campo 'equipo').
@@ -170,24 +156,11 @@ async function ordenCompletada(empresaId, data) {
  * un orden.cupos_actualizados — el UPDATE afectaba 0 filas en silencio.
  */
 async function upsertPuestoSistema(ofertaId, cargoId, plazas, tarifaDia) {
-  const [[existente]] = await pool.query(
-    'SELECT id FROM oferta_puestos WHERE oferta_id = ? AND cargo_id = ? ORDER BY id LIMIT 1',
-    [ofertaId, cargoId]
-  );
-  if (existente) {
-    const campos = ['plazas = ?'];
-    const valores = [plazas];
-    if (tarifaDia != null) {
-      campos.push('tarifa_dia = ?');
-      valores.push(tarifaDia);
-    }
-    valores.push(existente.id);
-    await pool.query(`UPDATE oferta_puestos SET ${campos.join(', ')} WHERE id = ?`, valores);
+  const puestoId = await EntrantesModel.idPuestoDeCargo(ofertaId, cargoId);
+  if (puestoId) {
+    await EntrantesModel.actualizarPuesto(puestoId, plazas, tarifaDia);
   } else if (plazas > 0) {
-    await pool.query(
-      'INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia) VALUES (?, ?, ?, ?)',
-      [ofertaId, cargoId, plazas, tarifaDia || 0]
-    );
+    await EntrantesModel.crearPuesto(ofertaId, cargoId, plazas, tarifaDia || 0);
   }
 }
 
@@ -286,7 +259,7 @@ async function ordenFechaCambiadaV2(empresaId, data) {
  */
 async function integracionActivada(empresaId) {
   await IntegracionModel.actualizarActivo(empresaId, true);
-  const destinatarios = await usuarioIdsAdminEmpresa(empresaId);
+  const destinatarios = await EntrantesModel.idsAdminsEmpresa(empresaId);
   if (destinatarios.length > 0) {
     await NotificacionesService.notificarVarios(destinatarios, {
       empresaId,
@@ -299,7 +272,7 @@ async function integracionActivada(empresaId) {
 
 async function integracionDesactivada(empresaId) {
   await IntegracionModel.actualizarActivo(empresaId, false);
-  const destinatarios = await usuarioIdsAdminEmpresa(empresaId);
+  const destinatarios = await EntrantesModel.idsAdminsEmpresa(empresaId);
   if (destinatarios.length > 0) {
     await NotificacionesService.notificarVarios(destinatarios, {
       empresaId,
@@ -309,12 +282,12 @@ async function integracionDesactivada(empresaId) {
     });
   }
 
-  const [[empresa]] = await pool.query('SELECT nombre FROM empresas WHERE id = ?', [empresaId]);
+  const nombreEmpresa = await EntrantesModel.nombreEmpresa(empresaId);
   await NotificacionesService.notificarSuperAdmins({
     empresaId,
     tipo: 'integracion.desactivada',
     titulo: 'Se desconectó una integración con logiq360',
-    mensaje: `${empresa?.nombre ?? 'Una empresa'} se desconectó de logiq360 — deja de ser gratis, 3 días de gracia.`,
+    mensaje: `${nombreEmpresa ?? 'Una empresa'} se desconectó de logiq360 — deja de ser gratis, 3 días de gracia.`,
     data: { empresa_id: empresaId },
   }).catch((err) => logger.error(`[integracion] no se pudo notificar desconexión a super_admin (empresa ${empresaId}):`, err.message));
 }
