@@ -26,11 +26,11 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `nomina.periodo_abierto` | Nuevo período de nómina abierto | Solo `trabajador_nomina` — se abre período | `periodos.service.js:53` |
 | `nomina.periodo_liquidado` | ¡Tu nómina fue pagada! | Solo `trabajador_nomina` — se liquida período | `periodos.service.js:126` |
 | `nomina.recordatorio_salida` | Llevas 8 horas trabajando | Solo `trabajador_nomina` — jornada activa supera las horas ordinarias (empieza a hacer extra) | `registros.worker.js:52` |
-| `reingreso.aprobado` / `reingreso.rechazado` | Reingreso aprobado / no autorizado | Gestor decide sobre solicitud de reingreso | `registros.service.js:455,463` |
+| `reingreso.aprobado` / `reingreso.rechazado` | Reingreso aprobado / no autorizado | Gestor decide sobre solicitud de reingreso | `registros.reingreso.service.js:66`, `:74` |
 | `invitacion_empresa` | Nueva invitación de empresa | Empresa invita por cédula a alguien sin cuenta vinculada aún | `trabajador-empresa.service.js:161` |
 | `trabajador_empresa.aprobado` | Solicitud aprobada | Gestor aprueba su solicitud de vinculación | `trabajador-empresa.service.js:214` |
 | `asignacion.correccion` | Tu horario fue modificado | Gestor corrige ingreso/egreso real de una asignación de turno | `asignaciones.service.js:590` |
-| `nomina.correccion` | Tu horario fue modificado | Gestor corrige hora_entrada/hora_salida de un registro diario | `registros.service.js:298` |
+| `nomina.correccion` | Tu horario fue modificado | Gestor corrige hora_entrada/hora_salida de un registro diario | `registros.gestion.service.js:351`, `:415` |
 | `contrato.pendiente_firma` | Falta firmar tu contrato | Gestor corrige un turno ya completado y el minicontrato queda por firmar | `asignaciones.service.js:623` |
 | `cuenta_cobro.bloqueada_sin_firma` | Aún no podemos generar tu cuenta de cobro | Al cerrar el período, el trabajador de turnos tiene turnos sin contrato firmado (la cuenta exige todos firmados) | `cuentas-cobro.service.js` |
 | `cuenta_cobro.trabajadores_sin_firma` | Cuentas de cobro sin generar | Mismo evento, resumen para `admin_empresa` / `jefe_nomina` con los trabajadores sin cuenta | `cuentas-cobro.service.js` |
@@ -53,11 +53,11 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `ausencia.nueva` | Nueva solicitud de ausencia | Trabajador solicita una ausencia | `ausencias.service.js:42` |
 | `nomina.horas_extra_iniciadas` | Horas extra en curso | Trabajador lleva horas extra hoy | `registros.worker.js:56` |
 | `nomina.compensatorios_hoy` | N trabajador(es) de compensatorio hoy | Cron 15 min, resumen diario (una vez por compensatorio) de quién tiene `fecha_asignada` = hoy | `compensatorios.worker.js` |
-| `nomina.entrada` | Entrada registrada | Trabajador marca entrada (registro diario) | `registros.service.js:306` |
-| `nomina.salida` | Salida registrada | Trabajador marca salida (registro diario) | `registros.service.js:382` |
-| `reingreso.solicitado` | Solicitud de reingreso | Trabajador pide reingresar | `registros.service.js:438` |
+| `nomina.entrada` | Entrada registrada | Trabajador marca entrada (registro diario) | `registros.marcaje.service.js:207` |
+| `nomina.salida` | Salida registrada | Trabajador marca salida (registro diario) | `registros.marcaje.service.js:300` |
+| `reingreso.solicitado` | Solicitud de reingreso | Trabajador pide reingresar | `registros.reingreso.service.js:48` |
 | `turno.sospechoso` | Posible marcaje fraudulento | Dos trabajadores marcan ingreso a turnos distintos desde el mismo dispositivo | `asignaciones.service.js:44` |
-| `nomina.sospechoso` | Posible marcaje fraudulento | Dos trabajadores marcan registro diario desde el mismo dispositivo | `registros.service.js:93` |
+| `nomina.sospechoso` | Posible marcaje fraudulento | Dos trabajadores marcan registro diario desde el mismo dispositivo | `registros.marcaje.service.js:84` |
 | `nomina.descuento_respondido` | Descuento aceptado / rechazado | Trabajador responde a un descuento pendiente | `descuentos.service.js:69` |
 | `trabajador_empresa.archivado_por_conversion` | Trabajador ya no disponible | Uno de sus trabajadores se convirtió a nómina de otra empresa | `trabajador-empresa.service.js:313` |
 | `oferta.creada` | Nuevo turno creado | Un jefe_turnos/admin_empresa crea o duplica un turno — avisa a los demás co-gestores de la empresa (no al creador) para que no lo dupliquen | `ofertas.gestion.service.js:crear,duplicar` |

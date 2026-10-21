@@ -5,8 +5,8 @@
  * que NO se trabajó (tipo_dia != 'ordinario' en el registro de origen —
  * descanso, vacación, licencia, incapacidad o ausencia). Bug: antes de este
  * fix, CompensatoriosService.crearSiCorresponde() no miraba tipo_dia, solo
- * si la fecha era domingo/festivo — ver registros.service.js /
- * compensatorios.service.js.
+ * si la fecha era domingo/festivo — ver registros.gestion.service.js,
+ * registros.marcaje.service.js y compensatorios.service.js.
  *
  * Uso:
  *   node scripts/limpiar-compensatorios-no-trabajados.js <empresaId> [--dry-run]

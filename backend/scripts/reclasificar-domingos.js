@@ -10,7 +10,7 @@
  * Pensado para datos sembrados por los scripts de seed (seed.js,
  * seed-plataforma-turnos.js, seed-datos-prueba.js), que insertan
  * registros_diarios festivos directo por SQL sin pasar por
- * registros.service.js#clasificarDiaFestivo — por eso pueden quedar todos
+ * registros.helpers.js#clasificarDiaFestivo — por eso pueden quedar todos
  * marcados con recargo sin importar cuál domingo del mes era para ese
  * trabajador.
  *
