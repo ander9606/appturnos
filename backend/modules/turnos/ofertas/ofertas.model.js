@@ -291,6 +291,15 @@ const OfertasModel = {
     return { data: filas.map(parsearPuestos), total };
   },
 
+  /** ¿La oferta existe y es de esa empresa? (más liviano que obtenerPorId, que arma los JSON de puestos). */
+  async perteneceAEmpresa(empresaId, ofertaId) {
+    const [[oferta]] = await pool.query(
+      'SELECT id FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
+      [ofertaId, empresaId]
+    );
+    return !!oferta;
+  },
+
   // ── Destinatarios de una oferta (validación y avisos) ──────────────────────────────
 
   /** Cuántos de esos trabajadores tienen vínculo activo con la empresa. */

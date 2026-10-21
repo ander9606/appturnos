@@ -73,13 +73,12 @@ describe('AsignacionesService.corregir — turno eventual de nómina', () => {
 describe('AsignacionesService.cerrarMasivo — turno eventual de nómina', () => {
   test('filtra a los trabajadores nomina fuera de la generación de contrato y del aviso de firma', async () => {
     const { pool } = require('../config/database');
-    pool.query
-      .mockResolvedValueOnce([[{ id: 100 }]]) // oferta pertenece a la empresa
-      .mockResolvedValueOnce([[
-        { id: 501, usuario_id: 42, trabajador_tipo: 'nomina' },
-        { id: 502, usuario_id: 43, trabajador_tipo: 'turnos' },
-      ]]) // enProgreso
-      .mockResolvedValueOnce([[]]); // confirmados
+    pool.query.mockResolvedValueOnce([[{ id: 100 }]]); // oferta pertenece a la empresa (OfertasModel real, vía pool)
+    AsignacionesModel.listarEnProgresoParaCierre.mockResolvedValue([
+      { id: 501, usuario_id: 42, trabajador_tipo: 'nomina' },
+      { id: 502, usuario_id: 43, trabajador_tipo: 'turnos' },
+    ]);
+    AsignacionesModel.listarConfirmadosParaCierre.mockResolvedValue([]);
 
     AsignacionesModel.cerrarMasivo.mockResolvedValue({ cerradas: 2, noPresentados: 0 });
     ContratosService.generarParaAsignacion.mockResolvedValue(null);
