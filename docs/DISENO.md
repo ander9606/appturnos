@@ -242,7 +242,7 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 - **Prohibido** armar bloques de error a mano (ícono `warning-outline` + "Error al cargar" + "Reintentar"): usa `ErrorState`, que ya trae reintento con spinner, `role="alert"` y la ilustración oculta a lectores de pantalla.
 - Pasa siempre `error` (no solo `isError`): sin él no se puede distinguir "sin internet" de "falló el servidor".
 - Los dos `PlanetIllustration` (móvil y web) dibujan lo mismo con las mismas coordenadas: si cambias uno, cambia el otro.
-- Aviso global (móvil, `StatusBanner`): barra **oscura** "Sin conexión · mostrando lo último que guardamos" (17:1) o **rojo oscuro** "No pudimos cargar todo" (4.8:1). Nunca blanco sobre ámbar (2.15:1).
+- Aviso global (móvil, `StatusBanner`): barra **oscura** "Sin conexión · solo verás lo que ya abriste" (17:1; el caché vive en memoria, no se guarda en el teléfono) o **rojo oscuro** "No pudimos cargar todo" (4.8:1). Nunca blanco sobre ámbar (2.15:1).
 - `ErrorBoundary` (error inesperado de código) usa el anillo torcido con el título "Algo se torció".
 
 ### 5.5 Avisos, confirmaciones y toasts (móvil)
@@ -403,6 +403,7 @@ Reglas:
 13. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
 14. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
+16. **Sin datos guardados en el teléfono.** El caché de TanStack Query vive solo en memoria: al reabrir la app sin internet no hay turnos que mostrar (sale `ErrorState` sin conexión). Persistirlo requiere `@react-native-async-storage/async-storage` (módulo nativo: build nuevo, no OTA) y decidir qué datos se guardan sin cifrar (propuesta: solo turnos, borrado al cerrar sesión, caducidad de 24 h).
 ---
 15. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: los vacíos de página completa ya usan `EmptyState`; quedan textos grises dentro de celdas de tabla y tarjetas pequeñas ("Sin cargos", "Sin gestores"…), donde una ilustración de 170 px no cabe.
 
