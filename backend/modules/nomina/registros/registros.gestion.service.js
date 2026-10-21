@@ -70,6 +70,107 @@ function diaSiguiente(fecha) {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Lo que crear() y corregir() calculan igual: acumulado semanal de ordinarias (el tope es
+ * semanal, no por día, igual que marcarSalida()), configuración de recargos de la empresa,
+ * clasificación del día festivo y desglose de horas. `calcular` recibe esos datos y devuelve
+ * las horas: es lo único que cambia entre un registro simple y uno por sesiones.
+ * El orden de las consultas es parte del contrato (ver el test de caracterización).
+ */
+async function calcularHorasDelDia(empresaId, trabajadorId, fecha, calcular) {
+  const lunes = getLunesDeSemana(fecha);
+  const { ordinarias: ordinariasAcum } =
+    await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunes, fecha);
+
+  const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
+  const { clasificacion, recargoFestivo, numeroDiaFestivo } =
+    await clasificarDiaFestivo(empresaId, trabajadorId, fecha, reglaDomingoHabitual);
+  const horas = calcular({ ordinariasAcum, recargoFestivo, sumarNocturnasFestivo });
+  return { horas, ordinariasAcum, clasificacion, numeroDiaFestivo, sumarNocturnasFestivo };
+}
+
+/** Las columnas de horas de un registro, tal como las devuelve el cálculo. */
+function columnasDeHoras(horas) {
+  return {
+    horas_ordinarias: horas.horas_ordinarias,
+    horas_extra_diurnas: horas.horas_extra_diurnas,
+    horas_extra_nocturnas: horas.horas_extra_nocturnas,
+    horas_nocturnas: horas.horas_nocturnas,
+    horas_festivo: horas.horas_festivo,
+    es_festivo: horas.es_festivo,
+  };
+}
+
+/**
+ * Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que marcarSalida().
+ * crearSiCorresponde() es idempotente (unique en origen_registro_id), así que no duplica.
+ */
+function crearCompensatorioDelDia(empresaId, { trabajadorId, periodoId, fecha, registroId, tipoDia }, dia) {
+  return CompensatoriosService.crearSiCorresponde(empresaId, {
+    trabajadorId,
+    periodoId,
+    fecha,
+    esFestivo: Boolean(dia.horas.es_festivo),
+    registroId,
+    clasificacion: dia.clasificacion,
+    numeroDiaFestivo: dia.numeroDiaFestivo,
+    sumarNocturnasFestivo: dia.sumarNocturnasFestivo,
+    tipoDia,
+  });
+}
+
+/** Reglas del período y de las horas para crear un registro a mano. */
+function validarCreacion(periodo, datos) {
+  if (!periodo) throw new AppError('Período no encontrado', 404);
+  if (periodo.estado !== 'abierto') {
+    throw new AppError('No se puede registrar en un período que no está abierto', 409);
+  }
+  if (datos.fecha < periodo.fecha_inicio || datos.fecha > periodo.fecha_fin) {
+    throw new AppError('La fecha está fuera del rango del período', 422);
+  }
+  if (datos.fecha > hoyISO()) {
+    throw new AppError('No puedes registrar un día que aún no ha ocurrido', 422);
+  }
+  // Creación manual: no hay campo para "día siguiente", así que a diferencia de
+  // marcarSalida() (clock-out real que sí puede cruzar medianoche) aquí salida <= entrada
+  // siempre es un dato imposible, no un turno nocturno.
+  if (datos.hora_entrada && datos.hora_salida && datos.hora_salida <= datos.hora_entrada) {
+    throw new AppError('La hora de salida debe ser posterior a la de entrada', 422);
+  }
+}
+
+/**
+ * Un día con reingreso (varias sesiones) se corrige por sesiones: hay que mandar la lista
+ * completa, porque los horas_* del registro son la suma de todas (ver sesionesUtils.js).
+ */
+function validarModoCorreccion(registro, datos) {
+  const porSesiones = registro.sesiones > 1;
+  if (porSesiones && !Array.isArray(datos.sesiones)) {
+    throw new AppError('Este día tiene reingreso: corrígelo enviando todas sus sesiones.', 422);
+  }
+  if (porSesiones && (datos.hora_entrada !== undefined || datos.hora_salida !== undefined)) {
+    throw new AppError('Este día tiene reingreso: usa "sesiones" en vez de hora_entrada/hora_salida.', 422);
+  }
+  if (!porSesiones && datos.sesiones !== undefined) {
+    throw new AppError('Solo un día con reingreso se corrige por sesiones.', 422);
+  }
+  return porSesiones;
+}
+
+/** Avisa al trabajador que su horario fue corregido (best-effort: un fallo no tumba la corrección). */
+async function avisarCorreccion(empresaId, usuario, registro, id) {
+  const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(registro.trabajador_id);
+  if (!trabajadorUsuarioId) return;
+  await NotificacionesService.notificar({
+    empresaId,
+    usuarioId: trabajadorUsuarioId,
+    tipo: 'nomina.correccion',
+    titulo: 'Tu horario fue modificado',
+    mensaje: `Tu horario del ${registro.fecha} fue modificado por ${usuario.nombre || 'tu gestor'}.`,
+    data: { registro_id: id },
+  }).catch(() => {});
+}
+
 const RegistrosGestionService = {
   async obtener(empresaId, registroId) {
     const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
@@ -117,42 +218,19 @@ const RegistrosGestionService = {
       throw new AppError('Trabajador no encontrado', 404);
     }
 
-    const periodo = await PeriodosModel.obtenerPorId(empresaId, datos.periodo_id);
-    if (!periodo) throw new AppError('Período no encontrado', 404);
-    if (periodo.estado !== 'abierto') {
-      throw new AppError('No se puede registrar en un período que no está abierto', 409);
-    }
-    if (datos.fecha < periodo.fecha_inicio || datos.fecha > periodo.fecha_fin) {
-      throw new AppError('La fecha está fuera del rango del período', 422);
-    }
-    if (datos.fecha > hoyISO()) {
-      throw new AppError('No puedes registrar un día que aún no ha ocurrido', 422);
-    }
-    // Creación manual: no hay campo para "día siguiente", así que a diferencia de
-    // marcarSalida() (clock-out real que sí puede cruzar medianoche) aquí salida <= entrada
-    // siempre es un dato imposible, no un turno nocturno.
-    if (datos.hora_entrada && datos.hora_salida && datos.hora_salida <= datos.hora_entrada) {
-      throw new AppError('La hora de salida debe ser posterior a la de entrada', 422);
-    }
-
-    // Mismo criterio que marcarSalida(): el tope de ordinarias es semanal, no por día.
-    const lunesCrear = getLunesDeSemana(datos.fecha);
-    const { ordinarias: ordinariasAcumCrear } =
-      await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunesCrear, datos.fecha);
+    validarCreacion(await PeriodosModel.obtenerPorId(empresaId, datos.periodo_id), datos);
 
     const jornadaContinua = Boolean(datos.jornada_continua);
-    const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
-    const { clasificacion, recargoFestivo, numeroDiaFestivo } =
-      await clasificarDiaFestivo(empresaId, trabajadorId, datos.fecha, reglaDomingoHabitual);
-    const horas = calcularHoras({
-      horaEntrada: datos.hora_entrada,
-      horaSalida: datos.hora_salida,
-      fecha: datos.fecha,
-      horasOrdinariasAcumuladas: ordinariasAcumCrear,
-      jornadaContinua,
-      recargoFestivo,
-      sumarNocturnasFestivo,
-    });
+    const dia = await calcularHorasDelDia(empresaId, trabajadorId, datos.fecha,
+      ({ ordinariasAcum, recargoFestivo, sumarNocturnasFestivo }) => calcularHoras({
+        horaEntrada: datos.hora_entrada,
+        horaSalida: datos.hora_salida,
+        fecha: datos.fecha,
+        horasOrdinariasAcumuladas: ordinariasAcum,
+        jornadaContinua,
+        recargoFestivo,
+        sumarNocturnasFestivo,
+      }));
 
     const id = await RegistrosModel.crear(empresaId, {
       trabajador_id: trabajadorId,
@@ -160,31 +238,20 @@ const RegistrosGestionService = {
       fecha: datos.fecha,
       hora_entrada: datos.hora_entrada || null,
       hora_salida: datos.hora_salida || null,
-      horas_ordinarias: horas.horas_ordinarias,
-      horas_extra_diurnas: horas.horas_extra_diurnas,
-      horas_extra_nocturnas: horas.horas_extra_nocturnas,
-      horas_nocturnas: horas.horas_nocturnas,
-      horas_festivo: horas.horas_festivo,
-      es_festivo: horas.es_festivo,
+      ...columnasDeHoras(dia.horas),
       novedad: datos.novedad || null,
       tipo_dia: datos.tipo_dia || 'ordinario',
       jornada_continua: jornadaContinua,
-      horas_acumuladas_semana: ordinariasAcumCrear,
+      horas_acumuladas_semana: dia.ordinariasAcum,
     });
 
-    // Compensatorio si es festivo o domingo (Art. 179 CST) — misma regla que marcarSalida.
-    // La unique constraint en origen_registro_id previene duplicados.
-    await CompensatoriosService.crearSiCorresponde(empresaId, {
+    await crearCompensatorioDelDia(empresaId, {
       trabajadorId,
       periodoId: datos.periodo_id,
       fecha: datos.fecha,
-      esFestivo: Boolean(horas.es_festivo),
       registroId: id,
-      clasificacion,
-      numeroDiaFestivo,
-      sumarNocturnasFestivo,
       tipoDia: datos.tipo_dia || 'ordinario',
-    });
+    }, dia);
 
     return RegistrosModel.obtenerPorId(empresaId, id);
   },
@@ -242,18 +309,7 @@ const RegistrosGestionService = {
     const registro = await RegistrosModel.obtenerPorId(empresaId, id);
     if (!registro) throw new AppError('Registro no encontrado', 404);
 
-    // Un día con reingreso (varias sesiones) se corrige por sesiones: hay que mandar la lista
-    // completa, porque los horas_* del registro son la suma de todas (ver sesionesUtils.js).
-    const porSesiones = registro.sesiones > 1;
-    if (porSesiones && !Array.isArray(datos.sesiones)) {
-      throw new AppError('Este día tiene reingreso: corrígelo enviando todas sus sesiones.', 422);
-    }
-    if (porSesiones && (datos.hora_entrada !== undefined || datos.hora_salida !== undefined)) {
-      throw new AppError('Este día tiene reingreso: usa "sesiones" en vez de hora_entrada/hora_salida.', 422);
-    }
-    if (!porSesiones && datos.sesiones !== undefined) {
-      throw new AppError('Solo un día con reingreso se corrige por sesiones.', 422);
-    }
+    const porSesiones = validarModoCorreccion(registro, datos);
 
     const periodo = await PeriodosModel.obtenerPorId(empresaId, registro.periodo_id);
     if (periodo.estado !== 'abierto') {
@@ -281,11 +337,6 @@ const RegistrosGestionService = {
       throw new AppError('La hora de salida no puede ser igual a la de entrada', 422);
     }
 
-    // Mismo criterio que marcarSalida(): el tope de ordinarias es semanal, no por día.
-    const lunesCorregir = getLunesDeSemana(registro.fecha);
-    const { ordinarias: ordinariasAcumCorregir } =
-      await RegistrosModel.sumarOrdinariasEnSemana(empresaId, registro.trabajador_id, lunesCorregir, registro.fecha);
-
     // Si no viene en la corrección, se preserva el flag ya persistido — de lo
     // contrario cada corregir() reintroduciría el descuento de almuerzo en un
     // día que el trabajador ya había marcado como jornada continua.
@@ -293,18 +344,16 @@ const RegistrosGestionService = {
       ? Boolean(datos.jornada_continua)
       : Boolean(registro.jornada_continua);
 
-    const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
-    const { clasificacion, recargoFestivo, numeroDiaFestivo } =
-      await clasificarDiaFestivo(empresaId, registro.trabajador_id, registro.fecha, reglaDomingoHabitual);
-    const horas = porSesiones
-      ? calcularHorasSesiones({
-          sesiones, fecha: registro.fecha, ordinariasAcum: ordinariasAcumCorregir,
-          jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
-        })
-      : calcularHoras({
-          horaEntrada, horaSalida, fecha: registro.fecha, horasOrdinariasAcumuladas: ordinariasAcumCorregir,
-          jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
-        });
+    const dia = await calcularHorasDelDia(empresaId, registro.trabajador_id, registro.fecha,
+      ({ ordinariasAcum, recargoFestivo, sumarNocturnasFestivo }) => (porSesiones
+        ? calcularHorasSesiones({
+            sesiones, fecha: registro.fecha, ordinariasAcum,
+            jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
+          })
+        : calcularHoras({
+            horaEntrada, horaSalida, fecha: registro.fecha, horasOrdinariasAcumuladas: ordinariasAcum,
+            jornadaContinua, recargoFestivo, sumarNocturnasFestivo,
+          })));
 
     const tipoDiaEfectivo = datos.tipo_dia !== undefined ? datos.tipo_dia : registro.tipo_dia;
 
@@ -312,49 +361,24 @@ const RegistrosGestionService = {
       ...camposSesiones,
       hora_entrada: horaEntrada || null,
       hora_salida: horaSalida || null,
-      horas_ordinarias: horas.horas_ordinarias,
-      horas_extra_diurnas: horas.horas_extra_diurnas,
-      horas_extra_nocturnas: horas.horas_extra_nocturnas,
-      horas_nocturnas: horas.horas_nocturnas,
-      horas_festivo: horas.horas_festivo,
-      es_festivo: horas.es_festivo,
+      ...columnasDeHoras(dia.horas),
       novedad: datos.novedad !== undefined ? datos.novedad : registro.novedad,
       tipo_dia: tipoDiaEfectivo,
       aprobado_por: usuario.sub,
       jornada_continua: jornadaContinua,
-      horas_acumuladas_semana: ordinariasAcumCorregir,
+      horas_acumuladas_semana: dia.ordinariasAcum,
     });
 
-    // Compensatorio si es festivo o domingo Y se trabajó (Art. 179 CST) — misma
-    // regla que crear()/marcarSalida(). Cubre el caso de completar acá (corrección
-    // manual) una salida que el trabajador olvidó marcar: crearSiCorresponde() es
-    // idempotente (INSERT IGNORE sobre origen_registro_id), así que no duplica el
-    // compensatorio si ya existía.
-    await CompensatoriosService.crearSiCorresponde(empresaId, {
+    // Cubre también completar acá (corrección manual) una salida que el trabajador olvidó marcar.
+    await crearCompensatorioDelDia(empresaId, {
       trabajadorId: registro.trabajador_id,
       periodoId: registro.periodo_id,
       fecha: registro.fecha,
-      esFestivo: Boolean(horas.es_festivo),
       registroId: id,
-      clasificacion,
-      numeroDiaFestivo,
-      sumarNocturnasFestivo,
       tipoDia: tipoDiaEfectivo,
-    });
+    }, dia);
 
-    if (notificar) {
-      const trabajadorUsuarioId = await TrabajadoresModel.obtenerUsuarioId(registro.trabajador_id);
-      if (trabajadorUsuarioId) {
-        await NotificacionesService.notificar({
-          empresaId,
-          usuarioId: trabajadorUsuarioId,
-          tipo: 'nomina.correccion',
-          titulo: 'Tu horario fue modificado',
-          mensaje: `Tu horario del ${registro.fecha} fue modificado por ${usuario.nombre || 'tu gestor'}.`,
-          data: { registro_id: id },
-        }).catch(() => {});
-      }
-    }
+    if (notificar) await avisarCorreccion(empresaId, usuario, registro, id);
 
     return RegistrosModel.obtenerPorId(empresaId, id);
   },
