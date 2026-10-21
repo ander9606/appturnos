@@ -13,7 +13,6 @@ jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
 }));
 
-const { pool } = require('../config/database');
 const OfertasModel = require('../modules/turnos/ofertas/ofertas.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
 const OfertasService = require('../modules/turnos/ofertas/ofertas.service');
@@ -35,37 +34,36 @@ describe('OfertasService.publicar — filtra el aviso por rol y acepta_extras', 
     const oferta = ofertaBase({ para_quien: 'nomina' });
     OfertasModel.obtenerPorId.mockResolvedValueOnce(oferta).mockResolvedValueOnce(oferta);
     OfertasModel.cambiarEstado.mockResolvedValue(1);
-    pool.query.mockResolvedValue([[{ usuario_id: 55 }]]);
+    OfertasModel.listarCandidatosPendientesDeAviso.mockResolvedValue([{ usuario_id: 55 }]);
 
     await OfertasService.publicar(7, 1);
 
-    const [, params] = pool.query.mock.calls[0];
-    // Últimos 3: created_at (delay de ranking), oferta_id y puesto_id (dedup de notificados).
-    expect(params).toEqual([7, 3, [ROLES.TRABAJADOR_NOMINA], ROLES.TRABAJADOR_NOMINA, '2026-05-30 10:00:00', 1, 10]);
+    // Llega la empresa, la oferta (created_at para el delay de ranking, id para no duplicar notificados),
+    // el puesto (cargo_id e id) y los roles a avisar.
+    expect(OfertasModel.listarCandidatosPendientesDeAviso).toHaveBeenCalledWith(7, oferta, oferta.puestos[0], [ROLES.TRABAJADOR_NOMINA]);
   });
 
   test("para_quien: 'turnos' solo avisa a trabajador_turnos", async () => {
     const oferta = ofertaBase({ para_quien: 'turnos' });
     OfertasModel.obtenerPorId.mockResolvedValueOnce(oferta).mockResolvedValueOnce(oferta);
     OfertasModel.cambiarEstado.mockResolvedValue(1);
-    pool.query.mockResolvedValue([[{ usuario_id: 55 }]]);
+    OfertasModel.listarCandidatosPendientesDeAviso.mockResolvedValue([{ usuario_id: 55 }]);
 
     await OfertasService.publicar(7, 1);
 
-    const [, params] = pool.query.mock.calls[0];
-    expect(params).toEqual([7, 3, [ROLES.TRABAJADOR_TURNOS], ROLES.TRABAJADOR_NOMINA, '2026-05-30 10:00:00', 1, 10]);
+    expect(OfertasModel.listarCandidatosPendientesDeAviso).toHaveBeenCalledWith(7, oferta, oferta.puestos[0], [ROLES.TRABAJADOR_TURNOS]);
   });
 
   test("para_quien: 'ambos' avisa a los dos roles", async () => {
     const oferta = ofertaBase({ para_quien: 'ambos' });
     OfertasModel.obtenerPorId.mockResolvedValueOnce(oferta).mockResolvedValueOnce(oferta);
     OfertasModel.cambiarEstado.mockResolvedValue(1);
-    pool.query.mockResolvedValue([[{ usuario_id: 55 }]]);
+    OfertasModel.listarCandidatosPendientesDeAviso.mockResolvedValue([{ usuario_id: 55 }]);
 
     await OfertasService.publicar(7, 1);
 
-    const [, params] = pool.query.mock.calls[0];
-    expect(params[2]).toEqual(expect.arrayContaining([ROLES.TRABAJADOR_NOMINA, ROLES.TRABAJADOR_TURNOS]));
+    const roles = OfertasModel.listarCandidatosPendientesDeAviso.mock.calls[0][3];
+    expect(roles).toEqual(expect.arrayContaining([ROLES.TRABAJADOR_NOMINA, ROLES.TRABAJADOR_TURNOS]));
   });
 
   test('dirigida a un trabajador_nomina sin acepta_extras → no se le notifica', async () => {
@@ -78,8 +76,8 @@ describe('OfertasService.publicar — filtra el aviso por rol y acepta_extras', 
     });
     OfertasModel.obtenerPorId.mockResolvedValueOnce(oferta).mockResolvedValueOnce(oferta);
     OfertasModel.cambiarEstado.mockResolvedValue(1);
-    // Única query de pool.query en este flujo: la de exclusión por acepta_extras.
-    pool.query.mockResolvedValue([[{ trabajador_id: 20 }]]);
+    // Única consulta de este flujo: la de exclusión por acepta_extras.
+    OfertasModel.trabajadorIdsNominaSinExtras.mockResolvedValue([20]);
 
     await OfertasService.publicar(7, 1);
 
@@ -103,13 +101,13 @@ describe('OfertasService.publicar — filtra el aviso por rol y acepta_extras', 
     });
     OfertasModel.obtenerPorId.mockResolvedValueOnce(oferta).mockResolvedValueOnce(oferta);
     OfertasModel.cambiarEstado.mockResolvedValue(1);
-    pool.query.mockResolvedValue([[{ usuario_id: 55 }]]);
+    OfertasModel.listarCandidatosPendientesDeAviso.mockResolvedValue([{ usuario_id: 55 }]);
 
     await OfertasService.publicar(7, 1);
 
-    expect(pool.query).toHaveBeenCalledTimes(1);
-    const [, params] = pool.query.mock.calls[0];
-    expect(params[1]).toBe(4); // cargo_id del puesto 'cocinero', no del 'mesero' lleno
+    expect(OfertasModel.listarCandidatosPendientesDeAviso).toHaveBeenCalledTimes(1);
+    const puestoConsultado = OfertasModel.listarCandidatosPendientesDeAviso.mock.calls[0][2];
+    expect(puestoConsultado.cargo_id).toBe(4); // cargo_id del puesto 'cocinero', no del 'mesero' lleno
     expect(NotificacionesService.notificarVarios).toHaveBeenCalledTimes(1);
     expect(NotificacionesService.notificarVarios).toHaveBeenCalledWith(
       [55],
@@ -124,15 +122,15 @@ describe('OfertasService.publicar — filtra el aviso por rol y acepta_extras', 
     const oferta = ofertaBase({ para_quien: 'ambos' });
     OfertasModel.obtenerPorId.mockResolvedValueOnce(oferta).mockResolvedValueOnce(oferta);
     OfertasModel.cambiarEstado.mockResolvedValue(1);
-    pool.query.mockResolvedValue([[{ usuario_id: 55 }]]);
+    OfertasModel.listarCandidatosPendientesDeAviso.mockResolvedValue([{ usuario_id: 55 }]);
 
     await OfertasService.publicar(7, 1);
 
-    const [sql] = pool.query.mock.calls[0];
-    expect(sql).toContain('TIMESTAMPDIFF(MINUTE, ?, NOW())');
-    expect(sql).toContain('t.ranking');
-    expect(sql).toContain('NOT EXISTS');
-    expect(sql).toContain("n.tipo = 'oferta.nueva'");
+    // El delay por ranking y el NOT EXISTS viven en el SQL del model: los fija
+    // ofertasGestionConsultasCaracterizacion.test.js. Aquí se comprueba que el service le
+    // entrega lo que necesita para aplicarlos (created_at de la oferta, e ids de oferta y puesto).
+    expect(OfertasModel.listarCandidatosPendientesDeAviso).toHaveBeenCalledWith(7, oferta, oferta.puestos[0], expect.any(Array));
+    expect(oferta.created_at).toBe('2026-05-30 10:00:00');
   });
 
   test('dirigida y ningún destinatario tiene acepta_extras → no notifica a nadie', async () => {
@@ -142,7 +140,7 @@ describe('OfertasService.publicar — filtra el aviso por rol y acepta_extras', 
     });
     OfertasModel.obtenerPorId.mockResolvedValueOnce(oferta).mockResolvedValueOnce(oferta);
     OfertasModel.cambiarEstado.mockResolvedValue(1);
-    pool.query.mockResolvedValue([[{ trabajador_id: 20 }]]);
+    OfertasModel.trabajadorIdsNominaSinExtras.mockResolvedValue([20]);
 
     await OfertasService.publicar(7, 1);
 

@@ -1,6 +1,5 @@
 'use strict';
 
-const { pool } = require('../../../config/database');
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const AsignacionesService = require('../asignaciones/asignaciones.service');
@@ -80,15 +79,7 @@ async function advertenciasDestinatarios(empresaId, visibilidad, trabajadorIds, 
   const ids = [...new Set((trabajadorIds || []).map(Number))];
   const cargoIds = [...new Set((puestos || []).map((p) => Number(p.cargo_id)))];
   if (visibilidad !== 'dirigida' || ids.length === 0 || cargoIds.length === 0) return [];
-  const [filas] = await pool.query(
-    `SELECT t.nombre, t.apellido FROM trabajadores t
-     WHERE t.id IN (?) AND NOT EXISTS (
-       SELECT 1 FROM trabajador_empresa te
-       JOIN trabajador_cargos tc ON tc.trabajador_empresa_id = te.id
-       WHERE te.trabajador_id = t.id AND te.empresa_id = ? AND tc.cargo_id IN (?)
-     )`,
-    [ids, empresaId, cargoIds]
-  );
+  const filas = await OfertasModel.nombresSinNingunCargo(empresaId, ids, cargoIds);
   if (filas.length === 0) return [];
   const nombres = filas.map((f) => `${f.nombre} ${f.apellido}`).join(', ');
   return [
@@ -132,13 +123,8 @@ async function validarDestinatarios(empresaId, visibilidad, trabajadorIds) {
   if (ids.length === 0) {
     throw new AppError('Elige al menos una persona para un turno dirigido', 400);
   }
-  const [filas] = await pool.query(
-    `SELECT t.id FROM trabajadores t
-     JOIN trabajador_empresa te ON te.trabajador_id = t.id
-     WHERE t.id IN (?) AND te.empresa_id = ? AND te.estado = 'activo'`,
-    [ids, empresaId]
-  );
-  if (filas.length !== ids.length) {
+  const activos = await OfertasModel.contarTrabajadoresActivosDeEmpresa(empresaId, ids);
+  if (activos !== ids.length) {
     throw new AppError('Alguno de los trabajadores seleccionados no pertenece a esta empresa', 400);
   }
 }
@@ -181,28 +167,7 @@ function rolesParaAviso(paraQuien) {
  * cada quien le toca).
  */
 async function listarPendientesDeNotificar(empresaId, oferta, puesto, roles) {
-  const [filas] = await pool.query(
-    `SELECT DISTINCT u.id AS usuario_id
-     FROM trabajador_cargos tc
-     JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
-     JOIN trabajadores t        ON t.id  = te.trabajador_id
-     JOIN usuarios u            ON u.id  = t.usuario_id
-     WHERE te.empresa_id = ?
-       AND tc.cargo_id   = ?
-       AND te.estado     = 'activo'
-       AND u.activo      = 1
-       AND u.rol IN (?)
-       AND (u.rol != ? OR t.acepta_extras = 1)
-       AND TIMESTAMPDIFF(MINUTE, ?, NOW()) >= ${DELAY_RANKING_SQL_CASE}
-       AND NOT EXISTS (
-         SELECT 1 FROM notificaciones n
-         WHERE n.usuario_id = u.id AND n.tipo = 'oferta.nueva'
-           AND CAST(n.data->>'$.oferta_id' AS UNSIGNED) = ?
-           AND CAST(n.data->>'$.puesto_id' AS UNSIGNED) = ?
-       )`,
-    [empresaId, puesto.cargo_id, roles, ROLES.TRABAJADOR_NOMINA, oferta.created_at, oferta.id, puesto.id]
-  );
-  return filas;
+  return OfertasModel.listarCandidatosPendientesDeAviso(empresaId, oferta, puesto, roles);
 }
 
 /**
@@ -266,14 +231,7 @@ async function notificarDestinatariosDirectos(empresaId, oferta) {
   // lo lleva a un 403 sin explicación.
   let sinExtras = new Set();
   if (trabajadorIds.length > 0) {
-    const [filas] = await pool.query(
-      `SELECT t.id AS trabajador_id
-       FROM trabajadores t
-       JOIN usuarios u ON u.id = t.usuario_id
-       WHERE t.id IN (?) AND u.rol = ? AND t.acepta_extras = 0`,
-      [trabajadorIds, ROLES.TRABAJADOR_NOMINA]
-    );
-    sinExtras = new Set(filas.map((f) => f.trabajador_id));
+    sinExtras = new Set(await OfertasModel.trabajadorIdsNominaSinExtras(trabajadorIds));
   }
 
   const usuarioIds = destinatarios
