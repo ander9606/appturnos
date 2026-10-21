@@ -71,6 +71,14 @@ const AusenciasModel = {
     );
     return total;
   },
+
+  async idsGestores(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('admin_empresa','jefe_turnos','jefe_nomina','nomina') AND activo = 1`,
+      [empresaId]
+    );
+    return filas.map((f) => f.id);
+  },
 };
 
 module.exports = AusenciasModel;
