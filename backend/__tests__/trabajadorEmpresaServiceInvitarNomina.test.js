@@ -15,7 +15,6 @@ jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
 }));
 
-const { pool } = require('../config/database');
 const { ROLES, ESTADOS_TRABAJADOR_EMPRESA: E } = require('../config/constants');
 const TrabajadorEmpresaModel = require('../modules/trabajador-empresa/trabajador-empresa.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
@@ -27,17 +26,16 @@ const USUARIO_ID = 42;
 const TRABAJADOR_ID = 5;
 
 function mockBusquedas() {
-  pool.query
-    // ficha del trabajador en esta empresa
-    .mockResolvedValueOnce([[{ id: TRABAJADOR_ID, usuario_id: USUARIO_ID, empresa_id: EMPRESA_ID }]])
-    // cuenta asociada a la cédula
-    .mockResolvedValueOnce([[{ usuario_id: USUARIO_ID, rol: ROLES.TRABAJADOR_TURNOS }]])
-    // UPDATE trabajadores SET usuario_id ... (no-op, ya estaba seteado)
-    .mockResolvedValueOnce([{ affectedRows: 0 }]);
+  // ficha del trabajador en esta empresa
+  TrabajadorEmpresaModel.fichaPorCedula.mockResolvedValue({ id: TRABAJADOR_ID, usuario_id: USUARIO_ID, empresa_id: EMPRESA_ID });
+  // cuenta asociada a la cédula
+  TrabajadorEmpresaModel.cuentaPorCedula.mockResolvedValue({ usuario_id: USUARIO_ID, rol: ROLES.TRABAJADOR_TURNOS });
+  // vincularUsuarioAFicha (no-op, ya estaba seteado): el automock devuelve undefined
 }
 
 beforeEach(() => {
-  pool.query.mockReset();
+  TrabajadorEmpresaModel.fichaPorCedula.mockReset();
+  TrabajadorEmpresaModel.cuentaPorCedula.mockReset();
   TrabajadorEmpresaModel.obtenerPorUsuarioEmpresa.mockReset();
   TrabajadorEmpresaModel.cambiarEstado.mockReset().mockResolvedValue(1);
   TrabajadorEmpresaModel.obtenerPorId.mockReset().mockResolvedValue({ id: 99 });
