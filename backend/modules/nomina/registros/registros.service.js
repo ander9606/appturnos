@@ -10,7 +10,6 @@ const EmpresasModel             = require('../../empresas/empresas.model');
 const CompensatoriosService     = require('../compensatorios/compensatorios.service');
 const NotificacionesService     = require('../../notificaciones/notificaciones.service');
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
-const { pool }                  = require('../../../config/database');
 const { calcularHoras, esDomingo, esDiaFestivo, esDomingoHabitual, ventanaRachaDomingos } = require('../../../utils/laboralUtils');
 const { validarSesiones, calcularHorasSesiones } = require('../../../utils/sesionesUtils');
 const { ahoraColombiaSQL }      = require('../../../utils/fechaColombia');
@@ -214,10 +213,7 @@ function ahoraHHMMSS() {
 }
 
 async function _notificarDecisionReingreso(empresaId, solicitudId, tipo, titulo, mensaje) {
-  const [[sol]] = await pool.query(
-    'SELECT sr.*, t.usuario_id FROM solicitudes_reingreso sr JOIN trabajadores t ON t.id = sr.trabajador_id WHERE sr.id = ?',
-    [solicitudId]
-  );
+  const sol = await SolicitudesReingresoModel.obtenerConUsuario(solicitudId);
   if (sol?.usuario_id) {
     await NotificacionesService.notificar({
       empresaId, usuarioId: sol.usuario_id, tipo, titulo, mensaje,
