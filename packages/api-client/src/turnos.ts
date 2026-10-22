@@ -350,6 +350,7 @@ export interface LiquidacionTurnoLinea {
   /** Agrupa líneas del mismo turno entre distintos trabajadores — ver liquidacionPorTurno(). */
   oferta_id: number;
   oferta_titulo: string;
+  oferta_descripcion: string | null;
   oferta_fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;
