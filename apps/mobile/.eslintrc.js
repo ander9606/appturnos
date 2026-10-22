@@ -20,5 +20,7 @@ module.exports = {
   overrides: [
     { files: ['components/ui/Text.tsx'], rules: { 'no-restricted-imports': 'off' } },
     { files: ['lib/designTokens.ts', '**/__tests__/**'], rules: { 'no-restricted-syntax': 'off' } },
+    // jest.mock() se iza por encima de los import, así que las fábricas de mocks de componentes necesitan require().
+    { files: ['**/__tests__/**'], rules: { '@typescript-eslint/no-require-imports': 'off' } },
   ],
 };
