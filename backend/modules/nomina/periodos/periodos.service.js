@@ -10,7 +10,7 @@ const RegistrosService = require('../registros/registros.service');
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
-const { toISODate, calcularPeriodoActual, calcularSiguientePeriodo } = require('../../../utils/periodoCiclo');
+const { calcularPeriodoActual, calcularSiguientePeriodo } = require('../../../utils/periodoCiclo');
 
 /** Best-effort: un fallo generando cuentas de cobro nunca debe tumbar el cierre del período. */
 async function generarCuentasDeCobroSiAplica(empresaId, periodoId) {

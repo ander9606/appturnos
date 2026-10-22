@@ -222,10 +222,10 @@ const AuthService = {
           for (const cargoId of cargoIds) {
             try {
               await CargosModel.asignar({ trabajadorEmpresaId: teId, cargoId, asignadoPor: trabajador.creado_por });
-            } catch (_e) { /* cargo ya no existe o fue desactivado — no bloquear la activación */ }
+            } catch { /* cargo ya no existe o fue desactivado — no bloquear la activación */ }
           }
         }
-      } catch (_e) { /* no bloquear la activación */ }
+      } catch { /* no bloquear la activación */ }
     }
 
     // Crear solicitudes de vinculación para las empresas pre-seleccionadas (iniciadas por el trabajador).
@@ -245,7 +245,7 @@ const AuthService = {
               iniciadoPor: 'trabajador',
             });
           }
-        } catch (_e) { /* no bloquear la activación */ }
+        } catch { /* no bloquear la activación */ }
       }
     }
 
@@ -267,7 +267,7 @@ const AuthService = {
             });
             await TrabajadorEmpresaModel.cambiarEstado(teId, ESTADOS.SOLICITADO_POR_EMPRESA, { trabajadorId: trabajador.id });
           }
-        } catch (_e) { /* no bloquear la activación */ }
+        } catch { /* no bloquear la activación */ }
       }
 
       if (invitaciones.length > 0) {
