@@ -187,6 +187,11 @@ const LOGIN = {
  */
 const TRIAL_DIAS_GRATIS = 30;
 
+// Cancelación del trabajador: si faltan menos de estas horas para el inicio del
+// turno, queda una calificación automática (la del gestor nunca penaliza).
+const HORAS_CANCELACION_SIN_PENALIZACION = 12;
+const CALIFICACION_CANCELACION_TARDIA = 1;
+
 /** Estados del vínculo trabajador ↔ empresa (tabla trabajador_empresa). */
 const ESTADOS_TRABAJADOR_EMPRESA = {
   SOLICITADO_POR_TRABAJADOR: 'solicitado_por_trabajador',
@@ -260,6 +265,8 @@ module.exports = {
   LOGIN,
   ESTADOS_TRABAJADOR_EMPRESA,
   TRIAL_DIAS_GRATIS,
+  HORAS_CANCELACION_SIN_PENALIZACION,
+  CALIFICACION_CANCELACION_TARDIA,
   TIPOS_CONTRATO,
   SALARIO_MINIMO_DIARIO_COP,
   CONTRATOS_ACUMULATIVOS_LIMITE,

@@ -80,6 +80,10 @@ router.post('/:id/rechazar', verificarRol(GESTIONAR), verificarSuscripcion, [idP
 // POST /api/turnos/asignaciones/:id/cancelar  (confirmado → cancelado, devuelve plaza)
 router.post('/:id/cancelar', verificarRol(GESTIONAR), verificarSuscripcion, [idParam], validar, ctrl.cancelar);
 
+// POST /api/turnos/asignaciones/:id/cancelar-propia  (el trabajador cancela su turno confirmado;
+// si faltan < 12 h recibe calificación baja). Sin verificarSuscripcion, mismo criterio que reconfirmar.
+router.post('/:id/cancelar-propia', verificarRol(TRABAJADOR), [idParam], validar, ctrl.cancelarPropia);
+
 // POST /api/turnos/asignaciones/:id/ingreso
 // Sin verificarSuscripcion a propósito: marcar ingreso/egreso es cómo el
 // trabajador registra sus horas — no debe bloquearse por un problema de
