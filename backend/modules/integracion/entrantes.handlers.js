@@ -131,17 +131,6 @@ async function ordenCancelada(empresaId, data) {
   }
 }
 
-async function ordenFechaCambiada(empresaId, data) {
-  const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
-  if (!oferta) return;
-  const cambios = {};
-  if (data.fecha_programada) cambios.fecha = data.fecha_programada;
-  if (data.hora_inicio) cambios.hora_inicio = data.hora_inicio;
-  if (Object.keys(cambios).length) {
-    await OfertasModel.actualizar(empresaId, oferta.id, cambios);
-  }
-}
-
 async function ordenCompletada(empresaId, data) {
   const oferta = await OfertasModel.obtenerPorExternalRef(empresaId, data.external_ref);
   if (oferta && oferta.estado !== 'cancelada') {

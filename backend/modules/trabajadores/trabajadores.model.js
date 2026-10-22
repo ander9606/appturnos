@@ -40,16 +40,6 @@ const COLUMNAS = `t.id, t.empresa_id, t.usuario_id, t.nombre, t.apellido, t.cedu
   t.activo, t.external_ref, t.ranking, t.total_calificaciones, t.created_at,
   u.foto_perfil`;
 
-// Alias para queries sin JOIN (uso interno donde ya no hay alias)
-const COLUMNAS_BARE = `id, empresa_id, usuario_id, nombre, apellido, cedula,
-  tipo_documento, fecha_nacimiento, sexo,
-  contacto_emergencia_nombre, contacto_emergencia_tel,
-  telefono, email, tipo, cargo, descripcion, tarifa_hora, salario_base, acepta_extras,
-  eps, afp, banco, tipo_cuenta, numero_cuenta, direccion,
-  ant_judiciales_fecha, ant_disciplinarios_fecha,
-  tipo_marcacion, punto_marcaje_id, hora_entrada_esperada,
-  activo, external_ref, ranking, total_calificaciones, created_at`;
-
 // Allowlist de columnas modificables vía PUT. Lista fija de código,
 // nunca construida a partir de input del cliente.
 const CAMPOS_EDITABLES = [
