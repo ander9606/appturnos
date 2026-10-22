@@ -16,7 +16,6 @@ const {
   ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS, HORAS_CORTE_EDICION_OFERTA,
 } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
-const { DELAY_RANKING_SQL_CASE } = require('../../../utils/rankingUtils');
 const logger = require('../../../utils/logger');
 
 /** Valida que cada puesto del array tiene un cargo válido para la empresa. */
