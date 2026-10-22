@@ -1,3 +1,4 @@
+import { PantallaPestana, EncabezadoPestana } from '@/components/ui/EncabezadoPestana';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
@@ -8,7 +9,6 @@ import {
   RefreshControl,
   SectionList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { empresasApi } from '@api-client';
@@ -199,9 +199,8 @@ export default function EmpresasScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <View className="px-6 pt-4 pb-0 border-b border-border bg-background">
-        <Text className="text-foreground text-xl font-bold mb-3">{t('tabs.empresas')}</Text>
+    <PantallaPestana>
+      <EncabezadoPestana titulo={t('tabs.empresas')}>
         <View className="flex-row">
           {tabs.map(({ key, label }) => {
             const isActive = activeTab === key;
@@ -209,18 +208,18 @@ export default function EmpresasScreen() {
               <View
                 key={key}
                 onTouchEnd={() => setActiveTab(key)}
-                className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
+                className={`py-2 mr-6 border-b-2 ${isActive ? 'border-white' : 'border-transparent'}`}
               >
-                <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                <Text className={`text-sm font-semibold ${isActive ? 'text-white' : 'text-white/70'}`}>
                   {label}
                 </Text>
               </View>
             );
           })}
         </View>
-      </View>
+      </EncabezadoPestana>
 
       {activeTab === 'mis_empresas' ? <MisEmpresasView /> : <DirectorioView />}
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }

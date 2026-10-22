@@ -9,6 +9,7 @@
  *  - FAB "+" para crear nuevo trabajador
  *  - Navegar al detalle con opciones de editar / desactivar
  */
+import { PantallaPestana, EncabezadoPestana } from '@/components/ui/EncabezadoPestana';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -21,7 +22,6 @@ import {
   Pressable,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -48,9 +48,9 @@ function MiEmpresaNominaView() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <PantallaPestana>
         <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
-      </SafeAreaView>
+      </PantallaPestana>
     );
   }
 
@@ -64,13 +64,9 @@ function MiEmpresaNominaView() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <View className="px-5 pt-4 pb-3">
-        <Text className="text-2xl font-bold text-foreground">Mi empresa</Text>
-        <Text className="text-sm text-muted-foreground mt-0.5">
-          Tu vínculo laboral actual
-        </Text>
-      </View>
+    <PantallaPestana>
+      <EncabezadoPestana titulo="Mi empresa" subtitulo="Tu vínculo laboral actual" />
+      <View className="h-3" />
 
       <View className="px-5 gap-3">
         {/* Empresa */}
@@ -167,7 +163,7 @@ function MiEmpresaNominaView() {
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }
 
@@ -188,14 +184,14 @@ function WorkerView() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <PantallaPestana>
         <SkeletonDetail style={{ paddingHorizontal: 16, paddingTop: 12 }} />
-      </SafeAreaView>
+      </PantallaPestana>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <PantallaPestana>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -331,7 +327,7 @@ function WorkerView() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }
 
@@ -416,49 +412,43 @@ export default function EquipoScreen() {
   // ── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      {/* Header */}
-      <View className="px-4 pt-4 pb-2 flex-row items-start justify-between">
-        <View>
-          <Text className="text-2xl font-bold text-foreground">Equipo</Text>
-          {!isLoading && (
-            <Text className="text-sm text-muted-foreground">
-              {total} {total === 1 ? 'trabajador' : 'trabajadores'}
+    <PantallaPestana>
+      <EncabezadoPestana
+        titulo="Equipo"
+        subtitulo={isLoading ? undefined : `${total} ${total === 1 ? 'trabajador' : 'trabajadores'}`}
+      />
+      <View className="px-4 pt-3 flex-row flex-wrap items-center gap-2">
+        {/* Solicitudes badge — admin y jefe_turnos */}
+        {canInvitar && (
+          <SolicitudesBadge
+            count={pendientesCount}
+            onPress={() => router.push('/solicitudes')}
+          />
+        )}
+        {/* Banco de talento — buscar trabajadores libres para invitar */}
+        {canInvitar && (
+          <Pressable
+            onPress={() => router.push('/banco-talento')}
+            className="flex-row items-center gap-1.5 bg-info/10 border border-info/30 rounded-full px-3 py-1.5"
+          >
+            <Ionicons name="search-outline" size={13} color={COLORS.info} />
+            <Text className="text-xs font-semibold text-info">Banco de talento</Text>
+          </Pressable>
+        )}
+        {/* Ausencias pendientes badge — todos los gestores */}
+        {canManage && ausenciasCount > 0 && (
+          <Pressable
+            onPress={() => router.push('/ausencias')}
+            className="flex-row items-center gap-1.5 bg-warning/10 border border-warning/30 rounded-full px-3 py-1.5"
+          >
+            <Ionicons name="calendar-clear-outline" size={13} color={COLORS.warningDark} />
+            <Text className="text-xs font-semibold text-warning">
+              {ausenciasCount} ausencia{ausenciasCount > 1 ? 's' : ''} pendiente{ausenciasCount > 1 ? 's' : ''}
             </Text>
-          )}
-        </View>
-        <View className="items-end gap-1">
-          {/* Solicitudes badge — admin y jefe_turnos */}
-          {canInvitar && (
-            <SolicitudesBadge
-              count={pendientesCount}
-              onPress={() => router.push('/solicitudes')}
-            />
-          )}
-          {/* Banco de talento — buscar trabajadores libres para invitar */}
-          {canInvitar && (
-            <Pressable
-              onPress={() => router.push('/banco-talento')}
-              className="flex-row items-center gap-1.5 bg-info/10 border border-info/30 rounded-full px-3 py-1.5"
-            >
-              <Ionicons name="search-outline" size={13} color={COLORS.info} />
-              <Text className="text-xs font-semibold text-info">Banco de talento</Text>
-            </Pressable>
-          )}
-          {/* Ausencias pendientes badge — todos los gestores */}
-          {canManage && ausenciasCount > 0 && (
-            <Pressable
-              onPress={() => router.push('/ausencias')}
-              className="flex-row items-center gap-1.5 bg-warning/10 border border-warning/30 rounded-full px-3 py-1.5"
-            >
-              <Ionicons name="calendar-clear-outline" size={13} color={COLORS.warningDark} />
-              <Text className="text-xs font-semibold text-warning">
-                {ausenciasCount} ausencia{ausenciasCount > 1 ? 's' : ''} pendiente{ausenciasCount > 1 ? 's' : ''}
-              </Text>
-            </Pressable>
-          )}
-        </View>
+          </Pressable>
+        )}
       </View>
+      <View className="h-3" />
 
       {/* Search bar */}
       <View className="px-4 pb-3">
@@ -584,6 +574,6 @@ export default function EquipoScreen() {
           <Ionicons name="person-add-outline" size={22} color={COLORS.white} />
         </Pressable>
       )}
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }
