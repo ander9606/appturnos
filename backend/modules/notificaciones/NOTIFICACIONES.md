@@ -16,6 +16,7 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `postulacion.confirmada` | Turno confirmado / Turno asignado | Gestor confirma su postulación, o lo asigna directo | `asignaciones.service.js:164,442` |
 | `postulacion.rechazada` | Postulación no aceptada | Gestor rechaza su postulación pendiente | `asignaciones.service.js:242` |
 | `asignacion.cancelada` | Turno cancelado | Gestor cancela una asignación ya confirmada | `asignaciones.service.js:205` |
+| `asignacion.cancelada_por_trabajador` | Un trabajador canceló su turno | Trabajador cancela su turno confirmado (aviso a gestores; indica si recibió calificación baja por faltar < 12 h) | `asignaciones.postulacion.service.js` (`cancelarPorTrabajador`) |
 | `asignacion.no_presentado` | Turno marcado como no presentado | Gestor lo marca como no-show individualmente | `asignaciones.service.js:533` |
 | `turno.cerrado_gestor` | Jornada finalizada | Gestor cierra masivamente una oferta en progreso | `asignaciones.service.js:626` |
 | `turno.no_presentado_gestor` | Marcado como no presentado | Cierre masivo, ausentes sin marcar ingreso | `asignaciones.service.js:636` |
