@@ -5,6 +5,7 @@
  */
 import React from 'react';
 import { Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import PerfilScreen from '../../app/(tabs)/perfil';
@@ -284,6 +285,37 @@ describe('accesos rápidos por rol', () => {
     await montar('trabajador_nomina');
     expect(texto('Ausencias y contratos')).toBeTruthy();
     expect(texto('Mi nómina')).toBeTruthy();
+  });
+
+  test('las secciones salen en este orden', async () => {
+    await montar('trabajador_nomina');
+    const orden = ['Mi Perfil', 'Información personal', 'Seguridad', 'Cuenta', 'Mi nómina', 'Ausencias y contratos', 'Legal', 'Cerrar sesión', 'Zona de peligro'];
+    const vistos = screen.getAllByText(new RegExp(`^(${orden.join('|')})$`)).map((n) => n.props.children);
+    expect(vistos).toEqual(orden);
+  });
+
+  test('el borde de arriba: la primera fila de cada tarjeta no lo lleva, las demás sí', async () => {
+    mockNominaPerfil = { acepta_extras: true };
+    await montar('trabajador_turnos');
+    const borde = (l: string) => /border-t/.test(filaDe(l).props.className);
+    // Cuenta: todas las filas de acceso van debajo de "Rol", así que llevan borde
+    for (const l of ['Perfil laboral', 'Mis postulaciones', 'Mis empresas', 'Mi disponibilidad']) expect(borde(l)).toBe(true);
+    // Ausencias, contratos y cuentas de cobro: la primera sin borde
+    expect(borde('Mis ausencias')).toBe(false);
+    expect(borde('Mis contratos')).toBe(true);
+    expect(borde('Mis cuentas de cobro')).toBe(true);
+    // Legal: la primera sin borde
+    expect(borde('Términos y condiciones')).toBe(false);
+    expect(borde('Política de privacidad')).toBe(true);
+    await montar('trabajador_nomina');
+    expect(borde('Mi información laboral')).toBe(false);
+    expect(borde('Mis postulaciones extra')).toBe(true);
+    expect(borde('Mis ausencias')).toBe(false);
+  });
+
+  test('el área segura solo protege arriba (la barra de pestañas ya cubre abajo)', async () => {
+    await montar();
+    expect(screen.UNSAFE_getByType(SafeAreaView).props.edges).toEqual(['top']);
   });
 
   test('las demás secciones siempre están: información personal, seguridad, cuenta, legal y zona de peligro', async () => {
