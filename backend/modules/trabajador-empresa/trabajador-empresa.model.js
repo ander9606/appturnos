@@ -1,23 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
-
-// ponytail: misma utilidad que trabajadores.model.js — upgrade path: moverla a utils/enTransaccion.js.
-/** Corre fn dentro de una transacción propia: commit si termina, rollback si lanza. */
-async function enTransaccion(fn) {
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-    const resultado = await fn(conn);
-    await conn.commit();
-    return resultado;
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
-}
+const { enTransaccion } = require('../../utils/enTransaccion');
 
 /**
  * Acceso a datos de la relación trabajador ↔ empresa (tabla trabajador_empresa).

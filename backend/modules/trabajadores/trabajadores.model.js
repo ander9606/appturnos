@@ -3,6 +3,7 @@
 const { pool } = require('../../config/database');
 const { CAMPOS_PERSONALES_TRABAJADOR, ROLES } = require('../../config/constants');
 const AppError = require('../../utils/AppError');
+const { enTransaccion: transaccionPropia } = require('../../utils/enTransaccion');
 
 // Fechas llegan como 'YYYY-MM-DD' (dateStrings) y '' equivale a NULL.
 const norm = (v) => (v == null || v === '' ? null : String(v));
@@ -21,19 +22,7 @@ async function tieneOtraFichaActiva(c, usuarioId, id) {
  * commit: la transacción la abre y la cierra quien llamó. Si no, abre la suya.
  */
 async function enTransaccion(conn, fn) {
-  if (conn) return fn(conn);
-  const propia = await pool.getConnection();
-  try {
-    await propia.beginTransaction();
-    const resultado = await fn(propia);
-    await propia.commit();
-    return resultado;
-  } catch (err) {
-    await propia.rollback();
-    throw err;
-  } finally {
-    propia.release();
-  }
+  return conn ? fn(conn) : transaccionPropia(fn);
 }
 
 /**
