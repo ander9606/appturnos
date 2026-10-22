@@ -47,9 +47,9 @@ export function BarraAccionesGestor({ oferta, puedeGestionar, puedeCancelarOfert
       const avisos: string[] = [];
       if (f > 0) {
         const horario = data.forzados_con_hora_actual ? 'con la hora actual' : 'con el horario estipulado';
-        avisos.push(`${f} trabajador${f > 1 ? 'es' : ''} que no había${f > 1 ? 'n' : ''} marcado salida se cerró${f > 1 ? 'aron' : ''} ${horario}`);
+        avisos.push(`${f} trabajador${f > 1 ? 'es' : ''} que no había${f > 1 ? 'n' : ''} marcado salida se ${f > 1 ? 'cerraron' : 'cerró'} ${horario}`);
       }
-      if (n > 0) avisos.push(`${n} trabajador${n > 1 ? 'es' : ''} sin ingreso quedó${n > 1 ? 'aron' : ''} como no presentado${n > 1 ? 's' : ''}`);
+      if (n > 0) avisos.push(`${n} trabajador${n > 1 ? 'es' : ''} sin ingreso ${n > 1 ? 'quedaron' : 'quedó'} como no presentado${n > 1 ? 's' : ''}`);
       showToast(
         avisos.length > 0
           ? `"${oferta.titulo}" completado. ${avisos.join('; ')}.`

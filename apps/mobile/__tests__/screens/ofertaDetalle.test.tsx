@@ -751,19 +751,17 @@ describe('barra de acciones del gestor', () => {
       expect(mockM.completarOferta.mutateAsync).not.toHaveBeenCalled();
     });
 
-    // OJO: los plurales salen mal escritos hoy ("cerróaron", "quedóaron"): el código pega `cerró` + `aron`.
-    // Se fija el texto actual para refactorizar sin cambiar nada; se corrige después en su propio commit.
     test.each([
       ['un forzado con hora actual', { forzados_al_completar: 1, forzados_con_hora_actual: true },
         '"Evento Gala" completado. 1 trabajador que no había marcado salida se cerró con la hora actual.'],
       ['varios forzados con horario estipulado', { forzados_al_completar: 2 },
-        '"Evento Gala" completado. 2 trabajadores que no habían marcado salida se cerróaron con el horario estipulado.'],
+        '"Evento Gala" completado. 2 trabajadores que no habían marcado salida se cerraron con el horario estipulado.'],
       ['un no presentado', { no_presentados_al_completar: 1 },
         '"Evento Gala" completado. 1 trabajador sin ingreso quedó como no presentado.'],
       ['varios no presentados', { no_presentados_al_completar: 3 },
-        '"Evento Gala" completado. 3 trabajadores sin ingreso quedóaron como no presentados.'],
+        '"Evento Gala" completado. 3 trabajadores sin ingreso quedaron como no presentados.'],
       ['ambos', { forzados_al_completar: 1, no_presentados_al_completar: 2 },
-        '"Evento Gala" completado. 1 trabajador que no había marcado salida se cerró con el horario estipulado; 2 trabajadores sin ingreso quedóaron como no presentados.'],
+        '"Evento Gala" completado. 1 trabajador que no había marcado salida se cerró con el horario estipulado; 2 trabajadores sin ingreso quedaron como no presentados.'],
     ])('el aviso al completar resume lo ocurrido (%s)', async (_n, data, esperado) => {
       mockM.completarOferta.mutateAsync.mockResolvedValueOnce(data);
       montar();
