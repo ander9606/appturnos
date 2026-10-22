@@ -35,6 +35,7 @@ type Vista = 'trabajador' | 'turno';
 interface TurnoGrupo {
   oferta_id: number;
   oferta_titulo: string;
+  oferta_descripcion: string | null;
   oferta_fecha: string;
   lugar: string | null;
   hora_inicio: string;
@@ -56,6 +57,7 @@ function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrup
         g = {
           oferta_id: t.oferta_id,
           oferta_titulo: t.oferta_titulo,
+          oferta_descripcion: t.oferta_descripcion,
           oferta_fecha: t.oferta_fecha,
           lugar: t.lugar,
           hora_inicio: t.hora_inicio,
@@ -321,13 +323,13 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
         <View className="w-1.5" style={{ backgroundColor: primary }} />
         <View className="flex-1 px-4 py-4 flex-row items-center gap-3">
           <View className="flex-1 gap-1">
-            <Text className="text-base font-bold text-foreground" numberOfLines={1}>
+            <Text className="text-base font-bold text-foreground" numberOfLines={expanded ? undefined : 1}>
               {item.oferta_titulo}
             </Text>
             <View className="flex-row items-center gap-3 flex-wrap">
               <Text className="text-xs text-muted-foreground">{fmtDate(item.oferta_fecha)}</Text>
               {item.lugar && (
-                <Text className="text-xs text-muted-foreground" numberOfLines={1}>{item.lugar}</Text>
+                <Text className="text-xs text-muted-foreground" numberOfLines={expanded ? undefined : 1}>{item.lugar}</Text>
               )}
               <Text className="text-xs text-muted-foreground">
                 {item.lineas.length} trabajador{item.lineas.length !== 1 ? 'es' : ''} · {item.total_horas.toFixed(1)}h
@@ -354,6 +356,9 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
 
       {expanded && (
         <View className="px-4 pb-4 border-t border-border">
+          {item.oferta_descripcion ? (
+            <Text className="text-sm text-muted-foreground mt-3">{item.oferta_descripcion}</Text>
+          ) : null}
           <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-3 mb-1">
             Trabajadores asignados
           </Text>
