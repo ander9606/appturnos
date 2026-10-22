@@ -9,7 +9,7 @@ jest.mock('mysql2/promise', () => {
   const fakePool = { getConnection: jest.fn(), query: jest.fn() };
   return { createPool: jest.fn(() => fakePool), __fakePool: fakePool, __conn: conn };
 });
-jest.mock('../instrument', () => ({}), { virtual: true });
+jest.mock('../instrument', () => ({ captureException: jest.fn() }));
 jest.mock('../utils/logger', () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn() }));
 
 process.env.JWT_SECRET = 'secreto-test';
