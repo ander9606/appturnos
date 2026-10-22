@@ -346,6 +346,14 @@ Referencia móvil: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`). Refe
 - **PDF de reglas de pago:** `scripts/generar-pdf-reglas.js` usa la familia de marca (`#FF5A3C`, `#FFF1EE`, `#C32D14`); regenerar el PDF al cambiarlo.
 - Deuda: los correos usan wordmark de texto; para el logo real necesitan una URL pública (`EMAIL_LOGO_URL`).
 
+### 5.10 Encabezado de las pestañas (móvil)
+
+Cada perfil tiene su color (`THEME_COLORS` vía `useTheme()`): trabajador de turnos **naranja**, trabajador de nómina **verde**, gestores **azul**. Todas las pestañas (Inicio, Turnos, Nómina, Equipo, Empresas, Perfil) abren con una franja de ese color, esquinas inferiores redondeadas y texto blanco.
+- `PantallaPestana` (`components/ui/EncabezadoPestana.tsx`) es la raíz de la pestaña: pinta de ese color la zona de la barra de estado (iconos claros) y deja el fondo normal debajo.
+- `EncabezadoPestana` es la franja: `titulo`, `subtitulo`, `derecha` (acción, icono blanco) y `children` (tarjetas o pestañas internas, sobre fondo `white/18`; las pestañas internas usan subrayado blanco).
+- No usar `bg-card`/texto oscuro para el título de una pestaña, ni hex: el color sale siempre del perfil.
+- Las pantallas de detalle (`turno/[id]`, `trabajador/[id]`…) conservan su encabezado blanco con flecha atrás.
+
 ## 6. Accesibilidad
 
 Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 px en negrita, y elementos gráficos):

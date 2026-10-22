@@ -1,3 +1,4 @@
+import { PantallaPestana, EncabezadoPestana } from '@/components/ui/EncabezadoPestana';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -10,7 +11,6 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
@@ -354,43 +354,39 @@ export default function TurnosScreen() {
   // ── Main render ───────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <PantallaPestana>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <View className="bg-card px-6 pt-3 pb-2 border-b border-border">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-bold text-foreground">
-            {isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
-          </Text>
-          {(isGestor || isWorker) && (
-            <TouchableOpacity
-              onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
-              accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
-              className="p-2 -mr-2 active:opacity-60"
-            >
-              <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={22} color={theme.primary} />
-            </TouchableOpacity>
-          )}
-        </View>
-
+      <EncabezadoPestana
+        titulo={isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
+        derecha={(isGestor || isWorker) ? (
+          <TouchableOpacity
+            onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
+            accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+            className="p-2 -mr-2 active:opacity-60"
+          >
+            <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={22} color={COLORS.white} />
+          </TouchableOpacity>
+        ) : undefined}
+      >
         {/* Saldo a pagar del mes + postulantes pendientes — igual patrón que Nómina */}
         {puedeGestionar && (
-          <View className="flex-row gap-2 mt-2.5">
+          <View className="flex-row gap-2">
             <TouchableOpacity
               onPress={() => router.push('/liquidacion-turnos')}
               activeOpacity={0.8}
               className="flex-1 flex-row items-center justify-between rounded-2xl px-4 py-2.5"
-              style={{ backgroundColor: alpha(theme.primary, 0.08) }}
+              style={{ backgroundColor: alpha(COLORS.white, 0.18) }}
             >
               <View>
-                <Text className="text-[11px] font-medium" style={{ color: theme.primary }}>
+                <Text className="text-[11px] font-medium text-white/80">
                   Total a pagar
                 </Text>
-                <Text className="text-base font-extrabold" style={{ color: theme.primary }}>
+                <Text className="text-base font-extrabold text-white">
                   ${totalAPagarPeriodo.toLocaleString('es-CO')}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={theme.primary} />
+              <Ionicons name="chevron-forward" size={16} color={COLORS.white} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -398,19 +394,19 @@ export default function TurnosScreen() {
               activeOpacity={0.8}
               accessibilityLabel="Ver postulaciones"
               className="items-center justify-center rounded-2xl"
-              style={{ backgroundColor: pendientesCount > 0 ? COLORS.warningLight : COLORS.muted, minWidth: 68, paddingHorizontal: 12 }}
+              style={{ backgroundColor: pendientesCount > 0 ? COLORS.warningLight : alpha(COLORS.white, 0.18), minWidth: 68, paddingHorizontal: 12 }}
             >
-              <Ionicons name="people" size={18} color={pendientesCount > 0 ? COLORS.warningDark : COLORS.mutedForeground} />
+              <Ionicons name="people" size={18} color={pendientesCount > 0 ? COLORS.warningDark : COLORS.white} />
               <Text
                 className="text-[10px] font-bold mt-0.5"
-                style={{ color: pendientesCount > 0 ? COLORS.warningDark : COLORS.mutedForeground }}
+                style={{ color: pendientesCount > 0 ? COLORS.warningDark : COLORS.white }}
               >
                 {pendientesCount > 0 ? `${pendientesCount} pend.` : 'Al día'}
               </Text>
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </EncabezadoPestana>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
       {viewMode === 'lista' && (
@@ -732,7 +728,7 @@ export default function TurnosScreen() {
         )}
         </>
       )}
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }
 

@@ -6,9 +6,9 @@
  * - Cambiar su contraseña
  * - Cerrar sesión
  */
+import { PantallaPestana } from '@/components/ui/EncabezadoPestana';
 import React from 'react';
 import { ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useNominaPerfil } from '@/features/nomina/useNomina';
 import { PerfilCabecera } from '@/features/perfil/PerfilCabecera';
@@ -26,7 +26,7 @@ export default function PerfilScreen() {
   const { data: nominaPerfil } = useNominaPerfil(isTrabajadorNomina);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <PantallaPestana>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -50,6 +50,6 @@ export default function PerfilScreen() {
           <ZonaPeligroSection />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }

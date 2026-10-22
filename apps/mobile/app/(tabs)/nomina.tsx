@@ -10,6 +10,7 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
+import { PantallaPestana } from '@/components/ui/EncabezadoPestana';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
@@ -17,7 +18,6 @@ import { showAlert } from '@/lib/alertDialog';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, FlatList, ScrollView, TouchableOpacity, RefreshControl, } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore }           from '@/features/auth/useAuthStore';
@@ -181,9 +181,9 @@ function NominaGestorView() {
 
   if (loadingPeriodos) {
     return (
-      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <PantallaPestana>
         <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
-      </SafeAreaView>
+      </PantallaPestana>
     );
   }
 
@@ -200,7 +200,7 @@ function NominaGestorView() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <PantallaPestana>
       <FlatList
         data={filas}
         keyExtractor={(item) => String(item.linea.trabajador_id)}
@@ -491,7 +491,7 @@ function NominaGestorView() {
         ItemSeparatorComponent={() => <View className="h-2" />}
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }
 
