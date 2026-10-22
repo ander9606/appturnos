@@ -10,13 +10,12 @@ const EmpresasModel = require('../../empresas/empresas.model');
 const CompensatoriosService = require('../compensatorios/compensatorios.service');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
-const { calcularHoras } = require('../../../utils/laboralUtils');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { haversineMetros } = require('../../../utils/geoUtils');
 const { buscarMatch, VENTANA_SEG: SOSPECHA_VENTANA_SEG } = require('../../../utils/marcajeSospechoso');
 const AppError = require('../../../utils/AppError');
 const { HORAS_EXTRA_MAX_SEMANA } = require('../../../config/constants');
-const { clasificarDiaFestivo, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS } = require('./registros.helpers');
+const { contextoFestivo, horasDeSesionAbierta, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS } = require('./registros.helpers');
 
 /**
  * Marcaje del propio trabajador de nómina: perfil, entrada y salida (con geofence y detección de marcajes sospechosos).
@@ -246,38 +245,9 @@ const RegistrosMarcajeService = {
 
     const horaSalida = ahoraHHMMSS();
 
-    // En sesiones > 1 los horas_* del registro ya contienen los totales de sesiones previas.
-    // Se incluyen en el acumulador para que calcularHoras clasifique esta sesión correctamente
-    // (si la sesión 1 agotó las ordinarias semanales, la 2 debe contar como extras).
-    const ordinariasBase = ordinariasAcum +
-      (registro.sesiones > 1
-        ? Number(registro.horas_ordinarias) + Number(registro.horas_nocturnas)
-        : 0);
-
-    const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
-    const { clasificacion, recargoFestivo, numeroDiaFestivo } =
-      await clasificarDiaFestivo(empresaId, trabajadorId, registro.fecha, reglaDomingoHabitual);
-    const horasSesion = calcularHoras({
-      horaEntrada: registro.hora_entrada,
-      horaSalida,
-      fecha: registro.fecha,
-      horasOrdinariasAcumuladas: ordinariasBase,
-      jornadaContinua: Boolean(jornadaContinua),
-      recargoFestivo,
-      sumarNocturnasFestivo,
-    });
-
-    // Totales del día = sesiones previas + esta sesión.
-    const horas = registro.sesiones > 1
-      ? {
-          horas_ordinarias:      Number(registro.horas_ordinarias)      + horasSesion.horas_ordinarias,
-          horas_extra_diurnas:   Number(registro.horas_extra_diurnas)   + horasSesion.horas_extra_diurnas,
-          horas_extra_nocturnas: Number(registro.horas_extra_nocturnas) + horasSesion.horas_extra_nocturnas,
-          horas_nocturnas:       Number(registro.horas_nocturnas)       + horasSesion.horas_nocturnas,
-          horas_festivo:         Number(registro.horas_festivo)         + horasSesion.horas_festivo,
-          es_festivo:            horasSesion.es_festivo,
-        }
-      : horasSesion;
+    const { sumarNocturnasFestivo, clasificacion, recargoFestivo, numeroDiaFestivo } =
+      await contextoFestivo(empresaId, trabajadorId, registro.fecha);
+    const horas = horasDeSesionAbierta(registro, { horaSalida, jornadaContinua, ordinariasAcum, recargoFestivo, sumarNocturnasFestivo });
 
     const updated = await RegistrosModel.actualizarSalida(empresaId, registroId, {
       hora_salida: horaSalida,

@@ -3,7 +3,6 @@
 const RegistrosModel = require('./registros.model');
 const PeriodosModel = require('../periodos/periodos.model');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
-const EmpresasModel = require('../../empresas/empresas.model');
 const CompensatoriosService = require('../compensatorios/compensatorios.service');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const { calcularHoras } = require('../../../utils/laboralUtils');
@@ -11,7 +10,7 @@ const { validarSesiones, calcularHorasSesiones } = require('../../../utils/sesio
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
 const { ROLES } = require('../../../config/constants');
-const { clasificarDiaFestivo, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS } = require('./registros.helpers');
+const { contextoFestivo, horasDeSesionAbierta, resolverTrabajadorPropio, getLunesDeSemana, hoyISO, ahoraHHMMSS } = require('./registros.helpers');
 
 /**
  * Gestión de registros diarios de nómina por el gestor: consultar, crear, corregir y reprocesar.
@@ -31,34 +30,15 @@ async function conHorasEnVivo(empresaId, registro) {
   const lunes = getLunesDeSemana(registro.fecha);
   const { ordinarias: ordinariasAcum } =
     await RegistrosModel.sumarOrdinariasEnSemana(empresaId, registro.trabajador_id, lunes, registro.fecha);
-  const ordinariasBase = ordinariasAcum +
-    (registro.sesiones > 1
-      ? Number(registro.horas_ordinarias) + Number(registro.horas_nocturnas)
-      : 0);
-
-  const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
-  const { recargoFestivo } =
-    await clasificarDiaFestivo(empresaId, registro.trabajador_id, registro.fecha, reglaDomingoHabitual);
-  const horasSesion = calcularHoras({
-    horaEntrada: registro.hora_entrada,
-    horaSalida: ahoraHHMMSS(),
-    fecha: registro.fecha,
-    horasOrdinariasAcumuladas: ordinariasBase,
-    jornadaContinua: Boolean(registro.jornada_continua),
+  const { sumarNocturnasFestivo, recargoFestivo } =
+    await contextoFestivo(empresaId, registro.trabajador_id, registro.fecha);
+  const horas = horasDeSesionAbierta(registro, {
+    horaSalida: ahoraHHMMSS(), // se lee DESPUÉS de las consultas: es la hora "ahora" de la proyección
+    jornadaContinua: registro.jornada_continua,
+    ordinariasAcum,
     recargoFestivo,
     sumarNocturnasFestivo,
   });
-
-  const horas = registro.sesiones > 1
-    ? {
-        horas_ordinarias:      Number(registro.horas_ordinarias)      + horasSesion.horas_ordinarias,
-        horas_extra_diurnas:   Number(registro.horas_extra_diurnas)   + horasSesion.horas_extra_diurnas,
-        horas_extra_nocturnas: Number(registro.horas_extra_nocturnas) + horasSesion.horas_extra_nocturnas,
-        horas_nocturnas:       Number(registro.horas_nocturnas)       + horasSesion.horas_nocturnas,
-        horas_festivo:         Number(registro.horas_festivo)         + horasSesion.horas_festivo,
-        es_festivo:            horasSesion.es_festivo,
-      }
-    : horasSesion;
 
   return { ...registro, ...horas, en_vivo: true };
 }
@@ -82,9 +62,8 @@ async function calcularHorasDelDia(empresaId, trabajadorId, fecha, calcular) {
   const { ordinarias: ordinariasAcum } =
     await RegistrosModel.sumarOrdinariasEnSemana(empresaId, trabajadorId, lunes, fecha);
 
-  const { sumarNocturnasFestivo, reglaDomingoHabitual } = await EmpresasModel.obtenerConfigRecargos(empresaId);
-  const { clasificacion, recargoFestivo, numeroDiaFestivo } =
-    await clasificarDiaFestivo(empresaId, trabajadorId, fecha, reglaDomingoHabitual);
+  const { sumarNocturnasFestivo, clasificacion, recargoFestivo, numeroDiaFestivo } =
+    await contextoFestivo(empresaId, trabajadorId, fecha);
   const horas = calcular({ ordinariasAcum, recargoFestivo, sumarNocturnasFestivo });
   return { horas, ordinariasAcum, clasificacion, numeroDiaFestivo, sumarNocturnasFestivo };
 }
