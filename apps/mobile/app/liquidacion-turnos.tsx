@@ -26,6 +26,7 @@ import { usePeriodos } from '@/features/nomina/useNomina';
 import { PeriodoSelector } from '@/features/nomina/PeriodoSelector';
 import { TipoPeriodoBadge } from '@/features/nomina/TipoPeriodoBadge';
 import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
+import { formatShortDate } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
 import { useRoleGuard } from '@/components/RoleGuard';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurnoLinea } from '@api-client';
@@ -85,13 +86,6 @@ function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrup
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-function fmtDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
-}
 function fmtHora(ts: string | null): string {
   if (!ts) return '—';
   // ts puede ser "2026-06-03 06:10:00" o "2026-06-03T06:10:00"
@@ -123,7 +117,7 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
             {t.oferta_titulo}
           </Text>
           <Text className="text-xs text-muted-foreground mt-0.5">
-            {fmtDate(t.oferta_fecha)}
+            {formatShortDate(t.oferta_fecha)}
             {t.lugar ? `  ·  ${t.lugar}` : ''}
           </Text>
         </View>
@@ -327,7 +321,7 @@ function TurnoGroupCard({ item, primary }: { item: TurnoGrupo; primary: string }
               {item.oferta_titulo}
             </Text>
             <View className="flex-row items-center gap-3 flex-wrap">
-              <Text className="text-xs text-muted-foreground">{fmtDate(item.oferta_fecha)}</Text>
+              <Text className="text-xs text-muted-foreground">{formatShortDate(item.oferta_fecha)}</Text>
               {item.lugar && (
                 <Text className="text-xs text-muted-foreground" numberOfLines={expanded ? undefined : 1}>{item.lugar}</Text>
               )}
