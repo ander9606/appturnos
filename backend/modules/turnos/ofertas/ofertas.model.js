@@ -5,6 +5,7 @@ const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { horaAMinutos } = require('../../../utils/laboralUtils');
 const { DIAS_GRACIA_ASIGNACIONES_COLGADAS, ROLES } = require('../../../config/constants');
 const { DELAY_RANKING_SQL_CASE } = require('../../../utils/rankingUtils');
+const { enTransaccion } = require('../../../utils/enTransaccion');
 
 const MIN_POR_DIA = 24 * 60;
 
@@ -502,9 +503,7 @@ const OfertasModel = {
    * @param datos.trabajador_ids — solo si visibilidad = 'dirigida': destinatarios elegidos a mano.
    */
   async crear(empresaId, datos, creadoPor) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
@@ -568,14 +567,8 @@ const OfertasModel = {
         }
       }
 
-      await conn.commit();
       return ofertaId;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   async actualizar(empresaId, id, datos) {
@@ -590,9 +583,7 @@ const OfertasModel = {
     const tocaPuntos = Array.isArray(datos.punto_marcaje_ids);
     if (sets.length === 0 && !tocaPuntos) return 0;
 
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
 
       let affectedRows = 0;
       if (sets.length > 0) {
@@ -622,14 +613,8 @@ const OfertasModel = {
         affectedRows = affectedRows || 1;
       }
 
-      await conn.commit();
       return affectedRows;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /**
@@ -770,9 +755,7 @@ const OfertasModel = {
   },
 
   async cancelar(empresaId, id) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    await enTransaccion(async (conn) => {
       await conn.query(
         "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
         [id, empresaId]
@@ -783,13 +766,7 @@ const OfertasModel = {
            AND estado NOT IN ('completado', 'cancelado')`,
         [id, empresaId]
       );
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /**
@@ -806,9 +783,7 @@ const OfertasModel = {
    * caller no debe notificarle una compensación que nunca se aplicó.
    */
   async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
       const ahora = ahoraColombiaSQL();
       const actualizados = [];
 
@@ -844,14 +819,8 @@ const OfertasModel = {
         [id, empresaId]
       );
 
-      await conn.commit();
       return actualizados;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   async eliminarDefinitivo(empresaId, id) {
