@@ -4,6 +4,7 @@ const { pool } = require('../../../config/database');
 const ContratosModel = require('../../contratos/contratos.model');
 const RankingModel = require('../../trabajadores/ranking.model');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
+const { enTransaccion } = require('../../../utils/enTransaccion');
 
 /**
  * Ciclo de vida de la postulación/asignación: crear, confirmar, cancelar,
@@ -204,9 +205,7 @@ module.exports = {
    * calificadoPor = null → calificación automática del sistema (ej. no_presentado).
    */
   async calificar(empresaId, asignacionId, { trabajadorId, calificacion, comentario, calificadoPor }) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
       await conn.query(
         `INSERT INTO calificaciones_turno
            (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por)
@@ -214,14 +213,8 @@ module.exports = {
         [empresaId, asignacionId, trabajadorId, calificacion, comentario ?? null, calificadoPor ?? null]
       );
       const resultado = await RankingModel.recalcular(conn, empresaId, trabajadorId);
-      await conn.commit();
       return resultado;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /**

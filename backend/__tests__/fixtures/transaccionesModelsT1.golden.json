@@ -1,0 +1,3733 @@
+{
+ "postulacion.calificar": {
+  "ok": {
+   "resultado": {
+    "ranking": null,
+    "total": 1
+   },
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      4,
+      "bien",
+      10
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET ranking = ?, total_calificaciones = ? WHERE id = ? AND empresa_id = ?",
+     [
+      null,
+      1,
+      5,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "ok_respuestas_vacias": {
+   "error": "Cannot read properties of undefined (reading 'promedio')",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      4,
+      "bien",
+      10
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      4,
+      "bien",
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      4,
+      "bien",
+      10
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      4,
+      "bien",
+      10
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET ranking = ?, total_calificaciones = ? WHERE id = ? AND empresa_id = ?",
+     [
+      null,
+      1,
+      5,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      4,
+      "bien",
+      10
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET ranking = ?, total_calificaciones = ? WHERE id = ? AND empresa_id = ?",
+     [
+      null,
+      1,
+      5,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      4,
+      "bien",
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "postulacion.calificar (del sistema, sin comentario)": {
+  "ok": {
+   "resultado": {
+    "ranking": null,
+    "total": 1
+   },
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      0,
+      null,
+      null
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET ranking = ?, total_calificaciones = ? WHERE id = ? AND empresa_id = ?",
+     [
+      null,
+      1,
+      5,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "ok_respuestas_vacias": {
+   "error": "Cannot read properties of undefined (reading 'promedio')",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      0,
+      null,
+      null
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      0,
+      null,
+      null
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      0,
+      null,
+      null
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      0,
+      null,
+      null
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET ranking = ?, total_calificaciones = ? WHERE id = ? AND empresa_id = ?",
+     [
+      null,
+      1,
+      5,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      0,
+      null,
+      null
+     ]
+    ],
+    [
+     "query",
+     "SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total FROM calificaciones_turno WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET ranking = ?, total_calificaciones = ? WHERE id = ? AND empresa_id = ?",
+     [
+      null,
+      1,
+      5,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO calificaciones_turno (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      30,
+      5,
+      0,
+      null,
+      null
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.crear (completa: puestos, destinatarios y puntos)": {
+  "ok": {
+   "resultado": 77,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      4,
+      1,
+      90000,
+      null
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      11
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      12
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      77,
+      21
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      77,
+      22
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 7
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 0,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      0,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      0,
+      4,
+      1,
+      90000,
+      null
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      0,
+      11
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      0,
+      12
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      0,
+      21
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      0,
+      22
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 7
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      4,
+      1,
+      90000,
+      null
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_consulta_3": {
+   "error": "falla en la consulta 3",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      4,
+      1,
+      90000,
+      null
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      11
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_consulta_4": {
+   "error": "falla en la consulta 4",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      4,
+      1,
+      90000,
+      null
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      11
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      12
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 5
+  },
+  "falla_consulta_5": {
+   "error": "falla en la consulta 5",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      4,
+      1,
+      90000,
+      null
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      11
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      12
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      77,
+      21
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 6
+  },
+  "falla_consulta_6": {
+   "error": "falla en la consulta 6",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      4,
+      1,
+      90000,
+      null
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      11
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      12
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      77,
+      21
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      77,
+      22
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 7
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      2,
+      80000,
+      "a"
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      4,
+      1,
+      90000,
+      null
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      11
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_destinatarios (oferta_id, trabajador_id) VALUES (?, ?)",
+     [
+      77,
+      12
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      77,
+      21
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      77,
+      22
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 7
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Montaje",
+      "d",
+      null,
+      "2026-06-20",
+      "08:00:00",
+      "16:00:00",
+      "Bodega",
+      4.6,
+      -74.1,
+      0,
+      null,
+      null,
+      "borrador",
+      "turnos",
+      "dirigida",
+      "lq:1",
+      "al:1",
+      "n",
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.crear (mínima)": {
+  "ok": {
+   "resultado": 77,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 0,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.crear (abierta con puestos, sin destinatarios)": {
+  "ok": {
+   "resultado": 77,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      1,
+      1,
+      null
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 0,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      0,
+      3,
+      1,
+      1,
+      null
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      1,
+      1,
+      null
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia, notas) VALUES (?, ?, ?, ?, ?)",
+     [
+      77,
+      3,
+      1,
+      1,
+      null
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "T",
+      null,
+      null,
+      "2026-06-20",
+      "08:00:00",
+      null,
+      null,
+      null,
+      null,
+      0,
+      null,
+      null,
+      "abierta",
+      "turnos",
+      "abierta",
+      null,
+      null,
+      null,
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.actualizar (campos y puntos)": {
+  "ok": {
+   "resultado": 1,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      3
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      4
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 1,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      3
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      4
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      3
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_consulta_3": {
+   "error": "falla en la consulta 3",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      3
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      4
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      3
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO oferta_puntos_marcaje (oferta_id, punto_marcaje_id) VALUES (?, ?)",
+     [
+      50,
+      4
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.actualizar (solo campos)": {
+  "ok": {
+   "resultado": 1,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 0,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET titulo = ? WHERE id = ? AND empresa_id = ?",
+     [
+      "Nuevo",
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.actualizar (solo puntos)": {
+  "ok": {
+   "resultado": 1,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 1,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE opm FROM oferta_puntos_marcaje opm JOIN ofertas_turno o ON o.id = opm.oferta_id WHERE opm.oferta_id = ? AND o.empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.actualizar (nada que cambiar: ni abre conexión)": {
+  "ok": {
+   "resultado": 0,
+   "log": [],
+   "consultas": 0
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 0,
+   "log": [],
+   "consultas": 0
+  },
+  "falla_begin": {
+   "resultado": 0,
+   "log": [],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "resultado": 0,
+   "log": [],
+   "consultas": 0
+  },
+  "falla_rollback": {
+   "resultado": 0,
+   "log": [],
+   "consultas": 0
+  },
+  "falla_getConnection": {
+   "resultado": 0,
+   "log": [],
+   "consultas": 0
+  }
+ },
+ "ofertas.cancelar": {
+  "ok": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "ok_respuestas_vacias": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.marcarFallida (con compensaciones)": {
+  "ok": {
+   "resultado": [
+    1,
+    2
+   ],
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      100,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      1,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      50,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      2,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "ok_respuestas_vacias": {
+   "resultado": [],
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      100,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      1,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      50,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      2,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      100,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      1,
+      1,
+      50
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      100,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      1,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      50,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      2,
+      1,
+      50
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      100,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      1,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      50,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      2,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_consulta_3": {
+   "error": "falla en la consulta 3",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      100,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      1,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      50,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      2,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      100,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      1,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      50,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      2,
+      1,
+      50
+     ]
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     [
+      "2026-06-10 17:00:00",
+      "2026-06-10 17:00:00",
+      100,
+      "fuerza mayor",
+      10,
+      "2026-06-10 17:00:00",
+      1,
+      1,
+      50
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "ofertas.marcarFallida (sin compensaciones)": {
+  "ok": {
+   "resultado": [],
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "ok_respuestas_vacias": {
+   "resultado": [],
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE asignaciones_turno SET estado = 'cancelado' WHERE oferta_id = ? AND empresa_id = ? AND estado NOT IN ('completado', 'cancelado', 'fallido')",
+     [
+      50,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ }
+}
