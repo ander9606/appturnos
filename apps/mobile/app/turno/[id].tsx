@@ -262,6 +262,7 @@ export default function TurnoDetailScreen() {
     const ok = await confirm(penaliza
       ? {
           title: 'Cancelar con poca anticipación',
+          variant: 'warning',
           message: `${minutos > 0 ? `Faltan solo ${fmtFaltan(minutos)} para tu turno` : 'Tu turno ya está por comenzar o comenzó'} (el mínimo para cancelar sin penalización es ${HORAS_CANCELACION_SIN_PENALIZACION} horas).\n\nSi cancelas ahora recibirás una calificación baja que afecta tu ranking y la empresa será avisada.\n\n¿Qué prefieres hacer?`,
           cancelLabel: 'Mantener mi turno',
           confirmLabel: 'Cancelar y aceptar penalización',

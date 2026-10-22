@@ -1,4 +1,5 @@
 import { createOverlayStore } from './overlayStore';
+import type { FeedbackVariant } from '@/components/ui/feedback';
 
 export interface ConfirmOptions {
   title: string;
@@ -6,6 +7,7 @@ export interface ConfirmOptions {
   cancelLabel?: string;   // default 'Cancelar'
   confirmLabel?: string;  // default 'Confirmar'
   destructive?: boolean;  // botón de confirmar en rojo — para acciones irreversibles
+  variant?: FeedbackVariant; // ícono/color del aviso en vez de la papelera (ej. 'warning' para una advertencia con consecuencia)
 }
 
 /** Store del diálogo global — ver components/ui/ConfirmDialog.tsx (montado en _layout.tsx). */

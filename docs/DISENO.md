@@ -268,6 +268,7 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 | `success` | Salió bien: "Solicitud enviada" | `checkmark-circle` · verde |
 
 - `confirm({ destructive: true })` pinta el botón de rojo y usa el ícono de papelera: **para acciones irreversibles** (eliminar, rechazar, dejar de sumar recargos).
+- `confirm({ variant: 'warning' })` cambia la papelera por el ícono del tipo (ámbar para advertencias con consecuencia, p. ej. cancelar un turno con penalización); `destructive` sigue pintando solo el botón de rojo.
 - `confirm` para elegir entre dos caminos también vale: `confirmLabel`/`cancelLabel` permiten textos como "Ver detalle" / "Volver a lista".
 - Un error de una **acción del usuario** va en `showAlert`; el feedback de que algo **salió bien** va en `showToast`. No pongas un diálogo para un éxito.
 - Todos llevan `accessibilityRole` (`alert`/`header`) y los diálogos `accessibilityViewIsModal`. Texto, ícono y tipo siempre juntos: nunca solo color.
