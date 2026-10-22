@@ -395,9 +395,7 @@ const TrabajadoresModel = {
    * @returns {Promise<number>} id del nuevo trabajador.
    */
   async crear(empresaId, datos) {
-    const conn = await pool.getConnection();
-    await conn.beginTransaction();
-    try {
+    return transaccionPropia(async (conn) => {
       const [res] = await conn.query(
         `INSERT INTO trabajadores
            (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo,
@@ -460,14 +458,8 @@ const TrabajadoresModel = {
         );
       }
 
-      await conn.commit();
       return trabajadorId;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /** Vincula una ficha recién creada a la cuenta del usuario. No pasar usuario_id
@@ -721,9 +713,7 @@ const TrabajadoresModel = {
    */
   async guardarDisponibilidad(empresaId, trabajadorId, slots) {
     if (!slots.length) return;
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    await transaccionPropia(async (conn) => {
       await conn.query(
         'DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?',
         [empresaId, trabajadorId]
@@ -734,13 +724,7 @@ const TrabajadoresModel = {
           [empresaId, trabajadorId, s.dia_semana, s.hora_inicio, s.hora_fin, s.activo ? 1 : 0]
         );
       }
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   // ── Consultas de apoyo de TrabajadoresService (cupo, identidad, avisos) ──

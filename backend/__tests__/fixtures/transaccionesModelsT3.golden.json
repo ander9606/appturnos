@@ -1,0 +1,1932 @@
+{
+ "cargos.reemplazarFunciones (con funciones)": {
+  "ok": {
+   "resultado": [
+    {
+     "id": 1,
+     "empresa_id": 1,
+     "trabajador_id": 5,
+     "estado": "confirmado",
+     "total": 1,
+     "promedio": null
+    }
+   ],
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO cargo_funciones (cargo_id, empresa_id, descripcion, orden) VALUES ?",
+     [
+      [
+       [
+        7,
+        1,
+        "Armar carpas",
+        0
+       ],
+       [
+        7,
+        1,
+        "Cargar camión",
+        1
+       ]
+      ]
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ],
+    [
+     "pool.query",
+     "SELECT id, descripcion, orden FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ? ORDER BY orden, id",
+     [
+      7,
+      1
+     ]
+    ]
+   ],
+   "consultas": 2
+  },
+  "ok_respuestas_vacias": {
+   "resultado": [],
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO cargo_funciones (cargo_id, empresa_id, descripcion, orden) VALUES ?",
+     [
+      [
+       [
+        7,
+        1,
+        "Armar carpas",
+        0
+       ],
+       [
+        7,
+        1,
+        "Cargar camión",
+        1
+       ]
+      ]
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ],
+    [
+     "pool.query",
+     "SELECT id, descripcion, orden FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ? ORDER BY orden, id",
+     [
+      7,
+      1
+     ]
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO cargo_funciones (cargo_id, empresa_id, descripcion, orden) VALUES ?",
+     [
+      [
+       [
+        7,
+        1,
+        "Armar carpas",
+        0
+       ],
+       [
+        7,
+        1,
+        "Cargar camión",
+        1
+       ]
+      ]
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO cargo_funciones (cargo_id, empresa_id, descripcion, orden) VALUES ?",
+     [
+      [
+       [
+        7,
+        1,
+        "Armar carpas",
+        0
+       ],
+       [
+        7,
+        1,
+        "Cargar camión",
+        1
+       ]
+      ]
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "cargos.reemplazarFunciones (lista vacía: solo borra)": {
+  "ok": {
+   "resultado": [
+    {
+     "id": 1,
+     "empresa_id": 1,
+     "trabajador_id": 5,
+     "estado": "confirmado",
+     "total": 1,
+     "promedio": null
+    }
+   ],
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ],
+    [
+     "pool.query",
+     "SELECT id, descripcion, orden FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ? ORDER BY orden, id",
+     [
+      7,
+      1
+     ]
+    ]
+   ],
+   "consultas": 1
+  },
+  "ok_respuestas_vacias": {
+   "resultado": [],
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ],
+    [
+     "pool.query",
+     "SELECT id, descripcion, orden FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ? ORDER BY orden, id",
+     [
+      7,
+      1
+     ]
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?",
+     [
+      7,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "periodos.cerrarConSnapshot": {
+  "ok": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE periodos_nomina SET estado = 'cerrado', cerrado_por = ?, cerrado_at = NOW() WHERE id = ? AND empresa_id = ?",
+     [
+      10,
+      20,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE registros_diarios r JOIN trabajadores t ON t.id = r.trabajador_id SET r.valor_hora_snapshot = CASE WHEN t.salario_base IS NOT NULL THEN t.salario_base / ? WHEN t.tarifa_hora IS NOT NULL THEN t.tarifa_hora ELSE 0 END, r.salario_base_snapshot = t.salario_base WHERE r.periodo_id = ? AND r.empresa_id = ?",
+     [
+      210,
+      20,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "ok_respuestas_vacias": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE periodos_nomina SET estado = 'cerrado', cerrado_por = ?, cerrado_at = NOW() WHERE id = ? AND empresa_id = ?",
+     [
+      10,
+      20,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE registros_diarios r JOIN trabajadores t ON t.id = r.trabajador_id SET r.valor_hora_snapshot = CASE WHEN t.salario_base IS NOT NULL THEN t.salario_base / ? WHEN t.tarifa_hora IS NOT NULL THEN t.tarifa_hora ELSE 0 END, r.salario_base_snapshot = t.salario_base WHERE r.periodo_id = ? AND r.empresa_id = ?",
+     [
+      210,
+      20,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE periodos_nomina SET estado = 'cerrado', cerrado_por = ?, cerrado_at = NOW() WHERE id = ? AND empresa_id = ?",
+     [
+      10,
+      20,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE periodos_nomina SET estado = 'cerrado', cerrado_por = ?, cerrado_at = NOW() WHERE id = ? AND empresa_id = ?",
+     [
+      10,
+      20,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE registros_diarios r JOIN trabajadores t ON t.id = r.trabajador_id SET r.valor_hora_snapshot = CASE WHEN t.salario_base IS NOT NULL THEN t.salario_base / ? WHEN t.tarifa_hora IS NOT NULL THEN t.tarifa_hora ELSE 0 END, r.salario_base_snapshot = t.salario_base WHERE r.periodo_id = ? AND r.empresa_id = ?",
+     [
+      210,
+      20,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE periodos_nomina SET estado = 'cerrado', cerrado_por = ?, cerrado_at = NOW() WHERE id = ? AND empresa_id = ?",
+     [
+      10,
+      20,
+      1
+     ]
+    ],
+    [
+     "query",
+     "UPDATE registros_diarios r JOIN trabajadores t ON t.id = r.trabajador_id SET r.valor_hora_snapshot = CASE WHEN t.salario_base IS NOT NULL THEN t.salario_base / ? WHEN t.tarifa_hora IS NOT NULL THEN t.tarifa_hora ELSE 0 END, r.salario_base_snapshot = t.salario_base WHERE r.periodo_id = ? AND r.empresa_id = ?",
+     [
+      210,
+      20,
+      1
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "UPDATE periodos_nomina SET estado = 'cerrado', cerrado_por = ?, cerrado_at = NOW() WHERE id = ? AND empresa_id = ?",
+     [
+      10,
+      20,
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "trabajadores.guardarDisponibilidad": {
+  "ok": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      1,
+      "08:00",
+      "12:00",
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      2,
+      "09:00",
+      "17:00",
+      0
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "ok_respuestas_vacias": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      1,
+      "08:00",
+      "12:00",
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      2,
+      "09:00",
+      "17:00",
+      0
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      1,
+      "08:00",
+      "12:00",
+      1
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      1,
+      "08:00",
+      "12:00",
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      2,
+      "09:00",
+      "17:00",
+      0
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      1,
+      "08:00",
+      "12:00",
+      1
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO disponibilidad_trabajador (empresa_id, trabajador_id, dia_semana, hora_inicio, hora_fin, activo) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      5,
+      2,
+      "09:00",
+      "17:00",
+      0
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?",
+     [
+      1,
+      5
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "trabajadores.guardarDisponibilidad (sin slots: ni abre conexión)": {
+  "ok": {
+   "resultado": "__undefined__",
+   "log": [],
+   "consultas": 0
+  },
+  "ok_respuestas_vacias": {
+   "resultado": "__undefined__",
+   "log": [],
+   "consultas": 0
+  },
+  "falla_begin": {
+   "resultado": "__undefined__",
+   "log": [],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "resultado": "__undefined__",
+   "log": [],
+   "consultas": 0
+  },
+  "falla_rollback": {
+   "resultado": "__undefined__",
+   "log": [],
+   "consultas": 0
+  },
+  "falla_getConnection": {
+   "resultado": "__undefined__",
+   "log": [],
+   "consultas": 0
+  }
+ },
+ "trabajadores.crear (completo: experiencias y diplomas)": {
+  "ok": {
+   "resultado": 77,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "123",
+      "CE",
+      "1990-01-01",
+      "F",
+      "300",
+      "ana@x.com",
+      "nomina",
+      "Auxiliar",
+      9000,
+      1750905,
+      "Luis",
+      "301",
+      "Sanitas",
+      "Porvenir",
+      "B",
+      "ahorros",
+      "1",
+      "cll",
+      "2026-01-01",
+      "2026-01-02",
+      "08:00:00",
+      "[2,3]",
+      "[4]",
+      "lq:9",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_experiencias (trabajador_id, empresa_nombre, cargo, fecha_inicio, fecha_fin) VALUES ?",
+     [
+      [
+       [
+        77,
+        "X",
+        "Y",
+        "2020-01-01",
+        "2021-01-01"
+       ],
+       [
+        77,
+        "Z",
+        "W",
+        "2021-02-01",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_diplomas (trabajador_id, titulo, institucion, anio) VALUES ?",
+     [
+      [
+       [
+        77,
+        "Bachiller",
+        "Colegio",
+        2008
+       ],
+       [
+        77,
+        "Curso",
+        "SENA",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 0,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "123",
+      "CE",
+      "1990-01-01",
+      "F",
+      "300",
+      "ana@x.com",
+      "nomina",
+      "Auxiliar",
+      9000,
+      1750905,
+      "Luis",
+      "301",
+      "Sanitas",
+      "Porvenir",
+      "B",
+      "ahorros",
+      "1",
+      "cll",
+      "2026-01-01",
+      "2026-01-02",
+      "08:00:00",
+      "[2,3]",
+      "[4]",
+      "lq:9",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_experiencias (trabajador_id, empresa_nombre, cargo, fecha_inicio, fecha_fin) VALUES ?",
+     [
+      [
+       [
+        0,
+        "X",
+        "Y",
+        "2020-01-01",
+        "2021-01-01"
+       ],
+       [
+        0,
+        "Z",
+        "W",
+        "2021-02-01",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_diplomas (trabajador_id, titulo, institucion, anio) VALUES ?",
+     [
+      [
+       [
+        0,
+        "Bachiller",
+        "Colegio",
+        2008
+       ],
+       [
+        0,
+        "Curso",
+        "SENA",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "123",
+      "CE",
+      "1990-01-01",
+      "F",
+      "300",
+      "ana@x.com",
+      "nomina",
+      "Auxiliar",
+      9000,
+      1750905,
+      "Luis",
+      "301",
+      "Sanitas",
+      "Porvenir",
+      "B",
+      "ahorros",
+      "1",
+      "cll",
+      "2026-01-01",
+      "2026-01-02",
+      "08:00:00",
+      "[2,3]",
+      "[4]",
+      "lq:9",
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "123",
+      "CE",
+      "1990-01-01",
+      "F",
+      "300",
+      "ana@x.com",
+      "nomina",
+      "Auxiliar",
+      9000,
+      1750905,
+      "Luis",
+      "301",
+      "Sanitas",
+      "Porvenir",
+      "B",
+      "ahorros",
+      "1",
+      "cll",
+      "2026-01-01",
+      "2026-01-02",
+      "08:00:00",
+      "[2,3]",
+      "[4]",
+      "lq:9",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_experiencias (trabajador_id, empresa_nombre, cargo, fecha_inicio, fecha_fin) VALUES ?",
+     [
+      [
+       [
+        77,
+        "X",
+        "Y",
+        "2020-01-01",
+        "2021-01-01"
+       ],
+       [
+        77,
+        "Z",
+        "W",
+        "2021-02-01",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "123",
+      "CE",
+      "1990-01-01",
+      "F",
+      "300",
+      "ana@x.com",
+      "nomina",
+      "Auxiliar",
+      9000,
+      1750905,
+      "Luis",
+      "301",
+      "Sanitas",
+      "Porvenir",
+      "B",
+      "ahorros",
+      "1",
+      "cll",
+      "2026-01-01",
+      "2026-01-02",
+      "08:00:00",
+      "[2,3]",
+      "[4]",
+      "lq:9",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_experiencias (trabajador_id, empresa_nombre, cargo, fecha_inicio, fecha_fin) VALUES ?",
+     [
+      [
+       [
+        77,
+        "X",
+        "Y",
+        "2020-01-01",
+        "2021-01-01"
+       ],
+       [
+        77,
+        "Z",
+        "W",
+        "2021-02-01",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_diplomas (trabajador_id, titulo, institucion, anio) VALUES ?",
+     [
+      [
+       [
+        77,
+        "Bachiller",
+        "Colegio",
+        2008
+       ],
+       [
+        77,
+        "Curso",
+        "SENA",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "123",
+      "CE",
+      "1990-01-01",
+      "F",
+      "300",
+      "ana@x.com",
+      "nomina",
+      "Auxiliar",
+      9000,
+      1750905,
+      "Luis",
+      "301",
+      "Sanitas",
+      "Porvenir",
+      "B",
+      "ahorros",
+      "1",
+      "cll",
+      "2026-01-01",
+      "2026-01-02",
+      "08:00:00",
+      "[2,3]",
+      "[4]",
+      "lq:9",
+      10
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_experiencias (trabajador_id, empresa_nombre, cargo, fecha_inicio, fecha_fin) VALUES ?",
+     [
+      [
+       [
+        77,
+        "X",
+        "Y",
+        "2020-01-01",
+        "2021-01-01"
+       ],
+       [
+        77,
+        "Z",
+        "W",
+        "2021-02-01",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO trabajador_diplomas (trabajador_id, titulo, institucion, anio) VALUES ?",
+     [
+      [
+       [
+        77,
+        "Bachiller",
+        "Colegio",
+        2008
+       ],
+       [
+        77,
+        "Curso",
+        "SENA",
+        null
+       ]
+      ]
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "123",
+      "CE",
+      "1990-01-01",
+      "F",
+      "300",
+      "ana@x.com",
+      "nomina",
+      "Auxiliar",
+      9000,
+      1750905,
+      "Luis",
+      "301",
+      "Sanitas",
+      "Porvenir",
+      "B",
+      "ahorros",
+      "1",
+      "cll",
+      "2026-01-01",
+      "2026-01-02",
+      "08:00:00",
+      "[2,3]",
+      "[4]",
+      "lq:9",
+      10
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "trabajadores.crear (mínimo)": {
+  "ok": {
+   "resultado": 77,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "A",
+      "B",
+      null,
+      "CC",
+      null,
+      null,
+      null,
+      null,
+      "turnos",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 0,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "A",
+      "B",
+      null,
+      "CC",
+      null,
+      null,
+      null,
+      null,
+      "turnos",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "A",
+      "B",
+      null,
+      "CC",
+      null,
+      null,
+      null,
+      null,
+      "turnos",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "A",
+      "B",
+      null,
+      "CC",
+      null,
+      null,
+      null,
+      null,
+      "turnos",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO trabajadores (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo, telefono, email, tipo, cargo, tarifa_hora, salario_base, contacto_emergencia_nombre, contacto_emergencia_tel, eps, afp, banco, tipo_cuenta, numero_cuenta, direccion, ant_judiciales_fecha, ant_disciplinarios_fecha, hora_entrada_esperada, empresas_postulacion, cargos_iniciales, external_ref, creado_por) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+     [
+      1,
+      "A",
+      "B",
+      null,
+      "CC",
+      null,
+      null,
+      null,
+      null,
+      "turnos",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ }
+}
