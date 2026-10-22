@@ -22,6 +22,8 @@ module.exports = {
       displayName: 'componentes',
       preset: 'jest-expo',
       setupFiles: ['<rootDir>/jest.setup.componentes.js'],
+      // api-client vive fuera de apps/mobile y no tiene node_modules propio: que resuelva desde aquí.
+      modulePaths: ['<rootDir>/node_modules'],
       testMatch: ['**/__tests__/**/*.test.tsx'],
       moduleNameMapper: alias,
     },
