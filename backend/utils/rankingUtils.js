@@ -1,7 +1,5 @@
 'use strict';
 
-const { pool } = require('../config/database');
-
 /**
  * Minutos de retraso en visibilidad de ofertas según ranking.
  * Un ranking más alto → el trabajador ve las ofertas antes que otros.
@@ -45,37 +43,4 @@ function nivelRanking(ranking, totalCalificaciones = 0) {
   return 'critico';
 }
 
-/**
- * Recalcula y persiste el ranking de un trabajador en una empresa concreta.
- * Debe llamarse dentro de una transacción activa (conn).
- * El AVG incluye las calificaciones 0-estrella (no_presentado).
- */
-async function recalcularRanking(conn, empresaId, trabajadorId) {
-  const [[stats]] = await conn.query(
-    `SELECT ROUND(AVG(calificacion), 2) AS promedio, COUNT(*) AS total
-     FROM calificaciones_turno
-     WHERE empresa_id = ? AND trabajador_id = ?`,
-    [empresaId, trabajadorId]
-  );
-  const promedio = stats.promedio != null ? Number(stats.promedio) : null;
-  await conn.query(
-    `UPDATE trabajadores SET ranking = ?, total_calificaciones = ?
-     WHERE id = ? AND empresa_id = ?`,
-    [promedio, stats.total, trabajadorId, empresaId]
-  );
-  return { ranking: promedio, total: stats.total };
-}
-
-/**
- * Versión standalone (abre su propia conexión) para uso fuera de transacciones.
- */
-async function recalcularRankingStandalone(empresaId, trabajadorId) {
-  const conn = await pool.getConnection();
-  try {
-    return await recalcularRanking(conn, empresaId, trabajadorId);
-  } finally {
-    conn.release();
-  }
-}
-
-module.exports = { delayPorRanking, DELAY_RANKING_SQL_CASE, nivelRanking, recalcularRanking, recalcularRankingStandalone };
+module.exports = { delayPorRanking, DELAY_RANKING_SQL_CASE, nivelRanking };

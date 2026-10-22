@@ -8,7 +8,7 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 
 const logger = require('./utils/logger');
-const { pool, verificarConexion } = require('./config/database');
+const { ping, verificarConexion } = require('./config/database');
 const { errorHandler, noEncontrado } = require('./middleware/errorHandler');
 
 const app = express();
@@ -91,9 +91,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/api/health', async (_req, res) => {
   let dbStatus = 'ok';
   try {
-    const conn = await pool.getConnection();
-    await conn.ping();
-    conn.release();
+    await ping();
   } catch {
     dbStatus = 'error';
   }

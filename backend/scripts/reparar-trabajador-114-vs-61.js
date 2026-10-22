@@ -16,7 +16,7 @@
 'use strict';
 
 const { pool } = require('../config/database');
-const { recalcularRankingStandalone } = require('../utils/rankingUtils');
+const RankingModel = require('../modules/trabajadores/ranking.model');
 
 const MARCA = 'reparar-trabajador-114-vs-61-2026-09';
 const TRABAJADOR_INCORRECTO = 114;
@@ -49,10 +49,10 @@ async function main() {
   );
   console.log(`✓ Reasignadas ${res.affectedRows} asignaciones a trabajador ${TRABAJADOR_CORRECTO}`);
 
-  const rankingCorrecto = await recalcularRankingStandalone(EMPRESA_AFECTADA, TRABAJADOR_CORRECTO);
+  const rankingCorrecto = await RankingModel.recalcularStandalone(EMPRESA_AFECTADA, TRABAJADOR_CORRECTO);
   console.log(`✓ Ranking recalculado trabajador ${TRABAJADOR_CORRECTO} (empresa ${EMPRESA_AFECTADA}):`, rankingCorrecto);
 
-  const rankingIncorrecto = await recalcularRankingStandalone(EMPRESA_LEGITIMA_114, TRABAJADOR_INCORRECTO);
+  const rankingIncorrecto = await RankingModel.recalcularStandalone(EMPRESA_LEGITIMA_114, TRABAJADOR_INCORRECTO);
   console.log(`✓ Ranking recalculado trabajador ${TRABAJADOR_INCORRECTO} (empresa ${EMPRESA_LEGITIMA_114}):`, rankingIncorrecto);
 
   await pool.query('INSERT INTO _migraciones (nombre) VALUES (?)', [MARCA]);

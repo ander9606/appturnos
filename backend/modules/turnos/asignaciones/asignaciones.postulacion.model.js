@@ -2,7 +2,7 @@
 
 const { pool } = require('../../../config/database');
 const ContratosModel = require('../../contratos/contratos.model');
-const { recalcularRanking } = require('../../../utils/rankingUtils');
+const RankingModel = require('../../trabajadores/ranking.model');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 
 /**
@@ -213,7 +213,7 @@ module.exports = {
          VALUES (?, ?, ?, ?, ?, ?)`,
         [empresaId, asignacionId, trabajadorId, calificacion, comentario ?? null, calificadoPor ?? null]
       );
-      const resultado = await recalcularRanking(conn, empresaId, trabajadorId);
+      const resultado = await RankingModel.recalcular(conn, empresaId, trabajadorId);
       await conn.commit();
       return resultado;
     } catch (err) {
@@ -271,7 +271,7 @@ module.exports = {
            VALUES (?, ?, ?, 0, NULL)`,
           [empresaId, id, asig.trabajador_id]
         );
-        await recalcularRanking(conn, empresaId, asig.trabajador_id);
+        await RankingModel.recalcular(conn, empresaId, asig.trabajador_id);
       }
 
       await conn.commit();
