@@ -1,0 +1,5890 @@
+{
+ "auth.activarCuentaTrabajador": {
+  "ok": {
+   "resultado": 77,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h",
+      "trabajador_turnos"
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET usuario_id = ? WHERE id = ?",
+     [
+      77,
+      5
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "ok_respuestas_vacias": {
+   "resultado": 0,
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h",
+      "trabajador_turnos"
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET usuario_id = ? WHERE id = ?",
+     [
+      0,
+      5
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h",
+      "trabajador_turnos"
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h",
+      "trabajador_turnos"
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET usuario_id = ? WHERE id = ?",
+     [
+      77,
+      5
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h",
+      "trabajador_turnos"
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET usuario_id = ? WHERE id = ?",
+     [
+      77,
+      5
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?)",
+     [
+      1,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h",
+      "trabajador_turnos"
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "auth.registrarEmpresa (completa)": {
+  "ok": {
+   "resultado": {
+    "empresaId": 77,
+    "usuarioId": 78
+   },
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "Eventos SAS",
+      "eventos",
+      "900",
+      "d",
+      "a",
+      "1",
+      "e@x.com",
+      "cll",
+      "Bogotá",
+      30
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, 'admin_empresa')",
+     [
+      77,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "ok_respuestas_vacias": {
+   "resultado": {
+    "empresaId": 0,
+    "usuarioId": 0
+   },
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "Eventos SAS",
+      "eventos",
+      "900",
+      "d",
+      "a",
+      "1",
+      "e@x.com",
+      "cll",
+      "Bogotá",
+      30
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, 'admin_empresa')",
+     [
+      0,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "Eventos SAS",
+      "eventos",
+      "900",
+      "d",
+      "a",
+      "1",
+      "e@x.com",
+      "cll",
+      "Bogotá",
+      30
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "Eventos SAS",
+      "eventos",
+      "900",
+      "d",
+      "a",
+      "1",
+      "e@x.com",
+      "cll",
+      "Bogotá",
+      30
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, 'admin_empresa')",
+     [
+      77,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h"
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "Eventos SAS",
+      "eventos",
+      "900",
+      "d",
+      "a",
+      "1",
+      "e@x.com",
+      "cll",
+      "Bogotá",
+      30
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, 'admin_empresa')",
+     [
+      77,
+      "Ana",
+      "Pérez",
+      "ana@x.com",
+      "h"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "Eventos SAS",
+      "eventos",
+      "900",
+      "d",
+      "a",
+      "1",
+      "e@x.com",
+      "cll",
+      "Bogotá",
+      30
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "auth.registrarEmpresa (mínima: opcionales vacíos)": {
+  "ok": {
+   "resultado": {
+    "empresaId": 77,
+    "usuarioId": 78
+   },
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "E",
+      "e",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      30
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, 'admin_empresa')",
+     [
+      77,
+      "A",
+      null,
+      "a@x.com",
+      "h"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "ok_respuestas_vacias": {
+   "resultado": {
+    "empresaId": 0,
+    "usuarioId": 0
+   },
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "E",
+      "e",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      30
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, 'admin_empresa')",
+     [
+      0,
+      "A",
+      null,
+      "a@x.com",
+      "h"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "E",
+      "e",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      30
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "E",
+      "e",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      30
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, 'admin_empresa')",
+     [
+      77,
+      "A",
+      null,
+      "a@x.com",
+      "h"
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "E",
+      "e",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      30
+     ]
+    ],
+    [
+     "query",
+     "INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol) VALUES (?, ?, ?, ?, ?, 'admin_empresa')",
+     [
+      77,
+      "A",
+      null,
+      "a@x.com",
+      "h"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+     [
+      "E",
+      "e",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      30
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "auth.eliminarCuenta (con fichas, email y teléfono)": {
+  "ok": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM codigos_verificacion WHERE destino IN (?,?)",
+     [
+      "ana@x.com",
+      "3001234567"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 13
+  },
+  "ok_respuestas_vacias": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 12
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_consulta_3": {
+   "error": "falla en la consulta 3",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_consulta_4": {
+   "error": "falla en la consulta 4",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 5
+  },
+  "falla_consulta_5": {
+   "error": "falla en la consulta 5",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 6
+  },
+  "falla_consulta_6": {
+   "error": "falla en la consulta 6",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 7
+  },
+  "falla_consulta_7": {
+   "error": "falla en la consulta 7",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 8
+  },
+  "falla_consulta_8": {
+   "error": "falla en la consulta 8",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 9
+  },
+  "falla_consulta_9": {
+   "error": "falla en la consulta 9",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 10
+  },
+  "falla_consulta_10": {
+   "error": "falla en la consulta 10",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 11
+  },
+  "falla_consulta_11": {
+   "error": "falla en la consulta 11",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 12
+  },
+  "falla_consulta_12": {
+   "error": "falla en la consulta 12",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM codigos_verificacion WHERE destino IN (?,?)",
+     [
+      "ana@x.com",
+      "3001234567"
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 13
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?,?)",
+     [
+      7,
+      8
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM codigos_verificacion WHERE destino IN (?,?)",
+     [
+      "ana@x.com",
+      "3001234567"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 13
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "auth.eliminarCuenta (solo email, con una ficha)": {
+  "ok": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM codigos_verificacion WHERE destino IN (?)",
+     [
+      "ana@x.com"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 13
+  },
+  "ok_respuestas_vacias": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 12
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_consulta_3": {
+   "error": "falla en la consulta 3",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_consulta_4": {
+   "error": "falla en la consulta 4",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 5
+  },
+  "falla_consulta_5": {
+   "error": "falla en la consulta 5",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 6
+  },
+  "falla_consulta_6": {
+   "error": "falla en la consulta 6",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 7
+  },
+  "falla_consulta_7": {
+   "error": "falla en la consulta 7",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 8
+  },
+  "falla_consulta_8": {
+   "error": "falla en la consulta 8",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 9
+  },
+  "falla_consulta_9": {
+   "error": "falla en la consulta 9",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 10
+  },
+  "falla_consulta_10": {
+   "error": "falla en la consulta 10",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 11
+  },
+  "falla_consulta_11": {
+   "error": "falla en la consulta 11",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 12
+  },
+  "falla_consulta_12": {
+   "error": "falla en la consulta 12",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM codigos_verificacion WHERE destino IN (?)",
+     [
+      "ana@x.com"
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 13
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE trabajadores SET nombre = 'Usuario', apellido = 'eliminado', cedula = NULL, telefono = NULL, email = NULL, tipo_documento = NULL, fecha_nacimiento = NULL, sexo = NULL, contacto_emergencia_nombre = NULL, contacto_emergencia_tel = NULL, eps = NULL, afp = NULL, banco = NULL, tipo_cuenta = NULL, numero_cuenta = NULL, ant_judiciales_fecha = NULL, ant_disciplinarios_fecha = NULL, activo = 0 WHERE id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE trabajador_id IN (?)",
+     [
+      7
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM codigos_verificacion WHERE destino IN (?)",
+     [
+      "ana@x.com"
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 13
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "auth.eliminarCuenta (sin fichas, sin email ni teléfono)": {
+  "ok": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 8
+  },
+  "ok_respuestas_vacias": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 8
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_2": {
+   "error": "falla en la consulta 2",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 3
+  },
+  "falla_consulta_3": {
+   "error": "falla en la consulta 3",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 4
+  },
+  "falla_consulta_4": {
+   "error": "falla en la consulta 4",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 5
+  },
+  "falla_consulta_5": {
+   "error": "falla en la consulta 5",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 6
+  },
+  "falla_consulta_6": {
+   "error": "falla en la consulta 6",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 7
+  },
+  "falla_consulta_7": {
+   "error": "falla en la consulta 7",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 8
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "UPDATE usuarios SET nombre = 'Usuario', apellido = 'eliminado', email = CONCAT('eliminado_', id, '@zaturno.app'), telefono = NULL, foto_perfil = NULL, password_hash = ?, activo = 0 WHERE id = ?",
+     [
+      "hash-inutil",
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id = ?",
+     [
+      42
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 8
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1",
+     [
+      42
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ },
+ "admin.eliminarEmpresaCompleta (fallas muestreadas)": {
+  "ok": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM calificaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_acumulacion_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cuentas_cobro WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descansos_compensatorios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descuentos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integracion_config WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_in WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_out WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM novedades WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_destinatarios WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?) OR trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puntos_marcaje WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turno_eventual WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM recordatorios_ingreso_enviados WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM solicitudes_reingreso WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_cargos WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?) OR asignado_por IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores_salario_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM wompi_eventos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM asignaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM registros_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_empresa WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turnos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM ofertas_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM puntos_marcaje WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM empresas WHERE id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 41
+  },
+  "ok_respuestas_vacias": {
+   "resultado": "__undefined__",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM calificaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_acumulacion_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cuentas_cobro WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descansos_compensatorios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descuentos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integracion_config WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_in WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_out WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM novedades WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_destinatarios WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?) OR trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puntos_marcaje WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turno_eventual WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM recordatorios_ingreso_enviados WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM solicitudes_reingreso WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_cargos WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?) OR asignado_por IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores_salario_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM wompi_eventos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM asignaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM registros_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_empresa WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turnos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM ofertas_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM puntos_marcaje WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM empresas WHERE id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 41
+  },
+  "falla_consulta_0": {
+   "error": "falla en la consulta 0",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_consulta_1": {
+   "error": "falla en la consulta 1",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM calificaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 2
+  },
+  "falla_consulta_20": {
+   "error": "falla en la consulta 20",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM calificaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_acumulacion_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cuentas_cobro WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descansos_compensatorios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descuentos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integracion_config WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_in WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_out WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM novedades WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_destinatarios WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?) OR trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puntos_marcaje WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turno_eventual WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM recordatorios_ingreso_enviados WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 21
+  },
+  "falla_consulta_39": {
+   "error": "falla en la consulta 39",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM calificaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_acumulacion_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cuentas_cobro WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descansos_compensatorios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descuentos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integracion_config WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_in WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_out WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM novedades WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_destinatarios WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?) OR trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puntos_marcaje WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turno_eventual WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM recordatorios_ingreso_enviados WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM solicitudes_reingreso WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_cargos WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?) OR asignado_por IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores_salario_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM wompi_eventos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM asignaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM registros_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_empresa WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turnos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM ofertas_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM puntos_marcaje WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 40
+  },
+  "falla_consulta_40": {
+   "error": "falla en la consulta 40",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM calificaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_acumulacion_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cuentas_cobro WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descansos_compensatorios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descuentos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integracion_config WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_in WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_out WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM novedades WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_destinatarios WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?) OR trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puntos_marcaje WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turno_eventual WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM recordatorios_ingreso_enviados WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM solicitudes_reingreso WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_cargos WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?) OR asignado_por IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores_salario_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM wompi_eventos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM asignaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM registros_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_empresa WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turnos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM ofertas_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM puntos_marcaje WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM empresas WHERE id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 41
+  },
+  "falla_begin": {
+   "error": "falla en begin",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 0
+  },
+  "falla_commit": {
+   "error": "falla en commit",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM calificaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargo_funciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_acumulacion_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM contratos_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cuentas_cobro WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descansos_compensatorios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM descuentos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integracion_config WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_in WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM integration_events_out WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM intentos_login WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM notificaciones WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM novedades WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_destinatarios WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?) OR trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puntos_marcaje WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turno_eventual WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM push_subscriptions WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM recordatorios_ingreso_enviados WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM refresh_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM solicitudes_reingreso WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_cargos WHERE trabajador_empresa_id IN (SELECT id FROM trabajador_empresa WHERE empresa_id = ?) OR asignado_por IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9,
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_diplomas WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_experiencias WHERE trabajador_id IN (SELECT id FROM trabajadores WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores_salario_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios_oauth WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM wompi_eventos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM asignaciones_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM registros_diarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajador_empresa WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_nomina WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM periodos_turnos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM trabajadores WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM cargos WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM ofertas_turno WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM usuarios WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM puntos_marcaje WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM empresas WHERE id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "commit"
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 41
+  },
+  "falla_rollback": {
+   "error": "rollback roto",
+   "log": [
+    [
+     "getConnection"
+    ],
+    [
+     "begin"
+    ],
+    [
+     "query",
+     "DELETE FROM ausencias WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "rollback"
+    ],
+    [
+     "release"
+    ]
+   ],
+   "consultas": 1
+  },
+  "falla_getConnection": {
+   "error": "pool agotado",
+   "log": [
+    [
+     "getConnection"
+    ]
+   ],
+   "consultas": 0
+  }
+ }
+}
