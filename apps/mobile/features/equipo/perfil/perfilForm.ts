@@ -44,3 +44,6 @@ export function buildForm(t: Trabajador | undefined): FormState {
     ant_disciplinarios_fecha:    t?.ant_disciplinarios_fecha?.slice(0, 10) ?? '',
   };
 }
+
+/** `set('campo')` devuelve el manejador que guarda un valor en ese campo del formulario. */
+export type SetCampo = <K extends keyof FormState>(key: K) => (val: FormState[K]) => void;
