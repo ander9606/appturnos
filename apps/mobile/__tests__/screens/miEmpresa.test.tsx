@@ -156,6 +156,14 @@ describe('carga', () => {
     expect(screen.getByText('Toca para firmar')).toBeTruthy();
   });
 
+  test('la descripción es un campo de varias líneas; los demás, de una', async () => {
+    await montarCargada();
+    const desc = screen.getByDisplayValue('Empresa de logística');
+    expect(desc.props.multiline).toBe(true);
+    expect(desc.props.numberOfLines).toBe(4);
+    expect(screen.getByDisplayValue('Bogotá').props.multiline).toBeFalsy();
+  });
+
   test('ciclo, régimen y recargos marcan la opción activa', async () => {
     await montarCargada();
     // ciclo (quincenal) y régimen (laboral) se resaltan solo por estilo; los recargos son radios accesibles
