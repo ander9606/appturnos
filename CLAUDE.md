@@ -80,7 +80,7 @@ npx expo start --android
 npx expo start --ios
 npm run lint         # ESLint over .ts/.tsx
 npm run type-check   # tsc --noEmit (no build output)
-npm test             # jest — lib/__tests__, features/**/__tests__
+npm test             # jest, 2 proyectos: `logica` (*.test.ts, ts-jest) y `componentes` (*.test.tsx, jest-expo + @testing-library/react-native)
 ```
 
 ### api-client (`packages/api-client/`)
