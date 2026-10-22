@@ -19,9 +19,9 @@ const path = require('path');
 const norm = (s) => String(s).replace(/\s+/g, ' ').trim();
 
 /** Respuesta genérica de conn.query: sirve para `[res]`, `[[fila]]` y `[filas]`. */
-function respuestaGenerica() {
-  const filas = [{ id: 1, empresa_id: 1, trabajador_id: 5, estado: 'confirmado', total: 1, promedio: null }];
-  filas.insertId = 77;
+function respuestaGenerica(fila = {}, insertId = 77) {
+  const filas = [{ id: 1, empresa_id: 1, trabajador_id: 5, estado: 'confirmado', total: 1, promedio: null, ...fila }];
+  filas.insertId = insertId;
   filas.affectedRows = 1;
   return [filas];
 }
@@ -35,8 +35,10 @@ function respuestaVacia() {
 }
 
 /** Ejecuta `llamar()` con la falla indicada y devuelve { resultado | error, log }. */
-async function correrEscenario(pool, llamar, falla, vacio = false) {
-  const respuesta = vacio ? respuestaVacia : respuestaGenerica;
+async function correrEscenario(pool, llamar, falla, vacio = false, fila = {}, idsDistintos = false) {
+  let nRespuesta = 0;
+  // idsDistintos: cada consulta devuelve un insertId propio (77, 78, 79…) para distinguir cuál se usa
+  const respuesta = vacio ? respuestaVacia : () => respuestaGenerica(fila, idsDistintos ? 77 + nRespuesta++ : 77);
   const log = [];
   let nQuery = 0;
   const conn = {
@@ -71,24 +73,39 @@ async function correrEscenario(pool, llamar, falla, vacio = false) {
   return { ...salida, log, consultas: nQuery };
 }
 
-/** Todos los escenarios de un método: éxito, falla en cada consulta, begin, commit, rollback, getConnection. */
-async function escenariosDe(pool, llamar) {
+/**
+ * Todos los escenarios de un método: éxito, falla en cada consulta, begin, commit, rollback, getConnection.
+ * opciones.fila     → campos extra de la fila genérica que devuelve conn.query.
+ * opciones.ids      → true: cada consulta devuelve un insertId distinto (77, 78, …).
+ * opciones.muestra  → solo inyecta fallas en una muestra de consultas (primera, segunda, central,
+ *                     penúltima y última): para métodos con decenas de consultas.
+ */
+async function escenariosDe(pool, llamar, opciones = {}) {
+  const fila = opciones.fila || {};
+  const ids = Boolean(opciones.ids);
   const res = {};
-  res.ok = await correrEscenario(pool, llamar, null);
+  res.ok = await correrEscenario(pool, llamar, null, false, fila, ids);
   res.ok_respuestas_vacias = await correrEscenario(pool, llamar, null, true);
   const n = res.ok.consultas;
-  for (let k = 0; k < n; k++) res[`falla_consulta_${k}`] = await correrEscenario(pool, llamar, { query: k });
-  res.falla_begin = await correrEscenario(pool, llamar, { tipo: 'begin' });
-  res.falla_commit = await correrEscenario(pool, llamar, { tipo: 'commit' });
-  res.falla_rollback = await correrEscenario(pool, llamar, { tipo: 'rollback' });
-  res.falla_getConnection = await correrEscenario(pool, llamar, { tipo: 'getConnection' });
+  const indices = opciones.muestra
+    ? [...new Set([0, 1, Math.floor(n / 2), n - 2, n - 1])].filter((k) => k >= 0 && k < n)
+    : Array.from({ length: n }, (_, k) => k);
+  for (const k of indices) res[`falla_consulta_${k}`] = await correrEscenario(pool, llamar, { query: k }, false, fila, ids);
+  res.falla_begin = await correrEscenario(pool, llamar, { tipo: 'begin' }, false, fila, ids);
+  res.falla_commit = await correrEscenario(pool, llamar, { tipo: 'commit' }, false, fila, ids);
+  res.falla_rollback = await correrEscenario(pool, llamar, { tipo: 'rollback' }, false, fila, ids);
+  res.falla_getConnection = await correrEscenario(pool, llamar, { tipo: 'getConnection' }, false, fila, ids);
   return res;
 }
 
 /** Corre todos los casos { nombre: () => promesa } y compara con (o escribe) el golden. */
 async function verificarGolden(pool, casos, archivoGolden) {
   const actual = {};
-  for (const [nombre, llamar] of Object.entries(casos)) actual[nombre] = await escenariosDe(pool, llamar);
+  for (const [nombre, caso] of Object.entries(casos)) {
+    // un caso es una función, o { llamar, fila?, muestra? }
+    const { llamar, ...opciones } = typeof caso === 'function' ? { llamar: caso } : caso;
+    actual[nombre] = await escenariosDe(pool, llamar, opciones);
+  }
   const ruta = path.join(__dirname, '..', 'fixtures', archivoGolden);
   if (process.env.UPDATE_GOLDEN === '1') {
     fs.writeFileSync(ruta, JSON.stringify(actual, null, 1) + '\n');

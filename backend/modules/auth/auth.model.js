@@ -2,6 +2,7 @@
 
 const { pool } = require('../../config/database');
 const { TRIAL_DIAS_GRATIS } = require('../../config/constants');
+const { enTransaccion } = require('../../utils/enTransaccion');
 
 /**
  * Acceso a datos del módulo de autenticación.
@@ -213,9 +214,7 @@ const AuthModel = {
     password_hash,
     rol,
   }) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
       const [res] = await conn.query(
         `INSERT INTO usuarios (empresa_id, nombre, apellido, email, password_hash, rol)
          VALUES (?, ?, ?, ?, ?, ?)`,
@@ -225,14 +224,8 @@ const AuthModel = {
         res.insertId,
         trabajadorId,
       ]);
-      await conn.commit();
       return res.insertId;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   // ─── Registro libre (trabajador_turnos marketplace) ──────────
@@ -256,9 +249,7 @@ const AuthModel = {
    * @returns {{ empresaId: number, usuarioId: number }}
    */
   async registrarEmpresa({ nombreEmpresa, slug, nit, descripcion, actividad, telefono, emailEmpresa, direccion, ciudad, nombre, apellido, email, passwordHash }) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
       const [empRes] = await conn.query(
         `INSERT INTO empresas (nombre, slug, nit, descripcion, actividad, telefono, email_empresa, direccion, ciudad, plan, suscripcion_vigente_hasta)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'basico', DATE_ADD(CURDATE(), INTERVAL ? DAY))`,
@@ -270,14 +261,8 @@ const AuthModel = {
          VALUES (?, ?, ?, ?, ?, 'admin_empresa')`,
         [empresaId, nombre, apellido || null, email, passwordHash]
       );
-      await conn.commit();
       return { empresaId, usuarioId: usrRes.insertId };
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /** Crea un usuario gestor (jefe_turnos, jefe_nomina, nomina) para una empresa. */
@@ -414,9 +399,7 @@ const AuthModel = {
    * trabajador (ver PONYTAIL-DEBT / política de privacidad §6-7).
    */
   async eliminarCuenta(usuarioId, trabajadorIds, passwordHashInutil) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    await enTransaccion(async (conn) => {
 
       const [[usuario]] = await conn.query(
         'SELECT email, telefono FROM usuarios WHERE id = ? LIMIT 1',
@@ -466,13 +449,7 @@ const AuthModel = {
         await conn.query(`DELETE FROM codigos_verificacion WHERE destino IN (${destPh})`, destinos);
       }
 
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 };
 
