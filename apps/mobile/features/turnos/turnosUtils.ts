@@ -75,6 +75,9 @@ export function turnoYaInicio(fecha: string, horaInicio: string): boolean {
   return nowBogota.getTime() >= inicioBogotaMs;
 }
 
+/** Espejo de HORAS_CANCELACION_SIN_PENALIZACION (backend/config/constants.js): bajo este margen, cancelar baja la calificación. */
+export const HORAS_CANCELACION_SIN_PENALIZACION = 12;
+
 // ── Estado → visual ───────────────────────────────────────────────────────
 
 export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'default' | 'primary';

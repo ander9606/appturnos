@@ -33,6 +33,15 @@ async function cancelar(req, res) {
   res.json({ success: true, data, message: 'Asignación cancelada' });
 }
 
+async function cancelarPropia(req, res) {
+  const data = await AsignacionesService.cancelarPorTrabajador(req.empresa_id, Number(req.params.id), req.usuario.sub);
+  res.json({
+    success: true,
+    data,
+    message: data.penalizado ? 'Turno cancelado. Recibiste una calificación baja por cancelar con poca anticipación' : 'Turno cancelado',
+  });
+}
+
 async function rechazar(req, res) {
   const data = await AsignacionesService.rechazar(req.empresa_id, Number(req.params.id), req.usuario.sub);
   res.json({ success: true, data, message: 'Postulación rechazada' });
@@ -127,6 +136,6 @@ async function descartarSospechoso(req, res) {
 }
 
 module.exports = {
-  listar, obtener, confirmar, rechazar, cancelar, ingreso, egreso, reconfirmar, misTurnos, corregir,
+  listar, obtener, confirmar, rechazar, cancelar, cancelarPropia, ingreso, egreso, reconfirmar, misTurnos, corregir,
   noPresentado, calificar, liquidacion, descartarSospechoso, agregarBono,
 };

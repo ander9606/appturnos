@@ -223,6 +223,47 @@ module.exports = {
     return asignacion;
   },
 
+  /**
+   * El trabajador cancela su propio turno confirmado. A diferencia de
+   * cancelar() (gestor, nunca penaliza), si faltan menos de
+   * HORAS_CANCELACION_SIN_PENALIZACION recibe una calificación automática baja.
+   */
+  async cancelarPorTrabajador(empresaId, id, usuarioId) {
+    // obtenerConDetalles acepta empresaId null (trabajador multi-empresa) y trae usuario_id.
+    const asignacion = await AsignacionesModel.obtenerConDetalles(empresaId, id);
+    if (!asignacion) throw new AppError('Asignación no encontrada', 404);
+    if (asignacion.usuario_id !== usuarioId) {
+      throw new AppError('Esta asignación no te pertenece', 403);
+    }
+
+    const dbEmpresaId = asignacion.empresa_id;
+    const res = await AsignacionesModel.cancelarPorTrabajador(dbEmpresaId, id, usuarioId);
+    if (!res.ok) {
+      throw new AppError('Solo se pueden cancelar asignaciones confirmadas', 409);
+    }
+
+    const fecha = fmtFechaCorta(asignacion.oferta_fecha);
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(dbEmpresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
+        empresaId: dbEmpresaId,
+        tipo: 'asignacion.cancelada_por_trabajador',
+        titulo: 'Un trabajador canceló su turno',
+        mensaje: `${asignacion.trabajador_nombre} ${asignacion.trabajador_apellido} canceló "${asignacion.oferta_titulo}" del ${fecha}.${res.penalizado ? ' Fue con poca anticipación y recibió una calificación baja.' : ''}`,
+        data: { oferta_id: asignacion.oferta_id },
+      });
+    }
+
+    if (asignacion.oferta_external_ref) {
+      await IntegracionService.emitir(dbEmpresaId, 'asignacion.cancelada', {
+        external_ref: asignacion.oferta_external_ref,
+        empleado_ref: asignacion.trabajador_external_ref || null,
+      });
+    }
+
+    return { ...(await AsignacionesModel.obtenerPorId(dbEmpresaId, id)), penalizado: res.penalizado };
+  },
+
   async rechazar(empresaId, id, gestorId) {
     const res = await AsignacionesModel.rechazar(empresaId, id, gestorId);
     if (!res.ok) {

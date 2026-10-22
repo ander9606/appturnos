@@ -638,6 +638,14 @@ export const turnosApi = {
   },
 
   /**
+   * El trabajador cancela su propio turno confirmado. Si faltan menos de 12 h
+   * para el inicio, `penalizado` viene en true (recibió una calificación baja).
+   */
+  cancelarPropia(asignacionId: number): Promise<Asignacion & { penalizado: boolean }> {
+    return api.post<Asignacion & { penalizado: boolean }>(`/api/turnos/asignaciones/${asignacionId}/cancelar-propia`, {});
+  },
+
+  /**
    * Corrección manual de ingreso y/o egreso por gestor/admin (sin GPS ni firma).
    * Recalcula horas_trabajadas si se proporcionan ambos extremos.
    * Acepta ISO 8601: "2025-06-20T08:30:00" o "2025-06-20T08:30:00.000Z".

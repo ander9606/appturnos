@@ -29,14 +29,14 @@ import { useTheme }            from '@/lib/theme';
 import { useAuthStore }        from '@/features/auth/useAuthStore';
 import { useNovedades }        from '@/features/novedades/useNovedades';
 import { ReportarNovedadModal } from '@/features/novedades/ReportarNovedadModal';
-import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useReconfirmarAsignacion } from '@/features/turnos/useTurnos';
+import { useAsignacion, useMarcarIngreso, useMarcarEgreso, useCalificar, useReconfirmarAsignacion, useCancelarPropiaAsignacion } from '@/features/turnos/useTurnos';
 import { confirm } from '@/lib/confirmDialog';
 import { useGeofence, type GeofenceTarget } from '@/features/turnos/useGeofence';
 import { useUbicacionLibre }   from '@/features/turnos/useUbicacionLibre';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
 import { TurnoTimeline }       from '@/features/turnos/TurnoTimeline';
 import { Button }              from '@/components/ui/Button';
-import { getEstadoConfig } from '@/features/turnos/turnosUtils';
+import { getEstadoConfig, fmtFaltan, HORAS_CANCELACION_SIN_PENALIZACION } from '@/features/turnos/turnosUtils';
 import { ApiError, puntosMarcajeApi, type PuntoParaTurno } from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
@@ -84,6 +84,7 @@ export default function TurnoDetailScreen() {
   const egresoMutation     = useMarcarEgreso();
   const calificarMutation  = useCalificar();
   const reconfirmarMutation = useReconfirmarAsignacion();
+  const cancelarPropiaMutation = useCancelarPropiaAsignacion();
 
   // ── Live timer: elapsed (en_progreso) + countdown (confirmado) ───────
   useEffect(() => {
@@ -249,6 +250,38 @@ export default function TurnoDetailScreen() {
       showToast(acepta ? 'Participación reconfirmada.' : 'Declinaste el turno.');
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'No se pudo procesar tu respuesta.';
+      showAlert('Error', msg);
+    }
+  };
+
+  const handleCancelarPropia = async () => {
+    if (!asignacion) return;
+    // minutosParaIngreso ya es null fuera de 'confirmado'; aquí siempre hay valor.
+    const minutos = minutosParaIngreso ?? 0;
+    const penaliza = minutos < HORAS_CANCELACION_SIN_PENALIZACION * 60;
+    const ok = await confirm(penaliza
+      ? {
+          title: 'Cancelar con poca anticipación',
+          variant: 'warning',
+          message: `${minutos > 0 ? `Faltan solo ${fmtFaltan(minutos)} para tu turno` : 'Tu turno ya está por comenzar o comenzó'} (el mínimo para cancelar sin penalización es ${HORAS_CANCELACION_SIN_PENALIZACION} horas).\n\nSi cancelas ahora recibirás una calificación baja que afecta tu ranking y la empresa será avisada.\n\n¿Qué prefieres hacer?`,
+          cancelLabel: 'Mantener mi turno',
+          confirmLabel: 'Cancelar y aceptar penalización',
+          destructive: true,
+        }
+      : {
+          title: 'Cancelar turno',
+          message: 'El cupo quedará libre para otra persona. Cancelando con tiempo no te afecta la calificación.',
+          cancelLabel: 'Volver',
+          confirmLabel: 'Cancelar turno',
+          destructive: true,
+        });
+    if (!ok) return;
+    try {
+      const res = await cancelarPropiaMutation.mutateAsync(asignacion.id);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast(res.penalizado ? 'Turno cancelado. Recibiste una calificación baja.' : 'Turno cancelado.');
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'No se pudo cancelar el turno.';
       showAlert('Error', msg);
     }
   };
@@ -450,6 +483,7 @@ export default function TurnoDetailScreen() {
 
           {/* ── CTA: Marcar Ingreso (estado: confirmado) ─────────────────── */}
           {estado === 'confirmado' && !soloLectura && (
+            <>
             <CTAConfirmadoCard
               dentroVentana={dentroVentana}
               minutosParaIngreso={minutosParaIngreso}
@@ -469,6 +503,16 @@ export default function TurnoDetailScreen() {
               trabajadorRanking={trabajador_ranking}
               trabajadorTotalCalificaciones={trabajador_total_calificaciones}
             />
+            {!isGestor && (
+              <Button
+                label="Cancelar turno"
+                variant="secondary"
+                fullWidth
+                loading={cancelarPropiaMutation.isPending}
+                onPress={handleCancelarPropia}
+              />
+            )}
+            </>
           )}
 
           {/* ── CTA: En progreso → Marcar Egreso ────────────────────────── */}

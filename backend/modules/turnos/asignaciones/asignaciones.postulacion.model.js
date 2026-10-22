@@ -5,6 +5,7 @@ const ContratosModel = require('../../contratos/contratos.model');
 const RankingModel = require('../../trabajadores/ranking.model');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { enTransaccion } = require('../../../utils/enTransaccion');
+const { HORAS_CANCELACION_SIN_PENALIZACION, CALIFICACION_CANCELACION_TARDIA } = require('../../../config/constants');
 
 /**
  * Ciclo de vida de la postulación/asignación: crear, confirmar, cancelar,
@@ -177,6 +178,54 @@ module.exports = {
     } finally {
       conn.release();
     }
+  },
+
+  /**
+   * El propio trabajador cancela su asignación confirmada. Igual que cancelar()
+   * (libera la plaza), pero si faltan menos de HORAS_CANCELACION_SIN_PENALIZACION
+   * para el inicio del turno inserta una calificación automática baja
+   * (calificado_por NULL = sistema) y recalcula el ranking, todo atómico.
+   * @returns {Promise<{ok:boolean, motivo?:string, penalizado?:boolean, trabajador_id?:number}>}
+   */
+  async cancelarPorTrabajador(empresaId, id, usuarioId) {
+    return enTransaccion(async (conn) => {
+      const [[asig]] = await conn.query(
+        'SELECT * FROM asignaciones_turno WHERE id = ? AND empresa_id = ? FOR UPDATE',
+        [id, empresaId]
+      );
+      if (!asig) return { ok: false, motivo: 'no_existe' };
+      if (asig.estado !== 'confirmado') return { ok: false, motivo: 'estado' };
+
+      const [[oferta]] = await conn.query(
+        'SELECT fecha, hora_inicio FROM ofertas_turno WHERE id = ? AND empresa_id = ?',
+        [asig.oferta_id, empresaId]
+      );
+      // dateStrings: true → ambos son strings en hora Colombia; comparar texto basta.
+      const limite = ahoraColombiaSQL(HORAS_CANCELACION_SIN_PENALIZACION * 3_600_000);
+      const penalizado = `${oferta.fecha} ${oferta.hora_inicio}` < limite;
+
+      await conn.query(
+        "UPDATE asignaciones_turno SET estado = 'cancelado', cancelado_por = ?, cancelado_at = NOW() WHERE id = ?",
+        [usuarioId, id]
+      );
+      await conn.query(
+        'UPDATE oferta_puestos SET plazas_cubiertas = GREATEST(0, plazas_cubiertas - 1) WHERE id = ?',
+        [asig.puesto_id]
+      );
+
+      if (penalizado) {
+        await conn.query(
+          `INSERT INTO calificaciones_turno
+             (empresa_id, asignacion_id, trabajador_id, calificacion, comentario, calificado_por)
+           VALUES (?, ?, ?, ?, ?, NULL)`,
+          [empresaId, id, asig.trabajador_id, CALIFICACION_CANCELACION_TARDIA,
+           `Canceló con menos de ${HORAS_CANCELACION_SIN_PENALIZACION} h de anticipación`]
+        );
+        await RankingModel.recalcular(conn, empresaId, asig.trabajador_id);
+      }
+
+      return { ok: true, penalizado, trabajador_id: asig.trabajador_id, oferta_id: asig.oferta_id };
+    });
   },
 
   /**
