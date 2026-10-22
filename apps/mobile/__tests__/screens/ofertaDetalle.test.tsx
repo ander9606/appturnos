@@ -377,6 +377,22 @@ describe('cargos y tarifas', () => {
     expect(texto('Aplicar como Mesero')).toBeTruthy();
   });
 
+  test('quien ya se postuló no vuelve a elegir cargo: título normal y sin selector', () => {
+    mockMisTurnos = { data: [{ oferta_id: 5, puesto_id: 1, estado: 'pendiente' }] };
+    montar();
+    expect(texto('Cargos y tarifas')).toBeTruthy();
+    expect(screen.queryByText('¿A qué cargo quieres aplicar?')).toBeNull();
+    expect(screen.queryByTestId('icon-radio-button-on')).toBeNull();
+    expect(screen.queryByTestId('icon-radio-button-off')).toBeNull();
+  });
+
+  test('con el turno ya iniciado tampoco se elige cargo', () => {
+    mockIniciado = true;
+    montar();
+    expect(texto('Cargos y tarifas')).toBeTruthy();
+    expect(screen.queryByTestId('icon-radio-button-off')).toBeNull();
+  });
+
   test('"Ver funciones" abre el modal del cargo y se cierra', () => {
     montar();
     expect(texto('false|null|')).toBeTruthy();
@@ -829,6 +845,7 @@ describe('barra de acciones del gestor', () => {
       fireEvent.press(texto('Turno fallido (fuerza mayor)'));
       expect(screen.getByTestId('fallido-modal').props.children).toBe('true');
       expect(mockFallidoProps.marcarFallidaM).toBe(mockM.marcarFallida);
+      expect(mockFallidoProps.oferta.id).toBe(5);
       fireEvent.press(screen.getByTestId('fallido-done'));
       expect(screen.getByTestId('fallido-modal').props.children).toBe('false');
       expect(mockAnuncio).toHaveBeenCalledWith('"Evento Gala" marcado como fallido.', 'cancelado');
