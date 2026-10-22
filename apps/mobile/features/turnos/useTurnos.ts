@@ -284,6 +284,19 @@ export function useReconfirmarAsignacion() {
   });
 }
 
+/** El trabajador cancela su turno confirmado (penaliza si faltan < 12 h; ver `penalizado` en la respuesta). */
+export function useCancelarPropiaAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => turnosApi.cancelarPropia(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+    },
+  });
+}
+
 /** Liquidación de turnos por trabajador (gestores/admin). */
 export function useLiquidacionTurnos(
   params?: { fecha_inicio?: string; fecha_fin?: string },
@@ -317,7 +330,6 @@ export function useCalificar() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
       qc.invalidateQueries({ queryKey: ['asignaciones'] });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
-      qc.invalidateQueries({ queryKey: ['trabajadores'] }); // ranking update
     },
   });
 }
