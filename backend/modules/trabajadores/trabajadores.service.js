@@ -3,7 +3,7 @@
 const TrabajadoresModel = require('./trabajadores.model');
 const AppError = require('../../utils/AppError');
 const logger = require('../../utils/logger');
-const { pool } = require('../../config/database');
+const { enTransaccion } = require('../../utils/enTransaccion');
 const { ROLES, ROL_POR_TIPO } = require('../../config/constants');
 const { PlanesModel } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
@@ -257,11 +257,9 @@ const TrabajadoresService = {
     // una sola transacción. Si cualquiera falla, no queda nada a medias.
     const { tarifa_hora, salario_base, ...resto } = datos;
     const cambiaSueldo = tarifa_hora !== undefined || salario_base !== undefined;
-    // ponytail: el service orquesta la transacción (conoce qué pasos son una unidad) — upgrade path: TrabajadoresModel.enTransaccion().
-    const conn = await pool.getConnection();
+    // El service decide qué pasos son una unidad; abrir/cerrar la transacción es del helper.
     let resultadoSueldo = null;
-    try {
-      await conn.beginTransaction();
+    await enTransaccion(async (conn) => {
       try {
         await TrabajadoresModel.actualizar(empresaId, id, resto, conn);
       } catch (err) {
@@ -279,13 +277,7 @@ const TrabajadoresService = {
       if (cambiaRol) {
         await TrabajadoresModel.sincronizarRolUsuario(actual.usuario_id, rolNuevo, conn);
       }
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
 
     // Aviso después del commit: si falla, el cambio ya está guardado; solo se registra.
     if (resultadoSueldo?.cambio) {
