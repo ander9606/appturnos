@@ -33,7 +33,7 @@ import {
   useNoPresentado,
 } from '@/features/turnos/useTurnos';
 import { turnoYaInicio } from '@/features/turnos/turnosUtils';
-import { bogotaToday } from '@/lib/formatters';
+import { bogotaToday, formatShortDate } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui/Button';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -41,14 +41,6 @@ import { confirm } from '@/lib/confirmDialog';
 import type { Asignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-function fmtFecha(iso: string) {
-  const d = new Date(`${iso}T00:00:00`);
-  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
-}
 
 function fmtHora(h: string) {
   return h.slice(0, 5).replace(/^0/, '');
@@ -276,7 +268,7 @@ function OfertaCard({
           <View className="flex-row items-center gap-1 flex-wrap">
             <Ionicons name="calendar-outline" size={11} color={COLORS.mutedForeground} />
             <Text className="text-xs text-muted-foreground">
-              {fmtFecha(group.fecha)}
+              {formatShortDate(group.fecha)}
             </Text>
             <Ionicons name="time-outline" size={11} color={COLORS.mutedForeground} style={{ marginLeft: 6 }} />
             <Text className="text-xs text-muted-foreground">
@@ -382,7 +374,7 @@ export default function PostulacionesScreen() {
     }
     return Array.from(byFecha.entries())
       .sort(([a], [b]) => b.localeCompare(a))
-      .map(([fecha, data]) => ({ title: fmtFecha(fecha), fecha, data }));
+      .map(([fecha, data]) => ({ title: formatShortDate(fecha), fecha, data }));
   }, [gruposVisibles]);
 
   const totalTab = grupos.reduce((s, g) => s + g.asignaciones.length, 0);
