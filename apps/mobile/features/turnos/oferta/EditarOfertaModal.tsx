@@ -6,7 +6,7 @@ import { View, ScrollView, TouchableOpacity, Platform, Modal, Pressable } from '
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { showToast } from '@/lib/toast';
-import { useActualizarOferta, useCrearPuesto, useCargos } from '@/features/turnos/useTurnos';
+import { useActualizarOferta, useActualizarPuesto, useCrearPuesto, useCargos } from '@/features/turnos/useTurnos';
 import { parseTarifa } from '@/features/turnos/crear/utils';
 import { LugarInput } from '@/features/turnos/crear/LugarInput';
 import { Button } from '@/components/ui/Button';
@@ -50,6 +50,7 @@ export function EditarOfertaModal({
   const [agregandoVacante, setAgregandoVacante] = useState(false);
   const [vacante, setVacante] = useState<{ cargo: Cargo | null; plazas: number; tarifa: string }>({ cargo: null, plazas: 1, tarifa: '' });
   const crearPuestoM = useCrearPuesto();
+  const actualizarPuestoM = useActualizarPuesto();
   const { data: cargos = [] } = useCargos(agregandoVacante);
   const usedIds = new Set(oferta.puestos.map(p => p.cargo_id));
 
@@ -86,6 +87,18 @@ export function EditarOfertaModal({
     || `${formatTimeObj(horaInicio)}:00` !== oferta.hora_inicio.slice(0, 5) + ':00'
     || (horaFin ? `${formatTimeObj(horaFin)}:00` : null) !== oferta.hora_fin_estimada
     || lugar !== (oferta.lugar ?? '');
+
+  // Cada toque guarda de una vez (igual que "Agregar vacante"). El mínimo son las plazas ya
+  // cubiertas — nunca menos de 1; el backend lo vuelve a validar.
+  async function cambiarPlazas(p: OfertaPuesto, delta: 1 | -1) {
+    const plazas = p.plazas + delta;
+    if (plazas < Math.max(1, p.plazas_cubiertas)) return;
+    try {
+      await actualizarPuestoM.mutateAsync({ ofertaId: oferta.id, puestoId: p.id, plazas });
+    } catch (err) {
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudieron cambiar las plazas.');
+    }
+  }
 
   async function handleAgregarVacante() {
     if (!vacante.cargo) { showAlert('Datos incompletos', 'Elige un rol para la vacante.', 'warning'); return; }
@@ -269,9 +282,43 @@ export function EditarOfertaModal({
               )}
             </View>
             {oferta.puestos.length === 0 && <Text className="text-sm text-muted-foreground">Sin vacantes</Text>}
-            {oferta.puestos.map(p => (
-              <Text key={p.id} className="text-sm text-muted-foreground">{p.cargo_nombre} · {p.plazas} plaza(s)</Text>
-            ))}
+            {oferta.puestos.map(p => {
+              const minimo = Math.max(1, p.plazas_cubiertas);
+              const ocupado = actualizarPuestoM.isPending;
+              return (
+                <View key={p.id} className="flex-row items-center justify-between gap-3">
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>{p.cargo_nombre}</Text>
+                    <Text className="text-xs text-muted-foreground">
+                      {p.plazas_cubiertas > 0 ? `${p.plazas_cubiertas} cubierta(s) — no se pueden quitar` : 'Sin cubrir'}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-2">
+                    <TouchableOpacity
+                      className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
+                      style={{ opacity: ocupado || p.plazas <= minimo ? 0.4 : 1 }}
+                      disabled={ocupado || p.plazas <= minimo}
+                      onPress={() => cambiarPlazas(p, -1)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Quitar una plaza de ${p.cargo_nombre}`}
+                    >
+                      <Ionicons name="remove" size={16} color={COLORS.mutedForeground} />
+                    </TouchableOpacity>
+                    <Text className="text-base font-bold text-foreground w-6 text-center">{p.plazas}</Text>
+                    <TouchableOpacity
+                      className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
+                      style={{ opacity: ocupado ? 0.4 : 1 }}
+                      disabled={ocupado}
+                      onPress={() => cambiarPlazas(p, 1)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Agregar una plaza a ${p.cargo_nombre}`}
+                    >
+                      <Ionicons name="add" size={16} color={COLORS.mutedForeground} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
             {agregandoVacante && (
               <View className="bg-card border border-border rounded-xl p-3 gap-3">
                 {/* ponytail: chips sin buscador — CargoModal es otro Modal y RN no anida Modals bien en iOS. Upgrade path: buscador si el catálogo crece. */}

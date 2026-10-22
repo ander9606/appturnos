@@ -575,6 +575,18 @@ export function useEliminarDescuento() {
 }
 
 /** Agrega una vacante a una oferta existente; refresca la oferta para ver el puesto nuevo. */
+export function useActualizarPuesto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, puestoId, plazas }: { ofertaId: number; puestoId: number; plazas: number }) =>
+      turnosApi.actualizarPuesto(ofertaId, puestoId, { plazas }),
+    onSuccess: (_data, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+    },
+  });
+}
+
 export function useCrearPuesto() {
   const qc = useQueryClient();
   return useMutation({

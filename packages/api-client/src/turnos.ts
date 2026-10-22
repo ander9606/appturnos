@@ -469,6 +469,11 @@ export const turnosApi = {
     return api.post<OfertaPuesto>(`/api/turnos/ofertas/${ofertaId}/puestos`, payload);
   },
 
+  /** Cambia las plazas de una vacante. El backend rechaza (409) bajar de las ya cubiertas. */
+  actualizarPuesto(ofertaId: number, puestoId: number, payload: { plazas: number }): Promise<OfertaPuesto> {
+    return api.patch<OfertaPuesto>(`/api/turnos/ofertas/${ofertaId}/puestos/${puestoId}`, payload);
+  },
+
   /**
    * Duplica una oferta a una nueva fecha (copia título, lugar y puestos).
    * `hora_inicio` (HH:MM:SS) es opcional — si se omite, conserva el horario original;
