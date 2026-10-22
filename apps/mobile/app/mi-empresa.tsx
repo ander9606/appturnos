@@ -17,13 +17,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
 
-import { empresasApi } from '@api-client';
-import type { ActualizarMiEmpresaPayload, TipoLiquidacion, TipoContrato } from '@api-client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { TipoLiquidacion, TipoContrato } from '@api-client';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
@@ -31,94 +28,11 @@ import { showToast } from '@/lib/toast';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import * as WebBrowser from 'expo-web-browser';
 import { SignaturePad } from '@/features/turnos/SignaturePad';
-
-// ── Schema ────────────────────────────────────────────────────────────────
-
-const TIPO_LIQUIDACION_OPTIONS: { value: TipoLiquidacion; label: string; sub: string }[] = [
-  { value: 'mensual',    label: 'Mensual',    sub: 'Ej. 1–30 Jun' },
-  { value: 'quincenal',  label: 'Quincenal',  sub: 'Ej. 1–15 / 16–30' },
-  { value: 'semanal',    label: 'Semanal',    sub: 'Lun–Dom' },
-];
-
-const TIPO_CONTRATO_OPTIONS: { value: TipoContrato; label: string; sub: string }[] = [
-  { value: 'laboral',              label: 'Contrato laboral',        sub: 'Descuenta salud y pensión' },
-  { value: 'prestacion_servicios', label: 'Prestación de servicios', sub: 'El independiente se autoliquida' },
-];
-
-const RECARGOS_OPTIONS: { value: boolean; label: string; sub: string }[] = [
-  { value: true,  label: 'Con recargos', sub: 'Recargo nocturno y festivo según la ley' },
-  { value: false, label: 'Sin recargos', sub: 'Normales hasta 42 h; después, extra diurna' },
-];
-
-const DOMINGO_HABITUAL_OPTIONS: { value: 'ley' | 'dos_meses'; label: string }[] = [
-  { value: 'ley',       label: '3 o más domingos en el mes (ley)' },
-  { value: 'dos_meses', label: '2 meses seguidos trabajando domingos' },
-];
-
-const schema = z.object({
-  nombre:               z.string().trim().min(1, 'Razón social requerida'),
-  nit:                  z.string().trim().optional(),
-  representante_nombre: z.string().trim().optional(),
-  representante_cedula: z.string().trim().optional(),
-  ciudad:               z.string().trim().optional(),
-  actividad:            z.string().trim().optional(),
-  descripcion:          z.string().trim().optional(),
-  // Ya no se tipea a mano — se sube por cámara/galería (data URI) o queda como URL externa preexistente.
-  logo_url:             z.string().optional().or(z.literal('')),
-  acepta_postulaciones: z.boolean(),
-  tipo_liquidacion:     z.enum(['mensual', 'quincenal', 'semanal']),
-  tipo_contrato:        z.enum(['laboral', 'prestacion_servicios']),
-  sumar_nocturnas_festivo: z.boolean(),
-  regla_domingo_habitual:  z.enum(['ley', 'dos_meses']),
-});
-
-type FormData = z.infer<typeof schema>;
-
-// ── Hooks ─────────────────────────────────────────────────────────────────
-
-function useMiEmpresa() {
-  return useQuery({
-    queryKey: ['mi-empresa'],
-    queryFn: () => empresasApi.obtenerMiEmpresa(),
-    staleTime: 300_000,
-  });
-}
-
-function useActualizarEmpresa() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (datos: ActualizarMiEmpresaPayload) =>
-      empresasApi.actualizarMiEmpresa(datos),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['mi-empresa'] });
-      // Cambiar tipo_liquidacion recalcula el período en el backend (cierra el
-      // abierto y abre uno nuevo con el ciclo correcto) — sin esto, todos los
-      // que ya tenían 'periodos' en caché siguen viendo el período/tipo viejo
-      // hasta que remonten la pantalla o pase el staleTime.
-      qc.invalidateQueries({ queryKey: ['periodos'] });
-    },
-  });
-}
-
-/** Reclasifica los días ya registrados del período abierto con la config de recargos actual. */
-function useReprocesarRecargos() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => empresasApi.reprocesarRecargos(),
-    onSuccess: ({ registros_actualizados }) => {
-      qc.invalidateQueries({ queryKey: ['registros'] });
-      qc.invalidateQueries({ queryKey: ['periodos'] });
-      qc.invalidateQueries({ queryKey: ['liquidacion'] });
-      qc.invalidateQueries({ queryKey: ['compensatorios'] });
-      showToast(
-        registros_actualizados > 0
-          ? `${registros_actualizados} registro(s) recalculados.`
-          : 'No había registros por recalcular en el período abierto.',
-      );
-    },
-    onError: () => showAlert('Error', 'No se pudo reprocesar el período. Intenta de nuevo.'),
-  });
-}
+import { useMiEmpresa, useActualizarEmpresa, useReprocesarRecargos } from '@/features/empresas/miEmpresa/useMiEmpresa';
+import { schema, type FormData } from '@/features/empresas/miEmpresa/miEmpresaForm';
+import {
+  TIPO_LIQUIDACION_OPTIONS, TIPO_CONTRATO_OPTIONS, RECARGOS_OPTIONS, DOMINGO_HABITUAL_OPTIONS,
+} from '@/features/empresas/miEmpresa/opcionesEmpresa';
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
