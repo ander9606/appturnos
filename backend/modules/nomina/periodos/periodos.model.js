@@ -2,6 +2,7 @@
 
 const { pool } = require('../../../config/database');
 const { HORAS_MES_NOMINA } = require('../../../config/constants');
+const { enTransaccion } = require('../../../utils/enTransaccion');
 
 /** Acceso a datos de períodos de nómina (tabla periodos_nomina). */
 
@@ -139,9 +140,7 @@ const PeriodosModel = {
    * modificación de sueldo posterior no afecte períodos ya cerrados.
    */
   async cerrarConSnapshot(empresaId, periodoId, cerradoPor) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    await enTransaccion(async (conn) => {
 
       // 1. Cambiar estado del período
       await conn.query(
@@ -168,13 +167,7 @@ const PeriodosModel = {
         [HORAS_MES_NOMINA, periodoId, empresaId],
       );
 
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /** Returns open periods whose fecha_fin is strictly before the given date. */
