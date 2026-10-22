@@ -36,7 +36,7 @@ import { useUbicacionLibre }   from '@/features/turnos/useUbicacionLibre';
 import { SignaturePad }        from '@/features/turnos/SignaturePad';
 import { TurnoTimeline }       from '@/features/turnos/TurnoTimeline';
 import { Button }              from '@/components/ui/Button';
-import { getEstadoConfig, HORAS_CANCELACION_SIN_PENALIZACION } from '@/features/turnos/turnosUtils';
+import { getEstadoConfig, fmtFaltan, HORAS_CANCELACION_SIN_PENALIZACION } from '@/features/turnos/turnosUtils';
 import { ApiError, puntosMarcajeApi, type PuntoParaTurno } from '@api-client';
 import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
 import { showToast }           from '@/lib/toast';
@@ -257,16 +257,23 @@ export default function TurnoDetailScreen() {
   const handleCancelarPropia = async () => {
     if (!asignacion) return;
     // minutosParaIngreso ya es null fuera de 'confirmado'; aquí siempre hay valor.
-    const penaliza = (minutosParaIngreso ?? 0) < HORAS_CANCELACION_SIN_PENALIZACION * 60;
-    const ok = await confirm({
-      title: 'Cancelar turno',
-      message: penaliza
-        ? `Faltan menos de ${HORAS_CANCELACION_SIN_PENALIZACION} horas para el turno. Si cancelas ahora recibirás una calificación baja que afecta tu ranking. ¿Quieres cancelar de todos modos?`
-        : 'El cupo quedará libre para otra persona. Cancelando con tiempo no te afecta la calificación.',
-      cancelLabel: 'Volver',
-      confirmLabel: 'Cancelar turno',
-      destructive: true,
-    });
+    const minutos = minutosParaIngreso ?? 0;
+    const penaliza = minutos < HORAS_CANCELACION_SIN_PENALIZACION * 60;
+    const ok = await confirm(penaliza
+      ? {
+          title: 'Cancelar con poca anticipación',
+          message: `${minutos > 0 ? `Faltan solo ${fmtFaltan(minutos)} para tu turno` : 'Tu turno ya está por comenzar o comenzó'} (el mínimo para cancelar sin penalización es ${HORAS_CANCELACION_SIN_PENALIZACION} horas).\n\nSi cancelas ahora recibirás una calificación baja que afecta tu ranking y la empresa será avisada.\n\n¿Qué prefieres hacer?`,
+          cancelLabel: 'Mantener mi turno',
+          confirmLabel: 'Cancelar y aceptar penalización',
+          destructive: true,
+        }
+      : {
+          title: 'Cancelar turno',
+          message: 'El cupo quedará libre para otra persona. Cancelando con tiempo no te afecta la calificación.',
+          cancelLabel: 'Volver',
+          confirmLabel: 'Cancelar turno',
+          destructive: true,
+        });
     if (!ok) return;
     try {
       const res = await cancelarPropiaMutation.mutateAsync(asignacion.id);
