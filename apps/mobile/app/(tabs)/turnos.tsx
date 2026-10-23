@@ -171,6 +171,8 @@ export default function TurnosScreen() {
   );
 
   const ofertas = ofertasResp?.data ?? [];
+  /** Ofertas abiertas a las que todavía no se ha postulado (círculo de la pestaña "Disponibles"). */
+  const disponiblesCount = useMemo(() => (ofertasResp?.data ?? []).filter((o) => !aplicadosIds.has(o.id)).length, [ofertasResp, aplicadosIds]);
 
   const ofertasFiltradas = useMemo(() => {
     const term = searchOfertas.trim().toLowerCase();
@@ -346,7 +348,7 @@ export default function TurnosScreen() {
           {isNomina && <BannerEventual periodo={periodoEventual} />}
 
           {/* ── Tab selector ─────────────────────────────────────── */}
-          {isWorker && <SelectorTabs activeTab={activeTab} onChange={setActiveTab} />}
+          {isWorker && <SelectorTabs activeTab={activeTab} onChange={setActiveTab} disponibles={disponiblesCount} />}
 
           {/* ── Worker list ──────────────────────────────────────── */}
           {(!isWorker || activeTab === 'mis_turnos') ? (
