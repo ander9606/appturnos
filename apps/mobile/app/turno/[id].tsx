@@ -50,6 +50,7 @@ import { CTAConfirmadoCard }    from '@/features/turnos/detalle/CTAConfirmadoCar
 import { CTAEnProgresoCard }    from '@/features/turnos/detalle/CTAEnProgresoCard';
 import { NovedadesCard }        from '@/features/turnos/detalle/NovedadesCard';
 import { DescuentosCard }       from '@/features/turnos/detalle/DescuentosCard';
+import { CorregirHorarioButton } from '@/features/turnos/detalle/CorregirHorarioButton';
 import { CorregirIngresoEgresoModal } from '@/features/turnos/detalle/CorregirIngresoEgresoModal';
 import { BonoModal }            from '@/features/turnos/detalle/BonoModal';
 import { DescuentoModal }       from '@/features/turnos/detalle/DescuentoModal';
@@ -418,7 +419,6 @@ export default function TurnoDetailScreen() {
                 isGestor={isGestor}
                 cargandoContrato={cargandoContrato}
                 onDescargarContrato={handleDescargarContrato}
-                onCorregir={() => setCorrigiendoIngreso(true)}
                 onIrAMisContratos={handleIrAMisContratos}
               />
 
@@ -532,7 +532,6 @@ export default function TurnoDetailScreen() {
               onMarcarSalidaConFirmaGuardada={handleEgreso}
               marcandoSalida={egresoMutation.isPending}
               isGestor={isGestor}
-              onCorregir={() => setCorrigiendoIngreso(true)}
               trabajadorTelefono={trabajador_telefono}
               trabajadorRanking={trabajador_ranking}
               trabajadorTotalCalificaciones={trabajador_total_calificaciones}
@@ -562,13 +561,7 @@ export default function TurnoDetailScreen() {
 
           {/* ── Gestor: Corregir horario (siempre disponible) ─────────────── */}
           {isGestor && (
-            <Button
-              label="Corregir horario de entrada/salida"
-              variant="secondary"
-              size="md"
-              fullWidth
-              onPress={() => setCorrigiendoIngreso(true)}
-            />
+            <CorregirHorarioButton onPress={() => setCorrigiendoIngreso(true)} />
           )}
 
           {/* ── Gestor: Bono / Descuento, uno al lado del otro. El contenedor se

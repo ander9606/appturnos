@@ -10,13 +10,12 @@ import { fmtTime } from '../turnosUtils';
 import type { Asignacion } from '@api-client';
 
 export function TurnoCompletadoCard({
-  asignacion, isGestor, cargandoContrato, onDescargarContrato, onCorregir, onIrAMisContratos,
+  asignacion, isGestor, cargandoContrato, onDescargarContrato, onIrAMisContratos,
 }: {
   asignacion: Asignacion;
   isGestor: boolean;
   cargandoContrato: boolean;
   onDescargarContrato: () => void;
-  onCorregir: () => void;
   onIrAMisContratos: () => void;
 }) {
   const { pago_total, horas_trabajadas, hora_ingreso_real, hora_egreso_real } = asignacion;
@@ -92,7 +91,7 @@ export function TurnoCompletadoCard({
         </View>
       )}
 
-      {/* Gestor: botones de descargar y corregir — "Contrato" no aplica a
+      {/* Gestor: botón de descargar el contrato (corregir el horario vive en CorregirHorarioButton) — "Contrato" no aplica a
           turnos eventuales de nómina (se pagan como bono) */}
       {isGestor && (
         <View className="flex-row items-center gap-3 mt-2">
@@ -110,13 +109,6 @@ export function TurnoCompletadoCard({
               <Text className="text-xs font-semibold text-success">Contrato</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            onPress={onCorregir}
-            className="flex-row items-center gap-1.5 flex-1"
-          >
-            <Ionicons name="time-outline" size={16} color={COLORS.success} />
-            <Text className="text-xs font-semibold text-success">Corregir</Text>
-          </TouchableOpacity>
         </View>
       )}
     </View>

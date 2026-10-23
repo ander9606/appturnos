@@ -31,6 +31,9 @@ export const COLORS = {
   primaryLight:    '#FFF1EE', // primary-50
   primary400:      '#FF7150',
   primary600:      '#E83E1F',
+  // Verde y azul del perfil con texto blanco encima (5,48:1 y 5,17:1); success/info quedan para íconos y fondos suaves (3,77 y 3,68).
+  success700:      '#047857',
+  info600:         '#2563EB',
   // Fondos suaves de cada semántico (badges, banners)
   successLight:    '#D1FAE5',
   warningLight:    '#FEF3C7',
@@ -117,8 +120,8 @@ export const HOUR_TYPE_COLORS = {
 // Paleta por tipo de usuario: naranja (turnos), verde (nomina), azul (gestores).
 export const THEME_COLORS = {
   turnos:   { primary: COLORS.primary, primaryLight: COLORS.primaryLight },
-  nomina:   { primary: COLORS.success, primaryLight: '#ECFDF5' },
-  gestores: { primary: COLORS.info,    primaryLight: COLORS.infoLight },
+  nomina:   { primary: COLORS.success700, primaryLight: '#ECFDF5' },
+  gestores: { primary: COLORS.info600,    primaryLight: COLORS.infoLight },
 } as const;
 
 export type ThemeKey = keyof typeof THEME_COLORS;
