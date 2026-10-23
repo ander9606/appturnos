@@ -3,9 +3,10 @@ import { View, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Text } from '@/components/ui/Text';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import { useTheme } from '@/lib/theme';
 import { etiquetaDia } from '@/lib/calendar';
+import { nombreFestivo } from '@api-client';
 
 export interface ItemDia {
   key: string;
@@ -22,6 +23,7 @@ export function ResumenDiaMes({
   fecha, items, onVerLista,
 }: { fecha: string; items: ItemDia[]; onVerLista: () => void }) {
   const theme = useTheme();
+  const festivo = nombreFestivo(fecha);
   return (
     <View className="bg-card border border-border rounded-3xl mt-4 px-4 py-3">
       <View className="flex-row items-center justify-between mb-1">
@@ -31,6 +33,12 @@ export function ResumenDiaMes({
           <Ionicons name="chevron-forward" size={14} color={theme.primary} />
         </TouchableOpacity>
       </View>
+      {festivo && (
+        <View className="flex-row items-center gap-1.5 self-start rounded-full px-2.5 py-1 mb-1" style={{ backgroundColor: alpha(theme.primary, 0.1) }}>
+          <Ionicons name="flag" size={11} color={theme.primary} />
+          <Text className="text-xs font-semibold" style={{ color: theme.primary }}>Festivo · {festivo}</Text>
+        </View>
+      )}
       {items.length === 0 ? (
         <Text className="text-sm text-muted-foreground py-2">Sin turnos este día.</Text>
       ) : (

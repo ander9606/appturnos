@@ -1,6 +1,8 @@
 import { Text } from '@/components/ui/Text';
 import React, { useMemo, useRef } from 'react';
 import { View, TouchableOpacity, PanResponder } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { nombreFestivo } from '@api-client';
 import { alpha, COLORS } from '@/lib/designTokens';
 import { useTheme } from '@/lib/theme';
 import { etiquetaDia, type CalendarDay } from '@/lib/calendar';
@@ -51,6 +53,7 @@ export function MonthCalendar({
         <View key={wi} className={`flex-row ${wi > 0 ? 'border-t border-border/40' : ''}`}>
           {week.map(day => {
             const Cell = onDayPress ? TouchableOpacity : View;
+            const festivo = nombreFestivo(day.date);
             return (
               <Cell
                 key={day.date}
@@ -60,19 +63,22 @@ export function MonthCalendar({
                   day.isToday ? { backgroundColor: alpha(theme.primary, 0.07) } : null,
                   day.date === selectedDate ? { borderWidth: 2, borderColor: theme.primary, borderRadius: 12 } : null,
                 ]}
-                accessibilityLabel={etiquetaDia(day.date)}
+                accessibilityLabel={festivo ? `${etiquetaDia(day.date)}, festivo: ${festivo}` : etiquetaDia(day.date)}
                 accessibilityState={{ selected: day.date === selectedDate }}
               >
-                <View
-                  className="w-6 h-6 rounded-full items-center justify-center"
-                  style={day.isToday ? { backgroundColor: theme.primary } : undefined}
-                >
-                  <Text
-                    className={`text-[11px] ${day.isToday ? 'font-bold' : 'font-medium'}`}
-                    style={{ color: day.isToday ? COLORS.white : COLORS.mutedForeground }}
+                <View className="flex-row items-center gap-0.5">
+                  <View
+                    className="w-6 h-6 rounded-full items-center justify-center"
+                    style={day.isToday ? { backgroundColor: theme.primary } : undefined}
                   >
-                    {Number(day.date.slice(8, 10))}
-                  </Text>
+                    <Text
+                      className={`text-[11px] ${day.isToday || festivo ? 'font-bold' : 'font-medium'}`}
+                      style={{ color: day.isToday ? COLORS.white : festivo ? theme.primary : COLORS.mutedForeground }}
+                    >
+                      {Number(day.date.slice(8, 10))}
+                    </Text>
+                  </View>
+                  {festivo && <Ionicons name="flag" size={9} color={theme.primary} />}
                 </View>
                 {renderDay(day)}
               </Cell>

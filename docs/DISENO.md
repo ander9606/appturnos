@@ -362,6 +362,8 @@ Los tres usan el color del perfil (`useTheme()`), nunca un color fijo:
 - Deslizar el calendario a derecha o izquierda cambia de mes (`onMesAnterior`/`onMesSiguiente` de `MonthCalendar`, con `PanResponder`: solo toma gestos claramente horizontales).
 - En Turnos, tocar un día lo **marca** (`selectedDate`) y muestra debajo `ResumenDiaMes` con los turnos de ese día y "Ver en lista"; ya no salta de vista.
 - Mientras carga el mes: `SkeletonCalendario`, no una lista.
+- **Festivos:** `MonthCalendar` marca los festivos de Colombia (número en el color del perfil + bandera) y `ResumenDiaMes` los nombra. Salen de `festivosColombia()` / `nombreFestivo()` de `@api-client`, espejo de `festivosDeAnio()` del backend (la prueba `festivos.test.ts` exige que coincidan). Los domingos no se marcan: ya llevan el color en la cabecera.
+- **Períodos de nómina:** el gestor ve cada período como franja bajo los días (verde abierto, ámbar cerrado por pagar, primario pagado), con el período que está mirando a todo color y los demás atenuados, el día de cierre rotulado y una leyenda. El trabajador de nómina ve una franja fina del color del perfil en los días de su período actual y "Cierre" en el último.
 - `WeekStrip` (`features/turnos/WeekStrip.tsx`): día seleccionado sólido, hoy con aro suave, rayita en los días con turnos.
 - Pendiente: los selectores de fecha nativos (`DateTimePicker`) los dibuja el sistema; en iOS se puede darles `accentColor`, en Android dependen del tema nativo del build (no cambia por OTA).
 

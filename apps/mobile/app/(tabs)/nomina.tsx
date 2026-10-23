@@ -307,13 +307,37 @@ function NominaGestorView() {
                       const bg = periodo.estado === 'abierto' ? 'bg-success-light'
                         : periodo.estado === 'cerrado' ? 'bg-warning-light' : 'bg-primary-100';
                       const esCierre = periodo.fecha_fin === day.date;
+                      const esInicio = periodo.fecha_inicio === day.date;
+                      // El período que se está mirando va a todo color; los demás, atenuados.
+                      const esActivo = periodo.id === activePeriodoId;
                       return (
-                        <View className={`flex-1 -m-1 mt-0 rounded-b-md px-1 py-0.5 ${bg}`}>
-                          {esCierre && <Text className="text-[8px] font-semibold text-foreground">Cierre</Text>}
+                        <View
+                          className={`flex-1 -m-1 mt-0 px-1 py-0.5 ${bg} ${esInicio ? 'rounded-bl-md' : ''} ${esCierre ? 'rounded-br-md' : ''}`}
+                          style={{ opacity: esActivo ? 1 : 0.5 }}
+                        >
+                          {esCierre && <Text className="text-[8px] font-bold text-foreground">Cierre</Text>}
                         </View>
                       );
                     }}
                   />
+                  <View className="flex-row items-center gap-x-3 gap-y-1 justify-center mt-1 flex-wrap">
+                    <View className="flex-row items-center gap-1.5">
+                      <View className="w-2.5 h-2.5 rounded bg-success-light" />
+                      <Text className="text-xs text-muted-foreground">Abierto</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1.5">
+                      <View className="w-2.5 h-2.5 rounded bg-warning-light" />
+                      <Text className="text-xs text-muted-foreground">Cerrado, por pagar</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1.5">
+                      <View className="w-2.5 h-2.5 rounded bg-primary-100" />
+                      <Text className="text-xs text-muted-foreground">Pagado</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1.5">
+                      <Ionicons name="flag" size={10} color={theme.primary} />
+                      <Text className="text-xs text-muted-foreground">Festivo</Text>
+                    </View>
+                  </View>
                 </View>
               ) : (
                 <PeriodoSelector periodos={periodos} activeId={activePeriodoId} onSelect={setPeriodoId} />
