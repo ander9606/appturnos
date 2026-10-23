@@ -116,7 +116,7 @@ jobs:
             (crontab -l 2>/dev/null | grep -qF 'backup-db.sh') || \
               ( (crontab -l 2>/dev/null; echo '0 8 * * * /app/backend/scripts/backup-db.sh >> /var/log/mysql-backup.log 2>&1') | crontab - )
             echo "→ Reconstruyendo API..."
-            docker compose --env-file backend/.env build api
+            docker compose --env-file backend/.env build --pull api
             echo "→ Reiniciando API..."
             docker compose --env-file backend/.env stop api
             docker compose --env-file backend/.env rm -f api
