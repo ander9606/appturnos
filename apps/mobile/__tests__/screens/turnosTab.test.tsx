@@ -574,6 +574,16 @@ describe('trabajador — vista lista', () => {
       expect(screen.getByText('Hoy')).toBeTruthy();
       expect(screen.queryByText('Otro')).toBeNull();
     });
+    it('círculo con la cantidad de ofertas a las que aún no se ha postulado (no cuenta las ya postuladas)', () => {
+      mockOfertas = q({ data: [OFERTA({ id: 1 }), OFERTA({ id: 2 }), OFERTA({ id: 3 })] });
+      mockMis = q([ASIG({ id: 5, oferta_id: 3 })]);
+      montar('trabajador_turnos');
+      expect(screen.getByText('2')).toBeTruthy();
+    });
+    it('sin ofertas por postular no hay círculo', () => {
+      montar('trabajador_turnos');
+      expect(screen.queryByText('0')).toBeNull();
+    });
     it('cargando: sin lista; vacío con mensaje', () => {
       irADisponibles();
       expect(screen.getByText('Sin ofertas este día')).toBeTruthy();

@@ -10,6 +10,7 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
+import { ContadorCirculo } from '@/components/ui/ContadorCirculo';
 import { PantallaPestana } from '@/components/ui/EncabezadoPestana';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -442,7 +443,7 @@ function NominaGestorView() {
                       <Text className="text-sm font-medium text-foreground">Reingresos pendientes</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                      {reingresosPendientes.length > 0 && <ConteoPendientes n={reingresosPendientes.length} />}
+                      <ContadorCirculo n={reingresosPendientes.length} />
                       <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                     </View>
                   </TouchableOpacity>
@@ -456,7 +457,7 @@ function NominaGestorView() {
                       <Text className="text-sm font-medium text-foreground">Descansos compensatorios</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                      {compPendientes > 0 && <ConteoPendientes n={compPendientes} />}
+                      <ContadorCirculo n={compPendientes} />
                       <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                     </View>
                   </TouchableOpacity>
@@ -513,14 +514,6 @@ function NominaGestorView() {
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
     </PantallaPestana>
-  );
-}
-
-function ConteoPendientes({ n }: { n: number }) {
-  return (
-    <View className="bg-warning rounded-full min-w-[24px] h-[24px] items-center justify-center px-1.5">
-      <Text className="text-white text-xs font-bold">{n}</Text>
-    </View>
   );
 }
 

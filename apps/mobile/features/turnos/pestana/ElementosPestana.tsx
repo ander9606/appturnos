@@ -1,6 +1,7 @@
 import { Text, TextInput } from '@/components/ui/Text';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { COLORS, alpha } from '@/lib/designTokens';
+import { ContadorCirculo } from '@/components/ui/ContadorCirculo';
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -110,7 +111,7 @@ export function BannerEventual({ periodo }: { periodo: PeriodoEventual | undefin
 }
 
 /** Selector "Mis Turnos" / "Disponibles" del trabajador. */
-export function SelectorTabs({ activeTab, onChange }: { activeTab: ActiveTab; onChange: (t: ActiveTab) => void }) {
+export function SelectorTabs({ activeTab, onChange, disponibles = 0 }: { activeTab: ActiveTab; onChange: (t: ActiveTab) => void; /** Ofertas a las que aún puede postularse; se muestra como círculo en "Disponibles". */ disponibles?: number }) {
   return (
     <View className="bg-card flex-row border-b border-border px-6">
       {(['mis_turnos', 'disponibles'] as ActiveTab[]).map((tab) => {
@@ -124,9 +125,12 @@ export function SelectorTabs({ activeTab, onChange }: { activeTab: ActiveTab; on
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
           >
-            <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
-              {label}
-            </Text>
+            <View className="flex-row items-center gap-1.5">
+              <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                {label}
+              </Text>
+              {tab === 'disponibles' && <ContadorCirculo n={disponibles} />}
+            </View>
           </TouchableOpacity>
         );
       })}
