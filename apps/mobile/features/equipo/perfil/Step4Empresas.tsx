@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import { COLORS } from '@/lib/designTokens';
@@ -92,9 +93,11 @@ export function Step4Empresas({ data, onChange, onBack, onSubmit }: Props) {
       {isLoading ? (
         <Spinner size="small" color={COLORS.primary} />
       ) : empresas.length === 0 ? (
-        <Text className="text-sm text-muted-foreground text-center py-4">
-          {busqueda ? 'Sin resultados para esa búsqueda' : 'No hay empresas en el directorio'}
-        </Text>
+        <EmptyState
+          compact
+          variant={busqueda ? 'search' : 'empty'}
+          title={busqueda ? 'Sin resultados para esa búsqueda' : 'No hay empresas en el directorio'}
+        />
       ) : (
         <View className="gap-2">
           {empresas.map((emp) => {

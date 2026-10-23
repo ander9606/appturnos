@@ -351,6 +351,7 @@ Referencia móvil: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`). Refe
 Cada perfil tiene su color (`THEME_COLORS` vía `useTheme()`): trabajador de turnos **naranja**, trabajador de nómina **verde**, gestores **azul**. Todas las pestañas (Inicio, Turnos, Nómina, Equipo, Empresas, Perfil) abren con una franja de ese color, esquinas inferiores redondeadas y texto blanco.
 - `PantallaPestana` (`components/ui/EncabezadoPestana.tsx`) es la raíz de la pestaña: pinta de ese color la zona de la barra de estado (iconos claros) y deja el fondo normal debajo.
 - `EncabezadoPestana` es la franja: `titulo`, `subtitulo`, `derecha` (acción, icono blanco) y `children` (tarjetas o pestañas internas, sobre fondo `white/18`; las pestañas internas usan subrayado blanco).
+- Excepción por sección: la pestaña **Nómina** es verde también para los gestores (la sección conserva su color). Se fija con `<SeccionTema.Provider value="nomina">` (`lib/theme.ts`); `useTheme()` lo lee en `PantallaPestana`, calendarios y todo lo de dentro.
 - No usar `bg-card`/texto oscuro para el título de una pestaña, ni hex: el color sale siempre del perfil.
 - Las pantallas de detalle (`turno/[id]`, `trabajador/[id]`…) conservan su encabezado blanco con flecha atrás.
 
@@ -423,12 +424,12 @@ Reglas:
 10. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
 11. **Más ilustraciones de marca.** Hecho en la web: el 404 y los vacíos de página completa usan el planeta. Falta móvil (sin turnos, sin equipo) donde aún haya texto suelto.
 12. **Probar `actionSheet` sobre un `Modal` en Android.** En iPhone se verificó que los diálogos aparecen sobre un `Modal`; falta repetirlo en Android.
-13. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
+13. **`ActionToast`**: resuelto, lleva el ícono de aviso y la misma entrada con resorte que `Toast`.
 14. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
 16. **Sin datos guardados en el teléfono.** El caché de TanStack Query vive solo en memoria: al reabrir la app sin internet no hay turnos que mostrar (sale `ErrorState` sin conexión). Persistirlo requiere `@react-native-async-storage/async-storage` (módulo nativo: build nuevo, no OTA) y decidir qué datos se guardan sin cifrar (propuesta: solo turnos, borrado al cerrar sesión, caducidad de 24 h).
 ---
-15. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: los vacíos de página completa ya usan `EmptyState`; quedan textos grises dentro de celdas de tabla y tarjetas pequeñas ("Sin cargos", "Sin gestores"…), donde una ilustración de 170 px no cabe.
+15. **`EmptyState` en el resto de pantallas.** Móvil: los vacíos de pantalla o sección (Solicitudes, Postulaciones, Directorio, Pagos y Empresas del panel admin, Liquidación eventual, Historial de ganancias, Sueldo, Step4Empresas) usan `EmptyState`; quedan solo textos de campo dentro de fichas ("Sin punto asignado", "Sin datos bancarios registrados", "Sin calificaciones aún"), que son estados de un dato, no de una pantalla. Web: los vacíos de página completa ya usan `EmptyState`; quedan textos grises dentro de celdas de tabla y tarjetas pequeñas ("Sin cargos", "Sin gestores"…), donde una ilustración de 170 px no cabe.
 
 ## 9. Referencias
 

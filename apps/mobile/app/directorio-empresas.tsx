@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 /**
  * Directorio de empresas — trabajador_turnos
  *
@@ -291,16 +292,12 @@ export default function DirectorioEmpresasScreen() {
       {isLoading ? (
         <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : empresas.length === 0 ? (
-        <View className="flex-1 items-center justify-center px-8 gap-3">
-          <Ionicons name="search-outline" size={48} color={COLORS.borderStrong} />
-          <Text className="text-base font-semibold text-foreground text-center">
-            {busqueda || ciudad ? 'Sin resultados' : 'No hay empresas disponibles'}
-          </Text>
-          {(busqueda || ciudad) && (
-            <TouchableOpacity onPress={() => { setBusqueda(''); setCiudad(null); }}>
-              <Text className="text-sm text-primary-500 font-semibold">Limpiar filtros</Text>
-            </TouchableOpacity>
-          )}
+        <View className="flex-1 justify-center">
+          <EmptyState
+            variant={busqueda || ciudad ? 'search' : 'empty'}
+            title={busqueda || ciudad ? 'Sin resultados' : 'No hay empresas disponibles'}
+            action={busqueda || ciudad ? { label: 'Limpiar filtros', onPress: () => { setBusqueda(''); setCiudad(null); } } : undefined}
+          />
         </View>
       ) : (
         <FlatList

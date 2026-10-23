@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 /**
  * Lista de todas las empresas — panel super_admin.
  * Permite buscar, filtrar por estado y navegar al detalle.
@@ -172,13 +173,7 @@ export default function EmpresasScreen() {
         )}
 
         {!isLoading && !isError && empresas.length === 0 && (
-          <View className="items-center py-16 gap-2">
-            <Text className="text-4xl">🏙️</Text>
-            <Text className="text-foreground font-semibold text-base">Sin resultados</Text>
-            <Text className="text-muted-foreground text-sm text-center px-8">
-              No se encontraron empresas con los filtros actuales.
-            </Text>
-          </View>
+          <EmptyState variant="search" title="Sin resultados" message="No se encontraron empresas con los filtros actuales." />
         )}
 
         {empresas.map((empresa) => {
