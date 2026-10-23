@@ -16,6 +16,20 @@ export function shiftMonth(cursor: MonthCursor, delta: number): MonthCursor {
   return { year: Math.floor(total / 12), month: (total % 12) + 1 };
 }
 
+/** Mes (1-12) y año de hoy en Bogotá. */
+export function mesDeHoy(): MonthCursor {
+  const [year, month] = bogotaToday().split('-').map(Number);
+  return { year, month };
+}
+
+const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+/** "2026-10-22" → "Jueves 22 de octubre". */
+export function etiquetaDia(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${DIAS_LARGOS[new Date(y, m - 1, d).getDay()]} ${d} de ${MESES_LARGOS[m - 1].toLowerCase()}`;
+}
+
 export interface CalendarDay {
   /** YYYY-MM-DD */
   date: string;

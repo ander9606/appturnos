@@ -129,3 +129,28 @@ export function SkeletonStats({ style }: { style?: StyleProp<ViewStyle> }) {
     </Cargando>
   );
 }
+
+/** Calendario mensual: cabecera de días y 5 semanas de celdas, con la forma de MonthCalendar. */
+export function SkeletonCalendario({ style }: { style?: StyleProp<ViewStyle> }) {
+  return (
+    <View
+      className="bg-card border border-border rounded-3xl overflow-hidden"
+      style={style}
+      accessibilityLabel={t('common.loading')}
+    >
+      <View className="flex-row px-1 py-3 justify-around" style={{ backgroundColor: COLORS.muted }}>
+        {Array.from({ length: 7 }, (_, i) => <Skeleton key={i} width={14} height={10} />)}
+      </View>
+      {Array.from({ length: 5 }, (_, w) => (
+        <View key={w} className={`flex-row ${w > 0 ? 'border-t border-border/40' : ''}`}>
+          {Array.from({ length: 7 }, (_, d) => (
+            <View key={d} className="flex-1 p-1 gap-1 min-h-16">
+              <Skeleton width={24} height={24} radius="full" />
+              {(w + d) % 3 === 0 && <Skeleton width={26} height={6} radius={3} />}
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}

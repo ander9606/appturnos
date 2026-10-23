@@ -32,7 +32,7 @@ import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
 import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { MonthCalendar }          from '@/components/ui/MonthCalendar';
-import { getMonthGrid, shiftMonth, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import { COLORS,HOUR_TYPE_COLORS }       from '@/lib/designTokens';
 import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { bogotaToday } from '@/lib/formatters';
@@ -92,6 +92,10 @@ function NominaGestorView() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  const mesAnterior  = () => setMesCursor(c => shiftMonth(c, -1));
+  const mesSiguiente = () => setMesCursor(c => shiftMonth(c, 1));
+  const hoyCursor    = mesDeHoy();
+  const esMesActual  = mesCursor.year === hoyCursor.year && mesCursor.month === hoyCursor.month;
   // Consulta aparte (no la de arriba, topada a 20) para que navegar el mes lejos en el tiempo
   // siga encontrando el período correspondiente en vez de mostrar el mes vacío en silencio.
   const { data: periodosMesResp } = usePeriodos(undefined, viewMode === 'mes', {
@@ -285,11 +289,14 @@ function NominaGestorView() {
                   <NavegadorMes
                     mes={mesCursor.month}
                     anio={mesCursor.year}
-                    onAnterior={() => setMesCursor(c => shiftMonth(c, -1))}
-                    onSiguiente={() => setMesCursor(c => shiftMonth(c, 1))}
+                    onAnterior={mesAnterior}
+                    onSiguiente={mesSiguiente}
+                    onHoy={esMesActual ? undefined : () => setMesCursor(mesDeHoy())}
                   />
                   <MonthCalendar
                     weeks={mesWeeks}
+                    onMesAnterior={mesAnterior}
+                    onMesSiguiente={mesSiguiente}
                     onDayPress={(day: CalendarDay) => {
                       const periodo = periodoDeDia(day.date);
                       if (periodo) { setPeriodoId(periodo.id); setViewMode('lista'); }

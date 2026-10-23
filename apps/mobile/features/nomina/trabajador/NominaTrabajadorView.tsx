@@ -30,7 +30,7 @@ import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
 import { useRegistrosHistorial } from '../useNomina';
 import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
-import { getMonthGrid, shiftMonth, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import { bogotaToday } from '@/lib/formatters';
 import type { TipoDia } from '@api-client';
 
@@ -54,6 +54,10 @@ export function NominaTrabajadorView() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  const mesAnterior  = () => setMesCursor(c => shiftMonth(c, -1));
+  const mesSiguiente = () => setMesCursor(c => shiftMonth(c, 1));
+  const hoyCursor    = mesDeHoy();
+  const esMesActual  = mesCursor.year === hoyCursor.year && mesCursor.month === hoyCursor.month;
   const { data: historialResp } = useRegistrosHistorial({
     enabled: activeTab === 'nomina' && viewMode === 'mes',
     fechaDesde: mesWeeks[0][0].date,
@@ -302,11 +306,14 @@ export function NominaTrabajadorView() {
                     <NavegadorMes
                       mes={mesCursor.month}
                       anio={mesCursor.year}
-                      onAnterior={() => setMesCursor(c => shiftMonth(c, -1))}
-                      onSiguiente={() => setMesCursor(c => shiftMonth(c, 1))}
+                      onAnterior={mesAnterior}
+                      onSiguiente={mesSiguiente}
+                      onHoy={esMesActual ? undefined : () => setMesCursor(mesDeHoy())}
                     />
                     <MonthCalendar
                       weeks={mesWeeks}
+                      onMesAnterior={mesAnterior}
+                      onMesSiguiente={mesSiguiente}
                       renderDay={(day: CalendarDay) => {
                         const tipoDia = tipoDiaPorFecha.get(day.date);
                         const esLibre = (tipoDia && DIA_LIBRE[tipoDia]) || compensatoriosAsignadosPorFecha.has(day.date);

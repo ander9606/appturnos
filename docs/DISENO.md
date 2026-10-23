@@ -358,7 +358,10 @@ Cada perfil tiene su color (`THEME_COLORS` vía `useTheme()`): trabajador de tur
 
 Los tres usan el color del perfil (`useTheme()`), nunca un color fijo:
 - `MonthCalendar` (`components/ui/MonthCalendar.tsx`): tarjeta `rounded-3xl`; cabecera de días tintada (`alpha(primary, .1)`), sábado y domingo en el color del perfil; el día de hoy con círculo sólido y celda tintada.
-- `NavegadorMes` (`components/ui/NavegadorMes.tsx`): ‹ Mes Año › con botones tintados. Es el único selector de mes: no copiar los chevrons a mano.
+- `NavegadorMes` (`components/ui/NavegadorMes.tsx`): ‹ Mes Año › con botones tintados y un botón "Hoy" (solo si no se ve el mes actual). Es el único selector de mes: no copiar los chevrons a mano.
+- Deslizar el calendario a derecha o izquierda cambia de mes (`onMesAnterior`/`onMesSiguiente` de `MonthCalendar`, con `PanResponder`: solo toma gestos claramente horizontales).
+- En Turnos, tocar un día lo **marca** (`selectedDate`) y muestra debajo `ResumenDiaMes` con los turnos de ese día y "Ver en lista"; ya no salta de vista.
+- Mientras carga el mes: `SkeletonCalendario`, no una lista.
 - `WeekStrip` (`features/turnos/WeekStrip.tsx`): día seleccionado sólido, hoy con aro suave, rayita en los días con turnos.
 - Pendiente: los selectores de fecha nativos (`DateTimePicker`) los dibuja el sistema; en iOS se puede darles `accentColor`, en Android dependen del tema nativo del build (no cambia por OTA).
 
@@ -408,7 +411,7 @@ Reglas:
 
 1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes, que el código compila y que ningún interlineado baja de 1.25×, pero no se vio en pantalla: revisar que no haya texto cortado (sobre todo números grandes y emojis en Android), que la negrita de Android no salga doble y que el arranque no parpadee.
 2. **Hex en la web.** Resuelto: `apps/web/.eslintrc.cjs` prohíbe hex literales (excepto la landing) y corre en el CI de la web (`npm run lint`).
-3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. Si se repite una forma nueva (p. ej. el calendario mensual), crear su skeleton propio.
+3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. (El calendario mensual ya tiene el suyo: `SkeletonCalendario`.)
 4. **Contraste del naranja.** Verde y azul del perfil ya pasan AA con texto blanco (`success700` 5,48:1, `info600` 5,17:1). El naranja de marca (`primary` #FF5A3C) queda en 3,10:1 con blanco: solo es válido para texto grande en negrita (títulos, botones); no usarlo con texto pequeño blanco. Alternativa evaluada: `primary600` (4,09:1) o texto oscuro (5,76:1).
 5. **Modo oscuro.** `userInterfaceStyle: "light"` fijo. Con los tokens ya centralizados, es viable como etapa propia.
 6. **Íconos.** Web usa `lucide-react`, móvil usa `Ionicons`. Unificar estilo (grosor, tamaño) o elegir un solo set.

@@ -2,7 +2,7 @@ import { PantallaPestana, EncabezadoPestana } from '@/components/ui/EncabezadoPe
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text, TextInput } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { SkeletonList } from '@/components/ui/Skeleton';
+import { SkeletonList, SkeletonCalendario } from '@/components/ui/Skeleton';
 import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
@@ -10,6 +10,7 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
 
 import { useRouter } from 'expo-router';
@@ -22,14 +23,15 @@ import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
-import { getDateRange, toISODate } from '@/features/turnos/turnosUtils';
+import { getDateRange, toISODate, fmtRange, getEstadoConfig } from '@/features/turnos/turnosUtils';
+import { ResumenDiaMes, type ItemDia } from '@/features/turnos/ResumenDiaMes';
 import { bogotaToday } from '@/lib/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
 import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
-import { getMonthGrid, shiftMonth, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -61,6 +63,11 @@ export default function TurnosScreen() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  const mesAnterior  = () => setMesCursor(c => shiftMonth(c, -1));
+  const mesSiguiente = () => setMesCursor(c => shiftMonth(c, 1));
+  const hoyCursor    = mesDeHoy();
+  const esMesActual  = mesCursor.year === hoyCursor.year && mesCursor.month === hoyCursor.month;
+  const irAHoy       = () => { setMesCursor(hoyCursor); setSelectedDate(today); };
   const { data: ofertasMesResp, isLoading: loadingOfertasMes, isError: errorOfertasMes, error: errOfertasMes, refetch: refetchOfertasMes } = useOfertas(
     {
       fecha_desde: mesWeeks[0][0].date,
@@ -354,6 +361,35 @@ export default function TurnosScreen() {
 
   // ── Main render ───────────────────────────────────────────────────────
 
+  // Vista previa del día marcado en el calendario del mes (funciones simples: leen datos ya calculados arriba).
+  const itemsGestorDia = (fecha: string): ItemDia[] => (ofertasPorDiaMes.get(fecha) ?? []).map(o => {
+    const total = o.puestos?.reduce((s, p) => s + p.plazas, 0) ?? 0;
+    const cubiertas = o.puestos?.reduce((s, p) => s + p.plazas_cubiertas, 0) ?? 0;
+    return {
+      key: `o${o.id}`,
+      titulo: o.titulo,
+      detalle: `${fmtRange(o.hora_inicio, o.hora_fin_estimada)} · ${cubiertas}/${total} plazas cubiertas`,
+      color: colorOferta(o, pendientesPorOferta, today, theme.primary),
+      onPress: () => router.push(`/oferta/${o.id}`),
+    };
+  });
+  const itemsTrabajadorDia = (fecha: string): ItemDia[] => [
+    ...(misTurnosPorDiaMes.get(fecha) ?? []).map(a => ({
+      key: `a${a.id}`,
+      titulo: a.oferta_titulo,
+      detalle: getEstadoConfig(a.estado).label,
+      color: theme.primary,
+      onPress: () => router.push(`/turno/${a.id}`),
+    })),
+    ...(ofertasPorDiaMes.get(fecha) ?? []).filter(o => !aplicadosIds.has(o.id)).map(o => ({
+      key: `d${o.id}`,
+      titulo: o.titulo,
+      detalle: `Disponible · ${fmtRange(o.hora_inicio, o.hora_fin_estimada)}`,
+      color: COLORS.info,
+      onPress: () => router.push(`/oferta/${o.id}`),
+    })),
+  ];
+
   return (
     <PantallaPestana>
 
@@ -424,24 +460,28 @@ export default function TurnosScreen() {
       {isGestor ? (
         <View className="flex-1">
           {viewMode === 'mes' ? (
-            <View className="flex-1 px-5 pt-3">
+            <ScrollView className="flex-1" contentContainerClassName="px-5 pt-3 pb-28">
               <View className="mb-3">
                 <NavegadorMes
                   mes={mesCursor.month}
                   anio={mesCursor.year}
-                  onAnterior={() => setMesCursor(c => shiftMonth(c, -1))}
-                  onSiguiente={() => setMesCursor(c => shiftMonth(c, 1))}
+                  onAnterior={mesAnterior}
+                  onSiguiente={mesSiguiente}
+                  onHoy={esMesActual ? undefined : irAHoy}
                 />
               </View>
 
               {loadingOfertasMes ? (
-                <SkeletonList count={3} />
+                <SkeletonCalendario />
               ) : errorOfertasMes ? (
                 <ErrorState compact error={errOfertasMes} onRetry={refetchOfertasMes} fallback="No se pudieron cargar los turnos del mes" />
               ) : (
                 <MonthCalendar
                   weeks={mesWeeks}
-                  onDayPress={(day: CalendarDay) => { setSelectedDate(day.date); setViewMode('lista'); }}
+                  selectedDate={selectedDate}
+                  onMesAnterior={mesAnterior}
+                  onMesSiguiente={mesSiguiente}
+                  onDayPress={(day: CalendarDay) => setSelectedDate(day.date)}
                   renderDay={(day: CalendarDay) => {
                     const delDia = ofertasPorDiaMes.get(day.date) ?? [];
                     if (delDia.length === 0) return null;
@@ -460,6 +500,10 @@ export default function TurnosScreen() {
                 />
               )}
 
+              {!loadingOfertasMes && !errorOfertasMes && (
+                <ResumenDiaMes fecha={selectedDate} items={itemsGestorDia(selectedDate)} onVerLista={() => setViewMode('lista')} />
+              )}
+
               <View className="flex-row items-center gap-x-3 gap-y-1.5 justify-center mt-3 flex-wrap">
                 <LeyendaPunto color={CAL_COLOR.borrador} label="Borrador" />
                 <LeyendaPunto color={theme.primary} label="Publicada" />
@@ -467,7 +511,7 @@ export default function TurnosScreen() {
                 <LeyendaPunto color={CAL_COLOR.completada} label="Completada" />
                 <LeyendaPunto color={CAL_COLOR.cancelada} label="Cancelada" />
               </View>
-            </View>
+            </ScrollView>
           ) : (
             <GestorTurnosView
               selectedDate={selectedDate}
@@ -505,18 +549,19 @@ export default function TurnosScreen() {
       ) : (
         <>
         {viewMode === 'mes' ? (
-          <View className="flex-1 px-5 pt-3">
+          <ScrollView className="flex-1" contentContainerClassName="px-5 pt-3 pb-8">
             <View className="mb-3">
               <NavegadorMes
                 mes={mesCursor.month}
                 anio={mesCursor.year}
-                onAnterior={() => setMesCursor(c => shiftMonth(c, -1))}
-                onSiguiente={() => setMesCursor(c => shiftMonth(c, 1))}
+                onAnterior={mesAnterior}
+                onSiguiente={mesSiguiente}
+                onHoy={esMesActual ? undefined : irAHoy}
               />
             </View>
 
             {loadingOfertasMes || loadingMios ? (
-              <SkeletonList count={3} />
+              <SkeletonCalendario />
             ) : isNomina && esErrorTurnosExtraApagadas(errOfertasMes) ? (
               <TurnosExtraOptIn />
             ) : errorOfertasMes || errorMios ? (
@@ -529,7 +574,10 @@ export default function TurnosScreen() {
             ) : (
               <MonthCalendar
                 weeks={mesWeeks}
-                onDayPress={(day: CalendarDay) => { setSelectedDate(day.date); setViewMode('lista'); }}
+                selectedDate={selectedDate}
+                onMesAnterior={mesAnterior}
+                onMesSiguiente={mesSiguiente}
+                onDayPress={(day: CalendarDay) => setSelectedDate(day.date)}
                 renderDay={(day: CalendarDay) => {
                   const mios = misTurnosPorDiaMes.get(day.date) ?? [];
                   // Naranja sólido solo si ya está aceptado (confirmado/en curso/completado) —
@@ -557,6 +605,10 @@ export default function TurnosScreen() {
               />
             )}
 
+            {!loadingOfertasMes && !loadingMios && !errorOfertasMes && !errorMios && (
+              <ResumenDiaMes fecha={selectedDate} items={itemsTrabajadorDia(selectedDate)} onVerLista={() => setViewMode('lista')} />
+            )}
+
             <View className="flex-row items-center gap-4 justify-center mt-4 flex-wrap">
               <View className="flex-row items-center gap-1.5">
                 <View className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primary }} />
@@ -571,7 +623,7 @@ export default function TurnosScreen() {
                 <Text className="text-xs text-muted-foreground">Disponibles</Text>
               </View>
             </View>
-          </View>
+          </ScrollView>
         ) : (
         <>
           {/* ── Banner turnos eventuales (trabajador_nomina) ─────── */}
