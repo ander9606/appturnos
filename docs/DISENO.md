@@ -418,7 +418,7 @@ Reglas:
 5. **Modo oscuro.** `userInterfaceStyle: "light"` fijo. Con los tokens ya centralizados, es viable como etapa propia.
 6. **Íconos.** Web usa `lucide-react`, móvil usa `Ionicons`. Unificar estilo (grosor, tamaño) o elegir un solo set.
 7. **Identidad propia.** Definir 3-4 rasgos distintivos (forma recurrente, sombra, ilustración para estados vacíos) y documentarlos en esta guía.
-8. **Spinner a nivel de marca.** Evaluar una animación con la forma del logo (Lottie) para el splash y la carga inicial.
+8. **Spinner a nivel de marca.** Hecho con `PlanetaCargando` (planeta con el anillo balanceándose, `Animated` + SVG) en la pantalla de arranque mientras se restaura la sesión. Pendiente para el próximo build nativo: pasarlo a Lottie (`lottie-react-native`) y usarlo también en el splash nativo.
 9. **`ErrorState` en el resto de pantallas.** Resuelto: móvil lo usa en todas las listas y pantallas de carga; en `empresa/[id]`, `contrato/[id]` y `cuenta-cobro/[id]` el 404 muestra `EmptyState` "no encontrado" y cualquier otro error muestra `ErrorState` con reintento (`isNotFound`). Web: el componente ya es de marca.
 10. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
 11. **Más ilustraciones de marca.** Hecho en la web: el 404 y los vacíos de página completa usan el planeta. Falta móvil (sin turnos, sin equipo) donde aún haya texto suelto.
