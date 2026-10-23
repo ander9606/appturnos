@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 /**
  * Pagos Wompi — panel super_admin.
  * Lista los eventos de pago recibidos vía webhook, con filtro por estado
@@ -212,13 +213,7 @@ export default function PagosScreen() {
         )}
 
         {!isLoading && !isError && eventos.length === 0 && (
-          <View className="items-center py-16 gap-2">
-            <Text className="text-4xl">💳</Text>
-            <Text className="text-foreground font-semibold text-base">Sin pagos</Text>
-            <Text className="text-muted-foreground text-sm text-center px-8">
-              No hay eventos de pago con este filtro.
-            </Text>
-          </View>
+          <EmptyState variant="search" title="Sin pagos" message="No hay eventos de pago con este filtro." />
         )}
 
         {eventos.map((evento) => (

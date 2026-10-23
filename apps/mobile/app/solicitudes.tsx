@@ -380,19 +380,13 @@ export default function SolicitudesScreen() {
 
         {/* Empty state */}
         {!isLoading && solicitudes.length === 0 && (
-          <View className="items-center justify-center px-8 py-16 gap-3">
-            <View className="w-16 h-16 rounded-2xl bg-muted items-center justify-center">
-              <Ionicons name="people-outline" size={32} color={COLORS.placeholder} />
-            </View>
-            <Text className="text-lg font-bold text-foreground text-center">
-              {tab === 'pendientes' ? 'Sin solicitudes pendientes' : 'Sin vínculos aprobados'}
-            </Text>
-            <Text className="text-sm text-muted-foreground text-center">
-              {tab === 'pendientes'
-                ? 'No hay solicitudes de vinculación que requieran tu atención.'
-                : 'Ningún trabajador tiene vínculo activo con esta empresa aún.'}
-            </Text>
-          </View>
+          <EmptyState
+            variant={tab === 'pendientes' ? 'done' : 'empty'}
+            title={tab === 'pendientes' ? 'Sin solicitudes pendientes' : 'Sin vínculos aprobados'}
+            message={tab === 'pendientes'
+              ? 'No hay solicitudes de vinculación que requieran tu atención.'
+              : 'Ningún trabajador tiene vínculo activo con esta empresa aún.'}
+          />
         )}
 
         {/* List */}

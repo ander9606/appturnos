@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 /**
  * Pantalla de postulaciones (gestores / admin_empresa).
  * Tres pestañas — Pendientes / Aceptados / Rechazados — cada una agrupada
@@ -11,7 +12,7 @@
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS, alpha } from '@/lib/designTokens';
+import { COLORS } from '@/lib/designTokens';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -455,23 +456,16 @@ export default function PostulacionesScreen() {
 
       {/* ── List ───────────────────────────────────────────────────────── */}
       {sections.length === 0 ? (
-        <View className="flex-1 items-center justify-center gap-4 px-8">
-          <View
-            className="w-20 h-20 rounded-full items-center justify-center"
-            style={{ backgroundColor: alpha(theme.primary, 0.09) }}
-          >
-            <Ionicons name="checkmark-done-outline" size={36} color={theme.primary} />
-          </View>
-          <Text className="text-base font-semibold text-foreground text-center">
-            {tab === 'pendientes' ? 'Sin postulaciones pendientes' : tab === 'aceptados' ? 'Sin aceptados' : 'Sin rechazados'}
-          </Text>
-          <Text className="text-sm text-muted-foreground text-center">
-            {tab === 'pendientes'
+        <View className="flex-1 justify-center">
+          <EmptyState
+            variant={tab === 'pendientes' ? 'done' : 'empty'}
+            title={tab === 'pendientes' ? 'Sin postulaciones pendientes' : tab === 'aceptados' ? 'Sin aceptados' : 'Sin rechazados'}
+            message={tab === 'pendientes'
               ? 'Todas las postulaciones han sido revisadas.'
               : tab === 'aceptados'
               ? 'Todavía no hay trabajadores confirmados.'
               : 'No hay postulaciones rechazadas.'}
-          </Text>
+          />
         </View>
       ) : (
         <SectionList

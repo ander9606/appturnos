@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
@@ -114,7 +115,7 @@ export function HistorialSueldo({ numId, habilitado }: { numId: number; habilita
       {historialSalario.isLoading ? (
         <Spinner />
       ) : (historialSalario.data ?? []).length === 0 ? (
-        <Text className="text-sm text-muted-foreground">Sin cambios registrados.</Text>
+        <EmptyState compact title="Sin cambios registrados." />
       ) : (
         (historialSalario.data ?? []).map((c) => (
           <View key={c.id} className="border-t border-border/60 pt-2 gap-0.5">

@@ -88,10 +88,7 @@ function TablaTurnosPorEmpresa({ turnos, primaryColor, onPressTurno }: {
 
   if (grupos.length === 0) {
     return (
-      <View className="py-10 items-center gap-2">
-        <Ionicons name="document-text-outline" size={32} color={COLORS.placeholder} />
-        <Text className="text-sm text-muted-foreground">Sin turnos completados en este rango.</Text>
-      </View>
+      <EmptyState compact title="Sin turnos completados en este rango." />
     );
   }
 
