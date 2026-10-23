@@ -351,6 +351,7 @@ Referencia móvil: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`). Refe
 Cada perfil tiene su color (`THEME_COLORS` vía `useTheme()`): trabajador de turnos **naranja**, trabajador de nómina **verde**, gestores **azul**. Todas las pestañas (Inicio, Turnos, Nómina, Equipo, Empresas, Perfil) abren con una franja de ese color, esquinas inferiores redondeadas y texto blanco.
 - `PantallaPestana` (`components/ui/EncabezadoPestana.tsx`) es la raíz de la pestaña: pinta de ese color la zona de la barra de estado (iconos claros) y deja el fondo normal debajo.
 - `EncabezadoPestana` es la franja: `titulo`, `subtitulo`, `derecha` (acción, icono blanco) y `children` (tarjetas o pestañas internas, sobre fondo `white/18`; las pestañas internas usan subrayado blanco).
+- Excepción por sección: la pestaña **Nómina** es verde también para los gestores (la sección conserva su color). Se fija con `<SeccionTema.Provider value="nomina">` (`lib/theme.ts`); `useTheme()` lo lee en `PantallaPestana`, calendarios y todo lo de dentro.
 - No usar `bg-card`/texto oscuro para el título de una pestaña, ni hex: el color sale siempre del perfil.
 - Las pantallas de detalle (`turno/[id]`, `trabajador/[id]`…) conservan su encabezado blanco con flecha atrás.
 

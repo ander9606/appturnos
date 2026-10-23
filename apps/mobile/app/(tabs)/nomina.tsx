@@ -43,7 +43,7 @@ import {
 import { useCompensatoriosTodos } from '@/features/nomina/compensatorios/useCompensatorios';
 import { useDescuentosPeriodo } from '@/features/nomina/descuentos/useDescuentos';
 import { ApiError, type LiquidacionLinea } from '@api-client';
-import { useTheme } from '@/lib/theme';
+import { useTheme, SeccionTema } from '@/lib/theme';
 import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
 import { useRouter } from 'expo-router';
@@ -56,7 +56,7 @@ type RolGestor = typeof GESTORES[number];
 export default function NominaScreen() {
   const rol = useAuthStore((s) => s.usuario?.rol) ?? 'trabajador_nomina';
 
-  if (GESTORES.includes(rol as RolGestor)) return <NominaGestorView />;
+  if (GESTORES.includes(rol as RolGestor)) return <SeccionTema.Provider value="nomina"><NominaGestorView /></SeccionTema.Provider>;
   if (rol === 'trabajador_turnos')         return <NominaTurnosView />;
   if (rol === 'jefe_turnos')               return <NominaGestorTurnosView />;
   return <NominaTrabajadorView />;
