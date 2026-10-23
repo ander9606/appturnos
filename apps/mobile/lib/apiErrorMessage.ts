@@ -14,6 +14,11 @@ export function isClientError(err: unknown): boolean {
   return err instanceof ApiError && err.status >= 400 && err.status < 500;
 }
 
+/** 404: el recurso no existe (o no es de esta empresa). No es un fallo: reintentar no lo arregla. */
+export function isNotFound(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 404;
+}
+
 /** Sin red: `fetch` no llega a abrir la conexión y lanza un TypeError ("Network request failed"), nunca un ApiError. */
 export function isNetworkError(err: unknown): boolean {
   return err instanceof Error && !(err instanceof ApiError)
