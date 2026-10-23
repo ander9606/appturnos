@@ -2,6 +2,9 @@
  * Detalle y edición de una empresa — panel super_admin.
  * Permite ver métricas, editar campos y cambiar estado activo/inactivo.
  */
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { isNotFound } from '@/lib/apiErrorMessage';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
@@ -97,7 +100,7 @@ export default function EmpresaDetailScreen() {
   const empresaId = Number(id);
 
   const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
-  const { data: empresa, isLoading, isError } = useAdminEmpresa(empresaId, isSuperAdmin);
+  const { data: empresa, isLoading, isError, error, refetch } = useAdminEmpresa(empresaId, isSuperAdmin);
   const { mutateAsync: actualizar, isPending: guardando } = useActualizarEmpresa(empresaId);
   const { mutateAsync: cambiarEstado, isPending: cambiandoEstado } = useCambiarEstadoEmpresa();
   const { mutateAsync: eliminarEmpresa, isPending: eliminando } = useEliminarEmpresa();
@@ -216,16 +219,18 @@ export default function EmpresaDetailScreen() {
     );
   }
 
-  if (isError || !empresa) {
+  if (isError && !isNotFound(error)) {
     return (
-      <SafeAreaView className="flex-1 bg-background items-center justify-center gap-2 px-8">
-        <Text className="text-3xl">⚠️</Text>
-        <Text className="text-foreground font-semibold text-lg text-center">
-          No se encontró la empresa
-        </Text>
-        <Pressable onPress={() => router.back()}>
-          <Text className="text-primary text-sm font-semibold mt-2">← Volver</Text>
-        </Pressable>
+      <SafeAreaView className="flex-1 bg-background">
+        <ErrorState error={error} onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!empresa) {
+    return (
+      <SafeAreaView className="flex-1 bg-background">
+        <EmptyState variant="search" title="No se encontró la empresa" message="Puede que ya no exista." action={{ label: 'Volver', onPress: () => router.back() }} />
       </SafeAreaView>
     );
   }

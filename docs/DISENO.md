@@ -354,6 +354,19 @@ Cada perfil tiene su color (`THEME_COLORS` vía `useTheme()`): trabajador de tur
 - No usar `bg-card`/texto oscuro para el título de una pestaña, ni hex: el color sale siempre del perfil.
 - Las pantallas de detalle (`turno/[id]`, `trabajador/[id]`…) conservan su encabezado blanco con flecha atrás.
 
+### 5.11 Calendarios (móvil)
+
+Los tres usan el color del perfil (`useTheme()`), nunca un color fijo:
+- `MonthCalendar` (`components/ui/MonthCalendar.tsx`): tarjeta `rounded-3xl`; cabecera de días tintada (`alpha(primary, .1)`), sábado y domingo en el color del perfil; el día de hoy con círculo sólido y celda tintada.
+- `NavegadorMes` (`components/ui/NavegadorMes.tsx`): ‹ Mes Año › con botones tintados y un botón "Hoy" (solo si no se ve el mes actual). Es el único selector de mes: no copiar los chevrons a mano.
+- Deslizar el calendario a derecha o izquierda cambia de mes (`onMesAnterior`/`onMesSiguiente` de `MonthCalendar`, con `PanResponder`: solo toma gestos claramente horizontales).
+- En Turnos, tocar un día lo **marca** (`selectedDate`) y muestra debajo `ResumenDiaMes` con los turnos de ese día y "Ver en lista"; ya no salta de vista.
+- Mientras carga el mes: `SkeletonCalendario`, no una lista.
+- **Festivos:** `MonthCalendar` marca los festivos de Colombia (número en el color del perfil + bandera) y `ResumenDiaMes` los nombra. Salen de `festivosColombia()` / `nombreFestivo()` de `@api-client`, espejo de `festivosDeAnio()` del backend (la prueba `festivos.test.ts` exige que coincidan). Los domingos no se marcan: ya llevan el color en la cabecera.
+- **Períodos de nómina:** el gestor ve cada período como franja bajo los días (verde abierto, ámbar cerrado por pagar, primario pagado), con el período que está mirando a todo color y los demás atenuados, el día de cierre rotulado y una leyenda. El trabajador de nómina ve una franja fina del color del perfil en los días de su período actual y "Cierre" en el último.
+- `WeekStrip` (`features/turnos/WeekStrip.tsx`): día seleccionado sólido, hoy con aro suave, rayita en los días con turnos.
+- Pendiente: los selectores de fecha nativos (`DateTimePicker`) los dibuja el sistema; en iOS se puede darles `accentColor`, en Android dependen del tema nativo del build (no cambia por OTA).
+
 ## 6. Accesibilidad
 
 Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 px en negrita, y elementos gráficos):
@@ -400,13 +413,13 @@ Reglas:
 
 1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes, que el código compila y que ningún interlineado baja de 1.25×, pero no se vio en pantalla: revisar que no haya texto cortado (sobre todo números grandes y emojis en Android), que la negrita de Android no salga doble y que el arranque no parpadee.
 2. **Hex en la web.** Resuelto: `apps/web/.eslintrc.cjs` prohíbe hex literales (excepto la landing) y corre en el CI de la web (`npm run lint`).
-3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. Si se repite una forma nueva (p. ej. el calendario mensual), crear su skeleton propio.
+3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. (El calendario mensual ya tiene el suyo: `SkeletonCalendario`.)
 4. **Contraste del naranja.** Verde y azul del perfil ya pasan AA con texto blanco (`success700` 5,48:1, `info600` 5,17:1). El naranja de marca (`primary` #FF5A3C) queda en 3,10:1 con blanco: solo es válido para texto grande en negrita (títulos, botones); no usarlo con texto pequeño blanco. Alternativa evaluada: `primary600` (4,09:1) o texto oscuro (5,76:1).
 5. **Modo oscuro.** `userInterfaceStyle: "light"` fijo. Con los tokens ya centralizados, es viable como etapa propia.
 6. **Íconos.** Web usa `lucide-react`, móvil usa `Ionicons`. Unificar estilo (grosor, tamaño) o elegir un solo set.
 7. **Identidad propia.** Definir 3-4 rasgos distintivos (forma recurrente, sombra, ilustración para estados vacíos) y documentarlos en esta guía.
-8. **Spinner a nivel de marca.** Evaluar una animación con la forma del logo (Lottie) para el splash y la carga inicial.
-9. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas y pantallas de carga (incluido el panel super_admin, Reportes, Mi plan, Integración, Registros del período). Quedan solo los casos de \"no encontrado\" (`empresa/[id]`, `contrato/[id]`, `cuenta-cobro/[id]`), que mezclan error real y 404 sin reintento. Web: el componente ya es de marca en todas las pantallas que lo usan.
+8. **Spinner a nivel de marca.** Hecho con `PlanetaCargando` (planeta con el anillo balanceándose, `Animated` + SVG) en la pantalla de arranque mientras se restaura la sesión. Pendiente para el próximo build nativo: pasarlo a Lottie (`lottie-react-native`) y usarlo también en el splash nativo.
+9. **`ErrorState` en el resto de pantallas.** Resuelto: móvil lo usa en todas las listas y pantallas de carga; en `empresa/[id]`, `contrato/[id]` y `cuenta-cobro/[id]` el 404 muestra `EmptyState` "no encontrado" y cualquier otro error muestra `ErrorState` con reintento (`isNotFound`). Web: el componente ya es de marca.
 10. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
 11. **Más ilustraciones de marca.** Hecho en la web: el 404 y los vacíos de página completa usan el planeta. Falta móvil (sin turnos, sin equipo) donde aún haya texto suelto.
 12. **Probar `actionSheet` sobre un `Modal` en Android.** En iPhone se verificó que los diálogos aparecen sobre un `Modal`; falta repetirlo en Android.

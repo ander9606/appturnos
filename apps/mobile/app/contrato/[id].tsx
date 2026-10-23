@@ -1,3 +1,6 @@
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { isNotFound } from '@/lib/apiErrorMessage';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
@@ -7,7 +10,7 @@ import {
   View, ScrollView, StyleSheet, TouchableOpacity, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
@@ -61,12 +64,13 @@ const GESTORES = ['admin_empresa', 'jefe_turnos'];
 
 export default function ContratoScreen() {
   const { id }    = useLocalSearchParams<{ id: string }>();
+  const router    = useRouter();
   const qc        = useQueryClient();
   const rol       = useAuthStore((s) => s.usuario?.rol);
   const isGestor  = GESTORES.includes(rol ?? '');
   const [showFirma, setShowFirma] = useState(false);
 
-  const { data: contrato, isLoading, isError } = useQuery({
+  const { data: contrato, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['contrato', id],
     queryFn: () => contratosApi.obtener(Number(id)),
     staleTime: 60_000,
@@ -102,11 +106,18 @@ export default function ContratoScreen() {
     );
   }
 
-  if (isError || !contrato) {
+  if (isError && !isNotFound(error)) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Ionicons name="alert-circle-outline" size={48} color={COLORS.danger} />
-        <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '600', color: COLORS.foreground }}>Contrato no encontrado</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted }}>
+        <ErrorState error={error} onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!contrato) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted }}>
+        <EmptyState variant="search" title="Contrato no encontrado" message="Puede que ya no exista o que no tengas acceso a él." action={{ label: 'Volver', onPress: () => router.back() }} />
       </SafeAreaView>
     );
   }

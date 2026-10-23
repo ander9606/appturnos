@@ -20,12 +20,14 @@ import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/
 import { WeekStrip }  from '@/features/turnos/WeekStrip';
 import { ShiftCard }  from '@/features/turnos/ShiftCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
-import { getDateRange } from '@/features/turnos/turnosUtils';
+import { getDateRange, fmtRange, getEstadoConfig } from '@/features/turnos/turnosUtils';
+import { ResumenDiaMes, type ItemDia } from '@/features/turnos/ResumenDiaMes';
 import { bogotaToday } from '@/lib/formatters';
 import { Ionicons } from '@expo/vector-icons';
-import { getMonthGrid, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { OfertaCard } from '@/features/turnos/pestana/OfertaCard';
+import { colorOferta } from '@/features/turnos/pestana/turnosPestana';
 import { CalendarioMesGestor, CalendarioMesTrabajador } from '@/features/turnos/pestana/CalendarioMes';
 import {
   ResumenGestor, FabCrearTurno, BannerEventual, SelectorTabs, EncabezadoOfertas, EmptyMisTurnos, EmptyOfertas,
@@ -223,7 +225,38 @@ export default function TurnosScreen() {
     />
   );
 
-  const irAlDia = (day: CalendarDay) => { setSelectedDate(day.date); setViewMode('lista'); };
+  const marcarDia = (day: CalendarDay) => setSelectedDate(day.date);
+  const irAHoy = () => { setMesCursor(mesDeHoy()); setSelectedDate(today); };
+  const verLista = () => setViewMode('lista');
+
+  // Vista previa del día marcado en el calendario del mes (funciones simples: leen datos ya calculados arriba).
+  const itemsGestorDia = (fecha: string): ItemDia[] => (ofertasPorDiaMes.get(fecha) ?? []).map(o => {
+    const total = o.puestos?.reduce((s, p) => s + p.plazas, 0) ?? 0;
+    const cubiertas = o.puestos?.reduce((s, p) => s + p.plazas_cubiertas, 0) ?? 0;
+    return {
+      key: `o${o.id}`,
+      titulo: o.titulo,
+      detalle: `${fmtRange(o.hora_inicio, o.hora_fin_estimada)} · ${cubiertas}/${total} plazas cubiertas`,
+      color: colorOferta(o, pendientesPorOferta, today, theme.primary),
+      onPress: () => router.push(`/oferta/${o.id}`),
+    };
+  });
+  const itemsTrabajadorDia = (fecha: string): ItemDia[] => [
+    ...(misTurnosPorDiaMes.get(fecha) ?? []).map(a => ({
+      key: `a${a.id}`,
+      titulo: a.oferta_titulo,
+      detalle: getEstadoConfig(a.estado).label,
+      color: theme.primary,
+      onPress: () => router.push(`/turno/${a.id}`),
+    })),
+    ...(ofertasPorDiaMes.get(fecha) ?? []).filter(o => !aplicadosIds.has(o.id)).map(o => ({
+      key: `d${o.id}`,
+      titulo: o.titulo,
+      detalle: `Disponible · ${fmtRange(o.hora_inicio, o.hora_fin_estimada)}`,
+      color: COLORS.info,
+      onPress: () => router.push(`/oferta/${o.id}`),
+    })),
+  ];
 
   // ── Main render ───────────────────────────────────────────────────────
 
@@ -273,7 +306,10 @@ export default function TurnosScreen() {
               ofertasPorDia={ofertasPorDiaMes}
               pendientesPorOferta={pendientesPorOferta}
               today={today}
-              onDayPress={irAlDia}
+              onDayPress={marcarDia}
+              selectedDate={selectedDate}
+              onHoy={irAHoy}
+              resumen={<ResumenDiaMes fecha={selectedDate} items={itemsGestorDia(selectedDate)} onVerLista={verLista} />}
             />
           ) : (
             <GestorTurnosView
@@ -299,7 +335,10 @@ export default function TurnosScreen() {
             misTurnosPorDia={misTurnosPorDiaMes}
             ofertasPorDia={ofertasPorDiaMes}
             aplicadosIds={aplicadosIds}
-            onDayPress={irAlDia}
+            onDayPress={marcarDia}
+            selectedDate={selectedDate}
+            onHoy={irAHoy}
+            resumen={<ResumenDiaMes fecha={selectedDate} items={itemsTrabajadorDia(selectedDate)} onVerLista={verLista} />}
           />
         ) : (
         <>

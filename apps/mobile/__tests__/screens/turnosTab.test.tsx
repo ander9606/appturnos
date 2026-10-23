@@ -337,9 +337,10 @@ describe('vista mes — gestor', () => {
     abrir();
     for (const t of ['Borrador', 'Publicada', 'Necesita atención', 'Completada', 'Cancelada']) expect(screen.getByText(t)).toBeTruthy();
   });
-  it('tocar un día vuelve a la lista con esa fecha', () => {
+  it('tocar un día lo marca y "Ver en lista" abre la lista con esa fecha', () => {
     abrir();
     fireEvent.press(screen.getByTestId('dia-2026-06-10'));
+    fireEvent.press(screen.getByText('Ver en lista'));
     expect(screen.getByTestId('gestor-view').props.children).toBe('2026-06-10|true');
   });
   it('días sin ofertas no dibujan puntos', () => {
@@ -427,9 +428,10 @@ describe('trabajador — vista mes', () => {
     abrir();
     for (const t of ['Aceptado', 'Postulación pendiente', 'Disponibles']) expect(screen.getByText(t)).toBeTruthy();
   });
-  it('tocar un día vuelve a la lista con esa fecha', () => {
+  it('tocar un día lo marca y "Ver en lista" abre la lista con esa fecha', () => {
     abrir();
     fireEvent.press(screen.getByTestId('dia-2026-06-10'));
+    fireEvent.press(screen.getByText('Ver en lista'));
     expect(screen.getByText('strip:2026-06-10')).toBeTruthy();
   });
   it('puntos: aceptados (máx 3) sólidos, pendientes (máx 2) y disponibles (máx 3) con borde', () => {
@@ -841,9 +843,9 @@ describe('casos extra (sobrevivientes de mutación)', () => {
   it('pasos del calendario: mes anterior y siguiente (gestor)', () => {
     montar('admin_empresa');
     fireEvent.press(screen.getByLabelText('Ver mes'));
-    fireEvent.press(screen.UNSAFE_getByProps({ name: 'chevron-back' }).parent!.parent!);
+    fireEvent.press(screen.getByLabelText('Mes anterior'));
     expect(screen.getByText('Mayo 2026')).toBeTruthy();
-    const sig = () => screen.UNSAFE_getAllByProps({ name: 'chevron-forward' }).slice(-1)[0].parent!.parent!;
+    const sig = () => screen.getByLabelText('Mes siguiente');
     fireEvent.press(sig());
     fireEvent.press(sig());
     expect(screen.getByText('Julio 2026')).toBeTruthy();

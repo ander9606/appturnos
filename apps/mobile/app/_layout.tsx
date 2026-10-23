@@ -26,6 +26,7 @@ import { BiometricLockScreen } from '@/features/auth/BiometricLockScreen';
 import { registerPushNotifications } from '@/lib/pushNotifications';
 import { queryClient } from '@/lib/queryClient';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PantallaArranque } from '@/components/ui/PlanetaCargando';
 import { StatusBanner } from '@/components/ui/StatusBanner';
 import { Toast } from '@/components/ui/Toast';
 import { ActionToast } from '@/components/ui/ActionToast';
@@ -181,6 +182,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      {status === 'unknown' && <PantallaArranque />}
       {locked && supported && (
         <BiometricLockScreen onUnlock={unlock} onLogout={logout} authenticating={authenticating} />
       )}

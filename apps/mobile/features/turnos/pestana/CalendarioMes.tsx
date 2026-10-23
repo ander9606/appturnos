@@ -1,39 +1,34 @@
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { SkeletonList } from '@/components/ui/Skeleton';
+import { SkeletonCalendario } from '@/components/ui/Skeleton';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
+import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { COLORS } from '@/lib/designTokens';
-import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { type ReactNode } from 'react';
+import { View, ScrollView } from 'react-native';
 import { useTheme } from '@/lib/theme';
 import { TurnosExtraOptIn, esErrorTurnosExtraApagadas } from '@/features/nomina/TurnosExtraOptIn';
-import { shiftMonth, MESES_LARGOS, type CalendarDay, type MonthCursor } from '@/lib/calendar';
+import { shiftMonth, mesDeHoy, type CalendarDay, type MonthCursor } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { CAL_COLOR, colorOferta } from './turnosPestana';
 
 type SetCursor = (fn: (c: MonthCursor) => MonthCursor) => void;
 
-/** Flechas de mes anterior/siguiente con el nombre del mes visible. */
-function NavegadorMes({ cursor, onCursor }: { cursor: MonthCursor; onCursor: SetCursor }) {
-  const theme = useTheme();
+/** Navegador del mes compartido (con "Hoy" cuando no se ve el mes actual) + props de deslizar. */
+function useNavMes(cursor: MonthCursor, onCursor: SetCursor, onHoy: () => void) {
+  const hoy = mesDeHoy();
+  const esActual = cursor.year === hoy.year && cursor.month === hoy.month;
+  return {
+    anterior: () => onCursor(c => shiftMonth(c, -1)),
+    siguiente: () => onCursor(c => shiftMonth(c, 1)),
+    hoy: esActual ? undefined : onHoy,
+  };
+}
+
+function Navegador({ cursor, nav }: { cursor: MonthCursor; nav: ReturnType<typeof useNavMes> }) {
   return (
-    <View className="flex-row items-center gap-3 mb-3">
-      <TouchableOpacity
-        onPress={() => onCursor(c => shiftMonth(c, -1))}
-        className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-      >
-        <Ionicons name="chevron-back" size={16} color={theme.primary} />
-      </TouchableOpacity>
-      <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-        {MESES_LARGOS[cursor.month - 1]} {cursor.year}
-      </Text>
-      <TouchableOpacity
-        onPress={() => onCursor(c => shiftMonth(c, 1))}
-        className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-      >
-        <Ionicons name="chevron-forward" size={16} color={theme.primary} />
-      </TouchableOpacity>
+    <View className="mb-3">
+      <NavegadorMes mes={cursor.month} anio={cursor.year} onAnterior={nav.anterior} onSiguiente={nav.siguiente} onHoy={nav.hoy} />
     </View>
   );
 }
@@ -49,7 +44,7 @@ function LeyendaPunto({ color, label }: { color: string; label: string }) {
 
 /** Calendario mensual del gestor: un punto por oferta, coloreado según su estado/urgencia. */
 export function CalendarioMesGestor({
-  cursor, onCursor, weeks, loading, isError, error, onRetry, ofertasPorDia, pendientesPorOferta, today, onDayPress,
+  cursor, onCursor, weeks, loading, isError, error, onRetry, ofertasPorDia, pendientesPorOferta, today, onDayPress, selectedDate, onHoy, resumen,
 }: {
   cursor: MonthCursor;
   onCursor: SetCursor;
@@ -62,19 +57,28 @@ export function CalendarioMesGestor({
   pendientesPorOferta: Map<number, number>;
   today: string;
   onDayPress: (day: CalendarDay) => void;
+  selectedDate: string;
+  /** Vuelve al mes y día de hoy. */
+  onHoy: () => void;
+  /** Vista previa del día marcado (la arma la pantalla). */
+  resumen: ReactNode;
 }) {
   const theme = useTheme();
+  const nav = useNavMes(cursor, onCursor, onHoy);
   return (
-    <View className="flex-1 px-5 pt-3">
-      <NavegadorMes cursor={cursor} onCursor={onCursor} />
+    <ScrollView className="flex-1" contentContainerClassName="px-5 pt-3 pb-28">
+      <Navegador cursor={cursor} nav={nav} />
 
       {loading ? (
-        <SkeletonList count={3} />
+        <SkeletonCalendario />
       ) : isError ? (
         <ErrorState compact error={error} onRetry={onRetry} fallback="No se pudieron cargar los turnos del mes" />
       ) : (
         <MonthCalendar
           weeks={weeks}
+          selectedDate={selectedDate}
+          onMesAnterior={nav.anterior}
+          onMesSiguiente={nav.siguiente}
           onDayPress={onDayPress}
           renderDay={(day: CalendarDay) => {
             const delDia = ofertasPorDia.get(day.date) ?? [];
@@ -94,6 +98,8 @@ export function CalendarioMesGestor({
         />
       )}
 
+      {!loading && !isError && resumen}
+
       <View className="flex-row items-center gap-x-3 gap-y-1.5 justify-center mt-3 flex-wrap">
         <LeyendaPunto color={CAL_COLOR.borrador} label="Borrador" />
         <LeyendaPunto color={theme.primary} label="Publicada" />
@@ -101,14 +107,14 @@ export function CalendarioMesGestor({
         <LeyendaPunto color={CAL_COLOR.completada} label="Completada" />
         <LeyendaPunto color={CAL_COLOR.cancelada} label="Cancelada" />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 /** Calendario mensual del trabajador: sus turnos (sólido/borde) y las ofertas disponibles. */
 export function CalendarioMesTrabajador({
   cursor, onCursor, weeks, loading, isNomina, errOfertas, errMios, onRetry,
-  misTurnosPorDia, ofertasPorDia, aplicadosIds, onDayPress,
+  misTurnosPorDia, ofertasPorDia, aplicadosIds, onDayPress, selectedDate, onHoy, resumen,
 }: {
   cursor: MonthCursor;
   onCursor: SetCursor;
@@ -122,14 +128,20 @@ export function CalendarioMesTrabajador({
   ofertasPorDia: Map<string, Oferta[]>;
   aplicadosIds: Set<number>;
   onDayPress: (day: CalendarDay) => void;
+  selectedDate: string;
+  /** Vuelve al mes y día de hoy. */
+  onHoy: () => void;
+  /** Vista previa del día marcado (la arma la pantalla). */
+  resumen: ReactNode;
 }) {
   const theme = useTheme();
+  const nav = useNavMes(cursor, onCursor, onHoy);
   return (
-    <View className="flex-1 px-5 pt-3">
-      <NavegadorMes cursor={cursor} onCursor={onCursor} />
+    <ScrollView className="flex-1" contentContainerClassName="px-5 pt-3 pb-28">
+      <Navegador cursor={cursor} nav={nav} />
 
       {loading ? (
-        <SkeletonList count={3} />
+        <SkeletonCalendario />
       ) : isNomina && esErrorTurnosExtraApagadas(errOfertas.error) ? (
         <TurnosExtraOptIn />
       ) : errOfertas.isError || errMios.isError ? (
@@ -142,6 +154,9 @@ export function CalendarioMesTrabajador({
       ) : (
         <MonthCalendar
           weeks={weeks}
+          selectedDate={selectedDate}
+          onMesAnterior={nav.anterior}
+          onMesSiguiente={nav.siguiente}
           onDayPress={onDayPress}
           renderDay={(day: CalendarDay) => {
             const mios = misTurnosPorDia.get(day.date) ?? [];
@@ -170,6 +185,8 @@ export function CalendarioMesTrabajador({
         />
       )}
 
+      {!loading && !errOfertas.isError && !errMios.isError && resumen}
+
       <View className="flex-row items-center gap-4 justify-center mt-4 flex-wrap">
         <View className="flex-row items-center gap-1.5">
           <View className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primary }} />
@@ -184,6 +201,6 @@ export function CalendarioMesTrabajador({
           <Text className="text-xs text-muted-foreground">Disponibles</Text>
         </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
