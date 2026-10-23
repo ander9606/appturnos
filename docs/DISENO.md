@@ -354,6 +354,14 @@ Cada perfil tiene su color (`THEME_COLORS` vía `useTheme()`): trabajador de tur
 - No usar `bg-card`/texto oscuro para el título de una pestaña, ni hex: el color sale siempre del perfil.
 - Las pantallas de detalle (`turno/[id]`, `trabajador/[id]`…) conservan su encabezado blanco con flecha atrás.
 
+### 5.11 Calendarios (móvil)
+
+Los tres usan el color del perfil (`useTheme()`), nunca un color fijo:
+- `MonthCalendar` (`components/ui/MonthCalendar.tsx`): tarjeta `rounded-3xl`; cabecera de días tintada (`alpha(primary, .1)`), sábado y domingo en el color del perfil; el día de hoy con círculo sólido y celda tintada.
+- `NavegadorMes` (`components/ui/NavegadorMes.tsx`): ‹ Mes Año › con botones tintados. Es el único selector de mes: no copiar los chevrons a mano.
+- `WeekStrip` (`features/turnos/WeekStrip.tsx`): día seleccionado sólido, hoy con aro suave, rayita en los días con turnos.
+- Pendiente: los selectores de fecha nativos (`DateTimePicker`) los dibuja el sistema; en iOS se puede darles `accentColor`, en Android dependen del tema nativo del build (no cambia por OTA).
+
 ## 6. Accesibilidad
 
 Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 px en negrita, y elementos gráficos):

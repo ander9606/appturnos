@@ -30,8 +30,9 @@ import { PeriodoSelector }        from '@/features/nomina/PeriodoSelector';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
+import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { MonthCalendar }          from '@/components/ui/MonthCalendar';
-import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, type CalendarDay } from '@/lib/calendar';
 import { COLORS,HOUR_TYPE_COLORS }       from '@/lib/designTokens';
 import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { bogotaToday } from '@/lib/formatters';
@@ -281,23 +282,12 @@ function NominaGestorView() {
             <View className="px-5 gap-3">
               {viewMode === 'mes' ? (
                 <View className="gap-2">
-                  <View className="flex-row items-center gap-3">
-                    <TouchableOpacity
-                      onPress={() => setMesCursor((c) => shiftMonth(c, -1))}
-                      className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-                    >
-                      <Ionicons name="chevron-back" size={16} color={theme.primary} />
-                    </TouchableOpacity>
-                    <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-                      {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setMesCursor((c) => shiftMonth(c, 1))}
-                      className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-                    >
-                      <Ionicons name="chevron-forward" size={16} color={theme.primary} />
-                    </TouchableOpacity>
-                  </View>
+                  <NavegadorMes
+                    mes={mesCursor.month}
+                    anio={mesCursor.year}
+                    onAnterior={() => setMesCursor(c => shiftMonth(c, -1))}
+                    onSiguiente={() => setMesCursor(c => shiftMonth(c, 1))}
+                  />
                   <MonthCalendar
                     weeks={mesWeeks}
                     onDayPress={(day: CalendarDay) => {

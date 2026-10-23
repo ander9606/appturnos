@@ -27,8 +27,9 @@ import { bogotaToday } from '@/lib/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import { Badge }   from '@/components/ui/Badge';
 import { Button }  from '@/components/ui/Button';
+import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
-import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -424,22 +425,13 @@ export default function TurnosScreen() {
         <View className="flex-1">
           {viewMode === 'mes' ? (
             <View className="flex-1 px-5 pt-3">
-              <View className="flex-row items-center gap-3 mb-3">
-                <TouchableOpacity
-                  onPress={() => setMesCursor(c => shiftMonth(c, -1))}
-                  className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-                >
-                  <Ionicons name="chevron-back" size={16} color={theme.primary} />
-                </TouchableOpacity>
-                <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-                  {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setMesCursor(c => shiftMonth(c, 1))}
-                  className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-                >
-                  <Ionicons name="chevron-forward" size={16} color={theme.primary} />
-                </TouchableOpacity>
+              <View className="mb-3">
+                <NavegadorMes
+                  mes={mesCursor.month}
+                  anio={mesCursor.year}
+                  onAnterior={() => setMesCursor(c => shiftMonth(c, -1))}
+                  onSiguiente={() => setMesCursor(c => shiftMonth(c, 1))}
+                />
               </View>
 
               {loadingOfertasMes ? (
@@ -514,22 +506,13 @@ export default function TurnosScreen() {
         <>
         {viewMode === 'mes' ? (
           <View className="flex-1 px-5 pt-3">
-            <View className="flex-row items-center gap-3 mb-3">
-              <TouchableOpacity
-                onPress={() => setMesCursor(c => shiftMonth(c, -1))}
-                className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-              >
-                <Ionicons name="chevron-back" size={16} color={theme.primary} />
-              </TouchableOpacity>
-              <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-                {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setMesCursor(c => shiftMonth(c, 1))}
-                className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-              >
-                <Ionicons name="chevron-forward" size={16} color={theme.primary} />
-              </TouchableOpacity>
+            <View className="mb-3">
+              <NavegadorMes
+                mes={mesCursor.month}
+                anio={mesCursor.year}
+                onAnterior={() => setMesCursor(c => shiftMonth(c, -1))}
+                onSiguiente={() => setMesCursor(c => shiftMonth(c, 1))}
+              />
             </View>
 
             {loadingOfertasMes || loadingMios ? (
