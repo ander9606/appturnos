@@ -228,7 +228,7 @@ function NominaGestorView() {
         }
         ListHeaderComponent={
           <View className="gap-4 pb-2">
-            <View className="bg-success pt-4 pb-6 px-6 rounded-b-[28px] gap-2">
+            <View className="pt-4 pb-6 px-6 rounded-b-[28px] gap-2" style={{ backgroundColor: theme.primary }}>
               <View className="flex-row items-center justify-between">
                 <View>
                   <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">

@@ -365,6 +365,7 @@ Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 
 | Blanco sobre `primary-700` `#C32D14` | 5.67 | ✅ AA |
 | `primary-700` sobre blanco | 5.67 | ✅ Para texto pequeño de marca usa 700 |
 | Blanco sobre `success` / `info` / `danger` | 3.77 / 3.68 / 3.76 | ⚠️ Solo texto grande/negrita |
+| Blanco sobre `success700` `#047857` / `info600` `#2563EB` | 5.48 / 5.17 | ✅ AA — son el color del perfil de nómina y de gestores (`THEME_COLORS`) |
 | Blanco sobre `warning` `#F59E0B` | **2.15** | ❌ No poner texto blanco sobre ámbar; usa texto oscuro |
 | `warning.dark` sobre blanco | 3.19 | ⚠️ Íconos y texto grande |
 | `danger.dark` sobre blanco | 4.83 | ✅ AA |
@@ -400,7 +401,7 @@ Reglas:
 1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes, que el código compila y que ningún interlineado baja de 1.25×, pero no se vio en pantalla: revisar que no haya texto cortado (sobre todo números grandes y emojis en Android), que la negrita de Android no salga doble y que el arranque no parpadee.
 2. **Hex en la web.** Resuelto: `apps/web/.eslintrc.cjs` prohíbe hex literales (excepto la landing) y corre en el CI de la web (`npm run lint`).
 3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. Si se repite una forma nueva (p. ej. el calendario mensual), crear su skeleton propio.
-4. **Contraste de marca.** Evaluar oscurecer ligeramente `primary` o usar `primary-600` en botones (4.09 → casi AA) sin perder identidad.
+4. **Contraste del naranja.** Verde y azul del perfil ya pasan AA con texto blanco (`success700` 5,48:1, `info600` 5,17:1). El naranja de marca (`primary` #FF5A3C) queda en 3,10:1 con blanco: solo es válido para texto grande en negrita (títulos, botones); no usarlo con texto pequeño blanco. Alternativa evaluada: `primary600` (4,09:1) o texto oscuro (5,76:1).
 5. **Modo oscuro.** `userInterfaceStyle: "light"` fijo. Con los tokens ya centralizados, es viable como etapa propia.
 6. **Íconos.** Web usa `lucide-react`, móvil usa `Ionicons`. Unificar estilo (grosor, tamaño) o elegir un solo set.
 7. **Identidad propia.** Definir 3-4 rasgos distintivos (forma recurrente, sombra, ilustración para estados vacíos) y documentarlos en esta guía.
