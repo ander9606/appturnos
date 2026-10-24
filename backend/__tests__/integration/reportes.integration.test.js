@@ -175,6 +175,6 @@ d('reportes con MySQL real', () => {
 
   it('asistencia e historial también corren con ONLY_FULL_GROUP_BY', async () => {
     await expect(ReportesService.asistencia(empresaId, rango)).resolves.toBeDefined();
-    await expect(ReportesService.historialTrabajador(empresaId, obreroId, rango)).resolves.toBeDefined();
+    await expect(ReportesService.historialTrabajador(empresaId, obreroId, rango, { verPagos: true })).resolves.toBeDefined();
   });
 });

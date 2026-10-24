@@ -42,7 +42,8 @@ async function trabajador(req, res) {
   const data = await ReportesService.historialTrabajador(
     req.empresa_id,
     Number(req.params.id),
-    rango(req)
+    rango(req),
+    { verPagos: verPagos(req) }
   );
   res.json({ success: true, data, message: 'Historial del trabajador' });
 }
