@@ -41,6 +41,8 @@ export interface Oferta {
   fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;
+  /** 1 si el turno termina al día siguiente (cruza la medianoche). */
+  fin_dia_siguiente?: number | null;
   descripcion: string | null;
   // Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato.
   notas_adicionales: string | null;
@@ -97,6 +99,7 @@ export interface LiquidacionTurno {
   oferta_fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;
+  fin_dia_siguiente?: number | null;
   lugar: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;

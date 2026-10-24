@@ -7,7 +7,7 @@ import { useLiquidacionTurnos, usePeriodoActivoTurnos } from '../hooks/useTurnos
 import { turnosApi } from '../api/turnosApi';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { StatCard } from '@/shared/components/StatCard';
-import { fmtCOP, fmtHrs, fmtDate, bogotaToday, inicioMesActual } from '@/shared/lib/format';
+import { fmtCOP, fmtHrs, fmtDate, fmtHorario, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 import { descargarBlob } from '@/shared/lib/download';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurno } from '../types';
 import { EmptyState } from '@/shared/components/EmptyState';
@@ -54,6 +54,7 @@ interface TurnoGrupo {
   oferta_fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;
+  fin_dia_siguiente?: number | null;
   lugar: string | null;
   total_horas: number;
   total_pago: number;
@@ -75,6 +76,7 @@ function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrup
           oferta_fecha: t.oferta_fecha,
           hora_inicio: t.hora_inicio,
           hora_fin_estimada: t.hora_fin_estimada,
+          fin_dia_siguiente: t.fin_dia_siguiente,
           lugar: t.lugar,
           total_horas: 0,
           total_pago: 0,
@@ -332,7 +334,7 @@ export function LiquidacionTurnosView() {
                                       )}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      {fmtDate(t.oferta_fecha)} · {t.hora_inicio}{t.hora_fin_estimada ? ` – ${t.hora_fin_estimada}` : ''}
+                                      {fmtDate(t.oferta_fecha)} · {fmtHorario(t.hora_inicio, t.hora_fin_estimada, t.fin_dia_siguiente)}
                                     </p>
                                   </div>
                                   <span className="flex items-center gap-2 text-xs text-muted-foreground flex-shrink-0">

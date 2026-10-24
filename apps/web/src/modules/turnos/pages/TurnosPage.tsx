@@ -16,7 +16,7 @@ import { LugarInput } from '../components/LugarInput';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
 import { ZonasMarcajeInput, type ZonaMarcaje } from '../components/ZonasMarcajeInput';
 import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
-import { fmtDate, fmtCOP, bogotaToday, inicioMesActual } from '@/shared/lib/format';
+import { fmtDate, fmtHorario, fmtCOP, bogotaToday, inicioMesActual } from '@/shared/lib/format';
 
 const ESTADO_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -166,7 +166,7 @@ export function TurnosPage() {
                   <tr key={o.id} className={`border-t border-border/60 hover:bg-muted transition-opacity ${esPasado ? 'opacity-50' : ''}`}>
                     <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>{o.titulo}</td>
                     <td className="px-4 py-3 text-muted-foreground">{fmtDate(o.fecha)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{o.hora_inicio}{o.hora_fin_estimada ? ` – ${o.hora_fin_estimada}` : ''}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{fmtHorario(o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.lugar ?? '—'}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{totalAsignados}/{totalPlazas}</td>
                     <td className="px-4 py-3">
@@ -245,6 +245,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
     titulo: '', fecha: '', hora_inicio: '', hora_fin_estimada: '',
     descripcion: '', lugar: '',
   });
+  const [finDiaSiguiente, setFinDiaSiguiente] = useState(false);
   const [latitud, setLatitud] = useState<number | null>(null);
   const [longitud, setLongitud] = useState<number | null>(null);
   const [paraQuien, setParaQuien] = useState<ParaQuienOferta>('turnos');
@@ -262,15 +263,23 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
       toast.error('La fecha del turno no puede ser en el pasado');
       return;
     }
-    if (form.hora_fin_estimada && form.hora_fin_estimada <= form.hora_inicio) {
-      toast.error('La hora de fin debe ser posterior a la hora de inicio');
-      return;
+    if (form.hora_fin_estimada) {
+      const finAntesDelInicio = form.hora_fin_estimada <= form.hora_inicio;
+      if (finDiaSiguiente && !finAntesDelInicio) {
+        toast.error('Si el turno termina al día siguiente, la hora de fin debe ser antes (o igual) que la de inicio');
+        return;
+      }
+      if (!finDiaSiguiente && finAntesDelInicio) {
+        toast.error('La hora de fin debe ser posterior a la hora de inicio. Si el turno pasa de la medianoche, marca "Termina al día siguiente"');
+        return;
+      }
     }
     const res = await crear.mutateAsync({
       titulo: form.titulo,
       fecha: form.fecha,
       hora_inicio: form.hora_inicio,
       hora_fin_estimada: form.hora_fin_estimada || undefined,
+      fin_dia_siguiente: (finDiaSiguiente && form.hora_fin_estimada) ? true : undefined,
       descripcion: form.descripcion || undefined,
       lugar: form.lugar || undefined,
       latitud: latitud ?? undefined,
@@ -312,6 +321,10 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Hora fin estimada</label>
           <input type="time" {...field('hora_fin_estimada')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          <label className="mt-2 flex items-center gap-2 text-sm text-foreground cursor-pointer">
+            <input type="checkbox" checked={finDiaSiguiente} onChange={e => setFinDiaSiguiente(e.target.checked)} className="accent-primary" />
+            Termina al día siguiente <span className="text-xs text-muted-foreground">(el turno pasa de la medianoche)</span>
+          </label>
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Lugar</label>

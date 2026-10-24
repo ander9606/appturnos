@@ -2,6 +2,11 @@ export function fmtDate(s: string) {
   return new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(s + 'T00:00:00'));
 }
 
+/** "22:00 – 02:00 (día sig.)": horario de un turno; la marca avisa que el fin cae al día siguiente. */
+export function fmtHorario(inicio: string, fin: string | null, finDiaSiguiente?: number | null): string {
+  return `${inicio}${fin ? ` – ${fin}${finDiaSiguiente ? ' (día sig.)' : ''}` : ''}`;
+}
+
 /** Nombre completo del mes en español, ej. "agosto". */
 function nombreMes(anio: number, mesIndex1: number): string {
   return new Intl.DateTimeFormat('es-CO', { month: 'long' }).format(new Date(anio, mesIndex1 - 1, 1));
