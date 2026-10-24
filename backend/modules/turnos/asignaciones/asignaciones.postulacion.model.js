@@ -91,11 +91,10 @@ module.exports = {
          WHERE a.trabajador_id = ?
            AND a.id != ?
            AND a.estado IN ('confirmado', 'en_progreso')
-           AND o.fecha = ?
-           AND o.hora_inicio < ?
-           AND COALESCE(o.hora_fin_estimada, '23:59:59') > ?
+           AND o.inicio_ts < TIMESTAMP(DATE_ADD(?, INTERVAL ? DAY), ?)
+           AND o.fin_ts > TIMESTAMP(?, ?)
          LIMIT 1`,
-        [asig.trabajador_id, id, oferta.fecha, finNuevo, oferta.hora_inicio]
+        [asig.trabajador_id, id, oferta.fecha, oferta.fin_dia_siguiente ? 1 : 0, finNuevo, oferta.fecha, oferta.hora_inicio]
       );
       if (traslape) {
         await conn.rollback();
@@ -454,11 +453,10 @@ module.exports = {
          JOIN ofertas_turno o ON o.id = a.oferta_id
          WHERE a.trabajador_id = ?
            AND a.estado IN ('confirmado', 'en_progreso')
-           AND o.fecha = ?
-           AND o.hora_inicio < ?
-           AND COALESCE(o.hora_fin_estimada, '23:59:59') > ?
+           AND o.inicio_ts < TIMESTAMP(DATE_ADD(?, INTERVAL ? DAY), ?)
+           AND o.fin_ts > TIMESTAMP(?, ?)
          LIMIT 1`,
-        [trabajadorId, oferta.fecha, finNuevo, oferta.hora_inicio]
+        [trabajadorId, oferta.fecha, oferta.fin_dia_siguiente ? 1 : 0, finNuevo, oferta.fecha, oferta.hora_inicio]
       );
       if (traslape) {
         await conn.rollback();

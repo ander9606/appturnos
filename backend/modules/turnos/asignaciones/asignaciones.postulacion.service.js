@@ -46,7 +46,8 @@ module.exports = {
 
       if (ofertaRow && rolTrabajador === 'trabajador_nomina') {
         // La misma empresa no puede tenerlo en jornada de nómina y en turno a la vez.
-        const horaFin = ofertaRow.hora_fin_estimada || '23:59:00';
+        // ponytail: un turno que cruza la medianoche se compara contra la jornada solo hasta las 23:59 de su día — upgrade path: comparar también el tramo del día siguiente
+        const horaFin = (ofertaRow.fin_dia_siguiente ? null : ofertaRow.hora_fin_estimada) || '23:59:00';
         const solapado = await RegistrosModel.existeJornadaSolapada(
           empresaId, asig.trabajador_id, ofertaRow.fecha, ofertaRow.hora_inicio, horaFin
         );
@@ -57,7 +58,7 @@ module.exports = {
 
       if (ofertaRow && rolTrabajador === 'trabajador_turnos' && trabajador.usuario_id) {
         const solapado = await AsignacionesModel.existeSolapeDeUsuario(
-          trabajador.usuario_id, id, ofertaRow.fecha, ofertaRow.hora_inicio, ofertaRow.hora_fin_estimada
+          trabajador.usuario_id, id, ofertaRow.fecha, ofertaRow.hora_inicio, ofertaRow.hora_fin_estimada, ofertaRow.fin_dia_siguiente
         );
         if (solapado) {
           throw new AppError('Este trabajador ya tiene un turno confirmado en otra empresa en ese horario', 409);
@@ -316,7 +317,7 @@ module.exports = {
       const ofertaRow = await OfertasModel.obtenerHorario(empresaId, ofertaId);
       if (ofertaRow) {
         const solapado = await AsignacionesModel.existeSolapeDeUsuario(
-          trabajadorPrevio.usuario_id, null, ofertaRow.fecha, ofertaRow.hora_inicio, ofertaRow.hora_fin_estimada
+          trabajadorPrevio.usuario_id, null, ofertaRow.fecha, ofertaRow.hora_inicio, ofertaRow.hora_fin_estimada, ofertaRow.fin_dia_siguiente
         );
         if (solapado) {
           throw new AppError('Este trabajador ya tiene un turno confirmado en otra empresa en ese horario', 409);

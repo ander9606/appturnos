@@ -641,7 +641,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -650,6 +650,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -739,7 +740,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -748,6 +749,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -837,7 +839,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -846,6 +848,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -881,7 +884,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -890,6 +893,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -936,7 +940,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -945,6 +949,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -1002,7 +1007,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -1011,6 +1016,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -1076,7 +1082,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -1085,6 +1091,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -1158,7 +1165,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -1167,6 +1174,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -1248,7 +1256,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -1257,6 +1265,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -1364,7 +1373,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -1373,6 +1382,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -1465,7 +1475,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "Montaje",
@@ -1474,6 +1484,7 @@
       "2026-06-20",
       "08:00:00",
       "16:00:00",
+      0,
       "Bodega",
       4.6,
       -74.1,
@@ -1520,7 +1531,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1529,6 +1540,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1564,7 +1576,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1573,6 +1585,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1608,7 +1621,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1617,6 +1630,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1670,7 +1684,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1679,6 +1693,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1717,7 +1732,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1726,6 +1741,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1772,7 +1788,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1781,6 +1797,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1827,7 +1844,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1836,6 +1853,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1882,7 +1900,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1891,6 +1909,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1926,7 +1945,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -1935,6 +1954,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -1999,7 +2019,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -2008,6 +2028,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -2057,7 +2078,7 @@
     ],
     [
      "query",
-     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+     "INSERT INTO ofertas_turno (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
      [
       1,
       "T",
@@ -2066,6 +2087,7 @@
       "2026-06-20",
       "08:00:00",
       null,
+      0,
       null,
       null,
       null,
@@ -3064,7 +3086,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3079,7 +3101,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3128,7 +3150,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3143,7 +3165,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3192,7 +3214,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3225,7 +3247,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3240,7 +3262,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3273,7 +3295,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3288,7 +3310,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3329,7 +3351,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3344,7 +3366,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3411,7 +3433,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3426,7 +3448,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",
@@ -3478,7 +3500,7 @@
     ],
     [
      "query",
-     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59'))) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
+     "UPDATE asignaciones_turno a JOIN oferta_puestos p ON p.id = a.puesto_id JOIN ofertas_turno o ON o.id = a.oferta_id SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?), a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real, LEAST(?, o.fin_ts) ) / 60, a.estado = 'fallido', a.pago_total = ? + a.bono_monto, a.compensacion_motivo = ?, a.fallido_por = ?, a.fallido_at = ? WHERE a.id = ? AND a.empresa_id = ? AND a.oferta_id = ? AND a.estado = 'en_progreso'",
      [
       "2026-06-10 17:00:00",
       "2026-06-10 17:00:00",

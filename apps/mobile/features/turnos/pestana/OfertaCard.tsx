@@ -110,7 +110,7 @@ export function OfertaCard({
           <View className="flex-row items-center gap-1">
             <Ionicons name="time-outline" size={13} color={COLORS.mutedForeground} />
             <Text className="text-sm text-muted-foreground">
-              {fmtRangeSimple(item.hora_inicio, item.hora_fin_estimada)}
+              {fmtRangeSimple(item.hora_inicio, item.hora_fin_estimada, item.fin_dia_siguiente)}
             </Text>
           </View>
           {item.lugar && (

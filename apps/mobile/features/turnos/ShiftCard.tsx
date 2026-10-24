@@ -84,7 +84,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
           <View className="flex-row items-center gap-1">
             <Ionicons name="time-outline" size={12} color={COLORS.mutedForeground} />
             <Text className="text-sm text-muted-foreground">
-              {fmtRange(asignacion.hora_inicio, asignacion.hora_fin_estimada)}
+              {fmtRange(asignacion.hora_inicio, asignacion.hora_fin_estimada, asignacion.fin_dia_siguiente)}
             </Text>
           </View>
 

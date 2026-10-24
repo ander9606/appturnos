@@ -187,6 +187,9 @@ Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src
 
 `laboralUtils.js` exports `calcularHoras()` (minute-by-minute breakdown), `esDiaFestivo()` (Colombian public holidays including Ley Emiliani + Easter-relative), `horaInicioNocturno()`, `recargoFestivo()`, `valorHora()`, `calcularPagoNomina()`, `desglosarPagoNomina()`, `calcularDeducciones()`, `calcularSubsidioTransporte()`.
 
+### Turnos que cruzan la medianoche
+`ofertas_turno.fin_dia_siguiente` (migración 116) dice que `hora_fin_estimada` cae al día siguiente a `fecha`. Para topes de horas, traslapes y vencimiento usa las columnas generadas `inicio_ts` / `fin_ts` (DATETIME), nunca `TIMESTAMP(o.fecha, o.hora_fin_estimada)` ni comparar horas sueltas: así ninguna consulta repite el "+1 día". Con la marca, la hora de fin debe ser ≤ la de inicio (máx. 24 h); sin ella, posterior al inicio. En móvil, `fmtRange(inicio, fin, fin_dia_siguiente)` agrega "(día sig.)".
+
 ### Subscriptions & Billing
 Companies with an active logiq360 integration (`integracion_config.activo = 1` + `api_key`) don't pay. The rest pay per plan via Wompi payment links (`webhooks/wompi.service.js`).
 

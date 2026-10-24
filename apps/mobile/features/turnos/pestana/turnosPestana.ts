@@ -8,10 +8,10 @@ export function formatShortDate(iso: string): string {
   return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
 }
 
-export function fmtRangeSimple(start: string, end: string | null): string {
+export function fmtRangeSimple(start: string, end: string | null, finDiaSiguiente?: number | boolean | null): string {
   const s = start.slice(0, 5).replace(/^0/, '');
   if (!end) return s;
-  return `${s} – ${end.slice(0, 5).replace(/^0/, '')}`;
+  return `${s} – ${end.slice(0, 5).replace(/^0/, '')}${finDiaSiguiente ? ' (día sig.)' : ''}`;
 }
 
 /** Detecta si una oferta se solapa en horario con algún turno confirmado del trabajador. */

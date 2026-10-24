@@ -254,7 +254,7 @@ module.exports = {
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
-              o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
+              o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
               o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
@@ -296,7 +296,7 @@ module.exports = {
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
-              o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
+              o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
               o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
@@ -333,7 +333,7 @@ module.exports = {
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               o.notas_adicionales AS oferta_notas_adicionales,
               o.externo_notas AS oferta_externo_notas,
-              o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada,
+              o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
               o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
               o.encargado_nombre, o.encargado_telefono,
               o.external_ref AS oferta_external_ref,
@@ -373,7 +373,7 @@ module.exports = {
   /** Fecha y horario de la oferta de una asignación (undefined si no existe en esa empresa). */
   async obtenerHorarioDeAsignacion(empresaId, id) {
     const [[fila]] = await pool.query(
-      `SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada
+      `SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente
        FROM asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id
        WHERE a.id = ? AND a.empresa_id = ?`,
@@ -388,7 +388,7 @@ module.exports = {
    * no alcanza a ver esto: un trabajador_turnos suele trabajar para varias empresas a la vez.
    * `excluirAsignacionId` deja fuera la propia asignación (null/undefined → ninguna).
    */
-  async existeSolapeDeUsuario(usuarioId, excluirAsignacionId, fecha, horaInicio, horaFinEstimada) {
+  async existeSolapeDeUsuario(usuarioId, excluirAsignacionId, fecha, horaInicio, horaFinEstimada, finDiaSiguiente = 0) {
     const horaFin = horaFinEstimada || '23:59:59';
     const [[fila]] = await pool.query(
       `SELECT a.id
@@ -398,11 +398,10 @@ module.exports = {
        WHERE t2.usuario_id = ?
          AND a.id != ?
          AND a.estado IN ('confirmado', 'en_progreso')
-         AND o.fecha = ?
-         AND o.hora_inicio < ?
-         AND COALESCE(o.hora_fin_estimada, '23:59:59') > ?
+         AND o.inicio_ts < TIMESTAMP(DATE_ADD(?, INTERVAL ? DAY), ?)
+         AND o.fin_ts > TIMESTAMP(?, ?)
        LIMIT 1`,
-      [usuarioId, excluirAsignacionId ?? 0, fecha, horaFin, horaInicio]
+      [usuarioId, excluirAsignacionId ?? 0, fecha, finDiaSiguiente ? 1 : 0, horaFin, fecha, horaInicio]
     );
     return Boolean(fila);
   },

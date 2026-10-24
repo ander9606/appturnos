@@ -107,6 +107,7 @@ describe('validateStep1', () => {
     fecha: daysFromNow(30),
     hora_inicio: timeAt(7, 0),
     hora_fin: timeAt(15, 0),
+    fin_dia_siguiente: false,
     lugar: '', latitud: null, longitud: null, ubicacion_libre: false,
     encargado_nombre: '', encargado_telefono: '',
     para_quien: 'turnos', visibilidad: 'abierta', destinatarios: [], puestos: [],
@@ -150,6 +151,24 @@ describe('validateStep1', () => {
     expect(
       validateStep1({ ...valid, hora_inicio: timeAt(9, 0), hora_fin: timeAt(9, 0) })
     ).toMatch(/fin.*inicio/i);
+  });
+
+  it('accepts a turno que termina al día siguiente (fin antes que inicio, con la marca)', () => {
+    expect(
+      validateStep1({ ...valid, hora_inicio: timeAt(22, 0), hora_fin: timeAt(2, 0), fin_dia_siguiente: true })
+    ).toBeNull();
+  });
+
+  it('con "día siguiente", rejects hora_fin después de hora_inicio (pasaría de 24 h)', () => {
+    expect(
+      validateStep1({ ...valid, hora_inicio: timeAt(9, 0), hora_fin: timeAt(15, 0), fin_dia_siguiente: true })
+    ).toMatch(/24 horas/i);
+  });
+
+  it('el aviso de fin antes del inicio sugiere la opción "Termina al día siguiente"', () => {
+    expect(
+      validateStep1({ ...valid, hora_inicio: timeAt(22, 0), hora_fin: timeAt(2, 0) })
+    ).toMatch(/Termina al día siguiente/);
   });
 
   it('requires at least one destinatario when visibilidad is dirigida', () => {

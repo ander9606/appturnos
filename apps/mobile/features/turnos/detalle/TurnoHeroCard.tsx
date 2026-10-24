@@ -83,7 +83,7 @@ export function TurnoHeroCard({
 
         <View className="mt-3">
           <InfoRow icon="calendar-outline" label="Fecha"   value={fmtDate(oferta_fecha)} />
-          <InfoRow icon="time-outline"     label="Horario" value={fmtRange(hora_inicio, hora_fin_estimada)} />
+          <InfoRow icon="time-outline"     label="Horario" value={fmtRange(hora_inicio, hora_fin_estimada, asignacion.fin_dia_siguiente)} />
 
           {/* Location row with Google Maps button */}
           {lugar && (

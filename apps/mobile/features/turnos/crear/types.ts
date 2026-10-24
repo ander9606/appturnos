@@ -20,6 +20,8 @@ export type WizardData = {
   fecha: Date | null;
   hora_inicio: Date | null;
   hora_fin: Date | null;
+  /** El turno pasa de la medianoche: la hora de fin cae al día siguiente. */
+  fin_dia_siguiente: boolean;
   lugar: string;
   latitud: number | null;
   longitud: number | null;
@@ -39,6 +41,7 @@ export const INITIAL: WizardData = {
   fecha: null,
   hora_inicio: null,
   hora_fin: null,
+  fin_dia_siguiente: false,
   lugar: '',
   latitud: null,
   longitud: null,

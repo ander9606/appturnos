@@ -1,8 +1,9 @@
 import { showAlert } from '@/lib/alertDialog';
 import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
+import { useTheme } from '@/lib/theme';
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Platform, Modal, Pressable } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Platform, Modal, Pressable, Switch } from 'react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { showToast } from '@/lib/toast';
@@ -20,7 +21,7 @@ import { fmtDate } from './fechasOferta';
 
 type OfertaEditable = {
   id: number; titulo: string; descripcion: string | null;
-  fecha: string; hora_inicio: string; hora_fin_estimada: string | null;
+  fecha: string; hora_inicio: string; hora_fin_estimada: string | null; fin_dia_siguiente?: number | null;
   lugar: string | null; latitud: number | null; longitud: number | null;
   puestos: OfertaPuesto[];
 };
@@ -34,6 +35,7 @@ export function EditarOfertaModal({
   oferta: OfertaEditable;
   onClose: () => void;
 }) {
+  const theme = useTheme();
   const actualizarM = useActualizarOferta();
   const [titulo, setTitulo] = useState(oferta.titulo);
   const [descripcion, setDescripcion] = useState(oferta.descripcion ?? '');
@@ -47,6 +49,7 @@ export function EditarOfertaModal({
   const [showFecha, setShowFecha] = useState(false);
   const [showHoraInicio, setShowHoraInicio] = useState(false);
   const [showHoraFin, setShowHoraFin] = useState(false);
+  const [finDiaSiguiente, setFinDiaSiguiente] = useState(false);
   const [agregandoVacante, setAgregandoVacante] = useState(false);
   const [vacante, setVacante] = useState<{ cargo: Cargo | null; plazas: number; tarifa: string }>({ cargo: null, plazas: 1, tarifa: '' });
   const crearPuestoM = useCrearPuesto();
@@ -73,6 +76,7 @@ export function EditarOfertaModal({
     } else {
       setHoraFin(null);
     }
+    setFinDiaSiguiente(Boolean(oferta.fin_dia_siguiente));
     setLugar(oferta.lugar ?? '');
     setLatitud(oferta.latitud == null ? null : Number(oferta.latitud));
     setLongitud(oferta.longitud == null ? null : Number(oferta.longitud));
@@ -86,6 +90,7 @@ export function EditarOfertaModal({
   const cambianCriticos = toISODate(fecha) !== oferta.fecha
     || `${formatTimeObj(horaInicio)}:00` !== oferta.hora_inicio.slice(0, 5) + ':00'
     || (horaFin ? `${formatTimeObj(horaFin)}:00` : null) !== oferta.hora_fin_estimada
+    || finDiaSiguiente !== Boolean(oferta.fin_dia_siguiente)
     || lugar !== (oferta.lugar ?? '');
 
   // Cada toque guarda de una vez (igual que "Agregar vacante"). El mínimo son las plazas ya
@@ -115,9 +120,16 @@ export function EditarOfertaModal({
   }
 
   async function handleGuardar() {
-    if (horaFin && formatTimeObj(horaFin) <= formatTimeObj(horaInicio)) {
-      showAlert('Error', 'La hora de fin debe ser posterior a la hora de inicio');
-      return;
+    if (horaFin) {
+      const finAntesDelInicio = formatTimeObj(horaFin) <= formatTimeObj(horaInicio);
+      if (finDiaSiguiente && !finAntesDelInicio) {
+        showAlert('Error', 'Si el turno termina al día siguiente, la hora de fin debe ser antes (o igual) que la de inicio.');
+        return;
+      }
+      if (!finDiaSiguiente && finAntesDelInicio) {
+        showAlert('Error', 'La hora de fin debe ser posterior a la hora de inicio. Si el turno pasa de la medianoche, activa "Termina al día siguiente".');
+        return;
+      }
     }
     try {
       await actualizarM.mutateAsync({
@@ -130,6 +142,7 @@ export function EditarOfertaModal({
         fecha: toISODate(fecha),
         hora_inicio: `${formatTimeObj(horaInicio)}:00`,
         hora_fin_estimada: horaFin ? `${formatTimeObj(horaFin)}:00` : undefined,
+        fin_dia_siguiente: finDiaSiguiente,
         lugar,
         latitud: latitud ?? undefined,
         longitud: longitud ?? undefined,
@@ -246,6 +259,16 @@ export function EditarOfertaModal({
                   <Text className="text-sm font-semibold text-primary">Listo</Text>
                 </TouchableOpacity>
               )}
+              <View className="flex-row items-center justify-between bg-muted rounded-xl px-3 py-2.5 mt-1">
+                <Text className="text-sm text-foreground flex-1 mr-2">Termina al día siguiente</Text>
+                <Switch
+                  accessibilityLabel="Termina al día siguiente"
+                  value={finDiaSiguiente}
+                  onValueChange={setFinDiaSiguiente}
+                  trackColor={{ true: theme.primary }}
+                  thumbColor={COLORS.white}
+                />
+              </View>
             </View>
           </View>
 
