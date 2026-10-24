@@ -38,7 +38,8 @@ async function verificarCedula(req, res) {
 }
 
 async function activarCuenta(req, res) {
-  const { cedula, email, password } = req.body;
+  const { cedula, email, password, email_token } = req.body;
+  VerificacionSvc.validarTokenVerificacion(email_token, 'email', email);
   const data = await AuthService.activarCuenta({ cedula, email, password });
   res.status(201).json({ success: true, data, message: 'Cuenta activada' });
 }

@@ -81,6 +81,7 @@ router.post(
       .isString()
       .isLength({ min: 8 })
       .withMessage('La contraseña debe tener al menos 8 caracteres'),
+    body('email_token').isString().notEmpty().withMessage('Token de verificación de email requerido'),
   ],
   validar,
   ctrl.activarCuenta
