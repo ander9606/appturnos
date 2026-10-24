@@ -137,6 +137,7 @@ export const authApi = {
     cedula: string;
     email: string;
     password: string;
+    email_token: string;
   }): Promise<ActivarCuentaResponse> {
     return api.post<ActivarCuentaResponse>(
       '/api/auth/activar-cuenta',
