@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<style>body{margin:0;background:#F8FAFC;font-family:Inter,Arial,sans-serif}svg{display:block;margin:0 auto 20px;background:#F8FAFC}</style>
+</head><body>
+<svg id="hoja1" width="1200" height="640" viewBox="0 0 1200 640"></svg>
+<svg id="hoja2" width="1200" height="720" viewBox="0 0 1200 720"></svg>
+<svg id="hoja3" width="1200" height="960" viewBox="0 0 1200 960"></svg>
+<svg id="hoja4" width="1200" height="960" viewBox="0 0 1200 960"></svg>
+<script src="perro.js"></script>
+<script>
+const titulo = (t, sub) => `<text x="30" y="44" font-size="26" font-weight="800" fill="${INK}" font-family="Inter,Arial,sans-serif">${t}</text>
+  <text x="30" y="68" font-size="15" fill="${C.GRIS}" font-family="Inter,Arial,sans-serif">${sub}</text>`;
+const etiqueta = (x, y, t, s = 17) => `<text x="${x}" y="${y}" text-anchor="middle" font-size="${s}" font-weight="700" fill="${INK}" font-family="Inter,Arial,sans-serif">${t}</text>`;
+
+// ============ HOJA 1: giro, proporciones y paleta ============
+(() => {
+  const y0 = 300, vistas = [[150, 'Frente', perro({ ojos: {}, boca: 'sonrisa' })], [420, 'Perfil', perfil()], [690, 'Espalda', espalda()]];
+  const guias = [[-136, 'Tope de la cabeza'], [-78, 'Línea de ojos'], [-22, 'Mentón / collar'], [54, 'Cadera'], [137, 'Suelo']];
+  const paleta = [['Pelo', C.PELO], ['Pelo oscuro', C.PELO_OSC], ['Canela', C.CANELA], ['Canela oscuro', C.CANELA_OSC], ['Collar', C.VERDE], ['Logo (medalla)', C.NARANJA], ['Lengua', C.ROSA], ['Fondo', C.BLANCO]];
+  document.getElementById('hoja1').innerHTML = titulo('Guía del perro · 1. Giro, proporciones y paleta', 'Todo el trabajo parte de estas vistas. Estilo plano: sin contornos, la profundidad sale de un tono más oscuro.')
+    + guias.map(([dy, t]) => `<path d="M30 ${y0 + dy} H870" stroke="${C.GRIS_CLARO}" stroke-width="1.5" stroke-dasharray="6 6"/><text x="876" y="${y0 + dy + 5}" font-size="12" fill="${C.GRIS}" font-family="Inter,Arial,sans-serif">${t}</text>`).join('')
+    + vistas.map(([x, t, g]) => `<g transform="translate(${x} ${y0})">${g}</g>${etiqueta(x, y0 + 185, t)}`).join('')
+    + `<text x="1020" y="110" font-size="15" font-weight="800" fill="${INK}" font-family="Inter,Arial,sans-serif">Paleta</text>`
+    + paleta.map(([n, h], i) => `<rect x="1020" y="${126 + i * 48}" width="40" height="36" rx="8" fill="${h}" stroke="${C.GRIS_CLARO}"/>
+        <text x="1070" y="${142 + i * 48}" font-size="14" font-weight="700" fill="${INK}" font-family="Inter,Arial,sans-serif">${n}</text>
+        <text x="1070" y="${158 + i * 48}" font-size="12" fill="${C.GRIS}" font-family="Inter,Arial,sans-serif">${h}</text>`).join('')
+    + `<text x="30" y="${y0 + 232}" font-size="14" fill="${C.GRIS}" font-family="Inter,Arial,sans-serif">Altura total ≈ 2,4 cabezas · cabeza más alta que ancha · sin ropa, sin gorra · el logo vive en la medalla del collar (siempre visible a la derecha del perro).</text>`
+    + `<text x="30" y="${y0 + 254}" font-size="14" fill="${C.GRIS}" font-family="Inter,Arial,sans-serif">Reglas: lengua afuera = estado feliz/neutro · cejas canela se mueven para actuar · el collar verde nunca cambia de color.</text>`;
+})();
+
+// ============ HOJA 2: caras ============
+(() => {
+  const caras = [
+    ['Neutra', { boca: 'sonrisa' }],
+    ['Feliz', { boca: 'lengua' }],
+    ['Carcajada', { boca: 'risa', ojos: { feliz: true } }],
+    ['Sorpresa', { boca: 'O', ojos: { sx: 1.3, px: 0, py: 0 }, cejas: -6, oreja: 14 }],
+    ['Preocupado', { boca: 'triste', ojos: { px: -5, py: -4 }, cejas: 22 }],
+    ['Enojado', { boca: 'dientes', ojos: { lid: 'enojo', px: 0, py: 3 }, cejas: -18 }],
+    ['Triste · llorando', { boca: 'triste', ojos: { lid: 'triste', lagrima: true, px: 0, py: 4 }, cejas: 20 }],
+    ['Cansado', { boca: 'bostezo', ojos: { lid: 'sueno', px: 0, py: 4 }, cejas: 6 }],
+    ['Guiño pícaro', { boca: 'ladeada', ojoD: { guino: true }, cejaD: -14, cejaDy: -4 }],
+    ['Pensativo', { boca: 'pensativa', ojos: { px: -8, py: -6 }, cejaDy: -8, cejaD: -12 }],
+  ];
+  document.getElementById('hoja2').innerHTML = titulo('Guía del perro · 2. Expresiones de la cara', 'Cejas canela, ojos y boca son los únicos tres controles de la actuación. Cada cara combina esos tres.')
+    + caras.map(([n, p], i) => {
+        const x = 120 + (i % 5) * 240, y = 210 + Math.floor(i / 5) * 310;
+        return `<g transform="translate(${x} ${y}) scale(1.5)">${cabeza(p)}</g>${etiqueta(x, y + 165, n)}`;
+      }).join('');
+})();
+
+// ============ HOJAS 3 y 4: situaciones ============
+const L = (a, b, c, d) => [a, b, c, d];
+const sit1 = [
+  ['Pensando', { incl: -8, boca: 'pensativa', ojos: { px: -6, py: -6 }, cejaDy: -6, cejaD: -12, brazoD: L(80, 14, 24, -8), brazoI: L(-60, 44, 16, 26),
+    propsFrente: P.interrogacion(86, -156, 12) + P.interrogacion(-84, -138, -12, .7) }],
+  ['Idea', { boca: 'risa', ojos: { sx: 1.15, px: 0, py: -2 }, brazoD: L(98, 0, 72, -84), propsFrente: P.bombilla(58, -190) + P.brillo(-60, -150, 1.2) }],
+  ['Marcaje · celular', { boca: 'sonrisa', ojos: { px: 0, py: 5 }, brazoI: L(-66, 28, -17, 16), brazoD: L(66, 28, 17, 16),
+    props: P.celular(0, 4), propsFrente: P.pin(86, -132) }],
+  ['Calculando', { boca: 'pensativa', ojos: { px: 0, py: 5 }, brazoI: L(-66, 30, -22, 26), brazoD: L(66, 30, 20, 30), props: P.calculadora(0, 22) }],
+  ['Nómina · dinero', { boca: 'risa', ojos: { sx: 1.1 }, brazoD: L(104, -4, 84, -68), brazoI: L(-92, 22, -48, 62),
+    props: P.billetes(84, -80, 14), propsFrente: P.billete(-80, -130, -20) + P.billete(-100, -88, 10) }],
+  ['Ya es tarde · noche', { boca: 'O', ojos: { sx: 1.25, px: 0, py: 0 }, cejas: 14, brazoI: L(-66, 28, -22, 20), brazoD: L(66, 28, 22, 20), props: P.reloj(0, 18),
+    propsFrente: P.luna(96, -150, .9) + P.brillo(60, -176, .8) + P.brillo(120, -110, .6) + P.gota(-66, -118, 1.1) }],
+  ['Revisando · lupa', { boca: 'pensativa', ojos: { px: 6, py: 0 }, ojoD: { sx: 1.35 }, cejaI: 6, brazoI: L(-92, 22, -48, 62), brazoD: L(86, 10, 46, -32),
+    propsFrente: P.lupa(24, -80, 46, -32) }],
+  ['Aprobado', { boca: 'risa', ojos: { feliz: true }, brazoD: L(104, -2, 82, -58), brazoI: L(-92, 22, -48, 62), propsFrente: P.check(-84, -128, 1) + P.brillo(104, -128, 1) + P.brillo(-124, -76, .7) }],
+];
+const sit2 = [
+  ['No sé · hombros', { incl: 6, boca: 'ladeada', ojos: { px: 0, py: -2 }, cejas: 14, brazoI: L(-82, 34, -96, 8), brazoD: L(82, 34, 96, 8), propsFrente: P.interrogacion(0, -166, 0) + P.gota(70, -118, 1) }],
+  ['Corriendo', { cuerpo: { rot: 10, dx: 8 }, boca: 'lengua', ojos: { px: 6 }, brazoI: L(-84, 22, -80, 72), brazoD: L(78, -4, 76, -38),
+    pieD: L(34, 88, 54, 114), pieI: L(-48, 88, -44, 96), sombra: .8, propsAtras: P.lineasVel(-70, 20) + P.polvo(-80, 128) }],
+  ['En el escritorio', { boca: 'sonrisa', ojos: { px: 0, py: 6 }, brazoI: L(-60, 30, -30, 52), brazoD: L(60, 30, 30, 52),
+    propsFrente: P.laptopTrasera(0, 36) + P.escritorio(66, 96) + P.taza(98, 62) }],
+  ['Cansado · de noche', { incl: 10, boca: 'bostezo', ojos: { lid: 'sueno', px: 0, py: 4 }, cejas: 6, brazoD: L(72, 0, 44, -50),
+    propsFrente: P.zzz(70, -150) + P.luna(-96, -140, .6) }],
+  ['Triste · llorando', { incl: -6, boca: 'triste', ojos: { lid: 'triste', lagrima: true, px: 0, py: 4 }, cejas: 20, brazoI: L(-70, 40, -58, 88), brazoD: L(70, 40, 58, 88), cuerpo: { dy: 3 } }],
+  ['Carcajada', { incl: -10, cuerpo: { rot: -3 }, boca: 'risa', ojos: { feliz: true }, brazoI: L(-62, 40, -16, 38), brazoD: L(62, 40, 16, 38),
+    propsFrente: P.ja(-86, -128, -12) + P.ja(94, -110, 10) + P.gota(-60, -62, .8) + P.gota(60, -62, .8) }],
+  ['Serio · brazos cruzados', { boca: 'ladeada', ojos: { px: -8, py: 0 }, cejaDy: -8, cejaD: -14, cejaI: 6, brazoI: L(-30, 40, 30, 24), brazoD: L(30, 36, -30, 14) }],
+  ['Susto · salta', { cuerpo: { dy: -28, rot: -8 }, boca: 'O', ojos: { sx: 1.3, px: 0, py: 0, r: 4 }, cejas: -8, brazoI: L(-100, -6, -98, -60), brazoD: L(100, -6, 98, -60),
+    pieI: L(-34, 90, -34, 104), pieD: L(34, 90, 34, 104), sombra: .5, propsFrente: P.gota(-84, -150, 1) + P.exclamacion(92, -138, 12) }],
+];
+function hojaSituaciones(id, tit, sub, lista) {
+  document.getElementById(id).innerHTML = titulo(tit, sub) + lista.map(([n, p], i) => {
+    const x = 150 + (i % 4) * 300, y = 310 + Math.floor(i / 4) * 440;
+    return `<g transform="translate(${x} ${y})">${perro(p)}</g>${etiqueta(x, y + 182, n, 18)}`;
+  }).join('');
+}
+hojaSituaciones('hoja3', 'Guía del perro · 3. Situaciones (Zaturno)', 'Producto y reglas de nómina: marcaje, cálculo, dinero, hora nocturna, revisión.', sit1);
+hojaSituaciones('hoja4', 'Guía del perro · 4. Actuación y emociones', 'Poses de reacción para los ganchos y cierres de los reels.', sit2);
+</script></body></html>
