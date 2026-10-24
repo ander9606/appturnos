@@ -586,15 +586,22 @@ export function useEliminarDescuento() {
   });
 }
 
-/** Agrega una vacante a una oferta existente; refresca la oferta para ver el puesto nuevo. */
+/**
+ * Agrega una vacante a una oferta existente. Pisa el puesto actualizado
+ * directo en la cache de la oferta (en vez de solo invalidar y esperar un
+ * refetch) para que el nuevo valor se vea de inmediato, sin la ventana donde
+ * la UI muestra brevemente el valor viejo mientras el refetch está en vuelo.
+ */
 export function useActualizarPuesto() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ ofertaId, puestoId, ...payload }: { ofertaId: number; puestoId: number; plazas?: number; tarifa_dia?: number }) =>
       turnosApi.actualizarPuesto(ofertaId, puestoId, payload),
-    onSuccess: (_data, { ofertaId }) => {
+    onSuccess: (puestoActualizado, { ofertaId }) => {
+      qc.setQueryData<OfertaDetalle>(QUERY_KEYS.oferta(ofertaId), (old) =>
+        old ? { ...old, puestos: old.puestos.map(p => p.id === puestoActualizado.id ? puestoActualizado : p) } : old
+      );
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
     },
   });
 }

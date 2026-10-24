@@ -54,6 +54,7 @@ export function EditarOfertaModal({
   const [vacante, setVacante] = useState<{ cargo: Cargo | null; plazas: number; tarifa: string }>({ cargo: null, plazas: 1, tarifa: '' });
   const [editandoTarifaId, setEditandoTarifaId] = useState<number | null>(null);
   const [tarifaEditada, setTarifaEditada] = useState('');
+  const [errorTarifa, setErrorTarifa] = useState<string | null>(null);
   const crearPuestoM = useCrearPuesto();
   const actualizarPuestoM = useActualizarPuesto();
   const { data: cargos = [] } = useCargos(agregandoVacante);
@@ -87,6 +88,7 @@ export function EditarOfertaModal({
     setShowHoraFin(false);
     setAgregandoVacante(false);
     setEditandoTarifaId(null);
+    setErrorTarifa(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -111,15 +113,19 @@ export function EditarOfertaModal({
   // El backend bloquea el cambio si ya hay alguien en_progreso/completado en
   // ese puesto, y a quien esté 'confirmado' lo pasa a 'por_reconfirmar' +
   // le notifica el nuevo pago (ver PuestosService.actualizar en el backend).
+  // El error se muestra inline (no con showAlert): este modal ya es un
+  // <Modal> de RN, y un segundo Modal (showAlert usa uno) abierto encima
+  // puede no verse en Android con varios Modal anidados.
   async function guardarTarifa(p: OfertaPuesto) {
     const tarifa = parseTarifa(tarifaEditada);
-    if (tarifa <= 0) { showAlert('Datos incompletos', 'Ingresa una tarifa válida.', 'warning'); return; }
+    if (tarifa <= 0) { setErrorTarifa('Ingresa una tarifa válida.'); return; }
+    setErrorTarifa(null);
     try {
       await actualizarPuestoM.mutateAsync({ ofertaId: oferta.id, puestoId: p.id, tarifa_dia: tarifa });
       setEditandoTarifaId(null);
       showToast('Tarifa actualizada.');
     } catch (err) {
-      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar la tarifa.');
+      setErrorTarifa(err instanceof ApiError ? err.message : 'No se pudo actualizar la tarifa.');
     }
   }
 
@@ -367,7 +373,6 @@ export function EditarOfertaModal({
                         <View className="flex-1 flex-row items-center bg-muted rounded-xl px-3 gap-1">
                           <Text className="text-sm font-bold text-muted-foreground">$</Text>
                           <TextInput
-                            autoFocus
                             className="flex-1 py-2 text-sm font-semibold text-foreground"
                             keyboardType="numeric"
                             value={tarifaEditada}
@@ -375,22 +380,24 @@ export function EditarOfertaModal({
                           />
                         </View>
                         <TouchableOpacity
-                          className="w-8 h-8 items-center justify-center"
+                          className="w-11 h-11 bg-muted rounded-xl items-center justify-center"
+                          style={{ opacity: ocupado ? 0.4 : 1 }}
                           disabled={ocupado}
-                          onPress={() => setEditandoTarifaId(null)}
+                          onPress={() => { setEditandoTarifaId(null); setErrorTarifa(null); }}
                           accessibilityRole="button"
                           accessibilityLabel="Cancelar edición de tarifa"
                         >
-                          <Ionicons name="close" size={18} color={COLORS.mutedForeground} />
+                          <Ionicons name="close" size={20} color={COLORS.mutedForeground} />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          className="w-8 h-8 items-center justify-center"
+                          className="w-11 h-11 bg-primary/10 rounded-xl items-center justify-center"
+                          style={{ opacity: ocupado ? 0.4 : 1 }}
                           disabled={ocupado}
                           onPress={() => guardarTarifa(p)}
                           accessibilityRole="button"
                           accessibilityLabel="Guardar tarifa"
                         >
-                          <Ionicons name="checkmark" size={18} color={COLORS.primary} />
+                          <Ionicons name="checkmark" size={20} color={COLORS.primary} />
                         </TouchableOpacity>
                       </>
                     ) : (
@@ -399,7 +406,7 @@ export function EditarOfertaModal({
                         <TouchableOpacity
                           className="flex-row items-center gap-1"
                           hitSlop={8}
-                          onPress={() => { setEditandoTarifaId(p.id); setTarifaEditada(String(p.tarifa_dia)); }}
+                          onPress={() => { setEditandoTarifaId(p.id); setTarifaEditada(String(p.tarifa_dia)); setErrorTarifa(null); }}
                           accessibilityRole="button"
                           accessibilityLabel={`Editar tarifa de ${p.cargo_nombre}`}
                         >
@@ -409,7 +416,10 @@ export function EditarOfertaModal({
                       </>
                     )}
                   </View>
-                  {editandoTarifa && p.plazas_cubiertas > 0 && (
+                  {editandoTarifa && errorTarifa && (
+                    <Text className="text-xs text-danger">{errorTarifa}</Text>
+                  )}
+                  {editandoTarifa && !errorTarifa && p.plazas_cubiertas > 0 && (
                     <Text className="text-xs text-warning">
                       Quien ya esté confirmado en esta vacante deberá reconfirmar tras el cambio.
                     </Text>
