@@ -256,17 +256,17 @@ const ReportesService = {
   },
 
   /** Historial individual de un trabajador: turnos + registros de nómina. */
-  async historialTrabajador(empresaId, trabajadorId, { desde, hasta }) {
+  // verPagos (admin, jefe de nómina y nomina): sin él, registros_nomina queda
+  // null — las horas ordinarias/extra/festivas y la novedad (notas médicas)
+  // de un trabajador son dato de nómina, no algo que jefe_turnos deba ver.
+  async historialTrabajador(empresaId, trabajadorId, { desde, hasta }, { verPagos }) {
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, trabajadorId);
     if (!trabajador) throw new AppError('Trabajador no encontrado', 404);
 
     const turnos = await ReportesModel.turnosDeTrabajador(empresaId, trabajadorId, desde, hasta);
-    const registros = await ReportesModel.registrosDeTrabajador(
-      empresaId,
-      trabajadorId,
-      desde,
-      hasta
-    );
+    const registros = verPagos
+      ? await ReportesModel.registrosDeTrabajador(empresaId, trabajadorId, desde, hasta)
+      : null;
     const pagoTurnos = turnos.reduce((suma, t) => suma + (Number(t.pago_total) || 0), 0);
 
     return {
@@ -284,7 +284,7 @@ const ReportesService = {
       resumen: {
         total_turnos: turnos.length,
         pago_turnos: redondear(pagoTurnos),
-        dias_nomina: registros.length,
+        dias_nomina: registros ? registros.length : null,
       },
     };
   },
