@@ -4154,6 +4154,13 @@
     ],
     [
      "query",
+     "DELETE FROM empresas_firma_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
      "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
      [
       9
@@ -4385,7 +4392,7 @@
      "release"
     ]
    ],
-   "consultas": 41
+   "consultas": 42
   },
   "ok_respuestas_vacias": {
    "resultado": "__undefined__",
@@ -4461,6 +4468,13 @@
     ],
     [
      "query",
+     "DELETE FROM empresas_firma_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
      "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
      [
       9
@@ -4692,7 +4706,7 @@
      "release"
     ]
    ],
-   "consultas": 41
+   "consultas": 42
   },
   "falla_consulta_0": {
    "error": "falla en la consulta 0",
@@ -4751,8 +4765,8 @@
    ],
    "consultas": 2
   },
-  "falla_consulta_20": {
-   "error": "falla en la consulta 20",
+  "falla_consulta_21": {
+   "error": "falla en la consulta 21",
    "log": [
     [
      "getConnection"
@@ -4819,6 +4833,13 @@
     [
      "query",
      "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM empresas_firma_auditoria WHERE empresa_id = ?",
      [
       9
      ]
@@ -4915,10 +4936,10 @@
      "release"
     ]
    ],
-   "consultas": 21
+   "consultas": 22
   },
-  "falla_consulta_39": {
-   "error": "falla en la consulta 39",
+  "falla_consulta_40": {
+   "error": "falla en la consulta 40",
    "log": [
     [
      "getConnection"
@@ -4985,6 +5006,13 @@
     [
      "query",
      "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM empresas_firma_auditoria WHERE empresa_id = ?",
      [
       9
      ]
@@ -5215,10 +5243,10 @@
      "release"
     ]
    ],
-   "consultas": 40
+   "consultas": 41
   },
-  "falla_consulta_40": {
-   "error": "falla en la consulta 40",
+  "falla_consulta_41": {
+   "error": "falla en la consulta 41",
    "log": [
     [
      "getConnection"
@@ -5285,6 +5313,13 @@
     [
      "query",
      "DELETE FROM disponibilidad_trabajador WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
+     "DELETE FROM empresas_firma_auditoria WHERE empresa_id = ?",
      [
       9
      ]
@@ -5522,7 +5557,7 @@
      "release"
     ]
    ],
-   "consultas": 41
+   "consultas": 42
   },
   "falla_begin": {
    "error": "falla en begin",
@@ -5616,6 +5651,13 @@
     ],
     [
      "query",
+     "DELETE FROM empresas_firma_auditoria WHERE empresa_id = ?",
+     [
+      9
+     ]
+    ],
+    [
+     "query",
      "DELETE FROM expo_push_tokens WHERE usuario_id IN (SELECT id FROM usuarios WHERE empresa_id = ?)",
      [
       9
@@ -5850,7 +5892,7 @@
      "release"
     ]
    ],
-   "consultas": 41
+   "consultas": 42
   },
   "falla_rollback": {
    "error": "rollback roto",
