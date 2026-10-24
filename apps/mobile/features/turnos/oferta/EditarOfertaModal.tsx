@@ -380,24 +380,24 @@ export function EditarOfertaModal({
                           />
                         </View>
                         <TouchableOpacity
-                          className="w-8 h-8 items-center justify-center"
-                          hitSlop={8}
+                          className="w-11 h-11 bg-muted rounded-xl items-center justify-center"
+                          style={{ opacity: ocupado ? 0.4 : 1 }}
                           disabled={ocupado}
                           onPress={() => { setEditandoTarifaId(null); setErrorTarifa(null); }}
                           accessibilityRole="button"
                           accessibilityLabel="Cancelar edición de tarifa"
                         >
-                          <Ionicons name="close" size={18} color={COLORS.mutedForeground} />
+                          <Ionicons name="close" size={20} color={COLORS.mutedForeground} />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          className="w-8 h-8 items-center justify-center"
-                          hitSlop={8}
+                          className="w-11 h-11 bg-primary/10 rounded-xl items-center justify-center"
+                          style={{ opacity: ocupado ? 0.4 : 1 }}
                           disabled={ocupado}
                           onPress={() => guardarTarifa(p)}
                           accessibilityRole="button"
                           accessibilityLabel="Guardar tarifa"
                         >
-                          <Ionicons name="checkmark" size={18} color={COLORS.primary} />
+                          <Ionicons name="checkmark" size={20} color={COLORS.primary} />
                         </TouchableOpacity>
                       </>
                     ) : (
