@@ -17,6 +17,11 @@ async function descargarContrato(asignacionId: number) {
   descargarBlob(blob, `contrato-turno-${asignacionId}.pdf`);
 }
 
+async function descargarCuentaCobro(cuentaCobroId: number) {
+  const blob = await turnosApi.descargarCuentaCobroPdf(cuentaCobroId);
+  descargarBlob(blob, `cuenta-cobro-${cuentaCobroId}.pdf`);
+}
+
 function fmtHora(dt: string | null): string {
   return dt ? dt.slice(11, 16) : '—';
 }
@@ -100,6 +105,7 @@ export function LiquidacionTurnosView() {
   const [turnosExpandidos, setTurnosExpandidos] = useState<Set<number>>(new Set());
   const [gruposExpandidos, setGruposExpandidos] = useState<Set<number>>(new Set());
   const [descargando, setDescargando] = useState<number | null>(null);
+  const [descargandoCuenta, setDescargandoCuenta] = useState<number | null>(null);
   const [vista, setVista] = useState<Vista>('trabajador');
 
   async function handleDescargarContrato(asignacionId: number) {
@@ -110,6 +116,17 @@ export function LiquidacionTurnosView() {
       toast.error('No se pudo descargar el contrato.');
     } finally {
       setDescargando(null);
+    }
+  }
+
+  async function handleDescargarCuentaCobro(cuentaCobroId: number) {
+    setDescargandoCuenta(cuentaCobroId);
+    try {
+      await descargarCuentaCobro(cuentaCobroId);
+    } catch {
+      toast.error('No se pudo descargar la cuenta de cobro.');
+    } finally {
+      setDescargandoCuenta(null);
     }
   }
 
@@ -257,27 +274,41 @@ export function LiquidacionTurnosView() {
                 const abierto = expandidos.has(w.trabajador_id);
                 return (
                   <div key={w.trabajador_id} className="bg-card border border-border rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => toggleTrabajador(w.trabajador_id)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted transition-colors"
-                    >
-                      <div>
-                        <p className="font-medium text-foreground">{w.nombre} {w.apellido}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                          {w.cargo ? `${w.cargo} · ` : ''}{w.total_turnos} turno{w.total_turnos !== 1 ? 's' : ''}
-                          {w.turnos_pendientes_firma > 0 && (
-                            <span className="flex items-center gap-0.5 text-warning font-medium">
-                              <AlertTriangle size={11} />
-                              {w.turnos_pendientes_firma} sin firmar
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <span className="flex items-center gap-3">
-                        <span className="font-semibold text-foreground">{fmtCOP(w.pago_total)}</span>
-                        <ChevronDown size={16} className={`text-muted-foreground transition-transform ${abierto ? 'rotate-180' : ''}`} />
-                      </span>
-                    </button>
+                    <div className="w-full flex items-center gap-1 bg-primary-50 pr-2">
+                      <button
+                        onClick={() => toggleTrabajador(w.trabajador_id)}
+                        className="flex-1 min-w-0 flex items-center justify-between px-4 py-3 text-left hover:bg-primary-100 transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground truncate">{w.nombre} {w.apellido}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            {w.cargo ? `${w.cargo} · ` : ''}{w.total_turnos} turno{w.total_turnos !== 1 ? 's' : ''}
+                            {w.turnos_pendientes_firma > 0 && (
+                              <span className="flex items-center gap-0.5 text-warning font-medium">
+                                <AlertTriangle size={11} />
+                                {w.turnos_pendientes_firma} sin firmar
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <span className="flex items-center gap-3 flex-shrink-0 ml-3">
+                          <span className="font-semibold text-foreground">{fmtCOP(w.pago_total)}</span>
+                          <ChevronDown size={16} className={`text-muted-foreground transition-transform ${abierto ? 'rotate-180' : ''}`} />
+                        </span>
+                      </button>
+                      {w.cuenta_cobro_id != null && (
+                        <button
+                          onClick={() => handleDescargarCuentaCobro(w.cuenta_cobro_id!)}
+                          disabled={descargandoCuenta === w.cuenta_cobro_id}
+                          title="Descargar cuenta de cobro del ciclo"
+                          className="flex-shrink-0 p-2 rounded-lg text-primary hover:bg-primary-100 disabled:opacity-60 transition-colors"
+                        >
+                          {descargandoCuenta === w.cuenta_cobro_id
+                            ? <Spinner size={14} />
+                            : <Download size={14} />}
+                        </button>
+                      )}
+                    </div>
                     {abierto && (
                       <div className="border-t border-border">
                         {w.turnos.length === 0 ? (

@@ -17,10 +17,23 @@ function verificarAcceso(cuenta, usuario) {
   }
 }
 
-/** trabajador_firma_guardada solo le sirve (y solo debe vérselo) al propio trabajador — ver contratos.service.js. */
+const CAMPOS_BANCARIOS_CUENTA_COBRO = [
+  'trabajador_banco', 'trabajador_tipo_cuenta', 'trabajador_numero_cuenta', 'trabajador_cedula',
+];
+
+/**
+ * trabajador_firma_guardada solo le sirve (y solo debe vérselo) al propio
+ * trabajador — ver contratos.service.js. Los datos bancarios y la cédula
+ * tampoco son del dominio de jefe_turnos (rol operativo de turnos, no de
+ * nómina/RRHH): puede descargar la cuenta de cobro (gestiona esta misma
+ * pantalla de Liquidación), pero sin esos campos.
+ */
 function limpiarCamposSensibles(cuenta, usuario) {
   if (cuenta.trabajador_usuario_id !== usuario.sub) {
     cuenta.trabajador_firma_guardada = null;
+  }
+  if (usuario.rol === ROLES.JEFE_TURNOS) {
+    for (const campo of CAMPOS_BANCARIOS_CUENTA_COBRO) cuenta[campo] = null;
   }
   return cuenta;
 }

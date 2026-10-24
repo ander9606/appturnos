@@ -3,6 +3,25 @@
 const PDFDocument = require('pdfkit');
 const { piePdfMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
+const logger = require('./logger');
+
+/**
+ * `empresas.logo_url` guarda, en la misma columna MEDIUMTEXT, una imagen
+ * subida como data URI ("data:image/png;base64,...") o una URL externa
+ * vieja de cuando el campo solo aceptaba links (ver migración 098). Las
+ * URLs externas no se descargan (SSRF: la URL la controla admin_empresa,
+ * un rol de confianza baja en un backend multi-tenant) — igual que
+ * firmaPdf.js, que maneja la misma columna y nunca hace fetch de red. Las
+ * filas viejas con URL externa simplemente no muestran logo, igual que ya
+ * pasa en cualquier otro PDF que usa esta columna.
+ */
+async function obtenerLogoBuffer(logoUrl) {
+  if (!logoUrl) return null;
+  if (/^data:image\/(png|jpe?g);base64,/.test(logoUrl)) {
+    return Buffer.from(logoUrl.replace(/^data:image\/[\w+-]+;base64,/, ''), 'base64');
+  }
+  return null;
+}
 
 /**
  * Genera el PDF de una cuenta de cobro (agregado de turnos de un período) y
@@ -10,9 +29,22 @@ const { dibujarFirma } = require('./firmaPdf');
  * con los datos de empresa, trabajador e `items` ya parseado (ver
  * CuentasCobroModel.obtenerPorId).
  */
-function generarCuentaCobroPdf(cuenta, stream) {
+async function generarCuentaCobroPdf(cuenta, stream) {
+  const logoBuffer = await obtenerLogoBuffer(cuenta.empresa_logo_url);
+
   const doc = new PDFDocument({ size: 'A4', margin: 56 });
   doc.pipe(stream);
+
+  if (logoBuffer) {
+    try {
+      const anchoLogo = 120;
+      doc.image(logoBuffer, (doc.page.width - anchoLogo) / 2, doc.y, { fit: [anchoLogo, 60] });
+      doc.y += 66;
+    } catch (err) {
+      // Logo corrupto o en un formato que pdfkit no decodifica (solo PNG/JPEG) — se omite.
+      logger.warn(`[cuentaCobroPdf] logo de la empresa ${cuenta.empresa_id} no se pudo dibujar: ${err.message}`);
+    }
+  }
 
   doc.fontSize(16).font('Helvetica-Bold').text('CUENTA DE COBRO', { align: 'center' });
   doc.moveDown(0.3);
@@ -153,4 +185,4 @@ function generarCuentaCobroPdf(cuenta, stream) {
   doc.end();
 }
 
-module.exports = { generarCuentaCobroPdf };
+module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer };
