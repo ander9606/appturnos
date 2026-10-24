@@ -7,7 +7,7 @@ import { useOfertas } from '@/modules/turnos/hooks/useTurnos';
 import { usePeriodos } from '@/modules/nomina/hooks/useNomina';
 import { MonthCalendar } from '@/shared/components/MonthCalendar';
 import { getMonthGrid, type CalendarDay } from '@/shared/lib/calendar';
-import { fmtDate, bogotaToday } from '@/shared/lib/format';
+import { fmtDate, fmtHorario, bogotaToday } from '@/shared/lib/format';
 import type { Oferta, EstadoOferta } from '@/modules/turnos/types';
 import type { Periodo, EstadoPeriodo } from '@/modules/nomina/types';
 
@@ -190,7 +190,7 @@ export function CalendarioPage() {
                             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ESTADO_OFERTA_DOT[o.estado]}`} />
                             <p className="text-sm font-medium text-foreground truncate">{o.titulo}</p>
                           </div>
-                          <p className="text-xs text-muted-foreground">{o.hora_inicio}{o.hora_fin_estimada ? ` – ${o.hora_fin_estimada}` : ''}</p>
+                          <p className="text-xs text-muted-foreground">{fmtHorario(o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente)}</p>
                         </button>
                       ))}
                     </div>

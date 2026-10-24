@@ -37,7 +37,7 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto, Oferta, DescuentoTurno, DescuentosAsignacion } from '../types';
-import { fmtDate, fmtCOP, bogotaToday } from '@/shared/lib/format';
+import { fmtDate, fmtHorario, fmtCOP, bogotaToday } from '@/shared/lib/format';
 import { EmptyState } from '@/shared/components/EmptyState';
 
 const ESTADO_OFERTA_BADGE: Record<EstadoOferta, string> = {
@@ -207,8 +207,7 @@ export function OfertaDetailPage() {
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {fmtDate(oferta.fecha)} · {oferta.hora_inicio}
-              {oferta.hora_fin_estimada ? ` – ${oferta.hora_fin_estimada}` : ''}
+              {fmtDate(oferta.fecha)} · {fmtHorario(oferta.hora_inicio, oferta.hora_fin_estimada, oferta.fin_dia_siguiente)}
               {oferta.lugar ? ` · ${oferta.lugar}` : ''}
               {oferta.latitud != null && oferta.longitud != null && (
                 <>
@@ -686,6 +685,7 @@ function EditarOfertaModal({
     hora_inicio: oferta.hora_inicio.slice(0, 5),
     hora_fin_estimada: oferta.hora_fin_estimada?.slice(0, 5) ?? '',
   });
+  const [finDiaSiguiente, setFinDiaSiguiente] = useState(Boolean(oferta.fin_dia_siguiente));
   const [lugar, setLugar] = useState(oferta.lugar ?? '');
   // mysql2 devuelve DECIMAL como string: se convierte para que el tipo sea número de verdad.
   const [latitud, setLatitud] = useState<number | null>(oferta.latitud == null ? null : Number(oferta.latitud));
@@ -694,6 +694,7 @@ function EditarOfertaModal({
   const cambianCriticos = form.fecha !== oferta.fecha
     || form.hora_inicio !== oferta.hora_inicio.slice(0, 5)
     || form.hora_fin_estimada !== (oferta.hora_fin_estimada?.slice(0, 5) ?? '')
+    || finDiaSiguiente !== Boolean(oferta.fin_dia_siguiente)
     || lugar !== (oferta.lugar ?? '');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -702,9 +703,16 @@ function EditarOfertaModal({
       toast.error('La fecha del turno no puede ser en el pasado');
       return;
     }
-    if (form.hora_fin_estimada && form.hora_fin_estimada <= form.hora_inicio) {
-      toast.error('La hora de fin debe ser posterior a la hora de inicio');
-      return;
+    if (form.hora_fin_estimada) {
+      const finAntesDelInicio = form.hora_fin_estimada <= form.hora_inicio;
+      if (finDiaSiguiente && !finAntesDelInicio) {
+        toast.error('Si el turno termina al día siguiente, la hora de fin debe ser antes (o igual) que la de inicio');
+        return;
+      }
+      if (!finDiaSiguiente && finAntesDelInicio) {
+        toast.error('La hora de fin debe ser posterior a la hora de inicio. Si el turno pasa de la medianoche, marca "Termina al día siguiente"');
+        return;
+      }
     }
     await actualizar.mutateAsync({
       id: ofertaId,
@@ -721,6 +729,7 @@ function EditarOfertaModal({
         // tocado el título o la descripción.
         hora_inicio: `${form.hora_inicio}:00`,
         hora_fin_estimada: form.hora_fin_estimada ? `${form.hora_fin_estimada}:00` : undefined,
+        fin_dia_siguiente: finDiaSiguiente,
         lugar,
         latitud: latitud ?? undefined,
         longitud: longitud ?? undefined,
@@ -775,6 +784,10 @@ function EditarOfertaModal({
             />
           </div>
         </div>
+        <label className="-mt-2 flex items-center gap-2 text-sm text-foreground cursor-pointer">
+          <input type="checkbox" checked={finDiaSiguiente} onChange={e => setFinDiaSiguiente(e.target.checked)} className="accent-primary" />
+          Termina al día siguiente <span className="text-xs text-muted-foreground">(el turno pasa de la medianoche)</span>
+        </label>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Lugar</label>
           <LugarInput
