@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const IntegracionModel = require('../integracion.model');
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
+const { hostExterno } = require('../../../utils/ssrfGuard');
 
 const ConfiguracionService = {
   /** Config sin exponer los secretos en claro. */
@@ -64,6 +65,13 @@ const ConfiguracionService = {
       throw new AppError('Código de emparejamiento inválido', 400);
     }
     if (!url || !nonce) throw new AppError('Código de emparejamiento inválido', 400);
+    // El código lo pega el propio admin_empresa (confianza baja en un backend
+    // multi-tenant) — sin este guard, `url` sería un SSRF: el backend haría
+    // un POST autenticado a cualquier host que el atacante elija (mismo
+    // criterio que logiq360_base_url, ver actualizarConfig arriba).
+    if (!(await hostExterno(url))) {
+      throw new AppError('Código de emparejamiento inválido', 400);
+    }
 
     const base = (process.env.PUBLIC_API_URL || '').replace(/\/$/, '');
     if (!base) throw new AppError('PUBLIC_API_URL no está configurada en el servidor. Agrega la URL pública de Zaturno en el .env antes de emparejar.', 500);
