@@ -11,7 +11,7 @@ import { useActualizarOferta, useActualizarPuesto, useCrearPuesto, useCargos } f
 import { parseTarifa } from '@/features/turnos/crear/utils';
 import { LugarInput } from '@/features/turnos/crear/LugarInput';
 import { Button } from '@/components/ui/Button';
-import { formatTimeObj, toISODate } from '@/lib/formatters';
+import { formatCOP, formatTimeObj, toISODate } from '@/lib/formatters';
 import type { Cargo, OfertaPuesto } from '@api-client';
 import { ApiError } from '@api-client';
 import { fmtDate } from './fechasOferta';
@@ -52,6 +52,8 @@ export function EditarOfertaModal({
   const [finDiaSiguiente, setFinDiaSiguiente] = useState(false);
   const [agregandoVacante, setAgregandoVacante] = useState(false);
   const [vacante, setVacante] = useState<{ cargo: Cargo | null; plazas: number; tarifa: string }>({ cargo: null, plazas: 1, tarifa: '' });
+  const [editandoTarifaId, setEditandoTarifaId] = useState<number | null>(null);
+  const [tarifaEditada, setTarifaEditada] = useState('');
   const crearPuestoM = useCrearPuesto();
   const actualizarPuestoM = useActualizarPuesto();
   const { data: cargos = [] } = useCargos(agregandoVacante);
@@ -84,6 +86,7 @@ export function EditarOfertaModal({
     setShowHoraInicio(false);
     setShowHoraFin(false);
     setAgregandoVacante(false);
+    setEditandoTarifaId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
@@ -102,6 +105,21 @@ export function EditarOfertaModal({
       await actualizarPuestoM.mutateAsync({ ofertaId: oferta.id, puestoId: p.id, plazas });
     } catch (err) {
       showAlert('Error', err instanceof ApiError ? err.message : 'No se pudieron cambiar las plazas.');
+    }
+  }
+
+  // El backend bloquea el cambio si ya hay alguien en_progreso/completado en
+  // ese puesto, y a quien esté 'confirmado' lo pasa a 'por_reconfirmar' +
+  // le notifica el nuevo pago (ver PuestosService.actualizar en el backend).
+  async function guardarTarifa(p: OfertaPuesto) {
+    const tarifa = parseTarifa(tarifaEditada);
+    if (tarifa <= 0) { showAlert('Datos incompletos', 'Ingresa una tarifa válida.', 'warning'); return; }
+    try {
+      await actualizarPuestoM.mutateAsync({ ofertaId: oferta.id, puestoId: p.id, tarifa_dia: tarifa });
+      setEditandoTarifaId(null);
+      showToast('Tarifa actualizada.');
+    } catch (err) {
+      showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo actualizar la tarifa.');
     }
   }
 
@@ -308,37 +326,94 @@ export function EditarOfertaModal({
             {oferta.puestos.map(p => {
               const minimo = Math.max(1, p.plazas_cubiertas);
               const ocupado = actualizarPuestoM.isPending;
+              const editandoTarifa = editandoTarifaId === p.id;
               return (
-                <View key={p.id} className="flex-row items-center justify-between gap-3">
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>{p.cargo_nombre}</Text>
-                    <Text className="text-xs text-muted-foreground">
-                      {p.plazas_cubiertas > 0 ? `${p.plazas_cubiertas} cubierta(s) — no se pueden quitar` : 'Sin cubrir'}
-                    </Text>
+                <View key={p.id} className="gap-2 py-1">
+                  <View className="flex-row items-center justify-between gap-3">
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>{p.cargo_nombre}</Text>
+                      <Text className="text-xs text-muted-foreground">
+                        {p.plazas_cubiertas > 0 ? `${p.plazas_cubiertas} cubierta(s) — no se pueden quitar` : 'Sin cubrir'}
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center gap-2">
+                      <TouchableOpacity
+                        className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
+                        style={{ opacity: ocupado || p.plazas <= minimo ? 0.4 : 1 }}
+                        disabled={ocupado || p.plazas <= minimo}
+                        onPress={() => cambiarPlazas(p, -1)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Quitar una plaza de ${p.cargo_nombre}`}
+                      >
+                        <Ionicons name="remove" size={16} color={COLORS.mutedForeground} />
+                      </TouchableOpacity>
+                      <Text className="text-base font-bold text-foreground w-6 text-center">{p.plazas}</Text>
+                      <TouchableOpacity
+                        className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
+                        style={{ opacity: ocupado ? 0.4 : 1 }}
+                        disabled={ocupado}
+                        onPress={() => cambiarPlazas(p, 1)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Agregar una plaza a ${p.cargo_nombre}`}
+                      >
+                        <Ionicons name="add" size={16} color={COLORS.mutedForeground} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
+
                   <View className="flex-row items-center gap-2">
-                    <TouchableOpacity
-                      className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
-                      style={{ opacity: ocupado || p.plazas <= minimo ? 0.4 : 1 }}
-                      disabled={ocupado || p.plazas <= minimo}
-                      onPress={() => cambiarPlazas(p, -1)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Quitar una plaza de ${p.cargo_nombre}`}
-                    >
-                      <Ionicons name="remove" size={16} color={COLORS.mutedForeground} />
-                    </TouchableOpacity>
-                    <Text className="text-base font-bold text-foreground w-6 text-center">{p.plazas}</Text>
-                    <TouchableOpacity
-                      className="w-8 h-8 bg-muted rounded-xl items-center justify-center"
-                      style={{ opacity: ocupado ? 0.4 : 1 }}
-                      disabled={ocupado}
-                      onPress={() => cambiarPlazas(p, 1)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Agregar una plaza a ${p.cargo_nombre}`}
-                    >
-                      <Ionicons name="add" size={16} color={COLORS.mutedForeground} />
-                    </TouchableOpacity>
+                    {editandoTarifa ? (
+                      <>
+                        <View className="flex-1 flex-row items-center bg-muted rounded-xl px-3 gap-1">
+                          <Text className="text-sm font-bold text-muted-foreground">$</Text>
+                          <TextInput
+                            autoFocus
+                            className="flex-1 py-2 text-sm font-semibold text-foreground"
+                            keyboardType="numeric"
+                            value={tarifaEditada}
+                            onChangeText={t => setTarifaEditada(t.replace(/[^\d.,]/g, ''))}
+                          />
+                        </View>
+                        <TouchableOpacity
+                          className="w-8 h-8 items-center justify-center"
+                          disabled={ocupado}
+                          onPress={() => setEditandoTarifaId(null)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Cancelar edición de tarifa"
+                        >
+                          <Ionicons name="close" size={18} color={COLORS.mutedForeground} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          className="w-8 h-8 items-center justify-center"
+                          disabled={ocupado}
+                          onPress={() => guardarTarifa(p)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Guardar tarifa"
+                        >
+                          <Ionicons name="checkmark" size={18} color={COLORS.primary} />
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <Text className="flex-1 text-xs text-muted-foreground">Tarifa: {formatCOP(Number(p.tarifa_dia))}</Text>
+                        <TouchableOpacity
+                          className="flex-row items-center gap-1"
+                          hitSlop={8}
+                          onPress={() => { setEditandoTarifaId(p.id); setTarifaEditada(String(p.tarifa_dia)); }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Editar tarifa de ${p.cargo_nombre}`}
+                        >
+                          <Ionicons name="pencil-outline" size={13} color={COLORS.primary} />
+                          <Text className="text-xs font-semibold text-primary">Editar</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
                   </View>
+                  {editandoTarifa && p.plazas_cubiertas > 0 && (
+                    <Text className="text-xs text-warning">
+                      Quien ya esté confirmado en esta vacante deberá reconfirmar tras el cambio.
+                    </Text>
+                  )}
                 </View>
               );
             })}

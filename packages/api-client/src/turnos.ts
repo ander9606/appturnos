@@ -477,8 +477,17 @@ export const turnosApi = {
     return api.post<OfertaPuesto>(`/api/turnos/ofertas/${ofertaId}/puestos`, payload);
   },
 
-  /** Cambia las plazas de una vacante. El backend rechaza (409) bajar de las ya cubiertas. */
-  actualizarPuesto(ofertaId: number, puestoId: number, payload: { plazas: number }): Promise<OfertaPuesto> {
+  /**
+   * Cambia plazas y/o tarifa_dia de una vacante. El backend rechaza (409) bajar
+   * las plazas por debajo de las ya cubiertas, y cambiar tarifa_dia si ya hay
+   * alguien en_progreso/completado en ese puesto — a quien esté 'confirmado' lo
+   * pasa a 'por_reconfirmar' y le notifica el nuevo pago.
+   */
+  actualizarPuesto(
+    ofertaId: number,
+    puestoId: number,
+    payload: { plazas?: number; tarifa_dia?: number; notas?: string | null }
+  ): Promise<OfertaPuesto> {
     return api.patch<OfertaPuesto>(`/api/turnos/ofertas/${ofertaId}/puestos/${puestoId}`, payload);
   },
 
