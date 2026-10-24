@@ -2,6 +2,7 @@
 
 const AuthService       = require('./auth.service');
 const VerificacionSvc   = require('./verificacion.service');
+const { ROLES }         = require('../../config/constants');
 
 /**
  * Controladores HTTP del módulo auth.
@@ -33,7 +34,12 @@ async function me(req, res) {
 async function verificarCedula(req, res) {
   const cedula = String(req.query.cedula ?? '').trim();
   if (!cedula) return res.status(400).json({ success: false, data: null, message: 'cedula requerida' });
-  const data = await AuthService.verificarCedula(cedula);
+  // Un visitante anónimo probando cédulas no debe poder mapear cédula→empleador;
+  // los gestores que crean/invitan trabajadores sí lo necesitan (duplicados,
+  // ver trabajador/nuevo.tsx) y ya llegan autenticados para esa pantalla.
+  const GESTORES_VEN_EMPRESA = [ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA];
+  const verEmpresa = GESTORES_VEN_EMPRESA.includes(req.usuario?.rol);
+  const data = await AuthService.verificarCedula(cedula, { verEmpresa });
   res.json({ success: true, data, message: 'Verificación de cédula' });
 }
 

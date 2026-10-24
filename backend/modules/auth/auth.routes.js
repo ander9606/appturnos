@@ -6,7 +6,7 @@ const { ipKeyGenerator } = rateLimit;
 const { body, param } = require('express-validator');
 
 const { validar } = require('../../middleware/validator');
-const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
+const { verificarToken, intentarAutenticar, verificarRol } = require('../../middleware/authMiddleware');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./auth.controller');
 
@@ -68,8 +68,9 @@ router.post(
 // GET /api/auth/me
 router.get('/me', verificarToken, ctrl.me);
 
-// GET /api/auth/verificar-cedula?cedula=xxx — endpoint público, sin auth
-router.get('/verificar-cedula', ctrl.verificarCedula);
+// GET /api/auth/verificar-cedula?cedula=xxx — público (sin token también funciona),
+// pero el nombre de la empresa que invitó solo se revela si llega autenticado.
+router.get('/verificar-cedula', intentarAutenticar, ctrl.verificarCedula);
 
 // POST /api/auth/activar-cuenta
 router.post(
