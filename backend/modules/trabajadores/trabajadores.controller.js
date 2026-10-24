@@ -22,12 +22,12 @@ async function listar(req, res) {
     activo,
     page,
     limit,
-  });
+  }, req.usuario);
   res.json({ success: true, data: { data, pagination } });
 }
 
 async function obtener(req, res) {
-  const data = await TrabajadoresService.obtener(req.empresa_id, Number(req.params.id));
+  const data = await TrabajadoresService.obtener(req.empresa_id, Number(req.params.id), req.usuario);
   res.json({ success: true, data, message: 'Detalle del trabajador' });
 }
 

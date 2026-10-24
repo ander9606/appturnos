@@ -2,6 +2,9 @@
 
 jest.mock('../modules/integracion/integracion.model');
 jest.mock('../modules/integracion/entrantes.handlers', () => ({ procesar: jest.fn() }));
+// El guard SSRF hace una resolución DNS real — en el test, fetch ya está
+// mockeado y no hay red, así que se asume host externo válido.
+jest.mock('../utils/ssrfGuard', () => ({ hostExterno: jest.fn().mockResolvedValue(true) }));
 
 const IntegracionModel = require('../modules/integracion/integracion.model');
 const entrantesHandlers = require('../modules/integracion/entrantes.handlers');

@@ -87,7 +87,7 @@ const PeriodosService = {
       // mínimo garantizado, deducciones) — nada de reimplementar reglas
       // laborales acá. Solo tomamos `.totales`, no las líneas por trabajador.
       for (const periodo of data) {
-        const { totales } = await LiquidacionService.generar(empresaId, periodo.id);
+        const { totales } = await LiquidacionService.generar(empresaId, periodo.id, usuario);
         periodo.total_estimado = totales.total_general;
         periodo.total_neto_estimado = totales.total_neto_general;
         periodo.trabajadores = totales.trabajadores;

@@ -13,10 +13,13 @@ jest.mock('../modules/notificaciones/notificaciones.service', () => ({
 jest.mock('../modules/cuentas-cobro/cuentas-cobro.service', () => ({
   generarParaPeriodo: jest.fn().mockResolvedValue({ generadas: 0 }),
 }));
+jest.mock('../modules/nomina/liquidacion/liquidacion.service');
 
 const PeriodosModel  = require('../modules/nomina/periodos/periodos.model');
+const LiquidacionService = require('../modules/nomina/liquidacion/liquidacion.service');
 const PeriodosService = require('../modules/nomina/periodos/periodos.service');
 const AppError        = require('../utils/AppError');
+const { ROLES }       = require('../config/constants');
 
 // ── listar ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +52,30 @@ describe('PeriodosService.listar', () => {
     expect(autoCrearSpy).not.toHaveBeenCalled();
     expect(result.data).toHaveLength(2);
     autoCrearSpy.mockRestore();
+  });
+});
+
+// Seguridad: conTotales reusa LiquidacionService.generar() para sumar los montos del
+// período — ese mismo método ya filtra a una sola línea cuando el usuario es
+// trabajador_nomina (ver liquidacion.service.js). Si se le olvida mandar `usuario`,
+// el total que vuelve es el de TODA la empresa, no el propio.
+describe('PeriodosService.listar — conTotales reenvía usuario a LiquidacionService.generar', () => {
+  beforeEach(() => {
+    PeriodosModel.listar.mockResolvedValue({ data: [{ id: 1, estado: 'abierto' }], total: 1 });
+    jest.spyOn(PeriodosService, 'autoCrear').mockResolvedValue(null);
+    LiquidacionService.generar.mockResolvedValue({
+      totales: { total_general: 100, total_neto_general: 90, trabajadores: 1 },
+    });
+  });
+
+  afterEach(() => PeriodosService.autoCrear.mockRestore());
+
+  test('pasa el usuario autenticado a LiquidacionService.generar (no solo empresaId/periodoId)', async () => {
+    const usuario = { sub: 42, rol: ROLES.TRABAJADOR_NOMINA };
+
+    await PeriodosService.listar(1, { page: 1, limit: 20, conTotales: true }, usuario);
+
+    expect(LiquidacionService.generar).toHaveBeenCalledWith(1, 1, usuario);
   });
 });
 

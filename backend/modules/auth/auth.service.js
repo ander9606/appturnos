@@ -169,6 +169,17 @@ const AuthService = {
       throw new AppError('Este trabajador ya tiene una cuenta activa', 409);
     }
 
+    // El controller ya probó (vía OTP) que quien activa controla `email`, pero
+    // eso no basta: si la empresa ya registró un correo para este trabajador,
+    // activar con uno distinto permitiría a cualquiera que solo conozca la
+    // cédula (dato semi-público) secuestrar la identidad con su propio correo.
+    if (trabajador.email && trabajador.email.toLowerCase() !== email.toLowerCase()) {
+      throw new AppError(
+        'La empresa tiene registrado otro correo para este trabajador. Usa ese correo para activar tu cuenta, o pide que lo actualicen.',
+        403
+      );
+    }
+
     const emailEnUso = await AuthModel.buscarUsuarioPorEmail(email);
     if (emailEnUso) {
       throw new AppError('Ese email ya tiene una cuenta. Si te creó un administrador, inicia sesión con la contraseña temporal que te dieron; no te registres de nuevo.', 409);

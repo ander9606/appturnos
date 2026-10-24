@@ -23,12 +23,33 @@ const CAMPOS_JEFE_NOMINA = [
 // persona que se copian a sus otras fichas (CAMPOS_PERSONALES_TRABAJADOR): esos son del admin.
 const CAMPOS_JEFE_TURNOS = ['nombre', 'apellido', 'telefono', 'email', 'cargo'];
 
+// Lo que jefe_turnos puede VER de una ficha (GET), no solo editar: mismo
+// criterio que CAMPOS_JEFE_TURNOS (rol operativo de turnos, no de nómina/RRHH)
+// más los campos de solo-lectura que la pantalla de Equipo necesita mostrar —
+// nunca sueldo, cuenta bancaria, cédula, ni otros datos personales sensibles
+// (antecedentes, dirección, contacto de emergencia, fecha de nacimiento).
+const CAMPOS_VISIBLES_JEFE_TURNOS = [
+  'id', 'empresa_id', 'usuario_id', 'nombre', 'apellido', 'telefono', 'email',
+  'tipo', 'cargo', 'descripcion', 'acepta_extras', 'tipo_marcacion',
+  'punto_marcaje_id', 'hora_entrada_esperada', 'activo', 'external_ref',
+  'ranking', 'total_calificaciones', 'created_at', 'foto_perfil', 'promedio_pago_turno',
+];
+
+function limpiarParaJefeTurnos(fila, usuario) {
+  if (usuario?.rol !== ROLES.JEFE_TURNOS) return fila;
+  const limpio = {};
+  for (const campo of CAMPOS_VISIBLES_JEFE_TURNOS) {
+    if (campo in fila) limpio[campo] = fila[campo];
+  }
+  return limpio;
+}
+
 /**
  * Lógica de negocio de trabajadores. Recibe siempre el empresaId del
  * usuario autenticado para garantizar el aislamiento entre tenants.
  */
 const TrabajadoresService = {
-  async listar(empresaId, { tipo, activo, page, limit }) {
+  async listar(empresaId, { tipo, activo, page, limit }, usuario) {
     const offset = (page - 1) * limit;
     const { data, total } = await TrabajadoresModel.listar(empresaId, {
       tipo,
@@ -36,7 +57,10 @@ const TrabajadoresService = {
       limit,
       offset,
     });
-    return { data, pagination: { page, limit, total } };
+    return {
+      data: data.map((fila) => limpiarParaJefeTurnos(fila, usuario)),
+      pagination: { page, limit, total },
+    };
   },
 
   async buscarPorCedula(cedula) {
@@ -124,10 +148,10 @@ const TrabajadoresService = {
     });
   },
 
-  async obtener(empresaId, id) {
+  async obtener(empresaId, id, usuario) {
     const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, id);
     if (!trabajador) throw new AppError('Trabajador no encontrado', 404);
-    return trabajador;
+    return limpiarParaJefeTurnos(trabajador, usuario);
   },
 
   /**

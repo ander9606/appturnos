@@ -70,7 +70,7 @@ const ContratosService = {
     let contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
     if (contrato) {
       verificarAcceso(contrato, usuario);
-      return contrato;
+      return limpiarCamposSensibles(contrato, usuario);
     }
 
     // Si no existe, obtener asignación con detalles (trae su propio empresa_id
@@ -85,7 +85,7 @@ const ContratosService = {
 
     contrato = await ContratosService.generarParaAsignacion(asignacion.empresa_id, asignacionId);
     verificarAcceso(contrato, usuario);
-    return contrato;
+    return limpiarCamposSensibles(contrato, usuario);
   },
 
   /**

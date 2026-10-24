@@ -20,7 +20,7 @@ async function listar(req, res) {
 }
 
 async function obtener(req, res) {
-  const data = await RegistrosService.obtener(req.empresa_id, Number(req.params.id));
+  const data = await RegistrosService.obtener(req.empresa_id, Number(req.params.id), req.usuario);
   res.json({ success: true, data });
 }
 

@@ -26,7 +26,13 @@ const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
   : [];
 if (corsOrigins.length === 0 && process.env.NODE_ENV === 'production') {
-  logger.error('CORS_ORIGINS no configurado en producción — todos los orígenes permitidos. Configura esta variable.');
+  // cors({}) sin whitelist refleja Access-Control-Allow-Origin para cualquier
+  // origen — a diferencia de JWT_SECRET esto no tiene un valor por defecto
+  // "evidentemente mal" que detectar, así que un despliegue que simplemente
+  // se olvida de configurar la variable queda abierto en silencio. Mismo
+  // criterio que JWT_SECRET: abortar el arranque, no solo loggear.
+  logger.error('CORS_ORIGINS no configurado en producción — todos los orígenes quedarían permitidos. Configura esta variable.');
+  process.exit(1);
 }
 app.use(cors(corsOrigins.length ? { origin: corsOrigins, credentials: true } : {}));
 
