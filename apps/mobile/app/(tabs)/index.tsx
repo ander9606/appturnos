@@ -7,6 +7,7 @@
  *
  * Colores: naranja (trabajador_turnos), verde (trabajador_nomina), azul (gestores).
  */
+import { PantallaPestana } from '@/components/ui/EncabezadoPestana';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { COLORS, alpha } from '@/lib/designTokens';
@@ -21,7 +22,6 @@ import {
 } from 'react-native';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { empresasApi, ApiError } from '@api-client';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -310,7 +310,7 @@ export default function DashboardScreen() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <PantallaPestana>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -606,6 +606,6 @@ export default function DashboardScreen() {
         )}
 
       </ScrollView>
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }

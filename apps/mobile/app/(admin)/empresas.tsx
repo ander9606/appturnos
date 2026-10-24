@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 /**
  * Lista de todas las empresas — panel super_admin.
  * Permite buscar, filtrar por estado y navegar al detalle.
@@ -18,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useAdminEmpresas } from '@/features/admin/useAdmin';
 import { formatCOP } from '@/lib/formatters';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -78,7 +80,7 @@ export default function EmpresasScreen() {
   };
 
   const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
-  const { data, isLoading, isError, refetch } = useAdminEmpresas(params, isSuperAdmin);
+  const { data, isLoading, isError, error, refetch } = useAdminEmpresas(params, isSuperAdmin);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -167,23 +169,11 @@ export default function EmpresasScreen() {
         )}
 
         {isError && (
-          <View className="mx-4 mt-4 bg-danger/10 border border-danger/30 rounded-2xl p-4 items-center gap-2">
-            <Text className="text-2xl">⚠️</Text>
-            <Text className="text-danger font-semibold">Error al cargar empresas</Text>
-            <Pressable onPress={() => refetch()}>
-              <Text className="text-primary text-sm font-semibold">Reintentar</Text>
-            </Pressable>
-          </View>
+          <ErrorState compact error={error} onRetry={refetch} fallback="Error al cargar empresas" />
         )}
 
         {!isLoading && !isError && empresas.length === 0 && (
-          <View className="items-center py-16 gap-2">
-            <Text className="text-4xl">🏙️</Text>
-            <Text className="text-foreground font-semibold text-base">Sin resultados</Text>
-            <Text className="text-muted-foreground text-sm text-center px-8">
-              No se encontraron empresas con los filtros actuales.
-            </Text>
-          </View>
+          <EmptyState variant="search" title="Sin resultados" message="No se encontraron empresas con los filtros actuales." />
         )}
 
         {empresas.map((empresa) => {

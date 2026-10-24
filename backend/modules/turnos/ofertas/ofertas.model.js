@@ -3,8 +3,9 @@
 const { pool } = require('../../../config/database');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
 const { horaAMinutos } = require('../../../utils/laboralUtils');
-const { DIAS_GRACIA_ASIGNACIONES_COLGADAS } = require('../../../config/constants');
+const { DIAS_GRACIA_ASIGNACIONES_COLGADAS, ROLES } = require('../../../config/constants');
 const { DELAY_RANKING_SQL_CASE } = require('../../../utils/rankingUtils');
+const { enTransaccion } = require('../../../utils/enTransaccion');
 
 const MIN_POR_DIA = 24 * 60;
 
@@ -19,7 +20,7 @@ function minutosAHora(minutos) {
  * `ofertas_turno` solo lleva los datos generales del evento.
  */
 
-const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
+const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
   lugar, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
@@ -110,6 +111,7 @@ const CAMPOS_EDITABLES = [
   'fecha',
   'hora_inicio',
   'hora_fin_estimada',
+  'fin_dia_siguiente',
   'lugar',
   'latitud',
   'longitud',
@@ -120,6 +122,17 @@ const CAMPOS_EDITABLES = [
 ];
 
 /** Convierte las columnas `puestos_json`/`destinatarios_json`/`puntos_marcaje_json` (string) en arrays de objetos. */
+/** Fin del turno como 'YYYY-MM-DD HH:MM:SS': el día siguiente a `fecha` si `fin_dia_siguiente`. */
+function finDeOferta({ fecha, hora_fin_estimada, fin_dia_siguiente }) {
+  let dia = String(fecha).slice(0, 10);
+  if (Number(fin_dia_siguiente) === 1) {
+    const d = new Date(`${dia}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    dia = d.toISOString().slice(0, 10);
+  }
+  return `${dia} ${hora_fin_estimada || '23:59:59'}`;
+}
+
 function parsearPuestos(fila) {
   if (!fila) return fila;
   const {
@@ -149,7 +162,7 @@ function parsearPuestos(fila) {
     !['completada', 'cancelada', 'borrador'].includes(resto.estado) &&
     Number(asignaciones_activas) > 0 &&
     Number(asignaciones_sin_resolver) === 0 &&
-    `${resto.fecha} ${resto.hora_fin_estimada || '23:59:59'}` <= ahoraColombiaSQL()
+    finDeOferta(resto) <= ahoraColombiaSQL()
   );
 
   return { ...resto, puestos, destinatarios, puntos_marcaje: puntosMarcaje, necesita_completar: necesitaCompletar };
@@ -291,6 +304,93 @@ const OfertasModel = {
     return { data: filas.map(parsearPuestos), total };
   },
 
+  /** ¿La oferta existe y es de esa empresa? (más liviano que obtenerPorId, que arma los JSON de puestos). */
+  async perteneceAEmpresa(empresaId, ofertaId) {
+    const [[oferta]] = await pool.query(
+      'SELECT id FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
+      [ofertaId, empresaId]
+    );
+    return !!oferta;
+  },
+
+  /** Fecha y horario de la oferta (undefined si no existe en esa empresa). */
+  async obtenerHorario(empresaId, ofertaId) {
+    const [[fila]] = await pool.query(
+      `SELECT fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente FROM ofertas_turno WHERE id = ? AND empresa_id = ?`,
+      [ofertaId, empresaId]
+    );
+    return fila;
+  },
+
+  // ── Destinatarios de una oferta (validación y avisos) ──────────────────────────────
+
+  /** Cuántos de esos trabajadores tienen vínculo activo con la empresa. */
+  async contarTrabajadoresActivosDeEmpresa(empresaId, trabajadorIds) {
+    const [filas] = await pool.query(
+      `SELECT t.id FROM trabajadores t
+     JOIN trabajador_empresa te ON te.trabajador_id = t.id
+     WHERE t.id IN (?) AND te.empresa_id = ? AND te.estado = 'activo'`,
+      [trabajadorIds, empresaId]
+    );
+    return filas.length;
+  },
+
+  /** Nombre y apellido de los trabajadores que no tienen NINGUNO de esos cargos certificados en la empresa. */
+  async nombresSinNingunCargo(empresaId, trabajadorIds, cargoIds) {
+    const [filas] = await pool.query(
+      `SELECT t.nombre, t.apellido FROM trabajadores t
+     WHERE t.id IN (?) AND NOT EXISTS (
+       SELECT 1 FROM trabajador_empresa te
+       JOIN trabajador_cargos tc ON tc.trabajador_empresa_id = te.id
+       WHERE te.trabajador_id = t.id AND te.empresa_id = ? AND tc.cargo_id IN (?)
+     )`,
+      [trabajadorIds, empresaId, cargoIds]
+    );
+    return filas;
+  },
+
+  /**
+   * Candidatos a avisar de un puesto: certificados para el cargo, con vínculo activo, que YA cumplieron su
+   * delay de ranking y que todavía no recibieron este aviso (el NOT EXISTS permite llamarlo varias veces
+   * para la misma oferta sin duplicar). Devuelve [{ usuario_id }].
+   */
+  async listarCandidatosPendientesDeAviso(empresaId, oferta, puesto, roles) {
+    const [filas] = await pool.query(
+      `SELECT DISTINCT u.id AS usuario_id
+     FROM trabajador_cargos tc
+     JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
+     JOIN trabajadores t        ON t.id  = te.trabajador_id
+     JOIN usuarios u            ON u.id  = t.usuario_id
+     WHERE te.empresa_id = ?
+       AND tc.cargo_id   = ?
+       AND te.estado     = 'activo'
+       AND u.activo      = 1
+       AND u.rol IN (?)
+       AND (u.rol != ? OR t.acepta_extras = 1)
+       AND TIMESTAMPDIFF(MINUTE, ?, NOW()) >= ${DELAY_RANKING_SQL_CASE}
+       AND NOT EXISTS (
+         SELECT 1 FROM notificaciones n
+         WHERE n.usuario_id = u.id AND n.tipo = 'oferta.nueva'
+           AND CAST(n.data->>'$.oferta_id' AS UNSIGNED) = ?
+           AND CAST(n.data->>'$.puesto_id' AS UNSIGNED) = ?
+       )`,
+      [empresaId, puesto.cargo_id, roles, ROLES.TRABAJADOR_NOMINA, oferta.created_at, oferta.id, puesto.id]
+    );
+    return filas;
+  },
+
+  /** ids de los trabajador_nomina (de entre esos) que no aceptan turnos extra. */
+  async trabajadorIdsNominaSinExtras(trabajadorIds) {
+    const [filas] = await pool.query(
+      `SELECT t.id AS trabajador_id
+       FROM trabajadores t
+       JOIN usuarios u ON u.id = t.usuario_id
+       WHERE t.id IN (?) AND u.rol = ? AND t.acepta_extras = 0`,
+      [trabajadorIds, ROLES.TRABAJADOR_NOMINA]
+    );
+    return filas.map((f) => f.trabajador_id);
+  },
+
   /** Resuelve la empresa dueña de una oferta sin conocerla de antemano — usada
    *  para validar membresía de trabajadores multi-empresa antes del fetch scoped. */
   async obtenerEmpresaId(id) {
@@ -415,16 +515,14 @@ const OfertasModel = {
    * @param datos.trabajador_ids — solo si visibilidad = 'dirigida': destinatarios elegidos a mano.
    */
   async crear(empresaId, datos, creadoPor) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
-           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
+           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
             lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono,
             estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresaId,
           datos.titulo,
@@ -433,6 +531,7 @@ const OfertasModel = {
           datos.fecha,
           datos.hora_inicio,
           datos.hora_fin_estimada ?? null,
+          datos.fin_dia_siguiente ? 1 : 0,
           datos.lugar ?? null,
           datos.latitud ?? null,
           datos.longitud ?? null,
@@ -481,14 +580,8 @@ const OfertasModel = {
         }
       }
 
-      await conn.commit();
       return ofertaId;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   async actualizar(empresaId, id, datos) {
@@ -503,9 +596,7 @@ const OfertasModel = {
     const tocaPuntos = Array.isArray(datos.punto_marcaje_ids);
     if (sets.length === 0 && !tocaPuntos) return 0;
 
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
 
       let affectedRows = 0;
       if (sets.length > 0) {
@@ -535,14 +626,8 @@ const OfertasModel = {
         affectedRows = affectedRows || 1;
       }
 
-      await conn.commit();
       return affectedRows;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /**
@@ -644,22 +729,26 @@ const OfertasModel = {
 
       let horaInicio = original.hora_inicio;
       let horaFinEstimada = original.hora_fin_estimada;
+      let finDiaSiguiente = original.fin_dia_siguiente;
       if (nuevaHoraInicio) {
         if (horaFinEstimada) {
           const delta = horaAMinutos(nuevaHoraInicio) - horaAMinutos(original.hora_inicio);
-          horaFinEstimada = minutosAHora(horaAMinutos(horaFinEstimada) + delta);
+          // Minutos desde la medianoche de `fecha`: ≥ 1440 → termina al día siguiente.
+          const finTotal = horaAMinutos(horaFinEstimada) + (original.fin_dia_siguiente ? 1440 : 0) + delta;
+          horaFinEstimada = minutosAHora(finTotal);
+          finDiaSiguiente = finTotal >= 1440 ? 1 : 0;
         }
         horaInicio = nuevaHoraInicio;
       }
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
-           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
+           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
             lugar, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
           empresaId, original.titulo, original.descripcion, original.notas_adicionales, nuevaFecha,
-          horaInicio, horaFinEstimada,
+          horaInicio, horaFinEstimada, finDiaSiguiente,
           original.lugar, original.latitud, original.longitud, original.ubicacion_libre,
           original.para_quien, creadoPor,
         ]
@@ -683,9 +772,7 @@ const OfertasModel = {
   },
 
   async cancelar(empresaId, id) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    await enTransaccion(async (conn) => {
       await conn.query(
         "UPDATE ofertas_turno SET estado = 'cancelada' WHERE id = ? AND empresa_id = ?",
         [id, empresaId]
@@ -696,13 +783,7 @@ const OfertasModel = {
            AND estado NOT IN ('completado', 'cancelado')`,
         [id, empresaId]
       );
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /**
@@ -719,9 +800,7 @@ const OfertasModel = {
    * caller no debe notificarle una compensación que nunca se aplicó.
    */
   async marcarFallida(empresaId, id, compensaciones, motivo, usuarioId) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    return enTransaccion(async (conn) => {
       const ahora = ahoraColombiaSQL();
       const actualizados = [];
 
@@ -732,7 +811,7 @@ const OfertasModel = {
            JOIN ofertas_turno o  ON o.id = a.oferta_id
            SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?),
                a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-                   LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+                   LEAST(?, o.fin_ts)
                ) / 60,
                a.estado = 'fallido',
                a.pago_total = ? + a.bono_monto,
@@ -757,14 +836,8 @@ const OfertasModel = {
         [id, empresaId]
       );
 
-      await conn.commit();
       return actualizados;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   async eliminarDefinitivo(empresaId, id) {

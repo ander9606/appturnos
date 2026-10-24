@@ -3,7 +3,6 @@
 // Cierra el hueco de integración: un incidente reportado en un turno originado
 // en logiq360 (external_ref) debe viajar como evento novedad.reportada, con
 // GPS si el trabajador lo compartió. Antes esto nunca salía de Zaturno.
-jest.mock('../config/database', () => ({ pool: { query: jest.fn() } }));
 jest.mock('../modules/novedades/novedades.model');
 jest.mock('../modules/turnos/asignaciones/asignaciones.model');
 jest.mock('../modules/notificaciones/notificaciones.service', () => ({
@@ -13,7 +12,6 @@ jest.mock('../modules/integracion/integracion.service', () => ({
   emitir: jest.fn().mockResolvedValue(undefined),
 }));
 
-const { pool } = require('../config/database');
 const NovedadesModel = require('../modules/novedades/novedades.model');
 const AsignacionesModel = require('../modules/turnos/asignaciones/asignaciones.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
@@ -101,13 +99,14 @@ describe('NovedadesService.crear — evento novedad.reportada hacia logiq360', (
     AsignacionesModel.obtenerConDetalles.mockResolvedValue({ empresa_id: 7, oferta_external_ref: null });
     NovedadesModel.create.mockResolvedValue({ id: 11 });
     NovedadesModel.getParticipantes.mockResolvedValue([]);
-    pool.query.mockResolvedValue([[{ 1: 1 }]]); // trabajador encontrado y dueño de la asignación
+    NovedadesModel.trabajadorEsUsuario.mockResolvedValue(true); // trabajador dueño de la asignación
 
     await expect(
       NovedadesService.crear(null, 5, 'retraso', 'Llegué tarde', null, null, usuarioTrabajadorMultiEmpresa)
     ).resolves.toEqual({ id: 11 });
 
     expect(AsignacionesModel.obtenerPorId).toHaveBeenCalledWith(null, 5);
+    expect(NovedadesModel.trabajadorEsUsuario).toHaveBeenCalledWith(3, 9);
     expect(NovedadesModel.create).toHaveBeenCalledWith(
       7, 5, 9, 'retraso', 'Llegué tarde', null, null, undefined, undefined
     );

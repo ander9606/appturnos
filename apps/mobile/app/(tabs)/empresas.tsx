@@ -1,3 +1,4 @@
+import { PantallaPestana, EncabezadoPestana } from '@/components/ui/EncabezadoPestana';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text, TextInput } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
@@ -8,7 +9,6 @@ import {
   RefreshControl,
   SectionList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { empresasApi } from '@api-client';
@@ -22,13 +22,14 @@ import {
 } from '@/features/empresas/useTrabajadorEmpresa';
 import { EmpresaCard } from '@/features/empresas/EmpresaCard';
 import { VinculoCard } from '@/features/empresas/VinculoCard';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 type ActiveTab = 'mis_empresas' | 'directorio';
 
 // ── Mis empresas ──────────────────────────────────────────────────────────
 
 function MisEmpresasView() {
-  const { data, isLoading, isError, refetch, isRefetching } = useMisEmpresas();
+  const { data, isLoading, isError, error, refetch, isRefetching } = useMisEmpresas();
   const { mutate: aceptar, isPending: aceptando, variables: aceptandoId } = useAceptar();
   const { mutate: rechazar, isPending: rechazando, variables: rechazandoVars } = useRechazarVinculo();
 
@@ -56,9 +57,7 @@ function MisEmpresasView() {
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center px-6">
-        <Text className="text-danger text-center">{t('common.error')}</Text>
-      </View>
+      <ErrorState error={error} onRetry={refetch} />
     );
   }
 
@@ -112,7 +111,7 @@ function DirectorioView() {
   const [query, setQuery] = useState('');
 
   const { data: misEmpresas } = useMisEmpresas();
-  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
     queryKey: ['empresas-directorio', query],
     queryFn: () => empresasApi.directorio({ busqueda: query || undefined, limit: 50 }),
     staleTime: 60_000,
@@ -161,9 +160,7 @@ function DirectorioView() {
       {isLoading ? (
         <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
       ) : isError ? (
-        <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-danger text-center">{t('common.error')}</Text>
-        </View>
+        <ErrorState error={error} onRetry={refetch} />
       ) : empresas.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <Ionicons name="search-outline" size={48} color={COLORS.placeholder} />
@@ -202,9 +199,8 @@ export default function EmpresasScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
-      <View className="px-6 pt-4 pb-0 border-b border-border bg-background">
-        <Text className="text-foreground text-xl font-bold mb-3">{t('tabs.empresas')}</Text>
+    <PantallaPestana>
+      <EncabezadoPestana titulo={t('tabs.empresas')}>
         <View className="flex-row">
           {tabs.map(({ key, label }) => {
             const isActive = activeTab === key;
@@ -212,18 +208,18 @@ export default function EmpresasScreen() {
               <View
                 key={key}
                 onTouchEnd={() => setActiveTab(key)}
-                className={`py-3 mr-6 border-b-2 ${isActive ? 'border-primary-500' : 'border-transparent'}`}
+                className={`py-2 mr-6 border-b-2 ${isActive ? 'border-white' : 'border-transparent'}`}
               >
-                <Text className={`text-sm font-semibold ${isActive ? 'text-primary-500' : 'text-muted-foreground'}`}>
+                <Text className={`text-sm font-semibold ${isActive ? 'text-white' : 'text-white/70'}`}>
                   {label}
                 </Text>
               </View>
             );
           })}
         </View>
-      </View>
+      </EncabezadoPestana>
 
       {activeTab === 'mis_empresas' ? <MisEmpresasView /> : <DirectorioView />}
-    </SafeAreaView>
+    </PantallaPestana>
   );
 }

@@ -62,7 +62,7 @@ export function StatusBanner() {
       {offline && <Ionicons name="cloud-offline-outline" size={14} color={COLORS.white} />}
       <Text className="text-white text-xs text-center font-medium">
         {offline
-          ? 'Sin conexión · mostrando lo último que guardamos'
+          ? 'Sin conexión · solo verás lo que ya abriste'
           : 'No pudimos cargar todo. Desliza para reintentar.'}
       </Text>
     </View>

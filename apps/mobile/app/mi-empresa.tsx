@@ -5,145 +5,32 @@
  */
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
-import { elegirFotoConMenu } from '@/lib/pickImage';
-import { confirm } from '@/lib/confirmDialog';
 import { showAlert } from '@/lib/alertDialog';
-import { Spinner } from '@/components/ui/Spinner';
-import { COLORS } from '@/lib/designTokens';
-import React, { useEffect, useRef, useState } from 'react';
-import {
-  View, ScrollView, Switch, Pressable, Animated, KeyboardAvoidingView, Platform, Image, } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Ionicons } from '@expo/vector-icons';
-import { SvgXml } from 'react-native-svg';
 
-import { empresasApi } from '@api-client';
-import type { ActualizarMiEmpresaPayload, TipoLiquidacion, TipoContrato } from '@api-client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Input } from '@/components/ui/Input';
+import type { TipoLiquidacion, TipoContrato } from '@api-client';
 import { Button } from '@/components/ui/Button';
-import { useTheme } from '@/lib/theme';
 import { showToast } from '@/lib/toast';
-import { webSafeSecureStore as SecureStore } from '@/lib/secureStore';
-import * as WebBrowser from 'expo-web-browser';
-import { SignaturePad } from '@/features/turnos/SignaturePad';
-
-// ── Schema ────────────────────────────────────────────────────────────────
-
-const TIPO_LIQUIDACION_OPTIONS: { value: TipoLiquidacion; label: string; sub: string }[] = [
-  { value: 'mensual',    label: 'Mensual',    sub: 'Ej. 1–30 Jun' },
-  { value: 'quincenal',  label: 'Quincenal',  sub: 'Ej. 1–15 / 16–30' },
-  { value: 'semanal',    label: 'Semanal',    sub: 'Lun–Dom' },
-];
-
-const TIPO_CONTRATO_OPTIONS: { value: TipoContrato; label: string; sub: string }[] = [
-  { value: 'laboral',              label: 'Contrato laboral',        sub: 'Descuenta salud y pensión' },
-  { value: 'prestacion_servicios', label: 'Prestación de servicios', sub: 'El independiente se autoliquida' },
-];
-
-const RECARGOS_OPTIONS: { value: boolean; label: string; sub: string }[] = [
-  { value: true,  label: 'Con recargos', sub: 'Recargo nocturno y festivo según la ley' },
-  { value: false, label: 'Sin recargos', sub: 'Normales hasta 42 h; después, extra diurna' },
-];
-
-const DOMINGO_HABITUAL_OPTIONS: { value: 'ley' | 'dos_meses'; label: string }[] = [
-  { value: 'ley',       label: '3 o más domingos en el mes (ley)' },
-  { value: 'dos_meses', label: '2 meses seguidos trabajando domingos' },
-];
-
-const schema = z.object({
-  nombre:               z.string().trim().min(1, 'Razón social requerida'),
-  nit:                  z.string().trim().optional(),
-  representante_nombre: z.string().trim().optional(),
-  representante_cedula: z.string().trim().optional(),
-  ciudad:               z.string().trim().optional(),
-  actividad:            z.string().trim().optional(),
-  descripcion:          z.string().trim().optional(),
-  // Ya no se tipea a mano — se sube por cámara/galería (data URI) o queda como URL externa preexistente.
-  logo_url:             z.string().optional().or(z.literal('')),
-  acepta_postulaciones: z.boolean(),
-  tipo_liquidacion:     z.enum(['mensual', 'quincenal', 'semanal']),
-  tipo_contrato:        z.enum(['laboral', 'prestacion_servicios']),
-  sumar_nocturnas_festivo: z.boolean(),
-  regla_domingo_habitual:  z.enum(['ley', 'dos_meses']),
-});
-
-type FormData = z.infer<typeof schema>;
-
-// ── Hooks ─────────────────────────────────────────────────────────────────
-
-function useMiEmpresa() {
-  return useQuery({
-    queryKey: ['mi-empresa'],
-    queryFn: () => empresasApi.obtenerMiEmpresa(),
-    staleTime: 300_000,
-  });
-}
-
-function useActualizarEmpresa() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (datos: ActualizarMiEmpresaPayload) =>
-      empresasApi.actualizarMiEmpresa(datos),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['mi-empresa'] });
-      // Cambiar tipo_liquidacion recalcula el período en el backend (cierra el
-      // abierto y abre uno nuevo con el ciclo correcto) — sin esto, todos los
-      // que ya tenían 'periodos' en caché siguen viendo el período/tipo viejo
-      // hasta que remonten la pantalla o pase el staleTime.
-      qc.invalidateQueries({ queryKey: ['periodos'] });
-    },
-  });
-}
-
-/** Reclasifica los días ya registrados del período abierto con la config de recargos actual. */
-function useReprocesarRecargos() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: () => empresasApi.reprocesarRecargos(),
-    onSuccess: ({ registros_actualizados }) => {
-      qc.invalidateQueries({ queryKey: ['registros'] });
-      qc.invalidateQueries({ queryKey: ['periodos'] });
-      qc.invalidateQueries({ queryKey: ['liquidacion'] });
-      qc.invalidateQueries({ queryKey: ['compensatorios'] });
-      showToast(
-        registros_actualizados > 0
-          ? `${registros_actualizados} registro(s) recalculados.`
-          : 'No había registros por recalcular en el período abierto.',
-      );
-    },
-    onError: () => showAlert('Error', 'No se pudo reprocesar el período. Intenta de nuevo.'),
-  });
-}
+import { useMiEmpresa, useActualizarEmpresa } from '@/features/empresas/miEmpresa/useMiEmpresa';
+import { schema, type FormData } from '@/features/empresas/miEmpresa/miEmpresaForm';
+import { TIPO_LIQUIDACION_OPTIONS, TIPO_CONTRATO_OPTIONS } from '@/features/empresas/miEmpresa/opcionesEmpresa';
+import { LogoEmpresa } from '@/features/empresas/miEmpresa/LogoEmpresa';
+import { CampoEmpresa } from '@/features/empresas/miEmpresa/CampoEmpresa';
+import { FirmaRepresentante } from '@/features/empresas/miEmpresa/FirmaRepresentante';
+import { SeccionOpciones } from '@/features/empresas/miEmpresa/SeccionOpciones';
+import { RecargosSection } from '@/features/empresas/miEmpresa/RecargosSection';
+import { DirectorioSwitch, ReglasPagoLink } from '@/features/empresas/miEmpresa/DirectorioYReglas';
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function MiEmpresaScreen() {
-  const theme  = useTheme();
   const { data: empresa, isLoading } = useMiEmpresa();
   const actualizar = useActualizarEmpresa();
-  const reprocesar = useReprocesarRecargos();
-  // Mantener presionado "Con recargos" reprocesa el período abierto con la
-  // regla actual — deliberadamente prolongado (no un long-press corto) para
-  // que no se dispare sin querer: recalcula horas ya registradas del equipo.
-  const HOLD_MS = 1800;
-  const holdAnim = useRef(new Animated.Value(0)).current;
-  const holdRunning = useRef<Animated.CompositeAnimation | null>(null);
-  const iniciarHold = (activo: boolean) => {
-    if (!activo || reprocesar.isPending) return;
-    holdAnim.setValue(0);
-    holdRunning.current = Animated.timing(holdAnim, { toValue: 1, duration: HOLD_MS, useNativeDriver: false });
-    holdRunning.current.start(({ finished }) => { if (finished) reprocesar.mutate(); });
-  };
-  const cancelarHold = () => {
-    holdRunning.current?.stop();
-    holdAnim.setValue(0);
-  };
-
   const {
     control,
     handleSubmit,
@@ -171,64 +58,7 @@ export default function MiEmpresaScreen() {
 
   const logoUrl = watch('logo_url');
   const sumar = watch('sumar_nocturnas_festivo');
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [verAviso, setVerAviso] = useState(false);
-
-  // ── Firma del representante legal — se guarda una sola vez y se estampa
-  // en todos los contratos (ver contratoPdf.js), no se firma contrato por
-  // contrato. Vive fuera del form de RHF: se guarda al instante, igual que
-  // el logo, en vez de esperar al botón "Guardar cambios" del resto de campos.
-  const [showFirma, setShowFirma] = useState(false);
-  const [uploadingFirma, setUploadingFirma] = useState(false);
   const firmaB64 = empresa?.firma_representante_b64 ?? null;
-  let firmaSvgXml: string | null = null;
-  if (firmaB64 && !firmaB64.startsWith('data:')) {
-    try { firmaSvgXml = atob(firmaB64); } catch { /* no es SVG — se intenta como imagen abajo */ }
-  }
-
-  const handleGuardarFirma = async (b64: string) => {
-    setShowFirma(false);
-    setUploadingFirma(true);
-    try {
-      await actualizar.mutateAsync({ firma_representante_b64: b64 });
-      showToast('Firma del representante actualizada.');
-    } catch {
-      showAlert('Error', 'No se pudo guardar la firma. Intenta de nuevo.');
-    } finally {
-      setUploadingFirma(false);
-    }
-  };
-
-  const handleQuitarFirma = async () => {
-    setUploadingFirma(true);
-    try {
-      await actualizar.mutateAsync({ firma_representante_b64: '' });
-      showToast('Firma eliminada.');
-    } catch {
-      showAlert('Error', 'No se pudo eliminar la firma.');
-    } finally {
-      setUploadingFirma(false);
-    }
-  };
-
-  // ── Logo — mismo flujo de cámara/galería que la foto de perfil de usuario ──
-
-  const handleCambiarLogo = async () => {
-    const logo = await elegirFotoConMenu({ title: 'Logo de la empresa', quitarLabel: logoUrl ? 'Quitar logo' : undefined });
-    if (logo !== undefined) _subirLogo(logo);
-  };
-
-  const _subirLogo = async (b64: string | null) => {
-    setUploadingLogo(true);
-    try {
-      await actualizar.mutateAsync({ logo_url: b64 ? `data:image/jpeg;base64,${b64}` : '' });
-      showToast(b64 ? 'Logo actualizado.' : 'Logo eliminado.');
-    } catch {
-      showAlert('Error', 'No se pudo actualizar el logo. Intenta de nuevo.');
-    } finally {
-      setUploadingLogo(false);
-    }
-  };
 
   useEffect(() => {
     if (empresa) {
@@ -283,7 +113,6 @@ export default function MiEmpresaScreen() {
   }
 
   return (
-    <>
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
       <Stack.Screen options={{ title: 'Mi empresa', headerShown: true }} />
       <KeyboardAvoidingView
@@ -296,35 +125,7 @@ export default function MiEmpresaScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Logo — toca para cambiarlo (cámara/galería), igual que la foto de perfil ── */}
-          <View className="items-center gap-3">
-            <Pressable onPress={handleCambiarLogo} disabled={uploadingLogo} className="relative active:opacity-70">
-              <View className="w-24 h-24 rounded-2xl bg-muted items-center justify-center overflow-hidden">
-                {logoUrl ? (
-                  <Image
-                    source={{ uri: logoUrl }}
-                    className="w-24 h-24"
-                    resizeMode="contain"
-                    onError={() => {}}
-                  />
-                ) : (
-                  <Ionicons name="business-outline" size={40} color={COLORS.placeholder} />
-                )}
-              </View>
-              <View className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary items-center justify-center border-2 border-background">
-                {uploadingLogo ? (
-                  <Spinner size="small" color={COLORS.white} />
-                ) : (
-                  <Ionicons name="camera" size={14} color={COLORS.white} />
-                )}
-              </View>
-            </Pressable>
-            <Text className="text-xs text-muted-foreground text-center">
-              Toca el logo para cambiarlo
-            </Text>
-            {errors.logo_url && (
-              <Text className="text-xs text-danger text-center">{errors.logo_url.message}</Text>
-            )}
-          </View>
+          <LogoEmpresa logoUrl={logoUrl} error={errors.logo_url?.message} />
 
           {/* ── Datos legales ─────────────────────────────────────── */}
           <View className="gap-1">
@@ -333,130 +134,60 @@ export default function MiEmpresaScreen() {
             </Text>
           </View>
 
-          <Controller
+          <CampoEmpresa
             control={control}
             name="nombre"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Razón social *"
-                placeholder="Logística Demo S.A.S."
-                autoCapitalize="words"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.nombre?.message}
-              />
-            )}
+            label="Razón social *"
+            placeholder="Logística Demo S.A.S."
+            autoCapitalize="words"
+            error={errors.nombre?.message}
           />
 
-          <Controller
+          <CampoEmpresa
             control={control}
             name="nit"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="NIT"
-                placeholder="900.123.456-7"
-                keyboardType="default"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.nit?.message}
-              />
-            )}
+            label="NIT"
+            placeholder="900.123.456-7"
+            keyboardType="default"
+            error={errors.nit?.message}
           />
 
-          <Controller
+          <CampoEmpresa
             control={control}
             name="representante_nombre"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Representante legal"
-                placeholder="Nombre completo de quien firma por la empresa"
-                autoCapitalize="words"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.representante_nombre?.message}
-              />
-            )}
+            label="Representante legal"
+            placeholder="Nombre completo de quien firma por la empresa"
+            autoCapitalize="words"
+            error={errors.representante_nombre?.message}
           />
 
-          <Controller
+          <CampoEmpresa
             control={control}
             name="representante_cedula"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Cédula del representante"
-                placeholder="1.234.567.890"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.representante_cedula?.message}
-              />
-            )}
+            label="Cédula del representante"
+            placeholder="1.234.567.890"
+            error={errors.representante_cedula?.message}
           />
 
           {/* ── Firma del representante legal ─────────────────────── */}
-          <View className="gap-2">
-            <Text className="text-sm font-medium text-foreground">Firma del representante legal</Text>
-            <Text className="text-xs text-muted-foreground -mt-1">
-              Se imprime en todos los contratos de prestación de servicios.
-            </Text>
-            <Pressable
-              onPress={() => setShowFirma(true)}
-              disabled={uploadingFirma}
-              className="h-24 rounded-2xl border border-dashed border-border items-center justify-center bg-card active:opacity-70 overflow-hidden"
-            >
-              {uploadingFirma ? (
-                <Spinner color={theme.primary} />
-              ) : firmaSvgXml ? (
-                <SvgXml xml={firmaSvgXml} width="90%" height={70} />
-              ) : firmaB64 ? (
-                <Image source={{ uri: firmaB64 }} style={{ width: '90%', height: 70 }} resizeMode="contain" />
-              ) : (
-                <View className="items-center gap-1">
-                  <Ionicons name="create-outline" size={20} color={COLORS.placeholder} />
-                  <Text className="text-xs text-muted-foreground">Toca para firmar</Text>
-                </View>
-              )}
-            </Pressable>
-            {firmaB64 && (
-              <Pressable onPress={handleQuitarFirma} disabled={uploadingFirma} hitSlop={8} className="self-start">
-                <Text className="text-xs font-semibold text-danger">Quitar firma</Text>
-              </Pressable>
-            )}
-          </View>
+          <FirmaRepresentante firmaB64={firmaB64} />
 
-          <Controller
+          <CampoEmpresa
             control={control}
             name="actividad"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Actividad económica"
-                placeholder="Ej. Transporte de carga, Manufactura textil…"
-                autoCapitalize="sentences"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.actividad?.message}
-              />
-            )}
+            label="Actividad económica"
+            placeholder="Ej. Transporte de carga, Manufactura textil…"
+            autoCapitalize="sentences"
+            error={errors.actividad?.message}
           />
 
-          <Controller
+          <CampoEmpresa
             control={control}
             name="ciudad"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Ciudad"
-                placeholder="Bogotá"
-                autoCapitalize="words"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.ciudad?.message}
-              />
-            )}
+            label="Ciudad"
+            placeholder="Bogotá"
+            autoCapitalize="words"
+            error={errors.ciudad?.message}
           />
 
           {/* ── Presentación pública ──────────────────────────────── */}
@@ -466,258 +197,43 @@ export default function MiEmpresaScreen() {
             </Text>
           </View>
 
-          <Controller
+          <CampoEmpresa
             control={control}
             name="descripcion"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Descripción"
-                placeholder="Cuéntale a los trabajadores de qué trata tu empresa…"
-                autoCapitalize="sentences"
-                multiline
-                numberOfLines={4}
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.descripcion?.message}
-              />
-            )}
+            label="Descripción"
+            placeholder="Cuéntale a los trabajadores de qué trata tu empresa…"
+            autoCapitalize="sentences"
+            multiline
+            numberOfLines={4}
+            error={errors.descripcion?.message}
           />
 
           {/* ── Ciclo de pago de nómina ──────────────────────────── */}
-          <View className="gap-3 mt-2">
-            <View className="gap-1">
-              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                Ciclo de nómina
-              </Text>
-              <Text className="text-xs text-muted-foreground">
-                Determina cómo se crean automáticamente los períodos de nómina por hora.
-              </Text>
-            </View>
-            <Controller
-              control={control}
-              name="tipo_liquidacion"
-              render={({ field: { onChange, value } }) => (
-                <View className="flex-row gap-2">
-                  {TIPO_LIQUIDACION_OPTIONS.map((opt) => {
-                    const active = value === opt.value;
-                    return (
-                      <View
-                        key={opt.value}
-                        className={`flex-1 rounded-2xl border py-3 px-2 items-center gap-0.5 ${
-                          active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
-                        }`}
-                        // ponytail: TouchableOpacity wrapping needed
-                      >
-                        <Text
-                          onPress={() => onChange(opt.value)}
-                          className={`text-sm font-bold ${active ? 'text-primary-500' : 'text-foreground'}`}
-                        >
-                          {opt.label}
-                        </Text>
-                        <Text className="text-[10px] text-muted-foreground text-center">{opt.sub}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            />
-          </View>
+          <SeccionOpciones
+            control={control}
+            name="tipo_liquidacion"
+            title="Ciclo de nómina"
+            description="Determina cómo se crean automáticamente los períodos de nómina por hora."
+            options={TIPO_LIQUIDACION_OPTIONS}
+          />
 
           {/* ── Régimen de contratación ───────────────────────────── */}
-          <View className="gap-3 mt-2">
-            <View className="gap-1">
-              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                Régimen de contratación
-              </Text>
-              <Text className="text-xs text-muted-foreground">
-                Determina si la liquidación descuenta salud y pensión del pago de cada trabajador.
-              </Text>
-            </View>
-            <Controller
-              control={control}
-              name="tipo_contrato"
-              render={({ field: { onChange, value } }) => (
-                <View className="flex-row gap-2">
-                  {TIPO_CONTRATO_OPTIONS.map((opt) => {
-                    const active = value === opt.value;
-                    return (
-                      <View
-                        key={opt.value}
-                        className={`flex-1 rounded-2xl border py-3 px-2 items-center gap-0.5 ${
-                          active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
-                        }`}
-                        // ponytail: TouchableOpacity wrapping needed
-                      >
-                        <Text
-                          onPress={() => onChange(opt.value)}
-                          className={`text-sm font-bold ${active ? 'text-primary-500' : 'text-foreground'}`}
-                        >
-                          {opt.label}
-                        </Text>
-                        <Text className="text-[10px] text-muted-foreground text-center">{opt.sub}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            />
-          </View>
+          <SeccionOpciones
+            control={control}
+            name="tipo_contrato"
+            title="Régimen de contratación"
+            description="Determina si la liquidación descuenta salud y pensión del pago de cada trabajador."
+            options={TIPO_CONTRATO_OPTIONS}
+          />
 
           {/* ── Cálculo de recargos ───────────────────────────────── */}
-          <View className="gap-3">
-            <View className="gap-1">
-              <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                Cálculo de recargos
-              </Text>
-              <Text className="text-xs text-muted-foreground">
-                Define si Zaturno calcula los recargos nocturnos y festivos al liquidar.
-              </Text>
-            </View>
-            <Controller
-              control={control}
-              name="sumar_nocturnas_festivo"
-              render={({ field: { onChange, value } }) => (
-                <View className="flex-row gap-2" accessibilityRole="radiogroup">
-                  {RECARGOS_OPTIONS.map((opt) => {
-                    const active = value === opt.value;
-                    const elegir = () => {
-                      if (opt.value || !value) return onChange(opt.value);
-                      confirm({
-                        title: 'Dejar de sumar recargos',
-                        message: 'Zaturno dejará de calcular el recargo nocturno y festivo. Las horas son normales hasta 42 h a la semana y, después, extra diurna. La empresa calcula esos recargos y responde por la liquidación. ¿Confirmas?',
-                        confirmLabel: 'Sí, dejar de sumar',
-                        destructive: true,
-                      }).then((ok) => { if (ok) onChange(false); });
-                    };
-                    return (
-                      <Pressable
-                        key={String(opt.value)}
-                        onPress={elegir}
-                        onPressIn={() => iniciarHold(opt.value && active)}
-                        onPressOut={cancelarHold}
-                        accessibilityRole="radio"
-                        accessibilityState={{ checked: active }}
-                        className={`flex-1 overflow-hidden rounded-2xl border py-3 px-2 items-center gap-0.5 active:opacity-70 ${
-                          active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
-                        }`}
-                      >
-                        {opt.value && active && (
-                          <Animated.View
-                            pointerEvents="none"
-                            style={{
-                              position: 'absolute', left: 0, top: 0, bottom: 0,
-                              width: holdAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-                              backgroundColor: theme.primaryLight,
-                            }}
-                          />
-                        )}
-                        <Text className={`text-sm font-bold ${active ? 'text-primary-500' : 'text-foreground'}`}>
-                          {opt.label}
-                        </Text>
-                        <Text className="text-[10px] text-muted-foreground text-center">{opt.sub}</Text>
-                        {opt.value && active && (
-                          <Text className="text-[9px] text-muted-foreground/70 text-center mt-0.5">
-                            Mantén presionado para reprocesar el período
-                          </Text>
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-            />
-
-            {!sumar && (
-              <View className="gap-2">
-                <Pressable onPress={() => setVerAviso((v) => !v)} accessibilityRole="button" className="self-start">
-                  <Text className="text-xs font-semibold text-primary-500">
-                    {verAviso ? 'Ocultar aviso' : 'Aviso sobre el cálculo'}
-                  </Text>
-                </Pressable>
-                {verAviso && (
-                  <Text className="text-xs text-muted-foreground">
-                    Zaturno registra las horas trabajadas. Si la empresa no suma recargos automáticamente, el cálculo de recargos y horas extra lo hace la empresa con la información que toma de Zaturno, y la empresa es la responsable de revisarlo y de la liquidación que paga. Zaturno no responde por los montos que se liquiden con esta opción.
-                  </Text>
-                )}
-              </View>
-            )}
-
-            {sumar && (
-              <View className="gap-2">
-                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
-                  Cuándo un domingo es habitual
-                </Text>
-                <Controller
-                  control={control}
-                  name="regla_domingo_habitual"
-                  render={({ field: { onChange, value } }) => (
-                    <View className="gap-2" accessibilityRole="radiogroup">
-                      {DOMINGO_HABITUAL_OPTIONS.map((opt) => {
-                        const active = value === opt.value;
-                        return (
-                          <Pressable
-                            key={opt.value}
-                            onPress={() => onChange(opt.value)}
-                            accessibilityRole="radio"
-                            accessibilityState={{ checked: active }}
-                            className={`rounded-2xl border px-4 py-3 active:opacity-70 ${
-                              active ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'
-                            }`}
-                          >
-                            <Text className={`text-sm font-semibold ${active ? 'text-primary-500' : 'text-foreground'}`}>
-                              {opt.label}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  )}
-                />
-              </View>
-            )}
-          </View>
+          <RecargosSection control={control} sumar={sumar} />
 
           {/* Acepta postulaciones */}
-          <View className="bg-card border border-border rounded-2xl px-5 py-4 flex-row items-center justify-between">
-            <View className="flex-1 mr-4">
-              <Text className="text-sm font-semibold text-foreground">Visible en el directorio</Text>
-              <Text className="text-xs text-muted-foreground mt-0.5">
-                Los trabajadores turnos pueden ver tu empresa y solicitar vinculación
-              </Text>
-            </View>
-            <Controller
-              control={control}
-              name="acepta_postulaciones"
-              render={({ field: { onChange, value } }) => (
-                <Switch
-                  value={value}
-                  onValueChange={onChange}
-                  trackColor={{ true: theme.primary }}
-                  thumbColor={COLORS.white}
-                />
-              )}
-            />
-          </View>
+          <DirectorioSwitch control={control} />
 
           {/* Cómo calculamos los pagos */}
-          <Pressable
-            onPress={async () => {
-              const token = await SecureStore.getItemAsync('appturnos.access_token');
-              const base  = process.env.EXPO_PUBLIC_API_URL;
-              await WebBrowser.openBrowserAsync(`${base}/api/empresas/reglas-pago?token=${token}`);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Descargar PDF: cómo calculamos los pagos"
-            className="flex-row items-center gap-3 bg-card border border-border rounded-2xl px-4 py-3 active:opacity-70"
-          >
-            <Ionicons name="document-text-outline" size={22} color={theme.primary} />
-            <View className="flex-1">
-              <Text className="text-sm font-semibold text-foreground">Cómo calculamos los pagos</Text>
-              <Text className="text-xs text-muted-foreground">Horas, recargos, descuentos y turnos · PDF</Text>
-            </View>
-            <Ionicons name="download-outline" size={18} color={COLORS.placeholder} />
-          </Pressable>
+          <ReglasPagoLink />
 
           {/* Guardar */}
           <Button
@@ -731,15 +247,5 @@ export default function MiEmpresaScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
-    <SignaturePad
-      visible={showFirma}
-      onClose={() => setShowFirma(false)}
-      onConfirm={handleGuardarFirma}
-      loading={uploadingFirma}
-      confirmLabel="Guardar firma"
-      title="Firma del representante legal"
-      subtitle="Se estampará en todos los contratos de prestación de servicios"
-    />
-    </>
   );
 }

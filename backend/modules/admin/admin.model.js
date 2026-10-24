@@ -3,6 +3,7 @@
 const { pool } = require('../../config/database');
 const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
 const { ROLES } = require('../../config/constants');
+const { enTransaccion } = require('../../utils/enTransaccion');
 
 // "Usuarios gestores" = quien administra una empresa, no quien trabaja para
 // ella — trabajador_turnos/trabajador_nomina ya se cuentan aparte en la
@@ -258,20 +259,12 @@ const AdminModel = {
 
   /** Borra la empresa y todo lo que cuelga de ella (ver ORDEN_BORRADO_EMPRESA). Irreversible. */
   async eliminarEmpresaCompleta(empresaId) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    await enTransaccion(async (conn) => {
       for (const sql of ORDEN_BORRADO_EMPRESA) {
         const placeholders = (sql.match(/\?/g) || []).length;
         await conn.query(sql, Array(placeholders).fill(empresaId));
       }
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /** Verifica si un slug ya existe (para validar unicidad al crear). */

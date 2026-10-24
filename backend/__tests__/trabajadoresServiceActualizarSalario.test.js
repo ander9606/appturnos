@@ -11,7 +11,6 @@ jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
 }));
 
-const { pool } = require('../config/database');
 const { ROLES } = require('../config/constants');
 const TrabajadoresModel = require('../modules/trabajadores/trabajadores.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
@@ -25,7 +24,7 @@ const auditoriaAdmin = { usuario_id: 2, usuario_nombre: 'Marta', usuario_rol: RO
 
 beforeEach(() => {
   jest.clearAllMocks();
-  pool.query.mockReset().mockResolvedValue([[{ id: 1 }, { id: 2 }]]);
+  TrabajadoresModel.idsAdminsEmpresa.mockReset().mockResolvedValue([1, 2]);
   TrabajadoresModel.obtenerPorId.mockResolvedValue({ ...base, salario_base: '1800000' });
 });
 

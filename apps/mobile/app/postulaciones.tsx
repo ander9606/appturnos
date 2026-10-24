@@ -1,3 +1,4 @@
+import { EmptyState } from '@/components/ui/EmptyState';
 /**
  * Pantalla de postulaciones (gestores / admin_empresa).
  * Tres pestañas — Pendientes / Aceptados / Rechazados — cada una agrupada
@@ -11,7 +12,7 @@
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Spinner } from '@/components/ui/Spinner';
-import { COLORS, alpha } from '@/lib/designTokens';
+import { COLORS } from '@/lib/designTokens';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -33,7 +34,7 @@ import {
   useNoPresentado,
 } from '@/features/turnos/useTurnos';
 import { turnoYaInicio } from '@/features/turnos/turnosUtils';
-import { bogotaToday } from '@/lib/formatters';
+import { bogotaToday, formatShortDate } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
 import { Button } from '@/components/ui/Button';
 import { useRoleGuard } from '@/components/RoleGuard';
@@ -41,14 +42,6 @@ import { confirm } from '@/lib/confirmDialog';
 import type { Asignacion } from '@api-client';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-
-const SHORT_DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-const SHORT_MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-function fmtFecha(iso: string) {
-  const d = new Date(`${iso}T00:00:00`);
-  return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
-}
 
 function fmtHora(h: string) {
   return h.slice(0, 5).replace(/^0/, '');
@@ -276,7 +269,7 @@ function OfertaCard({
           <View className="flex-row items-center gap-1 flex-wrap">
             <Ionicons name="calendar-outline" size={11} color={COLORS.mutedForeground} />
             <Text className="text-xs text-muted-foreground">
-              {fmtFecha(group.fecha)}
+              {formatShortDate(group.fecha)}
             </Text>
             <Ionicons name="time-outline" size={11} color={COLORS.mutedForeground} style={{ marginLeft: 6 }} />
             <Text className="text-xs text-muted-foreground">
@@ -382,7 +375,7 @@ export default function PostulacionesScreen() {
     }
     return Array.from(byFecha.entries())
       .sort(([a], [b]) => b.localeCompare(a))
-      .map(([fecha, data]) => ({ title: fmtFecha(fecha), fecha, data }));
+      .map(([fecha, data]) => ({ title: formatShortDate(fecha), fecha, data }));
   }, [gruposVisibles]);
 
   const totalTab = grupos.reduce((s, g) => s + g.asignaciones.length, 0);
@@ -463,23 +456,16 @@ export default function PostulacionesScreen() {
 
       {/* ── List ───────────────────────────────────────────────────────── */}
       {sections.length === 0 ? (
-        <View className="flex-1 items-center justify-center gap-4 px-8">
-          <View
-            className="w-20 h-20 rounded-full items-center justify-center"
-            style={{ backgroundColor: alpha(theme.primary, 0.09) }}
-          >
-            <Ionicons name="checkmark-done-outline" size={36} color={theme.primary} />
-          </View>
-          <Text className="text-base font-semibold text-foreground text-center">
-            {tab === 'pendientes' ? 'Sin postulaciones pendientes' : tab === 'aceptados' ? 'Sin aceptados' : 'Sin rechazados'}
-          </Text>
-          <Text className="text-sm text-muted-foreground text-center">
-            {tab === 'pendientes'
+        <View className="flex-1 justify-center">
+          <EmptyState
+            variant={tab === 'pendientes' ? 'done' : 'empty'}
+            title={tab === 'pendientes' ? 'Sin postulaciones pendientes' : tab === 'aceptados' ? 'Sin aceptados' : 'Sin rechazados'}
+            message={tab === 'pendientes'
               ? 'Todas las postulaciones han sido revisadas.'
               : tab === 'aceptados'
               ? 'Todavía no hay trabajadores confirmados.'
               : 'No hay postulaciones rechazadas.'}
-          </Text>
+          />
         </View>
       ) : (
         <SectionList

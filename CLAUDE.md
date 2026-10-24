@@ -80,7 +80,7 @@ npx expo start --android
 npx expo start --ios
 npm run lint         # ESLint over .ts/.tsx
 npm run type-check   # tsc --noEmit (no build output)
-npm test             # jest — lib/__tests__, features/**/__tests__
+npm test             # jest, 2 proyectos: `logica` (*.test.ts, ts-jest) y `componentes` (*.test.tsx, jest-expo + @testing-library/react-native)
 ```
 
 ### api-client (`packages/api-client/`)
@@ -100,6 +100,8 @@ CI gates (`.github/workflows/`): backend `npm test` + `npm audit`; mobile and ap
 - `EXPO_PUBLIC_API_URL` — points to the backend. Use the machine IP (not `localhost`) when testing on a physical device with Expo Go.
 
 Run migrations before first start: `cd backend && npm run migrate`.
+
+**Numerar migraciones:** antes de crear una, mira el último número en `origin/main` **y en los PR abiertos** (otra rama puede haber tomado "el siguiente"); si hay choque, toma uno libre (los huecos no rompen nada: el runner controla por nombre de archivo, no por número). `backend/__tests__/migracionesNumeracion.test.js` falla si dos archivos repiten número. Una migración ya aplicada en producción no se renombra ni se edita: se agrega otra.
 
 ## Repository Structure
 
@@ -183,9 +185,12 @@ Date-dependent rules live in `*_VIGENCIAS` tables (newest first) so re-liquidati
 
 **Payment rules doc:** `docs/REGLAS-CALCULO-PAGOS.md` explains every pay rule in Spanish (sections 1–9 public-facing, 10–11 internal). When you change a rule or constant, update it and regenerate `backend/documentos/reglas-calculo-pagos.pdf` with `node backend/scripts/generar-pdf-reglas.js` (needs Chrome; set `CHROME_PATH`). The PDF is for company admins, not every user — it's served by `GET /api/empresas/reglas-pago`, gated to `admin_empresa` (`verificarToken` + `verificarRol`), not a public static route. It accepts `?token=` (promoted to the `Authorization` header by `middleware/promoverTokenDeQuery.js`, shared with the contratos PDF routes) so mobile can open it via `WebBrowser.openBrowserAsync`. Linked from web Configuración → Mi plan and mobile `app/mi-empresa.tsx` — both already admin-only screens — never from Términos y condiciones, which every role sees.
 
-Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src/shared/laboral.ts` (identical copy) and `apps/mobile/features/nomina/trabajador/nominaTrabajadorUtils.ts` — update all of them together.
+Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src/shared/laboral.ts` (identical copy) and `apps/mobile/features/nomina/trabajador/nominaTrabajadorUtils.ts` — update all of them together. `festivosColombia()` there mirrors `festivosDeAnio()` of `laboralUtils.js` (with names, for the calendars); `apps/mobile/lib/__tests__/festivos.test.ts` fails if they diverge.
 
 `laboralUtils.js` exports `calcularHoras()` (minute-by-minute breakdown), `esDiaFestivo()` (Colombian public holidays including Ley Emiliani + Easter-relative), `horaInicioNocturno()`, `recargoFestivo()`, `valorHora()`, `calcularPagoNomina()`, `desglosarPagoNomina()`, `calcularDeducciones()`, `calcularSubsidioTransporte()`.
+
+### Turnos que cruzan la medianoche
+`ofertas_turno.fin_dia_siguiente` (migración 118) dice que `hora_fin_estimada` cae al día siguiente a `fecha`. Para topes de horas, traslapes y vencimiento usa las columnas generadas `inicio_ts` / `fin_ts` (DATETIME), nunca `TIMESTAMP(o.fecha, o.hora_fin_estimada)` ni comparar horas sueltas: así ninguna consulta repite el "+1 día". Con la marca, la hora de fin debe ser ≤ la de inicio (máx. 24 h); sin ella, posterior al inicio. En móvil, `fmtRange(inicio, fin, fin_dia_siguiente)` agrega "(día sig.)".
 
 ### Subscriptions & Billing
 Companies with an active logiq360 integration (`integracion_config.activo = 1` + `api_key`) don't pay. The rest pay per plan via Wompi payment links (`webhooks/wompi.service.js`).

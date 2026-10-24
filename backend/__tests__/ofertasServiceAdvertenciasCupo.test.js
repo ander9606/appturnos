@@ -76,22 +76,20 @@ describe('OfertasService.crear — advertencia de personal + cupo de plan', () =
 });
 
 describe('OfertasService.crear — invitados sin el cargo de los puestos', () => {
-  const pool = require('../config/database').pool;
   const datosDirigida = { ...datosBase, visibilidad: 'dirigida', trabajador_ids: [11, 12] };
 
   beforeEach(() => {
     CargosModel.contarActivosPorEmpresa.mockResolvedValue(10); // sin aviso de capacidad
   });
 
-  // Responde según el SQL: otras consultas del flujo (notificaciones, etc.) no deben consumir el mock.
-  const mockPool = (sinCargo) => pool.query.mockImplementation(async (sql) => {
-    if (/NOT EXISTS/.test(sql)) return [sinCargo];
-    if (/FROM trabajadores t\s+JOIN trabajador_empresa/.test(sql)) return [[{ id: 11 }, { id: 12 }]];
-    return [[]];
-  });
+  // OfertasModel está automockeado: se responde por método del model, no por SQL.
+  const mockInvitados = (sinCargo) => {
+    OfertasModel.contarTrabajadoresActivosDeEmpresa.mockResolvedValue(2); // los 2 invitados (11 y 12) tienen vínculo activo
+    OfertasModel.nombresSinNingunCargo.mockResolvedValue(sinCargo);
+  };
 
   test('avisa con nombres a los invitados sin ningún cargo del turno', async () => {
-    mockPool([{ nombre: 'Ana', apellido: 'Ruiz' }]);
+    mockInvitados([{ nombre: 'Ana', apellido: 'Ruiz' }]);
 
     const oferta = await OfertasService.crear(EMPRESA_ID, datosDirigida, 1);
 
@@ -100,7 +98,7 @@ describe('OfertasService.crear — invitados sin el cargo de los puestos', () =>
   });
 
   test('si todos tienen el cargo, no hay aviso', async () => {
-    mockPool([]);
+    mockInvitados([]);
 
     const oferta = await OfertasService.crear(EMPRESA_ID, datosDirigida, 1);
 

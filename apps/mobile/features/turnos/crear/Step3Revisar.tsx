@@ -33,7 +33,7 @@ function SummaryRow({ icon, label, value }: { icon: string; label: string; value
 export function Step3Revisar({ data, onBack, onPublish, isPublishing, isPublished, onClose }: Props) {
   const fecha = data.fecha ? formatDateObj(data.fecha) : '';
   const inicio = data.hora_inicio ? formatTimeObj(data.hora_inicio) : '';
-  const fin = data.hora_fin ? ` – ${formatTimeObj(data.hora_fin)}` : '';
+  const fin = data.hora_fin ? ` – ${formatTimeObj(data.hora_fin)}${data.fin_dia_siguiente ? ' (día siguiente)' : ''}` : '';
 
   const totalPlazas = data.puestos.reduce((s, p) => s + p.plazas, 0);
   const presupuesto = calcularPresupuesto(data.puestos);

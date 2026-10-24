@@ -162,7 +162,6 @@ const PeriodosTurnosModel = {
     // compensación se paga igual que un turno completado, ver
     // OfertasService.marcarFallida) en el rango como vinculadas a este período.
     // Si es extra_nomina, solo turnos de trabajador_nomina; si no, solo otros
-    const tipoTrabajador = esExtraNomina ? 'nomina' : 'no_nomina';
     const [resultado] = await pool.query(
       `UPDATE asignaciones_turno a
        JOIN ofertas_turno o ON o.id = a.oferta_id

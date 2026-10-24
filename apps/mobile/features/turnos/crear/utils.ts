@@ -23,8 +23,11 @@ export function validateStep1(data: WizardData): string | null {
   if (!data.fecha || toISODate(data.fecha) < bogotaToday()) return 'Ingresa una fecha válida — no puede ser en el pasado.';
   if (!data.hora_inicio) return 'Hora de inicio inválida.';
   if (!data.hora_fin) return 'Hora de fin inválida.';
-  if (isChronological(buildTime(data.hora_fin), buildTime(data.hora_inicio))) {
-    return 'La hora de fin debe ser después de la hora de inicio.';
+  const finAntesDelInicio = isChronological(buildTime(data.hora_fin), buildTime(data.hora_inicio));
+  if (data.fin_dia_siguiente) {
+    if (!finAntesDelInicio) return 'Si el turno termina al día siguiente, la hora de fin debe ser antes (o igual) que la de inicio — si no, pasaría de 24 horas.';
+  } else if (finAntesDelInicio) {
+    return 'La hora de fin debe ser después de la hora de inicio. Si el turno pasa de la medianoche, activa "Termina al día siguiente".';
   }
   if (data.visibilidad === 'dirigida' && data.destinatarios.length === 0) {
     return 'Elige al menos una persona para el turno dirigido.';

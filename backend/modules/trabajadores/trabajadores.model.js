@@ -1,8 +1,9 @@
 'use strict';
 
 const { pool } = require('../../config/database');
-const { CAMPOS_PERSONALES_TRABAJADOR } = require('../../config/constants');
+const { CAMPOS_PERSONALES_TRABAJADOR, ROLES } = require('../../config/constants');
 const AppError = require('../../utils/AppError');
+const { enTransaccion: transaccionPropia } = require('../../utils/enTransaccion');
 
 // Fechas llegan como 'YYYY-MM-DD' (dateStrings) y '' equivale a NULL.
 const norm = (v) => (v == null || v === '' ? null : String(v));
@@ -21,19 +22,7 @@ async function tieneOtraFichaActiva(c, usuarioId, id) {
  * commit: la transacción la abre y la cierra quien llamó. Si no, abre la suya.
  */
 async function enTransaccion(conn, fn) {
-  if (conn) return fn(conn);
-  const propia = await pool.getConnection();
-  try {
-    await propia.beginTransaction();
-    const resultado = await fn(propia);
-    await propia.commit();
-    return resultado;
-  } catch (err) {
-    await propia.rollback();
-    throw err;
-  } finally {
-    propia.release();
-  }
+  return conn ? fn(conn) : transaccionPropia(fn);
 }
 
 /**
@@ -50,16 +39,6 @@ const COLUMNAS = `t.id, t.empresa_id, t.usuario_id, t.nombre, t.apellido, t.cedu
   t.tipo_marcacion, t.punto_marcaje_id, t.hora_entrada_esperada,
   t.activo, t.external_ref, t.ranking, t.total_calificaciones, t.created_at,
   u.foto_perfil`;
-
-// Alias para queries sin JOIN (uso interno donde ya no hay alias)
-const COLUMNAS_BARE = `id, empresa_id, usuario_id, nombre, apellido, cedula,
-  tipo_documento, fecha_nacimiento, sexo,
-  contacto_emergencia_nombre, contacto_emergencia_tel,
-  telefono, email, tipo, cargo, descripcion, tarifa_hora, salario_base, acepta_extras,
-  eps, afp, banco, tipo_cuenta, numero_cuenta, direccion,
-  ant_judiciales_fecha, ant_disciplinarios_fecha,
-  tipo_marcacion, punto_marcaje_id, hora_entrada_esperada,
-  activo, external_ref, ranking, total_calificaciones, created_at`;
 
 // Allowlist de columnas modificables vía PUT. Lista fija de código,
 // nunca construida a partir de input del cliente.
@@ -406,9 +385,7 @@ const TrabajadoresModel = {
    * @returns {Promise<number>} id del nuevo trabajador.
    */
   async crear(empresaId, datos) {
-    const conn = await pool.getConnection();
-    await conn.beginTransaction();
-    try {
+    return transaccionPropia(async (conn) => {
       const [res] = await conn.query(
         `INSERT INTO trabajadores
            (empresa_id, nombre, apellido, cedula, tipo_documento, fecha_nacimiento, sexo,
@@ -471,14 +448,8 @@ const TrabajadoresModel = {
         );
       }
 
-      await conn.commit();
       return trabajadorId;
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
   },
 
   /** Vincula una ficha recién creada a la cuenta del usuario. No pasar usuario_id
@@ -732,9 +703,7 @@ const TrabajadoresModel = {
    */
   async guardarDisponibilidad(empresaId, trabajadorId, slots) {
     if (!slots.length) return;
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    await transaccionPropia(async (conn) => {
       await conn.query(
         'DELETE FROM disponibilidad_trabajador WHERE empresa_id = ? AND trabajador_id = ?',
         [empresaId, trabajadorId]
@@ -745,13 +714,70 @@ const TrabajadoresModel = {
           [empresaId, trabajadorId, s.dia_semana, s.hora_inicio, s.hora_fin, s.activo ? 1 : 0]
         );
       }
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
+  },
+
+  // ── Consultas de apoyo de TrabajadoresService (cupo, identidad, avisos) ──
+  // ponytail: tocan `usuarios`/`empresas`, pero solo las usa este flujo — upgrade path:
+  // moverlas a UsuariosModel/EmpresasModel si otro módulo las necesita.
+
+  /** ids de los admin_empresa activos de la empresa. */
+  async idsAdminsEmpresa(empresaId) {
+    const [admins] = await pool.query(
+      'SELECT id FROM usuarios WHERE empresa_id = ? AND rol = ? AND activo = 1',
+      [empresaId, ROLES.ADMIN_EMPRESA]
+    );
+    return admins.map((a) => a.id);
+  },
+
+  /** Plan de la empresa activa (undefined si no existe o está inactiva). */
+  async planDeEmpresa(empresaId) {
+    const [[empresa]] = await pool.query(
+      'SELECT plan FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return empresa;
+  },
+
+  async contarActivos(empresaId) {
+    const [[{ total }]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM trabajadores WHERE empresa_id = ? AND activo = 1',
+      [empresaId]
+    );
+    return total;
+  },
+
+  /** ¿Ese email ya es de un gestor (admin/jefe/nómina) de la empresa? */
+  async existeGestorConEmail(empresaId, email) {
+    const [filas] = await pool.query(
+      `SELECT 1 FROM usuarios
+       WHERE empresa_id = ? AND email = ? AND rol IN (?, ?, ?, ?) LIMIT 1`,
+      [empresaId, email.trim().toLowerCase(), ROLES.ADMIN_EMPRESA, ROLES.JEFE_TURNOS, ROLES.JEFE_NOMINA, ROLES.NOMINA]
+    );
+    return filas.length > 0;
+  },
+
+  /** Rol de la cuenta ya asociada a esa cédula o email (undefined si no hay). Al menos uno es obligatorio. */
+  async buscarRolCuentaPorCedulaOEmail({ cedula, email }) {
+    const condiciones = [];
+    const valores = [];
+    if (cedula) { condiciones.push('t.cedula = ?'); valores.push(cedula); }
+    if (email)  { condiciones.push('t.email = ?');  valores.push(email.trim().toLowerCase()); }
+    const [filas] = await pool.query(
+      `SELECT u.rol FROM usuarios u
+       INNER JOIN trabajadores t ON t.usuario_id = u.id
+       WHERE ${condiciones.join(' OR ')} LIMIT 1`,
+      valores
+    );
+    return filas[0]?.rol;
+  },
+
+  /** Resincroniza usuarios.rol con el tipo de la ficha. Va dentro de la transacción de quien llama (conn). */
+  async sincronizarRolUsuario(usuarioId, rolNuevo, conn) {
+    await conn.query(
+      'UPDATE usuarios SET rol = ? WHERE id = ? AND rol IN (?, ?)',
+      [rolNuevo, usuarioId, ROLES.TRABAJADOR_TURNOS, ROLES.TRABAJADOR_NOMINA]
+    );
   },
 };
 

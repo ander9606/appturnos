@@ -52,6 +52,7 @@ export default function NuevoTurnoScreen() {
       fecha:             buildFecha(data),
       hora_inicio:       buildTime(data.hora_inicio!),
       hora_fin_estimada: data.hora_fin ? buildTime(data.hora_fin) : undefined,
+      fin_dia_siguiente: data.fin_dia_siguiente || undefined,
       lugar:             data.lugar.trim() || undefined,
       latitud:           data.latitud ?? undefined,
       longitud:          data.longitud ?? undefined,

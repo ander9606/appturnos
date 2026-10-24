@@ -24,6 +24,28 @@ const COLUMNAS_ADMIN = `id, nombre, slug, nit, representante_nombre, representan
   tipo_liquidacion, tipo_contrato, sumar_nocturnas_festivo, regla_domingo_habitual, created_at`;
 
 const EmpresasModel = {
+  /**
+   * Empresas con suscripción propia (no logiq360) que vencen en 7, 3 o 0 días, o vencieron hace 3, con el email de su
+   * admin_empresa: [{ id, nombre, plan, suscripcion_vigente_hasta, dias_restantes, email, admin_nombre }]. Máximo 100.
+   */
+  async listarConRenovacionPendiente() {
+    const [empresas] = await pool.query(
+      `SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta,
+              DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes,
+              u.email, u.nombre AS admin_nombre
+         FROM empresas e
+         JOIN usuarios u ON u.empresa_id = e.id
+                        AND u.rol = 'admin_empresa'
+                        AND u.activo = 1
+        WHERE e.activo = 1
+          AND e.suscripcion_origen != 'logiq360'
+          AND e.suscripcion_vigente_hasta IS NOT NULL
+          AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 0, -3)
+        LIMIT 100`
+    );
+    return empresas;
+  },
+
   async listarDirectorio({ busqueda, ciudad, limit, offset }) {
     const where = ['activo = 1', 'acepta_postulaciones = 1'];
     const params = [];
@@ -246,6 +268,15 @@ const EmpresasModel = {
       'UPDATE empresas SET aviso_recargos_aceptado_por = ?, aviso_recargos_aceptado_at = ? WHERE id = ?',
       [usuarioId, ahoraColombiaSQL(), empresaId]
     );
+  },
+
+  /** { suscripcion_vigente_hasta } de la empresa activa (NULL = acceso indefinido); undefined si no existe o está inactiva. */
+  async obtenerVigenciaSuscripcion(empresaId) {
+    const [[empresa]] = await pool.query(
+      'SELECT suscripcion_vigente_hasta FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return empresa;
   },
 
   /** Opciones de la empresa que cambian cómo se clasifica y se paga un día trabajado. */

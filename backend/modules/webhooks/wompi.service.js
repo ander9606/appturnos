@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { pool } = require('../../config/database');
+const WompiModel = require('./wompi.model');
 const logger   = require('../../utils/logger');
 const { PlanesModel, precioPlanCop, planParaTrabajadores } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
@@ -41,23 +41,8 @@ function parsearReferencia(ref) {
 
 /** Activa la suscripción y marca el evento como procesado. Lanza si el UPDATE falla. */
 async function activarSuscripcion(eventoId, { empresaId, plan, meses }, montoCop) {
-  await pool.query(
-    `UPDATE empresas
-        SET plan                      = ?,
-            suscripcion_vigente_hasta = DATE_ADD(
-              GREATEST(COALESCE(suscripcion_vigente_hasta, CURDATE()), CURDATE()),
-              INTERVAL ? MONTH
-            ),
-            suscripcion_origen        = 'wompi'
-      WHERE id = ? AND activo = 1`,
-    [plan, meses, empresaId]
-  );
-  await pool.query(
-    `UPDATE wompi_eventos
-        SET estado = 'procesado', procesado_at = NOW(), intentos = intentos + 1
-      WHERE id = ?`,
-    [eventoId]
-  );
+  await WompiModel.activarSuscripcion(empresaId, plan, meses);
+  await WompiModel.marcarProcesado(eventoId);
   logger.info(`Wompi: empresa ${empresaId} +${meses}m -> ${plan}`);
   await enviarFactura(eventoId, { empresaId, plan, meses }, montoCop);
   return { ok: true, empresaId, plan, meses };
@@ -70,13 +55,7 @@ async function activarSuscripcion(eventoId, { empresaId, plan, meses }, montoCop
  */
 async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
   try {
-    const [[emp]] = await pool.query(
-      `SELECT e.nombre, e.nit, COALESCE(e.email_empresa, u.email) AS email
-         FROM empresas e
-         LEFT JOIN usuarios u ON u.empresa_id = e.id AND u.rol = 'admin_empresa' AND u.activo = 1
-        WHERE e.id = ? ORDER BY u.id LIMIT 1`,
-      [empresaId]
-    );
+    const emp = await WompiModel.datosFactura(empresaId);
     if (!emp?.email) return logger.warn(`Wompi: empresa ${empresaId} sin correo — factura no enviada`);
 
     const numero = `ZT-${String(eventoId).padStart(6, '0')}`;
@@ -109,22 +88,16 @@ async function enviarFactura(eventoId, { empresaId, plan, meses }, montoCop) {
 
 /** Marca el evento como error y loguea. */
 async function marcarError(eventoId, err) {
-  await pool.query(
-    `UPDATE wompi_eventos SET estado = 'error', intentos = intentos + 1, error_detalle = ? WHERE id = ?`,
-    [err.message, eventoId]
-  );
+  await WompiModel.marcarError(eventoId, err.message);
   logger.error(`Wompi: error evento ${eventoId}: ${err.message}`);
 }
 
 /** Avisa a los admin_empresa de la empresa que un intento de pago fue rechazado. Best-effort. */
 async function notificarPagoRechazado({ empresaId, plan, meses }, wompiStatus) {
   try {
-    const [admins] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol = 'admin_empresa' AND activo = 1`,
-      [empresaId]
-    );
-    if (admins.length > 0) {
-      await NotificacionesService.notificarVarios(admins.map((a) => a.id), {
+    const adminIds = await WompiModel.idsAdminsEmpresa(empresaId);
+    if (adminIds.length > 0) {
+      await NotificacionesService.notificarVarios(adminIds, {
         empresaId,
         tipo: 'suscripcion.pago_rechazado',
         titulo: 'Pago rechazado',
@@ -133,12 +106,12 @@ async function notificarPagoRechazado({ empresaId, plan, meses }, wompiStatus) {
       });
     }
 
-    const [[empresa]] = await pool.query('SELECT nombre FROM empresas WHERE id = ?', [empresaId]);
+    const nombreEmpresa = await WompiModel.nombreEmpresa(empresaId);
     await NotificacionesService.notificarSuperAdmins({
       empresaId,
       tipo: 'suscripcion.pago_rechazado',
       titulo: 'Pago rechazado',
-      mensaje: `${empresa?.nombre ?? 'Una empresa'}: pago rechazado por Wompi (plan ${plan}, ${meses} mes${meses !== 1 ? 'es' : ''}).`,
+      mensaje: `${nombreEmpresa ?? 'Una empresa'}: pago rechazado por Wompi (plan ${plan}, ${meses} mes${meses !== 1 ? 'es' : ''}).`,
       data: { empresa_id: empresaId, plan, meses, wompi_status: wompiStatus },
     });
   } catch (err) {
@@ -175,16 +148,16 @@ const WompiService = {
     const parsed = esActualizacion ? parsearReferencia(tx.reference) : null;
 
     // Persistir primero — si ya existe, ignorar (idempotencia)
-    const [ins] = await pool.query(
-      `INSERT IGNORE INTO wompi_eventos
-         (transaction_id, referencia, empresa_id, plan, meses, estado, payload)
-       VALUES (?, ?, ?, ?, ?, 'recibido', ?)`,
-      [transactionId, tx.reference ?? null, parsed?.empresaId ?? null,
-       parsed?.plan ?? null, parsed?.meses ?? null, JSON.stringify(payload)]
-    );
+    const { nuevo, id: eventoId } = await WompiModel.insertarEvento({
+      transactionId,
+      referencia: tx.reference ?? null,
+      empresaId: parsed?.empresaId ?? null,
+      plan: parsed?.plan ?? null,
+      meses: parsed?.meses ?? null,
+      payload,
+    });
 
-    if (ins.affectedRows === 0) return { ok: true, razon: 'duplicado' };
-    const eventoId = ins.insertId;
+    if (!nuevo) return { ok: true, razon: 'duplicado' };
 
     if (esActualizacion && tx.status === 'APPROVED' && parsed) {
       try {
@@ -196,22 +169,19 @@ const WompiService = {
     }
 
     if (esActualizacion && parsed && ESTADOS_RECHAZO.includes(tx.status)) {
-      await pool.query(`UPDATE wompi_eventos SET estado = 'rechazado' WHERE id = ?`, [eventoId]);
+      await WompiModel.marcarRechazado(eventoId);
       await notificarPagoRechazado(parsed, tx.status);
       return { ok: true, razon: 'rechazado' };
     }
 
     // Evento irrelevante: otro tipo de evento, o transaction.updated sin referencia parseable.
-    await pool.query(`UPDATE wompi_eventos SET estado = 'ignorado' WHERE id = ?`, [eventoId]);
+    await WompiModel.marcarIgnorado(eventoId);
     return { ok: true, razon: 'ignorado' };
   },
 
   /** Reintenta un evento en estado 'error' (llamado por el worker o el admin). */
   async reintentarEvento(eventoId) {
-    const [[ev]] = await pool.query(
-      `SELECT id, empresa_id, plan, meses, payload FROM wompi_eventos WHERE id = ? AND estado = 'error' LIMIT 1`,
-      [eventoId]
-    );
+    const ev = await WompiModel.obtenerEnError(eventoId);
     if (!ev) throw new Error('Evento no encontrado o no esta en estado error');
     if (!ev.empresa_id) throw new Error('Evento sin empresa_id — usa reconciliacion manual');
 
@@ -225,10 +195,7 @@ const WompiService = {
 
   /** Procesa todos los eventos en error con menos de 3 intentos (para el worker). */
   async procesarPendientes() {
-    const [eventos] = await pool.query(
-      `SELECT id, empresa_id, plan, meses, payload FROM wompi_eventos
-        WHERE estado = 'error' AND intentos < 3 AND empresa_id IS NOT NULL`
-    );
+    const eventos = await WompiModel.listarReintentables();
     let ok = 0;
     for (const ev of eventos) {
       try {
@@ -256,12 +223,7 @@ const WompiService = {
     const privateKey = process.env.WOMPI_PRIVATE_KEY;
     if (!privateKey) throw new Error('WOMPI_PRIVATE_KEY no configurada');
 
-    const [[{ activos, plan_actual }]] = await pool.query(
-      `SELECT (SELECT COUNT(*) FROM trabajadores WHERE empresa_id = e.id AND activo = 1) AS activos,
-              e.plan AS plan_actual
-         FROM empresas e WHERE e.id = ?`,
-      [empresaId]
-    );
+    const { activos, plan_actual } = await WompiModel.uso(empresaId);
     const n = Number(activos);
     const planes = await PlanesModel.listar();
     const minimo = planParaTrabajadores(planes, n);

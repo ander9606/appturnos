@@ -64,7 +64,7 @@ const ContratosModel = {
               t.direccion AS trabajador_direccion, t.eps AS trabajador_eps, t.afp AS trabajador_afp,
               t.usuario_id AS trabajador_usuario_id,
               t.firma_guardada AS trabajador_firma_guardada,
-              o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
+              o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente, o.lugar,
               e.nombre AS empresa_nombre, e.nit AS empresa_nit, e.ciudad AS empresa_ciudad,
               e.direccion AS empresa_direccion,
               e.representante_nombre AS empresa_representante_nombre,
@@ -117,7 +117,7 @@ const ContratosModel = {
               t.direccion AS trabajador_direccion, t.eps AS trabajador_eps, t.afp AS trabajador_afp,
               t.usuario_id AS trabajador_usuario_id,
               t.firma_guardada AS trabajador_firma_guardada,
-              o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
+              o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente, o.lugar,
               e.nombre AS empresa_nombre, e.nit AS empresa_nit, e.ciudad AS empresa_ciudad,
               e.direccion AS empresa_direccion,
               e.representante_nombre AS empresa_representante_nombre,
@@ -188,7 +188,7 @@ const ContratosModel = {
     const [filas] = await pool.query(
       `SELECT c.id, c.numero_contrato, c.fecha, c.valor_dia,
               c.descripcion_labor, c.tipo_contrato,
-              o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.lugar,
+              o.titulo AS oferta_titulo, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente, o.lugar,
               a.id AS asignacion_id
        FROM contratos_diarios c
        JOIN asignaciones_turno a  ON a.id = c.asignacion_id

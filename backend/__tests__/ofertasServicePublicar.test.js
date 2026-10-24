@@ -11,7 +11,6 @@ jest.mock('../modules/notificaciones/notificaciones.service', () => ({
   notificarVarios: jest.fn().mockResolvedValue(undefined),
 }));
 
-const { pool } = require('../config/database');
 const OfertasModel = require('../modules/turnos/ofertas/ofertas.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
 const OfertasService = require('../modules/turnos/ofertas/ofertas.service');
@@ -30,7 +29,7 @@ describe('OfertasService.publicar', () => {
       .mockResolvedValueOnce(ofertaBorrador)
       .mockResolvedValueOnce({ ...ofertaBorrador, estado: 'publicada' });
     OfertasModel.cambiarEstado.mockResolvedValue(1);
-    pool.query.mockResolvedValue([[{ usuario_id: 55 }]]);
+    OfertasModel.listarCandidatosPendientesDeAviso.mockResolvedValue([{ usuario_id: 55 }]);
 
     const resultado = await OfertasService.publicar(7, 1);
 

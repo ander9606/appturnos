@@ -28,7 +28,8 @@ function erDupEntry() {
 beforeEach(() => {
   pool.query.mockReset();
   // Plan sin límite conocido → TrabajadoresService.crear no hace la query de conteo.
-  pool.query.mockResolvedValue([[{ plan: 'gratis' }]]);
+  TrabajadoresModel.planDeEmpresa.mockReset().mockResolvedValue({ plan: 'gratis' });
+  pool.query.mockResolvedValue([[{ plan: 'gratis' }]]); // PlanesModel (real) lista los planes
 });
 
 describe('TrabajadoresService.crear — cédula duplicada', () => {

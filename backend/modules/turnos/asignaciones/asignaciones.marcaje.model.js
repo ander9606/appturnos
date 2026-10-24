@@ -77,7 +77,7 @@ module.exports = {
            a.longitud_egreso = ?,
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-               LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+               LEAST(?, o.fin_ts)
            ) / 60,
            a.pago_total = p.tarifa_dia + a.bono_monto
        WHERE a.id = ? AND a.empresa_id = ?
@@ -139,7 +139,7 @@ module.exports = {
     // 1. en_progreso → completado
     const ahora = ahoraColombiaSQL();
     const limiteSql = capearHoras
-      ? `LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))`
+      ? `LEAST(?, o.fin_ts)`
       : `?`;
     const [resComp] = await pool.query(
       `UPDATE asignaciones_turno a
@@ -188,6 +188,39 @@ module.exports = {
     }
 
     return { cerradas: resComp.affectedRows, noPresentados };
+  },
+
+  // Quiénes quedan afectados por un cierre masivo, para avisarles. Se consultan ANTES de cerrarMasivo,
+  // que los muta. `excepcionesIds` los deja fuera, igual que en cerrarMasivo.
+
+  /** Turnos en_progreso con ingreso real: [{ id, usuario_id, trabajador_tipo }]. */
+  async listarEnProgresoParaCierre(empresaId, ofertaId, excepcionesIds = []) {
+    const excClause = excepcionesIds.length
+      ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
+      : '';
+    const [filas] = await pool.query(
+      `SELECT a.id, t.usuario_id, t.tipo AS trabajador_tipo FROM asignaciones_turno a
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
+         AND a.hora_ingreso_real IS NOT NULL ${excClause}`,
+      [ofertaId, empresaId, ...excepcionesIds]
+    );
+    return filas;
+  },
+
+  /** Turnos confirmados que no llegaron a marcar ingreso: [{ usuario_id }]. */
+  async listarConfirmadosParaCierre(empresaId, ofertaId, excepcionesIds = []) {
+    const excClause = excepcionesIds.length
+      ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
+      : '';
+    const [filas] = await pool.query(
+      `SELECT t.usuario_id FROM asignaciones_turno a
+       JOIN trabajadores t ON t.id = a.trabajador_id
+       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'confirmado'
+         ${excClause}`,
+      [ofertaId, empresaId, ...excepcionesIds]
+    );
+    return filas;
   },
 
   /** Corrección manual de ingreso/egreso por un gestor (sin GPS ni firma). */

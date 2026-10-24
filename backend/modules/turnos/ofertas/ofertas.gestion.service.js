@@ -1,6 +1,5 @@
 'use strict';
 
-const { pool } = require('../../../config/database');
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const AsignacionesService = require('../asignaciones/asignaciones.service');
@@ -8,6 +7,7 @@ const CargosModel = require('../../cargos/cargos.model');
 const TrabajadoresService = require('../../trabajadores/trabajadores.service');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
 const GeocodingService = require('../../geocoding/geocoding.service');
@@ -16,7 +16,6 @@ const {
   ROLES, MAX_OFERTAS_ACTIVAS_POR_EMPRESA, DIAS_GRACIA_ASIGNACIONES_COLGADAS, HORAS_CORTE_EDICION_OFERTA,
 } = require('../../../config/constants');
 const { ahoraColombiaSQL } = require('../../../utils/fechaColombia');
-const { DELAY_RANKING_SQL_CASE } = require('../../../utils/rankingUtils');
 const logger = require('../../../utils/logger');
 
 /** Valida que cada puesto del array tiene un cargo válido para la empresa. */
@@ -79,15 +78,7 @@ async function advertenciasDestinatarios(empresaId, visibilidad, trabajadorIds, 
   const ids = [...new Set((trabajadorIds || []).map(Number))];
   const cargoIds = [...new Set((puestos || []).map((p) => Number(p.cargo_id)))];
   if (visibilidad !== 'dirigida' || ids.length === 0 || cargoIds.length === 0) return [];
-  const [filas] = await pool.query(
-    `SELECT t.nombre, t.apellido FROM trabajadores t
-     WHERE t.id IN (?) AND NOT EXISTS (
-       SELECT 1 FROM trabajador_empresa te
-       JOIN trabajador_cargos tc ON tc.trabajador_empresa_id = te.id
-       WHERE te.trabajador_id = t.id AND te.empresa_id = ? AND tc.cargo_id IN (?)
-     )`,
-    [ids, empresaId, cargoIds]
-  );
+  const filas = await OfertasModel.nombresSinNingunCargo(empresaId, ids, cargoIds);
   if (filas.length === 0) return [];
   const nombres = filas.map((f) => `${f.nombre} ${f.apellido}`).join(', ');
   return [
@@ -131,13 +122,8 @@ async function validarDestinatarios(empresaId, visibilidad, trabajadorIds) {
   if (ids.length === 0) {
     throw new AppError('Elige al menos una persona para un turno dirigido', 400);
   }
-  const [filas] = await pool.query(
-    `SELECT t.id FROM trabajadores t
-     JOIN trabajador_empresa te ON te.trabajador_id = t.id
-     WHERE t.id IN (?) AND te.empresa_id = ? AND te.estado = 'activo'`,
-    [ids, empresaId]
-  );
-  if (filas.length !== ids.length) {
+  const activos = await OfertasModel.contarTrabajadoresActivosDeEmpresa(empresaId, ids);
+  if (activos !== ids.length) {
     throw new AppError('Alguno de los trabajadores seleccionados no pertenece a esta empresa', 400);
   }
 }
@@ -180,28 +166,7 @@ function rolesParaAviso(paraQuien) {
  * cada quien le toca).
  */
 async function listarPendientesDeNotificar(empresaId, oferta, puesto, roles) {
-  const [filas] = await pool.query(
-    `SELECT DISTINCT u.id AS usuario_id
-     FROM trabajador_cargos tc
-     JOIN trabajador_empresa te ON te.id = tc.trabajador_empresa_id
-     JOIN trabajadores t        ON t.id  = te.trabajador_id
-     JOIN usuarios u            ON u.id  = t.usuario_id
-     WHERE te.empresa_id = ?
-       AND tc.cargo_id   = ?
-       AND te.estado     = 'activo'
-       AND u.activo      = 1
-       AND u.rol IN (?)
-       AND (u.rol != ? OR t.acepta_extras = 1)
-       AND TIMESTAMPDIFF(MINUTE, ?, NOW()) >= ${DELAY_RANKING_SQL_CASE}
-       AND NOT EXISTS (
-         SELECT 1 FROM notificaciones n
-         WHERE n.usuario_id = u.id AND n.tipo = 'oferta.nueva'
-           AND CAST(n.data->>'$.oferta_id' AS UNSIGNED) = ?
-           AND CAST(n.data->>'$.puesto_id' AS UNSIGNED) = ?
-       )`,
-    [empresaId, puesto.cargo_id, roles, ROLES.TRABAJADOR_NOMINA, oferta.created_at, oferta.id, puesto.id]
-  );
-  return filas;
+  return OfertasModel.listarCandidatosPendientesDeAviso(empresaId, oferta, puesto, roles);
 }
 
 /**
@@ -244,12 +209,9 @@ async function notificarPoolPorPuestos(empresaId, oferta) {
  * co-gestores que asignaciones.marcaje.service.js usa para "sospechoso".
  */
 async function notificarCoGestores(empresaId, oferta, creadoPor) {
-  const [gestores] = await pool.query(
-    `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1 AND id != ?`,
-    [empresaId, creadoPor]
-  );
-  if (gestores.length === 0) return;
-  await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+  const gestoresIds = await NotificacionesModel.idsCoGestoresTurnos(empresaId, creadoPor);
+  if (gestoresIds.length === 0) return;
+  await NotificacionesService.notificarVarios(gestoresIds, {
     empresaId,
     tipo: 'oferta.creada',
     titulo: 'Nuevo turno creado',
@@ -268,14 +230,7 @@ async function notificarDestinatariosDirectos(empresaId, oferta) {
   // lo lleva a un 403 sin explicación.
   let sinExtras = new Set();
   if (trabajadorIds.length > 0) {
-    const [filas] = await pool.query(
-      `SELECT t.id AS trabajador_id
-       FROM trabajadores t
-       JOIN usuarios u ON u.id = t.usuario_id
-       WHERE t.id IN (?) AND u.rol = ? AND t.acepta_extras = 0`,
-      [trabajadorIds, ROLES.TRABAJADOR_NOMINA]
-    );
-    sinExtras = new Set(filas.map((f) => f.trabajador_id));
+    sinExtras = new Set(await OfertasModel.trabajadorIdsNominaSinExtras(trabajadorIds));
   }
 
   const usuarioIds = destinatarios
@@ -297,12 +252,19 @@ async function notificarDestinatariosDirectos(empresaId, oferta) {
  * que validateStep1() en el mobile (apps/mobile/features/turnos/crear/utils.ts),
  * ahora también exigido en el backend para cerrar el hueco en web/API directa.
  */
-function validarFechaHoraOferta({ fecha, hora_inicio, hora_fin_estimada }) {
+function validarFechaHoraOferta({ fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente }) {
   if (fecha && fecha < ahoraColombiaSQL().slice(0, 10)) {
     throw new AppError('La fecha del turno no puede ser en el pasado', 422);
   }
-  if (hora_inicio && hora_fin_estimada && hora_fin_estimada <= hora_inicio) {
-    throw new AppError('La hora de fin debe ser posterior a la hora de inicio', 422);
+  if (hora_inicio && hora_fin_estimada) {
+    // Terminando al día siguiente, la hora de fin queda antes (o igual, 24 h) que la de inicio;
+    // más tarde que el inicio serían más de 24 h seguidas.
+    if (fin_dia_siguiente && hora_fin_estimada > hora_inicio) {
+      throw new AppError('Un turno que termina al día siguiente no puede durar más de 24 horas', 422);
+    }
+    if (!fin_dia_siguiente && hora_fin_estimada <= hora_inicio) {
+      throw new AppError('La hora de fin debe ser posterior a la hora de inicio (o marca que termina al día siguiente)', 422);
+    }
   }
 }
 
@@ -363,6 +325,7 @@ module.exports = {
    * empiece — no le queda tiempo real al trabajador para reaccionar.
    */
   async actualizar(empresaId, id, datos) {
+    if (datos.fin_dia_siguiente !== undefined) datos = { ...datos, fin_dia_siguiente: datos.fin_dia_siguiente ? 1 : 0 };
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {
@@ -372,9 +335,10 @@ module.exports = {
       fecha: datos.fecha ?? oferta.fecha,
       hora_inicio: datos.hora_inicio ?? oferta.hora_inicio,
       hora_fin_estimada: datos.hora_fin_estimada !== undefined ? datos.hora_fin_estimada : oferta.hora_fin_estimada,
+      fin_dia_siguiente: datos.fin_dia_siguiente !== undefined ? datos.fin_dia_siguiente : oferta.fin_dia_siguiente,
     });
 
-    const camposCriticos = ['fecha', 'hora_inicio', 'hora_fin_estimada', 'lugar'];
+    const camposCriticos = ['fecha', 'hora_inicio', 'hora_fin_estimada', 'fin_dia_siguiente', 'lugar'];
     const hayCambioRelevante = camposCriticos.some(
       (k) => datos[k] !== undefined && String(datos[k] ?? '') !== String(oferta[k] ?? '')
     );

@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { usePeriodos, useRegistros } from '@/features/nomina/useNomina';
 import { useTheme } from '@/lib/theme';
 import type { PeriodoNomina, RegistroDiario } from '@api-client';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -153,6 +154,7 @@ export function AsistenciaView({ selectedDate }: Props) {
     data: registrosResp,
     isLoading: loadingRegistros,
     isError,
+    error,
     refetch,
     isRefetching,
   } = useRegistros({ periodo_id: periodo?.id, fecha: selectedDate, limit: 100 });
@@ -179,16 +181,7 @@ export function AsistenciaView({ selectedDate }: Props) {
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center gap-3 px-6">
-        <Text className="text-4xl">⚠️</Text>
-        <Text className="text-base font-semibold text-foreground">Error al cargar registros</Text>
-        <TouchableOpacity
-          onPress={() => refetch()}
-          className="bg-card border border-border px-5 py-2.5 rounded-2xl"
-        >
-          <Text className="text-sm font-medium text-foreground">Reintentar</Text>
-        </TouchableOpacity>
-      </View>
+      <ErrorState error={error} onRetry={refetch} fallback="Error al cargar registros" />
     );
   }
 

@@ -1,3 +1,6 @@
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorState } from '@/components/ui/ErrorState';
+import { isNotFound } from '@/lib/apiErrorMessage';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
@@ -7,7 +10,7 @@ import {
   View, ScrollView, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
@@ -50,12 +53,13 @@ const GESTORES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina'];
 
 export default function CuentaCobroScreen() {
   const { id }    = useLocalSearchParams<{ id: string }>();
+  const router    = useRouter();
   const qc        = useQueryClient();
   const rol       = useAuthStore((s) => s.usuario?.rol);
   const isGestor  = GESTORES.includes(rol ?? '');
   const [showFirma, setShowFirma] = useState(false);
 
-  const { data: cuenta, isLoading, isError } = useQuery({
+  const { data: cuenta, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['cuenta-cobro', id],
     queryFn: () => cuentasCobroApi.obtener(Number(id)),
     staleTime: 60_000,
@@ -90,11 +94,18 @@ export default function CuentaCobroScreen() {
     );
   }
 
-  if (isError || !cuenta) {
+  if (isError && !isNotFound(error)) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Ionicons name="alert-circle-outline" size={48} color={COLORS.danger} />
-        <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '600', color: COLORS.foreground }}>Cuenta de cobro no encontrada</Text>
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted }}>
+        <ErrorState error={error} onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!cuenta) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.muted }}>
+        <EmptyState variant="search" title="Cuenta de cobro no encontrada" message="Puede que ya no exista o que no tengas acceso a ella." action={{ label: 'Volver', onPress: () => router.back() }} />
       </SafeAreaView>
     );
   }

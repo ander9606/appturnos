@@ -70,6 +70,9 @@ export function WeekStrip({
                     ? alpha(primaryColor, 0.1)
                     : 'transparent',
                 borderRadius: 14,
+                // Hoy sin seleccionar: aro suave del color del perfil
+                borderWidth: 1.5,
+                borderColor: day.isToday && !isSelected ? alpha(primaryColor, 0.45) : 'transparent',
               }}
               className="items-center py-2"
               accessibilityRole="button"

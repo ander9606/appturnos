@@ -21,6 +21,7 @@ import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { confirm } from '@/lib/confirmDialog';
 import { alertError } from '@/lib/alertDialog';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -32,9 +33,9 @@ function formatShortDate(iso: string) {
   return `${SHORT_DAYS[d.getDay()]} ${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}`;
 }
 
-function fmtRange(start: string, end: string | null) {
+function fmtRange(start: string, end: string | null, finDiaSiguiente?: number | null) {
   const s = start.slice(0, 5).replace(/^0/, '');
-  return end ? `${s} – ${end.slice(0, 5).replace(/^0/, '')}` : s;
+  return end ? `${s} – ${end.slice(0, 5).replace(/^0/, '')}${finDiaSiguiente ? ' (día sig.)' : ''}` : s;
 }
 
 type BadgeVariant = 'warning' | 'success' | 'info' | 'default' | 'danger';
@@ -313,7 +314,7 @@ function GestorOfertaItem({
               📅 {formatShortDate(oferta.fecha)}
             </Text>
             <Text className="text-sm text-muted-foreground">
-              🕐 {fmtRange(oferta.hora_inicio, oferta.hora_fin_estimada)}
+              🕐 {fmtRange(oferta.hora_inicio, oferta.hora_fin_estimada, oferta.fin_dia_siguiente)}
             </Text>
             {oferta.lugar ? (
               <Text className="text-sm text-muted-foreground" numberOfLines={1}>
@@ -434,13 +435,7 @@ export function GestorTurnosView({ selectedDate, filtroParaQuien, puedeGestionar
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center gap-3 px-6">
-        <Text className="text-4xl">⚠️</Text>
-        <Text className="text-base font-semibold text-foreground">
-          {apiErrorMessage(error, 'Error al cargar turnos')}
-        </Text>
-        <Button label="Reintentar" variant="secondary" onPress={() => refetch()} />
-      </View>
+      <ErrorState error={error} onRetry={refetch} fallback="Error al cargar turnos" />
     );
   }
 

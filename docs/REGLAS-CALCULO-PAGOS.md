@@ -406,7 +406,10 @@ La fuente de verdad es `backend/config/constants.js`; el resto de la app tiene c
 | Regla | Archivo |
 | --- | --- |
 | Clasificación minuto a minuto, festivos, valor hora, recargos, días comerciales, descuentos de ley, auxilio | `backend/utils/laboralUtils.js` |
-| Marcaje, geocerca, domingo ocasional, reingresos, correcciones | `backend/modules/nomina/registros/registros.service.js` |
+| Marcaje y geocerca | `backend/modules/nomina/registros/registros.marcaje.service.js` |
+| Correcciones de registros | `backend/modules/nomina/registros/registros.gestion.service.js` |
+| Reingresos | `backend/modules/nomina/registros/registros.reingreso.service.js` |
+| Domingo/festivo ocasional o habitual (`clasificarDiaFestivo`) | `backend/modules/nomina/registros/registros.helpers.js` |
 | Liquidación del período (bruto, descuentos, neto) | `backend/modules/nomina/liquidacion/liquidacion.service.js` |
 | Cierre y congelamiento del valor hora | `backend/modules/nomina/periodos/periodos.model.js` (`cerrarConSnapshot`) |
 | Descuentos manuales | `backend/modules/nomina/descuentos/` |

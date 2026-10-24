@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useReportesGlobales } from '@/features/admin/useAdmin';
 import { formatCOP } from '@/lib/formatters';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ── Sub-components ────────────────────────────────────────────────────────
 
@@ -61,7 +62,7 @@ export default function AdminDashboard() {
   const usuario = useAuthStore((s) => s.usuario);
   const isSuperAdmin = useAuthStore((s) => s.usuario?.rol === 'super_admin');
 
-  const { data, isLoading, isError, refetch } = useReportesGlobales(isSuperAdmin);
+  const { data, isLoading, isError, error, refetch } = useReportesGlobales(isSuperAdmin);
   const [refreshing, setRefreshing] = React.useState(false);
 
   const onRefresh = async () => {
@@ -112,13 +113,7 @@ export default function AdminDashboard() {
         )}
 
         {isError && (
-          <View className="mx-4 mt-6 bg-danger/10 border border-danger/30 rounded-2xl p-4 items-center gap-2">
-            <Text className="text-2xl">⚠️</Text>
-            <Text className="text-danger font-semibold">Error al cargar métricas</Text>
-            <Pressable onPress={() => refetch()} className="mt-1">
-              <Text className="text-primary text-sm font-semibold">Reintentar</Text>
-            </Pressable>
-          </View>
+          <ErrorState compact error={error} onRetry={refetch} fallback="Error al cargar métricas" />
         )}
 
         {data && (

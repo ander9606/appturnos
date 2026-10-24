@@ -1,13 +1,14 @@
 'use strict';
 
 const AsignacionesModel = require('./asignaciones.model');
+const OfertasModel = require('../ofertas/ofertas.model');
 const ContratosModel    = require('../../contratos/contratos.model');
 const ContratosService  = require('../../contratos/contratos.service');
 const TrabajadoresModel = require('../../trabajadores/trabajadores.model');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
-const { pool } = require('../../../config/database');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const IntegracionService = require('../../integracion/integracion.service');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const AppError = require('../../../utils/AppError');
@@ -34,12 +35,9 @@ async function revisarIngresoSospechoso(empresaId, asignacionId, trabajador, hor
     await AsignacionesModel.marcarSospechoso(empresaId, [asignacionId, match.registro_id]);
 
     const otro = await TrabajadoresModel.obtenerPorId(empresaId, match.trabajador_id);
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_turnos','admin_empresa') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestores.length > 0) {
-      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(empresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
         empresaId,
         tipo: 'turno.sospechoso',
         titulo: 'Posible marcaje fraudulento',
@@ -73,7 +71,7 @@ module.exports = {
 
     // Validación de geofence según tipo_geofence del cargo. 'libre' (ej.
     // camioneros, que no entran y salen del mismo punto) no exige ubicación
-    // — mismo criterio que validarGeofence en nomina/registros.service.js.
+    // — mismo criterio que validarGeofence en nomina/registros/registros.marcaje.service.js.
     const gf = asignacion.geofence_info;
     if (gf.tipo !== 'libre' && (latitud == null || longitud == null)) {
       throw new AppError('Debes enviar tu ubicación para registrar el ingreso', 422);
@@ -129,14 +127,10 @@ module.exports = {
     });
 
     // Notifica a jefes de turno y admin que el trabajador marcó ingreso (best-effort).
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios
-       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
-      [dbEmpresaId]
-    );
-    if (gestores.length > 0) {
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(dbEmpresaId);
+    if (gestoresIds.length > 0) {
       await NotificacionesService.notificarVarios(
-        gestores.map((g) => g.id),
+        gestoresIds,
         {
           empresaId: dbEmpresaId,
           tipo: 'turno.ingreso',
@@ -217,14 +211,10 @@ module.exports = {
     await AsignacionesModel.registrarEgreso(dbEmpresaId, id, firma_b64, latitud, longitud);
 
     // Notifica a jefes de turno y admin que el trabajador marcó salida (best-effort).
-    const [gestoresEgreso] = await pool.query(
-      `SELECT id FROM usuarios
-       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
-      [dbEmpresaId]
-    );
-    if (gestoresEgreso.length > 0) {
+    const gestoresEgresoIds = await NotificacionesModel.idsGestoresTurnos(dbEmpresaId);
+    if (gestoresEgresoIds.length > 0) {
       await NotificacionesService.notificarVarios(
-        gestoresEgreso.map((g) => g.id),
+        gestoresEgresoIds,
         {
           empresaId: dbEmpresaId,
           tipo: 'turno.egreso',
@@ -445,30 +435,11 @@ module.exports = {
    */
   async cerrarMasivo(empresaId, ofertaId, excepcionesIds = [], { capearHoras = true } = {}) {
     // Verificar que la oferta pertenece a la empresa.
-    const [[oferta]] = await pool.query(
-      'SELECT id FROM ofertas_turno WHERE id = ? AND empresa_id = ? LIMIT 1',
-      [ofertaId, empresaId]
-    );
-    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    if (!(await OfertasModel.perteneceAEmpresa(empresaId, ofertaId))) throw new AppError('Oferta no encontrada', 404);
 
     // Recopilar usuarios a notificar (antes de mutar) — dos grupos distintos.
-    const excClause = excepcionesIds.length
-      ? `AND a.trabajador_id NOT IN (${excepcionesIds.map(() => '?').join(',')})`
-      : '';
-    const [enProgreso] = await pool.query(
-      `SELECT a.id, t.usuario_id, t.tipo AS trabajador_tipo FROM asignaciones_turno a
-       JOIN trabajadores t ON t.id = a.trabajador_id
-       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'en_progreso'
-         AND a.hora_ingreso_real IS NOT NULL ${excClause}`,
-      [ofertaId, empresaId, ...excepcionesIds]
-    );
-    const [confirmados] = await pool.query(
-      `SELECT t.usuario_id FROM asignaciones_turno a
-       JOIN trabajadores t ON t.id = a.trabajador_id
-       WHERE a.oferta_id = ? AND a.empresa_id = ? AND a.estado = 'confirmado'
-         ${excClause}`,
-      [ofertaId, empresaId, ...excepcionesIds]
-    );
+    const enProgreso = await AsignacionesModel.listarEnProgresoParaCierre(empresaId, ofertaId, excepcionesIds);
+    const confirmados = await AsignacionesModel.listarConfirmadosParaCierre(empresaId, ofertaId, excepcionesIds);
 
     const { cerradas, noPresentados } = await AsignacionesModel.cerrarMasivo(empresaId, ofertaId, excepcionesIds, { capearHoras });
 

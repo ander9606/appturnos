@@ -10,6 +10,8 @@
  *   gestores          → NominaGestorView (liquidación completa, inline aquí)
  */
 
+import { ContadorCirculo } from '@/components/ui/ContadorCirculo';
+import { PantallaPestana } from '@/components/ui/EncabezadoPestana';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
@@ -17,7 +19,6 @@ import { showAlert } from '@/lib/alertDialog';
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, FlatList, ScrollView, TouchableOpacity, RefreshControl, } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore }           from '@/features/auth/useAuthStore';
@@ -30,8 +31,9 @@ import { PeriodoSelector }        from '@/features/nomina/PeriodoSelector';
 import { LiquidacionRow }         from '@/features/nomina/LiquidacionRow';
 import { Button }                 from '@/components/ui/Button';
 import { CompositionBar }         from '@/components/ui/CompositionBar';
+import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { MonthCalendar }          from '@/components/ui/MonthCalendar';
-import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import { COLORS,HOUR_TYPE_COLORS }       from '@/lib/designTokens';
 import { fmtPeriodo } from '@/features/nomina/trabajador/nominaTrabajadorUtils';
 import { bogotaToday } from '@/lib/formatters';
@@ -42,7 +44,7 @@ import {
 import { useCompensatoriosTodos } from '@/features/nomina/compensatorios/useCompensatorios';
 import { useDescuentosPeriodo } from '@/features/nomina/descuentos/useDescuentos';
 import { ApiError, type LiquidacionLinea } from '@api-client';
-import { useTheme } from '@/lib/theme';
+import { useTheme, SeccionTema } from '@/lib/theme';
 import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
 import { useRouter } from 'expo-router';
@@ -55,7 +57,7 @@ type RolGestor = typeof GESTORES[number];
 export default function NominaScreen() {
   const rol = useAuthStore((s) => s.usuario?.rol) ?? 'trabajador_nomina';
 
-  if (GESTORES.includes(rol as RolGestor)) return <NominaGestorView />;
+  if (GESTORES.includes(rol as RolGestor)) return <SeccionTema.Provider value="nomina"><NominaGestorView /></SeccionTema.Provider>;
   if (rol === 'trabajador_turnos')         return <NominaTurnosView />;
   if (rol === 'jefe_turnos')               return <NominaGestorTurnosView />;
   return <NominaTrabajadorView />;
@@ -91,6 +93,10 @@ function NominaGestorView() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  const mesAnterior  = () => setMesCursor(c => shiftMonth(c, -1));
+  const mesSiguiente = () => setMesCursor(c => shiftMonth(c, 1));
+  const hoyCursor    = mesDeHoy();
+  const esMesActual  = mesCursor.year === hoyCursor.year && mesCursor.month === hoyCursor.month;
   // Consulta aparte (no la de arriba, topada a 20) para que navegar el mes lejos en el tiempo
   // siga encontrando el período correspondiente en vez de mostrar el mes vacío en silencio.
   const { data: periodosMesResp } = usePeriodos(undefined, viewMode === 'mes', {
@@ -181,9 +187,9 @@ function NominaGestorView() {
 
   if (loadingPeriodos) {
     return (
-      <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <PantallaPestana>
         <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
-      </SafeAreaView>
+      </PantallaPestana>
     );
   }
 
@@ -200,7 +206,7 @@ function NominaGestorView() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <PantallaPestana>
       <FlatList
         data={filas}
         keyExtractor={(item) => String(item.linea.trabajador_id)}
@@ -228,7 +234,7 @@ function NominaGestorView() {
         }
         ListHeaderComponent={
           <View className="gap-4 pb-2">
-            <View className="bg-success pt-4 pb-6 px-6 rounded-b-[28px] gap-2">
+            <View className="pt-4 pb-6 px-6 rounded-b-[28px] gap-2" style={{ backgroundColor: theme.primary }}>
               <View className="flex-row items-center justify-between">
                 <View>
                   <Text className="text-white/80 text-xs font-medium uppercase tracking-wide">
@@ -281,25 +287,17 @@ function NominaGestorView() {
             <View className="px-5 gap-3">
               {viewMode === 'mes' ? (
                 <View className="gap-2">
-                  <View className="flex-row items-center gap-3">
-                    <TouchableOpacity
-                      onPress={() => setMesCursor((c) => shiftMonth(c, -1))}
-                      className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-                    >
-                      <Ionicons name="chevron-back" size={16} color={theme.primary} />
-                    </TouchableOpacity>
-                    <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-                      {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setMesCursor((c) => shiftMonth(c, 1))}
-                      className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-                    >
-                      <Ionicons name="chevron-forward" size={16} color={theme.primary} />
-                    </TouchableOpacity>
-                  </View>
+                  <NavegadorMes
+                    mes={mesCursor.month}
+                    anio={mesCursor.year}
+                    onAnterior={mesAnterior}
+                    onSiguiente={mesSiguiente}
+                    onHoy={esMesActual ? undefined : () => setMesCursor(mesDeHoy())}
+                  />
                   <MonthCalendar
                     weeks={mesWeeks}
+                    onMesAnterior={mesAnterior}
+                    onMesSiguiente={mesSiguiente}
                     onDayPress={(day: CalendarDay) => {
                       const periodo = periodoDeDia(day.date);
                       if (periodo) { setPeriodoId(periodo.id); setViewMode('lista'); }
@@ -310,13 +308,37 @@ function NominaGestorView() {
                       const bg = periodo.estado === 'abierto' ? 'bg-success-light'
                         : periodo.estado === 'cerrado' ? 'bg-warning-light' : 'bg-primary-100';
                       const esCierre = periodo.fecha_fin === day.date;
+                      const esInicio = periodo.fecha_inicio === day.date;
+                      // El período que se está mirando va a todo color; los demás, atenuados.
+                      const esActivo = periodo.id === activePeriodoId;
                       return (
-                        <View className={`flex-1 -m-1 mt-0 rounded-b-md px-1 py-0.5 ${bg}`}>
-                          {esCierre && <Text className="text-[8px] font-semibold text-foreground">Cierre</Text>}
+                        <View
+                          className={`flex-1 -m-1 mt-0 px-1 py-0.5 ${bg} ${esInicio ? 'rounded-bl-md' : ''} ${esCierre ? 'rounded-br-md' : ''}`}
+                          style={{ opacity: esActivo ? 1 : 0.5 }}
+                        >
+                          {esCierre && <Text className="text-[8px] font-bold text-foreground">Cierre</Text>}
                         </View>
                       );
                     }}
                   />
+                  <View className="flex-row items-center gap-x-3 gap-y-1 justify-center mt-1 flex-wrap">
+                    <View className="flex-row items-center gap-1.5">
+                      <View className="w-2.5 h-2.5 rounded bg-success-light" />
+                      <Text className="text-xs text-muted-foreground">Abierto</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1.5">
+                      <View className="w-2.5 h-2.5 rounded bg-warning-light" />
+                      <Text className="text-xs text-muted-foreground">Cerrado, por pagar</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1.5">
+                      <View className="w-2.5 h-2.5 rounded bg-primary-100" />
+                      <Text className="text-xs text-muted-foreground">Pagado</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1.5">
+                      <Ionicons name="flag" size={10} color={theme.primary} />
+                      <Text className="text-xs text-muted-foreground">Festivo</Text>
+                    </View>
+                  </View>
                 </View>
               ) : (
                 <PeriodoSelector periodos={periodos} activeId={activePeriodoId} onSelect={setPeriodoId} />
@@ -421,7 +443,7 @@ function NominaGestorView() {
                       <Text className="text-sm font-medium text-foreground">Reingresos pendientes</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                      {reingresosPendientes.length > 0 && <ConteoPendientes n={reingresosPendientes.length} />}
+                      <ContadorCirculo n={reingresosPendientes.length} />
                       <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                     </View>
                   </TouchableOpacity>
@@ -435,7 +457,7 @@ function NominaGestorView() {
                       <Text className="text-sm font-medium text-foreground">Descansos compensatorios</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
-                      {compPendientes > 0 && <ConteoPendientes n={compPendientes} />}
+                      <ContadorCirculo n={compPendientes} />
                       <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
                     </View>
                   </TouchableOpacity>
@@ -491,15 +513,7 @@ function NominaGestorView() {
         ItemSeparatorComponent={() => <View className="h-2" />}
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
-    </SafeAreaView>
-  );
-}
-
-function ConteoPendientes({ n }: { n: number }) {
-  return (
-    <View className="bg-warning rounded-full min-w-[24px] h-[24px] items-center justify-center px-1.5">
-      <Text className="text-white text-xs font-bold">{n}</Text>
-    </View>
+    </PantallaPestana>
   );
 }
 

@@ -4,8 +4,8 @@ const CompensatoriosModel = require('./compensatorios.model');
 const RegistrosModel      = require('../registros/registros.model');
 const TrabajadoresModel   = require('../../trabajadores/trabajadores.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const AppError            = require('../../../utils/AppError');
-const { pool }             = require('../../../config/database');
 const { ROLES, COMPENSATORIO_PLAZO_DIAS } = require('../../../config/constants');
 const { esDiaFestivo, esDomingo } = require('../../../utils/laboralUtils');
 const logger              = require('../../../utils/logger');
@@ -91,7 +91,7 @@ const CompensatoriosService = {
    * Avisa al trabajador y, cuando el día lleva recargo, también a los
    * gestores de nómina. Domingo y festivo entre semana comparten el mismo
    * umbral ocasional/habitual (decisión de producto, ver clasificarDiaFestivo
-   * en registros.service.js): el 1º/2º día festivo o domingo del mes es
+   * en registros.helpers.js): el 1º/2º día festivo o domingo del mes es
    * ocasional (solo compensatorio); el 3º en adelante es habitual (recargo +
    * compensatorio) — sin importar si ese 3º es domingo o festivo entre semana.
    * - Ocasional: solo avisa al trabajador — no requiere ninguna acción de los
@@ -139,12 +139,9 @@ const CompensatoriosService = {
 
     if (!sumarNocturnasFestivo) return;
 
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('jefe_nomina','admin_empresa','nomina') AND activo = 1`,
-      [empresaId]
-    );
-    if (gestores.length > 0) {
-      await NotificacionesService.notificarVarios(gestores.map((g) => g.id), {
+    const gestoresIds = await NotificacionesModel.idsGestoresNomina(empresaId);
+    if (gestoresIds.length > 0) {
+      await NotificacionesService.notificarVarios(gestoresIds, {
         empresaId,
         tipo: domingo ? 'nomina.domingo_habitual_gestor' : 'nomina.festivo_trabajado_gestor',
         titulo: 'Aplica recargo festivo',

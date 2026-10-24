@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
+const { enTransaccion } = require('../../utils/enTransaccion');
 
 /**
  * Acceso a datos de la relación trabajador ↔ empresa (tabla trabajador_empresa).
@@ -17,6 +18,17 @@ const COLUMNAS = `te.id, te.usuario_id, te.empresa_id, te.trabajador_id,
   e.telefono AS empresa_telefono, e.email_empresa AS empresa_email`;
 
 const TrabajadorEmpresaModel = {
+  /** Ids de las empresas ACTIVAS donde el usuario tiene una relación activa. */
+  async empresaIdsActivas(usuarioId) {
+    const [filas] = await pool.query(
+      `SELECT te.empresa_id FROM trabajador_empresa te
+       JOIN empresas e ON e.id = te.empresa_id AND e.activo = 1
+       WHERE te.usuario_id = ? AND te.estado = 'activo'`,
+      [usuarioId]
+    );
+    return filas.map((f) => f.empresa_id);
+  },
+
   async obtenerPorId(id) {
     const [filas] = await pool.query(
       `SELECT ${COLUMNAS}
@@ -133,7 +145,7 @@ const TrabajadorEmpresaModel = {
     return res.insertId;
   },
 
-  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto, activoAntesDeOferta, cargosInteres } = {}) {
+  async cambiarEstado(id, estado, { motivo, trabajadorId, tipoOfrecido, fechaResuelto, activoAntesDeOferta, cargosInteres } = {}, conn = pool) {
     const sets = ['estado = ?'];
     const params = [estado];
 
@@ -163,7 +175,7 @@ const TrabajadorEmpresaModel = {
     }
 
     params.push(id);
-    const [res] = await pool.query(
+    const [res] = await conn.query(
       `UPDATE trabajador_empresa SET ${sets.join(', ')} WHERE id = ?`,
       params
     );
@@ -175,8 +187,8 @@ const TrabajadorEmpresaModel = {
    * pendientes) al convertirse a nómina — exclusiva a una sola empresa. Deja
    * intactas las ya cerradas (rechazado/archivado), no hay nada que tocar ahí.
    */
-  async archivarOtrasRelacionesDeUsuario(usuarioId, exceptoId) {
-    const [filas] = await pool.query(
+  async archivarOtrasRelacionesDeUsuario(usuarioId, exceptoId, conn = pool) {
+    const [filas] = await conn.query(
       `SELECT id, empresa_id, trabajador_id FROM trabajador_empresa
        WHERE usuario_id = ? AND id != ?
          AND estado IN ('activo', 'solicitado_por_trabajador', 'solicitado_por_empresa')`,
@@ -184,13 +196,107 @@ const TrabajadorEmpresaModel = {
     );
     if (filas.length) {
       const ids = filas.map((f) => f.id);
-      await pool.query(
+      await conn.query(
         `UPDATE trabajador_empresa SET estado = 'archivado', fecha_resuelto = NOW()
          WHERE id IN (${ids.map(() => '?').join(',')})`,
         ids
       );
     }
     return filas;
+  },
+
+  /**
+   * El trabajador acepta una oferta de nómina. Los 4 cambios que sostienen la regla
+   * "nómina es exclusiva de una empresa" van en UNA transacción: estado de la relación,
+   * tipo de la ficha, rol de la cuenta y archivado de las demás relaciones. Si algo
+   * falla no queda nada aplicado y el trabajador puede reintentar.
+   * Devuelve las relaciones archivadas (el caller suspende sus fichas y notifica).
+   */
+  async aceptarConversionANomina({ relacionId, trabajadorId, usuarioId, empresaId, rolNomina }) {
+    return enTransaccion(async (conn) => {
+      await TrabajadorEmpresaModel.cambiarEstado(
+        relacionId, 'activo', { trabajadorId, activoAntesDeOferta: false }, conn
+      );
+      await TrabajadorEmpresaModel.convertirANomina(trabajadorId, usuarioId, empresaId, rolNomina, conn);
+      return TrabajadorEmpresaModel.archivarOtrasRelacionesDeUsuario(usuarioId, relacionId, conn);
+    });
+  },
+
+  // ponytail: consultas sobre `usuarios`/`trabajadores` que solo usa este flujo de vinculación,
+  // viven aquí en vez de abrir un modelo nuevo — upgrade path: moverlas a UsuariosModel/TrabajadoresModel.
+
+  /** admin_empresa + jefe_turnos activos de la empresa — gestionan solicitudes de vinculación. */
+  async idsGestores(empresaId) {
+    const [gestores] = await pool.query(
+      `SELECT id FROM usuarios
+     WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
+      [empresaId]
+    );
+    return gestores.map((g) => g.id);
+  },
+
+  /** id de la ficha de trabajadores del usuario en la empresa, o null. */
+  async idTrabajadorDeUsuario(usuarioId, empresaId) {
+    const [filas] = await pool.query(
+      'SELECT id FROM trabajadores WHERE usuario_id = ? AND empresa_id = ? LIMIT 1',
+      [usuarioId, empresaId]
+    );
+    return filas.length ? filas[0].id : null;
+  },
+
+  /** Datos básicos y rol global del usuario (undefined si no existe). */
+  async obtenerUsuario(usuarioId) {
+    const [[u]] = await pool.query(
+      'SELECT nombre, apellido, email, rol FROM usuarios WHERE id = ? LIMIT 1',
+      [usuarioId]
+    );
+    return u;
+  },
+
+  /** Ficha con esa cédula en ESTA empresa (puede no tener cuenta aún). */
+  async fichaPorCedula(cedula, empresaId) {
+    const [[ficha]] = await pool.query(
+      `SELECT t.id, t.usuario_id, t.empresa_id
+       FROM trabajadores t
+       WHERE t.cedula = ? AND t.empresa_id = ? LIMIT 1`,
+      [cedula, empresaId]
+    );
+    return ficha;
+  },
+
+  /** Cualquier cuenta ya asociada a la cédula, sin importar empresa ni rol. */
+  async cuentaPorCedula(cedula) {
+    const [[cuenta]] = await pool.query(
+      `SELECT u.id AS usuario_id, u.rol FROM usuarios u
+       INNER JOIN trabajadores t ON t.usuario_id = u.id
+       WHERE t.cedula = ? LIMIT 1`,
+      [cedula]
+    );
+    return cuenta;
+  },
+
+  /** Deja la empresa anotada en la ficha para que activarCuenta la procese. */
+  async agregarEmpresaInvitacion(trabajadorId, empresaId) {
+    await pool.query(
+      `UPDATE trabajadores
+         SET empresas_invitacion = JSON_ARRAY_APPEND(COALESCE(empresas_invitacion, JSON_ARRAY()), '$', ?)
+         WHERE id = ?`,
+      [empresaId, trabajadorId]
+    );
+  },
+
+  /** Asocia la ficha a su usuario (solo si aún no tenía uno). */
+  async vincularUsuarioAFicha(trabajadorId, usuarioId) {
+    await pool.query('UPDATE trabajadores SET usuario_id = ? WHERE id = ? AND usuario_id IS NULL', [usuarioId, trabajadorId]);
+  },
+
+  /** Fija el track de la ficha y cambia el rol global del usuario (nómina = exclusivo a una empresa). */
+  async convertirANomina(trabajadorId, usuarioId, empresaId, rolNomina, conn = pool) {
+    await conn.query('UPDATE trabajadores SET tipo = ? WHERE id = ?', ['nomina', trabajadorId]);
+    await conn.query(
+      'UPDATE usuarios SET rol = ?, empresa_id = ? WHERE id = ?',
+      [rolNomina, empresaId, usuarioId]
+    );
   },
 };
 

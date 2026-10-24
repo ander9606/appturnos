@@ -7,166 +7,51 @@
  *   jefe_nomina   → edita la ficha (nómina y turnos); el sueldo y la hora de entrada solo en nómina; no el tipo ni los datos de pago
  *   nomina        → solo lectura
  */
-import { showAlert } from '@/lib/alertDialog';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
-import { Text, TextInput } from '@/components/ui/Text';
+import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { Spinner } from '@/components/ui/Spinner';
 import React, { useState } from 'react';
-import {
-  View,
-  ScrollView,
-  Pressable,
-  Linking,
-  Modal,
-} from 'react-native';
+import { ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { confirm } from '@/lib/confirmDialog';
-import { showToast } from '@/lib/toast';
-import {
-  useTrabajador,
-  useActualizarTrabajador,
-  useDesactivarTrabajador,
-  useEliminarTrabajadorDefinitivo,
-  useActualizarSalario,
-  useHistorialSalario,
-} from '@/features/equipo/useEquipo';
-import { useInvitar, useBloquearOfertas } from '@/features/empresas/useTrabajadorEmpresa';
-import {
-  useAsignacionesTrabajador,
-  useCalificar,
-} from '@/features/turnos/useTurnos';
-import { StarRating }      from '@/features/turnos/StarRating';
+import { useTrabajador } from '@/features/equipo/useEquipo';
+import { useAsignacionesTrabajador } from '@/features/turnos/useTurnos';
 import { TrabajadorForm }  from '@/features/equipo/TrabajadorForm';
-import { MarcacionSelector } from '@/features/equipo/MarcacionSelector';
 import { CargosCertificadosCard } from '@/features/equipo/CargosCertificadosCard';
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import type { TrabajadorFormValues } from '@/features/equipo/schemas';
-import { ApiError } from '@api-client';
 import type { Asignacion } from '@api-client';
-import { COLORS } from '@/lib/designTokens';
-import { Avatar } from '@/components/ui/Avatar';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { formatCOP } from '@/lib/formatters';
 import { useRoleGuard } from '@/components/RoleGuard';
-
-// Lo que jefe_nomina puede editar de una ficha. Mismo criterio que el backend
-// (CAMPOS_JEFE_NOMINA / CAMPOS_JEFE_TURNOS en trabajadores.service.js): sin tipo ni datos de pago.
-const CAMPOS_JEFE = [
-  'nombre', 'apellido', 'cedula', 'tipo_documento', 'fecha_nacimiento', 'sexo',
-  'telefono', 'email', 'cargo', 'descripcion', 'eps', 'afp', 'direccion',
-  'contacto_emergencia_nombre', 'contacto_emergencia_tel',
-  'ant_judiciales_fecha', 'ant_disciplinarios_fecha', 'hora_entrada_esperada',
-  'tarifa_hora', 'salario_base',
-];
-// Turnos: sin sueldo ni hora de entrada, y sin los datos de persona que se copian a sus otras empresas (solo admin).
-const CAMPOS_JEFE_TURNOS = ['nombre', 'apellido', 'telefono', 'email', 'cargo'];
-
-function filtrarCampos<T extends object>(obj: T, campos: readonly string[]): Partial<T> {
-  return Object.fromEntries(Object.entries(obj).filter(([k]) => campos.includes(k))) as Partial<T>;
-}
-
-const TIPO_LABELS: Record<string, string> = {
-  turnos: 'Turnos',
-  nomina: 'Nómina',
-  ambos:  'Ambos',
-};
-
-const TIPO_DOC_LABELS: Record<string, string> = {
-  CC: 'Cédula (CC)',
-  CE: 'Cédula Ext. (CE)',
-  PAS: 'Pasaporte',
-};
-
-const SEXO_LABELS: Record<string, string> = {
-  M: 'Masculino',
-  F: 'Femenino',
-  otro: 'Otro',
-};
-
-const TIPO_CUENTA_LABELS: Record<string, string> = {
-  ahorros: 'Ahorros',
-  corriente: 'Corriente',
-};
-
-function fmtFechaCorta(iso: string | null | undefined) {
-  if (!iso) return null;
-  return new Date(iso.slice(0, 10) + 'T00:00:00').toLocaleDateString('es-CO', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  });
-}
-
-function fmtCopOpt(v: number | null) {
-  return v == null ? '—' : formatCOP(v);
-}
-
-function InfoRow({
-  label, value, onCall,
-}: {
-  label: string;
-  value: string | null | undefined;
-  /** Si se pasa, muestra un botón de llamar junto al valor (abre el marcador con el número). */
-  onCall?: () => void;
-}) {
-  if (value == null || value === '') return null;
-  return (
-    <View className="flex-row justify-between items-center py-3 border-b border-border last:border-b-0">
-      <Text className="text-sm text-muted-foreground">{label}</Text>
-      <View className="flex-row items-center gap-2 flex-1 ml-4 justify-end">
-        <Text className="text-sm font-medium text-foreground text-right">{value}</Text>
-        {onCall && (
-          <Pressable
-            onPress={onCall}
-            hitSlop={8}
-            accessibilityLabel={`Llamar a ${label}`}
-            className="w-7 h-7 rounded-full bg-success/10 items-center justify-center active:opacity-70"
-          >
-            <Ionicons name="call" size={14} color={COLORS.success} />
-          </Pressable>
-        )}
-      </View>
-    </View>
-  );
-}
+import { CAMPOS_JEFE, CAMPOS_JEFE_TURNOS } from '@/features/equipo/trabajador/fichaTrabajador';
+import {
+  HeroTrabajador, CuentaSinActivarBanner, DatosPersonalesCard, DatosAdicionales, MarcacionCard, RankingCard,
+} from '@/features/equipo/trabajador/FichaTrabajador';
+import { FilaSueldo, ModalSueldo, HistorialSueldo, useEditarSueldo } from '@/features/equipo/trabajador/SueldoTrabajador';
+import { TurnosRecientes } from '@/features/equipo/trabajador/TurnosRecientes';
+import { BloquearOfertasButton, DesactivarButton, EliminarButton } from '@/features/equipo/trabajador/AccionesTrabajador';
+import { useGuardarFicha } from '@/features/equipo/trabajador/useGuardarFicha';
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
 export default function TrabajadorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const numId   = Number(id);
-  const router  = useRouter();
   const usuario = useAuthStore((s) => s.usuario);
   const isAdmin  = usuario?.rol === 'admin_empresa';
   const canRate  = usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos';
 
   const [editing, setEditing] = useState(false);
   const [formDirty, setFormDirty] = useState(false);
-  // Calificación inline: id de la asignación que se está calificando
-  const [ratingId,       setRatingId]       = useState<number | null>(null);
-  const [ratingStars,    setRatingStars]    = useState(5);
-  const [ratingComment,  setRatingComment]  = useState('');
 
   const { data: t, isLoading, isError, error, refetch } = useTrabajador(numId);
   const { data: puntosMarcaje = [] } = usePuntosMarcaje(isAdmin && t?.tipo !== 'turnos');
-  const actualizar  = useActualizarTrabajador(numId);
-  const invitar     = useInvitar();
-  const desactivar  = useDesactivarTrabajador();
-  const eliminarDefinitivo = useEliminarTrabajadorDefinitivo();
-  const bloquearOfertas = useBloquearOfertas();
-  const calificar   = useCalificar();
-  const actualizarSalario = useActualizarSalario(numId);
+  const handleUpdate = useGuardarFicha(numId, t, isAdmin, () => setEditing(false));
   const puedeVerSalario = isAdmin || usuario?.rol === 'jefe_nomina';
-  const historialSalario  = useHistorialSalario(numId, puedeVerSalario);
   const canEditSalario = isAdmin || (usuario?.rol === 'jefe_nomina' && (t?.tipo === 'nomina' || t?.tipo === 'ambos'));
-  const [salarioModal, setSalarioModal] = useState(false);
-  const [tarifaInput,  setTarifaInput]  = useState('');
-  const [salarioInput, setSalarioInput] = useState('');
-  const [salarioError, setSalarioError] = useState<string | null>(null);
+  const sueldo = useEditarSueldo(numId, t);
 
   // Turnos recientes del trabajador (solo para roles que pueden ver asignaciones)
   const showTurnos = canRate || isAdmin;
@@ -180,31 +65,6 @@ export default function TrabajadorDetailScreen() {
 
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos', 'jefe_nomina', 'nomina']);
   if (denied) return denied;
-
-  function abrirSalario() {
-    setTarifaInput(t?.tarifa_hora != null ? String(t.tarifa_hora) : '');
-    setSalarioInput(t?.salario_base != null ? String(t.salario_base) : '');
-    setSalarioError(null);
-    setSalarioModal(true);
-  }
-
-  async function guardarSalario() {
-    const parse = (v: string) => (v.trim() === '' ? null : Number(v.replace(',', '.')));
-    const tarifa = parse(tarifaInput);
-    const salario = parse(salarioInput);
-    const invalido = (n: number | null) => n !== null && (!Number.isFinite(n) || n < 0);
-    if (invalido(tarifa) || invalido(salario)) {
-      setSalarioError('Ingresa valores numéricos mayores o iguales a 0.');
-      return;
-    }
-    try {
-      await actualizarSalario.mutateAsync({ tarifa_hora: tarifa, salario_base: salario });
-      setSalarioModal(false);
-      showToast('Sueldo actualizado.');
-    } catch (err: unknown) {
-      setSalarioError(err instanceof ApiError ? err.message : 'No se pudo guardar el sueldo.');
-    }
-  }
 
   // ── Header right button (edit toggle) ────────────────────────────────
 
@@ -237,176 +97,6 @@ export default function TrabajadorDetailScreen() {
         </Pressable>
       )
     : undefined;
-
-  // ── Submit edit ───────────────────────────────────────────────────────
-
-  async function handleUpdate(rawData: TrabajadorFormValues) {
-    // `handleUpdate` solo se invoca desde el form de edición, que ya requiere
-    // `t` cargado (ver el `if (isError || !t) return ...` de abajo) — este
-    // guard es solo para que TS lo sepa acá también.
-    if (!t) return;
-
-    // turnos/ambos → nómina no se guarda directo desde acá: nómina ata la
-    // cuenta a esta empresa en exclusiva, así que el trabajador debe aceptar
-    // o rechazar (igual que "Invitar trabajador"). Enviamos la invitación con
-    // la cédula que ya está en la ficha en vez de mandar al gestor a buscarla
-    // de nuevo en otra pantalla.
-    const pasaANomina = t.tipo !== 'nomina' && rawData.tipo === 'nomina';
-    let data = rawData;
-    let invitacionEnviada = false;
-
-    if (pasaANomina) {
-      if (!rawData.cedula) {
-        showAlert(
-          'Falta la cédula',
-          'Este trabajador no tiene cédula registrada. Agrégala y guarda antes de invitarlo a nómina.'
-        , 'warning');
-        return;
-      }
-      const ok = await confirm({
-        title: 'Enviar solicitud de nómina',
-        message:
-          `Nómina implica exclusividad: si ${rawData.nombre} acepta, dejará de estar disponible para turnos en ` +
-          'otras empresas (sus demás vínculos se archivan automáticamente). No se convierte de inmediato — se le ' +
-          'envía la solicitud y debe aceptarla o rechazarla desde su cuenta.',
-        confirmLabel: 'Enviar solicitud',
-      });
-      if (!ok) return;
-
-      // tipo se manda sin cambios porque la conversión la resuelve la invitación
-      // cuando el trabajador la acepte, no este formulario.
-      data = { ...rawData, tipo: t.tipo };
-    }
-
-    try {
-      const payload = {
-        nombre:       data.nombre,
-        apellido:     data.apellido,
-        tipo:         data.tipo,
-        cedula:       data.cedula   || undefined,
-        tipo_documento: (data.tipo_documento as 'CC' | 'CE' | 'PAS') || undefined,
-        fecha_nacimiento: data.fecha_nacimiento || undefined,
-        sexo:         (data.sexo as 'M' | 'F' | 'otro') || undefined,
-        email:        data.email    || undefined,
-        telefono:     data.telefono || undefined,
-        direccion:    data.direccion || undefined,
-        contacto_emergencia_nombre: data.contacto_emergencia_nombre || undefined,
-        contacto_emergencia_tel:    data.contacto_emergencia_tel    || undefined,
-        cargo:        data.cargo    || undefined,
-        tarifa_hora:  data.tarifa_hora,
-        salario_base: data.salario_base,
-        hora_entrada_esperada: data.hora_entrada_esperada || undefined,
-        eps:          data.eps          || undefined,
-        afp:          data.afp          || undefined,
-        banco:        data.banco        || undefined,
-        tipo_cuenta:  (data.tipo_cuenta as 'ahorros' | 'corriente') || undefined,
-        numero_cuenta: data.numero_cuenta || undefined,
-        ant_judiciales_fecha:     data.ant_judiciales_fecha     || undefined,
-        ant_disciplinarios_fecha: data.ant_disciplinarios_fecha || undefined,
-      };
-      await actualizar.mutateAsync(isAdmin ? payload : filtrarCampos(payload, t.tipo === 'turnos' ? CAMPOS_JEFE_TURNOS : CAMPOS_JEFE));
-      if (pasaANomina && rawData.cedula) {
-        // Invitar DESPUÉS de guardar: invitar() busca la ficha por cédula en la
-        // BD, y si la cédula nueva aún no está persistida crea una ficha fantasma.
-        try {
-          await invitar.mutateAsync({ cedula: rawData.cedula, tipo: 'nomina' });
-          invitacionEnviada = true;
-        } catch (err: unknown) {
-          const msg = err instanceof ApiError ? err.message : 'No se pudo enviar la invitación.';
-          showAlert('Error', msg);
-        }
-      }
-      setEditing(false);
-      showToast(
-        invitacionEnviada
-          ? 'Solicitud de nómina enviada. El trabajador debe aceptarla desde su cuenta.'
-          : 'Los datos del trabajador fueron actualizados.'
-      );
-    } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message: string }).message)
-          : 'Ocurrió un error al guardar.';
-      showAlert('Error', msg);
-    }
-  }
-
-  // ── Calificar ─────────────────────────────────────────────────────────
-
-  async function handleCalificar() {
-    if (!ratingId) return;
-    try {
-      await calificar.mutateAsync({
-        id: ratingId,
-        calificacion: ratingStars,
-        comentario: ratingComment.trim() || undefined,
-      });
-      setRatingId(null);
-      setRatingComment('');
-      setRatingStars(5);
-      showToast(`Turno calificado con ${ratingStars}/5 estrellas.`);
-    } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message: string }).message)
-          : 'No se pudo guardar la calificación.';
-      showAlert('Error', msg);
-    }
-  }
-
-  // ── Desactivar ────────────────────────────────────────────────────────
-
-  async function confirmDesactivar() {
-    const ok = await confirm({
-      title: '¿Desactivar trabajador?',
-      message: `${t?.nombre} ${t?.apellido} no podrá iniciar sesión ni recibir turnos.`,
-      confirmLabel: 'Desactivar',
-      destructive: true,
-    });
-    if (!ok) return;
-    desactivar.mutate(numId, {
-      onSuccess: () => router.back(),
-      onError: () => showAlert('Error', 'No se pudo desactivar. Intenta de nuevo.'),
-    });
-  }
-
-  // ── Bloquear ofertas (admin_empresa + jefe_turnos) ────────────────────
-
-  async function confirmBloquearOfertas() {
-    const ok = await confirm({
-      title: '¿Dejar de ofrecerle turnos?',
-      message: `${t?.nombre} ${t?.apellido} ya no verá ofertas tuyas ni podrá tomar turnos contigo, hasta que vuelva a solicitar el vínculo. Su ficha y su historial no se tocan.`,
-      confirmLabel: 'Dejar de ofrecerle turnos',
-      destructive: true,
-    });
-    if (!ok) return;
-    bloquearOfertas.mutate(numId, {
-      onSuccess: () => showToast('Ya no se le ofrecerán turnos.'),
-      onError: (err: unknown) => {
-        const msg = err instanceof ApiError ? err.message : 'No se pudo completar la acción';
-        showAlert('Error', msg);
-      },
-    });
-  }
-
-  // ── Eliminar definitivamente ──────────────────────────────────────────
-
-  async function confirmEliminarDefinitivo() {
-    const ok = await confirm({
-      title: '¿Eliminar trabajador?',
-      message: `Esto borra a ${t?.nombre} ${t?.apellido} para siempre. No se puede deshacer. Si tiene turnos, nómina o calificaciones registradas, no se podrá eliminar.`,
-      confirmLabel: 'Eliminar',
-      destructive: true,
-    });
-    if (!ok) return;
-    eliminarDefinitivo.mutate(numId, {
-      onSuccess: () => router.back(),
-      onError: (err: unknown) => {
-        const msg = err instanceof ApiError ? err.message : 'No se pudo eliminar. Intenta de nuevo.';
-        showAlert('Error', msg);
-      },
-    });
-  }
 
   // ── Loading / Error states ────────────────────────────────────────────
 
@@ -479,15 +169,6 @@ export default function TrabajadorDetailScreen() {
 
   // ── Detail view ───────────────────────────────────────────────────────
 
-  // Los trabajadores 'turnos' no tienen tarifa fija: cobran por turno aceptado (tarifa_dia de la oferta).
-  const salarioLabel = t.tipo === 'turnos'
-    ? 'Por turno aceptado'
-    : t.salario_base != null
-    ? `$${Number(t.salario_base).toLocaleString('es-CO')} / mes`
-    : t.tarifa_hora != null
-    ? `$${Number(t.tarifa_hora).toLocaleString('es-CO')} / hora`
-    : 'Sin configurar';
-
   return (
     <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
       <Stack.Screen
@@ -503,139 +184,25 @@ export default function TrabajadorDetailScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero */}
-        <View className="items-center pt-8 pb-6 px-4">
-          <View className="mb-3">
-            <Avatar id={t.id} nombre={t.nombre} apellido={t.apellido} fotoB64={t.foto_perfil} size={80} expandable />
-          </View>
-          <Text className="text-xl font-bold text-foreground">
-            {t.nombre} {t.apellido}
-          </Text>
-          {t.cargo && (
-            <Text className="text-sm text-muted-foreground mt-0.5">{t.cargo}</Text>
-          )}
-          <View className="flex-row gap-2 mt-2 items-center">
-            <View className="bg-primary/10 rounded-full px-3 py-1">
-              <Text className="text-primary text-xs font-semibold">
-                {TIPO_LABELS[t.tipo] ?? t.tipo}
-              </Text>
-            </View>
-            {!t.activo && (
-              <View className="bg-danger/10 rounded-full px-3 py-1">
-                <Text className="text-danger text-xs font-semibold">Inactivo</Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Sobre mí — descripción libre que el trabajador escribe sobre sí mismo */}
-        {t.descripcion && (
-          <View className="mx-4 mb-3 bg-card rounded-2xl border border-border px-4 py-3.5">
-            <Text className="text-xs text-muted-foreground mb-1">Sobre mí</Text>
-            <Text className="text-sm text-foreground leading-5">{t.descripcion}</Text>
-          </View>
-        )}
+        {/* Hero + Sobre mí */}
+        <HeroTrabajador t={t} />
 
         {/* Pending activation banner — shown to admin when worker hasn't set up login yet */}
-        {isAdmin && t.usuario_id === null && (
-          <View className="mx-4 mb-3 bg-warning/10 border border-warning/30 rounded-2xl p-4 flex-row gap-3">
-            <Ionicons name="time-outline" size={20} color={COLORS.warningDark} style={{ marginTop: 1 }} />
-            <View className="flex-1 gap-1">
-              <Text className="text-sm font-semibold" style={{ color: COLORS.warningText }}>Cuenta sin activar</Text>
-              <Text className="text-xs text-muted-foreground">
-                {t.cedula
-                  ? `Pídele que descargue la app y use "Activar cuenta" con la cédula ${t.cedula}.`
-                  : 'Pídele que descargue la app y use "Activar cuenta" con su número de cédula.'}
-              </Text>
-            </View>
-          </View>
-        )}
+        {isAdmin && t.usuario_id === null && <CuentaSinActivarBanner t={t} />}
 
         {/* Info card */}
-        <View className="mx-4 bg-card rounded-2xl border border-border px-4">
-          <InfoRow label="Cédula"     value={t.cedula} />
-          <InfoRow label="Tipo de documento" value={t.tipo_documento ? TIPO_DOC_LABELS[t.tipo_documento] : null} />
-          <InfoRow label="Correo"     value={t.email} />
-          <InfoRow
-            label="Teléfono"
-            value={t.telefono}
-            onCall={t.telefono ? () => Linking.openURL(`tel:${t.telefono}`) : undefined}
-          />
-          <InfoRow label="Fecha de nacimiento" value={fmtFechaCorta(t.fecha_nacimiento)} />
-          <InfoRow label="Sexo"       value={t.sexo ? SEXO_LABELS[t.sexo] : null} />
-          <InfoRow label="Salario"    value={salarioLabel} />
-          <InfoRow
-            label="Miembro desde"
-            value={new Date(t.created_at).toLocaleDateString('es-CO', {
-              year: 'numeric', month: 'long', day: 'numeric',
-            })}
-          />
-        </View>
+        <DatosPersonalesCard t={t} />
 
         {/* Sueldo — jefe_nomina y admin pueden cambiarlo */}
-        {canEditSalario && t.activo && (
-          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4 py-3 flex-row items-center justify-between">
-            <Text className="text-sm text-muted-foreground">Sueldo</Text>
-            <Pressable onPress={abrirSalario} hitSlop={8} accessibilityRole="button" className="active:opacity-70">
-              <Text className="text-sm font-semibold text-primary">Editar sueldo</Text>
-            </Pressable>
-          </View>
-        )}
+        {canEditSalario && t.activo && <FilaSueldo onEditar={sueldo.abrirSalario} />}
 
-        {/* Contacto de emergencia */}
-        {(t.contacto_emergencia_nombre || t.contacto_emergencia_tel) && (
-          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4">
-            <InfoRow label="Contacto de emergencia" value={t.contacto_emergencia_nombre} />
-            <InfoRow
-              label="Teléfono de emergencia"
-              value={t.contacto_emergencia_tel}
-              onCall={t.contacto_emergencia_tel ? () => Linking.openURL(`tel:${t.contacto_emergencia_tel}`) : undefined}
-            />
-          </View>
-        )}
-
-        {/* Dirección — se imprime en el contrato de prestación de servicios, aplica a cualquier tipo */}
-        {!!t.direccion && (
-          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4">
-            <InfoRow label="Dirección" value={t.direccion} />
-          </View>
-        )}
-
-        {/* Seguridad social, banco y antecedentes — solo aplica a nómina/ambos */}
-        {t.tipo !== 'turnos' && (t.eps || t.afp || t.banco || t.numero_cuenta || t.ant_judiciales_fecha || t.ant_disciplinarios_fecha) && (
-          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4">
-            <InfoRow label="EPS"  value={t.eps} />
-            <InfoRow label="AFP"  value={t.afp} />
-            <InfoRow label="Banco" value={t.banco} />
-            <InfoRow label="Tipo de cuenta" value={t.tipo_cuenta ? TIPO_CUENTA_LABELS[t.tipo_cuenta] : null} />
-            <InfoRow label="Número de cuenta" value={t.numero_cuenta} />
-            <InfoRow label="Antecedentes judiciales" value={fmtFechaCorta(t.ant_judiciales_fecha)} />
-            <InfoRow label="Antecedentes disciplinarios" value={fmtFechaCorta(t.ant_disciplinarios_fecha)} />
-          </View>
-        )}
+        <DatosAdicionales t={t} />
 
         {/* Marcación — admin, solo trabajadores de nómina/ambos */}
-        {isAdmin && t.tipo !== 'turnos' && (
-          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border p-4 gap-3">
-            <Text className="text-sm font-semibold text-foreground">Marcación</Text>
-            <MarcacionSelector trabajador={t} puntos={puntosMarcaje} />
-          </View>
-        )}
+        {isAdmin && t.tipo !== 'turnos' && <MarcacionCard t={t} puntos={puntosMarcaje} />}
 
         {/* Ranking card */}
-        <View className="mx-4 mt-3 bg-card rounded-2xl border border-border px-4 py-4 flex-row items-center justify-between">
-          <Text className="text-sm text-muted-foreground">Calificación promedio</Text>
-          {t.total_calificaciones > 0 ? (
-            <View className="flex-row items-center gap-2">
-              <StarRating mode="display" value={Number(t.ranking)} size="sm" />
-              <Text className="text-xs text-muted-foreground">
-                ({t.total_calificaciones} {t.total_calificaciones === 1 ? 'turno' : 'turnos'})
-              </Text>
-            </View>
-          ) : (
-            <Text className="text-sm text-muted-foreground italic">Sin calificaciones aún</Text>
-          )}
-        </View>
+        <RankingCard t={t} />
 
         {/* Cargos certificados — solo si ya activó su cuenta (existe el vínculo trabajador_empresa) */}
         {canRate && t.usuario_id !== null && (
@@ -644,207 +211,22 @@ export default function TrabajadorDetailScreen() {
 
         {/* Turnos recientes — visible para gestores que pueden calificar */}
         {showTurnos && turnosRecientes.length > 0 && (
-          <View className="mx-4 mt-3">
-            <Text className="text-sm font-semibold text-foreground mb-2">
-              Turnos recientes
-            </Text>
-
-            {turnosRecientes.map((a: Asignacion) => {
-              const yaCalificado = a.calificacion != null;
-              const isOpen       = ratingId === a.id;
-
-              return (
-                <View
-                  key={a.id}
-                  className="bg-card rounded-2xl border border-border mb-2 overflow-hidden"
-                >
-                  {/* Header row */}
-                  <View className="px-4 py-3 flex-row items-center justify-between">
-                    <View className="flex-1 mr-3">
-                      <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
-                        {(a as any).oferta_titulo ?? `Turno #${a.id}`}
-                      </Text>
-                      <Text className="text-xs text-muted-foreground">
-                        {(a as any).oferta_fecha ?? ''}
-                        {a.estado === 'no_presentado' ? '  ·  No presentado' : ''}
-                      </Text>
-                    </View>
-
-                    {a.estado === 'completado' && (
-                      yaCalificado ? (
-                        <StarRating mode="display" value={a.calificacion} size="sm" />
-                      ) : canRate ? (
-                        <Pressable
-                          onPress={() => {
-                            setRatingId(isOpen ? null : a.id);
-                            setRatingStars(5);
-                            setRatingComment('');
-                          }}
-                          className="bg-warning/10 rounded-full px-3 py-1 active:opacity-70"
-                        >
-                          <Text className="text-warning text-xs font-semibold">
-                            {isOpen ? 'Cancelar' : 'Calificar ★'}
-                          </Text>
-                        </Pressable>
-                      ) : (
-                        <Text className="text-xs text-muted-foreground italic">Sin calificar</Text>
-                      )
-                    )}
-                  </View>
-
-                  {/* Inline rating form */}
-                  {isOpen && (
-                    <View className="border-t border-border px-4 pb-4 pt-3 gap-3">
-                      <View className="flex-row items-center justify-between">
-                        <Text className="text-xs font-semibold text-muted-foreground">
-                          CALIFICACIÓN
-                        </Text>
-                        <StarRating
-                          mode="input"
-                          value={ratingStars}
-                          onChange={setRatingStars}
-                          size="lg"
-                        />
-                      </View>
-
-                      <TextInput
-                        className="bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground"
-                        placeholder="Comentario opcional…"
-                        placeholderTextColor={COLORS.placeholder}
-                        value={ratingComment}
-                        onChangeText={setRatingComment}
-                        maxLength={500}
-                        multiline
-                        numberOfLines={2}
-                      />
-
-                      <Pressable
-                        onPress={handleCalificar}
-                        disabled={calificar.isPending}
-                        className={`h-10 rounded-xl items-center justify-center ${
-                          calificar.isPending ? 'bg-primary/50' : 'bg-primary active:bg-primary/80'
-                        }`}
-                      >
-                        {calificar.isPending ? (
-                          <Spinner color="white" size="small" />
-                        ) : (
-                          <Text className="text-white font-bold text-sm">
-                            Confirmar calificación
-                          </Text>
-                        )}
-                      </Pressable>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </View>
+          <TurnosRecientes turnos={turnosRecientes as Asignacion[]} canRate={canRate} />
         )}
 
         {/* Dejar de ofrecerle turnos — admin_empresa + jefe_turnos, solo tipo turnos/ambos */}
-        {canRate && t.activo && (t.tipo === 'turnos' || t.tipo === 'ambos') && (
-          <View className="mx-4 mt-6">
-            <Pressable
-              onPress={confirmBloquearOfertas}
-              disabled={bloquearOfertas.isPending}
-              className="h-12 rounded-xl items-center justify-center border border-warning active:bg-warning/10 disabled:opacity-50"
-            >
-              {bloquearOfertas.isPending ? (
-                <Spinner size="small" color={COLORS.warningDark} />
-              ) : (
-                <Text className="text-warning font-semibold">Dejar de ofrecerle turnos</Text>
-              )}
-            </Pressable>
-          </View>
-        )}
+        {canRate && t.activo && (t.tipo === 'turnos' || t.tipo === 'ambos') && <BloquearOfertasButton t={t} />}
 
         {/* Desactivar button — admin only, active workers */}
-        {isAdmin && t.activo && (
-          <View className="mx-4 mt-6">
-            <Pressable
-              onPress={confirmDesactivar}
-              className="h-12 rounded-xl items-center justify-center border border-danger active:bg-danger/10"
-            >
-              <Text className="text-danger font-semibold">Desactivar trabajador</Text>
-            </Pressable>
-          </View>
-        )}
+        {isAdmin && t.activo && <DesactivarButton t={t} />}
 
         {/* Eliminar button — admin only, once deactivated */}
-        {isAdmin && !t.activo && (
-          <View className="mx-4 mt-6">
-            <Pressable
-              onPress={confirmEliminarDefinitivo}
-              disabled={eliminarDefinitivo.isPending}
-              className="h-12 rounded-xl items-center justify-center bg-danger active:bg-danger/80 disabled:opacity-50"
-            >
-              <Text className="text-white font-semibold">
-                {eliminarDefinitivo.isPending ? 'Eliminando…' : 'Eliminar trabajador'}
-              </Text>
-            </Pressable>
-          </View>
-        )}
-        {puedeVerSalario && (
-          <View className="mx-4 mt-3 bg-card rounded-2xl border border-border p-4 gap-3">
-            <View className="gap-0.5">
-              <Text className="text-sm font-semibold text-foreground">Historial de sueldo</Text>
-              <Text className="text-xs text-muted-foreground">Registro de auditoría. No se puede editar ni borrar.</Text>
-            </View>
-            {historialSalario.isLoading ? (
-              <Spinner />
-            ) : (historialSalario.data ?? []).length === 0 ? (
-              <Text className="text-sm text-muted-foreground">Sin cambios registrados.</Text>
-            ) : (
-              (historialSalario.data ?? []).map((c) => (
-                <View key={c.id} className="border-t border-border/60 pt-2 gap-0.5">
-                  <Text className="text-xs text-muted-foreground">
-                    {new Date(c.created_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    {' '}{new Date(c.created_at).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-                    {' · '}{c.usuario_nombre} ({c.usuario_rol})
-                  </Text>
-                  <Text className="text-sm text-foreground">Tarifa/h: {fmtCopOpt(c.tarifa_hora_anterior)} → {fmtCopOpt(c.tarifa_hora_nueva)}</Text>
-                  <Text className="text-sm text-foreground">Salario: {fmtCopOpt(c.salario_base_anterior)} → {fmtCopOpt(c.salario_base_nueva)}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        )}
+        {isAdmin && !t.activo && <EliminarButton t={t} />}
+
+        <HistorialSueldo numId={numId} habilitado={puedeVerSalario} />
       </ScrollView>
 
-      <Modal visible={salarioModal} transparent animationType="fade" onRequestClose={() => setSalarioModal(false)}>
-        <View className="flex-1 bg-black/40 items-center justify-center px-6">
-          <View className="w-full bg-card rounded-2xl p-5 gap-4">
-            <Text className="text-base font-semibold text-foreground">Editar sueldo</Text>
-            <Input
-              label="Tarifa por hora (COP)"
-              keyboardType="decimal-pad"
-              value={tarifaInput}
-              onChangeText={setTarifaInput}
-            />
-            <Input
-              label="Salario base mensual (COP)"
-              keyboardType="decimal-pad"
-              value={salarioInput}
-              onChangeText={setSalarioInput}
-              error={salarioError ?? undefined}
-            />
-            <Text className="text-xs text-muted-foreground">
-              Deja vacío para quitar el valor. Los períodos de nómina ya cerrados no cambian.
-            </Text>
-            <View className="flex-row gap-3">
-              <Pressable
-                onPress={() => setSalarioModal(false)}
-                className="flex-1 h-12 rounded-xl items-center justify-center border border-border active:opacity-70"
-              >
-                <Text className="text-foreground font-semibold">Cancelar</Text>
-              </Pressable>
-              <View className="flex-1">
-                <Button label="Guardar" onPress={guardarSalario} loading={actualizarSalario.isPending} fullWidth />
-              </View>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <ModalSueldo e={sueldo} />
     </SafeAreaView>
   );
 }

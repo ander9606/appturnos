@@ -59,10 +59,9 @@ describe('OfertasService.aplicar — trabajador multi-empresa (empresaId null)',
       puestos: [{ id: 20, cargo_id: 3, cargo_nombre: 'auxiliar', plazas: 1, plazas_cubiertas: 0 }],
     };
 
-    // 1ª query: resuelve la empresa dueña de la oferta. 2ª: gestores a notificar (ninguno).
-    pool.query
-      .mockResolvedValueOnce([[{ empresa_id: 7 }]])
-      .mockResolvedValueOnce([[]]);
+    // La empresa dueña de la oferta la resuelve OfertasModel; al pool solo llega la consulta de gestores a notificar (ninguno).
+    OfertasModel.obtenerEmpresaId.mockResolvedValue(7);
+    pool.query.mockResolvedValueOnce([[]]);
 
     // El trabajador tiene ranking distinto por empresa: elite (delay 0) en la
     // empresa 7 (dueña de la oferta) pero bajo (delay 60) en la empresa 8,

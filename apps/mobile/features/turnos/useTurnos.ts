@@ -284,6 +284,19 @@ export function useReconfirmarAsignacion() {
   });
 }
 
+/** El trabajador cancela su turno confirmado (penaliza si faltan < 12 h; ver `penalizado` en la respuesta). */
+export function useCancelarPropiaAsignacion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => turnosApi.cancelarPropia(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+    },
+  });
+}
+
 /** Liquidación de turnos por trabajador (gestores/admin). */
 export function useLiquidacionTurnos(
   params?: { fecha_inicio?: string; fecha_fin?: string },
@@ -317,7 +330,6 @@ export function useCalificar() {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.asignacion(id) });
       qc.invalidateQueries({ queryKey: ['asignaciones'] });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.misTurnos });
-      qc.invalidateQueries({ queryKey: ['trabajadores'] }); // ranking update
     },
   });
 }
@@ -575,6 +587,18 @@ export function useEliminarDescuento() {
 }
 
 /** Agrega una vacante a una oferta existente; refresca la oferta para ver el puesto nuevo. */
+export function useActualizarPuesto() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, puestoId, plazas }: { ofertaId: number; puestoId: number; plazas: number }) =>
+      turnosApi.actualizarPuesto(ofertaId, puestoId, { plazas }),
+    onSuccess: (_data, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+    },
+  });
+}
+
 export function useCrearPuesto() {
   const qc = useQueryClient();
   return useMutation({

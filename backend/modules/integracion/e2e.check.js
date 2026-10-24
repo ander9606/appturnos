@@ -27,7 +27,6 @@ console.log('1. Emparejamiento ...');
   const K   = 'lt_' + crypto.randomBytes(32).toString('hex');
   const nonce = crypto.randomBytes(24).toString('base64url');
   const LOGIQ360_BASE = 'https://logiq360.test';
-  const AT_BASE       = 'https://turnos.test';
 
   // Código que el usuario copia de logiq360 y pega en App Turnos
   const codigo = Buffer.from(JSON.stringify({ url: LOGIQ360_BASE, nonce }), 'utf8').toString('base64url');
@@ -129,8 +128,6 @@ console.log('3. orden.creada ...');
   OfertasModel.crear = async (_eid, datos) => { ofertas.push(datos); return { id: 500 }; };
 
   const { procesar } = require('./entrantes.handlers');
-  // Resetear cache del cargo auxiliar para usar nuestro mock
-  const handlers = require('./entrantes.handlers');
 
   await procesar('orden.creada', 1, {
     external_ref: 'logiq360:orden:301',

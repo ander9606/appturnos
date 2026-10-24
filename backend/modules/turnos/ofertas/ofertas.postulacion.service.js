@@ -1,11 +1,11 @@
 'use strict';
 
-const { pool } = require('../../../config/database');
 const OfertasModel = require('./ofertas.model');
 const AsignacionesModel = require('../asignaciones/asignaciones.model');
 const TrabajadorEmpresaModel = require('../../trabajador-empresa/trabajador-empresa.model');
 const CargosModel = require('../../cargos/cargos.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
+const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const AppError = require('../../../utils/AppError');
 const { ROLES } = require('../../../config/constants');
 const { delayPorRanking } = require('../../../utils/rankingUtils');
@@ -50,12 +50,9 @@ module.exports = {
     // Resolver empresa real de la oferta (multi-empresa para TRABAJADOR_TURNOS).
     let empresaOfertaId = empresaId;
     if (!empresaId) {
-      const [[ofertaBase]] = await pool.query(
-        'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
-        [ofertaId]
-      );
-      if (!ofertaBase) throw new AppError('Oferta no encontrada', 404);
-      empresaOfertaId = ofertaBase.empresa_id;
+      const empresaDeLaOferta = await OfertasModel.obtenerEmpresaId(ofertaId);
+      if (!empresaDeLaOferta) throw new AppError('Oferta no encontrada', 404);
+      empresaOfertaId = empresaDeLaOferta;
 
       const ids = empresasActivas && empresasActivas.length
         ? empresasActivas
@@ -140,14 +137,10 @@ module.exports = {
     );
 
     // Notifica a jefes de turno y admin que hay una postulación nueva (best-effort).
-    const [gestores] = await pool.query(
-      `SELECT id FROM usuarios
-       WHERE empresa_id = ? AND rol IN ('jefe_turnos', 'admin_empresa') AND activo = 1`,
-      [empresaOfertaId]
-    );
-    if (gestores.length > 0) {
+    const gestoresIds = await NotificacionesModel.idsGestoresTurnos(empresaOfertaId);
+    if (gestoresIds.length > 0) {
       await NotificacionesService.notificarVarios(
-        gestores.map((g) => g.id),
+        gestoresIds,
         {
           empresaId: empresaOfertaId,
           tipo: 'postulacion.nueva',
@@ -168,12 +161,9 @@ module.exports = {
 
     let empresaOfertaId = empresaId;
     if (!empresaId) {
-      const [[ofertaBase]] = await pool.query(
-        'SELECT empresa_id FROM ofertas_turno WHERE id = ? LIMIT 1',
-        [ofertaId]
-      );
-      if (!ofertaBase) throw new AppError('No estás postulado a esta oferta', 404);
-      empresaOfertaId = ofertaBase.empresa_id;
+      const empresaDeLaOferta = await OfertasModel.obtenerEmpresaId(ofertaId);
+      if (!empresaDeLaOferta) throw new AppError('No estás postulado a esta oferta', 404);
+      empresaOfertaId = empresaDeLaOferta;
     }
 
     const trabajador = await resolverTrabajador(empresaOfertaId, usuarioId);

@@ -9,7 +9,7 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Text } from '@/components/ui/Text';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { COLORS } from '@/lib/designTokens';
+import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,8 +28,9 @@ import { useNominaTrabajador } from './useNominaTrabajador';
 import { analizarDia } from './nominaTrabajadorUtils';
 import { useMisCompensatorios } from '../compensatorios/useCompensatorios';
 import { useRegistrosHistorial } from '../useNomina';
+import { NavegadorMes } from '@/components/ui/NavegadorMes';
 import { MonthCalendar } from '@/components/ui/MonthCalendar';
-import { getMonthGrid, shiftMonth, MESES_LARGOS, type CalendarDay } from '@/lib/calendar';
+import { getMonthGrid, shiftMonth, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import { bogotaToday } from '@/lib/formatters';
 import type { TipoDia } from '@api-client';
 
@@ -53,6 +54,10 @@ export function NominaTrabajadorView() {
     return { year: y, month: m };
   });
   const mesWeeks = useMemo(() => getMonthGrid(mesCursor.year, mesCursor.month), [mesCursor]);
+  const mesAnterior  = () => setMesCursor(c => shiftMonth(c, -1));
+  const mesSiguiente = () => setMesCursor(c => shiftMonth(c, 1));
+  const hoyCursor    = mesDeHoy();
+  const esMesActual  = mesCursor.year === hoyCursor.year && mesCursor.month === hoyCursor.month;
   const { data: historialResp } = useRegistrosHistorial({
     enabled: activeTab === 'nomina' && viewMode === 'mes',
     fechaDesde: mesWeeks[0][0].date,
@@ -298,40 +303,55 @@ export function NominaTrabajadorView() {
 
                 {viewMode === 'mes' && (
                   <View className="gap-2">
-                    <View className="flex-row items-center gap-3">
-                      <TouchableOpacity
-                        onPress={() => setMesCursor(c => shiftMonth(c, -1))}
-                        className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-                      >
-                        <Ionicons name="chevron-back" size={16} color={theme.primary} />
-                      </TouchableOpacity>
-                      <Text className="text-sm font-semibold text-foreground flex-1 text-center">
-                        {MESES_LARGOS[mesCursor.month - 1]} {mesCursor.year}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => setMesCursor(c => shiftMonth(c, 1))}
-                        className="w-8 h-8 items-center justify-center rounded-lg border border-border"
-                      >
-                        <Ionicons name="chevron-forward" size={16} color={theme.primary} />
-                      </TouchableOpacity>
-                    </View>
+                    <NavegadorMes
+                      mes={mesCursor.month}
+                      anio={mesCursor.year}
+                      onAnterior={mesAnterior}
+                      onSiguiente={mesSiguiente}
+                      onHoy={esMesActual ? undefined : () => setMesCursor(mesDeHoy())}
+                    />
                     <MonthCalendar
                       weeks={mesWeeks}
+                      onMesAnterior={mesAnterior}
+                      onMesSiguiente={mesSiguiente}
                       renderDay={(day: CalendarDay) => {
                         const tipoDia = tipoDiaPorFecha.get(day.date);
                         const esLibre = (tipoDia && DIA_LIBRE[tipoDia]) || compensatoriosAsignadosPorFecha.has(day.date);
                         const esAusencia = tipoDia && DIA_AUSENCIA[tipoDia];
-                        if (!esLibre && !esAusencia) return null;
+                        // Franja del período que se está liquidando: sus días y el de cierre.
+                        const enPeriodo = !!periodoActivo && periodoActivo.fecha_inicio <= day.date && day.date <= periodoActivo.fecha_fin;
+                        const esCierre = periodoActivo?.fecha_fin === day.date;
+                        if (!esLibre && !esAusencia && !enPeriodo) return null;
                         return (
-                          <View className={`flex-1 -m-1 mt-0 rounded-b-md items-center justify-end py-0.5 ${esLibre ? 'bg-success-light' : 'bg-warning-light'}`}>
-                            <Text className="text-foreground" style={{ fontSize: 8, fontWeight: '700' }}>
-                              {esLibre ? 'Libre' : 'Ausencia'}
-                            </Text>
+                          <View className="flex-1 -mx-1 -mb-1 mt-0 justify-end">
+                            {(esLibre || esAusencia) && (
+                              <View className={`flex-1 rounded-t-md items-center justify-end py-0.5 ${esLibre ? 'bg-success-light' : 'bg-warning-light'}`}>
+                                <Text className="text-foreground" style={{ fontSize: 8, fontWeight: '700' }}>
+                                  {esLibre ? 'Libre' : 'Ausencia'}
+                                </Text>
+                              </View>
+                            )}
+                            {enPeriodo && (
+                              <View
+                                className={`items-center justify-center ${esCierre ? 'h-3.5' : 'h-1'}`}
+                                style={{ backgroundColor: alpha(theme.primary, esCierre ? 0.3 : 0.2) }}
+                              >
+                                {esCierre && <Text className="text-foreground" style={{ fontSize: 8, fontWeight: '700' }}>Cierre</Text>}
+                              </View>
+                            )}
                           </View>
                         );
                       }}
                     />
-                    <View className="flex-row items-center gap-4 justify-center mt-1">
+                    <View className="flex-row items-center gap-x-4 gap-y-1 justify-center mt-1 flex-wrap">
+                      <View className="flex-row items-center gap-1.5">
+                        <View className="w-3 h-1 rounded" style={{ backgroundColor: alpha(theme.primary, 0.3) }} />
+                        <Text className="text-xs text-muted-foreground">Período actual</Text>
+                      </View>
+                      <View className="flex-row items-center gap-1.5">
+                        <Ionicons name="flag" size={10} color={theme.primary} />
+                        <Text className="text-xs text-muted-foreground">Festivo</Text>
+                      </View>
                       <View className="flex-row items-center gap-1.5">
                         <View className="w-2.5 h-2.5 rounded bg-success-light" />
                         <Text className="text-xs text-muted-foreground">Descanso / vacaciones</Text>

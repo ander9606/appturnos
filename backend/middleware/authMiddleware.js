@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = rateLimit;
 const AppError = require('../utils/AppError');
-const { pool } = require('../config/database');
+const TrabajadorEmpresaModel = require('../modules/trabajador-empresa/trabajador-empresa.model');
 const { ROLES } = require('../config/constants');
 
 /**
@@ -95,13 +95,7 @@ async function resolverEmpresasActivas(req, _res, next) {
     return next();
   }
   try {
-    const [filas] = await pool.query(
-      `SELECT te.empresa_id FROM trabajador_empresa te
-       JOIN empresas e ON e.id = te.empresa_id AND e.activo = 1
-       WHERE te.usuario_id = ? AND te.estado = 'activo'`,
-      [req.usuario.sub]
-    );
-    req.empresasActivas = filas.map((f) => f.empresa_id);
+    req.empresasActivas = await TrabajadorEmpresaModel.empresaIdsActivas(req.usuario.sub);
     next();
   } catch (err) {
     next(err);

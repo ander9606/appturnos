@@ -1,6 +1,7 @@
 'use strict';
 
 const { pool } = require('../../config/database');
+const { enTransaccion } = require('../../utils/enTransaccion');
 
 /**
  * Acceso a datos del catálogo de cargos y de las asignaciones por trabajador.
@@ -176,9 +177,7 @@ const CargosModel = {
 
   /** Reemplaza el listado completo de funciones de un cargo para una empresa. */
   async reemplazarFunciones(cargoId, empresaId, descripciones) {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+    await enTransaccion(async (conn) => {
       await conn.query('DELETE FROM cargo_funciones WHERE cargo_id = ? AND empresa_id = ?', [cargoId, empresaId]);
       if (descripciones.length > 0) {
         const values = descripciones.map((d, i) => [cargoId, empresaId, d, i]);
@@ -187,13 +186,7 @@ const CargosModel = {
           [values]
         );
       }
-      await conn.commit();
-    } catch (err) {
-      await conn.rollback();
-      throw err;
-    } finally {
-      conn.release();
-    }
+    });
     return CargosModel.listarFunciones(cargoId, empresaId);
   },
 };

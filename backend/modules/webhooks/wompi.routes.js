@@ -11,7 +11,7 @@ router.post('/', async (req, res) => {
     const resultado = await WompiService.procesarEvento(req.body);
     // Wompi espera 200 siempre; errores de negocio no deben generar reintentos
     res.json({ ok: resultado.ok });
-  } catch (err) {
+  } catch {
     res.status(500).json({ ok: false });
   }
 });

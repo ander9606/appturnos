@@ -211,7 +211,7 @@ export default function IngresoScreen() {
                 <View className="flex-1 bg-muted rounded-xl px-4 py-3">
                   <Text className="text-xs text-muted-foreground mb-0.5">Horario</Text>
                   <Text className="text-sm font-semibold text-foreground">
-                    {fmtRange(asignacion.hora_inicio, asignacion.hora_fin_estimada)}
+                    {fmtRange(asignacion.hora_inicio, asignacion.hora_fin_estimada, asignacion.fin_dia_siguiente)}
                   </Text>
                 </View>
               </View>

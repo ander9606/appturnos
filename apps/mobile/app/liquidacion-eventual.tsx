@@ -139,10 +139,8 @@ export default function LiquidacionEventualScreen() {
         {isLoading ? (
           <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
         ) : !periodo ? (
-          <View className="flex-1 items-center justify-center gap-3 px-8">
-            <Ionicons name="calendar-outline" size={48} color={COLORS.borderStrong} />
-            <Text className="text-base font-semibold text-foreground text-center">Sin período activo</Text>
-            <Text className="text-sm text-muted-foreground text-center">No hay un período abierto para tu empresa.</Text>
+          <View className="flex-1 justify-center">
+            <EmptyState title="Sin período activo" message="No hay un período abierto para tu empresa." />
           </View>
         ) : (
           <FlatList

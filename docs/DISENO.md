@@ -242,7 +242,7 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 - **Prohibido** armar bloques de error a mano (ícono `warning-outline` + "Error al cargar" + "Reintentar"): usa `ErrorState`, que ya trae reintento con spinner, `role="alert"` y la ilustración oculta a lectores de pantalla.
 - Pasa siempre `error` (no solo `isError`): sin él no se puede distinguir "sin internet" de "falló el servidor".
 - Los dos `PlanetIllustration` (móvil y web) dibujan lo mismo con las mismas coordenadas: si cambias uno, cambia el otro.
-- Aviso global (móvil, `StatusBanner`): barra **oscura** "Sin conexión · mostrando lo último que guardamos" (17:1) o **rojo oscuro** "No pudimos cargar todo" (4.8:1). Nunca blanco sobre ámbar (2.15:1).
+- Aviso global (móvil, `StatusBanner`): barra **oscura** "Sin conexión · solo verás lo que ya abriste" (17:1; el caché vive en memoria, no se guarda en el teléfono) o **rojo oscuro** "No pudimos cargar todo" (4.8:1). Nunca blanco sobre ámbar (2.15:1).
 - `ErrorBoundary` (error inesperado de código) usa el anillo torcido con el título "Algo se torció".
 
 ### 5.5 Avisos, confirmaciones y toasts (móvil)
@@ -268,6 +268,7 @@ El **planeta del logo con el anillo fuera de lugar** es la cara de los errores d
 | `success` | Salió bien: "Solicitud enviada" | `checkmark-circle` · verde |
 
 - `confirm({ destructive: true })` pinta el botón de rojo y usa el ícono de papelera: **para acciones irreversibles** (eliminar, rechazar, dejar de sumar recargos).
+- `confirm({ variant: 'warning' })` cambia la papelera por el ícono del tipo (ámbar para advertencias con consecuencia, p. ej. cancelar un turno con penalización); `destructive` sigue pintando solo el botón de rojo.
 - `confirm` para elegir entre dos caminos también vale: `confirmLabel`/`cancelLabel` permiten textos como "Ver detalle" / "Volver a lista".
 - Un error de una **acción del usuario** va en `showAlert`; el feedback de que algo **salió bien** va en `showToast`. No pongas un diálogo para un éxito.
 - Todos llevan `accessibilityRole` (`alert`/`header`) y los diálogos `accessibilityViewIsModal`. Texto, ícono y tipo siempre juntos: nunca solo color.
@@ -345,6 +346,28 @@ Referencia móvil: `app/reportes.tsx` y `features/reportes/` (`marca.tsx`). Refe
 - **PDF de reglas de pago:** `scripts/generar-pdf-reglas.js` usa la familia de marca (`#FF5A3C`, `#FFF1EE`, `#C32D14`); regenerar el PDF al cambiarlo.
 - Deuda: los correos usan wordmark de texto; para el logo real necesitan una URL pública (`EMAIL_LOGO_URL`).
 
+### 5.10 Encabezado de las pestañas (móvil)
+
+Cada perfil tiene su color (`THEME_COLORS` vía `useTheme()`): trabajador de turnos **naranja**, trabajador de nómina **verde**, gestores **azul**. Todas las pestañas (Inicio, Turnos, Nómina, Equipo, Empresas, Perfil) abren con una franja de ese color, esquinas inferiores redondeadas y texto blanco.
+- `PantallaPestana` (`components/ui/EncabezadoPestana.tsx`) es la raíz de la pestaña: pinta de ese color la zona de la barra de estado (iconos claros) y deja el fondo normal debajo.
+- `EncabezadoPestana` es la franja: `titulo`, `subtitulo`, `derecha` (acción, icono blanco) y `children` (tarjetas o pestañas internas, sobre fondo `white/18`; las pestañas internas usan subrayado blanco).
+- Excepción por sección: la pestaña **Nómina** es verde también para los gestores (la sección conserva su color). Se fija con `<SeccionTema.Provider value="nomina">` (`lib/theme.ts`); `useTheme()` lo lee en `PantallaPestana`, calendarios y todo lo de dentro.
+- No usar `bg-card`/texto oscuro para el título de una pestaña, ni hex: el color sale siempre del perfil.
+- Las pantallas de detalle (`turno/[id]`, `trabajador/[id]`…) conservan su encabezado blanco con flecha atrás.
+
+### 5.11 Calendarios (móvil)
+
+Los tres usan el color del perfil (`useTheme()`), nunca un color fijo:
+- `MonthCalendar` (`components/ui/MonthCalendar.tsx`): tarjeta `rounded-3xl`; cabecera de días tintada (`alpha(primary, .1)`), sábado y domingo en el color del perfil; el día de hoy con círculo sólido y celda tintada.
+- `NavegadorMes` (`components/ui/NavegadorMes.tsx`): ‹ Mes Año › con botones tintados y un botón "Hoy" (solo si no se ve el mes actual). Es el único selector de mes: no copiar los chevrons a mano.
+- Deslizar el calendario a derecha o izquierda cambia de mes (`onMesAnterior`/`onMesSiguiente` de `MonthCalendar`, con `PanResponder`: solo toma gestos claramente horizontales).
+- En Turnos, tocar un día lo **marca** (`selectedDate`) y muestra debajo `ResumenDiaMes` con los turnos de ese día y "Ver en lista"; ya no salta de vista.
+- Mientras carga el mes: `SkeletonCalendario`, no una lista.
+- **Festivos:** `MonthCalendar` marca los festivos de Colombia (número en el color del perfil + bandera) y `ResumenDiaMes` los nombra. Salen de `festivosColombia()` / `nombreFestivo()` de `@api-client`, espejo de `festivosDeAnio()` del backend (la prueba `festivos.test.ts` exige que coincidan). Los domingos no se marcan: ya llevan el color en la cabecera.
+- **Períodos de nómina:** el gestor ve cada período como franja bajo los días (verde abierto, ámbar cerrado por pagar, primario pagado), con el período que está mirando a todo color y los demás atenuados, el día de cierre rotulado y una leyenda. El trabajador de nómina ve una franja fina del color del perfil en los días de su período actual y "Cierre" en el último.
+- `WeekStrip` (`features/turnos/WeekStrip.tsx`): día seleccionado sólido, hoy con aro suave, rayita en los días con turnos.
+- Pendiente: los selectores de fecha nativos (`DateTimePicker`) los dibuja el sistema; en iOS se puede darles `accentColor`, en Android dependen del tema nativo del build (no cambia por OTA).
+
 ## 6. Accesibilidad
 
 Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 px en negrita, y elementos gráficos):
@@ -356,6 +379,7 @@ Contraste medido (WCAG: 4.5:1 texto normal, 3:1 texto grande ≥ 18 px o ≥ 14 
 | Blanco sobre `primary-700` `#C32D14` | 5.67 | ✅ AA |
 | `primary-700` sobre blanco | 5.67 | ✅ Para texto pequeño de marca usa 700 |
 | Blanco sobre `success` / `info` / `danger` | 3.77 / 3.68 / 3.76 | ⚠️ Solo texto grande/negrita |
+| Blanco sobre `success700` `#047857` / `info600` `#2563EB` | 5.48 / 5.17 | ✅ AA — son el color del perfil de nómina y de gestores (`THEME_COLORS`) |
 | Blanco sobre `warning` `#F59E0B` | **2.15** | ❌ No poner texto blanco sobre ámbar; usa texto oscuro |
 | `warning.dark` sobre blanco | 3.19 | ⚠️ Íconos y texto grande |
 | `danger.dark` sobre blanco | 4.83 | ✅ AA |
@@ -389,22 +413,23 @@ Reglas:
 ## 8. Deuda conocida (próximos pasos, por orden de impacto)
 
 1. **Probar Inter en dispositivo (iOS y Android).** Se verificó que la app empaqueta las cinco fuentes, que el código compila y que ningún interlineado baja de 1.25×, pero no se vio en pantalla: revisar que no haya texto cortado (sobre todo números grandes y emojis en Android), que la negrita de Android no salga doble y que el arranque no parpadee.
-2. **Hex en la web.** La app ya usa variables CSS, pero la web no tiene configuración de ESLint (el script `lint` existe sin `.eslintrc`), así que nada impide que vuelvan a aparecer hex. Crear la configuración y copiar la regla de móvil (con la landing como excepción).
-3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. Si se repite una forma nueva (p. ej. el calendario mensual), crear su skeleton propio.
-4. **Contraste de marca.** Evaluar oscurecer ligeramente `primary` o usar `primary-600` en botones (4.09 → casi AA) sin perder identidad.
+2. **Hex en la web.** Resuelto: `apps/web/.eslintrc.cjs` prohíbe hex literales (excepto la landing) y corre en el CI de la web (`npm run lint`).
+3. **Skeletons restantes.** Quedan con `PageLoading` el calendario de web (`CalendarioPage`) y con `Spinner` las cargas pequeñas en línea (selectores, ubicación, historiales dentro de tarjetas), cuyo resultado no tiene una forma fija. (El calendario mensual ya tiene el suyo: `SkeletonCalendario`.)
+4. **Contraste del naranja.** Verde y azul del perfil ya pasan AA con texto blanco (`success700` 5,48:1, `info600` 5,17:1). El naranja de marca (`primary` #FF5A3C) queda en 3,10:1 con blanco: solo es válido para texto grande en negrita (títulos, botones); no usarlo con texto pequeño blanco. Alternativa evaluada: `primary600` (4,09:1) o texto oscuro (5,76:1).
 5. **Modo oscuro.** `userInterfaceStyle: "light"` fijo. Con los tokens ya centralizados, es viable como etapa propia.
 6. **Íconos.** Web usa `lucide-react`, móvil usa `Ionicons`. Unificar estilo (grosor, tamaño) o elegir un solo set.
 7. **Identidad propia.** Definir 3-4 rasgos distintivos (forma recurrente, sombra, ilustración para estados vacíos) y documentarlos en esta guía.
-8. **Spinner a nivel de marca.** Evaluar una animación con la forma del logo (Lottie) para el splash y la carga inicial.
-9. **`ErrorState` en el resto de pantallas.** Móvil: ya está en las listas principales (Equipo, Turnos, Nómina, Historial, Postulaciones, Trabajador); quedan otras pantallas con su propio bloque de error. Web: el componente ya es de marca en todas las pantallas que lo usan.
+8. **Spinner a nivel de marca.** Hecho con `PlanetaCargando` (planeta con el anillo balanceándose, `Animated` + SVG) en la pantalla de arranque mientras se restaura la sesión. Pendiente para el próximo build nativo: pasarlo a Lottie (`lottie-react-native`) y usarlo también en el splash nativo.
+9. **`ErrorState` en el resto de pantallas.** Resuelto: móvil lo usa en todas las listas y pantallas de carga; en `empresa/[id]`, `contrato/[id]` y `cuenta-cobro/[id]` el 404 muestra `EmptyState` "no encontrado" y cualquier otro error muestra `ErrorState` con reintento (`isNotFound`). Web: el componente ya es de marca.
 10. **Ilustración sin probar en dispositivo.** El dibujo móvil usa `react-native-svg` con las mismas coordenadas que la web (verificada en Chromium); falta revisarlo en Expo Go.
 11. **Más ilustraciones de marca.** Hecho en la web: el 404 y los vacíos de página completa usan el planeta. Falta móvil (sin turnos, sin equipo) donde aún haya texto suelto.
 12. **Probar `actionSheet` sobre un `Modal` en Android.** En iPhone se verificó que los diálogos aparecen sobre un `Modal`; falta repetirlo en Android.
-13. **`ActionToast`** conserva su look anterior: darle el mismo ícono y animación que `Toast`.
+13. **`ActionToast`**: resuelto, lleva el ícono de aviso y la misma entrada con resorte que `Toast`.
 14. **Test pendiente no relacionado:** `features/turnos/__tests__/turnosUtils.test.ts › getWeekDays › marca correctamente el día de hoy` falla (depende de la fecha). Pre-existente.
 
+16. **Sin datos guardados en el teléfono.** El caché de TanStack Query vive solo en memoria: al reabrir la app sin internet no hay turnos que mostrar (sale `ErrorState` sin conexión). Persistirlo requiere `@react-native-async-storage/async-storage` (módulo nativo: build nuevo, no OTA) y decidir qué datos se guardan sin cifrar (propuesta: solo turnos, borrado al cerrar sesión, caducidad de 24 h).
 ---
-15. **`EmptyState` en el resto de pantallas.** Móvil: ya está en todas las listas con `ListEmptyComponent`; quedan textos "Sin…/No hay…" sueltos dentro de tarjetas y secciones (p. ej. "Sin calificaciones aún", "Sin punto asignado", "Sin datos bancarios registrados"). Web: los vacíos de página completa ya usan `EmptyState`; quedan textos grises dentro de celdas de tabla y tarjetas pequeñas ("Sin cargos", "Sin gestores"…), donde una ilustración de 170 px no cabe.
+15. **`EmptyState` en el resto de pantallas.** Móvil: los vacíos de pantalla o sección (Solicitudes, Postulaciones, Directorio, Pagos y Empresas del panel admin, Liquidación eventual, Historial de ganancias, Sueldo, Step4Empresas) usan `EmptyState`; quedan solo textos de campo dentro de fichas ("Sin punto asignado", "Sin datos bancarios registrados", "Sin calificaciones aún"), que son estados de un dato, no de una pantalla. Web: los vacíos de página completa ya usan `EmptyState`; quedan textos grises dentro de celdas de tabla y tarjetas pequeñas ("Sin cargos", "Sin gestores"…), donde una ilustración de 170 px no cabe.
 
 ## 9. Referencias
 

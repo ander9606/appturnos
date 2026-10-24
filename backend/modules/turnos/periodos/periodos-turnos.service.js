@@ -5,40 +5,6 @@ const EmpresasModel = require('../../empresas/empresas.model');
 const AppError = require('../../../utils/AppError');
 const logger = require('../../../utils/logger');
 
-/**
- * Calcula el período siguiente basado en el tipo y la fecha de fin.
- * Usado para auto-crear períodos encadenados.
- */
-function calcularSiguientePeriodo(tipo, fechaFin) {
-  const siguiente = new Date(fechaFin);
-  siguiente.setDate(siguiente.getDate() + 1); // Empezar al día siguiente
-
-  const fechaInicio = new Date(siguiente);
-  const fechaFinal = new Date(siguiente);
-
-  switch (tipo) {
-    case 'semanal':
-      fechaFinal.setDate(fechaFinal.getDate() + 6);
-      break;
-    case 'quincenal':
-      fechaFinal.setDate(fechaFinal.getDate() + 14);
-      break;
-    case 'mensual':
-      fechaFinal.setMonth(fechaFinal.getMonth() + 1);
-      fechaFinal.setDate(0); // Último día del mes
-      break;
-    case 'trimestral':
-      fechaFinal.setMonth(fechaFinal.getMonth() + 3);
-      fechaFinal.setDate(0);
-      break;
-    default:
-      throw new Error(`Tipo de período inválido: ${tipo}`);
-  }
-
-  const toISODate = (d) => d.toISOString().split('T')[0];
-  return { fechaInicio: toISODate(fechaInicio), fechaFinal: toISODate(fechaFinal) };
-}
-
 const PeriodosTurnosService = {
   /**
    * Auto-crear períodos de turnos para hoy (si no existen).

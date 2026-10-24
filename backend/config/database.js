@@ -20,18 +20,23 @@ const pool = mysql.createPool({
   dateStrings: true, // devuelve DATE/DATETIME como string, evita desfases de zona horaria
 });
 
-/**
- * Verifica la conectividad con la base de datos al arrancar.
- * Lanza si no puede conectar, para no levantar el server con la DB caída.
- */
-async function verificarConexion() {
+/** Comprueba que la base responde: abre una conexión, hace ping y la devuelve al pool (también si falla). */
+async function ping() {
   const conn = await pool.getConnection();
   try {
     await conn.ping();
-    logger.info(`DB conectada: ${process.env.DB_NAME || 'app_turnos'}`);
   } finally {
     conn.release();
   }
 }
 
-module.exports = { pool, verificarConexion };
+/**
+ * Verifica la conectividad con la base de datos al arrancar.
+ * Lanza si no puede conectar, para no levantar el server con la DB caída.
+ */
+async function verificarConexion() {
+  await ping();
+  logger.info(`DB conectada: ${process.env.DB_NAME || 'app_turnos'}`);
+}
+
+module.exports = { pool, ping, verificarConexion };

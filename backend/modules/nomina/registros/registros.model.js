@@ -364,6 +364,19 @@ const RegistrosModel = {
     );
     return res.affectedRows;
   },
+
+  /** ¿Tiene el trabajador una jornada de nómina registrada ese día que se cruce con [horaInicio, horaFin]? */
+  async existeJornadaSolapada(empresaId, trabajadorId, fecha, horaInicio, horaFin) {
+    const [[fila]] = await pool.query(
+      `SELECT id FROM registros_diarios
+       WHERE empresa_id = ? AND trabajador_id = ? AND fecha = ?
+         AND hora_entrada IS NOT NULL
+         AND hora_entrada < ? AND COALESCE(hora_salida,'23:59:00') > ?
+       LIMIT 1`,
+      [empresaId, trabajadorId, fecha, horaFin, horaInicio]
+    );
+    return Boolean(fila);
+  },
 };
 
 module.exports = RegistrosModel;

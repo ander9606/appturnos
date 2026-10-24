@@ -81,6 +81,8 @@ export interface Asignacion {
   oferta_fecha: string; // YYYY-MM-DD
   hora_inicio: string;  // HH:MM:SS
   hora_fin_estimada: string | null;
+  /** 1 si el turno termina al día siguiente (cruza la medianoche). */
+  fin_dia_siguiente?: number | null;
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
@@ -217,6 +219,8 @@ export interface Oferta {
   fecha: string; // YYYY-MM-DD
   hora_inicio: string;
   hora_fin_estimada: string | null;
+  /** 1 si el turno termina al día siguiente (cruza la medianoche). */
+  fin_dia_siguiente?: number | null;
   lugar: string | null;
   /** Resuelta por geocodificación a partir de latitud/longitud (best-effort, puede tardar unos segundos
    *  tras crear la oferta o quedar null si no se pudo resolver). Alimenta el filtro por ciudad del
@@ -275,6 +279,8 @@ export interface CrearOfertaPayload {
   fecha: string;           // YYYY-MM-DD
   hora_inicio: string;     // HH:mm:ss
   hora_fin_estimada?: string;
+  /** El turno termina al día siguiente (cruza la medianoche). */
+  fin_dia_siguiente?: boolean;
   lugar?: string;
   latitud?: number;
   longitud?: number;
@@ -311,6 +317,7 @@ export interface ActualizarOfertaPayload {
   fecha?: string;
   hora_inicio?: string;
   hora_fin_estimada?: string;
+  fin_dia_siguiente?: boolean;
   lugar?: string;
   latitud?: number;
   longitud?: number;
@@ -350,9 +357,11 @@ export interface LiquidacionTurnoLinea {
   /** Agrupa líneas del mismo turno entre distintos trabajadores — ver liquidacionPorTurno(). */
   oferta_id: number;
   oferta_titulo: string;
+  oferta_descripcion: string | null;
   oferta_fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;
+  fin_dia_siguiente?: number | null;
   lugar: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
@@ -466,6 +475,11 @@ export const turnosApi = {
   /** Agrega una vacante (puesto) a una oferta existente. Sin restricción de estado en el backend. */
   crearPuesto(ofertaId: number, payload: CrearPuestoPayload): Promise<OfertaPuesto> {
     return api.post<OfertaPuesto>(`/api/turnos/ofertas/${ofertaId}/puestos`, payload);
+  },
+
+  /** Cambia las plazas de una vacante. El backend rechaza (409) bajar de las ya cubiertas. */
+  actualizarPuesto(ofertaId: number, puestoId: number, payload: { plazas: number }): Promise<OfertaPuesto> {
+    return api.patch<OfertaPuesto>(`/api/turnos/ofertas/${ofertaId}/puestos/${puestoId}`, payload);
   },
 
   /**
@@ -629,6 +643,14 @@ export const turnosApi = {
    */
   cancelar(asignacionId: number): Promise<Asignacion> {
     return api.post<Asignacion>(`/api/turnos/asignaciones/${asignacionId}/cancelar`, {});
+  },
+
+  /**
+   * El trabajador cancela su propio turno confirmado. Si faltan menos de 12 h
+   * para el inicio, `penalizado` viene en true (recibió una calificación baja).
+   */
+  cancelarPropia(asignacionId: number): Promise<Asignacion & { penalizado: boolean }> {
+    return api.post<Asignacion & { penalizado: boolean }>(`/api/turnos/asignaciones/${asignacionId}/cancelar-propia`, {});
   },
 
   /**
