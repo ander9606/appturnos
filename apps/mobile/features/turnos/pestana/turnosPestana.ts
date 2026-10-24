@@ -14,13 +14,25 @@ export function fmtRangeSimple(start: string, end: string | null, finDiaSiguient
   return `${s} – ${end.slice(0, 5).replace(/^0/, '')}${finDiaSiguiente ? ' (día sig.)' : ''}`;
 }
 
-/** Detecta si una oferta se solapa en horario con algún turno confirmado del trabajador. */
+/** 'YYYY-MM-DD HH:MM:SS' sumando un día a `fecha` si el turno termina al día siguiente (comparable como texto). */
+function momento(fecha: string, hora: string, diaSiguiente?: number | null): string {
+  let dia = fecha.slice(0, 10);
+  if (diaSiguiente) {
+    const d = new Date(`${dia}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    dia = d.toISOString().slice(0, 10);
+  }
+  return `${dia} ${hora}`;
+}
+
+/** Detecta si una oferta se solapa en horario con algún turno confirmado del trabajador (también si cruza la medianoche). */
 export function turnosSolapan(oferta: Oferta, confirmados: Asignacion[]): boolean {
-  const ofFin = oferta.hora_fin_estimada ?? '23:59:59';
+  const ofIni = momento(oferta.fecha, oferta.hora_inicio);
+  const ofFin = momento(oferta.fecha, oferta.hora_fin_estimada ?? '23:59:59', oferta.fin_dia_siguiente);
   return confirmados.some((a) => {
-    if (a.oferta_fecha !== oferta.fecha) return false;
-    const aFin = a.hora_fin_estimada ?? '23:59:59';
-    return a.hora_inicio < ofFin && aFin > oferta.hora_inicio;
+    const aIni = momento(a.oferta_fecha, a.hora_inicio);
+    const aFin = momento(a.oferta_fecha, a.hora_fin_estimada ?? '23:59:59', a.fin_dia_siguiente);
+    return aIni < ofFin && aFin > ofIni;
   });
 }
 
