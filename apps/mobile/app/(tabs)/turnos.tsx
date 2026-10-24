@@ -238,7 +238,7 @@ export default function TurnosScreen() {
     return {
       key: `o${o.id}`,
       titulo: o.titulo,
-      detalle: `${fmtRange(o.hora_inicio, o.hora_fin_estimada)} · ${cubiertas}/${total} plazas cubiertas`,
+      detalle: `${fmtRange(o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente)} · ${cubiertas}/${total} plazas cubiertas`,
       color: colorOferta(o, pendientesPorOferta, today, theme.primary),
       onPress: () => router.push(`/oferta/${o.id}`),
     };
@@ -254,7 +254,7 @@ export default function TurnosScreen() {
     ...(ofertasPorDiaMes.get(fecha) ?? []).filter(o => !aplicadosIds.has(o.id)).map(o => ({
       key: `d${o.id}`,
       titulo: o.titulo,
-      detalle: `Disponible · ${fmtRange(o.hora_inicio, o.hora_fin_estimada)}`,
+      detalle: `Disponible · ${fmtRange(o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente)}`,
       color: COLORS.info,
       onPress: () => router.push(`/oferta/${o.id}`),
     })),

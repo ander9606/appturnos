@@ -47,6 +47,7 @@ function reglasOferta({ parcial }) {
       .optional({ values: 'falsy' })
       .matches(RE_HORA)
       .withMessage('hora_fin_estimada inválida (HH:MM)'),
+    body('fin_dia_siguiente').optional().isBoolean().withMessage('fin_dia_siguiente debe ser verdadero o falso'),
     body('para_quien').optional().isIn(['turnos','nomina','ambos']).withMessage('para_quien inválido'),
     body('descripcion').optional({ values: 'falsy' }).isString(),
     body('notas_adicionales').optional({ values: 'falsy' }).isString(),

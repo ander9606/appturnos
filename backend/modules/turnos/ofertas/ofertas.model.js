@@ -20,7 +20,7 @@ function minutosAHora(minutos) {
  * `ofertas_turno` solo lleva los datos generales del evento.
  */
 
-const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
+const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
   lugar, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
@@ -111,6 +111,7 @@ const CAMPOS_EDITABLES = [
   'fecha',
   'hora_inicio',
   'hora_fin_estimada',
+  'fin_dia_siguiente',
   'lugar',
   'latitud',
   'longitud',
@@ -121,6 +122,17 @@ const CAMPOS_EDITABLES = [
 ];
 
 /** Convierte las columnas `puestos_json`/`destinatarios_json`/`puntos_marcaje_json` (string) en arrays de objetos. */
+/** Fin del turno como 'YYYY-MM-DD HH:MM:SS': el día siguiente a `fecha` si `fin_dia_siguiente`. */
+function finDeOferta({ fecha, hora_fin_estimada, fin_dia_siguiente }) {
+  let dia = String(fecha).slice(0, 10);
+  if (Number(fin_dia_siguiente) === 1) {
+    const d = new Date(`${dia}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    dia = d.toISOString().slice(0, 10);
+  }
+  return `${dia} ${hora_fin_estimada || '23:59:59'}`;
+}
+
 function parsearPuestos(fila) {
   if (!fila) return fila;
   const {
@@ -150,7 +162,7 @@ function parsearPuestos(fila) {
     !['completada', 'cancelada', 'borrador'].includes(resto.estado) &&
     Number(asignaciones_activas) > 0 &&
     Number(asignaciones_sin_resolver) === 0 &&
-    `${resto.fecha} ${resto.hora_fin_estimada || '23:59:59'}` <= ahoraColombiaSQL()
+    finDeOferta(resto) <= ahoraColombiaSQL()
   );
 
   return { ...resto, puestos, destinatarios, puntos_marcaje: puntosMarcaje, necesita_completar: necesitaCompletar };
@@ -304,7 +316,7 @@ const OfertasModel = {
   /** Fecha y horario de la oferta (undefined si no existe en esa empresa). */
   async obtenerHorario(empresaId, ofertaId) {
     const [[fila]] = await pool.query(
-      `SELECT fecha, hora_inicio, hora_fin_estimada FROM ofertas_turno WHERE id = ? AND empresa_id = ?`,
+      `SELECT fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente FROM ofertas_turno WHERE id = ? AND empresa_id = ?`,
       [ofertaId, empresaId]
     );
     return fila;
@@ -507,10 +519,10 @@ const OfertasModel = {
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
-           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
+           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
             lugar, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono,
             estado, para_quien, visibilidad, external_ref, alquiler_ref, externo_notas, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           empresaId,
           datos.titulo,
@@ -519,6 +531,7 @@ const OfertasModel = {
           datos.fecha,
           datos.hora_inicio,
           datos.hora_fin_estimada ?? null,
+          datos.fin_dia_siguiente ? 1 : 0,
           datos.lugar ?? null,
           datos.latitud ?? null,
           datos.longitud ?? null,
@@ -716,22 +729,26 @@ const OfertasModel = {
 
       let horaInicio = original.hora_inicio;
       let horaFinEstimada = original.hora_fin_estimada;
+      let finDiaSiguiente = original.fin_dia_siguiente;
       if (nuevaHoraInicio) {
         if (horaFinEstimada) {
           const delta = horaAMinutos(nuevaHoraInicio) - horaAMinutos(original.hora_inicio);
-          horaFinEstimada = minutosAHora(horaAMinutos(horaFinEstimada) + delta);
+          // Minutos desde la medianoche de `fecha`: ≥ 1440 → termina al día siguiente.
+          const finTotal = horaAMinutos(horaFinEstimada) + (original.fin_dia_siguiente ? 1440 : 0) + delta;
+          horaFinEstimada = minutosAHora(finTotal);
+          finDiaSiguiente = finTotal >= 1440 ? 1 : 0;
         }
         horaInicio = nuevaHoraInicio;
       }
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
-           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada,
+           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
             lugar, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
           empresaId, original.titulo, original.descripcion, original.notas_adicionales, nuevaFecha,
-          horaInicio, horaFinEstimada,
+          horaInicio, horaFinEstimada, finDiaSiguiente,
           original.lugar, original.latitud, original.longitud, original.ubicacion_libre,
           original.para_quien, creadoPor,
         ]
@@ -794,7 +811,7 @@ const OfertasModel = {
            JOIN ofertas_turno o  ON o.id = a.oferta_id
            SET a.hora_egreso_real = COALESCE(a.hora_egreso_real, ?),
                a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-                   LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+                   LEAST(?, o.fin_ts)
                ) / 60,
                a.estado = 'fallido',
                a.pago_total = ? + a.bono_monto,

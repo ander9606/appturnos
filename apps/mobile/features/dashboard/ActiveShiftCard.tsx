@@ -5,22 +5,30 @@ import type { Asignacion } from '@api-client';
 import { fmtRange } from '@/features/turnos/turnosUtils';
 import { t } from '@/lib/i18n';
 
-function calcProgress(inicio: string, fin: string | null): number {
-  if (!fin) return 0;
-  const now = new Date();
+/** Inicio y fin de hoy; si el turno termina al día siguiente, el fin es mañana (o el inicio fue ayer, ya pasada la medianoche). */
+function ventana(inicio: string, fin: string, finDiaSiguiente: boolean) {
   const [ih, im] = inicio.split(':').map(Number);
   const [fh, fm] = fin.split(':').map(Number);
   const start = new Date(); start.setHours(ih, im, 0, 0);
   const end   = new Date(); end.setHours(fh, fm, 0, 0);
+  if (finDiaSiguiente) {
+    if (Date.now() < start.getTime()) start.setDate(start.getDate() - 1);
+    else end.setDate(end.getDate() + 1);
+  }
+  return { start, end };
+}
+
+function calcProgress(inicio: string, fin: string | null, finDiaSiguiente: boolean): number {
+  if (!fin) return 0;
+  const { start, end } = ventana(inicio, fin, finDiaSiguiente);
   const total   = end.getTime() - start.getTime();
-  const elapsed = now.getTime() - start.getTime();
+  const elapsed = Date.now() - start.getTime();
   if (total <= 0) return 100;
   return Math.max(0, Math.min(100, (elapsed / total) * 100));
 }
 
-function minutesLeft(fin: string): number {
-  const [fh, fm] = fin.split(':').map(Number);
-  const end = new Date(); end.setHours(fh, fm, 0, 0);
+function minutesLeft(inicio: string, fin: string, finDiaSiguiente: boolean): number {
+  const { end } = ventana(inicio, fin, finDiaSiguiente);
   return Math.max(0, Math.round((end.getTime() - Date.now()) / 60_000));
 }
 
@@ -39,20 +47,21 @@ interface ActiveShiftCardProps {
 }
 
 export function ActiveShiftCard({ turno, primaryColor, onPress, onEgreso }: ActiveShiftCardProps) {
+  const diaSig = Boolean(turno.fin_dia_siguiente);
   const [pct, setPct] = useState(() =>
-    calcProgress(turno.hora_inicio, turno.hora_fin_estimada),
+    calcProgress(turno.hora_inicio, turno.hora_fin_estimada, diaSig),
   );
   const [minsLeft, setMinsLeft] = useState(() =>
-    turno.hora_fin_estimada ? minutesLeft(turno.hora_fin_estimada) : null,
+    turno.hora_fin_estimada ? minutesLeft(turno.hora_inicio, turno.hora_fin_estimada, diaSig) : null,
   );
 
   useEffect(() => {
     const id = setInterval(() => {
-      setPct(calcProgress(turno.hora_inicio, turno.hora_fin_estimada));
-      if (turno.hora_fin_estimada) setMinsLeft(minutesLeft(turno.hora_fin_estimada));
+      setPct(calcProgress(turno.hora_inicio, turno.hora_fin_estimada, diaSig));
+      if (turno.hora_fin_estimada) setMinsLeft(minutesLeft(turno.hora_inicio, turno.hora_fin_estimada, diaSig));
     }, 60_000);
     return () => clearInterval(id);
-  }, [turno.hora_inicio, turno.hora_fin_estimada]);
+  }, [turno.hora_inicio, turno.hora_fin_estimada, diaSig]);
 
   return (
     <Pressable
@@ -75,7 +84,7 @@ export function ActiveShiftCard({ turno, primaryColor, onPress, onEgreso }: Acti
       </Text>
 
       <Text className="text-white/80 text-sm">
-        {fmtRange(turno.hora_inicio, turno.hora_fin_estimada)}
+        {fmtRange(turno.hora_inicio, turno.hora_fin_estimada, turno.fin_dia_siguiente)}
         {turno.lugar ? `  ·  ${turno.lugar}` : ''}
       </Text>
 

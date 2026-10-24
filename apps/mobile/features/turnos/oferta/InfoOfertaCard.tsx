@@ -11,9 +11,9 @@ import { ApiError } from '@api-client';
 import type { OfertaDetalle } from '@api-client';
 import { fmtDate } from './fechasOferta';
 
-function fmtRange(start: string, end: string | null) {
+function fmtRange(start: string, end: string | null, finDiaSiguiente?: number | null) {
   const s = start.slice(0, 5).replace(/^0/, '');
-  return end ? `${s} – ${end.slice(0, 5).replace(/^0/, '')}` : s;
+  return end ? `${s} – ${end.slice(0, 5).replace(/^0/, '')}${finDiaSiguiente ? ' (día sig.)' : ''}` : s;
 }
 
 /** Tarjeta principal: título, plazas, fecha, horario, lugar (con mapa) y ubicación libre. */
@@ -87,7 +87,7 @@ export function InfoOfertaCard({ oferta, esPasado, puedeGestionar, ofertaEsEdita
           <View className="flex-1">
             <Text className="text-xs text-muted-foreground">Horario</Text>
             <Text className="text-sm font-medium text-foreground">
-              {fmtRange(oferta.hora_inicio, oferta.hora_fin_estimada)}
+              {fmtRange(oferta.hora_inicio, oferta.hora_fin_estimada, oferta.fin_dia_siguiente)}
             </Text>
           </View>
         </View>

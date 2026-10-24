@@ -30,13 +30,13 @@ const Postulacion = require('../modules/turnos/asignaciones/asignaciones.postula
 
 const EMPRESA = 7;
 const ASIG = 50;
-const SQL_HORARIO_ASIGNACION = 'SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada FROM asignaciones_turno a JOIN ofertas_turno o ON o.id = a.oferta_id WHERE a.id = ? AND a.empresa_id = ?';
+const SQL_HORARIO_ASIGNACION = 'SELECT o.fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente FROM asignaciones_turno a JOIN ofertas_turno o ON o.id = a.oferta_id WHERE a.id = ? AND a.empresa_id = ?';
 const SQL_JORNADA = "SELECT id FROM registros_diarios WHERE empresa_id = ? AND trabajador_id = ? AND fecha = ? AND hora_entrada IS NOT NULL AND hora_entrada < ? AND COALESCE(hora_salida,'23:59:00') > ? LIMIT 1";
-const SQL_SOLAPE_USUARIO = "SELECT a.id FROM asignaciones_turno a JOIN ofertas_turno o ON o.id = a.oferta_id JOIN trabajadores t2 ON t2.id = a.trabajador_id WHERE t2.usuario_id = ? AND a.id != ? AND a.estado IN ('confirmado', 'en_progreso') AND o.fecha = ? AND o.hora_inicio < ? AND COALESCE(o.hora_fin_estimada, '23:59:59') > ? LIMIT 1";
-const SQL_HORARIO_OFERTA = 'SELECT fecha, hora_inicio, hora_fin_estimada FROM ofertas_turno WHERE id = ? AND empresa_id = ?';
+const SQL_SOLAPE_USUARIO = "SELECT a.id FROM asignaciones_turno a JOIN ofertas_turno o ON o.id = a.oferta_id JOIN trabajadores t2 ON t2.id = a.trabajador_id WHERE t2.usuario_id = ? AND a.id != ? AND a.estado IN ('confirmado', 'en_progreso') AND o.inicio_ts < TIMESTAMP(DATE_ADD(?, INTERVAL ? DAY), ?) AND o.fin_ts > TIMESTAMP(?, ?) LIMIT 1";
+const SQL_HORARIO_OFERTA = 'SELECT fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente FROM ofertas_turno WHERE id = ? AND empresa_id = ?';
 
 const horario = (fin = '17:00:00') => [/^SELECT o\.fecha, o\.hora_inicio/, [[{ fecha: '2026-06-01', hora_inicio: '09:00:00', hora_fin_estimada: fin }]]];
-const horarioOferta = (fin = '17:00:00') => [/^SELECT fecha, hora_inicio, hora_fin_estimada FROM ofertas_turno/, [[{ fecha: '2026-06-01', hora_inicio: '09:00:00', hora_fin_estimada: fin }]]];
+const horarioOferta = (fin = '17:00:00') => [/^SELECT fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente FROM ofertas_turno/, [[{ fecha: '2026-06-01', hora_inicio: '09:00:00', hora_fin_estimada: fin }]]];
 const jornadaSolapada = [/FROM registros_diarios/, [[{ id: 1 }]]];
 const solapeOtraEmpresa = [/JOIN trabajadores t2/, [[{ id: 77 }]]];
 const sqls = () => llamadas.map(([s]) => s);
@@ -97,14 +97,21 @@ describe('confirmar', () => {
     await expect(Postulacion.confirmar(EMPRESA, ASIG)).rejects.toMatchObject({ message: 'La asignación no está pendiente de confirmación' });
 
     expect(sqls()).toEqual([SQL_HORARIO_ASIGNACION, SQL_SOLAPE_USUARIO]);
-    expect(llamadas[1][1]).toEqual([42, ASIG, '2026-06-01', '17:00:00', '09:00:00']);
+    expect(llamadas[1][1]).toEqual([42, ASIG, '2026-06-01', 0, '17:00:00', '2026-06-01', '09:00:00']);
   });
 
   test('trabajador_turnos sin hora de fin estimada: el solape se compara hasta 23:59:59', async () => {
     TrabajadoresModel.obtenerUsuarioIdYRol.mockResolvedValue({ rol: 'trabajador_turnos', usuario_id: 42 });
     responder([horario(null)]);
     await expect(Postulacion.confirmar(EMPRESA, ASIG)).rejects.toThrow();
-    expect(llamadas[1][1][3]).toBe('23:59:59');
+    expect(llamadas[1][1][4]).toBe('23:59:59');
+  });
+
+  test('trabajador_turnos con turno que termina al día siguiente: el solape suma un día al fin', async () => {
+    TrabajadoresModel.obtenerUsuarioIdYRol.mockResolvedValue({ rol: 'trabajador_turnos', usuario_id: 42 });
+    responder([[/^SELECT o\.fecha, o\.hora_inicio/, [[{ fecha: '2026-06-01', hora_inicio: '22:00:00', hora_fin_estimada: '02:00:00', fin_dia_siguiente: 1 }]]]]);
+    await expect(Postulacion.confirmar(EMPRESA, ASIG)).rejects.toThrow();
+    expect(llamadas[1][1]).toEqual([42, ASIG, '2026-06-01', 1, '02:00:00', '2026-06-01', '22:00:00']);
   });
 
   test('trabajador_turnos con turno confirmado en otra empresa → 409 y no confirma', async () => {
@@ -134,7 +141,7 @@ describe('asignarDirecto', () => {
 
     expect(sqls()).toEqual([SQL_HORARIO_OFERTA, SQL_SOLAPE_USUARIO]);
     expect(llamadas[0][1]).toEqual([9, EMPRESA]);
-    expect(llamadas[1][1]).toEqual([42, 0, '2026-06-01', '17:00:00', '09:00:00']); // sin asignación previa que excluir
+    expect(llamadas[1][1]).toEqual([42, 0, '2026-06-01', 0, '17:00:00', '2026-06-01', '09:00:00']); // sin asignación previa que excluir
     expect(AsignacionesModel.asignarDirecto).toHaveBeenCalledWith(EMPRESA, 9, 20, 5);
   });
 

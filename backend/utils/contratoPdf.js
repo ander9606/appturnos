@@ -34,7 +34,7 @@ function construirFilasTurno(contrato) {
   const filas = [['Labor', contrato.descripcion_labor || contrato.oferta_titulo || '—']];
   if (contrato.lugar) filas.push(['Lugar', contrato.lugar]);
   filas.push(['Fecha', fmtFechaLegal(contrato.fecha)]);
-  filas.push(['Horario', `${fmtHora(contrato.hora_inicio)} - ${fmtHora(contrato.hora_fin_estimada)}`]);
+  filas.push(['Horario', `${fmtHora(contrato.hora_inicio)} - ${fmtHora(contrato.hora_fin_estimada)}${Number(contrato.fin_dia_siguiente) === 1 ? ' (día siguiente)' : ''}`]);
   filas.push(['Valor del día', fmtCOP(contrato.valor_dia)]);
   if (Number(contrato.bono_monto) > 0) {
     filas.push(['Bono', `${fmtCOP(contrato.bono_monto)}${contrato.bono_motivo ? ` — ${contrato.bono_motivo}` : ''}`]);

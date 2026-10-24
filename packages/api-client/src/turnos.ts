@@ -81,6 +81,8 @@ export interface Asignacion {
   oferta_fecha: string; // YYYY-MM-DD
   hora_inicio: string;  // HH:MM:SS
   hora_fin_estimada: string | null;
+  /** 1 si el turno termina al día siguiente (cruza la medianoche). */
+  fin_dia_siguiente?: number | null;
   lugar: string | null;
   latitud: number | null;
   longitud: number | null;
@@ -217,6 +219,8 @@ export interface Oferta {
   fecha: string; // YYYY-MM-DD
   hora_inicio: string;
   hora_fin_estimada: string | null;
+  /** 1 si el turno termina al día siguiente (cruza la medianoche). */
+  fin_dia_siguiente?: number | null;
   lugar: string | null;
   /** Resuelta por geocodificación a partir de latitud/longitud (best-effort, puede tardar unos segundos
    *  tras crear la oferta o quedar null si no se pudo resolver). Alimenta el filtro por ciudad del
@@ -275,6 +279,8 @@ export interface CrearOfertaPayload {
   fecha: string;           // YYYY-MM-DD
   hora_inicio: string;     // HH:mm:ss
   hora_fin_estimada?: string;
+  /** El turno termina al día siguiente (cruza la medianoche). */
+  fin_dia_siguiente?: boolean;
   lugar?: string;
   latitud?: number;
   longitud?: number;
@@ -311,6 +317,7 @@ export interface ActualizarOfertaPayload {
   fecha?: string;
   hora_inicio?: string;
   hora_fin_estimada?: string;
+  fin_dia_siguiente?: boolean;
   lugar?: string;
   latitud?: number;
   longitud?: number;
@@ -354,6 +361,7 @@ export interface LiquidacionTurnoLinea {
   oferta_fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;
+  fin_dia_siguiente?: number | null;
   lugar: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;

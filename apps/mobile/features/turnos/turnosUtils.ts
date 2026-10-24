@@ -111,8 +111,8 @@ export function fmtTime(t: string): string {
 }
 
 /** "08:00:00", "14:00:00" → "8:00 – 14:00" */
-export function fmtRange(start: string, end: string | null): string {
-  return end ? `${fmtTime(start)} – ${fmtTime(end)}` : fmtTime(start);
+export function fmtRange(start: string, end: string | null, finDiaSiguiente?: number | boolean | null): string {
+  return end ? `${fmtTime(start)} – ${fmtTime(end)}${finDiaSiguiente ? ' (día sig.)' : ''}` : fmtTime(start);
 }
 
 /** "2026-09-21" → "Lun, 21 de Sep" */

@@ -198,6 +198,22 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
 
       <View className="flex-row items-center justify-between bg-muted rounded-2xl px-4 py-3">
         <View className="flex-1 mr-4">
+          <Text className="text-sm font-semibold text-foreground">Termina al día siguiente</Text>
+          <Text className="text-xs text-muted-foreground mt-0.5">
+            Actívalo si el turno pasa de la medianoche (por ejemplo, de 10:00 p. m. a 2:00 a. m.).
+          </Text>
+        </View>
+        <Switch
+          accessibilityLabel="Termina al día siguiente"
+          value={data.fin_dia_siguiente}
+          onValueChange={(v) => onChange({ fin_dia_siguiente: v })}
+          trackColor={{ true: theme.primary }}
+          thumbColor={COLORS.white}
+        />
+      </View>
+
+      <View className="flex-row items-center justify-between bg-muted rounded-2xl px-4 py-3">
+        <View className="flex-1 mr-4">
           <Text className="text-sm font-semibold text-foreground">Ubicación libre</Text>
           <Text className="text-xs text-muted-foreground mt-0.5">
             El trabajador podrá marcar entrada y salida desde cualquier lugar — para turnos sin un punto fijo (rutas, entregas, mandados).

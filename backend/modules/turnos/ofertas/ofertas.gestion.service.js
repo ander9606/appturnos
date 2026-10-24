@@ -252,12 +252,19 @@ async function notificarDestinatariosDirectos(empresaId, oferta) {
  * que validateStep1() en el mobile (apps/mobile/features/turnos/crear/utils.ts),
  * ahora también exigido en el backend para cerrar el hueco en web/API directa.
  */
-function validarFechaHoraOferta({ fecha, hora_inicio, hora_fin_estimada }) {
+function validarFechaHoraOferta({ fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente }) {
   if (fecha && fecha < ahoraColombiaSQL().slice(0, 10)) {
     throw new AppError('La fecha del turno no puede ser en el pasado', 422);
   }
-  if (hora_inicio && hora_fin_estimada && hora_fin_estimada <= hora_inicio) {
-    throw new AppError('La hora de fin debe ser posterior a la hora de inicio', 422);
+  if (hora_inicio && hora_fin_estimada) {
+    // Terminando al día siguiente, la hora de fin queda antes (o igual, 24 h) que la de inicio;
+    // más tarde que el inicio serían más de 24 h seguidas.
+    if (fin_dia_siguiente && hora_fin_estimada > hora_inicio) {
+      throw new AppError('Un turno que termina al día siguiente no puede durar más de 24 horas', 422);
+    }
+    if (!fin_dia_siguiente && hora_fin_estimada <= hora_inicio) {
+      throw new AppError('La hora de fin debe ser posterior a la hora de inicio (o marca que termina al día siguiente)', 422);
+    }
   }
 }
 
@@ -318,6 +325,7 @@ module.exports = {
    * empiece — no le queda tiempo real al trabajador para reaccionar.
    */
   async actualizar(empresaId, id, datos) {
+    if (datos.fin_dia_siguiente !== undefined) datos = { ...datos, fin_dia_siguiente: datos.fin_dia_siguiente ? 1 : 0 };
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {
@@ -327,9 +335,10 @@ module.exports = {
       fecha: datos.fecha ?? oferta.fecha,
       hora_inicio: datos.hora_inicio ?? oferta.hora_inicio,
       hora_fin_estimada: datos.hora_fin_estimada !== undefined ? datos.hora_fin_estimada : oferta.hora_fin_estimada,
+      fin_dia_siguiente: datos.fin_dia_siguiente !== undefined ? datos.fin_dia_siguiente : oferta.fin_dia_siguiente,
     });
 
-    const camposCriticos = ['fecha', 'hora_inicio', 'hora_fin_estimada', 'lugar'];
+    const camposCriticos = ['fecha', 'hora_inicio', 'hora_fin_estimada', 'fin_dia_siguiente', 'lugar'];
     const hayCambioRelevante = camposCriticos.some(
       (k) => datos[k] !== undefined && String(datos[k] ?? '') !== String(oferta[k] ?? '')
     );

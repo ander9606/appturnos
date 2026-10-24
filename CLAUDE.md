@@ -101,6 +101,8 @@ CI gates (`.github/workflows/`): backend `npm test` + `npm audit`; mobile and ap
 
 Run migrations before first start: `cd backend && npm run migrate`.
 
+**Numerar migraciones:** antes de crear una, mira el último número en `origin/main` **y en los PR abiertos** (otra rama puede haber tomado "el siguiente"); si hay choque, toma uno libre (los huecos no rompen nada: el runner controla por nombre de archivo, no por número). `backend/__tests__/migracionesNumeracion.test.js` falla si dos archivos repiten número. Una migración ya aplicada en producción no se renombra ni se edita: se agrega otra.
+
 ## Repository Structure
 
 ```
@@ -186,6 +188,9 @@ Date-dependent rules live in `*_VIGENCIAS` tables (newest first) so re-liquidati
 Legal values are mirrored in `packages/api-client/src/laboral.ts`, `apps/web/src/shared/laboral.ts` (identical copy) and `apps/mobile/features/nomina/trabajador/nominaTrabajadorUtils.ts` — update all of them together. `festivosColombia()` there mirrors `festivosDeAnio()` of `laboralUtils.js` (with names, for the calendars); `apps/mobile/lib/__tests__/festivos.test.ts` fails if they diverge.
 
 `laboralUtils.js` exports `calcularHoras()` (minute-by-minute breakdown), `esDiaFestivo()` (Colombian public holidays including Ley Emiliani + Easter-relative), `horaInicioNocturno()`, `recargoFestivo()`, `valorHora()`, `calcularPagoNomina()`, `desglosarPagoNomina()`, `calcularDeducciones()`, `calcularSubsidioTransporte()`.
+
+### Turnos que cruzan la medianoche
+`ofertas_turno.fin_dia_siguiente` (migración 118) dice que `hora_fin_estimada` cae al día siguiente a `fecha`. Para topes de horas, traslapes y vencimiento usa las columnas generadas `inicio_ts` / `fin_ts` (DATETIME), nunca `TIMESTAMP(o.fecha, o.hora_fin_estimada)` ni comparar horas sueltas: así ninguna consulta repite el "+1 día". Con la marca, la hora de fin debe ser ≤ la de inicio (máx. 24 h); sin ella, posterior al inicio. En móvil, `fmtRange(inicio, fin, fin_dia_siguiente)` agrega "(día sig.)".
 
 ### Subscriptions & Billing
 Companies with an active logiq360 integration (`integracion_config.activo = 1` + `api_key`) don't pay. The rest pay per plan via Wompi payment links (`webhooks/wompi.service.js`).

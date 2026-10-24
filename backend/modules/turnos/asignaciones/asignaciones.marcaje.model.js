@@ -77,7 +77,7 @@ module.exports = {
            a.longitud_egreso = ?,
            a.estado = 'completado',
            a.horas_trabajadas = TIMESTAMPDIFF(MINUTE, a.hora_ingreso_real,
-               LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))
+               LEAST(?, o.fin_ts)
            ) / 60,
            a.pago_total = p.tarifa_dia + a.bono_monto
        WHERE a.id = ? AND a.empresa_id = ?
@@ -139,7 +139,7 @@ module.exports = {
     // 1. en_progreso → completado
     const ahora = ahoraColombiaSQL();
     const limiteSql = capearHoras
-      ? `LEAST(?, TIMESTAMP(o.fecha, COALESCE(o.hora_fin_estimada, '23:59:59')))`
+      ? `LEAST(?, o.fin_ts)`
       : `?`;
     const [resComp] = await pool.query(
       `UPDATE asignaciones_turno a
