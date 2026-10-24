@@ -48,6 +48,28 @@ function verificarToken(req, res, next) {
 }
 
 /**
+ * Variante de verificarToken que nunca bloquea la petición: si llega un
+ * Bearer válido expone `req.usuario`, si no hay token o es inválido/expirado
+ * sigue como anónimo. Para endpoints públicos que dan más detalle a quien ya
+ * está autenticado (ver verificar-cedula: el nombre de la empresa que invitó
+ * a una cédula solo se revela a un admin_empresa logueado — a un visitante
+ * anónimo probando cédulas no debe decírsele dónde trabaja alguien).
+ */
+function intentarAutenticar(req, _res, next) {
+  const header = req.headers.authorization;
+  if (header?.startsWith('Bearer ')) {
+    try {
+      const payload = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+      req.usuario = payload;
+      req.empresa_id = payload.empresa_id ?? null;
+    } catch {
+      // token inválido/expirado: sigue sin req.usuario, no bloquea.
+    }
+  }
+  next();
+}
+
+/**
  * Restringe el acceso a una lista de roles.
  * Uso: router.post('/', verificarToken, verificarRol([ROLES.ADMIN_EMPRESA]), ...)
  * @param {string[]} roles  Roles autorizados.
@@ -102,4 +124,4 @@ async function resolverEmpresasActivas(req, _res, next) {
   }
 }
 
-module.exports = { verificarToken, verificarRol, resolverEmpresa, resolverEmpresasActivas };
+module.exports = { verificarToken, intentarAutenticar, verificarRol, resolverEmpresa, resolverEmpresasActivas };

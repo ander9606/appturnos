@@ -133,7 +133,12 @@ const AuthService = {
    * Activa la cuenta de un trabajador que aún no tiene login.
    * Crea el usuario (rol según `trabajador.tipo`) y lo vincula.
    */
-  async verificarCedula(cedula) {
+  /**
+   * verEmpresa=false (visitante anónimo): dice si hay invitación pendiente,
+   * pero nunca el nombre de la empresa — conocer solo la cédula no debe
+   * bastar para mapear cédula→empleador probando números al azar.
+   */
+  async verificarCedula(cedula, { verEmpresa = false } = {}) {
     const fila = await AuthModel.verificarCedula(cedula);
     if (!fila) return { existe: false };
 
@@ -147,7 +152,7 @@ const AuthService = {
       tiene_cuenta: !!fila.usuario_id,
       tipo,
       invitacion: fila.estado_vinculo === 'solicitado_por_empresa'
-        ? { empresa_nombre: fila.empresa_nombre }
+        ? { empresa_nombre: verEmpresa ? fila.empresa_nombre : undefined }
         : null,
     };
   },

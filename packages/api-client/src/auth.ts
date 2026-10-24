@@ -112,17 +112,19 @@ export const authApi = {
     return api.delete<null>('/api/auth/me', { password });
   },
 
-  /** Verifica si una cédula existe y tiene invitación pendiente. Endpoint público. */
+  /**
+   * Verifica si una cédula existe y tiene invitación pendiente. Público (funciona
+   * sin sesión), pero `invitacion.empresa_nombre` solo viene si quien pregunta ya
+   * está autenticado como admin_empresa — por eso NO fuerza `authenticated: false`:
+   * manda el token si hay uno, sin exigirlo.
+   */
   verificarCedula(cedula: string): Promise<{
     existe: boolean;
     tiene_cuenta?: boolean;
     tipo?: string;
-    invitacion?: { empresa_nombre: string } | null;
+    invitacion?: { empresa_nombre?: string } | null;
   }> {
-    return api.get(
-      `/api/auth/verificar-cedula?cedula=${encodeURIComponent(cedula)}`,
-      { authenticated: false },
-    );
+    return api.get(`/api/auth/verificar-cedula?cedula=${encodeURIComponent(cedula)}`);
   },
 
   /**

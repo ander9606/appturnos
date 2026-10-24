@@ -41,7 +41,7 @@ export default function ActivarCuentaScreen() {
   const activarCuenta = useAuthStore((s) => s.activarCuenta);
   const [step, setStep] = React.useState<'datos' | 'otp'>('datos');
   const [serverError, setServerError] = React.useState<string | null>(null);
-  const [invitacionInfo, setInvitacionInfo] = React.useState<{ empresa_nombre: string; tipo: string } | null>(null);
+  const [invitacionInfo, setInvitacionInfo] = React.useState<{ empresa_nombre?: string; tipo: string } | null>(null);
   const [cuentaExistente, setCuentaExistente] = React.useState(false);
 
   const emailTokenRef = React.useRef<string | null>(null);
@@ -205,8 +205,12 @@ export default function ActivarCuentaScreen() {
                       <View style={styles.invitacionBanner}>
                         <Ionicons name="business-outline" size={16} color={COLORS.info} />
                         <Text style={styles.invitacionText}>
-                          Tienes una invitación de{' '}
-                          <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
+                          Tienes una invitación pendiente
+                          {invitacionInfo.empresa_nombre ? (
+                            <>
+                              {' '}de <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
+                            </>
+                          ) : null}
                           {invitacionInfo.tipo ? ` como ${TIPO_LABEL[invitacionInfo.tipo] ?? invitacionInfo.tipo}` : ''}.
                           Completa tu activación aquí.
                         </Text>
@@ -217,7 +221,7 @@ export default function ActivarCuentaScreen() {
                         <Ionicons name="information-circle-outline" size={16} color={COLORS.info} />
                         <Text style={styles.invitacionText}>
                           Esta cédula ya tiene una cuenta
-                          {invitacionInfo ? (
+                          {invitacionInfo?.empresa_nombre ? (
                             <>
                               {' '}con una invitación de <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
                             </>
