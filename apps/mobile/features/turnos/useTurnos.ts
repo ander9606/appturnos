@@ -590,8 +590,8 @@ export function useEliminarDescuento() {
 export function useActualizarPuesto() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ ofertaId, puestoId, plazas }: { ofertaId: number; puestoId: number; plazas: number }) =>
-      turnosApi.actualizarPuesto(ofertaId, puestoId, { plazas }),
+    mutationFn: ({ ofertaId, puestoId, ...payload }: { ofertaId: number; puestoId: number; plazas?: number; tarifa_dia?: number }) =>
+      turnosApi.actualizarPuesto(ofertaId, puestoId, payload),
     onSuccess: (_data, { ofertaId }) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
