@@ -3,7 +3,13 @@
 const PuestosModel = require('./puestos.model');
 const OfertasModel = require('../ofertas.model');
 const CargosModel = require('../../../cargos/cargos.model');
+const AsignacionesModel = require('../../asignaciones/asignaciones.model');
+const TrabajadoresModel = require('../../../trabajadores/trabajadores.model');
+const NotificacionesService = require('../../../notificaciones/notificaciones.service');
 const AppError = require('../../../../utils/AppError');
+const { ahoraColombiaSQL } = require('../../../../utils/fechaColombia');
+const { HORAS_CORTE_EDICION_OFERTA } = require('../../../../config/constants');
+const logger = require('../../../../utils/logger');
 
 /**
  * Lógica para gestionar puestos (slots cargo+plazas+tarifa) de una oferta
@@ -55,6 +61,65 @@ async function advertenciaCapacidad(empresaId, cargoId, cargoNombre, plazas) {
     `${disponibles} trabajador(es) activo(s) certificado(s) para ese cargo.`;
 }
 
+/**
+ * Cambiar `tarifa_dia` no puede aplicarse en silencio sobre alguien que ya
+ * aceptó el turno con la tarifa anterior — mismo criterio que camposCriticos
+ * en OfertasService.actualizar (fecha/hora/lugar): bloquea si alguien de este
+ * puesto ya marcó ingreso, y devuelve a quien esté 'confirmado' para que
+ * actualizar() lo pase a 'por_reconfirmar' y le avise, con el mismo margen de
+ * HORAS_CORTE_EDICION_OFERTA para que pueda reaccionar a tiempo.
+ */
+async function confirmadosParaReconfirmarPorTarifa(empresaId, ofertaId, puestoId) {
+  const asignaciones = (await AsignacionesModel.listarPorOferta(empresaId, ofertaId))
+    .filter((a) => a.puesto_id === puestoId);
+
+  const yaIniciado = asignaciones.some((a) => ['en_progreso', 'completado'].includes(a.estado));
+  if (yaIniciado) {
+    throw new AppError(
+      'No puedes cambiar el valor de este puesto: ya hay alguien que marcó ingreso en este turno.',
+      409
+    );
+  }
+
+  const confirmados = asignaciones.filter((a) => a.estado === 'confirmado');
+  if (confirmados.length > 0) {
+    const oferta = await OfertasModel.obtenerPorId(empresaId, ofertaId);
+    const inicio = `${oferta.fecha} ${oferta.hora_inicio}`;
+    const limiteEdicion = ahoraColombiaSQL(HORAS_CORTE_EDICION_OFERTA * 3_600_000);
+    if (inicio <= limiteEdicion) {
+      throw new AppError(
+        `No puedes cambiar el valor a menos de ${HORAS_CORTE_EDICION_OFERTA}h de que empiece el turno.`,
+        409
+      );
+    }
+  }
+  return confirmados;
+}
+
+/** Pasa a 'por_reconfirmar' a quien ya estaba confirmado en el puesto cuya tarifa cambió, y le avisa. */
+async function reconfirmarPorCambioDeTarifa(empresaId, puesto, confirmados) {
+  for (const a of confirmados) {
+    const res = await AsignacionesModel.marcarPorReconfirmar(empresaId, a.id);
+    if (!res.ok) {
+      logger.warn(`[puestos] no se pudo pasar a por_reconfirmar la asignación ${a.id} al editar la tarifa del puesto ${puesto.id}: ${res.motivo}`);
+    }
+  }
+
+  const montoFmt = Number(puesto.tarifa_dia).toLocaleString('es-CO');
+  for (const a of confirmados) {
+    const usuarioId = await TrabajadoresModel.obtenerUsuarioId(a.trabajador_id);
+    if (!usuarioId) continue;
+    await NotificacionesService.notificar({
+      empresaId,
+      usuarioId,
+      tipo: 'oferta.modificada',
+      titulo: 'Cambió el pago de tu turno — reconfirma tu participación',
+      mensaje: `El pago de "${puesto.cargo_nombre}" cambió a $${montoFmt}. Si quieres seguir, reconfirma o tu cupo quedará libre.`,
+      data: { oferta_id: puesto.oferta_id, puesto_id: puesto.id },
+    });
+  }
+}
+
 const PuestosService = {
   async listar(empresaId, ofertaId) {
     await cargarOfertaDeEmpresa(empresaId, ofertaId);
@@ -94,9 +159,20 @@ const PuestosService = {
         409
       );
     }
+
+    const cambiaTarifa = cambios.tarifa_dia !== undefined
+      && Number(cambios.tarifa_dia) !== Number(puesto.tarifa_dia);
+    const confirmados = cambiaTarifa
+      ? await confirmadosParaReconfirmarPorTarifa(empresaId, ofertaId, puestoId)
+      : [];
+
     const afectadas = await PuestosModel.actualizar(puestoId, cambios);
     if (afectadas === 0) throw new AppError('Nada que actualizar', 400);
     const actualizado = await PuestosModel.obtenerPorId(puestoId);
+
+    if (confirmados.length > 0) {
+      await reconfirmarPorCambioDeTarifa(empresaId, actualizado, confirmados);
+    }
     if (cambios.plazas !== undefined) {
       actualizado.advertencia = await advertenciaCapacidad(
         empresaId, actualizado.cargo_id, actualizado.cargo_nombre, Number(cambios.plazas)
