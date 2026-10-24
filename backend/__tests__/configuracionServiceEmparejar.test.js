@@ -8,8 +8,12 @@ jest.mock('../modules/integracion/integracion.model');
 jest.mock('../modules/integracion/services/conciliacion.service', () => ({
   autovincular: jest.fn().mockResolvedValue({ auto_vinculados: 0 }),
 }));
+// El guard SSRF hace una resolución DNS real — en el test, fetch ya está
+// mockeado y no hay red, así que se asume host externo válido.
+jest.mock('../utils/ssrfGuard', () => ({ hostExterno: jest.fn().mockResolvedValue(true) }));
 
 const IntegracionModel = require('../modules/integracion/integracion.model');
+const { hostExterno } = require('../utils/ssrfGuard');
 const ConfiguracionService = require('../modules/integracion/services/configuracion.service');
 
 const codigoValido = Buffer.from(JSON.stringify({
@@ -58,5 +62,21 @@ describe('ConfiguracionService.emparejar', () => {
     // La misma key es la que se le mandó a logiq360 en la confirmación.
     const bodyEnviado = JSON.parse(global.fetch.mock.calls[0][1].body);
     expect(bodyEnviado.app_turnos_api_key).toBe(guardado.logiq360_api_key);
+  });
+});
+
+// Seguridad: el código lo pega admin_empresa — url apuntando a un host interno
+// (metadata de nube, servicios internos) es un SSRF, el backend no debe
+// hacerle un POST autenticado a lo que el atacante elija.
+describe('ConfiguracionService.emparejar — SSRF', () => {
+  test('url resuelve a un host interno → rechaza sin llamar fetch', async () => {
+    hostExterno.mockResolvedValueOnce(false);
+    const codigoMalicioso = Buffer.from(JSON.stringify({
+      url: 'http://169.254.169.254', nonce: 'abc123',
+    }), 'utf8').toString('base64url');
+
+    await expect(ConfiguracionService.emparejar(7, codigoMalicioso)).rejects.toMatchObject({ statusCode: 400 });
+    expect(global.fetch).not.toHaveBeenCalled();
+    expect(IntegracionModel.guardarConfig).not.toHaveBeenCalled();
   });
 });
