@@ -151,9 +151,19 @@ async function avisarCorreccion(empresaId, usuario, registro, id) {
 }
 
 const RegistrosGestionService = {
-  async obtener(empresaId, registroId) {
+  async obtener(empresaId, registroId, usuario) {
     const registro = await RegistrosModel.obtenerPorId(empresaId, registroId);
     if (!registro) throw new AppError('Registro no encontrado', 404);
+    // Mismo chequeo que marcarSalida: compara contra el trabajador_id del
+    // propio registro, no contra "mi trabajador en esta empresa" — un
+    // usuario puede tener más de una fila en `trabajadores` para la misma
+    // empresa, y resolverlo por separado podría devolver una fila distinta.
+    if (usuario.rol === ROLES.TRABAJADOR_NOMINA) {
+      const trabajador = await TrabajadoresModel.obtenerPorId(empresaId, registro.trabajador_id);
+      if (!trabajador || trabajador.usuario_id !== usuario.sub) {
+        throw new AppError('No autorizado', 403);
+      }
+    }
     return conHorasEnVivo(empresaId, registro);
   },
 

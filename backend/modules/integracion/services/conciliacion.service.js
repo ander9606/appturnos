@@ -2,12 +2,18 @@
 
 const IntegracionModel = require('../integracion.model');
 const AppError = require('../../../utils/AppError');
+const { hostExterno } = require('../../../utils/ssrfGuard');
+const logger = require('../../../utils/logger');
 
 const ConciliacionService = {
   /** Obtiene empleados tipo turnos de logiq360 via su API pull. */
   async _candidatosLogiq360(cfg) {
     if (!cfg?.logiq360_base_url || !cfg?.api_key) return [];
     const base = String(cfg.logiq360_base_url).replace(/\/$/, '');
+    if (!(await hostExterno(base))) {
+      logger.warn(`[integracion] logiq360_base_url resuelve a un host interno, se omite: ${base}`);
+      return [];
+    }
     const resp = await fetch(`${base}/api/integracion/public/empleados?solo_turnos=true`, {
       headers: { 'X-API-Key': cfg.api_key },
     });

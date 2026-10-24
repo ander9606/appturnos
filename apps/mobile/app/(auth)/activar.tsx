@@ -1,12 +1,12 @@
 /**
  * Pantalla: Activar cuenta
  *
- * Flujo:
- *   1. Trabajador introduce cédula + email + contraseña
- *   2. Se llama useAuthStore.activarCuenta()
- *      (internamente: POST /api/auth/activar-cuenta → POST /api/auth/login)
- *   3. Si OK → queda autenticado, _layout.tsx redirige a (tabs)
- *   4. Si error → mensaje en pantalla
+ * Flujo de 2 pasos (igual que registro.tsx):
+ *   Paso 1 — cédula + email + contraseña → envía OTP al email
+ *   Paso 2 — verificación del código OTP → activa la cuenta y autentica
+ *
+ * El OTP prueba que quien activa controla ese correo — necesario porque la
+ * cédula (lo único que identifica al trabajador aquí) no es un secreto.
  */
 import { Text } from '@/components/ui/Text';
 import { COLORS, alpha } from '@/lib/designTokens';
@@ -39,9 +39,20 @@ const { height } = Dimensions.get('window');
 export default function ActivarCuentaScreen() {
   const router = useRouter();
   const activarCuenta = useAuthStore((s) => s.activarCuenta);
+  const [step, setStep] = React.useState<'datos' | 'otp'>('datos');
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [invitacionInfo, setInvitacionInfo] = React.useState<{ empresa_nombre: string; tipo: string } | null>(null);
   const [cuentaExistente, setCuentaExistente] = React.useState(false);
+
+  const emailTokenRef = React.useRef<string | null>(null);
+  const formDataRef = React.useRef<ActivarCuentaFormData | null>(null);
+
+  const [emailOtp, setEmailOtp] = React.useState('');
+  const [otpError, setOtpError] = React.useState<string | null>(null);
+  const [emailVerified, setEmailVerified] = React.useState(false);
+  const [isVerifying, setIsVerifying] = React.useState(false);
+  const [isCreating, setIsCreating] = React.useState(false);
+  const [resending, setResending] = React.useState(false);
 
   const checkCedula = async (cedula: string) => {
     if (cedula.length < 4) return;
@@ -68,13 +79,56 @@ export default function ActivarCuentaScreen() {
     defaultValues: { cedula: '', email: '', password: '', confirmPassword: '' },
   });
 
-  const onSubmit = async (data: ActivarCuentaFormData) => {
+  const onSubmitDatos = async (data: ActivarCuentaFormData) => {
     setServerError(null);
+    try {
+      await authApi.enviarOtp({ tipo: 'email', destino: data.email });
+      formDataRef.current = data;
+      setStep('otp');
+    } catch (err) {
+      setServerError(err instanceof ApiError ? err.message : t('auth.errors.generic'));
+    }
+  };
+
+  const verificarEmail = async () => {
+    if (emailOtp.length !== 6) { setOtpError('El código tiene 6 dígitos'); return; }
+    setOtpError(null);
+    setIsVerifying(true);
+    try {
+      const { token } = await authApi.verificarOtp({
+        tipo: 'email',
+        destino: formDataRef.current!.email,
+        codigo: emailOtp,
+      });
+      emailTokenRef.current = token;
+      setEmailVerified(true);
+    } catch (err) {
+      setOtpError(err instanceof ApiError ? err.message : 'Código incorrecto');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const reenviarCodigo = async () => {
+    setResending(true);
+    try { await authApi.enviarOtp({ tipo: 'email', destino: formDataRef.current!.email }); }
+    finally { setResending(false); }
+  };
+
+  const crearCuenta = async () => {
+    const data = formDataRef.current;
+    if (!data || !emailVerified || !emailTokenRef.current) {
+      setServerError('Verifica el código antes de continuar.');
+      return;
+    }
+    setServerError(null);
+    setIsCreating(true);
     try {
       await activarCuenta({
         cedula: data.cedula,
         email: data.email,
         password: data.password,
+        email_token: emailTokenRef.current,
       });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -87,8 +141,12 @@ export default function ActivarCuentaScreen() {
       } else {
         setServerError(t('auth.errors.generic'));
       }
+    } finally {
+      setIsCreating(false);
     }
   };
+
+  const data = formDataRef.current;
 
   return (
     <KeyboardAvoidingView
@@ -107,10 +165,14 @@ export default function ActivarCuentaScreen() {
           <View style={styles.circle2} />
 
           <View style={styles.logoBox}>
-            <Ionicons name="key-outline" size={38} color="white" />
+            <Ionicons name={step === 'datos' ? 'key-outline' : 'shield-checkmark-outline'} size={38} color="white" />
           </View>
-          <Text style={styles.title}>{t('auth.activar.title')}</Text>
-          <Text style={styles.subtitle}>{t('auth.activar.subtitle')}</Text>
+          <Text style={styles.title}>
+            {step === 'datos' ? t('auth.activar.title') : 'Verificar identidad'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {step === 'datos' ? t('auth.activar.subtitle') : 'Ingresa el código que enviamos a tu correo'}
+          </Text>
         </View>
 
         {/* ── Formulario ── */}
@@ -122,137 +184,200 @@ export default function ActivarCuentaScreen() {
             </View>
           )}
 
-          <View style={styles.fields}>
-            <Controller
-              control={control}
-              name="cedula"
-              render={({ field: { onChange, onBlur, value } }) => (
+          {step === 'datos' && (
+            <View style={styles.fields}>
+              <Controller
+                control={control}
+                name="cedula"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <>
+                    <Input
+                      label={t('auth.activar.cedula')}
+                      placeholder={t('auth.activar.cedulaPlaceholder')}
+                      keyboardType="number-pad"
+                      returnKeyType="next"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={() => { onBlur(); checkCedula(value); }}
+                      error={errors.cedula?.message}
+                    />
+                    {invitacionInfo && !cuentaExistente && (
+                      <View style={styles.invitacionBanner}>
+                        <Ionicons name="business-outline" size={16} color={COLORS.info} />
+                        <Text style={styles.invitacionText}>
+                          Tienes una invitación de{' '}
+                          <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
+                          {invitacionInfo.tipo ? ` como ${TIPO_LABEL[invitacionInfo.tipo] ?? invitacionInfo.tipo}` : ''}.
+                          Completa tu activación aquí.
+                        </Text>
+                      </View>
+                    )}
+                    {cuentaExistente && (
+                      <View style={styles.invitacionBanner}>
+                        <Ionicons name="information-circle-outline" size={16} color={COLORS.info} />
+                        <Text style={styles.invitacionText}>
+                          Esta cédula ya tiene una cuenta
+                          {invitacionInfo ? (
+                            <>
+                              {' '}con una invitación de <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
+                            </>
+                          ) : null}
+                          . Inicia sesión con tu correo y contraseña para continuar.
+                        </Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              />
+
+              {!cuentaExistente && (
                 <>
-                  <Input
-                    label={t('auth.activar.cedula')}
-                    placeholder={t('auth.activar.cedulaPlaceholder')}
-                    keyboardType="number-pad"
-                    returnKeyType="next"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={() => { onBlur(); checkCedula(value); }}
-                    error={errors.cedula?.message}
+                  <Controller
+                    control={control}
+                    name="email"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <Input
+                        label={t('auth.activar.email')}
+                        placeholder={t('auth.activar.emailPlaceholder')}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        autoComplete="email"
+                        returnKeyType="next"
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        error={errors.email?.message}
+                      />
+                    )}
                   />
-                  {invitacionInfo && !cuentaExistente && (
-                    <View style={styles.invitacionBanner}>
-                      <Ionicons name="business-outline" size={16} color={COLORS.info} />
-                      <Text style={styles.invitacionText}>
-                        Tienes una invitación de{' '}
-                        <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
-                        {invitacionInfo.tipo ? ` como ${TIPO_LABEL[invitacionInfo.tipo] ?? invitacionInfo.tipo}` : ''}.
-                        Completa tu activación aquí.
-                      </Text>
-                    </View>
-                  )}
-                  {cuentaExistente && (
-                    <View style={styles.invitacionBanner}>
-                      <Ionicons name="information-circle-outline" size={16} color={COLORS.info} />
-                      <Text style={styles.invitacionText}>
-                        Esta cédula ya tiene una cuenta
-                        {invitacionInfo ? (
-                          <>
-                            {' '}con una invitación de <Text style={styles.invitacionBold}>{invitacionInfo.empresa_nombre}</Text>
-                          </>
-                        ) : null}
-                        . Inicia sesión con tu correo y contraseña para continuar.
-                      </Text>
-                    </View>
-                  )}
+
+                  <Controller
+                    control={control}
+                    name="password"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <Input
+                        label={t('auth.activar.password')}
+                        placeholder={t('auth.activar.passwordPlaceholder')}
+                        isPassword
+                        hint="Mínimo 8 caracteres"
+                        returnKeyType="next"
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        error={errors.password?.message}
+                      />
+                    )}
+                  />
+
+                  <Controller
+                    control={control}
+                    name="confirmPassword"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <Input
+                        label={t('auth.activar.confirmPassword')}
+                        placeholder={t('auth.activar.confirmPlaceholder')}
+                        isPassword
+                        returnKeyType="done"
+                        onSubmitEditing={handleSubmit(onSubmitDatos)}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        error={errors.confirmPassword?.message}
+                      />
+                    )}
+                  />
                 </>
               )}
-            />
 
-            {!cuentaExistente && (
-              <>
-                <Controller
-                  control={control}
-                  name="email"
-                  render={({ field: { onChange, onBlur, value } }) => (
+              <View style={styles.submitWrap}>
+                {cuentaExistente ? (
+                  <Button
+                    label={t('auth.activar.loginLink')}
+                    onPress={() => router.push('/(auth)/login')}
+                    fullWidth
+                    size="lg"
+                  />
+                ) : (
+                  <Button
+                    label={isSubmitting ? 'Enviando código…' : t('auth.activar.submit')}
+                    onPress={handleSubmit(onSubmitDatos)}
+                    loading={isSubmitting}
+                    fullWidth
+                    size="lg"
+                  />
+                )}
+              </View>
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>{t('auth.activar.alreadyAccount')} </Text>
+                <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+                  <Text style={styles.footerLink}>{t('auth.activar.loginLink')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {step === 'otp' && data && (
+            <View style={styles.fields}>
+              <View style={styles.otpCard}>
+                <View style={styles.otpCardHeader}>
+                  <Ionicons
+                    name={emailVerified ? 'checkmark-circle' : 'mail-outline'}
+                    size={20}
+                    color={emailVerified ? COLORS.success : COLORS.placeholder}
+                  />
+                  <Text style={styles.otpCardTitle}>Código de correo electrónico</Text>
+                </View>
+                <Text style={styles.otpCardSubtitle}>
+                  Enviado a <Text style={{ fontWeight: '600' }}>{data.email}</Text>
+                </Text>
+
+                {!emailVerified ? (
+                  <>
                     <Input
-                      label={t('auth.activar.email')}
-                      placeholder={t('auth.activar.emailPlaceholder')}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      autoComplete="email"
-                      returnKeyType="next"
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      error={errors.email?.message}
+                      label=""
+                      placeholder="000000"
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      value={emailOtp}
+                      onChangeText={setEmailOtp}
+                      error={otpError ?? undefined}
                     />
-                  )}
-                />
+                    <View style={styles.otpActions}>
+                      <View style={{ flex: 1 }}>
+                        <Button
+                          label={isVerifying ? 'Verificando…' : 'Verificar'}
+                          onPress={verificarEmail}
+                          loading={isVerifying}
+                          size="sm"
+                          fullWidth
+                        />
+                      </View>
+                      <TouchableOpacity onPress={reenviarCodigo} disabled={resending} style={styles.otpResend}>
+                        <Text style={styles.footerLink}>{resending ? 'Reenviando…' : 'Reenviar'}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <Text style={{ color: COLORS.success, fontWeight: '600', fontSize: 13 }}>✓ Correo verificado</Text>
+                )}
+              </View>
 
-                <Controller
-                  control={control}
-                  name="password"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <Input
-                      label={t('auth.activar.password')}
-                      placeholder={t('auth.activar.passwordPlaceholder')}
-                      isPassword
-                      hint="Mínimo 8 caracteres"
-                      returnKeyType="next"
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      error={errors.password?.message}
-                    />
-                  )}
-                />
-
-                <Controller
-                  control={control}
-                  name="confirmPassword"
-                  render={({ field: { onChange, onBlur, value } }) => (
-                    <Input
-                      label={t('auth.activar.confirmPassword')}
-                      placeholder={t('auth.activar.confirmPlaceholder')}
-                      isPassword
-                      returnKeyType="done"
-                      onSubmitEditing={handleSubmit(onSubmit)}
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      error={errors.confirmPassword?.message}
-                    />
-                  )}
-                />
-              </>
-            )}
-          </View>
-
-          <View style={styles.submitWrap}>
-            {cuentaExistente ? (
               <Button
-                label={t('auth.activar.loginLink')}
-                onPress={() => router.push('/(auth)/login')}
+                label={isCreating ? t('auth.activar.submitting') : t('auth.activar.submit')}
+                onPress={crearCuenta}
+                loading={isCreating}
+                disabled={!emailVerified}
                 fullWidth
                 size="lg"
               />
-            ) : (
-              <Button
-                label={isSubmitting ? t('auth.activar.submitting') : t('auth.activar.submit')}
-                onPress={handleSubmit(onSubmit)}
-                loading={isSubmitting}
-                fullWidth
-                size="lg"
-              />
-            )}
-          </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>{t('auth.activar.alreadyAccount')} </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-              <Text style={styles.footerLink}>{t('auth.activar.loginLink')}</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity onPress={() => setStep('datos')} style={{ alignItems: 'center', paddingVertical: 8 }}>
+                <Text style={styles.footerText}>← Volver y editar datos</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -316,4 +441,14 @@ const styles = StyleSheet.create({
   },
   invitacionText: { flex: 1, fontSize: 13, color: COLORS.infoText, lineHeight: 18 },
   invitacionBold: { fontWeight: '700' },
+
+  otpCard: {
+    backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border,
+    borderRadius: 16, padding: 16, gap: 12,
+  },
+  otpCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  otpCardTitle: { fontSize: 14, fontWeight: '600', color: COLORS.foreground },
+  otpCardSubtitle: { fontSize: 12, color: COLORS.placeholder },
+  otpActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  otpResend: { justifyContent: 'center', paddingHorizontal: 4 },
 });

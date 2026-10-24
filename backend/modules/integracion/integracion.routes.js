@@ -55,6 +55,8 @@ router.put(
     body('api_key').optional({ values: 'falsy' }).isString(),
     body('incoming_secret').optional({ values: 'falsy' }).isString(),
     body('logiq360_api_key').optional({ values: 'falsy' }).isString(),
+    // logiq360_tenant_id/logiq360_base_url no son editables por este endpoint
+    // (ver configuracion.service.js#actualizarConfig) — si llegan, se ignoran.
   ],
   validar,
   ctrl.actualizarConfig

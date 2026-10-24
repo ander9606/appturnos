@@ -32,6 +32,19 @@ function verificarAcceso(contrato, usuario) {
   }
 }
 
+/**
+ * trabajador_firma_guardada es un atajo reutilizable para firmar sin
+ * redibujar (ver TrabajadoresModel.guardarFirma) — solo le sirve, y solo
+ * debe vérselo, al propio trabajador. Un gestor viendo el contrato de otra
+ * persona no necesita ese dato y no debe recibirlo en la respuesta.
+ */
+function limpiarCamposSensibles(contrato, usuario) {
+  if (contrato.trabajador_usuario_id !== usuario.sub) {
+    contrato.trabajador_firma_guardada = null;
+  }
+  return contrato;
+}
+
 function validarSalarioMinimo(valorDia) {
   if (valorDia < SALARIO_MINIMO_DIARIO_COP) {
     throw new AppError(
@@ -57,7 +70,7 @@ const ContratosService = {
     let contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
     if (contrato) {
       verificarAcceso(contrato, usuario);
-      return contrato;
+      return limpiarCamposSensibles(contrato, usuario);
     }
 
     // Si no existe, obtener asignación con detalles (trae su propio empresa_id
@@ -72,7 +85,7 @@ const ContratosService = {
 
     contrato = await ContratosService.generarParaAsignacion(asignacion.empresa_id, asignacionId);
     verificarAcceso(contrato, usuario);
-    return contrato;
+    return limpiarCamposSensibles(contrato, usuario);
   },
 
   /**
@@ -142,6 +155,7 @@ const ContratosService = {
     const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, asignacionId);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     verificarAcceso(contrato, usuario);
+    limpiarCamposSensibles(contrato, usuario);
     return adjuntarDescuentos(contrato);
   },
 
@@ -149,6 +163,7 @@ const ContratosService = {
     const contrato = await ContratosModel.obtenerPorId(empresaId, id);
     if (!contrato) throw new AppError('Contrato no encontrado', 404);
     verificarAcceso(contrato, usuario);
+    limpiarCamposSensibles(contrato, usuario);
     return adjuntarDescuentos(contrato);
   },
 

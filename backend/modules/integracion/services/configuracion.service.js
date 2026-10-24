@@ -24,7 +24,15 @@ const ConfiguracionService = {
     };
   },
 
-  /** Actualiza la config; los campos no enviados conservan su valor. */
+  /**
+   * Actualiza la config; los campos no enviados conservan su valor.
+   * logiq360_tenant_id/logiq360_base_url NUNCA se toman de `datos`: son
+   * datos de sistema que solo emparejar() escribe, tomados de la respuesta
+   * de logiq360 — si este PUT los aceptara del body, un admin_empresa
+   * (confianza baja en un backend multi-tenant) podría apuntar el host al
+   * que el worker de reconciliación le manda el api_key real por X-API-Key
+   * (SSRF + robo de ese secreto).
+   */
   async actualizarConfig(empresaId, datos) {
     const actual = await IntegracionModel.obtenerConfig(empresaId);
     const tomar = (campo) =>
@@ -36,8 +44,8 @@ const ConfiguracionService = {
       webhook_secret: tomar('webhook_secret'),
       api_key: tomar('api_key'),
       incoming_secret: tomar('incoming_secret'),
-      logiq360_tenant_id: tomar('logiq360_tenant_id'),
-      logiq360_base_url: tomar('logiq360_base_url'),
+      logiq360_tenant_id: actual?.logiq360_tenant_id ?? null,
+      logiq360_base_url: actual?.logiq360_base_url ?? null,
       logiq360_api_key: tomar('logiq360_api_key'),
     });
     return ConfiguracionService.obtenerConfig(empresaId);

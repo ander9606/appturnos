@@ -58,8 +58,18 @@ async function actualizarMiEmpresa(req, res) {
   if (sumar_nocturnas_festivo !== undefined) datos.sumar_nocturnas_festivo = ['1', 'true', 1, true].includes(sumar_nocturnas_festivo) ? 1 : 0;
   if (regla_domingo_habitual  !== undefined) datos.regla_domingo_habitual  = regla_domingo_habitual;
 
-  const data = await EmpresasService.actualizarMiEmpresa(req.empresa_id, datos, req.usuario.sub);
+  const data = await EmpresasService.actualizarMiEmpresa(req.empresa_id, datos, {
+    usuario_id: req.usuario.sub,
+    usuario_nombre: req.usuario.nombre,
+    usuario_rol: req.usuario.rol,
+    ip: req.ip,
+  });
   res.json({ success: true, data, message: 'Empresa actualizada' });
+}
+
+async function historialFirma(req, res) {
+  const data = await EmpresasService.historialFirma(req.empresa_id);
+  res.json({ success: true, data });
 }
 
 async function generarLinkPago(req, res) {
@@ -86,5 +96,5 @@ function reglasPago(req, res) {
 }
 
 module.exports = {
-  directorio, detalle, miEmpresa, actualizarMiEmpresa, reprocesarRecargos, generarLinkPago, obtenerSuscripcion, reglasPago,
+  directorio, detalle, miEmpresa, actualizarMiEmpresa, historialFirma, reprocesarRecargos, generarLinkPago, obtenerSuscripcion, reglasPago,
 };

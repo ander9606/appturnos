@@ -8,24 +8,17 @@ const logger = require('./logger');
 /**
  * `empresas.logo_url` guarda, en la misma columna MEDIUMTEXT, una imagen
  * subida como data URI ("data:image/png;base64,...") o una URL externa
- * vieja de cuando el campo solo aceptaba links (ver migración 098). Si es
- * una URL, se descarga; si falla (host caído, timeout, formato que pdfkit
- * no decodifica), se omite el logo sin romper la cuenta de cobro.
+ * vieja de cuando el campo solo aceptaba links (ver migración 098). Las
+ * URLs externas no se descargan (SSRF: la URL la controla admin_empresa,
+ * un rol de confianza baja en un backend multi-tenant) — igual que
+ * firmaPdf.js, que maneja la misma columna y nunca hace fetch de red. Las
+ * filas viejas con URL externa simplemente no muestran logo, igual que ya
+ * pasa en cualquier otro PDF que usa esta columna.
  */
 async function obtenerLogoBuffer(logoUrl) {
   if (!logoUrl) return null;
   if (/^data:image\/(png|jpe?g);base64,/.test(logoUrl)) {
     return Buffer.from(logoUrl.replace(/^data:image\/[\w+-]+;base64,/, ''), 'base64');
-  }
-  if (/^https?:\/\//.test(logoUrl)) {
-    try {
-      const res = await fetch(logoUrl, { signal: AbortSignal.timeout(5000) });
-      if (!res.ok) return null;
-      return Buffer.from(await res.arrayBuffer());
-    } catch (err) {
-      logger.warn(`[cuentaCobroPdf] no se pudo descargar el logo de la empresa: ${err.message}`);
-      return null;
-    }
   }
   return null;
 }

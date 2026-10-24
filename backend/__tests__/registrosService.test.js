@@ -25,6 +25,45 @@ const { ROLES }          = require('../config/constants');
 // Usuario gestor estándar para pruebas.
 const GESTOR = { sub: 10, rol: ROLES.JEFE_NOMINA };
 
+// ── obtener ───────────────────────────────────────────────────────────────────
+// IDOR: trabajador_nomina no debe poder leer el registro diario de un compañero
+// solo cambiando el :id en la URL (listar() ya filtra a lo propio; obtener() no lo hacía).
+
+describe('RegistrosService.obtener', () => {
+  const REGISTRO_AJENO = { id: 77, empresa_id: 1, trabajador_id: 5, fecha: '2026-06-10', hora_entrada: null, hora_salida: null };
+
+  test('trabajador_nomina pide el registro de OTRO trabajador → 403', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue(REGISTRO_AJENO);
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, usuario_id: 999 }); // no es "yo"
+
+    await expect(
+      RegistrosService.obtener(1, 77, { sub: 42, rol: ROLES.TRABAJADOR_NOMINA })
+    ).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  test('trabajador_nomina pide SU propio registro → lo devuelve', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue(REGISTRO_AJENO);
+    TrabajadoresModel.obtenerPorId.mockResolvedValue({ id: 5, usuario_id: 42 });
+
+    await expect(
+      RegistrosService.obtener(1, 77, { sub: 42, rol: ROLES.TRABAJADOR_NOMINA })
+    ).resolves.toMatchObject({ id: 77 });
+  });
+
+  test('gestor (jefe_nomina) puede pedir el registro de cualquiera', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue(REGISTRO_AJENO);
+
+    await expect(RegistrosService.obtener(1, 77, GESTOR)).resolves.toMatchObject({ id: 77 });
+    expect(TrabajadoresModel.obtenerPorId).not.toHaveBeenCalled();
+  });
+
+  test('registro no encontrado → 404', async () => {
+    RegistrosModel.obtenerPorId.mockResolvedValue(null);
+
+    await expect(RegistrosService.obtener(1, 999, GESTOR)).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
 // ── crear ─────────────────────────────────────────────────────────────────────
 
 describe('RegistrosService.crear', () => {

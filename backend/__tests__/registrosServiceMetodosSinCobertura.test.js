@@ -15,18 +15,22 @@ const TrabajadoresModel = require('../modules/trabajadores/trabajadores.model');
 const PuntosMarcajeModel = require('../modules/puntos-marcaje/puntos-marcaje.model');
 const EmpresasModel = require('../modules/empresas/empresas.model');
 const RegistrosService = require('../modules/nomina/registros/registros.service');
+const { ROLES } = require('../config/constants');
+
+// Gestor estándar — obtener() solo valida dueño cuando el rol es trabajador_nomina.
+const GESTOR = { sub: 1, rol: ROLES.ADMIN_EMPRESA };
 
 describe('obtener', () => {
   test('registro inexistente (o de otra empresa) → 404', async () => {
     RegistrosModel.obtenerPorId.mockResolvedValue(null);
-    await expect(RegistrosService.obtener(1, 9)).rejects.toMatchObject({ statusCode: 404, message: 'Registro no encontrado' });
+    await expect(RegistrosService.obtener(1, 9, GESTOR)).rejects.toMatchObject({ statusCode: 404, message: 'Registro no encontrado' });
     expect(RegistrosModel.obtenerPorId).toHaveBeenCalledWith(1, 9);
   });
 
   test('jornada ya cerrada: se devuelve tal cual, sin calcular horas en vivo', async () => {
     const cerrado = { id: 9, fecha: '2026-06-01', hora_entrada: '08:00:00', hora_salida: '17:00:00', horas_ordinarias: 9 };
     RegistrosModel.obtenerPorId.mockResolvedValue(cerrado);
-    await expect(RegistrosService.obtener(1, 9)).resolves.toBe(cerrado);
+    await expect(RegistrosService.obtener(1, 9, GESTOR)).resolves.toBe(cerrado);
     expect(RegistrosModel.sumarOrdinariasEnSemana).not.toHaveBeenCalled();
   });
 });

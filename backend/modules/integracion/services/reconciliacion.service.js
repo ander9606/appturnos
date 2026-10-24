@@ -2,6 +2,7 @@
 
 const IntegracionModel = require('../integracion.model');
 const entrantesHandlers = require('../entrantes.handlers');
+const { hostExterno } = require('../../../utils/ssrfGuard');
 const logger = require('../../../utils/logger');
 
 // 401/402 de logiq360 confirman que la api_key ya no autentica (activo=0 o
@@ -18,6 +19,10 @@ const ReconciliacionService = {
   async _estadoReal(cfg) {
     if (!cfg?.logiq360_base_url || !cfg?.api_key) return null;
     const base = String(cfg.logiq360_base_url).replace(/\/$/, '');
+    if (!(await hostExterno(base))) {
+      logger.warn(`[integracion] logiq360_base_url resuelve a un host interno, se omite: ${base}`);
+      return null;
+    }
     try {
       const resp = await fetch(`${base}/api/integracion/public/ping`, {
         headers: { 'X-API-Key': cfg.api_key },

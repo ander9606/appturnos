@@ -68,11 +68,12 @@ interface AuthState {
   /** Login normal con email + contraseña */
   login(email: string, password: string): Promise<void>;
 
-  /** Activar cuenta de trabajador con cédula + email + contraseña */
+  /** Activar cuenta de trabajador con cédula + email + contraseña (ya verificado por OTP) */
   activarCuenta(params: {
     cedula: string;
     email: string;
     password: string;
+    email_token: string;
   }): Promise<void>;
 
   /** Registro público de empresa nueva + auto-login como admin_empresa */
@@ -173,10 +174,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   },
 
   // ── activarCuenta ─────────────────────────────────────────────────────
-  async activarCuenta({ cedula, email, password }) {
+  async activarCuenta({ cedula, email, password, email_token }) {
     // Activation only creates the account; it does NOT return tokens.
     // After success we do a regular login so the user lands logged in.
-    await authApi.activarCuenta({ cedula, email, password });
+    await authApi.activarCuenta({ cedula, email, password, email_token });
     await get().login(email, password);
   },
 

@@ -31,6 +31,9 @@ const RegistrosService = require('../modules/nomina/registros/registros.service'
 const { ROLES } = require('../config/constants');
 
 const EMPLEADO = { sub: 42, rol: ROLES.TRABAJADOR_NOMINA };
+// obtener() ahora valida dueño si el rol es trabajador_nomina — un gestor evita esa
+// consulta extra y no cambia el orden de consultas que este archivo congela.
+const GESTOR = { sub: 1, rol: ROLES.ADMIN_EMPRESA };
 const MIERCOLES = '2026-06-10';
 const DOMINGO = '2026-06-14';
 const AHORA = `${MIERCOLES} 17:00:00`; // reloj de Colombia fijo: la salida es 17:00:00
@@ -216,7 +219,7 @@ describe('cálculo en vivo — caracterización', () => {
     const reg = registroAbierto();
     conRegistro(reg);
 
-    const r = await RegistrosService.obtener(1, 99);
+    const r = await RegistrosService.obtener(1, 99, GESTOR);
 
     expect(nombres()).toEqual(['registro.obtenerPorId', 'registro.sumar', 'empresa.config', 'reloj']);
     expect(llamada('registro.sumar').slice(1)).toEqual([1, 5, '2026-06-08', MIERCOLES]);
@@ -229,14 +232,14 @@ describe('cálculo en vivo — caracterización', () => {
   test('toma la jornada continua del registro y el acumulado semanal', async () => {
     conRegistro(registroAbierto({ jornada_continua: 1 }));
     anotar(RegistrosModel.sumarOrdinariasEnSemana, 'registro.sumar', { ordinarias: 40, extras: 0 });
-    const r = await RegistrosService.obtener(1, 99);
+    const r = await RegistrosService.obtener(1, 99, GESTOR);
     expect(r).toMatchObject({ horas_ordinarias: 2, horas_extra_diurnas: 7, en_vivo: true });
   });
 
   test('segunda sesión abierta: suma lo ya guardado y cuenta las ordinarias previas en el acumulado', async () => {
     conRegistro(registroAbierto({ sesiones: 2, hora_entrada: '14:00:00', horas_ordinarias: '4.00', horas_nocturnas: '0.00', horas_extra_diurnas: '0.50', horas_extra_nocturnas: '0.00', horas_festivo: '0.00' }));
     anotar(RegistrosModel.sumarOrdinariasEnSemana, 'registro.sumar', { ordinarias: 36, extras: 0 });
-    const r = await RegistrosService.obtener(1, 99);
+    const r = await RegistrosService.obtener(1, 99, GESTOR);
     expect(r).toMatchObject({ horas_ordinarias: 6, horas_extra_diurnas: 1.5, en_vivo: true });
     expect(r).not.toHaveProperty('total_horas');
   });
@@ -244,14 +247,14 @@ describe('cálculo en vivo — caracterización', () => {
   test('sesión previa con nocturnas, festivas y es_festivo: cada total se SUMA y es_festivo es el de ESTA sesión', async () => {
     conRegistro(registroAbierto({ sesiones: 2, hora_entrada: '14:00:00', horas_ordinarias: '3.00', horas_nocturnas: '1.00', horas_extra_diurnas: '0.50', horas_extra_nocturnas: '0.25', horas_festivo: '0.75', es_festivo: 1 }));
     anotar(RegistrosModel.sumarOrdinariasEnSemana, 'registro.sumar', { ordinarias: 36, extras: 0 });
-    const r = await RegistrosService.obtener(1, 99);
+    const r = await RegistrosService.obtener(1, 99, GESTOR);
     expect(r).toMatchObject({ ...{ horas_ordinarias: 5, horas_extra_diurnas: 1.5, horas_extra_nocturnas: 0.25, horas_nocturnas: 1, horas_festivo: 0.75, es_festivo: 0 }, en_vivo: true });
   });
 
   test('domingo: consulta festivos del mes y el desglose sale como festivo', async () => {
     conRegistro(registroAbierto({ fecha: DOMINGO }));
     anotar(RegistrosModel.contarFestivosTrabajadosEnMes, 'registro.contarFestivos', 2);
-    const r = await RegistrosService.obtener(1, 99);
+    const r = await RegistrosService.obtener(1, 99, GESTOR);
     expect(nombres()).toEqual(['registro.obtenerPorId', 'registro.sumar', 'empresa.config', 'registro.contarFestivos', 'reloj']);
     expect(r.es_festivo).toBe(1);
   });
@@ -261,13 +264,13 @@ describe('cálculo en vivo — caracterización', () => {
     ['sin entrada (sin horario)', registroAbierto({ hora_entrada: null })],
   ])('%s: se devuelve intacto, sin consultar nada más ni leer el reloj', async (_n, reg) => {
     conRegistro(reg);
-    await expect(RegistrosService.obtener(1, 99)).resolves.toBe(reg);
+    await expect(RegistrosService.obtener(1, 99, GESTOR)).resolves.toBe(reg);
     expect(nombres()).toEqual(['registro.obtenerPorId']);
   });
 
   test('obtener: registro inexistente → 404', async () => {
     conRegistro(null);
-    await expect(RegistrosService.obtener(1, 99)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(RegistrosService.obtener(1, 99, GESTOR)).rejects.toMatchObject({ statusCode: 404 });
   });
 
   test('listar: proyecta en vivo solo los abiertos y deja intactos los cerrados, conservando el orden', async () => {
