@@ -6,7 +6,7 @@ import { useInvitar } from '@/features/empresas/useTrabajadorEmpresa';
 import type { TrabajadorFormValues } from '@/features/equipo/schemas';
 import { ApiError } from '@api-client';
 import type { Trabajador } from '@api-client';
-import { CAMPOS_JEFE, CAMPOS_JEFE_TURNOS, filtrarCampos } from './fichaTrabajador';
+import { CAMPOS_JEFE, CAMPOS_JEFE_TURNOS, filtrarCampos } from './fichaTrabajadorUtils';
 
 /** Guarda la ficha editada; si pasa de turnos/ambos a nómina, además invita al trabajador. */
 export function useGuardarFicha(numId: number, t: Trabajador | undefined, isAdmin: boolean, onGuardado: () => void) {

@@ -9,7 +9,7 @@ import { ApiError } from '@api-client';
 import type { Trabajador } from '@api-client';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { fmtCopOpt } from './fichaTrabajador';
+import { fmtCopOpt } from './fichaTrabajadorUtils';
 
 /** Estado y acciones del modal "Editar sueldo". */
 export function useEditarSueldo(numId: number, t: Trabajador | undefined) {

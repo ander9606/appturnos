@@ -25,7 +25,7 @@ import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import type { TrabajadorFormValues } from '@/features/equipo/schemas';
 import type { Asignacion } from '@api-client';
 import { useRoleGuard } from '@/components/RoleGuard';
-import { CAMPOS_JEFE, CAMPOS_JEFE_TURNOS } from '@/features/equipo/trabajador/fichaTrabajador';
+import { CAMPOS_JEFE, CAMPOS_JEFE_TURNOS } from '@/features/equipo/trabajador/fichaTrabajadorUtils';
 import {
   HeroTrabajador, CuentaSinActivarBanner, DatosPersonalesCard, DatosAdicionales, MarcacionCard, RankingCard,
 } from '@/features/equipo/trabajador/FichaTrabajador';

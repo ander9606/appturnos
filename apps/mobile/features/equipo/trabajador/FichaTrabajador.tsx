@@ -9,7 +9,7 @@ import { MarcacionSelector } from '@/features/equipo/MarcacionSelector';
 import type { Trabajador, PuntoMarcaje } from '@api-client';
 import {
   TIPO_LABELS, TIPO_DOC_LABELS, SEXO_LABELS, TIPO_CUENTA_LABELS, fmtFechaCorta,
-} from './fichaTrabajador';
+} from './fichaTrabajadorUtils';
 
 export function InfoRow({
   label, value, onCall,
