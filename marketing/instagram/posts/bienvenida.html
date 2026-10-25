@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<style>body{margin:0;background:#fff}svg{display:block}text{font-family:Inter,Arial,sans-serif;font-weight:800}</style>
+</head><body>
+<!-- Post de feed 4:5 (1080 x 1350): "Bienvenido a Zaturno". Dos versiones: A fondo naranja, B fondo claro. -->
+<svg id="post-bienvenida-a" width="1080" height="1350" viewBox="0 0 1080 1350"></svg>
+<svg id="post-bienvenida-b" width="1080" height="1350" viewBox="0 0 1080 1350"></svg>
+<script src="../personaje/perro.js"></script>
+<script>
+// El perro saluda: solo cambia la pata derecha (arriba) y la boca (lengua afuera).
+const saluda = perro({ boca: 'lengua', brazoD: [92, -10, 76, -78] });
+const mensaje = (y, color, size = 60) =>
+  `<text x="540" y="${y}" font-size="${size}" fill="${color}" text-anchor="middle">¡Control de nómina</text>
+   <text x="540" y="${y + size * 1.2}" font-size="${size}" fill="${color}" text-anchor="middle">y gestión de turnos!</text>`;
+const planeta = (cx, cy, r, ancho, alto, anillo, cuerpo, opacidad = 1) =>
+  `<ellipse cx="${cx}" cy="${cy}" rx="${ancho}" ry="${alto}" fill="none" stroke="${anillo}" stroke-width="30" opacity="${opacidad}" transform="rotate(-20 ${cx} ${cy})"/>
+   <circle cx="${cx}" cy="${cy}" r="${r}" fill="${cuerpo}" opacity="${opacidad}"/>`;
+
+// ---- A: fondo naranja de la marca ----
+document.getElementById('post-bienvenida-a').innerHTML = `
+  <rect width="1080" height="1350" fill="${C.NARANJA}"/>
+  ${planeta(540, 730, 360, 540, 130, '#fff', '#fff', .14)}
+  ${P.brillo(110, 420, 3.2, '#fff')}${P.brillo(960, 360, 2.6, '#fff')}${P.brillo(930, 900, 2, '#fff')}${P.brillo(150, 940, 1.6, '#fff')}
+  <text x="540" y="190" font-size="130" fill="#fff" text-anchor="middle">¡Bienvenido</text>
+  <text x="540" y="322" font-size="130" fill="#fff" text-anchor="middle">a Zaturno!</text>
+  <g transform="translate(540 730) scale(2.7)">${saluda}</g>
+  <rect x="90" y="1150" width="900" height="170" rx="44" fill="#fff"/>
+  ${mensaje(1222, C.INK, 56)}`;
+
+// ---- B: fondo claro, el planeta naranja detrás del perro ----
+document.getElementById('post-bienvenida-b').innerHTML = `
+  <rect width="1080" height="1350" fill="${C.BLANCO}"/>
+  <text x="540" y="180" font-size="124" fill="${C.INK}" text-anchor="middle">¡Bienvenido a</text>
+  <text x="540" y="312" font-size="136" fill="${C.NARANJA}" text-anchor="middle">Zaturno!</text>
+  ${planeta(540, 730, 390, 560, 140, C.NARANJA_OSC, C.NARANJA)}
+  ${P.brillo(120, 430, 3, C.AMARILLO)}${P.brillo(960, 400, 2.4, C.AMARILLO)}${P.brillo(970, 980, 1.8, C.AMARILLO)}
+  <g transform="translate(540 700) scale(2.6)">${saluda}</g>
+  ${mensaje(1222, C.INK, 62)}`;
+</script></body></html>
