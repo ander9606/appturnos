@@ -60,6 +60,7 @@ const TIPO_ICON: Record<string, React.ComponentProps<typeof Ionicons>['name']> =
   'reingreso.aprobado':          'checkmark-circle-outline',
   'reingreso.rechazado':         'close-circle-outline',
   'suscripcion.pago_rechazado':  'card-outline',
+  'suscripcion.vencimiento':     'alert-circle-outline',
   'ausencia.nueva':              'calendar-clear-outline',
   'ausencia.resuelta':           'calendar-outline',
   'nomina.compensatorio_asignado': 'sunny-outline',

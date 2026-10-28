@@ -5,6 +5,7 @@ const { enviarEmail } = require('../../utils/mailer');
 const { plantillaCorreo, esc } = require('../../utils/plantillaCorreo');
 const WompiService    = require('../webhooks/wompi.service');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
+const NotificacionesModel   = require('../notificaciones/notificaciones.model');
 const logger          = require('../../utils/logger');
 
 const INTERVALO_MS = 24 * 60 * 60 * 1000; // cada 24h
@@ -60,6 +61,22 @@ async function procesarRenovaciones() {
       mensaje,
       data: { empresa_id: emp.id },
     }).catch((err) => logger.error(`[suscripcion-worker] no se pudo notificar a super_admin (empresa ${emp.id}):`, err.message));
+
+    // Aviso in-app a TODOS los gestores de la empresa (no solo admin_empresa,
+    // que es el único que recibe el email) para que todos se enteren a tiempo.
+    try {
+      const gestoresIds = await NotificacionesModel.idsGestores(emp.id);
+      await NotificacionesService.notificarVarios(gestoresIds, {
+        empresaId: emp.id,
+        tipo: 'suscripcion.vencimiento',
+        titulo: dias >= 0 ? 'Suscripción por vencer' : 'Suscripción vencida',
+        mensaje: dias >= 0
+          ? `La suscripción vence en ${dias} día${dias !== 1 ? 's' : ''}.`
+          : `La suscripción venció hace ${-dias} días.`,
+      });
+    } catch (err) {
+      logger.error(`[suscripcion-worker] no se pudo notificar a gestores (empresa ${emp.id}):`, err.message);
+    }
   }
 }
 
