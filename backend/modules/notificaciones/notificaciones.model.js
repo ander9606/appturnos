@@ -122,6 +122,15 @@ const NotificacionesModel = {
     return filas.map((f) => f.usuario_id);
   },
 
+  /** Todos los gestores activos de la empresa, sin importar área: admin_empresa, jefe_turnos, jefe_nomina y nomina. */
+  async idsGestores(empresaId) {
+    const [filas] = await pool.query(
+      `SELECT id FROM usuarios WHERE empresa_id = ? AND rol IN ('admin_empresa','jefe_turnos','jefe_nomina','nomina') AND activo = 1`,
+      [empresaId]
+    );
+    return filas.map((f) => f.id);
+  },
+
   /** Gestores de turnos activos: jefe_turnos y admin_empresa. */
   async idsGestoresTurnos(empresaId) {
     const [filas] = await pool.query(

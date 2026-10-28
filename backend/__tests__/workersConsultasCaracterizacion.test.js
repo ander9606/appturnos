@@ -185,6 +185,20 @@ describe('suscripcion.worker (avisos de renovación)', () => {
     }));
   });
 
+  test('vence en 7 días: también avisa in-app a todos los gestores de la empresa (no solo admin_empresa)', async () => {
+    responder([
+      [/FROM empresas e JOIN usuarios u/, [[empresa(7)]]],
+      [/^SELECT id FROM usuarios WHERE empresa_id = \? AND rol IN \('admin_empresa','jefe_turnos','jefe_nomina','nomina'\)/, [[{ id: 1 }, { id: 2 }]]],
+    ]);
+
+    suscripcionWorker.iniciarWorker();
+    await avanzar(60_000);
+
+    expect(Notificaciones.notificarVarios).toHaveBeenCalledWith([1, 2], expect.objectContaining({
+      empresaId: 7, tipo: 'suscripcion.vencimiento', titulo: 'Suscripción por vencer', mensaje: 'La suscripción vence en 7 días.',
+    }));
+  });
+
   test('vence hoy: el asunto lo dice', async () => {
     conEmpresas(empresa(0));
     suscripcionWorker.iniciarWorker();

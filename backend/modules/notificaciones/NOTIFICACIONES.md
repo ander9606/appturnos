@@ -62,6 +62,7 @@ Para regenerar el barrido: `grep -rn "NotificacionesService\.\(notificar\|notifi
 | `nomina.descuento_respondido` | Descuento aceptado / rechazado | Trabajador responde a un descuento pendiente | `descuentos.service.js:69` |
 | `trabajador_empresa.archivado_por_conversion` | Trabajador ya no disponible | Uno de sus trabajadores se convirtió a nómina de otra empresa | `trabajador-empresa.service.js:313` |
 | `oferta.creada` | Nuevo turno creado | Un jefe_turnos/admin_empresa crea o duplica un turno — avisa a los demás co-gestores de la empresa (no al creador) para que no lo dupliquen | `ofertas.gestion.service.js:crear,duplicar` |
+| `suscripcion.vencimiento` | Suscripción por vencer / vencida | Cron diario, a TODOS los gestores (admin_empresa, jefe_turnos, jefe_nomina, nomina) — el email de renovación solo le llega a admin_empresa, esto avisa in-app al resto | `suscripcion.worker.js` |
 
 ## Solo `admin_empresa`
 
