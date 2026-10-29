@@ -42,6 +42,7 @@ const PLANES: { value: PlanEmpresa; label: string; color: string }[] = [
   { value: 'basico', label: 'Básico', color: COLORS.placeholder },
   { value: 'profesional', label: 'Profesional', color: COLORS.info },
   { value: 'empresarial', label: 'Empresarial', color: ACCENT.violeta },
+  { value: 'ilimitado', label: 'Ilimitado', color: COLORS.success },
 ];
 
 // ── Sub-components ────────────────────────────────────────────────────────

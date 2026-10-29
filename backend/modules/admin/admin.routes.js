@@ -7,6 +7,7 @@ const { validar } = require('../../middleware/validator');
 const { verificarToken, verificarRol } = require('../../middleware/authMiddleware');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./admin.controller');
+const { CODIGOS_PLAN } = require('../suscripciones/planes.model');
 
 const router = express.Router();
 
@@ -41,9 +42,11 @@ router.put(
   verificarToken,
   verificarRol(SOLO_SUPER),
   [
-    param('codigo').isIn(['basico', 'profesional', 'empresarial']),
+    param('codigo').isIn(CODIGOS_PLAN),
     body('precio_cop').isInt({ min: 0, max: 10_000_000 }).toInt()
       .withMessage('precio_cop debe ser un entero entre 0 y 10.000.000'),
+    body('precio_anual_cop').optional({ nullable: true }).isInt({ min: 0, max: 100_000_000 }).toInt()
+      .withMessage('precio_anual_cop debe ser un entero entre 0 y 100.000.000'),
     enteroONull('max_trabajadores', { min: 1, max: 100_000 }),
     enteroONull('incluidos', { min: 0, max: 100_000 }),
     enteroONull('precio_adicional_cop', { min: 0, max: 1_000_000 }),
@@ -61,7 +64,7 @@ router.get(
   verificarRol(SOLO_SUPER),
   [
     query('busqueda').optional().isString().trim(),
-    query('plan').optional().isIn(['basico', 'profesional', 'empresarial']),
+    query('plan').optional().isIn(CODIGOS_PLAN),
     query('activo').optional().isIn(['true', 'false']),
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
@@ -97,7 +100,7 @@ router.post(
     body('ciudad').optional({ nullable: true }).isString().trim(),
     body('plan')
       .optional()
-      .isIn(['basico', 'profesional', 'empresarial'])
+      .isIn(CODIGOS_PLAN)
       .withMessage('plan inválido'),
     body('descripcion').optional({ nullable: true }).isString().trim(),
     body('admin_nombre').optional({ nullable: true }).isString().trim().notEmpty(),
@@ -117,7 +120,7 @@ router.put(
     body('nombre').optional().isString().trim().notEmpty(),
     body('nit').optional({ nullable: true }).isString().trim(),
     body('ciudad').optional({ nullable: true }).isString().trim(),
-    body('plan').optional().isIn(['basico', 'profesional', 'empresarial']),
+    body('plan').optional().isIn(CODIGOS_PLAN),
     body('acepta_postulaciones').optional().isBoolean().toBoolean(),
     body('descripcion').optional({ nullable: true }).isString().trim(),
     body('logo_url').optional({ nullable: true }).isURL().withMessage('logo_url debe ser una URL válida'),
@@ -133,7 +136,7 @@ router.post(
   verificarRol(SOLO_SUPER),
   [
     param('id').isInt({ min: 1 }).toInt(),
-    body('plan').isIn(['basico', 'profesional', 'empresarial']).withMessage('plan requerido'),
+    body('plan').isIn(CODIGOS_PLAN).withMessage('plan requerido'),
     body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
   ],
   validar,
@@ -147,7 +150,7 @@ router.patch(
   verificarRol(SOLO_SUPER),
   [
     param('id').isInt({ min: 1 }).toInt(),
-    body('plan').optional().isIn(['basico', 'profesional', 'empresarial']),
+    body('plan').optional().isIn(CODIGOS_PLAN),
     body('vigente_hasta').optional({ nullable: true }).custom((v) => {
       if (v === null) return true;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) throw new Error('vigente_hasta debe ser YYYY-MM-DD o null');

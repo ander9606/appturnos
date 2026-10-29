@@ -71,7 +71,7 @@ export interface GestorCreado {
   password_temporal: string;
 }
 
-export type PlanCodigo = 'basico' | 'profesional' | 'empresarial';
+export type PlanCodigo = 'basico' | 'profesional' | 'empresarial' | 'ilimitado';
 
 /** Un plan tal como lo ve el admin_empresa, con el precio que pagaría hoy. */
 export interface PlanOpcion {
@@ -84,6 +84,8 @@ export interface PlanOpcion {
   precio_mensual_cop: number;
   /** Año completo (12 meses) con la promo: 10 mensualidades. */
   precio_anual_cop: number;
+  /** Si sube a este plan en plena vigencia: solo paga la diferencia (el vencimiento no cambia). null = plan completo. */
+  precio_cambio_cop: number | null;
   /** false si el tope del plan es menor que sus trabajadores activos. */
   disponible: boolean;
 }

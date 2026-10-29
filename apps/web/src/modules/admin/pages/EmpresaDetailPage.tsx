@@ -13,12 +13,14 @@ const PLAN_BADGE: Record<Plan, string> = {
   basico: 'bg-muted text-muted-foreground',
   profesional: 'bg-primary-100 text-primary-600',
   empresarial: 'bg-warning-light text-warning',
+  ilimitado: 'bg-success-light text-success',
 };
 
 const PLAN_LABEL: Record<Plan, string> = {
   basico: 'Básico',
   profesional: 'Profesional',
   empresarial: 'Empresarial',
+  ilimitado: 'Ilimitado',
 };
 
 const ORIGEN_BADGE: Record<OrigenSuscripcion, string> = {
@@ -306,6 +308,7 @@ export function EmpresaDetailPage() {
                 <option value="basico">Básico</option>
                 <option value="profesional">Profesional</option>
                 <option value="empresarial">Empresarial</option>
+                <option value="ilimitado">Ilimitado</option>
               </select>
             </div>
             <div className="flex-1">

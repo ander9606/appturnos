@@ -72,6 +72,7 @@ export default function MiPlanScreen() {
   const elegido = planElegido ?? s.plan;
   const opcion = s.planes.find((p) => p.codigo === elegido);
   const esCambio = elegido !== s.plan;
+  const soloDiferencia = opcion?.precio_cambio_cop != null;
   const enTope = s.max_trabajadores != null && s.trabajadores_activos >= s.max_trabajadores;
   const uso = s.max_trabajadores ? Math.min(100, Math.round((s.trabajadores_activos / s.max_trabajadores) * 100)) : null;
   const colorUso = enTope ? 'bg-danger' : (uso ?? 0) >= 80 ? 'bg-warning' : 'bg-primary';
@@ -188,6 +189,12 @@ export default function MiPlanScreen() {
               </View>
             </View>
 
+            {soloDiferencia ? (
+              <Text className="text-xs text-muted-foreground">
+                Como ya tienes una suscripción vigente, solo pagas la diferencia por lo que te resta. Tu fecha de vencimiento no cambia.
+              </Text>
+            ) : (
+              <>
             {/* ── Modalidad ─────────────────────────────────────────── */}
             <View className="gap-2" accessibilityRole="radiogroup">
               <Text className="text-xs text-muted-foreground uppercase">Modalidad de pago</Text>
@@ -223,11 +230,13 @@ export default function MiPlanScreen() {
                 Si durante la vigencia superas el tope de trabajadores de tu plan, deberás pasar a un plan superior.
               </Text>
             </View>
+              </>
+            )}
 
             <View className="flex-row justify-between items-center">
               <Text className="text-sm text-muted-foreground">Total</Text>
               <Text className="text-lg font-bold text-foreground">
-                {opcion ? formatCOP(meses === 12 ? opcion.precio_anual_cop : opcion.precio_mensual_cop) : '—'}
+                {opcion ? formatCOP(opcion.precio_cambio_cop ?? (meses === 12 ? opcion.precio_anual_cop : opcion.precio_mensual_cop)) : '—'}
               </Text>
             </View>
 

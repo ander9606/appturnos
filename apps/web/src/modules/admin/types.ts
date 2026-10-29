@@ -1,4 +1,4 @@
-export type Plan = 'basico' | 'profesional' | 'empresarial';
+export type Plan = 'basico' | 'profesional' | 'empresarial' | 'ilimitado';
 
 /** Fila de la tabla `planes` (backend) — precios editables por super_admin, COP/mes. */
 export interface PlanConfig {

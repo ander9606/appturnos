@@ -946,7 +946,7 @@ function GestoresTab() {
 }
 
 /* ── Mi plan ── */
-const PLAN_LABEL: Record<string, string> = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial' };
+const PLAN_LABEL: Record<string, string> = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial', ilimitado: 'Ilimitado' };
 
 // ponytail: formatea tanto suscripcion_vigente_hasta (DATE) como link.expira_at (datetime ISO
 // generado en el backend) — el fmtDate compartido asume fechas puras (columnas DATE) y rompería
@@ -992,6 +992,7 @@ function PlanTab() {
   const elegido = planElegido ?? s.plan;
   const opcion = s.planes.find(p => p.codigo === elegido);
   const esCambio = elegido !== s.plan;
+  const soloDiferencia = opcion?.precio_cambio_cop != null;
   const uso = s.max_trabajadores ? Math.min(100, Math.round((s.trabajadores_activos / s.max_trabajadores) * 100)) : null;
   const enTope = s.max_trabajadores != null && s.trabajadores_activos >= s.max_trabajadores;
 
@@ -1146,35 +1147,44 @@ function PlanTab() {
                 ))}
               </fieldset>
 
+              {soloDiferencia ? (
+                <p className="text-sm text-foreground bg-primary-50 border border-primary-600/30 rounded-xl px-4 py-3">
+                  Como ya tienes una suscripción vigente, solo pagas la diferencia por lo que te resta.
+                  Tu fecha de vencimiento no cambia.
+                </p>
+              ) : (
+                <>
               <fieldset className="flex flex-col gap-2">
-                <legend className="sr-only">Modalidad de pago</legend>
-                <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-colors ${
-                  meses === 1 ? 'border-primary-600 bg-primary-50' : 'border-border hover:bg-muted/40'}`}>
-                  <input type="radio" name="modalidad" checked={meses === 1} onChange={() => setMeses(1)} className="accent-primary-600" />
-                  <span className="flex-1 font-medium text-foreground">Mensual</span>
-                  <span className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_mensual_cop) : '—'}</span>
-                </label>
-                <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-colors ${
-                  meses === 12 ? 'border-primary-600 bg-primary-50' : 'border-border hover:bg-muted/40'}`}>
-                  <input type="radio" name="modalidad" checked={meses === 12} onChange={() => setMeses(12)} className="accent-primary-600" />
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">Anual · promoción</p>
-                    <p className="text-xs text-muted-foreground">
-                      12 meses{opcion ? ` — ahorras ${fmtCOP(opcion.precio_mensual_cop * 12 - opcion.precio_anual_cop)}` : ''}
-                    </p>
-                  </div>
-                  <span className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_anual_cop) : '—'}</span>
-                </label>
-              </fieldset>
-              <p className="text-xs text-muted-foreground">
-                Si durante la vigencia superas el tope de trabajadores de tu plan, deberás pasar a un plan superior.
-              </p>
+                  <legend className="sr-only">Modalidad de pago</legend>
+                  <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-colors ${
+                    meses === 1 ? 'border-primary-600 bg-primary-50' : 'border-border hover:bg-muted/40'}`}>
+                    <input type="radio" name="modalidad" checked={meses === 1} onChange={() => setMeses(1)} className="accent-primary-600" />
+                    <span className="flex-1 font-medium text-foreground">Mensual</span>
+                    <span className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_mensual_cop) : '—'}</span>
+                  </label>
+                  <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-colors ${
+                    meses === 12 ? 'border-primary-600 bg-primary-50' : 'border-border hover:bg-muted/40'}`}>
+                    <input type="radio" name="modalidad" checked={meses === 12} onChange={() => setMeses(12)} className="accent-primary-600" />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">Anual · promoción</p>
+                      <p className="text-xs text-muted-foreground">
+                        12 meses{opcion ? ` — ahorras ${fmtCOP(opcion.precio_mensual_cop * 12 - opcion.precio_anual_cop)}` : ''}
+                      </p>
+                    </div>
+                    <span className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_anual_cop) : '—'}</span>
+                  </label>
+                </fieldset>
+                <p className="text-xs text-muted-foreground">
+                  Si durante la vigencia superas el tope de trabajadores de tu plan, deberás pasar a un plan superior.
+                </p>
+                </>
+              )}
 
               <div className="flex gap-3 items-end">
                 <div className="flex-1 text-sm">
                   <p className="text-xs text-muted-foreground uppercase mb-1">Total</p>
                   <p className="font-semibold text-foreground">
-                    {opcion ? fmtCOP(meses === 12 ? opcion.precio_anual_cop : opcion.precio_mensual_cop) : '—'}
+                    {opcion ? fmtCOP(opcion.precio_cambio_cop ?? (meses === 12 ? opcion.precio_anual_cop : opcion.precio_mensual_cop)) : '—'}
                   </p>
                 </div>
                 <button

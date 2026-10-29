@@ -127,6 +127,7 @@ const EmpresasService = {
       PlanesModel.listar(), EmpresasModel.contarTrabajadoresActivos(empresaId),
     ]);
     const actual = planes.find((p) => p.codigo === e.plan);
+    const cambios = esLogiq360 ? {} : await require('../webhooks/wompi.service').cotizarCambiosPlan(empresaId, planes, activos);
     return {
       activa,
       plan: e.plan,
@@ -146,6 +147,8 @@ const EmpresasService = {
         precio_adicional_cop: p.precio_adicional_cop,
         precio_mensual_cop: precioPlanCop(p, activos),
         precio_anual_cop: montoSuscripcionCop(p, activos, MESES_ANUAL),
+        // Si sube de plan en plena vigencia: solo la diferencia, sin mover el vencimiento. null = paga el plan completo.
+        precio_cambio_cop: cambios[p.codigo] ?? null,
         disponible: p.max_trabajadores == null || activos <= p.max_trabajadores,
       })),
     };

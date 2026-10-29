@@ -16,7 +16,8 @@ const WompiModel = {
     return { nuevo: ins.affectedRows > 0, id: ins.insertId };
   },
 
-  async activarSuscripcion(empresaId, plan, meses) {
+  /** `valorMesCop` = lo que paga por mes en este período; `meses` 0 = cambio de plan, la vigencia no se mueve. */
+  async activarSuscripcion(empresaId, plan, meses, valorMesCop, modalidadMeses) {
     await pool.query(
       `UPDATE empresas
           SET plan                      = ?,
@@ -24,9 +25,11 @@ const WompiModel = {
                 GREATEST(COALESCE(suscripcion_vigente_hasta, CURDATE()), CURDATE()),
                 INTERVAL ? MONTH
               ),
-              suscripcion_origen        = 'wompi'
+              suscripcion_origen        = 'wompi',
+              suscripcion_valor_mes_cop = ?,
+              suscripcion_meses         = COALESCE(?, suscripcion_meses)
         WHERE id = ? AND activo = 1`,
-      [plan, meses, empresaId]
+      [plan, meses, valorMesCop, modalidadMeses, empresaId]
     );
   },
 
@@ -101,7 +104,10 @@ const WompiModel = {
   async uso(empresaId) {
     const [[fila]] = await pool.query(
       `SELECT (SELECT COUNT(*) FROM trabajadores WHERE empresa_id = e.id AND activo = 1) AS activos,
-              e.plan AS plan_actual
+              e.plan AS plan_actual,
+              GREATEST(0, DATEDIFF(e.suscripcion_vigente_hasta, CURDATE())) AS dias_restantes,
+              e.suscripcion_valor_mes_cop AS valor_mes_cop,
+              e.suscripcion_meses AS modalidad_meses
          FROM empresas e WHERE e.id = ?`,
       [empresaId]
     );
