@@ -1121,7 +1121,7 @@ function PlanTab() {
                   <label
                     key={p.codigo}
                     className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm transition-colors ${
-                      !p.disponible ? 'opacity-50 cursor-not-allowed border-border'
+                      !p.disponible ? 'cursor-not-allowed border-border bg-muted/50 grayscale opacity-60'
                       : elegido === p.codigo ? 'border-primary-600 bg-primary-50 cursor-pointer'
                       : 'border-border hover:bg-muted/40 cursor-pointer'}`}
                   >
@@ -1136,13 +1136,16 @@ function PlanTab() {
                     />
                     <div className="flex-1">
                       <p className="font-medium text-foreground">
-                        {p.nombre}{p.codigo === s.plan && <span className="text-xs text-muted-foreground font-normal"> · tu plan actual</span>}
+                        {p.nombre}{p.codigo === s.plan && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-600 text-[10px] font-semibold align-middle">Tu plan actual</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {p.disponible ? describirPlan(p) : `No admite tus ${s.trabajadores_activos} trabajadores activos`}
                       </p>
                     </div>
-                    <span className="font-semibold text-foreground">{fmtCOP(p.precio_mensual_cop)}<span className="text-xs font-normal text-muted-foreground">/mes</span></span>
+                    <div className="text-right">
+                      <p className="font-semibold text-foreground">{fmtCOP(p.precio_mensual_cop)}<span className="text-xs font-normal text-muted-foreground">/mes</span></p>
+                      <p className="text-xs text-muted-foreground">o {fmtCOP(p.precio_anual_cop)}/año</p>
+                    </div>
                   </label>
                 ))}
               </fieldset>

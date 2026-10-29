@@ -162,7 +162,7 @@ export default function MiPlanScreen() {
                       accessibilityRole="radio"
                       accessibilityState={{ checked: activo, disabled: !p.disponible }}
                       className={`flex-row items-center gap-3 rounded-2xl border px-4 py-3 ${
-                        !p.disponible ? 'opacity-50 border-border bg-card'
+                        !p.disponible ? 'opacity-50 border-border bg-muted'
                         : activo ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'}`}
                     >
                       <Ionicons
@@ -173,16 +173,19 @@ export default function MiPlanScreen() {
                       <View className="flex-1">
                         <Text className="text-sm font-semibold text-foreground">
                           {p.nombre}
-                          {p.codigo === s.plan && <Text className="text-xs font-normal text-muted-foreground"> · actual</Text>}
+                          {p.codigo === s.plan && <Text className="text-xs font-semibold text-primary"> · Tu plan actual</Text>}
                         </Text>
                         <Text className="text-xs text-muted-foreground">
                           {p.disponible ? describirPlan(p) : `No admite tus ${s.trabajadores_activos} trabajadores activos`}
                         </Text>
                       </View>
-                      <Text className="text-sm font-bold text-foreground">
-                        {formatCOP(p.precio_mensual_cop)}
-                        <Text className="text-xs font-normal text-muted-foreground">/mes</Text>
-                      </Text>
+                      <View className="items-end">
+                        <Text className="text-sm font-bold text-foreground">
+                          {formatCOP(p.precio_mensual_cop)}
+                          <Text className="text-xs font-normal text-muted-foreground">/mes</Text>
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">o {formatCOP(p.precio_anual_cop)}/año</Text>
+                      </View>
                     </Pressable>
                   );
                 })}
