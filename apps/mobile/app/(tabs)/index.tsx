@@ -10,6 +10,8 @@
 import { PantallaPestana } from '@/components/ui/EncabezadoPestana';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
+import { actionSheet } from '@/lib/actionSheet';
+import { formatCOP } from '@/lib/formatters';
 import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -163,26 +165,42 @@ export default function DashboardScreen() {
     suscData?.dias_restantes !== null && (suscData?.dias_restantes ?? 99) <= 3;
 
   const pagarMutation = useMutation({
-    mutationFn: () => empresasApi.generarLinkPago(),
+    mutationFn: (meses: 1 | 12) => empresasApi.generarLinkPago({ meses }),
     // Link hospedado por Wompi, se abre en el navegador del sistema — no un webview embebido.
     onSuccess: (data) => Linking.openURL(data.url),
     onError: (error: ApiError) =>
       showAlert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
   });
 
-  function iniciarRenovacion() {
-    if (isAdmin && Platform.OS === 'ios') {
-      // Apple guideline 3.1.1: no iniciar el pago externo (Wompi) desde acá
-      // en iOS — Mi plan explica cómo renovar desde la web.
-      router.push('/mi-plan');
-      return;
-    }
+  async function iniciarRenovacion() {
     if (!isAdmin) {
       // Solo el admin_empresa puede pagar — el resto solo puede avisarle.
       Linking.openURL('mailto:soporte@zaturno.app');
       return;
     }
-    pagarMutation.mutate();
+    // Apple guideline 3.1.1: en iOS no se inicia el pago externo (Wompi) desde acá — Mi plan solo muestra el uso.
+    const planes = suscData?.planes ?? [];
+    // El mismo plan que renovará el backend: el actual, o el primero que admita a sus trabajadores.
+    const plan = planes.find((p) => p.codigo === suscData?.plan && p.disponible) ?? planes.find((p) => p.disponible);
+    if (Platform.OS === 'ios' || !plan) {
+      router.push('/mi-plan');
+      return;
+    }
+    const eleccion = await actionSheet({
+      title: `Renovar plan ${plan.nombre}`,
+      message: 'Elige cuánto quieres pagar. Puedes cambiar de plan desde Mi plan.',
+      items: [
+        { key: '1', label: `Pagar el siguiente mes — ${formatCOP(plan.precio_mensual_cop)}`, icon: 'calendar-outline' },
+        {
+          key: '12',
+          label: `Pagar el año entero — ${formatCOP(plan.precio_anual_cop)} (ahorras ${formatCOP(plan.precio_mensual_cop * 12 - plan.precio_anual_cop)})`,
+          icon: 'ribbon-outline',
+        },
+        { key: 'plan', label: 'Cambiar de plan', icon: 'swap-horizontal-outline' },
+      ],
+    });
+    if (eleccion === 'plan') router.push('/mi-plan');
+    else if (eleccion === '1' || eleccion === '12') pagarMutation.mutate(eleccion === '12' ? 12 : 1);
   }
 
   // ── Pull to refresh ──────────────────────────────────────────────────────
@@ -336,9 +354,7 @@ export default function DashboardScreen() {
               <Text className="text-danger text-sm font-semibold">Suscripción vencida</Text>
               <Text className="text-danger/80 text-xs mt-0.5">
                 {puedeAutopagar
-                  ? pagarMutation.isPending
-                    ? 'Generando link de pago…'
-                    : 'Tienes 3 días de gracia. Toca aquí para pagar y renovar.'
+                  ? pagarMutation.isPending ? 'Generando link de pago…' : 'Tienes 3 días de gracia. Toca aquí para pagar y renovar.'
                   : 'Tienes 3 días de gracia. Toca aquí para renovar.'}
               </Text>
             </View>
@@ -547,7 +563,6 @@ export default function DashboardScreen() {
           <Pressable
             // admin_empresa va a Mi plan (uso + ampliar); el resto sigue avisando a soporte.
             onPress={isAdmin ? () => router.push('/mi-plan') : iniciarRenovacion}
-            disabled={pagarMutation.isPending}
             className="flex-row items-center justify-center gap-1.5 mx-4 mt-4 py-2 rounded-full bg-card border border-border active:opacity-60"
             accessibilityRole="button"
           >

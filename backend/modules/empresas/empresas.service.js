@@ -5,7 +5,7 @@ const IntegracionModel = require('../integracion/integracion.model');
 const PeriodosService = require('../nomina/periodos/periodos.service');
 const RegistrosService = require('../nomina/registros/registros.service');
 const AppError = require('../../utils/AppError');
-const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
+const { PlanesModel, precioPlanCop, montoSuscripcionCop, MESES_ANUAL } = require('../suscripciones/planes.model');
 const logger = require('../../utils/logger');
 
 /** Fuente de verdad de "es logiq360": conexión activa con api_key, no una etiqueta manual. */
@@ -127,6 +127,7 @@ const EmpresasService = {
       PlanesModel.listar(), EmpresasModel.contarTrabajadoresActivos(empresaId),
     ]);
     const actual = planes.find((p) => p.codigo === e.plan);
+    const cambios = esLogiq360 ? {} : await require('../webhooks/wompi.service').cotizarCambiosPlan(empresaId, planes, activos);
     return {
       activa,
       plan: e.plan,
@@ -145,6 +146,9 @@ const EmpresasService = {
         incluidos: p.incluidos,
         precio_adicional_cop: p.precio_adicional_cop,
         precio_mensual_cop: precioPlanCop(p, activos),
+        precio_anual_cop: montoSuscripcionCop(p, activos, MESES_ANUAL),
+        // Si sube de plan en plena vigencia: solo la diferencia, sin mover el vencimiento. null = paga el plan completo.
+        precio_cambio_cop: cambios[p.codigo] ?? null,
         disponible: p.max_trabajadores == null || activos <= p.max_trabajadores,
       })),
     };

@@ -96,10 +96,10 @@ const AdminController = {
   // PUT /api/admin/planes/:codigo
   async actualizarPlan(req, res, next) {
     try {
-      const { precio_cop, max_trabajadores, incluidos, precio_adicional_cop } = req.body;
+      const { precio_cop, precio_anual_cop, max_trabajadores, incluidos, precio_adicional_cop } = req.body;
       const planes = await AdminService.actualizarPlan(
         req.params.codigo,
-        { precio_cop, max_trabajadores, incluidos, precio_adicional_cop },
+        { precio_cop, precio_anual_cop, max_trabajadores, incluidos, precio_adicional_cop },
         req.usuario.sub
       );
       res.json({ success: true, data: planes, message: 'Plan actualizado' });

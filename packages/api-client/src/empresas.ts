@@ -12,6 +12,10 @@ export interface PlanOpcion {
   precio_adicional_cop: number | null;
   /** Precio mensual con sus trabajadores activos actuales (incluye adicionales). */
   precio_mensual_cop: number;
+  /** Año completo (12 meses) con la promo: 10 mensualidades. */
+  precio_anual_cop: number;
+  /** Si sube a este plan en plena vigencia: solo paga la diferencia (el vencimiento no cambia). null = plan completo. */
+  precio_cambio_cop: number | null;
   /** false si el tope del plan es menor que sus trabajadores activos. */
   disponible: boolean;
 }
@@ -123,7 +127,7 @@ export const empresasApi = {
    * Sin `plan` renueva el actual; con `plan` amplía (o reduce) — el backend
    * rechaza (422) un plan cuyo tope no admite sus trabajadores activos.
    */
-  generarLinkPago(payload: { meses?: number; plan?: PlanEmpresa } = {}): Promise<{ url: string; referencia: string; plan: PlanEmpresa; monto_cop: number; expira_at: string }> {
+  generarLinkPago(payload: { meses?: number; plan?: PlanEmpresa } = {}): Promise<{ url: string; referencia: string; plan: PlanEmpresa; monto_cop: number; prorrateado: boolean; expira_at: string }> {
     return api.post('/api/empresas/suscripcion/pagar', payload);
   },
 

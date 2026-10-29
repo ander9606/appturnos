@@ -946,7 +946,7 @@ function GestoresTab() {
 }
 
 /* ── Mi plan ── */
-const PLAN_LABEL: Record<string, string> = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial' };
+const PLAN_LABEL: Record<string, string> = { basico: 'Básico', profesional: 'Profesional', empresarial: 'Empresarial', ilimitado: 'Ilimitado' };
 
 // ponytail: formatea tanto suscripcion_vigente_hasta (DATE) como link.expira_at (datetime ISO
 // generado en el backend) — el fmtDate compartido asume fechas puras (columnas DATE) y rompería
@@ -992,6 +992,7 @@ function PlanTab() {
   const elegido = planElegido ?? s.plan;
   const opcion = s.planes.find(p => p.codigo === elegido);
   const esCambio = elegido !== s.plan;
+  const soloDiferencia = opcion?.precio_cambio_cop != null;
   const uso = s.max_trabajadores ? Math.min(100, Math.round((s.trabajadores_activos / s.max_trabajadores) * 100)) : null;
   const enTope = s.max_trabajadores != null && s.trabajadores_activos >= s.max_trabajadores;
 
@@ -1090,7 +1091,7 @@ function PlanTab() {
         <div className="bg-card border border-border rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Renovar o ampliar plan</h2>
           <p className="text-xs text-muted-foreground mb-4">
-            Al pagar, el plan elegido se activa de inmediato y tu suscripción se extiende por los meses que pagues.
+            Al pagar, el plan elegido se activa de inmediato y tu suscripción se extiende por el período que pagues.
           </p>
           {link ? (
             <div className="flex flex-col gap-2">
@@ -1120,7 +1121,7 @@ function PlanTab() {
                   <label
                     key={p.codigo}
                     className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm transition-colors ${
-                      !p.disponible ? 'opacity-50 cursor-not-allowed border-border'
+                      !p.disponible ? 'cursor-not-allowed border-border bg-muted/50 grayscale opacity-60'
                       : elegido === p.codigo ? 'border-primary-600 bg-primary-50 cursor-pointer'
                       : 'border-border hover:bg-muted/40 cursor-pointer'}`}
                   >
@@ -1135,32 +1136,59 @@ function PlanTab() {
                     />
                     <div className="flex-1">
                       <p className="font-medium text-foreground">
-                        {p.nombre}{p.codigo === s.plan && <span className="text-xs text-muted-foreground font-normal"> · tu plan actual</span>}
+                        {p.nombre}{p.codigo === s.plan && <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-600 text-[10px] font-semibold align-middle">Tu plan actual</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {p.disponible ? describirPlan(p) : `No admite tus ${s.trabajadores_activos} trabajadores activos`}
                       </p>
                     </div>
-                    <span className="font-semibold text-foreground">{fmtCOP(p.precio_mensual_cop)}<span className="text-xs font-normal text-muted-foreground">/mes</span></span>
+                    <div className="text-right">
+                      <p className="font-semibold text-foreground">{fmtCOP(p.precio_mensual_cop)}<span className="text-xs font-normal text-muted-foreground">/mes</span></p>
+                      <p className="text-xs text-muted-foreground">o {fmtCOP(p.precio_anual_cop)}/año</p>
+                    </div>
                   </label>
                 ))}
               </fieldset>
 
+              {soloDiferencia ? (
+                <p className="text-sm text-foreground bg-primary-50 border border-primary-600/30 rounded-xl px-4 py-3">
+                  Como ya tienes una suscripción vigente, solo pagas la diferencia por lo que te resta.
+                  Tu fecha de vencimiento no cambia.
+                </p>
+              ) : (
+                <>
+              <fieldset className="flex flex-col gap-2">
+                  <legend className="sr-only">Modalidad de pago</legend>
+                  <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-colors ${
+                    meses === 1 ? 'border-primary-600 bg-primary-50' : 'border-border hover:bg-muted/40'}`}>
+                    <input type="radio" name="modalidad" checked={meses === 1} onChange={() => setMeses(1)} className="accent-primary-600" />
+                    <span className="flex-1 font-medium text-foreground">Mensual</span>
+                    <span className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_mensual_cop) : '—'}</span>
+                  </label>
+                  <label className={`flex items-center gap-3 border rounded-xl px-4 py-3 text-sm cursor-pointer transition-colors ${
+                    meses === 12 ? 'border-primary-600 bg-primary-50' : 'border-border hover:bg-muted/40'}`}>
+                    <input type="radio" name="modalidad" checked={meses === 12} onChange={() => setMeses(12)} className="accent-primary-600" />
+                    <div className="flex-1">
+                      <p className="font-medium text-foreground">Anual · promoción</p>
+                      <p className="text-xs text-muted-foreground">
+                        12 meses{opcion ? ` — ahorras ${fmtCOP(opcion.precio_mensual_cop * 12 - opcion.precio_anual_cop)}` : ''}
+                      </p>
+                    </div>
+                    <span className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_anual_cop) : '—'}</span>
+                  </label>
+                </fieldset>
+                <p className="text-xs text-muted-foreground">
+                  Si durante la vigencia superas el tope de trabajadores de tu plan, deberás pasar a un plan superior.
+                </p>
+                </>
+              )}
+
               <div className="flex gap-3 items-end">
-                <div>
-                  <label htmlFor="plan-meses" className="block text-xs font-medium text-muted-foreground uppercase mb-1">Meses</label>
-                  <select
-                    id="plan-meses"
-                    value={meses}
-                    onChange={e => setMeses(Number(e.target.value))}
-                    className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
                 <div className="flex-1 text-sm">
                   <p className="text-xs text-muted-foreground uppercase mb-1">Total</p>
-                  <p className="font-semibold text-foreground">{opcion ? fmtCOP(opcion.precio_mensual_cop * meses) : '—'}</p>
+                  <p className="font-semibold text-foreground">
+                    {opcion ? fmtCOP(opcion.precio_cambio_cop ?? (meses === 12 ? opcion.precio_anual_cop : opcion.precio_mensual_cop)) : '—'}
+                  </p>
                 </div>
                 <button
                   onClick={handleGenerar}

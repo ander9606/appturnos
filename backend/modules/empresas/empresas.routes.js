@@ -9,6 +9,7 @@ const promoverTokenDeQuery = require('../../middleware/promoverTokenDeQuery');
 const verificarSuscripcion = require('../../middleware/verificarSuscripcion');
 const { ROLES } = require('../../config/constants');
 const ctrl = require('./empresas.controller');
+const { CODIGOS_PLAN } = require('../suscripciones/planes.model');
 
 const router = express.Router();
 
@@ -58,7 +59,7 @@ router.post(
   verificarRol(SOLO_ADMIN),
   [
     body('meses').optional().isInt({ min: 1, max: 12 }).toInt(),
-    body('plan').optional().isIn(['basico', 'profesional', 'empresarial']),
+    body('plan').optional().isIn(CODIGOS_PLAN),
   ],
   validar,
   ctrl.generarLinkPago

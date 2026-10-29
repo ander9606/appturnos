@@ -75,7 +75,7 @@ describe('WompiService.procesarEvento', () => {
     expect(q[1][0]).toContain('UPDATE empresas SET plan = ?');
     expect(q[1][0]).toContain("suscripcion_origen = 'wompi'");
     expect(q[1][0]).toContain('WHERE id = ? AND activo = 1');
-    expect(q[1][1]).toEqual(['profesional', 3, 7]);
+    expect(q[1][1]).toEqual(['profesional', 3, 169333, 3, 7]); // valor/mes y modalidad guardados para el prorrateo
     expect(q[2][0]).toContain("SET estado = 'procesado', procesado_at = NOW(), intentos = intentos + 1");
     expect(q[2][1]).toEqual([42]);
     expect(q[3][0]).toContain('FROM empresas e LEFT JOIN usuarios u');
@@ -167,7 +167,7 @@ describe('WompiService.reintentarEvento / procesarPendientes', () => {
       [/FROM empresas e\s+LEFT JOIN usuarios/, [[{}]]],
     ]);
     await expect(WompiService.reintentarEvento(9)).resolves.toEqual({ ok: true, empresaId: 7, plan: 'basico', meses: 1 });
-    expect(sqls()[1][1]).toEqual(['basico', 1, 7]);
+    expect(sqls()[1][1]).toEqual(['basico', 1, 129000, 1, 7]);
   });
 
   test('procesarPendientes: lee eventos en error con <3 intentos; uno falla y otro pasa', async () => {

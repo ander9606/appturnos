@@ -28,8 +28,6 @@ import { formatCOP, formatDate } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
 import { ErrorState } from '@/components/ui/ErrorState';
 
-const OPCIONES_MESES = [1, 3, 6, 12];
-
 /** "Hasta 10 trabajadores" / "80 incluidos + $3.500 por adicional" / "Sin tope de trabajadores". */
 function describirPlan(p: PlanOpcion): string {
   if (p.incluidos != null) return `${p.incluidos} incluidos + ${formatCOP(p.precio_adicional_cop ?? 0)} por adicional`;
@@ -39,7 +37,7 @@ function describirPlan(p: PlanOpcion): string {
 export default function MiPlanScreen() {
   const theme = useTheme();
   const [planElegido, setPlanElegido] = useState<PlanEmpresa | null>(null);
-  const [meses, setMeses] = useState(1);
+  const [meses, setMeses] = useState<1 | 12>(1);
 
   const { data: s, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['empresa', 'suscripcion'],
@@ -74,6 +72,7 @@ export default function MiPlanScreen() {
   const elegido = planElegido ?? s.plan;
   const opcion = s.planes.find((p) => p.codigo === elegido);
   const esCambio = elegido !== s.plan;
+  const soloDiferencia = opcion?.precio_cambio_cop != null;
   const enTope = s.max_trabajadores != null && s.trabajadores_activos >= s.max_trabajadores;
   const uso = s.max_trabajadores ? Math.min(100, Math.round((s.trabajadores_activos / s.max_trabajadores) * 100)) : null;
   const colorUso = enTope ? 'bg-danger' : (uso ?? 0) >= 80 ? 'bg-warning' : 'bg-primary';
@@ -150,7 +149,7 @@ export default function MiPlanScreen() {
             <View className="gap-2">
               <Text className="text-sm font-semibold text-foreground">Renovar o ampliar plan</Text>
               <Text className="text-xs text-muted-foreground">
-                Al pagar, el plan elegido se activa de inmediato y tu suscripción se extiende por los meses que pagues.
+                Al pagar, el plan elegido se activa de inmediato y tu suscripción se extiende por el período que pagues.
               </Text>
               <View accessibilityRole="radiogroup" className="gap-2 mt-1">
                 {s.planes.map((p) => {
@@ -163,7 +162,7 @@ export default function MiPlanScreen() {
                       accessibilityRole="radio"
                       accessibilityState={{ checked: activo, disabled: !p.disponible }}
                       className={`flex-row items-center gap-3 rounded-2xl border px-4 py-3 ${
-                        !p.disponible ? 'opacity-50 border-border bg-card'
+                        !p.disponible ? 'opacity-50 border-border bg-muted'
                         : activo ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'}`}
                     >
                       <Ionicons
@@ -174,46 +173,73 @@ export default function MiPlanScreen() {
                       <View className="flex-1">
                         <Text className="text-sm font-semibold text-foreground">
                           {p.nombre}
-                          {p.codigo === s.plan && <Text className="text-xs font-normal text-muted-foreground"> · actual</Text>}
+                          {p.codigo === s.plan && <Text className="text-xs font-semibold text-primary"> · Tu plan actual</Text>}
                         </Text>
                         <Text className="text-xs text-muted-foreground">
                           {p.disponible ? describirPlan(p) : `No admite tus ${s.trabajadores_activos} trabajadores activos`}
                         </Text>
                       </View>
-                      <Text className="text-sm font-bold text-foreground">
-                        {formatCOP(p.precio_mensual_cop)}
-                        <Text className="text-xs font-normal text-muted-foreground">/mes</Text>
-                      </Text>
+                      <View className="items-end">
+                        <Text className="text-sm font-bold text-foreground">
+                          {formatCOP(p.precio_mensual_cop)}
+                          <Text className="text-xs font-normal text-muted-foreground">/mes</Text>
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">o {formatCOP(p.precio_anual_cop)}/año</Text>
+                      </View>
                     </Pressable>
                   );
                 })}
               </View>
             </View>
 
-            {/* ── Meses ─────────────────────────────────────────────── */}
-            <View className="gap-2">
-              <Text className="text-xs text-muted-foreground uppercase">Meses a pagar</Text>
-              <View className="flex-row gap-2" accessibilityRole="radiogroup">
-                {OPCIONES_MESES.map((m) => (
+            {soloDiferencia ? (
+              <Text className="text-xs text-muted-foreground">
+                Como ya tienes una suscripción vigente, solo pagas la diferencia por lo que te resta. Tu fecha de vencimiento no cambia.
+              </Text>
+            ) : (
+              <>
+            {/* ── Modalidad ─────────────────────────────────────────── */}
+            <View className="gap-2" accessibilityRole="radiogroup">
+              <Text className="text-xs text-muted-foreground uppercase">Modalidad de pago</Text>
+              {([1, 12] as const).map((m) => {
+                const precio = m === 12 ? opcion?.precio_anual_cop : opcion?.precio_mensual_cop;
+                return (
                   <Pressable
                     key={m}
                     onPress={() => setMeses(m)}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: meses === m }}
-                    accessibilityLabel={`${m} ${m === 1 ? 'mes' : 'meses'}`}
-                    className={`flex-1 rounded-xl border py-2 items-center ${
+                    className={`flex-row items-center gap-3 rounded-2xl border px-4 py-3 ${
                       meses === m ? 'border-primary-500 bg-primary/10' : 'border-border bg-card'}`}
                   >
-                    <Text className={`text-sm font-semibold ${meses === m ? 'text-primary' : 'text-muted-foreground'}`}>{m}</Text>
+                    <Ionicons
+                      name={meses === m ? 'radio-button-on' : 'radio-button-off'}
+                      size={18}
+                      color={meses === m ? theme.primary : COLORS.placeholder}
+                    />
+                    <View className="flex-1">
+                      <Text className="text-sm font-semibold text-foreground">{m === 12 ? 'Anual · promoción' : 'Mensual'}</Text>
+                      {m === 12 && opcion && (
+                        <Text className="text-xs text-muted-foreground">
+                          12 meses — ahorras {formatCOP(opcion.precio_mensual_cop * 12 - opcion.precio_anual_cop)}
+                        </Text>
+                      )}
+                    </View>
+                    <Text className="text-sm font-bold text-foreground">{precio != null ? formatCOP(precio) : '—'}</Text>
                   </Pressable>
-                ))}
-              </View>
+                );
+              })}
+              <Text className="text-xs text-muted-foreground">
+                Si durante la vigencia superas el tope de trabajadores de tu plan, deberás pasar a un plan superior.
+              </Text>
             </View>
+              </>
+            )}
 
             <View className="flex-row justify-between items-center">
               <Text className="text-sm text-muted-foreground">Total</Text>
               <Text className="text-lg font-bold text-foreground">
-                {opcion ? formatCOP(opcion.precio_mensual_cop * meses) : '—'}
+                {opcion ? formatCOP(opcion.precio_cambio_cop ?? (meses === 12 ? opcion.precio_anual_cop : opcion.precio_mensual_cop)) : '—'}
               </Text>
             </View>
 
