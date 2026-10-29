@@ -82,6 +82,8 @@ export interface PlanOpcion {
   precio_adicional_cop: number | null;
   /** Precio mensual con sus trabajadores activos actuales (incluye adicionales). */
   precio_mensual_cop: number;
+  /** Año completo (12 meses) con la promo: 10 mensualidades. */
+  precio_anual_cop: number;
   /** false si el tope del plan es menor que sus trabajadores activos. */
   disponible: boolean;
 }

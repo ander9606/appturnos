@@ -32,6 +32,15 @@ function precioPlanCop(plan, activos = 0) {
   return plan.precio_cop + extra * (plan.precio_adicional_cop ?? 0);
 }
 
+const MESES_ANUAL = 12;
+const MESES_PAGADOS_ANUAL = 10; // promo: pagas 10, usas 12
+
+/** Monto a cobrar por `meses`: el año completo (12) vale 10 mensualidades; cualquier otra cantidad, precio lleno. */
+function montoSuscripcionCop(plan, activos, meses = 1) {
+  const mensual = precioPlanCop(plan, activos);
+  return meses === MESES_ANUAL ? mensual * MESES_PAGADOS_ANUAL : mensual * meses;
+}
+
 /**
  * Plan más barato (por `orden`) cuyo tope admite `activos`. Si ninguno
  * alcanza (el super_admin puso tope a todos), el último — nunca undefined.
@@ -41,4 +50,4 @@ function planParaTrabajadores(planes, activos) {
     ?? planes[planes.length - 1];
 }
 
-module.exports = { PlanesModel, precioPlanCop, planParaTrabajadores };
+module.exports = { PlanesModel, precioPlanCop, montoSuscripcionCop, planParaTrabajadores, MESES_ANUAL, MESES_PAGADOS_ANUAL };

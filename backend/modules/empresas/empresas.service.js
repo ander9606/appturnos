@@ -5,7 +5,7 @@ const IntegracionModel = require('../integracion/integracion.model');
 const PeriodosService = require('../nomina/periodos/periodos.service');
 const RegistrosService = require('../nomina/registros/registros.service');
 const AppError = require('../../utils/AppError');
-const { PlanesModel, precioPlanCop } = require('../suscripciones/planes.model');
+const { PlanesModel, precioPlanCop, montoSuscripcionCop, MESES_ANUAL } = require('../suscripciones/planes.model');
 const logger = require('../../utils/logger');
 
 /** Fuente de verdad de "es logiq360": conexión activa con api_key, no una etiqueta manual. */
@@ -145,6 +145,7 @@ const EmpresasService = {
         incluidos: p.incluidos,
         precio_adicional_cop: p.precio_adicional_cop,
         precio_mensual_cop: precioPlanCop(p, activos),
+        precio_anual_cop: montoSuscripcionCop(p, activos, MESES_ANUAL),
         disponible: p.max_trabajadores == null || activos <= p.max_trabajadores,
       })),
     };

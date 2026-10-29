@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const WompiModel = require('./wompi.model');
 const logger   = require('../../utils/logger');
-const { PlanesModel, precioPlanCop, planParaTrabajadores } = require('../suscripciones/planes.model');
+const { PlanesModel, montoSuscripcionCop, planParaTrabajadores } = require('../suscripciones/planes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const { enviarEmail } = require('../../utils/mailer');
 const { plantillaCorreo, esc } = require('../../utils/plantillaCorreo');
@@ -232,7 +232,7 @@ const WompiService = {
       ? planes.find((p) => p.codigo === plan)
       : (actual && actual.orden >= minimo.orden ? actual : minimo);
     const planCobro   = elegido.codigo;
-    const montoCop    = precioPlanCop(elegido, n) * meses;
+    const montoCop    = montoSuscripcionCop(elegido, n, meses);
     const amountCents = montoCop * 100;
     const reference   = `AT-${empresaId}-${planCobro}-${meses}`;
     const expiresAt   = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19) + '.000Z';

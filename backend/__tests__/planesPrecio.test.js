@@ -1,7 +1,7 @@
 'use strict';
 
 jest.mock('../config/database', () => ({ pool: {} }));
-const { precioPlanCop, planParaTrabajadores } = require('../modules/suscripciones/planes.model');
+const { precioPlanCop, montoSuscripcionCop, planParaTrabajadores } = require('../modules/suscripciones/planes.model');
 
 // Mismos valores que la semilla de migrations/sql/100_planes.sql.
 const PLANES = [
@@ -32,6 +32,13 @@ describe('precios de suscripción por plan', () => {
   test('si el super_admin pone tope a todos los planes, cae en el último (nunca undefined)', () => {
     const conTope = PLANES.map((p) => ({ ...p, max_trabajadores: p.max_trabajadores ?? 100 }));
     expect(planParaTrabajadores(conTope, 500).codigo).toBe('empresarial');
+  });
+
+  test('plan anual: 12 meses cuestan 10 mensualidades; otros períodos, precio lleno', () => {
+    expect(montoSuscripcionCop(profesional, 25, 12)).toBe(1_690_000);
+    expect(montoSuscripcionCop(profesional, 25, 1)).toBe(169_000);
+    expect(montoSuscripcionCop(profesional, 25, 6)).toBe(6 * 169_000);
+    expect(montoSuscripcionCop(empresarial, 100, 12)).toBe(10 * (299_000 + 20 * 3_500));
   });
 
   test('plan desconocido lanza error (nunca generar un link con monto indefinido)', () => {
