@@ -9,7 +9,6 @@
  */
 import { PantallaPestana } from '@/components/ui/EncabezadoPestana';
 import { Text } from '@/components/ui/Text';
-import { showAlert } from '@/lib/alertDialog';
 import { COLORS, alpha } from '@/lib/designTokens';
 import React, { useState } from 'react';
 import {
@@ -20,8 +19,8 @@ import {
   Linking,
   Platform,
 } from 'react-native';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { empresasApi, ApiError } from '@api-client';
+import { useQuery } from '@tanstack/react-query';
+import { empresasApi } from '@api-client';
 import { useRouter } from 'expo-router';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -162,27 +161,15 @@ export default function DashboardScreen() {
     isManager && !logiq360Conectado && suscData?.activa === true &&
     suscData?.dias_restantes !== null && (suscData?.dias_restantes ?? 99) <= 3;
 
-  const pagarMutation = useMutation({
-    mutationFn: () => empresasApi.generarLinkPago(),
-    // Link hospedado por Wompi, se abre en el navegador del sistema — no un webview embebido.
-    onSuccess: (data) => Linking.openURL(data.url),
-    onError: (error: ApiError) =>
-      showAlert('No se pudo generar el link de pago', error.message || 'Intenta de nuevo o contacta a soporte.'),
-  });
-
   function iniciarRenovacion() {
-    if (isAdmin && Platform.OS === 'ios') {
-      // Apple guideline 3.1.1: no iniciar el pago externo (Wompi) desde acá
-      // en iOS — Mi plan explica cómo renovar desde la web.
+    if (isAdmin) {
+      // Mi plan deja elegir plan y mensual/anual antes de generar el link (y en iOS,
+      // por la guideline 3.1.1 de Apple, solo muestra el uso).
       router.push('/mi-plan');
       return;
     }
-    if (!isAdmin) {
-      // Solo el admin_empresa puede pagar — el resto solo puede avisarle.
-      Linking.openURL('mailto:soporte@zaturno.app');
-      return;
-    }
-    pagarMutation.mutate();
+    // Solo el admin_empresa puede pagar — el resto solo puede avisarle.
+    Linking.openURL('mailto:soporte@zaturno.app');
   }
 
   // ── Pull to refresh ──────────────────────────────────────────────────────
@@ -327,7 +314,6 @@ export default function DashboardScreen() {
         {suscVencida && (
           <Pressable
             onPress={iniciarRenovacion}
-            disabled={pagarMutation.isPending}
             className="mx-4 mt-4 flex-row items-center gap-3 bg-danger-light border border-danger/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
@@ -336,9 +322,7 @@ export default function DashboardScreen() {
               <Text className="text-danger text-sm font-semibold">Suscripción vencida</Text>
               <Text className="text-danger/80 text-xs mt-0.5">
                 {puedeAutopagar
-                  ? pagarMutation.isPending
-                    ? 'Generando link de pago…'
-                    : 'Tienes 3 días de gracia. Toca aquí para pagar y renovar.'
+                  ? 'Tienes 3 días de gracia. Toca aquí para elegir tu plan y renovar.'
                   : 'Tienes 3 días de gracia. Toca aquí para renovar.'}
               </Text>
             </View>
@@ -350,7 +334,6 @@ export default function DashboardScreen() {
         {!suscVencida && suscPorVencer && (
           <Pressable
             onPress={iniciarRenovacion}
-            disabled={pagarMutation.isPending}
             className="mx-4 mt-4 flex-row items-center gap-3 bg-warning-light border border-warning/30 rounded-2xl px-4 py-3"
             accessibilityRole="button"
           >
@@ -547,7 +530,6 @@ export default function DashboardScreen() {
           <Pressable
             // admin_empresa va a Mi plan (uso + ampliar); el resto sigue avisando a soporte.
             onPress={isAdmin ? () => router.push('/mi-plan') : iniciarRenovacion}
-            disabled={pagarMutation.isPending}
             className="flex-row items-center justify-center gap-1.5 mx-4 mt-4 py-2 rounded-full bg-card border border-border active:opacity-60"
             accessibilityRole="button"
           >

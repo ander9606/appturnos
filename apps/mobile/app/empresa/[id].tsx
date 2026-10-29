@@ -34,7 +34,7 @@ import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
 import type { PlanEmpresa, EmpresaAdmin, LinkPagoResponse } from '@api-client';
 
-const OPCIONES_MESES = [1, 3, 6, 12];
+const OPCIONES_MESES = [1, 12];
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
@@ -397,7 +397,7 @@ export default function EmpresaDetailScreen() {
                   className="text-xs font-bold"
                   style={{ color: mesesLink === m ? COLORS.integracion : COLORS.placeholder }}
                 >
-                  {m} mes{m > 1 ? 'es' : ''}
+                  {m === 12 ? 'Anual (promo)' : 'Mensual'}
                 </Text>
               </Pressable>
             ))}

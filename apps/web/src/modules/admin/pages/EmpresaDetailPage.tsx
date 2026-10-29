@@ -236,14 +236,15 @@ export function EmpresaDetailPage() {
                 ))}
               </select>
             </div>
-            <div className="w-24">
-              <label className="text-xs text-muted-foreground mb-1 block">Meses</label>
+            <div className="w-36">
+              <label className="text-xs text-muted-foreground mb-1 block">Pago</label>
               <select
                 value={linkMeses}
                 onChange={e => { setLinkMeses(Number(e.target.value)); setLinkUrl(''); }}
                 className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-background text-foreground"
               >
-                {[1, 3, 6, 12].map(m => <option key={m} value={m}>{m}</option>)}
+                <option value={1}>Mensual</option>
+                <option value={12}>Anual (promo)</option>
               </select>
             </div>
           </div>
@@ -253,7 +254,7 @@ export function EmpresaDetailPage() {
             <span className="font-semibold text-foreground">
               {fmtCOP(linkUrl && linkMonto != null
                 ? linkMonto
-                : planLink ? precioPlan(planLink, empresa.total_trabajadores ?? 0) * linkMeses : 0)}
+                : planLink ? precioPlan(planLink, empresa.total_trabajadores ?? 0, linkMeses) : 0)}
             </span>
           </p>
 
