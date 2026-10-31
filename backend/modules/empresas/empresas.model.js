@@ -3,6 +3,9 @@
 const crypto = require('crypto');
 const { pool } = require('../../config/database');
 const { DIAS_GRACIA_SUSCRIPCION } = require('../../config/constants');
+
+// Días respecto al vencimiento en que se avisa: antes, el día, durante la gracia y al terminar (sin repetir).
+const DIAS_AVISO_SUSCRIPCION = [...new Set([7, 3, 1, 0, -1, -DIAS_GRACIA_SUSCRIPCION])];
 const { ahoraColombiaSQL } = require('../../utils/fechaColombia');
 const { cifrar, descifrar } = require('../../utils/firmaCrypto');
 
@@ -41,7 +44,7 @@ const EmpresasModel = {
         WHERE e.activo = 1
           AND e.suscripcion_origen != 'logiq360'
           AND e.suscripcion_vigente_hasta IS NOT NULL
-          AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 0, -${DIAS_GRACIA_SUSCRIPCION})
+          AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (${DIAS_AVISO_SUSCRIPCION.join(', ')})
         LIMIT 100`
     );
     return empresas;
