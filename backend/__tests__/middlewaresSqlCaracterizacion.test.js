@@ -88,7 +88,7 @@ describe('verificarSuscripcion', () => {
   test.each([
     ['vigente hasta mañana', new Date('2026-06-16T00:00:00Z'), true],
     ['venció ayer (dentro de la gracia)', new Date('2026-06-14T00:00:00Z'), true],
-    ['venció hace 2 días (dentro de la gracia)', new Date('2026-06-13T00:00:00Z'), true],
+    ['venció hace 2 días (fin de la gracia de 2 días)', new Date('2026-06-13T00:00:00Z'), false],
     ['venció hace 5 días (fuera de la gracia)', new Date('2026-06-10T00:00:00Z'), false],
     ['venció en 2020', '2020-01-01', false],
   ])('%s', async (_n, fecha, pasa) => {

@@ -26,7 +26,7 @@ async function procesarRenovaciones() {
     const dias = emp.dias_restantes;
 
     // El email de renovación solo aplica antes/el día del vencimiento — mismos
-    // 3 checkpoints de siempre. -3 (ya vencida) es nuevo y solo es para super_admin.
+    // 3 checkpoints de siempre. -DIAS_GRACIA_SUSCRIPCION (fin de la gracia) es nuevo y solo es para super_admin.
     if (dias >= 0) {
       try {
         const link = await WompiService.generarLinkPago({

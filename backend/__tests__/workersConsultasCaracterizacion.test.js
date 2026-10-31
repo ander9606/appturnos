@@ -157,7 +157,7 @@ describe('registros.worker (horas extra en jornada activa)', () => {
 });
 
 describe('suscripcion.worker (avisos de renovación)', () => {
-  const SQL_RENOVACIONES = "SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta, DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes, u.email, u.nombre AS admin_nombre FROM empresas e JOIN usuarios u ON u.empresa_id = e.id AND u.rol = 'admin_empresa' AND u.activo = 1 WHERE e.activo = 1 AND e.suscripcion_origen != 'logiq360' AND e.suscripcion_vigente_hasta IS NOT NULL AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 0, -3) LIMIT 100";
+  const SQL_RENOVACIONES = "SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta, DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes, u.email, u.nombre AS admin_nombre FROM empresas e JOIN usuarios u ON u.empresa_id = e.id AND u.rol = 'admin_empresa' AND u.activo = 1 WHERE e.activo = 1 AND e.suscripcion_origen != 'logiq360' AND e.suscripcion_vigente_hasta IS NOT NULL AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 0, -2) LIMIT 100";
   const empresa = (dias) => ({ id: 7, nombre: 'ACME', plan: 'basico', dias_restantes: dias, email: 'a@acme.co', admin_nombre: 'Marta' });
   const conEmpresas = (...filas) => responder([[/FROM empresas e JOIN usuarios u/, [filas]]]);
 
