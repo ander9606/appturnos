@@ -216,7 +216,7 @@ describe('integracion.activada / desactivada', () => {
     expect(sqlLog()[1][0]).toMatch(/^SELECT nombre FROM empresas WHERE id = \?( LIMIT 1)?$/);
     expect(log[4][1]).toMatchObject({
       empresaId: 7, tipo: 'integracion.desactivada',
-      mensaje: 'Eventos SAS se desconectó de logiq360 — deja de ser gratis, 3 días de gracia.',
+      mensaje: 'Eventos SAS se desconectó de logiq360 — deja de ser gratis, 2 días de gracia.',
       data: { empresa_id: 7 },
     });
   });
@@ -224,7 +224,7 @@ describe('integracion.activada / desactivada', () => {
   test('desactivada sin admins ni nombre: igual avisa a super_admins con texto genérico', async () => {
     await procesar('integracion.desactivada', 7, {});
     expect(Notificaciones.notificarVarios).not.toHaveBeenCalled();
-    expect(Notificaciones.notificarSuperAdmins.mock.calls[0][0].mensaje).toBe('Una empresa se desconectó de logiq360 — deja de ser gratis, 3 días de gracia.');
+    expect(Notificaciones.notificarSuperAdmins.mock.calls[0][0].mensaje).toBe('Una empresa se desconectó de logiq360 — deja de ser gratis, 2 días de gracia.');
   });
 
   test('si avisar a super_admins falla: se registra y el evento NO falla', async () => {

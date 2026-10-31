@@ -25,6 +25,8 @@ export interface Suscripcion {
   plan: PlanEmpresa;
   vigente_hasta: string | null;
   dias_restantes: number | null;
+  /** Días que sigue operando la empresa después de vencida (luego se bloquea la gestión). */
+  dias_gracia: number;
   origen: 'logiq360' | 'directo';
   logiq360_conectado: boolean;
   trabajadores_activos: number;

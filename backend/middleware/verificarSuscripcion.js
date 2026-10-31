@@ -3,6 +3,7 @@
 const AppError = require('../utils/AppError');
 const IntegracionModel = require('../modules/integracion/integracion.model');
 const EmpresasModel = require('../modules/empresas/empresas.model');
+const { DIAS_GRACIA_SUSCRIPCION } = require('../config/constants');
 
 /**
  * Middleware de suscripción. Aplica solo a rutas de escritura en endpoints protegidos.
@@ -19,9 +20,9 @@ async function verificarSuscripcion(req, _res, next) {
     const empresa = await EmpresasModel.obtenerVigenciaSuscripcion(req.usuario.empresa_id);
     if (!empresa) return next(new AppError('Empresa no encontrada', 404));
     if (empresa.suscripcion_vigente_hasta === null) return next();
-    // 3 días de gracia después del vencimiento
+    // días de gracia después del vencimiento
     const limite = new Date(empresa.suscripcion_vigente_hasta);
-    limite.setDate(limite.getDate() + 3);
+    limite.setDate(limite.getDate() + DIAS_GRACIA_SUSCRIPCION);
     if (limite >= new Date()) return next();
     return next(new AppError('Suscripción vencida. Renueva tu plan para continuar.', 402));
   } catch (err) {

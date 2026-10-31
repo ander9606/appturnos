@@ -33,12 +33,17 @@ const tablaDatos = (filas) =>
  * @param {string} p.titulo   Título del correo (texto plano).
  * @param {string} p.cuerpo   HTML ya armado por quien llama (con esc() en cada dato de usuario).
  * @param {{texto: string, url: string}} [p.boton]  Botón principal.
+ * @param {{texto: string, url: string}} [p.botonSecundario]  Segunda opción, con borde (p. ej. pagar el año).
  * @param {string} [p.nota]   Texto pequeño bajo el contenido (texto plano).
  */
-function plantillaCorreo({ titulo, cuerpo, boton, nota }) {
+function plantillaCorreo({ titulo, cuerpo, boton, botonSecundario, nota }) {
   const botonHtml = boton
     ? `<p style="margin:24px 0"><a href="${esc(boton.url)}" style="display:inline-block;padding:14px 28px;background:${C.primary};color:#FFFFFF;` +
       `border-radius:12px;text-decoration:none;font-weight:700;font-size:16px">${esc(boton.texto)}</a></p>`
+    : '';
+  const secundarioHtml = botonSecundario
+    ? `<p style="margin:-12px 0 24px"><a href="${esc(botonSecundario.url)}" style="display:inline-block;padding:12px 26px;border:2px solid ${C.primary};` +
+      `color:${C.primary700};border-radius:12px;text-decoration:none;font-weight:700;font-size:15px">${esc(botonSecundario.texto)}</a></p>`
     : '';
   const notaHtml = nota ? `<p style="margin:16px 0 0;color:${C.muted};font-size:13px;line-height:1.5">${esc(nota)}</p>` : '';
   return `<!doctype html>
@@ -51,7 +56,7 @@ function plantillaCorreo({ titulo, cuerpo, boton, nota }) {
     </td></tr>
     <tr><td style="background:${C.card};border:1px solid ${C.border};border-top:0;border-radius:0 0 20px 20px;padding:28px;font-size:15px;line-height:1.6">
       <h1 style="margin:0 0 12px;font-size:20px;line-height:1.3">${esc(titulo)}</h1>
-      ${cuerpo}${botonHtml}${notaHtml}
+      ${cuerpo}${botonHtml}${secundarioHtml}${notaHtml}
     </td></tr>
     <tr><td style="padding:16px 8px;text-align:center;color:${C.muted};font-size:12px">Zaturno · Gestión de turnos y nómina</td></tr>
   </table>

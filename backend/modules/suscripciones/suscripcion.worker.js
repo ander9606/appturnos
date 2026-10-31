@@ -7,13 +7,62 @@ const WompiService    = require('../webhooks/wompi.service');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const NotificacionesModel   = require('../notificaciones/notificaciones.model');
 const logger          = require('../../utils/logger');
+const { DIAS_GRACIA_SUSCRIPCION } = require('../../config/constants');
 
 const INTERVALO_MS = 24 * 60 * 60 * 1000; // cada 24h
 
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+const cop = (n) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+
 /**
- * Busca empresas cuya suscripción vence en 7, 3 o 0 días
- * y les envía un email con el link de pago de Wompi.
- * logiq360 está excluido (suscripcion_origen = 'logiq360').
+ * Qué decirle a la empresa según el día respecto al vencimiento (dias > 0: faltan; 0: hoy; < 0: ya venció).
+ * `consecuencia` dice qué pasa y qué NO pasa: el marcaje de los trabajadores nunca se bloquea.
+ */
+function mensajeEtapa(dias) {
+  const gracia = DIAS_GRACIA_SUSCRIPCION;
+  const limites = 'no podrás crear ni editar turnos, trabajadores ni nómina';
+  const siguesPudiendo = 'Tu información está a salvo y tus empleados seguirán pudiendo marcar ingreso y egreso.';
+  if (dias > 0) {
+    return {
+      asunto: `Tu suscripción de Zaturno vence en ${plural(dias, 'día', 'días')}`,
+      titulo: 'Tu suscripción está por vencer',
+      intro: `vence en <strong>${plural(dias, 'día', 'días')}</strong>`,
+      consecuencia: `Si no renuevas, tendrás ${plural(gracia, 'día', 'días')} de gracia; después ${limites}. ${siguesPudiendo}`,
+      inApp: `La suscripción vence en ${plural(dias, 'día', 'días')}.`,
+    };
+  }
+  if (dias === 0) {
+    return {
+      asunto: '⚠️ Tu suscripción de Zaturno vence hoy',
+      titulo: 'Tu suscripción vence hoy',
+      intro: 'vence <strong>hoy</strong>',
+      consecuencia: `Si no renuevas, tendrás ${plural(gracia, 'día', 'días')} de gracia; después ${limites}. ${siguesPudiendo}`,
+      inApp: 'La suscripción vence hoy.',
+    };
+  }
+  if (-dias < gracia) {
+    const quedan = gracia + dias;
+    return {
+      asunto: `Tu suscripción de Zaturno venció: te ${quedan === 1 ? 'queda 1 día' : `quedan ${quedan} días`} de gracia`,
+      titulo: 'Tu suscripción venció',
+      intro: `venció hace <strong>${plural(-dias, 'día', 'días')}</strong>`,
+      consecuencia: `Te ${quedan === 1 ? 'queda 1 día' : `quedan ${quedan} días`} de gracia; después ${limites}. ${siguesPudiendo}`,
+      inApp: `La suscripción venció hace ${plural(-dias, 'día', 'días')}. Renueva antes de que termine la gracia.`,
+    };
+  }
+  return {
+    asunto: 'Tu cuenta de Zaturno quedó en modo consulta',
+    titulo: 'Renueva para volver a gestionar',
+    intro: `venció hace <strong>${plural(-dias, 'día', 'días')}</strong> y terminó el plazo de gracia`,
+    consecuencia: `Mientras no renueves, ${limites}. ${siguesPudiendo}`,
+    inApp: `La suscripción venció hace ${plural(-dias, 'día', 'días')}: la gestión está bloqueada hasta que se renueve.`,
+  };
+}
+
+/**
+ * Busca empresas cuyo vencimiento cae en un día de aviso (ver DIAS_AVISO_SUSCRIPCION: antes, el día,
+ * durante la gracia y al terminar), avisa al admin por correo con dos links de pago (un mes o el año),
+ * a los gestores dentro de la app y al super_admin. logiq360 está excluido (suscripcion_origen = 'logiq360').
  */
 async function procesarRenovaciones() {
   const empresas = await EmpresasModel.listarConRenovacionPendiente();
@@ -24,36 +73,29 @@ async function procesarRenovaciones() {
 
   for (const emp of empresas) {
     const dias = emp.dias_restantes;
+    const etapa = mensajeEtapa(dias);
 
-    // El email de renovación solo aplica antes/el día del vencimiento — mismos
-    // 3 checkpoints de siempre. -3 (ya vencida) es nuevo y solo es para super_admin.
-    if (dias >= 0) {
-      try {
-        const link = await WompiService.generarLinkPago({
-          empresaId:     emp.id,
-          nombreEmpresa: emp.nombre,
-          meses:         1,
-        });
+    try {
+      const base = { empresaId: emp.id, nombreEmpresa: emp.nombre };
+      const mensual = await WompiService.generarLinkPago({ ...base, meses: 1 });
+      const anual = await WompiService.generarLinkPago({ ...base, meses: 12 });
 
-        const asunto =
-          dias === 0 ? `⚠️ Tu suscripción de Zaturno vence hoy`
-          : `Tu suscripción de Zaturno vence en ${dias} día${dias > 1 ? 's' : ''}`;
+      await enviarEmail({
+        to:      emp.email,
+        subject: etapa.asunto,
+        html:    emailHtml({ empresa: emp.nombre, admin: emp.admin_nombre, etapa, mensual, anual }),
+      });
 
-        await enviarEmail({
-          to:      emp.email,
-          subject: asunto,
-          html:    emailHtml({ empresa: emp.nombre, admin: emp.admin_nombre, dias, url: link.url, monto: link.monto_cop }),
-        });
-
-        logger.info(`[suscripcion-worker] email enviado a ${emp.email} (empresa ${emp.id}, ${dias}d restantes)`);
-      } catch (err) {
-        logger.error(`[suscripcion-worker] error empresa ${emp.id}: ${err.message}`);
-      }
+      logger.info(`[suscripcion-worker] email enviado a ${emp.email} (empresa ${emp.id}, ${dias}d restantes)`);
+    } catch (err) {
+      logger.error(`[suscripcion-worker] error empresa ${emp.id}: ${err.message}`);
     }
 
     const mensaje = dias >= 0
       ? `${emp.nombre}: suscripción vence en ${dias} día${dias !== 1 ? 's' : ''}.`
-      : `${emp.nombre}: suscripción vencida hace ${-dias} días (ya pasó el período de gracia).`;
+      : -dias < DIAS_GRACIA_SUSCRIPCION
+        ? `${emp.nombre}: suscripción vencida hace ${plural(-dias, 'día', 'días')} (dentro de la gracia).`
+        : `${emp.nombre}: suscripción vencida hace ${-dias} días (ya pasó el período de gracia).`;
     await NotificacionesService.notificarSuperAdmins({
       empresaId: emp.id,
       tipo: 'admin.suscripcion_vencimiento',
@@ -70,9 +112,7 @@ async function procesarRenovaciones() {
         empresaId: emp.id,
         tipo: 'suscripcion.vencimiento',
         titulo: dias >= 0 ? 'Suscripción por vencer' : 'Suscripción vencida',
-        mensaje: dias >= 0
-          ? `La suscripción vence en ${dias} día${dias !== 1 ? 's' : ''}.`
-          : `La suscripción venció hace ${-dias} días.`,
+        mensaje: etapa.inApp,
       });
     } catch (err) {
       logger.error(`[suscripcion-worker] no se pudo notificar a gestores (empresa ${emp.id}):`, err.message);
@@ -80,22 +120,21 @@ async function procesarRenovaciones() {
   }
 }
 
-function emailHtml({ empresa, admin, dias, url, monto }) {
-  const urgencia = dias === 0 ? 'vence <strong>hoy</strong>'
-    : `vence en <strong>${dias} día${dias > 1 ? 's' : ''}</strong>`;
-
-  const montoFmt = new Intl.NumberFormat('es-CO', {
-    style: 'currency', currency: 'COP', maximumFractionDigits: 0,
-  }).format(monto);
-
+function emailHtml({ empresa, admin, etapa, mensual, anual }) {
+  const ahorro = mensual.monto_cop * 12 - anual.monto_cop;
   return plantillaCorreo({
-    titulo: 'Tu suscripción está por vencer',
+    titulo: etapa.titulo,
     cuerpo:
       `<p style="margin:0 0 12px">Hola <strong>${esc(admin)}</strong>,</p>` +
-      `<p style="margin:0 0 12px">La suscripción de <strong>${esc(empresa)}</strong> ${urgencia}.</p>` +
-      `<p style="margin:0">Para continuar usando Zaturno sin interrupciones, renueva tu plan:</p>`,
-    boton: { texto: `Renovar suscripción — ${montoFmt}`, url },
-    nota: 'Este link es de un solo uso y expira en 7 días. Si ya realizaste el pago, ignora este mensaje.',
+      `<p style="margin:0 0 12px">La suscripción de <strong>${esc(empresa)}</strong> ${etapa.intro}.</p>` +
+      `<p style="margin:0 0 12px">${esc(etapa.consecuencia)}</p>` +
+      `<p style="margin:0">Elige cómo renovar tu plan:</p>`,
+    boton: { texto: `Renovar un mes — ${cop(mensual.monto_cop)}`, url: mensual.url },
+    botonSecundario: {
+      texto: `Pagar el año — ${cop(anual.monto_cop)}${ahorro > 0 ? ` (ahorras ${cop(ahorro)})` : ''}`,
+      url: anual.url,
+    },
+    nota: 'Los links son de un solo uso y expiran en 7 días. Si ya realizaste el pago, ignora este mensaje.',
   });
 }
 

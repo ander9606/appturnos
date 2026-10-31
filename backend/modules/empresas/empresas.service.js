@@ -5,6 +5,7 @@ const IntegracionModel = require('../integracion/integracion.model');
 const PeriodosService = require('../nomina/periodos/periodos.service');
 const RegistrosService = require('../nomina/registros/registros.service');
 const AppError = require('../../utils/AppError');
+const { DIAS_GRACIA_SUSCRIPCION } = require('../../config/constants');
 const { PlanesModel, precioPlanCop, montoSuscripcionCop, MESES_ANUAL } = require('../suscripciones/planes.model');
 const logger = require('../../utils/logger');
 
@@ -120,7 +121,7 @@ const EmpresasService = {
     const hoy = new Date();
     const vence = e.suscripcion_vigente_hasta ? new Date(e.suscripcion_vigente_hasta) : null;
     const limite = vence ? new Date(vence) : null;
-    if (limite) limite.setDate(limite.getDate() + 3);
+    if (limite) limite.setDate(limite.getDate() + DIAS_GRACIA_SUSCRIPCION);
     const activa = esLogiq360 || !vence || limite >= hoy;
     const diasRestantes = vence ? Math.ceil((vence - hoy) / 86400000) : null;
     const [planes, activos] = await Promise.all([
@@ -133,6 +134,7 @@ const EmpresasService = {
       plan: e.plan,
       vigente_hasta: e.suscripcion_vigente_hasta,
       dias_restantes: diasRestantes,
+      dias_gracia: DIAS_GRACIA_SUSCRIPCION,
       origen: esLogiq360 ? 'logiq360' : 'directo',
       logiq360_conectado: esLogiq360,
       trabajadores_activos: activos,

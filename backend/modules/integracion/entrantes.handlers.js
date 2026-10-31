@@ -6,6 +6,7 @@ const IntegracionModel = require('./integracion.model');
 const EntrantesModel = require('./entrantes.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const logger = require('../../utils/logger');
+const { DIAS_GRACIA_SUSCRIPCION } = require('../../config/constants');
 const AppError = require('../../utils/AppError');
 
 /**
@@ -267,7 +268,7 @@ async function integracionDesactivada(empresaId) {
       empresaId,
       tipo: 'integracion.desactivada',
       titulo: 'Se desconectó tu integración con logiq360',
-      mensaje: 'Ya no tienes la integración activa con logiq360, así que Zaturno deja de ser gratis. Tienes 3 días de gracia para renovar tu suscripción.',
+      mensaje: `Ya no tienes la integración activa con logiq360, así que Zaturno deja de ser gratis. Tienes ${DIAS_GRACIA_SUSCRIPCION} días de gracia para renovar tu suscripción.`,
     });
   }
 
@@ -276,7 +277,7 @@ async function integracionDesactivada(empresaId) {
     empresaId,
     tipo: 'integracion.desactivada',
     titulo: 'Se desconectó una integración con logiq360',
-    mensaje: `${nombreEmpresa ?? 'Una empresa'} se desconectó de logiq360 — deja de ser gratis, 3 días de gracia.`,
+    mensaje: `${nombreEmpresa ?? 'Una empresa'} se desconectó de logiq360 — deja de ser gratis, ${DIAS_GRACIA_SUSCRIPCION} días de gracia.`,
     data: { empresa_id: empresaId },
   }).catch((err) => logger.error(`[integracion] no se pudo notificar desconexión a super_admin (empresa ${empresaId}):`, err.message));
 }
