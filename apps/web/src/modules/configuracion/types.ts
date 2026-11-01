@@ -95,6 +95,7 @@ export interface Suscripcion {
   plan: PlanCodigo;
   vigente_hasta: string | null;
   dias_restantes: number | null;
+  dias_gracia: number;
   origen: 'directo' | 'logiq360';
   trabajadores_activos: number;
   /** Tope del plan actual; null = sin tope. */

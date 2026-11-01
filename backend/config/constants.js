@@ -55,6 +55,12 @@ const MAX_OFERTAS_ACTIVAS_POR_EMPRESA = 500;
 const DIAS_GRACIA_ASIGNACIONES_COLGADAS = 2;
 
 /**
+ * Días que una empresa sigue operando después de vencida su suscripción. Pasado el plazo, las rutas de
+ * gestión con verificarSuscripcion devuelven 402 (el marcaje de los trabajadores nunca se bloquea).
+ */
+const DIAS_GRACIA_SUSCRIPCION = 2;
+
+/**
  * Horas antes de hora_inicio a partir de las cuales ya no se puede cambiar
  * fecha/hora_inicio/hora_fin_estimada/lugar de una oferta (ver
  * OfertasService.actualizar) — deja tiempo real para que el trabajador vea
@@ -242,6 +248,7 @@ module.exports = {
   ESTADOS_OFERTA,
   MAX_OFERTAS_ACTIVAS_POR_EMPRESA,
   DIAS_GRACIA_ASIGNACIONES_COLGADAS,
+  DIAS_GRACIA_SUSCRIPCION,
   HORAS_CORTE_EDICION_OFERTA,
   ESTADOS_ASIGNACION,
   ESTADOS_PERIODO,

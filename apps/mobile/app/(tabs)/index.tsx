@@ -354,8 +354,8 @@ export default function DashboardScreen() {
               <Text className="text-danger text-sm font-semibold">Suscripción vencida</Text>
               <Text className="text-danger/80 text-xs mt-0.5">
                 {puedeAutopagar
-                  ? pagarMutation.isPending ? 'Generando link de pago…' : 'Tienes 3 días de gracia. Toca aquí para pagar y renovar.'
-                  : 'Tienes 3 días de gracia. Toca aquí para renovar.'}
+                  ? pagarMutation.isPending ? 'Generando link de pago…' : `Tienes ${suscData?.dias_gracia ?? 2} días de gracia. Toca aquí para pagar y renovar.`
+                  : `Tienes ${suscData?.dias_gracia ?? 2} días de gracia. Toca aquí para renovar.`}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.danger} />
