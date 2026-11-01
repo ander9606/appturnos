@@ -61,8 +61,8 @@ function mensajeEtapa(dias) {
 
 /**
  * Busca empresas cuyo vencimiento cae en un día de aviso (ver DIAS_AVISO_SUSCRIPCION: antes, el día,
- * durante la gracia y al terminar), avisa al admin por correo con dos links de pago (un mes o el año),
- * a los gestores dentro de la app y al super_admin. logiq360 está excluido (suscripcion_origen = 'logiq360').
+ * durante la gracia y al terminar), avisa por correo a todos los gestores con dos links de pago (un mes o el año),
+ * dentro de la app a esos mismos gestores y al super_admin. logiq360 está excluido (suscripcion_origen = 'logiq360').
  */
 async function procesarRenovaciones() {
   const empresas = await EmpresasModel.listarConRenovacionPendiente();
@@ -75,18 +75,24 @@ async function procesarRenovaciones() {
     const dias = emp.dias_restantes;
     const etapa = mensajeEtapa(dias);
 
+    // Un solo par de links por empresa; el correo sale a TODOS los gestores (cada uno con su saludo).
     try {
       const base = { empresaId: emp.id, nombreEmpresa: emp.nombre };
       const mensual = await WompiService.generarLinkPago({ ...base, meses: 1 });
       const anual = await WompiService.generarLinkPago({ ...base, meses: 12 });
 
-      await enviarEmail({
-        to:      emp.email,
-        subject: etapa.asunto,
-        html:    emailHtml({ empresa: emp.nombre, admin: emp.admin_nombre, etapa, mensual, anual }),
-      });
-
-      logger.info(`[suscripcion-worker] email enviado a ${emp.email} (empresa ${emp.id}, ${dias}d restantes)`);
+      for (const dest of emp.destinatarios) {
+        try {
+          await enviarEmail({
+            to:      dest.email,
+            subject: etapa.asunto,
+            html:    emailHtml({ empresa: emp.nombre, admin: dest.nombre, etapa, mensual, anual }),
+          });
+          logger.info(`[suscripcion-worker] email enviado a ${dest.email} (empresa ${emp.id}, ${dias}d restantes)`);
+        } catch (err) {
+          logger.error(`[suscripcion-worker] no se pudo enviar a ${dest.email} (empresa ${emp.id}): ${err.message}`);
+        }
+      }
     } catch (err) {
       logger.error(`[suscripcion-worker] error empresa ${emp.id}: ${err.message}`);
     }

@@ -32,22 +32,30 @@ const EmpresasModel = {
    * Empresas con suscripción propia (no logiq360) que vencen en 7, 3 o 0 días, o vencieron hace 3, con el email de su
    * admin_empresa: [{ id, nombre, plan, suscripcion_vigente_hasta, dias_restantes, email, admin_nombre }]. Máximo 100.
    */
+  /**
+   * Empresas con aviso de renovación hoy, cada una con `destinatarios`: todos sus gestores activos
+   * con correo (admin_empresa, jefe_turnos, jefe_nomina y nomina), no solo el admin.
+   */
   async listarConRenovacionPendiente() {
     const [empresas] = await pool.query(
       `SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta,
-              DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes,
-              u.email, u.nombre AS admin_nombre
+              DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes
          FROM empresas e
-         JOIN usuarios u ON u.empresa_id = e.id
-                        AND u.rol = 'admin_empresa'
-                        AND u.activo = 1
         WHERE e.activo = 1
           AND e.suscripcion_origen != 'logiq360'
           AND e.suscripcion_vigente_hasta IS NOT NULL
           AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (${DIAS_AVISO_SUSCRIPCION.join(', ')})
         LIMIT 100`
     );
-    return empresas;
+    if (empresas.length === 0) return empresas;
+
+    const [gestores] = await pool.query(
+      `SELECT empresa_id, email, nombre FROM usuarios
+        WHERE empresa_id IN (?) AND rol IN ('admin_empresa','jefe_turnos','jefe_nomina','nomina')
+          AND activo = 1 AND email IS NOT NULL AND email != ''`,
+      [empresas.map((e) => e.id)]
+    );
+    return empresas.map((e) => ({ ...e, destinatarios: gestores.filter((g) => g.empresa_id === e.id) }));
   },
 
   async listarDirectorio({ busqueda, ciudad, limit, offset }) {

@@ -157,9 +157,13 @@ describe('registros.worker (horas extra en jornada activa)', () => {
 });
 
 describe('suscripcion.worker (avisos de renovación)', () => {
-  const SQL_RENOVACIONES = "SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta, DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes, u.email, u.nombre AS admin_nombre FROM empresas e JOIN usuarios u ON u.empresa_id = e.id AND u.rol = 'admin_empresa' AND u.activo = 1 WHERE e.activo = 1 AND e.suscripcion_origen != 'logiq360' AND e.suscripcion_vigente_hasta IS NOT NULL AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 1, 0, -1, -2) LIMIT 100";
-  const empresa = (dias) => ({ id: 7, nombre: 'ACME', plan: 'basico', dias_restantes: dias, email: 'a@acme.co', admin_nombre: 'Marta' });
-  const conEmpresas = (...filas) => responder([[/FROM empresas e JOIN usuarios u/, [filas]]]);
+  const SQL_RENOVACIONES = "SELECT e.id, e.nombre, e.plan, e.suscripcion_vigente_hasta, DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) AS dias_restantes FROM empresas e WHERE e.activo = 1 AND e.suscripcion_origen != 'logiq360' AND e.suscripcion_vigente_hasta IS NOT NULL AND DATEDIFF(e.suscripcion_vigente_hasta, CURDATE()) IN (7, 3, 1, 0, -1, -2) LIMIT 100";
+  const empresa = (dias) => ({ id: 7, nombre: 'ACME', plan: 'basico', dias_restantes: dias });
+  const MARTA = { empresa_id: 7, email: 'a@acme.co', nombre: 'Marta' };
+  const RODRIGO = { empresa_id: 7, email: 'r@acme.co', nombre: 'Rodrigo' };
+  const FILAS_EMPRESAS = /FROM empresas e WHERE e\.activo = 1/;
+  const FILAS_DESTINATARIOS = /^SELECT empresa_id, email, nombre FROM usuarios/;
+  const conEmpresas = (...filas) => responder([[FILAS_EMPRESAS, [filas]], [FILAS_DESTINATARIOS, [[MARTA]]]]);
 
   beforeEach(() => Wompi.generarLinkPago.mockResolvedValue({ url: 'https://pago/x', monto_cop: 129000 }));
 
@@ -187,7 +191,8 @@ describe('suscripcion.worker (avisos de renovación)', () => {
 
   test('vence en 7 días: también avisa in-app a todos los gestores de la empresa (no solo admin_empresa)', async () => {
     responder([
-      [/FROM empresas e JOIN usuarios u/, [[empresa(7)]]],
+      [FILAS_EMPRESAS, [[empresa(7)]]],
+      [FILAS_DESTINATARIOS, [[MARTA]]],
       [/^SELECT id FROM usuarios WHERE empresa_id = \? AND rol IN \('admin_empresa','jefe_turnos','jefe_nomina','nomina'\)/, [[{ id: 1 }, { id: 2 }]]],
     ]);
 
@@ -223,9 +228,29 @@ describe('suscripcion.worker (avisos de renovación)', () => {
     expect(html).toContain('marcar ingreso y egreso'); // dice que el marcaje no se bloquea
   });
 
+  test('el correo sale a TODOS los gestores de la empresa, con los links generados una sola vez', async () => {
+    responder([[FILAS_EMPRESAS, [[empresa(3)]]], [FILAS_DESTINATARIOS, [[MARTA, RODRIGO]]]]);
+    suscripcionWorker.iniciarWorker();
+    await avanzar(60_000);
+
+    expect(Wompi.generarLinkPago).toHaveBeenCalledTimes(2); // un mes + un año, no por destinatario
+    expect(enviarEmail.mock.calls.map(([m]) => m.to)).toEqual(['a@acme.co', 'r@acme.co']);
+    expect(enviarEmail.mock.calls[1][0].html).toContain('Rodrigo');
+  });
+
+  test('si el correo de un gestor falla, igual se envía a los demás', async () => {
+    enviarEmail.mockRejectedValueOnce(new Error('buzón lleno'));
+    responder([[FILAS_EMPRESAS, [[empresa(3)]]], [FILAS_DESTINATARIOS, [[MARTA, RODRIGO]]]]);
+    suscripcionWorker.iniciarWorker();
+    await avanzar(60_000);
+
+    expect(enviarEmail).toHaveBeenCalledTimes(2);
+  });
+
   test('dentro de la gracia (-1): correo con los días que quedan y aviso in-app a gestores', async () => {
     responder([
-      [/FROM empresas e JOIN usuarios u/, [[empresa(-1)]]],
+      [FILAS_EMPRESAS, [[empresa(-1)]]],
+      [FILAS_DESTINATARIOS, [[MARTA]]],
       [/^SELECT id FROM usuarios WHERE empresa_id = \? AND rol IN/, [[{ id: 1 }]]],
     ]);
     suscripcionWorker.iniciarWorker();
