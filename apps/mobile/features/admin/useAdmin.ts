@@ -121,6 +121,18 @@ export function useEliminarEmpresa() {
   });
 }
 
+export function useGestionarSuscripcion(id: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (datos: Parameters<typeof adminApi.gestionarSuscripcion>[1]) => adminApi.gestionarSuscripcion(id, datos),
+    onSuccess: (empresa) => {
+      qc.setQueryData(ADMIN_KEYS.empresa(id), empresa);
+      qc.invalidateQueries({ queryKey: ['admin', 'empresas'] });
+      qc.invalidateQueries({ queryKey: ADMIN_KEYS.reportes });
+    },
+  });
+}
+
 export function useGenerarLinkPago(id: number) {
   return useMutation({
     mutationFn: (datos: { plan: PlanEmpresa; meses?: number }) => adminApi.generarLinkPago(id, datos),
