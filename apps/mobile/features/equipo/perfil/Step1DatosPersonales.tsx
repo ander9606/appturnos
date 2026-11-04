@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { validateStep1 } from './utils';
+import { TIPO_HINTS } from '../schemas';
 import type { WizardData, TipoDocumento, Sexo } from './types';
 import { authApi } from '@api-client';
 import { TIPO_LABEL } from '@/lib/roleLabels';
@@ -146,6 +147,11 @@ export function Step1DatosPersonales({ data, onChange, onNext }: Props) {
           value={data.tipo}
           onChange={(v) => onChange({ tipo: v })}
         />
+        <Text className="text-xs text-muted-foreground">
+          {data.tipo
+            ? TIPO_HINTS[data.tipo]
+            : 'Nómina: personal fijo con salario que marca su jornada. Turnos: personal por día o evento que cobra por turno.'}
+        </Text>
       </View>
 
       {/* Documento */}

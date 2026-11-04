@@ -31,7 +31,7 @@ function getInitials(nombre?: string, apellido?: string) {
 export default function InvitarTrabajadorScreen() {
   const router  = useRouter();
   const [cedula, setCedula] = useState('');
-  const [tipo, setTipo] = useState<'turnos' | 'nomina'>('turnos');
+  const [tipo, setTipo] = useState<'turnos' | 'nomina' | null>(null); // sin valor por defecto: el gestor elige el vínculo a conciencia
   const [debouncedCedula, setDebouncedCedula] = useState('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -48,10 +48,10 @@ export default function InvitarTrabajadorScreen() {
   if (denied) return denied;
 
   const notFound = isError && (error as ApiError)?.status === 404 && debouncedCedula.length >= 5;
-  const canSend  = !!trabajador && !isFetching;
+  const canSend  = !!trabajador && !isFetching && tipo !== null;
 
   function handleInvitar() {
-    if (!canSend) return;
+    if (!canSend || !tipo) return;
     invitar.mutate({ cedula: cedula.trim(), tipo }, {
       onSuccess: () => {
         showToast(`${trabajador!.nombre} ${trabajador!.apellido} recibirá una notificación para unirse a tu empresa.`);

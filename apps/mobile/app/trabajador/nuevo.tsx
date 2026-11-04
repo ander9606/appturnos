@@ -35,6 +35,7 @@ export default function NuevoTrabajadorScreen() {
   const patch = (p: Partial<WizardData>) => setData((prev) => ({ ...prev, ...p }));
 
   const handleCreate = async () => {
+    if (!data.tipo) return; // validateStep1 ya lo exige: nunca se crea sin elegir el tipo
     try {
       const t = await mutateAsync({
         nombre:   data.nombre,

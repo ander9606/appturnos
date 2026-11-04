@@ -25,7 +25,8 @@ export interface WizardData {
   // Paso 1 — Datos personales
   nombre: string;
   apellido: string;
-  tipo: TipoTrabajador;
+  /** '' = aún sin elegir: sin valor por defecto, para que nadie cree un empleado de nómina como de turnos por no tocar el selector. */
+  tipo: TipoTrabajador | '';
   tipo_documento: TipoDocumento;
   cedula: string;
   nac_d: string;
@@ -60,7 +61,7 @@ export interface WizardData {
 }
 
 export const INITIAL: WizardData = {
-  nombre: '', apellido: '', tipo: 'turnos',
+  nombre: '', apellido: '', tipo: '',
   tipo_documento: 'CC', cedula: '',
   nac_d: '', nac_m: '', nac_a: '',
   sexo: '',

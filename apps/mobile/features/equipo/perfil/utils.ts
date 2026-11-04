@@ -29,6 +29,7 @@ export function buildMesAnio(m: string, a: string): string | null {
 export function validateStep1(d: WizardData): string | null {
   if (!d.nombre.trim()) return 'El nombre es obligatorio';
   if (!d.apellido.trim()) return 'El apellido es obligatorio';
+  if (!d.tipo) return 'Elige si es un empleado de turnos o de nómina';
   if (!d.cedula.trim()) return 'La cédula es obligatoria';
   if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email.trim()))
     return 'El correo electrónico no es válido';
