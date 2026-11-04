@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import {
@@ -28,8 +29,9 @@ import {
   useCambiarEstadoEmpresa,
   useEliminarEmpresa,
   useGenerarLinkPago,
+  useGestionarSuscripcion,
 } from '@/features/admin/useAdmin';
-import { formatCOP } from '@/lib/formatters';
+import { formatCOP, toISODate } from '@/lib/formatters';
 import { confirm } from '@/lib/confirmDialog';
 import { showToast } from '@/lib/toast';
 import type { PlanEmpresa, EmpresaAdmin, LinkPagoResponse } from '@api-client';
@@ -106,6 +108,8 @@ export default function EmpresaDetailScreen() {
   const { mutateAsync: cambiarEstado, isPending: cambiandoEstado } = useCambiarEstadoEmpresa();
   const { mutateAsync: eliminarEmpresa, isPending: eliminando } = useEliminarEmpresa();
   const { mutateAsync: generarLink, isPending: generandoLink } = useGenerarLinkPago(empresaId);
+  const { mutateAsync: gestionarSusc, isPending: guardandoFin } = useGestionarSuscripcion(empresaId);
+  const [pickerFin, setPickerFin] = useState(false);
 
   const [mesesLink, setMesesLink] = useState(1);
   const [linkGenerado, setLinkGenerado] = useState<LinkPagoResponse | null>(null);
@@ -372,6 +376,41 @@ export default function EmpresaDetailScreen() {
                 : 'Indefinida'
             }
           />
+          <Pressable
+            onPress={() => setPickerFin(true)}
+            disabled={guardandoFin}
+            accessibilityRole="button"
+            className="flex-row items-center justify-center gap-2 h-10 rounded-xl border border-border my-2 active:opacity-70"
+          >
+            {guardandoFin ? <Spinner size="small" color={COLORS.info} /> : (
+              <Text className="text-sm font-semibold text-info">Cambiar fecha de fin del plan</Text>
+            )}
+          </Pressable>
+          {pickerFin && (
+            <DateTimePicker
+              mode="date"
+              display="default"
+              value={empresa.suscripcion_vigente_hasta ? new Date(`${empresa.suscripcion_vigente_hasta}T00:00:00`) : new Date()}
+              onChange={async (_, fecha) => {
+                setPickerFin(false);
+                if (!fecha) return;
+                const texto = fecha.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+                const ok = await confirm({
+                  title: 'Cambiar fecha de fin',
+                  message: `El plan ${PLANES.find((p) => p.value === empresa.plan)?.label ?? empresa.plan} de ${empresa.nombre} quedará vigente hasta el ${texto}.`,
+                  confirmLabel: 'Guardar',
+                });
+                if (!ok) return;
+                try {
+                  // Se conserva el plan y el origen actuales: solo cambia la fecha.
+                  await gestionarSusc({ plan: empresa.plan, vigente_hasta: toISODate(fecha), origen: empresa.suscripcion_origen });
+                  showToast('Fecha de fin actualizada');
+                } catch (e) {
+                  showAlert('No se pudo guardar', (e as Error).message);
+                }
+              }}
+            />
+          )}
         </View>
 
         {/* ── Generar link de pago ─────────────────────────────────────── */}
