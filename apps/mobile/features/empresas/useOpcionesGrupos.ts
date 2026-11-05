@@ -10,10 +10,11 @@ export const ETIQUETA_GRUPO_DEFECTO = 'Grupo';
  * empresa lo encendió. Al cambiar de sesión la caché se limpia entera (useAuthStore), así que no
  * hace falta la empresa en la clave.
  */
-export function useOpcionesGrupos() {
+export function useOpcionesGrupos(enabled = true) {
   const { data, isLoading } = useQuery({
     queryKey: ['opciones-grupos'],
     queryFn: () => empresasApi.obtenerOpcionesGrupos(),
+    enabled,
   });
   return {
     usa: data?.usa_grupos_turno ?? false,

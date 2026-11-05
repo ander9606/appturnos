@@ -40,7 +40,7 @@ import { LugarAlias } from '../components/LugarAlias';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto, Oferta, DescuentoTurno, DescuentosAsignacion } from '../types';
 import { fmtDate, fmtCOP, bogotaToday } from '@/shared/lib/format';
 import { EmptyState } from '@/shared/components/EmptyState';
-import { GrupoBadge } from '@/modules/grupos/components/GrupoBadge';
+import { GrupoDeLaOferta } from '@/modules/grupos/components/GrupoDeLaOferta';
 
 const ESTADO_OFERTA_BADGE: Record<EstadoOferta, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -208,7 +208,7 @@ export function OfertaDetailPage() {
                 </span>
               )}
             </div>
-            {oferta.grupo_nombre && <div className="mb-1"><GrupoBadge nombre={oferta.grupo_nombre} /></div>}
+            <div className="mb-2 max-w-xs"><GrupoDeLaOferta oferta={oferta} puedeGestionar={puedeGestionar} /></div>
             <p className="text-sm text-muted-foreground">
               {fmtDate(oferta.fecha)} · {oferta.hora_inicio}
               {oferta.hora_fin_estimada ? ` – ${oferta.hora_fin_estimada}` : ''}

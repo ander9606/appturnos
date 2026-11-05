@@ -61,7 +61,8 @@ router.patch(
 );
 
 // POST /api/grupos-turno/:id/cerrar | /reabrir
-router.post('/:id/cerrar', verificarRol(GESTIONAR), requiereGruposTurno, verificarSuscripcion, [idParam], validar, ctrl.cerrar);
+router.post('/:id/cerrar', verificarRol(GESTIONAR), requiereGruposTurno, verificarSuscripcion,
+  [idParam, body('confirmar').optional().isBoolean().withMessage('confirmar debe ser verdadero o falso')], validar, ctrl.cerrar);
 router.post('/:id/reabrir', verificarRol(GESTIONAR), requiereGruposTurno, verificarSuscripcion, [idParam], validar, ctrl.reabrir);
 
 module.exports = router;

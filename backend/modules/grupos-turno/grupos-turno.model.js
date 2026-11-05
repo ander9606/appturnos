@@ -111,6 +111,24 @@ const GruposTurnoModel = {
    * Turnos que impiden cerrar el grupo: los que aún no terminan (abiertos o en proceso, con fin
    * en el futuro) y los que tienen a alguien trabajando ahora. `ahora` es la hora de Colombia.
    */
+  /**
+   * Turnos completados del grupo cuyo contrato diario el trabajador aún no firmó: mientras no firme, ese pago no se
+   * suma en la liquidación ni entra en su cuenta de cobro. (El sistema no registra qué turnos ya se pagaron, así que
+   * esta es la señal real de "pago pendiente" que hay.) Los 'fallido' no llevan contrato y no cuentan.
+   */
+  async contarSinFirma(empresaId, id) {
+    const [[fila]] = await pool.query(
+      `SELECT COUNT(*) AS n
+       FROM asignaciones_turno a
+       JOIN ofertas_turno o ON o.id = a.oferta_id
+       LEFT JOIN contratos_diarios cd ON cd.asignacion_id = a.id
+       WHERE o.grupo_id = ? AND o.empresa_id = ? AND a.estado = 'completado'
+         AND COALESCE(cd.firmado_trabajador, 0) = 0`,
+      [id, empresaId]
+    );
+    return Number(fila.n);
+  },
+
   async contarPendientes(empresaId, id, ahora) {
     const [[fila]] = await pool.query(
       `SELECT COUNT(*) AS n FROM ofertas_turno o

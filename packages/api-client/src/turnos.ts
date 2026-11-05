@@ -383,6 +383,9 @@ export interface LiquidacionTurnoLinea {
   lugar: string | null;
   /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
   lugar_alias?: string | null;
+  /** Grupo de turnos al que pertenece el turno; null si no tiene. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
   horas_trabajadas: number;

@@ -75,7 +75,7 @@ export type {
   LiquidacionTurnosTrabajador,
   ParaQuienOferta,
 } from './turnos';
-export { gruposTurnoApi } from './grupos-turno';
+export { gruposTurnoApi, esAvisoCierre } from './grupos-turno';
 export type {
   GrupoTurno,
   GrupoTurnoDetalle,

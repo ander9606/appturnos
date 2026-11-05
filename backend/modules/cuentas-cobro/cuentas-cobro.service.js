@@ -43,6 +43,15 @@ const redondear = (n) => Math.round(Number(n) * 100) / 100;
 
 const fechaCorta = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
 
+/**
+ * Grupo del turno en el momento de generar la cuenta. Va dentro del ítem (que ya se guarda como JSON): una cuenta
+ * firmada es un documento cerrado y no debe cambiar si después renombran el grupo. Sin grupo no agrega nada, así que
+ * las cuentas de empresas que no usan grupos quedan idénticas a las de antes.
+ */
+function datosGrupo(t) {
+  return t.grupo_id ? { grupo_id: t.grupo_id, grupo_nombre: t.grupo_nombre ?? null } : {};
+}
+
 /** Línea completa de un turno que aún no estaba en ninguna cuenta firmada. */
 function itemCompleto(t) {
   return {
@@ -51,6 +60,7 @@ function itemCompleto(t) {
     descripcion: t.oferta_titulo,
     cargo: t.cargo_nombre,
     lugar: lugarCorto(t.lugar, t.lugar_alias),
+    ...datosGrupo(t),
     hora_inicio: t.hora_inicio,
     hora_fin: t.hora_fin_estimada,
     horas: t.horas_trabajadas,
@@ -73,6 +83,7 @@ function itemDiferencia(t, diferencia) {
     descripcion: `${t.oferta_titulo} (ajuste por diferencia)`,
     cargo: t.cargo_nombre,
     lugar: lugarCorto(t.lugar, t.lugar_alias),
+    ...datosGrupo(t),
     hora_inicio: t.hora_inicio,
     hora_fin: t.hora_fin_estimada,
     horas: 0,

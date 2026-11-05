@@ -104,6 +104,8 @@ export interface LiquidacionTurno {
   hora_fin_estimada: string | null;
   lugar: string | null;
   lugar_alias?: string | null;
+  /** Grupo de turnos al que pertenece el turno; null si no tiene. */
+  grupo_nombre?: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
   horas_trabajadas: number;

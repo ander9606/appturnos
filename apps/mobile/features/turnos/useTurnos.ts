@@ -386,7 +386,26 @@ export function useDuplicarOferta() {
   return useMutation({
     mutationFn: ({ ofertaId, fecha, hora_inicio }: { ofertaId: number; fecha: string; hora_inicio?: string }) =>
       turnosApi.duplicarOferta(ofertaId, fecha, hora_inicio),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      // La copia conserva el grupo: cambian sus contadores y fechas.
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+    },
+  });
+}
+
+/** Vincular un turno ya creado a un grupo (o quitarlo con `null`). Cambian el turno y los contadores del grupo. */
+export function useVincularGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, grupoId }: { ofertaId: number; grupoId: number | null }) =>
+      turnosApi.vincularOfertaAGrupo(ofertaId, grupoId),
+    onSuccess: (_d, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+    },
   });
 }
 

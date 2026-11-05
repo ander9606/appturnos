@@ -88,10 +88,14 @@ const GruposTurnoService = {
     return conFase(await GruposTurnoModel.obtenerPorId(empresaId, id));
   },
 
-  async cerrar(empresaId, id) {
+  /**
+   * Cerrar no toca pagos ni cuentas de cobro: solo saca el grupo de la lista de activos. Pero si quedan turnos
+   * completados sin contrato firmado (su pago sigue frenado), avisa con un 409 de código `confirmar_cierre` y solo
+   * cierra cuando el cliente repite la llamada con `confirmar: true`.
+   */
+  async cerrar(empresaId, id, { confirmar = false } = {}) {
     const grupo = await obtenerOFallar(empresaId, id);
     if (grupo.estado === 'cerrado') throw new AppError('El grupo ya está cerrado', 409);
-    // ponytail: solo bloquea por turnos sin terminar — upgrade path: avisar (con confirmación) si quedan pagos pendientes.
     const pendientes = await GruposTurnoModel.contarPendientes(empresaId, id, ahoraColombiaSQL());
     if (pendientes > 0) {
       throw new AppError(
@@ -99,6 +103,18 @@ const GruposTurnoService = {
         + 'Espera a que terminen o cancélalos.',
         409
       );
+    }
+    if (!confirmar) {
+      const sinFirma = await GruposTurnoModel.contarSinFirma(empresaId, id);
+      if (sinFirma > 0) {
+        const error = new AppError(
+          `${sinFirma} turno${sinFirma !== 1 ? 's' : ''} terminado${sinFirma !== 1 ? 's' : ''} sin contrato firmado: su pago sigue frenado hasta que se firme. `
+          + 'Cerrar el grupo no cambia eso.',
+          409
+        );
+        error.detalles = [{ codigo: 'confirmar_cierre', turnos_sin_firma: sinFirma, mensaje: error.message }];
+        throw error;
+      }
     }
     await GruposTurnoModel.cambiarEstado(empresaId, id, 'cerrado');
     return conFase(await GruposTurnoModel.obtenerPorId(empresaId, id));

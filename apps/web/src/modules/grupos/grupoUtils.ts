@@ -1,5 +1,6 @@
+import axios from 'axios';
 import { fmtPeriodo } from '@/shared/lib/format';
-import type { GrupoElegido, GrupoTurno } from './types';
+import type { FaseGrupo, GrupoElegido, GrupoTurno, TurnoDeGrupo } from './types';
 
 /** Lo que el formulario guarda del grupo elegido. */
 export function aElegido(g: GrupoTurno): GrupoElegido {
@@ -33,4 +34,30 @@ export function lugarEsDelGrupo(
   grupo: GrupoElegido | null,
 ): boolean {
   return !!grupo?.lugar && turno.lugar === grupo.lugar && turno.latitud === grupo.latitud && turno.longitud === grupo.longitud;
+}
+
+/** Texto y color de la fase del grupo (la calcula el servidor con las fechas de sus turnos). */
+export const FASE_INFO: Record<FaseGrupo, { label: string; clase: string }> = {
+  sin_turnos: { label: 'Sin turnos', clase: 'bg-muted text-muted-foreground' },
+  proximo:    { label: 'Próximo',    clase: 'bg-primary/10 text-primary-700' },
+  en_curso:   { label: 'En curso',   clase: 'bg-success-light text-success' },
+  terminado:  { label: 'Terminado',  clase: 'bg-muted text-muted-foreground' },
+  cerrado:    { label: 'Cerrado',    clase: 'bg-muted text-muted-foreground' },
+};
+
+/** Último turno del grupo que se puede copiar: el de fecha más reciente que no esté cancelado. */
+export function ultimoTurnoCopiable(turnos: TurnoDeGrupo[]): TurnoDeGrupo | null {
+  const vivos = turnos.filter(t => t.estado !== 'cancelada');
+  if (!vivos.length) return null;
+  return vivos.reduce((a, b) => (b.fecha > a.fecha || (b.fecha === a.fecha && b.hora_inicio > a.hora_inicio) ? b : a));
+}
+
+/**
+ * Si el error es el aviso de cerrar un grupo con turnos terminados sin contrato firmado (409 con código
+ * `confirmar_cierre`), devuelve el texto para preguntar al usuario; si es cualquier otro error, null.
+ */
+export function avisoDeCierre(err: unknown): string | null {
+  if (!axios.isAxiosError(err) || err.response?.status !== 409) return null;
+  const data = err.response.data as { message?: string; detalles?: { codigo?: string }[] } | undefined;
+  return data?.detalles?.[0]?.codigo === 'confirmar_cierre' ? (data.message ?? 'Hay contratos sin firmar.') : null;
 }

@@ -238,6 +238,7 @@ export default function TurnosScreen() {
     return {
       key: `o${o.id}`,
       titulo: o.titulo,
+      grupo: o.grupo_nombre,
       detalle: `${fmtRange(o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente)} · ${cubiertas}/${total} plazas cubiertas`,
       color: colorOferta(o, pendientesPorOferta, today, theme.primary),
       onPress: () => router.push(`/oferta/${o.id}`),
@@ -247,6 +248,7 @@ export default function TurnosScreen() {
     ...(misTurnosPorDiaMes.get(fecha) ?? []).map(a => ({
       key: `a${a.id}`,
       titulo: a.oferta_titulo,
+      grupo: a.grupo_nombre,
       detalle: getEstadoConfig(a.estado).label,
       color: theme.primary,
       onPress: () => router.push(`/turno/${a.id}`),
@@ -254,6 +256,7 @@ export default function TurnosScreen() {
     ...(ofertasPorDiaMes.get(fecha) ?? []).filter(o => !aplicadosIds.has(o.id)).map(o => ({
       key: `d${o.id}`,
       titulo: o.titulo,
+      grupo: o.grupo_nombre,
       detalle: `Disponible · ${fmtRange(o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente)}`,
       color: COLORS.info,
       onPress: () => router.push(`/oferta/${o.id}`),

@@ -2,13 +2,15 @@ import type { IconName } from '@/components/ui/Icon';
 import { actionSheet } from '@/lib/actionSheet';
 import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme }        from '@/lib/theme';
 import { useCrearOferta }  from '@/features/turnos/useTurnos';
+import { useGrupo }        from '@/features/grupos/useGrupos';
+import { aElegido, parcheAlElegirGrupo } from '@/features/grupos/grupoUtils';
 import { StepIndicator }   from '@/features/turnos/crear/StepIndicator';
 import { Step1Basicos }    from '@/features/turnos/crear/Step1Basicos';
 import { StepLugar }       from '@/features/turnos/crear/StepLugar';
@@ -31,11 +33,23 @@ export default function NuevoTurnoScreen() {
   const { usuario } = useAuthStore();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [data, setData] = useState<WizardData>(INITIAL);
+  // "Agregar turno" desde un grupo llega con ?grupoId=: el grupo (y su lugar) ya vienen elegidos.
+  const { grupoId } = useLocalSearchParams<{ grupoId?: string }>();
+  const grupoPrevio = useGrupo(Number(grupoId));
+  const [base, setBase] = useState<WizardData>(INITIAL);
+  const preseleccionado = useRef(false);
+  useEffect(() => {
+    if (!grupoId || preseleccionado.current || !grupoPrevio.data || grupoPrevio.data.estado !== 'activo') return;
+    preseleccionado.current = true;
+    const desde = { ...INITIAL, ...parcheAlElegirGrupo(INITIAL, aElegido(grupoPrevio.data)) };
+    setBase(desde);
+    setData((prev) => (JSON.stringify(prev) === JSON.stringify(INITIAL) ? desde : prev));
+  }, [grupoId, grupoPrevio.data]);
 
   const crearMutation = useCrearOferta();
 
   const allowNextLeave = useConfirmDiscard(
-    !crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(INITIAL)
+    !crearMutation.isSuccess && JSON.stringify(data) !== JSON.stringify(base)
   );
 
   const patch = useCallback((p: Partial<WizardData>) => {

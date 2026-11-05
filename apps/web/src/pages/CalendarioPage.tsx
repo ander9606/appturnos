@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '@/modules/auth/authStore';
 import { useOfertas } from '@/modules/turnos/hooks/useTurnos';
+import { GrupoBadge } from '@/modules/grupos/components/GrupoBadge';
 import { usePeriodos } from '@/modules/nomina/hooks/useNomina';
 import { MonthCalendar } from '@/shared/components/MonthCalendar';
 import { getMonthGrid, type CalendarDay } from '@/shared/lib/calendar';
@@ -190,6 +191,7 @@ export function CalendarioPage() {
                             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ESTADO_OFERTA_DOT[o.estado]}`} />
                             <p className="text-sm font-medium text-foreground truncate">{o.titulo}</p>
                           </div>
+                          {o.grupo_nombre && <div className="mt-0.5"><GrupoBadge nombre={o.grupo_nombre} /></div>}
                           <p className="text-xs text-muted-foreground">{o.hora_inicio}{o.hora_fin_estimada ? ` – ${o.hora_fin_estimada}` : ''}</p>
                         </button>
                       ))}

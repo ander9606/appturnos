@@ -73,6 +73,19 @@ describe('empresa con la función activada', () => {
     expect(Servicio.crear).toHaveBeenCalledWith(7, expect.objectContaining({ nombre: 'Feria', lugar: 'Corferias' }), 1);
   });
 
+  test('cerrar: sin cuerpo no confirma; solo `confirmar: true` confirma; otro valor → 422', async () => {
+    Servicio.cerrar.mockResolvedValue({ id: 3, estado: 'cerrado' });
+    expect((await pedir('/3/cerrar', 'POST')).status).toBe(200);
+    expect(Servicio.cerrar).toHaveBeenLastCalledWith(7, '3', { confirmar: false });
+    expect((await pedir('/3/cerrar', 'POST', { confirmar: true })).status).toBe(200);
+    expect(Servicio.cerrar).toHaveBeenLastCalledWith(7, '3', { confirmar: true });
+    expect((await pedir('/3/cerrar', 'POST', { confirmar: false })).status).toBe(200);
+    expect(Servicio.cerrar).toHaveBeenLastCalledWith(7, '3', { confirmar: false });
+    Servicio.cerrar.mockClear();
+    expect((await pedir('/3/cerrar', 'POST', { confirmar: 'quizas' })).status).toBe(422);
+    expect(Servicio.cerrar).not.toHaveBeenCalled();
+  });
+
   test('id inválido → 422', async () => {
     expect((await pedir('/abc')).status).toBe(422);
     expect((await pedir('/0/cerrar', 'POST')).status).toBe(422);

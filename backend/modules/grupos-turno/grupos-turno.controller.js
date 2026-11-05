@@ -29,7 +29,7 @@ async function actualizar(req, res) {
 }
 
 async function cerrar(req, res) {
-  const data = await GruposTurnoService.cerrar(req.empresa_id, req.params.id);
+  const data = await GruposTurnoService.cerrar(req.empresa_id, req.params.id, { confirmar: req.body?.confirmar === true });
   res.json({ success: true, data, message: 'Grupo cerrado' });
 }
 
