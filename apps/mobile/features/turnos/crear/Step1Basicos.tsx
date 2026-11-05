@@ -16,6 +16,8 @@ import { useTheme }    from '@/lib/theme';
 import { Button }      from '@/components/ui/Button';
 import { LugarInput }   from './LugarInput';
 import { TrabajadorPickerModal } from './TrabajadorPickerModal';
+import { GrupoSelector } from '@/features/grupos/GrupoSelector';
+import { parcheAlElegirGrupo, lugarEsDelGrupo } from '@/features/grupos/grupoUtils';
 import { validateStep1 } from './utils';
 import { bogotaToday, formatShortDate, formatTimeObj, toISODate } from '@/lib/formatters';
 import type { WizardData } from './types';
@@ -68,6 +70,9 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
           returnKeyType="next"
         />
       </View>
+
+      {/* Grupo de turnos (solo si la empresa los usa): al elegirlo, el lugar del turno se prellena con el suyo */}
+      <GrupoSelector grupo={data.grupo} onChange={(g) => onChange(parcheAlElegirGrupo(data, g))} />
 
       <View className="gap-1.5">
         <Text className="text-sm font-semibold text-foreground">Descripción</Text>
@@ -237,6 +242,9 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
           longitud={data.longitud}
           onChange={(lugar, lat, lng) => onChange({ lugar, latitud: lat, longitud: lng })}
         />
+        {lugarEsDelGrupo(data) && (
+          <Text className="text-xs text-muted-foreground">{`Tomado de «${data.grupo!.nombre}». Puedes cambiarlo.`}</Text>
+        )}
       </View>
 
       <View className="gap-1.5">
