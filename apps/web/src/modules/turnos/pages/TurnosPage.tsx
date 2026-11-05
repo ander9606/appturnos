@@ -16,6 +16,7 @@ import { LugarInput } from '../components/LugarInput';
 import { GrupoSelector } from '@/modules/grupos/components/GrupoSelector';
 import { lugarAlElegirGrupo, lugarEsDelGrupo } from '@/modules/grupos/grupoUtils';
 import type { GrupoElegido } from '@/modules/grupos/types';
+import { GrupoBadge } from '@/modules/grupos/components/GrupoBadge';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
 import { ZonasMarcajeInput, type ZonaMarcaje } from '../components/ZonasMarcajeInput';
 import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
@@ -167,7 +168,10 @@ export function TurnosPage() {
                 const esPasado = o.fecha < today && o.estado !== 'completada';
                 return (
                   <tr key={o.id} className={`border-t border-border/60 hover:bg-muted transition-opacity ${esPasado ? 'opacity-50' : ''}`}>
-                    <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>{o.titulo}</td>
+                    <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>
+                      {o.titulo}
+                      {o.grupo_nombre && <div className="mt-1 font-normal"><GrupoBadge nombre={o.grupo_nombre} /></div>}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{fmtDate(o.fecha)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.hora_inicio}{o.hora_fin_estimada ? ` – ${o.hora_fin_estimada}` : ''}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.lugar ?? '—'}</td>
