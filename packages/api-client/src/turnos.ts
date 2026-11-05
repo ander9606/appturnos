@@ -54,6 +54,9 @@ export interface Asignacion {
   empresa_id: number;
   oferta_id: number;
   trabajador_id: number;
+  /** Grupo del turno (etiqueta de la tarjeta). null o ausente = sin grupo. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
   estado: EstadoAsignacion;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
@@ -212,6 +215,11 @@ export interface Oferta {
   empresa_id: number;
   /** Solo presente en el feed agregado multi-empresa (listarOfertas para trabajador_turnos). */
   empresa_nombre?: string;
+  /** Grupo al que pertenece el turno (etiqueta de la tarjeta). null o ausente = sin grupo. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
+  /** Solo en el detalle de una oferta; un grupo cerrado no recibe turnos nuevos. */
+  grupo_estado?: 'activo' | 'cerrado' | null;
   titulo: string;
   descripcion: string | null;
   /** Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato. */
@@ -274,6 +282,8 @@ export interface Oferta {
 export interface CrearOfertaPayload {
   titulo: string;
   descripcion?: string;
+  /** Grupo de turnos al que pertenece. Debe ser de la empresa y estar activo; omitido = sin grupo. */
+  grupo_id?: number;
   /** Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato. */
   notas_adicionales?: string;
   fecha: string;           // YYYY-MM-DD
@@ -442,6 +452,14 @@ export const turnosApi = {
   /** Crea una oferta nueva con sus puestos en una sola transacción. */
   crearOferta(payload: CrearOfertaPayload): Promise<Oferta> {
     return api.post<Oferta>('/api/turnos/ofertas', payload);
+  },
+
+  /**
+   * Vincula la oferta a un grupo, la cambia de grupo o la saca de él (`null`). Es solo una etiqueta:
+   * se permite en cualquier estado del turno. 409 si el grupo está cerrado, 404 si no es de la empresa.
+   */
+  vincularOfertaAGrupo(ofertaId: number, grupoId: number | null): Promise<OfertaDetalle> {
+    return api.put<OfertaDetalle>(`/api/turnos/ofertas/${ofertaId}/grupo`, { grupo_id: grupoId });
   },
 
   /**

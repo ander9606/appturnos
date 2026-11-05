@@ -74,7 +74,18 @@ export interface Empresa extends EmpresaDirectorio {
   /** false = no se suman recargos nocturnos/festivos (solo se acumulan horas y se avisa al pasar 42 h). */
   sumar_nocturnas_festivo: boolean;
   regla_domingo_habitual: 'ley' | 'dos_meses';
+  /** Grupos de turnos encendidos para la empresa (0/1: así sale de la base). Los enciende su admin_empresa. */
+  usa_grupos_turno?: 0 | 1;
+  /** Cómo llama la empresa a un grupo ("Evento", "Obra"…). null = "Grupo". */
+  etiqueta_grupo?: string | null;
   created_at: string;
+}
+
+/** Lo que cualquier rol necesita saber de los grupos de turnos de su empresa. */
+export interface OpcionesGrupos {
+  usa_grupos_turno: boolean;
+  /** null = usar el nombre por defecto ("Grupo"). */
+  etiqueta_grupo: string | null;
 }
 
 export interface ActualizarMiEmpresaPayload {
@@ -92,6 +103,9 @@ export interface ActualizarMiEmpresaPayload {
   tipo_contrato?: TipoContrato;
   sumar_nocturnas_festivo?: boolean;
   regla_domingo_habitual?: 'ley' | 'dos_meses';
+  usa_grupos_turno?: boolean;
+  /** Vacío o null vuelve al nombre por defecto ("Grupo"). Máx. 40 caracteres. */
+  etiqueta_grupo?: string | null;
 }
 
 export interface DirectorioResponse {
@@ -122,6 +136,11 @@ export const empresasApi = {
 
   obtenerSuscripcion(): Promise<Suscripcion> {
     return api.get('/api/empresas/suscripcion');
+  },
+
+  /** Opciones de grupos de turnos de la empresa activa — la lee cualquier rol autenticado. */
+  obtenerOpcionesGrupos(): Promise<OpcionesGrupos> {
+    return api.get<OpcionesGrupos>('/api/empresas/opciones');
   },
 
   /**
