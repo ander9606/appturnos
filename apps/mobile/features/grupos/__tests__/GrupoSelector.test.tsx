@@ -193,7 +193,9 @@ describe('crear un grupo', () => {
     await abrirCrear();
     escribirNombre('Feria del Libro');
     await presionar('Crear y usar');
-    expect(await screen.findByText('Ya existe un grupo llamado "Feria del Libro".')).toBeTruthy();
+    // El aviso usa el nombre que escribió el usuario, sin la palabra "grupo" (la empresa los llama "Evento").
+    expect(await screen.findByText('Ya existe «Feria del Libro».')).toBeTruthy();
+    expect(screen.queryByText(/grupo/i)).toBeNull();
     await presionar('Usar ese');
     expect(mockObtener).toHaveBeenCalledWith(3);
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(ELEGIDO_FERIA));
@@ -205,7 +207,7 @@ describe('crear un grupo', () => {
     await abrirCrear();
     escribirNombre('X');
     await presionar('Crear y usar');
-    expect(await screen.findByText('Ya existe un grupo llamado "X".')).toBeTruthy();
+    expect(await screen.findByText('Ya existe «X».')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Usar ese' })).toBeNull();
   });
 

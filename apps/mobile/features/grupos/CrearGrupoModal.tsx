@@ -57,7 +57,8 @@ export function CrearGrupoModal({ visible, etiqueta, onCreado, onClose }: Props)
       onCreado(grupo);
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        setRepetido({ id: err.detalles?.[0]?.grupo_id ?? null, mensaje: err.message });
+        // El mensaje del servidor dice "grupo": aquí se arma con el nombre, para que sirva con la etiqueta de la empresa.
+        setRepetido({ id: err.detalles?.[0]?.grupo_id ?? null, mensaje: `Ya existe «${limpio}».` });
       } else {
         showAlert('Error', err instanceof ApiError ? err.message : 'No se pudo crear.');
       }
