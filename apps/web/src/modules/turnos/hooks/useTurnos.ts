@@ -125,6 +125,35 @@ export function usePostulacionesPendientes() {
   });
 }
 
+/** Vincular un turno ya creado a un grupo (o quitarlo con `null`). */
+export function useVincularGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, grupoId }: { ofertaId: number; grupoId: number | null }) =>
+      turnosApi.vincularOfertaAGrupo(ofertaId, grupoId),
+    onSuccess: (_d, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: KEYS.oferta(ofertaId) });
+      qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+    },
+    onError: (err) => toast.error(getErrMsg(err)),
+  });
+}
+
+/** Duplicar un turno a otra fecha; sin toast propio, el modal avisa con la fecha. */
+export function useDuplicarOferta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, fecha, hora_inicio }: { ofertaId: number; fecha: string; hora_inicio?: string }) =>
+      turnosApi.duplicarOferta(ofertaId, fecha, hora_inicio),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+    },
+    onError: (err) => toast.error(getErrMsg(err)),
+  });
+}
+
 export function useCrearOferta() {
   const qc = useQueryClient();
   return useMutation({

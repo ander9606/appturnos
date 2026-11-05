@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import { toast } from 'sonner';
 import { gruposApi } from '../api/gruposApi';
 import type { EstadoGrupo } from '../types';
 
@@ -20,5 +22,29 @@ export function useCrearGrupo() {
   return useMutation({
     mutationFn: gruposApi.crear,
     onSuccess: () => { qc.invalidateQueries({ queryKey: GRUPOS_KEY }); },
+  });
+}
+
+/** Un grupo con sus turnos (página de detalle). */
+export function useGrupo(id: number | null) {
+  return useQuery({
+    queryKey: [...GRUPOS_KEY, 'detalle', id],
+    queryFn: () => gruposApi.obtener(id!),
+    enabled: id !== null && Number.isFinite(id),
+  });
+}
+
+/** Cerrar o reabrir; el 409 del servidor ("tiene turnos sin terminar…") sale tal cual como aviso. */
+export function useCambiarEstadoGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, cerrar }: { id: number; cerrar: boolean }) => (cerrar ? gruposApi.cerrar(id) : gruposApi.reabrir(id)),
+    onSuccess: (_d, { cerrar }) => {
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+      toast.success(cerrar ? 'Grupo cerrado' : 'Grupo reabierto');
+    },
+    onError: (err) => {
+      toast.error(axios.isAxiosError(err) ? (err.response?.data?.message as string | undefined) ?? 'No se pudo completar.' : 'No se pudo completar.');
+    },
   });
 }

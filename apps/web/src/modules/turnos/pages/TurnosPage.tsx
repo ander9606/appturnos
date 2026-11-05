@@ -1,6 +1,6 @@
 import { SkeletonTable } from '@/shared/components/Skeleton';
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { Plus, ChevronRight, XCircle, DollarSign, AlertTriangle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/modules/auth/authStore';
@@ -14,7 +14,8 @@ import { StatCard } from '@/shared/components/StatCard';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
 import { GrupoSelector } from '@/modules/grupos/components/GrupoSelector';
-import { lugarAlElegirGrupo, lugarEsDelGrupo } from '@/modules/grupos/grupoUtils';
+import { aElegido, lugarAlElegirGrupo, lugarEsDelGrupo } from '@/modules/grupos/grupoUtils';
+import { useGrupo } from '@/modules/grupos/hooks/useGrupos';
 import type { GrupoElegido } from '@/modules/grupos/types';
 import { GrupoBadge } from '@/modules/grupos/components/GrupoBadge';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
@@ -55,6 +56,21 @@ export function TurnosPage() {
   const [vista, setVista] = useState<'ofertas' | 'pagos'>('ofertas');
   const [estado, setEstado] = useState<EstadoOferta | undefined>(undefined);
   const [showCrear, setShowCrear] = useState(false);
+  // "Agregar turno" desde un grupo llega con ?grupo=ID: el formulario abre con el grupo (y su lugar) ya elegidos.
+  const [params, setParams] = useSearchParams();
+  const grupoParam = Number(params.get('grupo')) || null;
+  const grupoPrevio = useGrupo(grupoParam).data?.data;
+  const abiertoPorGrupo = useRef(false);
+  useEffect(() => {
+    if (grupoPrevio && grupoPrevio.estado === 'activo' && !abiertoPorGrupo.current) {
+      abiertoPorGrupo.current = true;
+      setShowCrear(true);
+    }
+  }, [grupoPrevio]);
+  const cerrarCrear = () => {
+    setShowCrear(false);
+    if (grupoParam) setParams({}, { replace: true });
+  };
 
   const { data, isLoading, isError, error, refetch } = useOfertas({ estado, limit: 100 });
   const ofertas: Oferta[] = data?.data?.data ?? [];
@@ -230,7 +246,7 @@ export function TurnosPage() {
       </>
       )}
 
-      {showCrear && <NuevaOfertaModal onClose={() => setShowCrear(false)} />}
+      {showCrear && <NuevaOfertaModal grupoInicial={grupoPrevio?.estado === 'activo' ? aElegido(grupoPrevio) : null} onClose={cerrarCrear} />}
 
       {confirmState && (
         <ConfirmModal
@@ -245,21 +261,21 @@ export function TurnosPage() {
   );
 }
 
-function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
+function NuevaOfertaModal({ onClose, grupoInicial = null }: { onClose: () => void; grupoInicial?: GrupoElegido | null }) {
   const crear = useCrearOferta();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     titulo: '', fecha: '', hora_inicio: '', hora_fin_estimada: '',
-    descripcion: '', lugar: '',
+    descripcion: '', lugar: grupoInicial?.lugar ?? '',
   });
-  const [latitud, setLatitud] = useState<number | null>(null);
-  const [longitud, setLongitud] = useState<number | null>(null);
+  const [latitud, setLatitud] = useState<number | null>(grupoInicial?.lugar ? grupoInicial.latitud : null);
+  const [longitud, setLongitud] = useState<number | null>(grupoInicial?.lugar ? grupoInicial.longitud : null);
   const [paraQuien, setParaQuien] = useState<ParaQuienOferta>('turnos');
   const [visibilidad, setVisibilidad] = useState<VisibilidadOferta>('abierta');
   const [destinatarios, setDestinatarios] = useState<DestinatarioSeleccionado[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [zonas, setZonas] = useState<ZonaMarcaje[]>([]);
-  const [grupo, setGrupo] = useState<GrupoElegido | null>(null);
+  const [grupo, setGrupo] = useState<GrupoElegido | null>(grupoInicial);
 
   // Al elegir un grupo, el lugar del turno toma el del grupo (valor por defecto) si aún no tiene uno propio.
   const elegirGrupo = (g: GrupoElegido | null) => {

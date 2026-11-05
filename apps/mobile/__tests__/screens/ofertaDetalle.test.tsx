@@ -71,7 +71,10 @@ jest.mock('@/features/turnos/useTurnos', () => ({
   useMarcarOfertaFallida: () => mockM.marcarFallida,
   useCompletarOferta: () => mockM.completarOferta,
   useActualizarOferta: () => mockM.actualizarOferta,
+  useVincularGrupo: () => ({ mutateAsync: jest.fn() }),
 }));
+// El gestor ve el selector de grupo solo si su empresa los usa; aquí no (lo prueba GrupoDeLaOferta.test).
+jest.mock('@/features/empresas/useOpcionesGrupos', () => ({ useOpcionesGrupos: () => ({ usa: false, etiqueta: 'Grupo', isLoading: false }) }));
 
 jest.mock('@/features/nomina/TurnosExtraOptIn', () => {
   const { Text } = require('react-native');

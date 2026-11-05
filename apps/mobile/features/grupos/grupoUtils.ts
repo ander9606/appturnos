@@ -1,4 +1,4 @@
-import type { GrupoTurno } from '@api-client';
+import type { FaseGrupo, GrupoTurno, TurnoDeGrupo } from '@api-client';
 import { formatShortDate } from '@/lib/formatters';
 import type { GrupoElegido, WizardData } from '@/features/turnos/crear/types';
 
@@ -46,4 +46,20 @@ export function parcheAlElegirGrupo(
 export function lugarEsDelGrupo(data: Pick<WizardData, 'lugar' | 'latitud' | 'longitud' | 'grupo'>): boolean {
   const g = data.grupo;
   return !!g?.lugar && data.lugar === g.lugar && data.latitud === g.latitud && data.longitud === g.longitud;
+}
+
+/** Texto y color de la fase del grupo (la fase la calcula el backend con las fechas de sus turnos). */
+export const FASE_INFO: Record<FaseGrupo, { label: string; clase: string; texto: string }> = {
+  sin_turnos: { label: 'Sin turnos',  clase: 'bg-muted',          texto: 'text-muted-foreground' },
+  proximo:    { label: 'Próximo',     clase: 'bg-primary/10',    texto: 'text-primary-700' },
+  en_curso:   { label: 'En curso',    clase: 'bg-success-light',  texto: 'text-success' },
+  terminado:  { label: 'Terminado',   clase: 'bg-muted',          texto: 'text-muted-foreground' },
+  cerrado:    { label: 'Cerrado',     clase: 'bg-muted',          texto: 'text-muted-foreground' },
+};
+
+/** Último turno del grupo que se puede copiar: el de fecha más reciente que no esté cancelado. */
+export function ultimoTurnoCopiable(turnos: TurnoDeGrupo[]): TurnoDeGrupo | null {
+  const vivos = turnos.filter((t) => t.estado !== 'cancelada');
+  if (!vivos.length) return null;
+  return vivos.reduce((a, b) => (b.fecha > a.fecha || (b.fecha === a.fecha && b.hora_inicio > a.hora_inicio) ? b : a));
 }
