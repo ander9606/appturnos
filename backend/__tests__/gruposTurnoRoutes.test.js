@@ -7,11 +7,11 @@ jest.mock('../middleware/authMiddleware', () => ({
   verificarRol: () => (_req, _res, next) => next(),
 }));
 jest.mock('../middleware/verificarSuscripcion', () => (_req, _res, next) => next());
-jest.mock('../modules/grupos-turno/grupos-turno.model');
+jest.mock('../modules/empresas/empresas.model');
 jest.mock('../modules/grupos-turno/grupos-turno.service');
 
 const express = require('express');
-const Modelo = require('../modules/grupos-turno/grupos-turno.model');
+const EmpresasModel = require('../modules/empresas/empresas.model');
 const Servicio = require('../modules/grupos-turno/grupos-turno.service');
 const errorHandler = require('../middleware/errorHandler');
 
@@ -32,7 +32,7 @@ const pedir = (ruta, metodo = 'GET', cuerpo) => fetch(`${base}${ruta}`, {
 });
 
 describe('empresa sin la función activada', () => {
-  beforeEach(() => Modelo.empresaUsaGrupos.mockResolvedValue(false));
+  beforeEach(() => EmpresasModel.usaGruposTurno.mockResolvedValue(false));
 
   test.each([['GET', '/', undefined], ['GET', '/3', undefined], ['POST', '/', { nombre: 'X' }], ['PATCH', '/3', { nombre: 'X' }], ['POST', '/3/cerrar', undefined], ['POST', '/3/reabrir', undefined]])(
     '%s %s → 403 y no llega al servicio', async (metodo, ruta, cuerpo) => {
@@ -45,7 +45,7 @@ describe('empresa sin la función activada', () => {
 });
 
 describe('empresa con la función activada', () => {
-  beforeEach(() => Modelo.empresaUsaGrupos.mockResolvedValue(true));
+  beforeEach(() => EmpresasModel.usaGruposTurno.mockResolvedValue(true));
 
   test('GET / lista (por defecto los activos)', async () => {
     Servicio.listar.mockResolvedValue([{ id: 1, nombre: 'Feria' }]);

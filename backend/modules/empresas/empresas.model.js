@@ -291,6 +291,15 @@ const EmpresasModel = {
     return empresa;
   },
 
+  /** ¿La empresa activa tiene encendida la función de grupos de turnos? (la enciende el super_admin) */
+  async usaGruposTurno(empresaId) {
+    const [[empresa]] = await pool.query(
+      'SELECT usa_grupos_turno FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId]
+    );
+    return Boolean(empresa?.usa_grupos_turno);
+  },
+
   /** Opciones de la empresa que cambian cómo se clasifica y se paga un día trabajado. */
   async obtenerConfigRecargos(empresaId) {
     const [filas] = await pool.query(

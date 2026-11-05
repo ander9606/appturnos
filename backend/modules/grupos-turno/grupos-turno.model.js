@@ -31,12 +31,6 @@ function normalizar(fila) {
 const CAMPOS_EDITABLES = ['nombre', 'descripcion', 'lugar', 'latitud', 'longitud'];
 
 const GruposTurnoModel = {
-  /** ¿La empresa tiene activada la función de grupos? (interruptor del super_admin) */
-  async empresaUsaGrupos(empresaId) {
-    const [[fila]] = await pool.query('SELECT usa_grupos_turno FROM empresas WHERE id = ? LIMIT 1', [empresaId]);
-    return Boolean(fila?.usa_grupos_turno);
-  },
-
   /** estado: 'activo' | 'cerrado' | null (todos). */
   async listar(empresaId, estado = null) {
     const params = [empresaId];

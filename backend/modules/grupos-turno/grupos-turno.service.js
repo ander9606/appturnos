@@ -7,7 +7,7 @@ const { ahoraColombiaSQL } = require('../../utils/fechaColombia');
 /**
  * Grupos de turnos: agrupan turnos de distintos días bajo un mismo contexto (feria, obra,
  * proyecto…). Reglas:
- *   - Solo existen para empresas con `usa_grupos_turno = 1` (ver `requiereGrupos` en las rutas).
+ *   - Solo existen para empresas con `usa_grupos_turno = 1` (ver middleware/requiereGruposTurno).
  *   - El nombre es único por empresa (sin importar mayúsculas).
  *   - lugar, latitud y longitud van juntos o no va ninguno. Es solo el valor por defecto de
  *     los turnos nuevos: cada turno guarda su propia copia.
@@ -89,6 +89,7 @@ const GruposTurnoService = {
   async cerrar(empresaId, id) {
     const grupo = await obtenerOFallar(empresaId, id);
     if (grupo.estado === 'cerrado') throw new AppError('El grupo ya está cerrado', 409);
+    // ponytail: solo bloquea por turnos sin terminar — upgrade path: avisar (con confirmación) si quedan pagos pendientes.
     const pendientes = await GruposTurnoModel.contarPendientes(empresaId, id, ahoraColombiaSQL());
     if (pendientes > 0) {
       throw new AppError(
