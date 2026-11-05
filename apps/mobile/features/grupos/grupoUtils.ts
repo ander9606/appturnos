@@ -3,8 +3,8 @@ import { formatShortDate } from '@/lib/formatters';
 import type { GrupoElegido, WizardData } from '@/features/turnos/crear/types';
 
 /** Lo que el asistente guarda del grupo elegido. */
-export function aElegido(g: Pick<GrupoTurno, 'id' | 'nombre' | 'lugar' | 'latitud' | 'longitud'>): GrupoElegido {
-  return { id: g.id, nombre: g.nombre, lugar: g.lugar, latitud: g.latitud, longitud: g.longitud };
+export function aElegido(g: Pick<GrupoTurno, 'id' | 'nombre' | 'lugar' | 'latitud' | 'longitud'> & { lugar_alias?: string | null }): GrupoElegido {
+  return { id: g.id, nombre: g.nombre, lugar: g.lugar, lugar_alias: g.lugar_alias ?? null, latitud: g.latitud, longitud: g.longitud };
 }
 
 /** "Lun 9 nov" o "Lun 9 nov – Mié 11 nov"; null si el grupo aún no tiene turnos. */
@@ -36,6 +36,7 @@ export function parcheAlElegirGrupo(
   const lugarSinDueno = !data.lugar.trim() || (!!data.grupo?.lugar && data.lugar === data.grupo.lugar);
   if (nuevo?.lugar && nuevo.latitud != null && nuevo.longitud != null && lugarSinDueno && !data.ubicacion_libre) {
     parche.lugar = nuevo.lugar;
+    parche.lugar_alias = nuevo.lugar_alias ?? '';
     parche.latitud = nuevo.latitud;
     parche.longitud = nuevo.longitud;
   }

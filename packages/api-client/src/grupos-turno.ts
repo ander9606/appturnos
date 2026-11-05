@@ -17,6 +17,8 @@ export interface GrupoTurno {
   descripcion: string | null;
   /** Lugar por defecto de los turnos nuevos del grupo (cada turno guarda su propia copia). Va completo o no va. */
   lugar: string | null;
+  /** Nombre corto del lugar por defecto; se copia a los turnos nuevos junto con el lugar. */
+  lugar_alias?: string | null;
   latitud: number | null;
   longitud: number | null;
   estado: EstadoGrupo;
@@ -54,6 +56,7 @@ export interface CrearGrupoPayload {
   descripcion?: string;
   /** lugar, latitud y longitud van los tres o ninguno (422 si falta alguno). */
   lugar?: string;
+  lugar_alias?: string;
   latitud?: number;
   longitud?: number;
 }
@@ -63,6 +66,8 @@ export interface ActualizarGrupoPayload {
   nombre?: string;
   descripcion?: string | null;
   lugar?: string | null;
+  /** Con '' o null se quita. */
+  lugar_alias?: string | null;
   latitud?: number | null;
   longitud?: number | null;
 }

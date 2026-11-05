@@ -8,7 +8,7 @@ const aNumero = (v) => (v == null ? null : Number(v));
 // Resumen del grupo. Las fechas y el conteo se CALCULAN con sus turnos (nunca se guardan,
 // para que no queden desactualizadas); los turnos cancelados no cuentan.
 const RESUMEN = `
-  g.id, g.empresa_id, g.nombre, g.descripcion, g.lugar, g.latitud, g.longitud,
+  g.id, g.empresa_id, g.nombre, g.descripcion, g.lugar, g.lugar_alias, g.latitud, g.longitud,
   g.estado, g.cerrado_at, g.created_at,
   COUNT(o.id)  AS total_turnos,
   MIN(o.fecha) AS fecha_inicio,
@@ -28,7 +28,7 @@ function normalizar(fila) {
   };
 }
 
-const CAMPOS_EDITABLES = ['nombre', 'descripcion', 'lugar', 'latitud', 'longitud'];
+const CAMPOS_EDITABLES = ['nombre', 'descripcion', 'lugar', 'lugar_alias', 'latitud', 'longitud'];
 
 const GruposTurnoModel = {
   /** estado: 'activo' | 'cerrado' | null (todos). */
@@ -68,7 +68,7 @@ const GruposTurnoModel = {
   /** Turnos del grupo por fecha (los cancelados también, para que el gestor los vea). */
   async turnos(empresaId, id) {
     const [filas] = await pool.query(
-      `SELECT id, titulo, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, estado,
+      `SELECT id, titulo, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente, lugar, lugar_alias, estado,
               (SELECT COALESCE(SUM(p.plazas), 0) FROM oferta_puestos p WHERE p.oferta_id = ofertas_turno.id) AS plazas,
               (SELECT COALESCE(SUM(p.plazas_cubiertas), 0) FROM oferta_puestos p WHERE p.oferta_id = ofertas_turno.id) AS plazas_cubiertas
        FROM ofertas_turno
@@ -81,9 +81,9 @@ const GruposTurnoModel = {
 
   async crear(empresaId, datos, creadoPor) {
     const [res] = await pool.query(
-      `INSERT INTO grupos_turno (empresa_id, nombre, descripcion, lugar, latitud, longitud, creado_por)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [empresaId, datos.nombre, datos.descripcion ?? null, datos.lugar ?? null,
+      `INSERT INTO grupos_turno (empresa_id, nombre, descripcion, lugar, lugar_alias, latitud, longitud, creado_por)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [empresaId, datos.nombre, datos.descripcion ?? null, datos.lugar ?? null, datos.lugar_alias || null,
         datos.latitud ?? null, datos.longitud ?? null, creadoPor ?? null]
     );
     return res.insertId;

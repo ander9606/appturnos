@@ -44,11 +44,18 @@ test('un título largo no se monta con la línea de cargo y lugar de abajo', asy
   expect(meta.y).toBeGreaterThanOrEqual(titulo.y + titulo.altura);
 });
 
-test('un lugar muy largo ocupa varias líneas y la fila siguiente empieza debajo, sin montarse', async () => {
-  const llamadas = await dibujar([item(1, 'Montaje', LUGAR_LARGO), item(2, 'Desmontaje', LUGAR_LARGO)]);
+// La dirección larga ya no llega al PDF: se usa el nombre corto o se reduce a sus dos primeras partes (lugarCorto).
+// Lo que sigue pudiendo ocupar varias líneas es la línea de cargo y lugar completa (p. ej. un cargo largo).
+const CARGO_LARGO = 'Auxiliar de montaje, logística, atención al público, apoyo en caja y acompañamiento de visitantes';
+
+test('una línea de cargo y lugar de varias líneas no se monta con la fila siguiente', async () => {
+  const llamadas = await dibujar([
+    { ...item(1, 'Montaje', 'Bodega Central'), cargo: CARGO_LARGO },
+    item(2, 'Desmontaje', 'Bodega Central'),
+  ]);
   const metas = llamadas.filter((l) => l.texto.startsWith('Auxiliar de montaje'));
   const segundaFila = llamadas.find((l) => l.texto === 'Desmontaje');
-  expect(metas[0].altura).toBeGreaterThan(20);
+  expect(metas[0].altura).toBeGreaterThan(12); // más de una línea (una mide ~9,2): cargo + lugar ocupan dos
   expect(segundaFila.y).toBeGreaterThanOrEqual(metas[0].y + metas[0].altura);
 });
 

@@ -1,7 +1,7 @@
 import type { GrupoTurno } from '@api-client';
 
 /** Lo que el asistente necesita del grupo elegido (el lugar sirve para prellenar el del turno). */
-export type GrupoElegido = Pick<GrupoTurno, 'id' | 'nombre' | 'lugar' | 'latitud' | 'longitud'>;
+export type GrupoElegido = Pick<GrupoTurno, 'id' | 'nombre' | 'lugar' | 'lugar_alias' | 'latitud' | 'longitud'>;
 
 export type PuestoInput = {
   key: string;
@@ -30,6 +30,8 @@ export type WizardData = {
   /** El turno pasa de la medianoche: la hora de fin cae al día siguiente. */
   fin_dia_siguiente: boolean;
   lugar: string;
+  /** Nombre corto del lugar (opcional): tarjetas y cuenta de cobro; la dirección completa va en `lugar`. */
+  lugar_alias: string;
   latitud: number | null;
   longitud: number | null;
   ubicacion_libre: boolean;
@@ -51,6 +53,7 @@ export const INITIAL: WizardData = {
   hora_fin: null,
   fin_dia_siguiente: false,
   lugar: '',
+  lugar_alias: '',
   latitud: null,
   longitud: null,
   ubicacion_libre: false,

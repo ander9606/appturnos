@@ -259,7 +259,7 @@ module.exports = {
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               ${SELECT_GRUPO_COLS}
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
-              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
+              o.lugar, o.lugar_alias, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
@@ -302,7 +302,7 @@ module.exports = {
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               ${SELECT_GRUPO_COLS}
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
-              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
+              o.lugar, o.lugar_alias, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,
               p.tarifa_dia, p.cargo_id,
@@ -340,7 +340,7 @@ module.exports = {
               o.notas_adicionales AS oferta_notas_adicionales,
               o.externo_notas AS oferta_externo_notas,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
-              o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
+              o.lugar, o.lugar_alias, o.latitud, o.longitud, o.ubicacion_libre,
               o.encargado_nombre, o.encargado_telefono,
               o.external_ref AS oferta_external_ref,
               emp.nombre AS empresa_nombre, emp.tipo_liquidacion AS empresa_tipo_liquidacion,

@@ -88,7 +88,7 @@ function PostulacionCard({
           </Text>
           {asignacion.lugar && (
             <Text className="text-xs text-muted-foreground mt-0.5" numberOfLines={1}>
-              {asignacion.lugar}
+              {asignacion.lugar_alias || asignacion.lugar}
             </Text>
           )}
         </View>

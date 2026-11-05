@@ -6,6 +6,7 @@ const AsignacionesModel = require('../turnos/asignaciones/asignaciones.model');
 const TrabajadoresModel = require('../trabajadores/trabajadores.model');
 const NotificacionesService = require('../notificaciones/notificaciones.service');
 const AppError = require('../../utils/AppError');
+const { lugarCorto } = require('../../utils/lugarCorto');
 const { ROLES } = require('../../config/constants');
 
 function verificarAcceso(cuenta, usuario) {
@@ -58,7 +59,7 @@ function itemCompleto(t) {
     fecha: t.oferta_fecha,
     descripcion: t.oferta_titulo,
     cargo: t.cargo_nombre,
-    lugar: t.lugar,
+    lugar: lugarCorto(t.lugar, t.lugar_alias),
     ...datosGrupo(t),
     hora_inicio: t.hora_inicio,
     hora_fin: t.hora_fin_estimada,
@@ -81,7 +82,7 @@ function itemDiferencia(t, diferencia) {
     fecha: t.oferta_fecha,
     descripcion: `${t.oferta_titulo} (ajuste por diferencia)`,
     cargo: t.cargo_nombre,
-    lugar: t.lugar,
+    lugar: lugarCorto(t.lugar, t.lugar_alias),
     ...datosGrupo(t),
     hora_inicio: t.hora_inicio,
     hora_fin: t.hora_fin_estimada,

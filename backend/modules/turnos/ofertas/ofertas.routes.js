@@ -52,6 +52,8 @@ function reglasOferta({ parcial }) {
     body('descripcion').optional({ values: 'falsy' }).isString(),
     body('notas_adicionales').optional({ values: 'falsy' }).isString(),
     body('lugar').optional({ values: 'falsy' }).isString(),
+    // Nombre corto del lugar (migración 121). Con '' o null se borra al editar.
+    body('lugar_alias').optional({ values: 'null' }).isString().trim().isLength({ max: 80 }).withMessage('El nombre corto del lugar admite hasta 80 caracteres'),
     body('encargado_nombre').optional({ values: 'falsy' }).isString().trim().isLength({ max: 150 }),
     body('encargado_telefono').optional({ values: 'falsy' }).isString().trim().isLength({ max: 20 }),
     body('latitud')

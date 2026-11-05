@@ -94,7 +94,7 @@ export function ShiftCard({ asignacion, onPress, showDate = false }: ShiftCardPr
             <View className="flex-row items-center gap-1 flex-1">
               <Ionicons name="location-outline" size={12} color={COLORS.mutedForeground} />
               <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                {asignacion.lugar}
+                {asignacion.lugar_alias || asignacion.lugar}
               </Text>
             </View>
           )}

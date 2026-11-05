@@ -21,7 +21,7 @@ function minutosAHora(minutos) {
  */
 
 const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
-  lugar, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
+  lugar, lugar_alias, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
 // Grupo al que pertenece la oferta (migración 120): grupo_id es NULL si no tiene, y entonces
@@ -120,6 +120,7 @@ const CAMPOS_EDITABLES = [
   'hora_fin_estimada',
   'fin_dia_siguiente',
   'lugar',
+  'lugar_alias',
   'latitud',
   'longitud',
   'ubicacion_libre',
@@ -570,6 +571,10 @@ const OfertasModel = {
       if (datos.grupo_id != null) {
         await conn.query('UPDATE ofertas_turno SET grupo_id = ? WHERE id = ? AND empresa_id = ?', [datos.grupo_id, ofertaId, empresaId]);
       }
+      // Nombre corto del lugar (migración 121), con el mismo criterio: UPDATE aparte y solo si viene.
+      if (datos.lugar_alias) {
+        await conn.query('UPDATE ofertas_turno SET lugar_alias = ? WHERE id = ? AND empresa_id = ?', [datos.lugar_alias, ofertaId, empresaId]);
+      }
 
       // Insertar puestos en la misma transacción.
       if (Array.isArray(datos.puestos)) {
@@ -767,12 +772,12 @@ const OfertasModel = {
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
            (empresa_id, grupo_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
-            lugar, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+            lugar, lugar_alias, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
           empresaId, original.grupo_id, original.titulo, original.descripcion, original.notas_adicionales, nuevaFecha,
           horaInicio, horaFinEstimada, finDiaSiguiente,
-          original.lugar, original.latitud, original.longitud, original.ubicacion_libre,
+          original.lugar, original.lugar_alias ?? null, original.latitud, original.longitud, original.ubicacion_libre,
           original.para_quien, creadoPor,
         ]
       );

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Modal } from '@/shared/components/Modal';
 import { LugarInput } from '@/modules/turnos/components/LugarInput';
+import { LugarAlias } from '@/modules/turnos/components/LugarAlias';
 import { gruposApi } from '../api/gruposApi';
 import { useCrearGrupo } from '../hooks/useGrupos';
 import type { GrupoTurno } from '../types';
@@ -24,6 +25,7 @@ export function CrearGrupoModal({ etiqueta, onCreado, onClose }: Props) {
   const [lugar, setLugar] = useState('');
   const [latitud, setLatitud] = useState<number | null>(null);
   const [longitud, setLongitud] = useState<number | null>(null);
+  const [lugarAlias, setLugarAlias] = useState('');
   const [errorNombre, setErrorNombre] = useState<string | null>(null);
   const [errorLugar, setErrorLugar] = useState<string | null>(null);
   // Nombre repetido: el servidor trae el id del que ya lo usa, para ofrecer "Usar ese".
@@ -42,7 +44,7 @@ export function CrearGrupoModal({ etiqueta, onCreado, onClose }: Props) {
     try {
       const res = await crear.mutateAsync({
         nombre: limpio,
-        ...(conLugar ? { lugar: lugar.trim(), latitud: latitud!, longitud: longitud! } : {}),
+        ...(conLugar ? { lugar: lugar.trim(), latitud: latitud!, longitud: longitud!, ...(lugarAlias.trim() ? { lugar_alias: lugarAlias.trim() } : {}) } : {}),
       });
       onCreado(res.data);
     } catch (err) {
@@ -110,8 +112,9 @@ export function CrearGrupoModal({ etiqueta, onCreado, onClose }: Props) {
             value={lugar}
             latitud={latitud}
             longitud={longitud}
-            onChange={(l, lat, lng) => { setLugar(l); setLatitud(lat); setLongitud(lng); setErrorLugar(null); }}
+            onChange={(l, lat, lng) => { if (lat != null && l !== lugar) setLugarAlias(''); setLugar(l); setLatitud(lat); setLongitud(lng); setErrorLugar(null); }}
           />
+          <LugarAlias lugar={lugar} latitud={latitud} longitud={longitud} alias={lugarAlias} onChange={setLugarAlias} />
           {errorLugar
             ? <p role="alert" className="text-xs text-danger mt-1">{errorLugar}</p>
             : <p className="text-xs text-muted-foreground mt-1">Los turnos nuevos usarán este lugar por defecto; podrás cambiarlo en cada turno.</p>}

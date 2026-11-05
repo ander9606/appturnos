@@ -13,17 +13,17 @@ async function obtener(req, res) {
 }
 
 async function crear(req, res) {
-  const { nombre, descripcion, lugar, latitud, longitud } = req.body;
+  const { nombre, descripcion, lugar, lugar_alias, latitud, longitud } = req.body;
   const data = await GruposTurnoService.crear(
-    req.empresa_id, { nombre, descripcion, lugar, latitud, longitud }, req.usuario.sub
+    req.empresa_id, { nombre, descripcion, lugar, lugar_alias, latitud, longitud }, req.usuario.sub
   );
   res.status(201).json({ success: true, data, message: 'Grupo creado' });
 }
 
 async function actualizar(req, res) {
-  const { nombre, descripcion, lugar, latitud, longitud } = req.body;
+  const { nombre, descripcion, lugar, lugar_alias, latitud, longitud } = req.body;
   const data = await GruposTurnoService.actualizar(
-    req.empresa_id, req.params.id, { nombre, descripcion, lugar, latitud, longitud }
+    req.empresa_id, req.params.id, { nombre, descripcion, lugar, lugar_alias, latitud, longitud }
   );
   res.json({ success: true, data, message: 'Grupo actualizado' });
 }

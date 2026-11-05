@@ -119,7 +119,7 @@ export function OfertaCard({
             <View className="flex-row items-center gap-1 flex-1">
               <Ionicons name="location-outline" size={13} color={COLORS.mutedForeground} />
               <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                {item.lugar}
+                {item.lugar_alias || item.lugar}
               </Text>
             </View>
           )}

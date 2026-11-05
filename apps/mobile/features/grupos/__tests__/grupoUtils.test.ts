@@ -25,7 +25,12 @@ describe('rangoDeFechas / subtituloGrupo', () => {
 
 describe('parcheAlElegirGrupo', () => {
   test('turno sin lugar: toma el lugar del grupo (con sus coordenadas)', () => {
-    expect(parcheAlElegirGrupo(turno(), FERIA)).toEqual({ grupo: FERIA, lugar: 'Corferias', latitud: 4.63, longitud: -74.09 });
+    expect(parcheAlElegirGrupo(turno(), FERIA)).toEqual({ grupo: FERIA, lugar: 'Corferias', lugar_alias: '', latitud: 4.63, longitud: -74.09 });
+  });
+  test('el nombre corto del lugar del grupo se copia al turno junto con el lugar', () => {
+    const conAlias = { ...FERIA, lugar: 'Corferias, Carrera 37, Bogotá', lugar_alias: 'Corferias' };
+    expect(parcheAlElegirGrupo(turno(), conAlias)).toMatchObject({ lugar: 'Corferias, Carrera 37, Bogotá', lugar_alias: 'Corferias' });
+    expect(parcheAlElegirGrupo(turno({ lugar: 'Mi bodega' }), conAlias)).toEqual({ grupo: conAlias }); // no pisa un lugar propio, ni su nombre corto
   });
   test('nunca pisa un lugar que el usuario ya escribió', () => {
     expect(parcheAlElegirGrupo(turno({ lugar: 'Mi bodega' }), FERIA)).toEqual({ grupo: FERIA });
@@ -39,7 +44,7 @@ describe('parcheAlElegirGrupo', () => {
   });
   test('cambiar de grupo reemplaza el lugar que había puesto el anterior, pero no uno escrito a mano', () => {
     expect(parcheAlElegirGrupo(turno({ lugar: 'Corferias', grupo: FERIA }), OBRA))
-      .toEqual({ grupo: OBRA, lugar: 'Bodega Norte', latitud: 4.7, longitud: -74.1 });
+      .toEqual({ grupo: OBRA, lugar: 'Bodega Norte', lugar_alias: '', latitud: 4.7, longitud: -74.1 });
     expect(parcheAlElegirGrupo(turno({ lugar: 'Otro sitio', grupo: FERIA }), OBRA)).toEqual({ grupo: OBRA });
   });
   test('quitar el grupo no borra el lugar', () => {
@@ -59,7 +64,7 @@ describe('lugarEsDelGrupo', () => {
 
 test('aElegido se queda solo con lo que usa el asistente', () => {
   const completo = { ...FERIA, empresa_id: 1, estado: 'activo', total_turnos: 3 } as never;
-  expect(aElegido(completo)).toEqual(FERIA);
+  expect(aElegido(completo)).toEqual({ ...FERIA, lugar_alias: null }); // sin nombre corto → null
 });
 
 describe('ultimoTurnoCopiable', () => {

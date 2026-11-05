@@ -60,7 +60,7 @@ function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrup
           oferta_titulo: t.oferta_titulo,
           oferta_descripcion: t.oferta_descripcion,
           oferta_fecha: t.oferta_fecha,
-          lugar: t.lugar,
+          lugar: t.lugar_alias || t.lugar,
           hora_inicio: t.hora_inicio,
           hora_fin_estimada: t.hora_fin_estimada,
           total_horas: 0,
@@ -118,7 +118,7 @@ function TurnoLineaRow({ t, primary }: { t: LiquidacionTurnoLinea; primary: stri
           </Text>
           <Text className="text-xs text-muted-foreground mt-0.5">
             {formatShortDate(t.oferta_fecha)}
-            {t.lugar ? `  ·  ${t.lugar}` : ''}
+            {t.lugar ? `  ·  ${t.lugar_alias || t.lugar}` : ''}
           </Text>
         </View>
         <Text

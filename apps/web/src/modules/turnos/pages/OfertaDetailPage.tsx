@@ -36,6 +36,7 @@ import { Modal } from '@/shared/components/Modal';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
+import { LugarAlias } from '../components/LugarAlias';
 import type { EstadoAsignacion, EstadoOferta, Asignacion, Puesto, Oferta, DescuentoTurno, DescuentosAsignacion } from '../types';
 import { fmtDate, fmtCOP, bogotaToday } from '@/shared/lib/format';
 import { EmptyState } from '@/shared/components/EmptyState';
@@ -689,6 +690,7 @@ function EditarOfertaModal({
     hora_fin_estimada: oferta.hora_fin_estimada?.slice(0, 5) ?? '',
   });
   const [lugar, setLugar] = useState(oferta.lugar ?? '');
+  const [lugarAlias, setLugarAlias] = useState(oferta.lugar_alias ?? '');
   // mysql2 devuelve DECIMAL como string: se convierte para que el tipo sea número de verdad.
   const [latitud, setLatitud] = useState<number | null>(oferta.latitud == null ? null : Number(oferta.latitud));
   const [longitud, setLongitud] = useState<number | null>(oferta.longitud == null ? null : Number(oferta.longitud));
@@ -724,6 +726,8 @@ function EditarOfertaModal({
         hora_inicio: `${form.hora_inicio}:00`,
         hora_fin_estimada: form.hora_fin_estimada ? `${form.hora_fin_estimada}:00` : undefined,
         lugar,
+        // Como el lugar: se envía tal cual para que vaciarlo lo quite.
+        lugar_alias: lugarAlias,
         latitud: latitud ?? undefined,
         longitud: longitud ?? undefined,
       },
@@ -783,8 +787,9 @@ function EditarOfertaModal({
             value={lugar}
             latitud={latitud}
             longitud={longitud}
-            onChange={(l, lat, lng) => { setLugar(l); setLatitud(lat); setLongitud(lng); }}
+            onChange={(l, lat, lng) => { if (lat != null && l !== lugar) setLugarAlias(''); setLugar(l); setLatitud(lat); setLongitud(lng); }}
           />
+          <LugarAlias lugar={lugar} latitud={latitud} longitud={longitud} alias={lugarAlias} onChange={setLugarAlias} />
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Descripción</label>

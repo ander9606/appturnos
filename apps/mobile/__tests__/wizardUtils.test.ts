@@ -107,7 +107,7 @@ describe('validateStep1', () => {
     hora_inicio: timeAt(7, 0),
     hora_fin: timeAt(15, 0),
     fin_dia_siguiente: false,
-    lugar: '', latitud: null, longitud: null, ubicacion_libre: false,
+    lugar: '', lugar_alias: '', latitud: null, longitud: null, ubicacion_libre: false,
     encargado_nombre: '', encargado_telefono: '',
     para_quien: 'turnos', visibilidad: 'abierta', destinatarios: [], puestos: [],
   };
@@ -217,7 +217,7 @@ describe('buildPayload', () => {
   const base: WizardData = {
     titulo: '  Montaje  ', grupo: null, descripcion: '', notas_adicionales: '',
     fecha: new Date(2030, 0, 15), hora_inicio: timeAt(8, 0), hora_fin: timeAt(17, 0),
-    fin_dia_siguiente: false, lugar: '', latitud: null, longitud: null, ubicacion_libre: false,
+    fin_dia_siguiente: false, lugar: '', lugar_alias: '', latitud: null, longitud: null, ubicacion_libre: false,
     encargado_nombre: '', encargado_telefono: '', para_quien: 'turnos', visibilidad: 'abierta', destinatarios: [],
     puestos: [{ key: 'a', cargo_id: 7, cargo_nombre: 'Auxiliar', plazas: 3, tarifa_dia: '50.000' }],
   };
@@ -248,5 +248,11 @@ describe('buildPayload', () => {
     const dirigido = buildPayload({ ...base, visibilidad: 'dirigida', destinatarios: [{ id: 9, nombre: 'A', apellido: 'B' }] });
     expect(dirigido.trabajador_ids).toEqual([9]);
     expect(buildPayload(base).trabajador_ids).toBeUndefined();
+  });
+
+  test('lugar_alias viaja solo si hay lugar y nombre corto (recortado); si no, no va', () => {
+    expect(buildPayload({ ...base, lugar: 'Corferias, Carrera 37', lugar_alias: '  Feria  ' })).toMatchObject({ lugar_alias: 'Feria' });
+    expect(buildPayload({ ...base, lugar: 'Corferias, Carrera 37', lugar_alias: '   ' }).lugar_alias).toBeUndefined();
+    expect(buildPayload({ ...base, lugar: '', lugar_alias: 'Feria' }).lugar_alias).toBeUndefined(); // sin lugar no hay nombre corto
   });
 });
