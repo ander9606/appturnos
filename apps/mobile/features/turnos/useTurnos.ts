@@ -386,7 +386,11 @@ export function useDuplicarOferta() {
   return useMutation({
     mutationFn: ({ ofertaId, fecha, hora_inicio }: { ofertaId: number; fecha: string; hora_inicio?: string }) =>
       turnosApi.duplicarOferta(ofertaId, fecha, hora_inicio),
-    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      // La copia conserva el grupo: cambian sus contadores y fechas.
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+    },
   });
 }
 

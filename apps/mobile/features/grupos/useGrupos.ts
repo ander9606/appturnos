@@ -14,6 +14,25 @@ export function useGrupos(estado: EstadoGrupo | 'todos' = 'activo', enabled = tr
   });
 }
 
+/** Un grupo con sus turnos (pantalla de detalle). */
+export function useGrupo(id: number) {
+  return useQuery({
+    queryKey: [...GRUPOS_KEY, 'detalle', id],
+    queryFn: () => gruposTurnoApi.obtener(id),
+    enabled: Number.isFinite(id),
+  });
+}
+
+/** Cerrar o reabrir un grupo; refresca listas y detalle (todos cuelgan de GRUPOS_KEY). */
+export function useCambiarEstadoGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, cerrar }: { id: number; cerrar: boolean }) =>
+      cerrar ? gruposTurnoApi.cerrar(id) : gruposTurnoApi.reabrir(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: GRUPOS_KEY }); },
+  });
+}
+
 export function useCrearGrupo() {
   const qc = useQueryClient();
   return useMutation({

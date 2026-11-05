@@ -30,6 +30,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
+import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { useMisTurnos, useOfertas, useAsignacionesHoy, useCargos } from '@/features/turnos/useTurnos';
 import { usePuntosMarcaje } from '@/features/turnos/usePuntosMarcaje';
 import { useTrabajadores } from '@/features/equipo/useEquipo';
@@ -84,6 +85,13 @@ export default function DashboardScreen() {
   const puedeVerOfertas = isManager && usuario?.rol !== 'nomina';
   // Backend restringe GET /asignaciones (hoy) a admin_empresa/jefe_turnos únicamente.
   const puedeVerAsignacionesHoy = usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos';
+
+  // Atajo a "Grupos de turnos": solo para quien gestiona turnos y solo si su empresa los activó.
+  const gestionaTurnos = usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos';
+  const { usa: usaGrupos } = useOpcionesGrupos(gestionaTurnos);
+  const atajoGrupos: Action[] = gestionaTurnos && usaGrupos
+    ? [{ icon: 'albums-outline', label: 'Grupos', onPress: () => router.push('/grupos') }]
+    : [];
 
   const hour = new Date().getHours();
   const greeting =
@@ -312,10 +320,11 @@ export default function DashboardScreen() {
               { icon: 'person-add-outline'  as IoniconsName, label: 'Agregar emp.', onPress: () => router.push('/trabajador/nuevo') },
               { icon: 'briefcase-outline'   as IoniconsName, label: 'Cargos',       onPress: () => router.push('/cargos') },
               { icon: 'location-outline'    as IoniconsName, label: 'Puntos marcaje', onPress: () => router.push('/puntos-marcaje') },
+              ...atajoGrupos,
               { icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') },
             ]
           : isJefeTurnos
-            ? [{ icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') }]
+            ? [...atajoGrupos, { icon: 'bar-chart-outline'   as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') }]
             // Rol 'nomina' (solo lectura): ve Reportes y conserva el estado de la sincronización
             : [
                 { icon: 'bar-chart-outline' as IoniconsName, label: 'Reportes',     onPress: () => router.push('/reportes') },
