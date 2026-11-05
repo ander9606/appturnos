@@ -11,7 +11,7 @@
 --   * `ofertas_turno.grupo_id`  NULL = "sin grupo". Todos los turnos actuales quedan
 --                               en NULL, así que ninguna consulta ni cálculo cambia.
 --   * `empresas.usa_grupos_turno`  0 por defecto: la función queda apagada para todas
---                                  las empresas hasta que el super_admin la active.
+--                                  las empresas hasta que su admin_empresa la active.
 --   * `empresas.etiqueta_grupo`    texto opcional para renombrar "Grupo" ("Evento", "Obra").
 --
 -- Re-ejecutable: MySQL no revierte el DDL si falla a la mitad, así que cada paso se

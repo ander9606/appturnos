@@ -38,6 +38,11 @@ const EmpresasService = {
     return empresa;
   },
 
+  /** Opciones de grupos de turnos (encendido y cómo la empresa los llama): las leen todos los roles. */
+  async opcionesGruposTurno(empresaId) {
+    return EmpresasModel.opcionesGruposTurno(empresaId);
+  },
+
   /** Auditoría legal de cambios a la firma del representante — solo admin_empresa (ver routes). */
   async historialFirma(empresaId) {
     return EmpresasModel.listarHistorialFirma(empresaId);

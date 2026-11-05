@@ -25,7 +25,8 @@ const COLUMNAS_PUBLICAS = `id, nombre, slug, ciudad, plan, actividad,
 const COLUMNAS_ADMIN = `id, nombre, slug, nit, representante_nombre, representante_cedula, firma_representante_b64,
   ciudad, plan, actividad,
   logo_url, descripcion, telefono, email_empresa, direccion, acepta_postulaciones,
-  tipo_liquidacion, tipo_contrato, sumar_nocturnas_festivo, regla_domingo_habitual, created_at`;
+  tipo_liquidacion, tipo_contrato, sumar_nocturnas_festivo, regla_domingo_habitual,
+  usa_grupos_turno, etiqueta_grupo, created_at`;
 
 const EmpresasModel = {
   /**
@@ -185,7 +186,7 @@ const EmpresasModel = {
    * escribe cifrada y con auditoría, vía actualizarFirmaConAuditoria.
    */
   async actualizarPorAdmin(empresaId, datos) {
-    const CAMPOS = ['nombre', 'nit', 'representante_nombre', 'representante_cedula', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual'];
+    const CAMPOS = ['nombre', 'nit', 'representante_nombre', 'representante_cedula', 'ciudad', 'descripcion', 'actividad', 'logo_url', 'telefono', 'email_empresa', 'direccion', 'acepta_postulaciones', 'tipo_liquidacion', 'tipo_contrato', 'sumar_nocturnas_festivo', 'regla_domingo_habitual', 'usa_grupos_turno', 'etiqueta_grupo'];
     const sets = [];
     const params = [];
     for (const campo of CAMPOS) {
@@ -291,13 +292,21 @@ const EmpresasModel = {
     return empresa;
   },
 
-  /** ¿La empresa activa tiene encendida la función de grupos de turnos? (la enciende el super_admin) */
-  async usaGruposTurno(empresaId) {
+  /**
+   * Opciones de grupos de turnos de la empresa (la enciende su admin_empresa). Sin empresa
+   * (trabajador multi-empresa sin empresa activa) o inexistente: apagado y sin etiqueta.
+   */
+  async opcionesGruposTurno(empresaId) {
     const [[empresa]] = await pool.query(
-      'SELECT usa_grupos_turno FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
-      [empresaId]
+      'SELECT usa_grupos_turno, etiqueta_grupo FROM empresas WHERE id = ? AND activo = 1 LIMIT 1',
+      [empresaId ?? 0]
     );
-    return Boolean(empresa?.usa_grupos_turno);
+    return { usa_grupos_turno: Boolean(empresa?.usa_grupos_turno), etiqueta_grupo: empresa?.etiqueta_grupo ?? null };
+  },
+
+  /** ¿La empresa activa tiene encendida la función de grupos de turnos? */
+  async usaGruposTurno(empresaId) {
+    return (await this.opcionesGruposTurno(empresaId)).usa_grupos_turno;
   },
 
   /** Opciones de la empresa que cambian cómo se clasifica y se paga un día trabajado. */
