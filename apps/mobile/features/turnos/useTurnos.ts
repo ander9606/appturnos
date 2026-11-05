@@ -394,6 +394,21 @@ export function useDuplicarOferta() {
   });
 }
 
+/** Vincular un turno ya creado a un grupo (o quitarlo con `null`). Cambian el turno y los contadores del grupo. */
+export function useVincularGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ofertaId, grupoId }: { ofertaId: number; grupoId: number | null }) =>
+      turnosApi.vincularOfertaAGrupo(ofertaId, grupoId),
+    onSuccess: (_d, { ofertaId }) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.oferta(ofertaId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      qc.invalidateQueries({ queryKey: ['asignaciones'] });
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+    },
+  });
+}
+
 /** Marcar una oferta como completada a mano — el jefe/admin decide, sin depender de la fecha ni del estado de las asignaciones. */
 export function useCompletarOferta() {
   const qc = useQueryClient();
