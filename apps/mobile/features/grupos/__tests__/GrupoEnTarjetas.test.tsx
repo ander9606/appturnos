@@ -12,6 +12,8 @@ import { TurnoHeroCard } from '@/features/turnos/detalle/TurnoHeroCard';
 import { OfertaCard } from '@/features/turnos/pestana/OfertaCard';
 import { InfoOfertaCard } from '@/features/turnos/oferta/InfoOfertaCard';
 import { GestorTurnosView } from '@/features/turnos/GestorTurnosView';
+import { LiquidacionTurnoLinea } from '@/features/nomina/LiquidacionTurnoLinea';
+import { ResumenDiaMes } from '@/features/turnos/ResumenDiaMes';
 
 jest.mock('@expo/vector-icons', () => {
   const { Text } = require('react-native');
@@ -59,6 +61,13 @@ const SUPERFICIES: [string, (g: string | null) => React.ReactElement][] = [
     mockOfertas.mockReturnValue({ data: { data: [oferta(g)] }, isLoading: false, isError: false, refetch: noop, isRefetching: false });
     return <GestorTurnosView selectedDate="2030-01-15" puedeGestionar />;
   }],
+  ['línea de turno en Pagos (liquidación)', (g) => <LiquidacionTurnoLinea primaryColor="#111111" linea={{
+    asignacion_id: 1, oferta_id: 5, oferta_titulo: 'Montaje stand', oferta_fecha: '2030-01-15', hora_ingreso_real: null, hora_egreso_real: null,
+    horas_trabajadas: 8, pago_extra: 0, bono_monto: 0, pago_total: 50000, calificacion: null, firmado_trabajador: true, grupo_nombre: g,
+  } as never} />],
+  ['resumen del día en el calendario', (g) => <ResumenDiaMes fecha="2030-01-15" onVerLista={noop} items={[
+    { key: 'o5', titulo: 'Montaje stand', grupo: g, color: '#111111', onPress: noop },
+  ]} />],
 ];
 
 describe('GrupoBadge', () => {

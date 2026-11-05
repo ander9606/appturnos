@@ -7,10 +7,13 @@ import { COLORS, alpha } from '@/lib/designTokens';
 import { useTheme } from '@/lib/theme';
 import { etiquetaDia } from '@/lib/calendar';
 import { nombreFestivo } from '@api-client';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 
 export interface ItemDia {
   key: string;
   titulo: string;
+  /** Grupo de turnos del turno (etiqueta bajo el título); sin grupo no se dibuja nada. */
+  grupo?: string | null;
   /** Segunda línea: horario, plazas, estado… */
   detalle?: string;
   /** Color del punto (el mismo que lleva ese turno en el calendario). */
@@ -53,6 +56,7 @@ export function ResumenDiaMes({
             <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: it.color }} />
             <View className="flex-1">
               <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>{it.titulo}</Text>
+              <GrupoBadge nombre={it.grupo} />
               {it.detalle ? <Text className="text-xs text-muted-foreground mt-0.5" numberOfLines={1}>{it.detalle}</Text> : null}
             </View>
             <Ionicons name="chevron-forward" size={16} color={COLORS.placeholder} />
