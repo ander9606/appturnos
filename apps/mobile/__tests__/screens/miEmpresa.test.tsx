@@ -208,6 +208,8 @@ describe('guardar', () => {
     await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith('Datos de la empresa actualizados.'));
     expect(inv).toHaveBeenCalledWith({ queryKey: ['mi-empresa'] });
     expect(inv).toHaveBeenCalledWith({ queryKey: ['periodos'] });
+    // El hook useOpcionesGrupos (cualquier pantalla) se entera del cambio de grupos sin esperar.
+    expect(inv).toHaveBeenCalledWith({ queryKey: ['opciones-grupos'] });
   });
 
   test('tras guardar vuelve a pedir la empresa al servidor', async () => {

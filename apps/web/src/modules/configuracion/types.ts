@@ -25,6 +25,13 @@ export interface Empresa {
   etiqueta_grupo?: string | null;
 }
 
+/** Lo que cualquier rol necesita saber de los grupos de turnos de su empresa. */
+export interface OpcionesGrupos {
+  usa_grupos_turno: boolean;
+  /** null = usar el nombre por defecto ("Grupo"). */
+  etiqueta_grupo: string | null;
+}
+
 export type AlcancePunto = 'todos' | 'nomina';
 export type TipoPunto = 'fijo' | 'zonal';
 

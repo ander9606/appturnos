@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/modules/auth/authStore';
 import { configuracionApi } from '../api/configuracionApi';
 
 function getErrMsg(err: unknown) {
@@ -16,9 +17,37 @@ export function useUpdateEmpresa() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: configuracionApi.updateEmpresa,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['config', 'empresa'] }); toast.success('Empresa actualizada'); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['config', 'empresa'] });
+      // El admin pudo encender/apagar los grupos o cambiar cómo los llama: que se vea de inmediato.
+      qc.invalidateQueries({ queryKey: ['opciones-grupos'] });
+      toast.success('Empresa actualizada');
+    },
     onError: (err: unknown) => toast.error(getErrMsg(err)),
   });
+}
+
+/** Nombre con el que se muestra un grupo cuando la empresa no eligió uno propio. */
+export const ETIQUETA_GRUPO_DEFECTO = 'Grupo';
+
+/**
+ * ¿Usa la empresa los grupos de turnos y cómo los llama? Lo lee cualquier rol. Mientras carga, o si la
+ * consulta falla, `usa` es false: lo nuevo no aparece hasta saber que la empresa lo encendió.
+ * La clave lleva la empresa porque al cerrar sesión la caché no se limpia: sin ella, quien entra
+ * después desde otra empresa vería las opciones de la anterior.
+ */
+export function useOpcionesGrupos() {
+  const empresaId = useAuthStore(s => s.usuario?.empresa_id ?? null);
+  const { data, isLoading } = useQuery({
+    queryKey: ['opciones-grupos', empresaId],
+    queryFn: configuracionApi.getOpcionesGrupos,
+    enabled: empresaId !== null,
+  });
+  return {
+    usa: data?.data.usa_grupos_turno ?? false,
+    etiqueta: data?.data.etiqueta_grupo?.trim() || ETIQUETA_GRUPO_DEFECTO,
+    isLoading,
+  };
 }
 
 export function useReprocesarRecargos() {
