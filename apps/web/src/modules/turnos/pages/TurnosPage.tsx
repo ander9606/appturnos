@@ -13,6 +13,10 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { StatCard } from '@/shared/components/StatCard';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
+import { GrupoSelector } from '@/modules/grupos/components/GrupoSelector';
+import { lugarAlElegirGrupo, lugarEsDelGrupo } from '@/modules/grupos/grupoUtils';
+import type { GrupoElegido } from '@/modules/grupos/types';
+import { GrupoBadge } from '@/modules/grupos/components/GrupoBadge';
 import { TrabajadorPickerModal, type DestinatarioSeleccionado } from '../components/TrabajadorPickerModal';
 import { ZonasMarcajeInput, type ZonaMarcaje } from '../components/ZonasMarcajeInput';
 import { LiquidacionTurnosView } from '../components/LiquidacionTurnosView';
@@ -151,7 +155,7 @@ export function TurnosPage() {
                 <th className="text-left px-4 py-3 font-medium">Fecha</th>
                 <th className="text-left px-4 py-3 font-medium">Hora</th>
                 <th className="text-left px-4 py-3 font-medium">Lugar</th>
-                <th className="text-right px-4 py-3 font-medium">Puestos</th>
+                <th className="text-right px-4 py-3 font-medium" title="Plazas cubiertas / plazas totales">Plazas</th>
                 <th className="text-left px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -164,7 +168,10 @@ export function TurnosPage() {
                 const esPasado = o.fecha < today && o.estado !== 'completada';
                 return (
                   <tr key={o.id} className={`border-t border-border/60 hover:bg-muted transition-opacity ${esPasado ? 'opacity-50' : ''}`}>
-                    <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>{o.titulo}</td>
+                    <td className={`px-4 py-3 font-medium ${esPasado ? 'text-muted-foreground' : 'text-foreground'}`}>
+                      {o.titulo}
+                      {o.grupo_nombre && <div className="mt-1 font-normal"><GrupoBadge nombre={o.grupo_nombre} /></div>}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{fmtDate(o.fecha)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.hora_inicio}{o.hora_fin_estimada ? ` – ${o.hora_fin_estimada}` : ''}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.lugar ?? '—'}</td>
@@ -176,7 +183,7 @@ export function TurnosPage() {
                         </span>
                         {pendientes > 0 && (
                           <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">
-                            {pendientes} pendiente{pendientes !== 1 ? 's' : ''}
+                            {pendientes} postulante{pendientes !== 1 ? 's' : ''} por revisar
                           </span>
                         )}
                         {o.necesita_completar && (
@@ -184,7 +191,7 @@ export function TurnosPage() {
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning"
                             title="El turno ya terminó y todos quedaron resueltos, pero nadie lo marcó como completado"
                           >
-                            <AlertTriangle size={11} /> Falta completar
+                            <AlertTriangle size={11} /> Falta marcar completado
                           </span>
                         )}
                       </div>
@@ -252,6 +259,18 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   const [destinatarios, setDestinatarios] = useState<DestinatarioSeleccionado[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [zonas, setZonas] = useState<ZonaMarcaje[]>([]);
+  const [grupo, setGrupo] = useState<GrupoElegido | null>(null);
+
+  // Al elegir un grupo, el lugar del turno toma el del grupo (valor por defecto) si aún no tiene uno propio.
+  const elegirGrupo = (g: GrupoElegido | null) => {
+    const lugarDelGrupo = lugarAlElegirGrupo({ lugar: form.lugar }, grupo, g);
+    if (lugarDelGrupo) {
+      setForm(f => ({ ...f, lugar: lugarDelGrupo.lugar }));
+      setLatitud(lugarDelGrupo.latitud);
+      setLongitud(lugarDelGrupo.longitud);
+    }
+    setGrupo(g);
+  };
 
   const dirigidaSinPersonas = visibilidad === 'dirigida' && destinatarios.length === 0;
 
@@ -268,6 +287,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
     }
     const res = await crear.mutateAsync({
       titulo: form.titulo,
+      ...(grupo ? { grupo_id: grupo.id } : {}),
       fecha: form.fecha,
       hora_inicio: form.hora_inicio,
       hora_fin_estimada: form.hora_fin_estimada || undefined,
@@ -299,6 +319,8 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
           <label className="block text-sm font-medium text-foreground mb-1">Título *</label>
           <input required type="text" {...field('titulo')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
         </div>
+        {/* Grupo de turnos (solo si la empresa los usa): al elegirlo, el lugar del turno se prellena con el suyo */}
+        <GrupoSelector grupo={grupo} onChange={elegirGrupo} />
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
@@ -325,6 +347,9 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
               setLongitud(lng);
             }}
           />
+          {lugarEsDelGrupo({ lugar: form.lugar, latitud, longitud }, grupo) && (
+            <p className="text-xs text-muted-foreground mt-1">{`Tomado de «${grupo!.nombre}». Puedes cambiarlo.`}</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">Zonas de marcaje válidas (opcional)</label>

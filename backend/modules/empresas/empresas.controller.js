@@ -36,7 +36,7 @@ async function actualizarMiEmpresa(req, res) {
     nombre, nit, representante_nombre, representante_cedula, firma_representante_b64, ciudad,
     descripcion, actividad, logo_url,
     telefono, email_empresa, direccion, acepta_postulaciones, tipo_liquidacion, tipo_contrato,
-    sumar_nocturnas_festivo, regla_domingo_habitual,
+    sumar_nocturnas_festivo, regla_domingo_habitual, usa_grupos_turno, etiqueta_grupo,
   } = req.body;
   const datos = {};
   if (nombre               !== undefined) datos.nombre               = nombre;
@@ -57,6 +57,9 @@ async function actualizarMiEmpresa(req, res) {
   // El web manda '1'/'0' (form de strings): '0' es truthy, por eso se compara explícito.
   if (sumar_nocturnas_festivo !== undefined) datos.sumar_nocturnas_festivo = ['1', 'true', 1, true].includes(sumar_nocturnas_festivo) ? 1 : 0;
   if (regla_domingo_habitual  !== undefined) datos.regla_domingo_habitual  = regla_domingo_habitual;
+  if (usa_grupos_turno        !== undefined) datos.usa_grupos_turno        = ['1', 'true', 1, true].includes(usa_grupos_turno) ? 1 : 0;
+  // Vacío o null = volver al nombre por defecto ("Grupo").
+  if (etiqueta_grupo          !== undefined) datos.etiqueta_grupo          = etiqueta_grupo || null;
 
   const data = await EmpresasService.actualizarMiEmpresa(req.empresa_id, datos, {
     usuario_id: req.usuario.sub,
@@ -78,6 +81,11 @@ async function generarLinkPago(req, res) {
   res.json({ success: true, data, message: 'Link de pago generado' });
 }
 
+async function opcionesGruposTurno(req, res) {
+  const data = await EmpresasService.opcionesGruposTurno(req.empresa_id);
+  res.json({ success: true, data, message: 'Opciones de grupos de turnos' });
+}
+
 async function obtenerSuscripcion(req, res) {
   const data = await EmpresasService.estadoSuscripcion(req.empresa_id);
   res.json({ success: true, data });
@@ -96,5 +104,5 @@ function reglasPago(req, res) {
 }
 
 module.exports = {
-  directorio, detalle, miEmpresa, actualizarMiEmpresa, historialFirma, reprocesarRecargos, generarLinkPago, obtenerSuscripcion, reglasPago,
+  directorio, detalle, miEmpresa, actualizarMiEmpresa, historialFirma, reprocesarRecargos, generarLinkPago, obtenerSuscripcion, opcionesGruposTurno, reglasPago,
 };

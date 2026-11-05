@@ -38,6 +38,9 @@ export interface OfertaDestinatario {
 export interface Oferta {
   id: number;
   titulo: string;
+  /** Grupo al que pertenece el turno (etiqueta de la tarjeta). null o ausente = sin grupo. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
   fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;

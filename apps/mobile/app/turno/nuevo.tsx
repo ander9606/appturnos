@@ -13,7 +13,7 @@ import { StepIndicator }   from '@/features/turnos/crear/StepIndicator';
 import { Step1Basicos }    from '@/features/turnos/crear/Step1Basicos';
 import { Step2Puestos }    from '@/features/turnos/crear/Step2Puestos';
 import { Step3Revisar }    from '@/features/turnos/crear/Step3Revisar';
-import { buildFecha, buildTime } from '@/features/turnos/crear/utils';
+import { buildPayload } from '@/features/turnos/crear/utils';
 import { INITIAL }         from '@/features/turnos/crear/types';
 import { ApiError }        from '@api-client';
 import { useConfirmDiscard } from '@/lib/useConfirmDiscard';
@@ -45,29 +45,7 @@ export default function NuevoTurnoScreen() {
   if (denied) return denied;
 
   const handlePublish = async () => {
-    const payload = {
-      titulo:            data.titulo.trim(),
-      descripcion:       data.descripcion.trim() || undefined,
-      notas_adicionales: data.notas_adicionales.trim() || undefined,
-      fecha:             buildFecha(data),
-      hora_inicio:       buildTime(data.hora_inicio!),
-      hora_fin_estimada: data.hora_fin ? buildTime(data.hora_fin) : undefined,
-      fin_dia_siguiente: data.fin_dia_siguiente || undefined,
-      lugar:             data.lugar.trim() || undefined,
-      latitud:           data.latitud ?? undefined,
-      longitud:          data.longitud ?? undefined,
-      ubicacion_libre:   data.ubicacion_libre,
-      encargado_nombre:   data.encargado_nombre.trim() || undefined,
-      encargado_telefono: data.encargado_telefono.trim() || undefined,
-      para_quien:        data.para_quien,
-      visibilidad:       data.visibilidad,
-      trabajador_ids:    data.visibilidad === 'dirigida' ? data.destinatarios.map((d) => d.id) : undefined,
-      puestos:           data.puestos.map((p) => ({
-        cargo_id:   p.cargo_id,
-        plazas:     p.plazas,
-        tarifa_dia: parseFloat(p.tarifa_dia.replace(/\./g, '').replace(',', '.')) || 0,
-      })),
-    };
+    const payload = buildPayload(data);
 
     try {
       const oferta = await crearMutation.mutateAsync(payload);

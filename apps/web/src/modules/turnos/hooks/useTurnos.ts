@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { turnosApi } from '../api/turnosApi';
+import { GRUPOS_KEY } from '@/modules/grupos/hooks/useGrupos';
 import type { EstadoOferta, EstadoAsignacion, Oferta } from '../types';
 
 const KEYS = {
@@ -130,6 +131,8 @@ export function useCrearOferta() {
     mutationFn: (data: Record<string, unknown>) => turnosApi.crearOferta(data),
     onSuccess: (res: { data?: Oferta }) => {
       qc.invalidateQueries({ queryKey: ['turnos', 'ofertas'] });
+      // Cambió el total y las fechas del grupo al que se agregó el turno.
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
       toast.success('Oferta creada');
       // No bloqueó la creación — solo avisa que el catálogo de trabajadores
       // no alcanza para las plazas pedidas (ver advertenciasCapacidad en

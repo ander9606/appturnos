@@ -62,7 +62,7 @@ export function AplicarOfertaCta({ id, esPasado, turnoIniciado, yaAplicado, miAs
       {esPasado ? (
         <View className="bg-muted rounded-2xl px-5 py-4 flex-row items-center gap-3">
           <Ionicons name="time-outline" size={20} color={COLORS.placeholder} />
-          <Text className="text-sm text-muted-foreground">Evento finalizado</Text>
+          <Text className="text-sm text-muted-foreground">Este turno ya terminó</Text>
         </View>
       ) : yaAplicado ? (
         <View className="gap-3">

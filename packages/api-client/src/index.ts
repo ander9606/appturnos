@@ -13,7 +13,7 @@ export type { TokenStore } from './client';
 export { authApi } from './auth';
 export type { CrearGestorPayload, ActualizarGestorPayload, CrearGestorResult, Gestor } from './auth';
 export { empresasApi } from './empresas';
-export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato, Suscripcion, PlanOpcion } from './empresas';
+export type { EmpresaDirectorio, Empresa, ActualizarMiEmpresaPayload, DirectorioResponse, TipoLiquidacion, TipoContrato, Suscripcion, PlanOpcion, OpcionesGrupos } from './empresas';
 export { trabajadorEmpresaApi } from './trabajador-empresa';
 export type {
   Vinculo,
@@ -75,6 +75,16 @@ export type {
   LiquidacionTurnosTrabajador,
   ParaQuienOferta,
 } from './turnos';
+export { gruposTurnoApi } from './grupos-turno';
+export type {
+  GrupoTurno,
+  GrupoTurnoDetalle,
+  TurnoDeGrupo,
+  EstadoGrupo,
+  FaseGrupo,
+  CrearGrupoPayload,
+  ActualizarGrupoPayload,
+} from './grupos-turno';
 export { turnosEventualApi } from './turnosEventual';
 export type {
   PeriodoTurnoEventual,

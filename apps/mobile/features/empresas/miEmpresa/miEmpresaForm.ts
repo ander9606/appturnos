@@ -15,6 +15,9 @@ export const schema = z.object({
   tipo_contrato:        z.enum(['laboral', 'prestacion_servicios']),
   sumar_nocturnas_festivo: z.boolean(),
   regla_domingo_habitual:  z.enum(['ley', 'dos_meses']),
+  usa_grupos_turno:     z.boolean(),
+  // Cómo llama la empresa a un grupo ("Evento", "Obra"…). Vacío = "Grupo".
+  etiqueta_grupo:       z.string().trim().max(40, 'Máximo 40 caracteres').optional(),
 });
 
 export type FormData = z.infer<typeof schema>;

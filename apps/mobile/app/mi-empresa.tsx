@@ -25,6 +25,7 @@ import { FirmaRepresentante } from '@/features/empresas/miEmpresa/FirmaRepresent
 import { SeccionOpciones } from '@/features/empresas/miEmpresa/SeccionOpciones';
 import { RecargosSection } from '@/features/empresas/miEmpresa/RecargosSection';
 import { DirectorioSwitch, ReglasPagoLink } from '@/features/empresas/miEmpresa/DirectorioYReglas';
+import { GruposTurnoSection } from '@/features/empresas/miEmpresa/GruposTurnoSection';
 
 // ── Screen ────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ export default function MiEmpresaScreen() {
     handleSubmit,
     reset,
     watch,
-    formState: { errors, isDirty, isSubmitting },
+    formState: { errors, isDirty, isSubmitting, dirtyFields },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -53,11 +54,14 @@ export default function MiEmpresaScreen() {
       tipo_contrato:        'laboral' as TipoContrato,
       sumar_nocturnas_festivo: true,
       regla_domingo_habitual:  'ley',
+      usa_grupos_turno:     false,
+      etiqueta_grupo:       '',
     },
   });
 
   const logoUrl = watch('logo_url');
   const sumar = watch('sumar_nocturnas_festivo');
+  const usaGrupos = watch('usa_grupos_turno');
   const firmaB64 = empresa?.firma_representante_b64 ?? null;
 
   useEffect(() => {
@@ -76,6 +80,8 @@ export default function MiEmpresaScreen() {
         tipo_contrato:        (empresa.tipo_contrato ?? 'laboral') as TipoContrato,
         sumar_nocturnas_festivo: Boolean(empresa.sumar_nocturnas_festivo ?? true),
         regla_domingo_habitual:  empresa.regla_domingo_habitual ?? 'ley',
+        usa_grupos_turno:     Boolean(empresa.usa_grupos_turno),
+        etiqueta_grupo:       empresa.etiqueta_grupo ?? '',
       });
     }
   }, [empresa, reset]);
@@ -96,6 +102,10 @@ export default function MiEmpresaScreen() {
         tipo_contrato:        data.tipo_contrato,
         sumar_nocturnas_festivo: data.sumar_nocturnas_festivo,
         regla_domingo_habitual:  data.regla_domingo_habitual,
+        // Solo si el admin los tocó: así guardar otros datos nunca pisa con valores viejos lo que
+        // otro admin cambió, y quien no usa grupos guarda exactamente lo de siempre. Vacío = "Grupo" (null).
+        ...(dirtyFields.usa_grupos_turno ? { usa_grupos_turno: data.usa_grupos_turno } : {}),
+        ...(dirtyFields.etiqueta_grupo ? { etiqueta_grupo: data.etiqueta_grupo || null } : {}),
       });
       showToast('Datos de la empresa actualizados.');
     } catch {
@@ -231,6 +241,9 @@ export default function MiEmpresaScreen() {
 
           {/* Acepta postulaciones */}
           <DirectorioSwitch control={control} />
+
+          {/* Agrupar turnos (el admin decide si su empresa usa grupos) */}
+          <GruposTurnoSection control={control} usa={usaGrupos} errors={errors} />
 
           {/* Cómo calculamos los pagos */}
           <ReglasPagoLink />

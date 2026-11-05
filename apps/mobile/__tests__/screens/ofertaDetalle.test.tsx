@@ -465,14 +465,14 @@ describe('postulación del trabajador', () => {
   test('un evento de hoy todavía no es "finalizado" (solo lo es el de días anteriores)', () => {
     conOferta({ fecha: '2026-06-15' });
     montar();
-    expect(screen.queryByText('Evento finalizado')).toBeNull();
+    expect(screen.queryByText('Este turno ya terminó')).toBeNull();
     expect(texto('Aplicar como Mesero')).toBeTruthy();
   });
 
-  test('evento finalizado: no se puede postular', () => {
+  test('turno finalizado: no se puede postular', () => {
     conOferta({ fecha: '2026-06-01' });
     montar();
-    expect(texto('Evento finalizado')).toBeTruthy();
+    expect(texto('Este turno ya terminó')).toBeTruthy();
     expect(screen.queryByText(/Aplicar como/)).toBeNull();
   });
 
@@ -557,7 +557,7 @@ describe('postulación del trabajador', () => {
     montar();
     expect(mockMisTurnosOpts).toEqual({ enabled: false });
     expect(screen.queryByText(/Aplicar como/)).toBeNull();
-    expect(screen.queryByText('Evento finalizado')).toBeNull();
+    expect(screen.queryByText('Este turno ya terminó')).toBeNull();
   });
 });
 

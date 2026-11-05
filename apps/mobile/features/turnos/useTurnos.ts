@@ -3,6 +3,7 @@ import { turnosApi, cargosApi } from '@api-client';
 import type { LiquidacionTurnosTrabajador, OfertaDetalle, PaginatedResponse, Asignacion, CrearOfertaPayload, ActualizarOfertaPayload, CrearPuestoPayload, CrearCargoPayload, ActualizarCargoPayload } from '@api-client';
 import type { CargoFuncion } from '@api-client';
 import { useAuthStore } from '@/features/auth/useAuthStore';
+import { GRUPOS_KEY } from '@/features/grupos/useGrupos';
 import { bogotaToday } from '@/lib/formatters';
 import { getDeviceId } from '@/lib/deviceId';
 
@@ -517,6 +518,8 @@ export function useCrearOferta() {
     mutationFn: (payload: CrearOfertaPayload) => turnosApi.crearOferta(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.ofertas() });
+      // Cambió el total y las fechas del grupo al que se agregó el turno.
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
     },
   });
 }

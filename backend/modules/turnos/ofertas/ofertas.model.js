@@ -24,6 +24,13 @@ const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha,
   lugar, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
+// Grupo al que pertenece la oferta (migración 120): grupo_id es NULL si no tiene, y entonces
+// nombre y estado también salen NULL (y la subconsulta no busca nada). `alias` es el de la
+// tabla en la consulta; sin alias, el nombre de la tabla.
+const grupoInfo = (alias = 'ofertas_turno') => `${alias}.grupo_id,
+  (SELECT g.nombre FROM grupos_turno g WHERE g.id = ${alias}.grupo_id) AS grupo_nombre,
+  (SELECT g.estado FROM grupos_turno g WHERE g.id = ${alias}.grupo_id) AS grupo_estado`;
+
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
 // al listar/obtener. mysql2 devuelve esto como string si es resultado de
 // expresión (no columna JSON), así que el modelo se encarga de parsear.
@@ -194,7 +201,7 @@ const OfertasModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
+      `SELECT ${COLUMNAS}, ${grupoInfo()}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
        FROM ofertas_turno
        WHERE ${whereSql}
        ORDER BY fecha DESC, hora_inicio
@@ -284,7 +291,7 @@ const OfertasModel = {
     // gestor ya sabe en qué empresa está), acá el nombre es indispensable para distinguir
     // de un vistazo de qué empresa es cada oferta.
     const [filas] = await pool.query(
-      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}, ${PUNTOS_JSON_ALIAS}
+      `SELECT ${colsAliased}, ${grupoInfo('o')}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}, ${PUNTOS_JSON_ALIAS}
        FROM ofertas_turno o
        ${joinSql}
        WHERE ${whereSql}
@@ -421,7 +428,7 @@ const OfertasModel = {
       params.push(antiguedadMinMin);
     }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
+      `SELECT ${COLUMNAS}, ${grupoInfo()}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
        FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
       params
     );
@@ -454,6 +461,15 @@ const OfertasModel = {
       [empresaId]
     );
     return fila.total;
+  },
+
+  /** Vincula la oferta a un grupo (migración 120) o la deja sin grupo con `null`. */
+  async asignarGrupo(empresaId, id, grupoId) {
+    const [res] = await pool.query(
+      'UPDATE ofertas_turno SET grupo_id = ? WHERE id = ? AND empresa_id = ?',
+      [grupoId, id, empresaId]
+    );
+    return res.affectedRows;
   },
 
   async cambiarEstado(empresaId, id, estado) {
@@ -548,6 +564,12 @@ const OfertasModel = {
         ]
       );
       const ofertaId = res.insertId;
+
+      // ponytail: UPDATE aparte (y solo si hay grupo) para no tocar el INSERT de quienes no usan
+      // grupos — su SQL queda idéntico — upgrade path: meter grupo_id en el INSERT y regenerar el golden.
+      if (datos.grupo_id != null) {
+        await conn.query('UPDATE ofertas_turno SET grupo_id = ? WHERE id = ? AND empresa_id = ?', [datos.grupo_id, ofertaId, empresaId]);
+      }
 
       // Insertar puestos en la misma transacción.
       if (Array.isArray(datos.puestos)) {
@@ -714,7 +736,8 @@ const OfertasModel = {
   /**
    * Copia una oferta a una nueva fecha, con plazas_cubiertas = 0 en todos los puestos.
    * Si se pasa `nuevaHoraInicio`, la hora de fin se desplaza el mismo delta para
-   * conservar la duración original del turno.
+   * conservar la duración original del turno. La copia queda en el mismo grupo
+   * (`grupo_id`) que el original; el servicio ya verificó que no esté cerrado.
    */
   async duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio) {
     const conn = await pool.getConnection();
@@ -743,11 +766,11 @@ const OfertasModel = {
 
       const [res] = await conn.query(
         `INSERT INTO ofertas_turno
-           (empresa_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
+           (empresa_id, grupo_id, titulo, descripcion, notas_adicionales, fecha, hora_inicio, hora_fin_estimada, fin_dia_siguiente,
             lugar, latitud, longitud, ubicacion_libre, estado, para_quien, creado_por)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta', ?, ?)`,
         [
-          empresaId, original.titulo, original.descripcion, original.notas_adicionales, nuevaFecha,
+          empresaId, original.grupo_id, original.titulo, original.descripcion, original.notas_adicionales, nuevaFecha,
           horaInicio, horaFinEstimada, finDiaSiguiente,
           original.lugar, original.latitud, original.longitud, original.ubicacion_libre,
           original.para_quien, creadoPor,

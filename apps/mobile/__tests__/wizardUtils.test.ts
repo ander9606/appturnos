@@ -4,8 +4,7 @@ import {
   parseTarifa,
   calcularPresupuesto,
   validateStep1,
-  validateStep2,
-} from '../features/turnos/crear/utils';
+  validateStep2, buildPayload } from '../features/turnos/crear/utils';
 import type { WizardData, PuestoInput } from '../features/turnos/crear/types';
 import { bogotaToday } from '../lib/formatters';
 
@@ -103,7 +102,7 @@ describe('calcularPresupuesto', () => {
 
 describe('validateStep1', () => {
   const valid: WizardData = {
-    titulo: 'Turno Corferias', descripcion: '', notas_adicionales: '',
+    titulo: 'Turno Corferias', grupo: null, descripcion: '', notas_adicionales: '',
     fecha: daysFromNow(30),
     hora_inicio: timeAt(7, 0),
     hora_fin: timeAt(15, 0),
@@ -208,5 +207,46 @@ describe('validateStep2', () => {
       { key: '1', cargo_id: 1, cargo_nombre: 'Auxiliar', plazas: 1, tarifa_dia: '' },
     ];
     expect(validateStep2(puestos)).toMatch(/tarifa/i);
+  });
+});
+
+
+// ── buildPayload ──────────────────────────────────────────────────────────────
+
+describe('buildPayload', () => {
+  const base: WizardData = {
+    titulo: '  Montaje  ', grupo: null, descripcion: '', notas_adicionales: '',
+    fecha: new Date(2030, 0, 15), hora_inicio: timeAt(8, 0), hora_fin: timeAt(17, 0),
+    fin_dia_siguiente: false, lugar: '', latitud: null, longitud: null, ubicacion_libre: false,
+    encargado_nombre: '', encargado_telefono: '', para_quien: 'turnos', visibilidad: 'abierta', destinatarios: [],
+    puestos: [{ key: 'a', cargo_id: 7, cargo_nombre: 'Auxiliar', plazas: 3, tarifa_dia: '50.000' }],
+  };
+  const FERIA = { id: 3, nombre: 'Feria del Libro', lugar: 'Corferias', latitud: 4.63, longitud: -74.09 };
+
+  test('sin grupo no incluye la clave grupo_id (el cuerpo es el de siempre)', () => {
+    const payload = buildPayload(base);
+    expect('grupo_id' in payload).toBe(false);
+    expect(payload).toEqual({
+      titulo: 'Montaje', descripcion: undefined, notas_adicionales: undefined, fecha: '2030-01-15',
+      hora_inicio: '08:00:00', hora_fin_estimada: '17:00:00', fin_dia_siguiente: undefined, lugar: undefined,
+      latitud: undefined, longitud: undefined, ubicacion_libre: false, encargado_nombre: undefined,
+      encargado_telefono: undefined, para_quien: 'turnos', visibilidad: 'abierta', trabajador_ids: undefined,
+      puestos: [{ cargo_id: 7, plazas: 3, tarifa_dia: 50000 }],
+    });
+  });
+
+  test('con grupo elegido, el turno se crea dentro de ese grupo', () => {
+    expect(buildPayload({ ...base, grupo: FERIA }).grupo_id).toBe(3);
+  });
+
+  test('el lugar prellenado desde el grupo viaja como lugar propio del turno (cada turno guarda su copia)', () => {
+    const payload = buildPayload({ ...base, grupo: FERIA, lugar: 'Corferias', latitud: 4.63, longitud: -74.09 });
+    expect(payload).toMatchObject({ grupo_id: 3, lugar: 'Corferias', latitud: 4.63, longitud: -74.09 });
+  });
+
+  test('un turno dirigido envía los trabajadores elegidos; uno abierto, no', () => {
+    const dirigido = buildPayload({ ...base, visibilidad: 'dirigida', destinatarios: [{ id: 9, nombre: 'A', apellido: 'B' }] });
+    expect(dirigido.trabajador_ids).toEqual([9]);
+    expect(buildPayload(base).trabajador_ids).toBeUndefined();
   });
 });
