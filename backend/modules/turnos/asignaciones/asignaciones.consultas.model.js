@@ -41,6 +41,8 @@ function construirGeofenceInfo(row) {
   };
 }
 
+// Grupo del turno (migración 120) para la etiqueta de las tarjetas: NULL si no tiene.
+const SELECT_GRUPO_COLS = `o.grupo_id, (SELECT g.nombre FROM grupos_turno g WHERE g.id = o.grupo_id) AS grupo_nombre,`;
 const SELECT_GEOFENCE_COLS = `carg.tipo_geofence,
               pm.id   AS punto_id,      pm.nombre AS punto_nombre,
               pm.latitud AS punto_latitud, pm.longitud AS punto_longitud,
@@ -219,6 +221,7 @@ module.exports = {
 
     const [filas] = await pool.query(
       `SELECT a.*, o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              ${SELECT_GRUPO_COLS}
               o.fecha AS oferta_fecha, o.hora_inicio,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre
@@ -254,6 +257,7 @@ module.exports = {
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              ${SELECT_GRUPO_COLS}
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
               o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
@@ -296,6 +300,7 @@ module.exports = {
               a.device_ingreso, a.sospechoso, a.cancelado_por, a.cancelado_at,
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              ${SELECT_GRUPO_COLS}
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
               o.lugar, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
@@ -331,6 +336,7 @@ module.exports = {
     const [filas] = await pool.query(
       `SELECT a.*,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
+              ${SELECT_GRUPO_COLS}
               o.notas_adicionales AS oferta_notas_adicionales,
               o.externo_notas AS oferta_externo_notas,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,

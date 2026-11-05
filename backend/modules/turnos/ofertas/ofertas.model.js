@@ -24,12 +24,12 @@ const COLUMNAS = `id, empresa_id, titulo, descripcion, notas_adicionales, fecha,
   lugar, ciudad, latitud, longitud, ubicacion_libre, encargado_nombre, encargado_telefono, estado, para_quien, visibilidad,
   external_ref, alquiler_ref, externo_notas, creado_por, created_at`;
 
-// Grupo al que pertenece la oferta (migración 120): grupo_id es NULL si no tiene, y
-// entonces nombre y estado también salen NULL. Solo para consultas de una oferta sobre
-// `ofertas_turno` sin alias (la subconsulta correlaciona con ese nombre).
-const GRUPO_INFO = `grupo_id,
-  (SELECT g.nombre FROM grupos_turno g WHERE g.id = ofertas_turno.grupo_id) AS grupo_nombre,
-  (SELECT g.estado FROM grupos_turno g WHERE g.id = ofertas_turno.grupo_id) AS grupo_estado`;
+// Grupo al que pertenece la oferta (migración 120): grupo_id es NULL si no tiene, y entonces
+// nombre y estado también salen NULL (y la subconsulta no busca nada). `alias` es el de la
+// tabla en la consulta; sin alias, el nombre de la tabla.
+const grupoInfo = (alias = 'ofertas_turno') => `${alias}.grupo_id,
+  (SELECT g.nombre FROM grupos_turno g WHERE g.id = ${alias}.grupo_id) AS grupo_nombre,
+  (SELECT g.estado FROM grupos_turno g WHERE g.id = ${alias}.grupo_id) AS grupo_estado`;
 
 // Subquery que adjunta los puestos como JSON array a cada oferta. Evita N+1
 // al listar/obtener. mysql2 devuelve esto como string si es resultado de
@@ -201,7 +201,7 @@ const OfertasModel = {
     const whereSql = where.join(' AND ');
 
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
+      `SELECT ${COLUMNAS}, ${grupoInfo()}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
        FROM ofertas_turno
        WHERE ${whereSql}
        ORDER BY fecha DESC, hora_inicio
@@ -291,7 +291,7 @@ const OfertasModel = {
     // gestor ya sabe en qué empresa está), acá el nombre es indispensable para distinguir
     // de un vistazo de qué empresa es cada oferta.
     const [filas] = await pool.query(
-      `SELECT ${colsAliased}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}, ${PUNTOS_JSON_ALIAS}
+      `SELECT ${colsAliased}, ${grupoInfo('o')}, e.nombre AS empresa_nombre, ${PUESTOS_JSON_ALIAS}, ${DESTINATARIOS_JSON_ALIAS}, ${PUNTOS_JSON_ALIAS}
        FROM ofertas_turno o
        ${joinSql}
        WHERE ${whereSql}
@@ -428,7 +428,7 @@ const OfertasModel = {
       params.push(antiguedadMinMin);
     }
     const [filas] = await pool.query(
-      `SELECT ${COLUMNAS}, ${GRUPO_INFO}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
+      `SELECT ${COLUMNAS}, ${grupoInfo()}, ${PUESTOS_JSON}, ${DESTINATARIOS_JSON}, ${PUNTOS_JSON}, ${ASIGNACIONES_RESUMEN}
        FROM ofertas_turno WHERE id = ? AND empresa_id = ?${extra} LIMIT 1`,
       params
     );
