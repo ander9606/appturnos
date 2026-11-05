@@ -24,6 +24,24 @@ async function obtenerLogoBuffer(logoUrl) {
 }
 
 /**
+ * Línea de desglose de un turno ("Base $ 80.000 + bono $ 15.000 - descuento $ 5.000 (motivo)"), o null si el
+ * turno no tiene recargo, bono ni descuento. Ojo: el PDF usa la fuente estándar Helvetica (WinAnsi), que no
+ * trae el signo de resta Unicode "−": salía como una comilla ("). Aquí va el guion normal.
+ */
+function textoDesglose(item) {
+  const extra = Number(item.pago_extra || 0);
+  const bono = Number(item.bono_monto || 0);
+  const descuento = Number(item.descuento_monto || 0);
+  if (!(extra > 0 || bono > 0 || descuento > 0)) return null;
+  const partes = [`Base $ ${Number(item.valor_base).toLocaleString('es-CO')}`];
+  if (extra > 0) partes.push(`recargo $ ${extra.toLocaleString('es-CO')}`);
+  if (bono > 0) partes.push(`bono $ ${bono.toLocaleString('es-CO')}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
+  let texto = partes.join(' + ');
+  if (descuento > 0) texto += ` - descuento $ ${descuento.toLocaleString('es-CO')}${item.descuento_motivo ? ` (${item.descuento_motivo})` : ''}`;
+  return texto;
+}
+
+/**
  * Genera el PDF de una cuenta de cobro (agregado de turnos de un período) y
  * lo escribe en `stream` (normalmente la respuesta HTTP). `cuenta` debe venir
  * con los datos de empresa, trabajador e `items` ya parseado (ver
@@ -123,15 +141,8 @@ async function generarCuentaCobroPdf(cuenta, stream) {
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
     }
 
-    const extra = Number(item.pago_extra || 0);
-    const bono = Number(item.bono_monto || 0);
-    const descuento = Number(item.descuento_monto || 0);
-    if (extra > 0 || bono > 0 || descuento > 0) {
-      const partes = [`Base $ ${Number(item.valor_base).toLocaleString('es-CO')}`];
-      if (extra > 0) partes.push(`recargo $ ${extra.toLocaleString('es-CO')}`);
-      if (bono > 0) partes.push(`bono $ ${bono.toLocaleString('es-CO')}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
-      let texto = partes.join(' + ');
-      if (descuento > 0) texto += ` − descuento $ ${descuento.toLocaleString('es-CO')}${item.descuento_motivo ? ` (${item.descuento_motivo})` : ''}`;
+    const texto = textoDesglose(item);
+    if (texto) {
       doc.font('Helvetica-Oblique').fontSize(8).fillColor('#B45309')
         .text(texto, col.desc, doc.y, { width: 240 });
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
@@ -185,4 +196,4 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   doc.end();
 }
 
-module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer };
+module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer, textoDesglose };
