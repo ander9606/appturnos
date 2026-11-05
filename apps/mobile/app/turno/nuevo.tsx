@@ -11,6 +11,7 @@ import { useTheme }        from '@/lib/theme';
 import { useCrearOferta }  from '@/features/turnos/useTurnos';
 import { StepIndicator }   from '@/features/turnos/crear/StepIndicator';
 import { Step1Basicos }    from '@/features/turnos/crear/Step1Basicos';
+import { StepLugar }       from '@/features/turnos/crear/StepLugar';
 import { Step2Puestos }    from '@/features/turnos/crear/Step2Puestos';
 import { Step3Revisar }    from '@/features/turnos/crear/Step3Revisar';
 import { buildPayload } from '@/features/turnos/crear/utils';
@@ -22,13 +23,13 @@ import { useAuthStore } from '@/features/auth/useAuthStore';
 import { showAnuncioTurno } from '@/lib/anuncioTurno';
 import type { WizardData } from '@/features/turnos/crear/types';
 
-const TITLES = ['Información básica', 'Roles y tarifas', 'Revisar y publicar'];
+const TITLES = ['Información básica', 'Lugar', 'Roles y tarifas', 'Revisar y publicar'];
 
 export default function NuevoTurnoScreen() {
   const router  = useRouter();
   const theme   = useTheme();
   const { usuario } = useAuthStore();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [data, setData] = useState<WizardData>(INITIAL);
 
   const crearMutation = useCrearOferta();
@@ -106,12 +107,15 @@ export default function NuevoTurnoScreen() {
             <Step1Basicos data={data} onChange={patch} onNext={() => setStep(2)} />
           )}
           {step === 2 && (
-            <Step2Puestos data={data} onChange={patch} onNext={() => setStep(3)} onBack={() => setStep(1)} />
+            <StepLugar data={data} onChange={patch} onNext={() => setStep(3)} onBack={() => setStep(1)} />
           )}
           {step === 3 && (
+            <Step2Puestos data={data} onChange={patch} onNext={() => setStep(4)} onBack={() => setStep(2)} />
+          )}
+          {step === 4 && (
             <Step3Revisar
               data={data}
-              onBack={() => setStep(2)}
+              onBack={() => setStep(3)}
               onPublish={handlePublish}
               isPublishing={crearMutation.isPending}
               isPublished={crearMutation.isSuccess}

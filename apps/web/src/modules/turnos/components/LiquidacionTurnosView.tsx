@@ -75,7 +75,7 @@ function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrup
           oferta_fecha: t.oferta_fecha,
           hora_inicio: t.hora_inicio,
           hora_fin_estimada: t.hora_fin_estimada,
-          lugar: t.lugar,
+          lugar: t.lugar_alias || t.lugar,
           total_horas: 0,
           total_pago: 0,
           pendientes_firma: 0,
@@ -349,7 +349,7 @@ export function LiquidacionTurnosView() {
                                       </p>
                                     )}
                                     <div className="grid grid-cols-2 gap-1.5">
-                                      <span>Lugar: {t.lugar ?? '—'}</span>
+                                      <span>Lugar: {t.lugar_alias || t.lugar || '—'}</span>
                                       <span>Cargo: {t.cargo_nombre}</span>
                                       <span>Ingreso real: {fmtHora(t.hora_ingreso_real)}</span>
                                       <span>Egreso real: {fmtHora(t.hora_egreso_real)}</span>

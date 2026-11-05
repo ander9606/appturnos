@@ -1,6 +1,7 @@
 /**
- * Paso 1 de crear turno con grupos: elegir un grupo prellena el lugar del turno (valor por defecto) y se avisa
- * de dónde salió; nunca pisa un lugar que el usuario ya escribió; sin la función no se dibuja nada de esto.
+ * Paso 1 de crear turno con grupos: elegir un grupo prellena el lugar del turno (valor por defecto); nunca pisa un
+ * lugar que el usuario ya escribió; sin la función no se dibuja nada de esto. (El aviso de dónde salió el lugar se
+ * muestra en el paso «Lugar»: ver StepLugar.test.tsx.)
  */
 import React, { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
@@ -20,10 +21,6 @@ jest.mock('@/components/ui/Spinner', () => {
 jest.mock('@/lib/theme', () => ({ useTheme: () => ({ primary: '#111111', primaryLight: '#222222' }) }));
 jest.mock('@react-native-community/datetimepicker', () => () => null);
 jest.mock('@/features/turnos/crear/TrabajadorPickerModal', () => ({ TrabajadorPickerModal: () => null }));
-jest.mock('@/features/turnos/crear/LugarInput', () => {
-  const { Text } = require('react-native');
-  return { LugarInput: ({ value }: { value: string }) => <Text testID="lugar-valor">{value}</Text> };
-});
 
 const mockOpciones = jest.fn();
 const mockListar = jest.fn();
@@ -62,30 +59,26 @@ beforeEach(() => {
 });
 afterEach(() => { qc?.clear(); });
 
-test('turno sin lugar: al elegir el grupo toma su lugar y avisa de dónde salió', async () => {
+test('turno sin lugar: al elegir el grupo toma su lugar', async () => {
   montar();
   await elegirFeria();
-  expect(ultimo.grupo).toEqual({ id: 3, nombre: 'Feria del Libro', lugar: 'Corferias', latitud: 4.63, longitud: -74.09 });
+  expect(ultimo.grupo).toEqual({ id: 3, nombre: 'Feria del Libro', lugar: 'Corferias', lugar_alias: null, latitud: 4.63, longitud: -74.09 });
   expect(ultimo).toMatchObject({ lugar: 'Corferias', latitud: 4.63, longitud: -74.09 });
-  expect(screen.getByTestId('lugar-valor').props.children).toBe('Corferias');
-  expect(screen.getByText('Tomado de «Feria del Libro». Puedes cambiarlo.')).toBeTruthy();
 });
 
-test('un lugar que el usuario ya escribió no se pisa y no se dice que viene del grupo', async () => {
+test('un lugar que el usuario ya escribió no se pisa', async () => {
   montar({ lugar: 'Mi bodega' });
   await elegirFeria();
   expect(ultimo.grupo?.id).toBe(3);
   expect(ultimo.lugar).toBe('Mi bodega');
-  expect(screen.queryByText(/Tomado de/)).toBeNull();
 });
 
-test('quitar el grupo no borra el lugar, pero ya no se dice que viene del grupo', async () => {
+test('quitar el grupo no borra el lugar', async () => {
   montar();
   await elegirFeria();
   await act(async () => { fireEvent.press(screen.getByRole('button', { name: 'Quitar Evento' })); });
   expect(ultimo.grupo).toBeNull();
   expect(ultimo.lugar).toBe('Corferias');
-  expect(screen.queryByText(/Tomado de/)).toBeNull();
 });
 
 test('turno de ubicación libre: elegir grupo no le pone lugar', async () => {

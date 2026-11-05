@@ -55,7 +55,7 @@ const { ApiError } = jest.requireActual('@api-client');
 const FERIA = { id: 3, empresa_id: 1, nombre: 'Feria del Libro', descripcion: null, lugar: 'Corferias', latitud: 4.63, longitud: -74.09,
   estado: 'activo', cerrado_at: null, created_at: '', total_turnos: 3, fecha_inicio: '2026-11-09', fecha_fin: '2026-11-11', fase: 'proximo' };
 const OBRA = { ...FERIA, id: 4, nombre: 'Obra Norte', lugar: null, latitud: null, longitud: null, total_turnos: 0, fecha_inicio: null, fecha_fin: null, fase: 'sin_turnos' };
-const ELEGIDO_FERIA = { id: 3, nombre: 'Feria del Libro', lugar: 'Corferias', latitud: 4.63, longitud: -74.09 };
+const ELEGIDO_FERIA = { id: 3, nombre: 'Feria del Libro', lugar: 'Corferias', lugar_alias: null, latitud: 4.63, longitud: -74.09 };
 
 let qc: QueryClient;
 function montar(grupo: unknown = null, onChange = jest.fn()) {
@@ -162,7 +162,7 @@ describe('crear un grupo', () => {
     escribirNombre('  Feria nueva ');
     await presionar('Crear y usar');
     expect(mockCrear).toHaveBeenCalledWith({ nombre: 'Feria nueva' }); // sin claves de lugar
-    expect(onChange).toHaveBeenCalledWith({ id: 9, nombre: 'Feria nueva', lugar: null, latitud: null, longitud: null });
+    expect(onChange).toHaveBeenCalledWith({ id: 9, nombre: 'Feria nueva', lugar: null, lugar_alias: null, latitud: null, longitud: null });
     await waitFor(() => expect(screen.queryByText('Crear Evento')).toBeNull());
   });
 

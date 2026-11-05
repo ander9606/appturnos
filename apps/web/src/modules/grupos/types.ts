@@ -6,6 +6,8 @@ export interface GrupoTurno {
   nombre: string;
   /** Lugar por defecto de los turnos nuevos del grupo (cada turno guarda su propia copia). */
   lugar: string | null;
+  /** Nombre corto del lugar por defecto; se copia a los turnos nuevos junto con el lugar. */
+  lugar_alias?: string | null;
   latitud: number | null;
   longitud: number | null;
   estado: EstadoGrupo;
@@ -17,12 +19,13 @@ export interface GrupoTurno {
 }
 
 /** Lo que el formulario de turno guarda del grupo elegido (el lugar sirve para prellenar el del turno). */
-export type GrupoElegido = Pick<GrupoTurno, 'id' | 'nombre' | 'lugar' | 'latitud' | 'longitud'>;
+export type GrupoElegido = Pick<GrupoTurno, 'id' | 'nombre' | 'lugar' | 'lugar_alias' | 'latitud' | 'longitud'>;
 
 export interface CrearGrupoPayload {
   nombre: string;
   /** lugar, latitud y longitud van los tres o ninguno (422 si falta alguno). */
   lugar?: string;
+  lugar_alias?: string;
   latitud?: number;
   longitud?: number;
 }

@@ -98,3 +98,29 @@ test('la tarjeta de turno incluye el grupo en su descripción para lectores de p
   render(<ShiftCard asignacion={asig(null)} onPress={noop} />);
   expect(screen.getAllByRole('button', { name: /^Montaje stand, [^,]*$/ }).length).toBeGreaterThan(0); // sin grupo: igual que antes
 });
+
+// ── Nombre corto del lugar (lugar_alias): las tarjetas lo usan en vez de la dirección larga ──────────────────
+const DIRECCION = 'Corferias, Carrera 37, Quinta Paredes, Teusaquillo, Bogotá, Colombia';
+const conLugar = (base: never, alias: string | null) => ({ ...(base as object), lugar: DIRECCION, lugar_alias: alias }) as never;
+
+const TARJETAS_CON_LUGAR: [string, (alias: string | null) => React.ReactElement][] = [
+  ['lista de turnos del trabajador (ShiftCard)', (a) => <ShiftCard asignacion={conLugar(asig(null), a)} />],
+  ['oferta disponible del trabajador', (a) => <OfertaCard item={conLugar(oferta(null), a)} today="2030-01-01" yaAplicado={false} turnosConfirmados={[]} aplicando={false} onAplicar={noop} />],
+  ['próximo turno del inicio', (a) => <NextShiftCard turno={conLugar(asig(null), a)} primaryColor="#111111" onPress={noop} onIngreso={noop} />],
+  ['lista de ofertas del gestor', (a) => {
+    mockOfertas.mockReturnValue({ data: { data: [conLugar(oferta(null), a)] }, isLoading: false, isError: false, refetch: noop, isRefetching: false });
+    return <GestorTurnosView selectedDate="2030-01-15" puedeGestionar />;
+  }],
+];
+
+describe.each(TARJETAS_CON_LUGAR)('lugar en %s', (_nombre, tarjeta) => {
+  test('con nombre corto muestra el nombre corto, no la dirección completa', () => {
+    render(tarjeta('Feria'));
+    expect(screen.getByText(/Feria/)).toBeTruthy();
+    expect(screen.queryByText(/Quinta Paredes/)).toBeNull();
+  });
+  test('sin nombre corto sigue mostrando la dirección, como siempre', () => {
+    render(tarjeta(null));
+    expect(screen.getByText(new RegExp(DIRECCION.slice(0, 20)))).toBeTruthy();
+  });
+});

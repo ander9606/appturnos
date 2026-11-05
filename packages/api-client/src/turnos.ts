@@ -87,6 +87,8 @@ export interface Asignacion {
   /** 1 si el turno termina al día siguiente (cruza la medianoche). */
   fin_dia_siguiente?: number | null;
   lugar: string | null;
+  /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
+  lugar_alias?: string | null;
   latitud: number | null;
   longitud: number | null;
   encargado_nombre: string | null;
@@ -230,6 +232,8 @@ export interface Oferta {
   /** 1 si el turno termina al día siguiente (cruza la medianoche). */
   fin_dia_siguiente?: number | null;
   lugar: string | null;
+  /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
+  lugar_alias?: string | null;
   /** Resuelta por geocodificación a partir de latitud/longitud (best-effort, puede tardar unos segundos
    *  tras crear la oferta o quedar null si no se pudo resolver). Alimenta el filtro por ciudad del
    *  directorio de empresas — no se muestra en ninguna pantalla todavía. */
@@ -292,6 +296,8 @@ export interface CrearOfertaPayload {
   /** El turno termina al día siguiente (cruza la medianoche). */
   fin_dia_siguiente?: boolean;
   lugar?: string;
+  /** Nombre corto del lugar; opcional. */
+  lugar_alias?: string;
   latitud?: number;
   longitud?: number;
   /** Sin restricción de ubicación al marcar ingreso/egreso (ej. rutas, entregas). Default: false. */
@@ -329,6 +335,8 @@ export interface ActualizarOfertaPayload {
   hora_fin_estimada?: string;
   fin_dia_siguiente?: boolean;
   lugar?: string;
+  /** Nombre corto del lugar; con '' se quita. */
+  lugar_alias?: string;
   latitud?: number;
   longitud?: number;
   ubicacion_libre?: boolean;
@@ -373,6 +381,8 @@ export interface LiquidacionTurnoLinea {
   hora_fin_estimada: string | null;
   fin_dia_siguiente?: number | null;
   lugar: string | null;
+  /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
+  lugar_alias?: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
   horas_trabajadas: number;

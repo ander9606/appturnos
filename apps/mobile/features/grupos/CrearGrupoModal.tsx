@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { showAlert } from '@/lib/alertDialog';
 import { COLORS } from '@/lib/designTokens';
 import { LugarInput } from '@/features/turnos/crear/LugarInput';
+import { LugarAlias } from '@/features/turnos/crear/LugarAlias';
 import { useCrearGrupo } from './useGrupos';
 
 type Props = {
@@ -27,13 +28,14 @@ export function CrearGrupoModal({ visible, etiqueta, onCreado, onClose }: Props)
   const [lugar, setLugar] = useState('');
   const [latitud, setLatitud] = useState<number | null>(null);
   const [longitud, setLongitud] = useState<number | null>(null);
+  const [lugarAlias, setLugarAlias] = useState('');
   const [errorNombre, setErrorNombre] = useState<string | undefined>();
   const [errorLugar, setErrorLugar] = useState<string | undefined>();
   // Nombre repetido: el servidor trae el id del que ya lo usa, para ofrecer "Usar ese".
   const [repetido, setRepetido] = useState<{ id: number | null; mensaje: string } | null>(null);
 
   const reiniciar = () => {
-    setNombre(''); setLugar(''); setLatitud(null); setLongitud(null);
+    setNombre(''); setLugar(''); setLugarAlias(''); setLatitud(null); setLongitud(null);
     setErrorNombre(undefined); setErrorLugar(undefined); setRepetido(null);
   };
   const cerrar = () => { reiniciar(); onClose(); };
@@ -51,7 +53,7 @@ export function CrearGrupoModal({ visible, etiqueta, onCreado, onClose }: Props)
     try {
       const grupo = await crear.mutateAsync({
         nombre: limpio,
-        ...(conLugar ? { lugar: lugar.trim(), latitud: latitud!, longitud: longitud! } : {}),
+        ...(conLugar ? { lugar: lugar.trim(), latitud: latitud!, longitud: longitud!, ...(lugarAlias.trim() ? { lugar_alias: lugarAlias.trim() } : {}) } : {}),
       });
       reiniciar();
       onCreado(grupo);
@@ -111,8 +113,9 @@ export function CrearGrupoModal({ visible, etiqueta, onCreado, onClose }: Props)
                 value={lugar}
                 latitud={latitud}
                 longitud={longitud}
-                onChange={(l, lat, lng) => { setLugar(l); setLatitud(lat); setLongitud(lng); setErrorLugar(undefined); }}
+                onChange={(l, lat, lng) => { if (lat != null && l !== lugar) setLugarAlias(''); setLugar(l); setLatitud(lat); setLongitud(lng); setErrorLugar(undefined); }}
               />
+              <LugarAlias lugar={lugar} latitud={latitud} longitud={longitud} alias={lugarAlias} onChange={setLugarAlias} />
               {errorLugar
                 ? <Text className="text-xs text-danger">{errorLugar}</Text>
                 : <Text className="text-xs text-muted-foreground">Los turnos nuevos usarán este lugar por defecto; podrás cambiarlo en cada turno.</Text>}

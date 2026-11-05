@@ -39,7 +39,7 @@ export function NextShiftCard({ turno, primaryColor, onPress, onIngreso }: NextS
       <Text className="text-muted-foreground text-sm">
         {fmtTime(turno.hora_inicio)}
         {turno.hora_fin_estimada ? ` – ${fmtTime(turno.hora_fin_estimada)}` : ''}
-        {turno.lugar ? `  ·  ${turno.lugar}` : ''}
+        {turno.lugar ? `  ·  ${turno.lugar_alias || turno.lugar}` : ''}
       </Text>
 
       {porReconfirmar ? (

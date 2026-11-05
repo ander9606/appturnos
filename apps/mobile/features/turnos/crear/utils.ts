@@ -31,6 +31,7 @@ export function buildPayload(data: WizardData): CrearOfertaPayload {
     hora_fin_estimada: data.hora_fin ? buildTime(data.hora_fin) : undefined,
     fin_dia_siguiente: data.fin_dia_siguiente || undefined,
     lugar:             data.lugar.trim() || undefined,
+    lugar_alias:       data.lugar.trim() && data.lugar_alias.trim() ? data.lugar_alias.trim() : undefined,
     latitud:           data.latitud ?? undefined,
     longitud:          data.longitud ?? undefined,
     ubicacion_libre:   data.ubicacion_libre,

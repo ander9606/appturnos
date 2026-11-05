@@ -320,7 +320,7 @@ function GestorOfertaItem({
             </Text>
             {oferta.lugar ? (
               <Text className="text-sm text-muted-foreground" numberOfLines={1}>
-                📍 {oferta.lugar}
+                📍 {oferta.lugar_alias || oferta.lugar}
               </Text>
             ) : null}
           </View>

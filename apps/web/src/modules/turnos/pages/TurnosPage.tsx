@@ -13,6 +13,7 @@ import { ConfirmModal } from '@/shared/components/ConfirmModal';
 import { StatCard } from '@/shared/components/StatCard';
 import { useConfirm } from '@/shared/hooks/useConfirm';
 import { LugarInput } from '../components/LugarInput';
+import { LugarAlias } from '../components/LugarAlias';
 import { GrupoSelector } from '@/modules/grupos/components/GrupoSelector';
 import { lugarAlElegirGrupo, lugarEsDelGrupo } from '@/modules/grupos/grupoUtils';
 import type { GrupoElegido } from '@/modules/grupos/types';
@@ -174,7 +175,7 @@ export function TurnosPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{fmtDate(o.fecha)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.hora_inicio}{o.hora_fin_estimada ? ` – ${o.hora_fin_estimada}` : ''}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{o.lugar ?? '—'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{o.lugar_alias || o.lugar || '—'}</td>
                     <td className="px-4 py-3 text-right text-muted-foreground">{totalAsignados}/{totalPlazas}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -260,12 +261,14 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [zonas, setZonas] = useState<ZonaMarcaje[]>([]);
   const [grupo, setGrupo] = useState<GrupoElegido | null>(null);
+  const [lugarAlias, setLugarAlias] = useState('');
 
   // Al elegir un grupo, el lugar del turno toma el del grupo (valor por defecto) si aún no tiene uno propio.
   const elegirGrupo = (g: GrupoElegido | null) => {
     const lugarDelGrupo = lugarAlElegirGrupo({ lugar: form.lugar }, grupo, g);
     if (lugarDelGrupo) {
       setForm(f => ({ ...f, lugar: lugarDelGrupo.lugar }));
+      setLugarAlias(lugarDelGrupo.lugar_alias);
       setLatitud(lugarDelGrupo.latitud);
       setLongitud(lugarDelGrupo.longitud);
     }
@@ -293,6 +296,7 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
       hora_fin_estimada: form.hora_fin_estimada || undefined,
       descripcion: form.descripcion || undefined,
       lugar: form.lugar || undefined,
+      lugar_alias: form.lugar && lugarAlias.trim() ? lugarAlias.trim() : undefined,
       latitud: latitud ?? undefined,
       longitud: longitud ?? undefined,
       para_quien: paraQuien,
@@ -342,11 +346,14 @@ function NuevaOfertaModal({ onClose }: { onClose: () => void }) {
             latitud={latitud}
             longitud={longitud}
             onChange={(lugar, lat, lng) => {
+              // Elegir otro lugar (con coordenadas: buscador, biblioteca, GPS o mapa) deja sin efecto el nombre corto del anterior.
+              if (lat != null && lugar !== form.lugar) setLugarAlias('');
               setForm(f => ({ ...f, lugar }));
               setLatitud(lat);
               setLongitud(lng);
             }}
           />
+          <LugarAlias lugar={form.lugar} latitud={latitud} longitud={longitud} alias={lugarAlias} onChange={setLugarAlias} />
           {lugarEsDelGrupo({ lugar: form.lugar, latitud, longitud }, grupo) && (
             <p className="text-xs text-muted-foreground mt-1">{`Tomado de «${grupo!.nombre}». Puedes cambiarlo.`}</p>
           )}

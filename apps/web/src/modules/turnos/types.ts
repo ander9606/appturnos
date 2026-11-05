@@ -48,6 +48,8 @@ export interface Oferta {
   // Detalles adicionales para el trabajador (ej. qué llevar) — el trabajador SÍ los ve, pero nunca salen en el contrato.
   notas_adicionales: string | null;
   lugar: string | null;
+  /** Nombre corto del lugar (tarjetas y cuenta de cobro); la dirección completa sigue en `lugar`. */
+  lugar_alias?: string | null;
   /** Resuelta por geocodificación a partir de latitud/longitud (best-effort, puede quedar null). */
   ciudad: string | null;
   latitud: number | null;
@@ -101,6 +103,7 @@ export interface LiquidacionTurno {
   hora_inicio: string;
   hora_fin_estimada: string | null;
   lugar: string | null;
+  lugar_alias?: string | null;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
   horas_trabajadas: number;

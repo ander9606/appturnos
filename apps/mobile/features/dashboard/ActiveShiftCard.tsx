@@ -87,7 +87,7 @@ export function ActiveShiftCard({ turno, primaryColor, onPress, onEgreso }: Acti
 
       <Text className="text-white/80 text-sm">
         {fmtRange(turno.hora_inicio, turno.hora_fin_estimada, turno.fin_dia_siguiente)}
-        {turno.lugar ? `  ·  ${turno.lugar}` : ''}
+        {turno.lugar ? `  ·  ${turno.lugar_alias || turno.lugar}` : ''}
       </Text>
 
       <View className="h-1.5 bg-white/30 rounded-full overflow-hidden">
