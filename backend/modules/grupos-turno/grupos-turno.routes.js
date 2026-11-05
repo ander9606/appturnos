@@ -20,6 +20,7 @@ const idParam = param('id').isInt({ min: 1 }).withMessage('id inválido');
 // también para PATCH, donde puede llegar solo una parte). Con `null` se borra.
 const reglasLugar = [
   body('lugar').optional({ values: 'null' }).isString().trim().isLength({ min: 1, max: 300 }).withMessage('Lugar inválido (máx. 300 caracteres)'),
+  body('lugar_alias').optional({ values: 'null' }).isString().trim().isLength({ max: 80 }).withMessage('El nombre corto del lugar admite hasta 80 caracteres'),
   body('latitud').optional({ values: 'null' }).isFloat({ min: -90, max: 90 }).withMessage('Latitud inválida'),
   body('longitud').optional({ values: 'null' }).isFloat({ min: -180, max: 180 }).withMessage('Longitud inválida'),
 ];

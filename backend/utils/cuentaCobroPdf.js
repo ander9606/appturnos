@@ -4,6 +4,7 @@ const PDFDocument = require('pdfkit');
 const { piePdfMarca } = require('./marcaPdf');
 const { dibujarFirma } = require('./firmaPdf');
 const logger = require('./logger');
+const { lugarCorto } = require('./lugarCorto');
 
 /**
  * `empresas.logo_url` guarda, en la misma columna MEDIUMTEXT, una imagen
@@ -116,7 +117,8 @@ async function generarCuentaCobroPdf(cuenta, stream) {
     doc.text(`$ ${Number(item.valor).toLocaleString('es-CO')}`, col.valor, y, { width: 100, align: 'right' });
     doc.moveDown(0.3);
 
-    const meta = [item.cargo, item.lugar].filter(Boolean).join(' · ');
+    // Las cuentas ya generadas guardaron la dirección completa; lugarCorto no toca lo que ya es corto.
+    const meta = [item.cargo, lugarCorto(item.lugar, item.lugar_alias)].filter(Boolean).join(' · ');
     if (meta) {
       doc.font('Helvetica-Oblique').fontSize(8).fillColor('#475569')
         .text(meta, col.desc, doc.y, { width: 240 });

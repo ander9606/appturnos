@@ -346,6 +346,8 @@ module.exports = {
    */
   async actualizar(empresaId, id, datos) {
     if (datos.fin_dia_siguiente !== undefined) datos = { ...datos, fin_dia_siguiente: datos.fin_dia_siguiente ? 1 : 0 };
+    // Un nombre corto de lugar vacío significa "quitarlo".
+    if (datos.lugar_alias !== undefined) datos = { ...datos, lugar_alias: datos.lugar_alias?.trim() || null };
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
     if (!oferta) throw new AppError('Oferta no encontrada', 404);
     if (oferta.estado !== 'abierta' && oferta.estado !== 'borrador') {

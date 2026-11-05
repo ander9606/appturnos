@@ -77,6 +77,8 @@ const GruposTurnoService = {
       latitud: cambios.latitud !== undefined ? cambios.latitud : grupo.latitud,
       longitud: cambios.longitud !== undefined ? cambios.longitud : grupo.longitud,
     });
+    // Un nombre corto vacío significa "quitarlo".
+    if (cambios.lugar_alias !== undefined) cambios = { ...cambios, lugar_alias: cambios.lugar_alias?.trim() || null };
     try {
       await GruposTurnoModel.actualizar(empresaId, id, cambios);
     } catch (err) {

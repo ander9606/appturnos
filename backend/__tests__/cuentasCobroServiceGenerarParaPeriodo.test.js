@@ -63,6 +63,22 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     }));
   });
 
+  test('el lugar del ítem usa el nombre corto; sin él, una dirección larga se acorta y una corta se deja igual', async () => {
+    const larga = 'Corferias, Carrera 37, Quinta Paredes, Teusaquillo, Bogotá, Bogotá Distrito Capital, RAP (Especial) Central, 111321, Colombia';
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ asignacion_id: 1, lugar: larga, lugar_alias: 'Feria' }),
+        turno({ asignacion_id: 2, oferta_fecha: '2026-09-04', lugar: larga }),
+        turno({ asignacion_id: 3, oferta_fecha: '2026-09-05', lugar: 'Bodega Central' }),
+      ]),
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items.map((i) => i.lugar)).toEqual(['Feria', 'Corferias, Carrera 37', 'Bodega Central']);
+  });
+
   test('con un turno sin firmar NO genera la cuenta y avisa al trabajador y a los gestores', async () => {
     AsignacionesModel.liquidacion.mockResolvedValue([
       trabajador([turno(), turno({ asignacion_id: 2, firmado_trabajador: false })]),
