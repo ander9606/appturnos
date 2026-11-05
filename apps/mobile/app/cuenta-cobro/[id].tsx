@@ -15,7 +15,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
 import { cuentasCobroApi } from '@api-client';
+import type { CuentaCobroItem } from '@api-client';
 import { descargarCuentaCobro } from '@/features/nomina/descargarCuentaCobro';
+import { agruparItemsCuenta } from '@/features/nomina/cuentaCobroGrupos';
 import { SignaturePad } from '@/features/turnos/SignaturePad';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { formatCOP } from '@/lib/formatters';
@@ -45,6 +47,27 @@ function breakdown(item: { valor_base: number; pago_extra: number; bono_monto: n
   if (item.pago_extra > 0) partes.push(`recargo ${formatCOP(item.pago_extra)}`);
   if (item.bono_monto > 0) partes.push(`bono ${formatCOP(item.bono_monto)}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
   return partes.join(' + ');
+}
+
+/** Una línea de turno de la tabla de la cuenta. */
+function FilaItem({ item }: { item: CuentaCobroItem }) {
+  const desglose = breakdown(item);
+  return (
+    <View style={s.tableRow}>
+      <Text style={[s.tableCell, s.colFecha]}>{fmtCorta(item.fecha)}</Text>
+      <View style={s.colTurno}>
+        <Text style={s.itemDesc}>{item.descripcion}</Text>
+        <Text style={s.itemMeta}>
+          {fmtH(item.hora_inicio)}–{fmtH(item.hora_fin)}
+          {item.cargo ? ` · ${item.cargo}` : ''}
+          {item.lugar ? ` · ${item.lugar}` : ''}
+        </Text>
+        {desglose ? <Text style={s.itemBreakdown}>{desglose}</Text> : null}
+      </View>
+      <Text style={[s.tableCell, s.colHoras, s.alignRight]}>{Number(item.horas).toFixed(1)}</Text>
+      <Text style={[s.tableCell, s.colValor, s.alignRight, s.itemValor]}>{formatCOP(item.valor)}</Text>
+    </View>
+  );
 }
 
 const GESTORES = ['admin_empresa', 'jefe_turnos', 'jefe_nomina'];
@@ -116,6 +139,9 @@ export default function CuentaCobroScreen() {
   if (cuenta.firma_b64) {
     try { sigXml = atob(cuenta.firma_b64); } catch { /* malformed — skip */ }
   }
+
+  // null si ningún turno tiene grupo: la tabla se muestra plana, como siempre.
+  const secciones = agruparItemsCuenta(cuenta.items);
 
   return (
     <>
@@ -202,25 +228,16 @@ export default function CuentaCobroScreen() {
               <Text style={[s.tableHeaderCell, s.colHoras, s.alignRight]}>Horas</Text>
               <Text style={[s.tableHeaderCell, s.colValor, s.alignRight]}>Valor</Text>
             </View>
-            {cuenta.items.map((item) => {
-              const desglose = breakdown(item);
-              return (
-                <View key={item.asignacion_id} style={s.tableRow}>
-                  <Text style={[s.tableCell, s.colFecha]}>{fmtCorta(item.fecha)}</Text>
-                  <View style={s.colTurno}>
-                    <Text style={s.itemDesc}>{item.descripcion}</Text>
-                    <Text style={s.itemMeta}>
-                      {fmtH(item.hora_inicio)}–{fmtH(item.hora_fin)}
-                      {item.cargo ? ` · ${item.cargo}` : ''}
-                      {item.lugar ? ` · ${item.lugar}` : ''}
-                    </Text>
-                    {desglose ? <Text style={s.itemBreakdown}>{desglose}</Text> : null}
-                  </View>
-                  <Text style={[s.tableCell, s.colHoras, s.alignRight]}>{Number(item.horas).toFixed(1)}</Text>
-                  <Text style={[s.tableCell, s.colValor, s.alignRight, s.itemValor]}>{formatCOP(item.valor)}</Text>
+            {secciones ? secciones.map((sec) => (
+              <View key={sec.grupoId ?? 'sin-grupo'}>
+                <Text style={s.groupHeader}>{sec.nombre ?? 'Sin grupo'}</Text>
+                {sec.items.map((item) => <FilaItem key={item.asignacion_id} item={item} />)}
+                <View style={s.subtotalRow}>
+                  <Text style={s.subtotalLabel}>Subtotal {sec.nombre ?? 'sin grupo'}</Text>
+                  <Text style={s.subtotalValor}>{formatCOP(sec.subtotal)}</Text>
                 </View>
-              );
-            })}
+              </View>
+            )) : cuenta.items.map((item) => <FilaItem key={item.asignacion_id} item={item} />)}
 
             <View style={s.totalsRow}>
               <Text style={s.totalsLabel}>Total ({cuenta.total_turnos} turno{cuenta.total_turnos !== 1 ? 's' : ''}, {Number(cuenta.total_horas).toFixed(1)}h)</Text>
@@ -463,6 +480,21 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.foreground,
   },
+  groupHeader: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: COLORS.foreground,
+    marginTop: 12,
+    marginBottom: 2,
+  },
+  subtotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    gap: 8,
+  },
+  subtotalLabel: { flex: 1, fontSize: 12, fontWeight: '700', color: COLORS.mutedForeground },
+  subtotalValor: { fontSize: 12, fontWeight: '800', color: COLORS.foreground },
   totalsRow: {
     flexDirection: 'row',
     alignItems: 'center',

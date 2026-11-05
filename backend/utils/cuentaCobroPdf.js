@@ -23,6 +23,28 @@ async function obtenerLogoBuffer(logoUrl) {
   return null;
 }
 
+const redondear2 = (n) => Math.round(Number(n) * 100) / 100;
+
+/**
+ * Reparte los ítems de la cuenta por grupo de turnos, con el subtotal de cada uno. Devuelve null si ningún ítem
+ * tiene grupo: entonces la cuenta se dibuja como siempre (lista plana), igual que para las empresas que no usan
+ * grupos. Orden: cada grupo según su primer ítem (los ítems ya vienen por fecha) y «sin grupo» al final. La
+ * clave es el id (el nombre es el de cuando se generó la cuenta). Los subtotales suman exactamente `valor_total`.
+ */
+function agruparItemsPorGrupo(items) {
+  if (!items.some((i) => i.grupo_id)) return null;
+  const secciones = new Map();
+  for (const item of items) {
+    const clave = item.grupo_id ?? null;
+    if (!secciones.has(clave)) secciones.set(clave, { grupo_id: clave, nombre: clave === null ? null : (item.grupo_nombre || 'Grupo'), items: [], subtotal: 0 });
+    const sec = secciones.get(clave);
+    sec.items.push(item);
+    sec.subtotal = redondear2(sec.subtotal + Number(item.valor));
+  }
+  const lista = [...secciones.values()];
+  return [...lista.filter((s) => s.grupo_id !== null), ...lista.filter((s) => s.grupo_id === null)];
+}
+
 /**
  * Genera el PDF de una cuenta de cobro (agregado de turnos de un período) y
  * lo escribe en `stream` (normalmente la respuesta HTTP). `cuenta` debe venir
@@ -102,8 +124,7 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   };
   dibujarEncabezado();
 
-  doc.font('Helvetica').fontSize(9);
-  for (const item of cuenta.items) {
+  const dibujarItem = (item) => {
     if (doc.y > 700) {
       doc.addPage();
       dibujarEncabezado();
@@ -137,6 +158,31 @@ async function generarCuentaCobroPdf(cuenta, stream) {
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
     }
     doc.moveDown(0.4);
+  };
+
+  doc.font('Helvetica').fontSize(9);
+  const secciones = agruparItemsPorGrupo(cuenta.items);
+  if (!secciones) {
+    cuenta.items.forEach(dibujarItem);
+  } else {
+    for (const sec of secciones) {
+      if (doc.y > 680) {
+        doc.addPage();
+        dibujarEncabezado();
+      }
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#0F172A')
+        .text(sec.nombre ?? 'Sin grupo', col.fecha, doc.y, { width: 484 });
+      doc.moveDown(0.3);
+      doc.font('Helvetica').fontSize(9).fillColor('#000000');
+      sec.items.forEach(dibujarItem);
+      const y = doc.y;
+      doc.font('Helvetica-Bold').fontSize(9);
+      doc.text(`Subtotal ${sec.nombre ?? 'sin grupo'}`, col.desc, y, { width: 300 });
+      doc.text(`$ ${Number(sec.subtotal).toLocaleString('es-CO')}`, col.valor, y, { width: 100, align: 'right' });
+      doc.x = col.fecha; // el texto del subtotal deja el cursor en la columna de valores
+      doc.moveDown(0.8);
+      doc.font('Helvetica').fontSize(9);
+    }
   }
 
   doc.moveTo(56, doc.y).lineTo(540, doc.y).strokeColor('#94A3B8').stroke();
@@ -185,4 +231,4 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   doc.end();
 }
 
-module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer };
+module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer, agruparItemsPorGrupo };

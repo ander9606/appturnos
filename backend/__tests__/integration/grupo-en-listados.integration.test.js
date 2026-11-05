@@ -92,6 +92,15 @@ d('grupo en los listados de turnos (MySQL real)', () => {
     expect(await AsignacionesModel.obtenerConDetalles(empresaId, asigSinGrupo)).toMatchObject({ grupo_nombre: null, grupo_id: null });
   });
 
+  test('liquidación: cada turno trae su grupo (alimenta la cuenta de cobro agrupada)', async () => {
+    // La liquidación solo cuenta turnos completados.
+    await pool.query("UPDATE asignaciones_turno SET estado = 'completado', horas_trabajadas = 8, pago_total = 50000 WHERE empresa_id = ?", [empresaId]);
+    const [w] = await AsignacionesModel.liquidacion(empresaId, { fechaInicio: '2026-11-01', fechaFin: '2026-11-30' });
+    expect(w.turnos).toHaveLength(2);
+    expect(w.turnos.find((t) => t.oferta_titulo === 'Con grupo')).toMatchObject({ grupo_nombre: 'Feria del Libro', grupo_id: expect.any(Number) });
+    expect(w.turnos.find((t) => t.oferta_titulo === 'Sin grupo')).toMatchObject({ grupo_nombre: null, grupo_id: null });
+  });
+
   test('renombrar el grupo se refleja en los listados (el turno apunta al id, no al texto)', async () => {
     await pool.query("UPDATE grupos_turno SET nombre = 'Feria 2026' WHERE empresa_id = ?", [empresaId]);
     const { data } = await OfertasModel.listar(empresaId, { limit: 50, offset: 0 });

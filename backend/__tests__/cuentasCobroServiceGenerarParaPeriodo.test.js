@@ -63,6 +63,37 @@ describe('CuentasCobroService.generarParaPeriodo', () => {
     }));
   });
 
+  test('el grupo del turno queda en el ítem; sin grupo el ítem no trae esas claves (igual que antes)', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([
+        turno({ grupo_id: 3, grupo_nombre: 'Feria del Libro' }),
+        turno({ asignacion_id: 2, oferta_fecha: '2026-09-05', grupo_id: null, grupo_nombre: null }),
+      ]),
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items[0]).toMatchObject({ grupo_id: 3, grupo_nombre: 'Feria del Libro' });
+    expect(items[1]).not.toHaveProperty('grupo_id');
+    expect(items[1]).not.toHaveProperty('grupo_nombre');
+  });
+
+  test('la cuenta complementaria por diferencia también lleva el grupo del turno', async () => {
+    AsignacionesModel.liquidacion.mockResolvedValue([
+      trabajador([turno({ pago_total: 70000, grupo_id: 3, grupo_nombre: 'Feria del Libro' })]),
+    ]);
+    CuentasCobroModel.listarPorPeriodoYTrabajador.mockResolvedValue([
+      { id: 1, secuencia: 1, firmado_trabajador: true, items: [{ asignacion_id: 1, valor: 60000 }] },
+    ]);
+
+    await CuentasCobroService.generarParaPeriodo(7, 10);
+
+    const { items } = CuentasCobroModel.crear.mock.calls[0][1];
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ valor: 10000, grupo_id: 3, grupo_nombre: 'Feria del Libro' });
+  });
+
   test('con un turno sin firmar NO genera la cuenta y avisa al trabajador y a los gestores', async () => {
     AsignacionesModel.liquidacion.mockResolvedValue([
       trabajador([turno(), turno({ asignacion_id: 2, firmado_trabajador: false })]),
