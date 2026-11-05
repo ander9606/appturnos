@@ -619,6 +619,13 @@ module.exports = {
   async duplicar(empresaId, id, nuevaFecha, creadoPor, nuevaHoraInicio) {
     const original = await OfertasModel.obtenerPorId(empresaId, id);
     if (!original) throw new AppError('Oferta no encontrada', 404);
+    // La copia se queda en el grupo del original; a un grupo cerrado no se le agregan turnos.
+    if (original.grupo_estado === 'cerrado') {
+      throw new AppError(
+        `El grupo "${original.grupo_nombre}" está cerrado. Reábrelo para duplicar este turno dentro de él.`,
+        409
+      );
+    }
     const activas = await OfertasModel.contarActivasPorEmpresa(empresaId);
     if (activas >= MAX_OFERTAS_ACTIVAS_POR_EMPRESA) {
       throw new AppError(
