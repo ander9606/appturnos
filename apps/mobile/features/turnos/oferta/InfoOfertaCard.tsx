@@ -9,7 +9,7 @@ import { showToast } from '@/lib/toast';
 import { useActualizarOferta } from '@/features/turnos/useTurnos';
 import { ApiError } from '@api-client';
 import type { OfertaDetalle } from '@api-client';
-import { GrupoBadge } from '@/features/grupos/GrupoBadge';
+import { GrupoDeLaOferta } from '@/features/grupos/GrupoDeLaOferta';
 import { fmtDate } from './fechasOferta';
 
 function fmtRange(start: string, end: string | null, finDiaSiguiente?: number | null) {
@@ -68,7 +68,7 @@ export function InfoOfertaCard({ oferta, esPasado, puedeGestionar, ofertaEsEdita
             </Text>
           </View>
         </View>
-        <GrupoBadge nombre={oferta.grupo_nombre} />
+        <GrupoDeLaOferta oferta={oferta} puedeGestionar={puedeGestionar} />
 
         {/* Fecha */}
         <View className="flex-row items-center gap-3">

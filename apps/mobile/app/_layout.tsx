@@ -238,6 +238,9 @@ function RootLayout() {
             <Stack.Screen name="invitar-trabajador"   options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
             <Stack.Screen name="banco-talento"        options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
             {/* Integración logiq360 — solo admin_empresa */}
+            <Stack.Screen name="grupos" options={{ title: 'Grupos de turnos' }} />
+            <Stack.Screen name="grupo/[id]" options={{ headerShown: true }} />
+
             <Stack.Screen name="mi-plan" options={{ headerShown: true, title: 'Mi plan' }} />
             <Stack.Screen name="integracion/config" options={{ title: 'Integración logiq360' }} />
             <Stack.Screen name="integracion/estado" options={{ title: 'Estado de la cola' }} />

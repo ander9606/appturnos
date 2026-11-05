@@ -11,6 +11,7 @@ import { fmtCOP, fmtHrs, fmtDate, bogotaToday, inicioMesActual } from '@/shared/
 import { descargarBlob } from '@/shared/lib/download';
 import type { LiquidacionTurnosTrabajador, LiquidacionTurno } from '../types';
 import { EmptyState } from '@/shared/components/EmptyState';
+import { GrupoBadge } from '@/modules/grupos/components/GrupoBadge';
 
 async function descargarContrato(asignacionId: number) {
   const blob = await turnosApi.descargarContratoPorAsignacion(asignacionId);
@@ -51,6 +52,7 @@ const NOMBRE_CICLO: Record<string, string> = { quincenal: 'Quincena', mensual: '
 interface TurnoGrupo {
   oferta_id: number;
   oferta_titulo: string;
+  grupo_nombre: string | null;
   oferta_fecha: string;
   hora_inicio: string;
   hora_fin_estimada: string | null;
@@ -72,6 +74,7 @@ function agruparPorTurno(trabajadores: LiquidacionTurnosTrabajador[]): TurnoGrup
         g = {
           oferta_id: t.oferta_id,
           oferta_titulo: t.oferta_titulo,
+          grupo_nombre: t.grupo_nombre ?? null,
           oferta_fecha: t.oferta_fecha,
           hora_inicio: t.hora_inicio,
           hora_fin_estimada: t.hora_fin_estimada,
@@ -325,6 +328,7 @@ export function LiquidacionTurnosView() {
                                   <div>
                                     <p className="text-foreground flex items-center gap-1.5">
                                       {t.oferta_titulo}
+                                      <GrupoBadge nombre={t.grupo_nombre} />
                                       {!t.firmado_trabajador && (
                                         <span title="Contrato sin firmar — no incluido en el total a pagar">
                                           <AlertTriangle size={12} className="text-warning" />
@@ -397,7 +401,10 @@ export function LiquidacionTurnosView() {
                       className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted transition-colors"
                     >
                       <div>
-                        <p className="font-medium text-foreground">{g.oferta_titulo}</p>
+                        <p className="font-medium text-foreground flex items-center gap-1.5 flex-wrap">
+                          {g.oferta_titulo}
+                          <GrupoBadge nombre={g.grupo_nombre} />
+                        </p>
                         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                           {fmtDate(g.oferta_fecha)}{g.lugar ? ` · ${g.lugar}` : ''} · {g.lineas.length} trabajador{g.lineas.length !== 1 ? 'es' : ''}
                           {g.pendientes_firma > 0 && (

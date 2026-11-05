@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { formatShortDate, formatTimestampHora, formatCOP } from '@/lib/formatters';
 import type { LiquidacionTurnoLinea as TLinea } from '@api-client';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 
 interface Props {
   linea:        TLinea;
@@ -40,6 +41,8 @@ export function LiquidacionTurnoLinea({ linea, primaryColor }: Props) {
           </View>
         )}
       </View>
+
+      <GrupoBadge nombre={linea.grupo_nombre} />
 
       {/* Detalles + pago */}
       <View className="flex-row items-center justify-between">

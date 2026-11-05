@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import { toast } from 'sonner';
 import { gruposApi } from '../api/gruposApi';
+import { avisoDeCierre } from '../grupoUtils';
 import type { EstadoGrupo } from '../types';
 
 /** Clave de las consultas de grupos: sirve de prefijo para invalidarlas todas. */
@@ -20,5 +23,31 @@ export function useCrearGrupo() {
   return useMutation({
     mutationFn: gruposApi.crear,
     onSuccess: () => { qc.invalidateQueries({ queryKey: GRUPOS_KEY }); },
+  });
+}
+
+/** Un grupo con sus turnos (página de detalle). */
+export function useGrupo(id: number | null) {
+  return useQuery({
+    queryKey: [...GRUPOS_KEY, 'detalle', id],
+    queryFn: () => gruposApi.obtener(id!),
+    enabled: id !== null && Number.isFinite(id),
+  });
+}
+
+/** Cerrar o reabrir; el 409 del servidor ("tiene turnos sin terminar…") sale tal cual como aviso. */
+export function useCambiarEstadoGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, cerrar, confirmar }: { id: number; cerrar: boolean; confirmar?: boolean }) =>
+      (cerrar ? gruposApi.cerrar(id, confirmar) : gruposApi.reabrir(id)),
+    onSuccess: (_d, { cerrar }) => {
+      qc.invalidateQueries({ queryKey: GRUPOS_KEY });
+      toast.success(cerrar ? 'Grupo cerrado' : 'Grupo reabierto');
+    },
+    onError: (err) => {
+      if (avisoDeCierre(err)) return; // no es un fallo: la página pregunta si cerrar de todos modos
+      toast.error(axios.isAxiosError(err) ? (err.response?.data?.message as string | undefined) ?? 'No se pudo completar.' : 'No se pudo completar.');
+    },
   });
 }

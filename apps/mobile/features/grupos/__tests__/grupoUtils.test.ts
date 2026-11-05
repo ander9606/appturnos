@@ -61,3 +61,23 @@ test('aElegido se queda solo con lo que usa el asistente', () => {
   const completo = { ...FERIA, empresa_id: 1, estado: 'activo', total_turnos: 3 } as never;
   expect(aElegido(completo)).toEqual(FERIA);
 });
+
+describe('ultimoTurnoCopiable', () => {
+  const t = (id: number, fecha: string, hora_inicio = '08:00:00', estado = 'abierta') =>
+    ({ id, titulo: `T${id}`, fecha, hora_inicio, estado }) as never;
+  const { ultimoTurnoCopiable } = jest.requireActual('../grupoUtils');
+
+  test('sin turnos no hay nada que copiar', () => {
+    expect(ultimoTurnoCopiable([])).toBeNull();
+  });
+  test('elige el de fecha más reciente, sin importar el orden de la lista', () => {
+    expect(ultimoTurnoCopiable([t(1, '2026-11-11'), t(2, '2026-11-09'), t(3, '2026-11-10')]).id).toBe(1);
+  });
+  test('el mismo día gana el de hora de inicio más tarde', () => {
+    expect(ultimoTurnoCopiable([t(1, '2026-11-09', '08:00:00'), t(2, '2026-11-09', '14:00:00')]).id).toBe(2);
+  });
+  test('ignora los cancelados', () => {
+    expect(ultimoTurnoCopiable([t(1, '2026-11-09'), t(2, '2026-11-12', '08:00:00', 'cancelada')]).id).toBe(1);
+    expect(ultimoTurnoCopiable([t(1, '2026-11-09', '08:00:00', 'cancelada')])).toBeNull();
+  });
+});
