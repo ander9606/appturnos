@@ -86,6 +86,8 @@ function reglasOferta({ parcial }) {
           body('visibilidad').optional().isIn(['abierta', 'dirigida']).withMessage('visibilidad inválida'),
           body('trabajador_ids').optional().isArray().withMessage('trabajador_ids debe ser un array'),
           body('trabajador_ids.*').isInt({ min: 1 }).withMessage('trabajador_ids inválido'),
+          // Grupo de turnos (migración 120): solo al crear; después se cambia con PUT /:id/grupo.
+          body('grupo_id').optional({ values: 'null' }).isInt({ min: 1 }).withMessage('grupo_id inválido'),
         ]),
   ];
 }
@@ -133,6 +135,21 @@ router.put(
   [idParam, ...reglasOferta({ parcial: true })],
   validar,
   ctrl.actualizar
+);
+
+// PUT /api/turnos/ofertas/:id/grupo  — vincula el turno a un grupo, lo cambia o lo saca (grupo_id: null)
+router.put(
+  '/:id/grupo',
+  verificarRol(GESTIONAR),
+  verificarSuscripcion,
+  [
+    idParam,
+    body('grupo_id')
+      .custom((v) => v === null || (Number.isInteger(v) && v >= 1))
+      .withMessage('grupo_id debe ser un id de grupo o null'),
+  ],
+  validar,
+  ctrl.vincularGrupo
 );
 
 // POST /api/turnos/ofertas/:id/publicar  — pasa una oferta de 'borrador' a 'publicada'

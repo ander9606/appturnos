@@ -6,6 +6,8 @@ const AsignacionesService = require('../asignaciones/asignaciones.service');
 const CargosModel = require('../../cargos/cargos.model');
 const TrabajadoresService = require('../../trabajadores/trabajadores.service');
 const PuntosMarcajeModel = require('../../puntos-marcaje/puntos-marcaje.model');
+const GruposTurnoModel = require('../../grupos-turno/grupos-turno.model');
+const EmpresasModel = require('../../empresas/empresas.model');
 const NotificacionesService = require('../../notificaciones/notificaciones.service');
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const CostoLaborService = require('../../integracion/costo-labor.service');
@@ -139,6 +141,23 @@ async function validarPuntosMarcaje(empresaId, puntoMarcajeIds) {
   for (const id of ids) {
     const punto = await PuntosMarcajeModel.obtenerPorId(empresaId, id);
     if (!punto) throw new AppError(`Punto de marcaje ${id} no encontrado`, 404);
+  }
+}
+
+/**
+ * Un turno solo se vincula a un grupo de su empresa, que esté activo, y solo si la empresa
+ * tiene la función encendida. `null`/`undefined` = sin grupo: no consulta nada, así que para
+ * las empresas que no usan grupos este chequeo no cuesta ni una consulta.
+ */
+async function validarGrupo(empresaId, grupoId) {
+  if (grupoId == null) return;
+  if (!(await EmpresasModel.usaGruposTurno(empresaId))) {
+    throw new AppError('Los grupos de turnos no están activados para tu empresa.', 403);
+  }
+  const grupo = await GruposTurnoModel.obtenerPorId(empresaId, Number(grupoId));
+  if (!grupo) throw new AppError('Grupo no encontrado', 404);
+  if (grupo.estado === 'cerrado') {
+    throw new AppError(`El grupo "${grupo.nombre}" está cerrado. Reábrelo para agregarle turnos.`, 409);
   }
 }
 
@@ -291,6 +310,7 @@ module.exports = {
     await validarPuestosParaEmpresa(empresaId, datos.puestos);
     await validarDestinatarios(empresaId, datos.visibilidad, datos.trabajador_ids);
     await validarPuntosMarcaje(empresaId, datos.punto_marcaje_ids);
+    await validarGrupo(empresaId, datos.grupo_id);
     const id = await OfertasModel.crear(empresaId, datos, creadoPor);
     const oferta = await OfertasModel.obtenerPorId(empresaId, id);
 
@@ -637,6 +657,19 @@ module.exports = {
     const oferta = await OfertasModel.obtenerPorId(empresaId, nuevaId);
     await notificarCoGestores(empresaId, oferta, creadoPor);
     return oferta;
+  },
+
+  /**
+   * Vincula una oferta a un grupo, la cambia de grupo o la saca de él (`grupoId = null`).
+   * Es solo una etiqueta (no toca horario, pagos ni asignaciones), así que a diferencia de
+   * `actualizar` se permite en cualquier estado: también sirve para ordenar turnos ya hechos.
+   */
+  async vincularGrupo(empresaId, id, grupoId) {
+    const oferta = await OfertasModel.obtenerPorId(empresaId, id);
+    if (!oferta) throw new AppError('Oferta no encontrada', 404);
+    await validarGrupo(empresaId, grupoId);
+    await OfertasModel.asignarGrupo(empresaId, id, grupoId);
+    return OfertasModel.obtenerPorId(empresaId, id);
   },
 
   /**

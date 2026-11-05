@@ -463,6 +463,15 @@ const OfertasModel = {
     return fila.total;
   },
 
+  /** Vincula la oferta a un grupo (migración 120) o la deja sin grupo con `null`. */
+  async asignarGrupo(empresaId, id, grupoId) {
+    const [res] = await pool.query(
+      'UPDATE ofertas_turno SET grupo_id = ? WHERE id = ? AND empresa_id = ?',
+      [grupoId, id, empresaId]
+    );
+    return res.affectedRows;
+  },
+
   async cambiarEstado(empresaId, id, estado) {
     const [res] = await pool.query(
       'UPDATE ofertas_turno SET estado = ? WHERE id = ? AND empresa_id = ?',
@@ -555,6 +564,12 @@ const OfertasModel = {
         ]
       );
       const ofertaId = res.insertId;
+
+      // ponytail: UPDATE aparte (y solo si hay grupo) para no tocar el INSERT de quienes no usan
+      // grupos — su SQL queda idéntico — upgrade path: meter grupo_id en el INSERT y regenerar el golden.
+      if (datos.grupo_id != null) {
+        await conn.query('UPDATE ofertas_turno SET grupo_id = ? WHERE id = ? AND empresa_id = ?', [datos.grupo_id, ofertaId, empresaId]);
+      }
 
       // Insertar puestos en la misma transacción.
       if (Array.isArray(datos.puestos)) {
