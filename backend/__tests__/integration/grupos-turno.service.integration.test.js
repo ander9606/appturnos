@@ -9,7 +9,7 @@ const d = corre ? describe : describe.skip;
 const sumarDias = (n) => new Date(Date.now() - 5 * 3_600_000 + n * 86_400_000).toISOString().slice(0, 10);
 
 d('grupos de turnos (MySQL real)', () => {
-  let pool, Servicio, empresaA, empresaB;
+  let pool, Servicio, GruposTurnoModel, empresaA, empresaB;
 
   const crearEmpresa = async (m) => (await pool.query(
     "INSERT INTO empresas (nombre, slug, plan, usa_grupos_turno) VALUES (?, ?, 'basico', 1)", [`Test grupos ${m}`, `t-gsv-${m}-${Date.now()}`]
@@ -28,6 +28,7 @@ d('grupos de turnos (MySQL real)', () => {
   beforeAll(async () => {
     ({ pool } = require('../../config/database'));
     Servicio = require('../../modules/grupos-turno/grupos-turno.service');
+    GruposTurnoModel = require('../../modules/grupos-turno/grupos-turno.model');
     empresaA = await crearEmpresa('a');
     empresaB = await crearEmpresa('b');
   });
@@ -35,6 +36,7 @@ d('grupos de turnos (MySQL real)', () => {
   afterAll(async () => {
     if (!pool) return;
     for (const id of [empresaA, empresaB]) {
+      await pool.query('DELETE FROM contratos_diarios WHERE empresa_id = ?', [id]);
       await pool.query('DELETE FROM asignaciones_turno WHERE empresa_id = ?', [id]);
       await pool.query('DELETE FROM trabajadores WHERE empresa_id = ?', [id]);
       await pool.query('DELETE FROM oferta_puestos WHERE oferta_id IN (SELECT id FROM ofertas_turno WHERE empresa_id = ?)', [id]);
@@ -107,7 +109,12 @@ d('grupos de turnos (MySQL real)', () => {
     await falla(Servicio.cerrar(empresaA, g.id), 409); // alguien sigue marcado como trabajando
 
     await pool.query("UPDATE asignaciones_turno SET estado = 'completado' WHERE oferta_id = ?", [pasado]);
-    const cerrado = await Servicio.cerrar(empresaA, g.id);
+    // Terminó, pero el trabajador no firmó su contrato diario: su pago sigue frenado → pide confirmar.
+    const aviso = await falla(Servicio.cerrar(empresaA, g.id), 409);
+    expect(aviso.message).toContain('1 turno terminado sin contrato firmado');
+    expect(aviso.detalles).toEqual([expect.objectContaining({ codigo: 'confirmar_cierre', turnos_sin_firma: 1 })]);
+    expect((await GruposTurnoModel.obtenerPorId(empresaA, g.id)).estado).toBe('activo'); // el aviso no cerró nada
+    const cerrado = await Servicio.cerrar(empresaA, g.id, { confirmar: true });
     expect(cerrado).toMatchObject({ estado: 'cerrado', fase: 'cerrado' });
     expect(cerrado.cerrado_at).not.toBeNull();
     await falla(Servicio.cerrar(empresaA, g.id), 409);
@@ -115,6 +122,26 @@ d('grupos de turnos (MySQL real)', () => {
     const reabierto = await Servicio.reabrir(empresaA, g.id);
     expect(reabierto).toMatchObject({ estado: 'activo', cerrado_at: null });
     await falla(Servicio.reabrir(empresaA, g.id), 409);
+  });
+
+  test('cerrar: el aviso de contratos sin firmar se quita al firmar, y los turnos fallidos no cuentan', async () => {
+    const g = await Servicio.crear(empresaA, { nombre: 'Aviso de firma' }, null);
+    const pasado = await turno(g.id, sumarDias(-2), 'completada');
+    const [t] = await pool.query("INSERT INTO trabajadores (empresa_id, nombre, apellido, tipo, activo) VALUES (?, 'Luis', 'Test', 'turnos', 1)", [empresaA]);
+    const [[cargo]] = await pool.query('SELECT id FROM cargos WHERE empresa_id IS NULL LIMIT 1');
+    const [pu] = await pool.query('INSERT INTO oferta_puestos (oferta_id, cargo_id, plazas, tarifa_dia) VALUES (?, ?, 1, 50000)', [pasado, cargo.id]);
+    const [a] = await pool.query("INSERT INTO asignaciones_turno (empresa_id, oferta_id, puesto_id, trabajador_id, estado) VALUES (?, ?, ?, ?, 'fallido')", [empresaA, pasado, pu.insertId, t.insertId]);
+    expect(await GruposTurnoModel.contarSinFirma(empresaA, g.id)).toBe(0); // fallido: compensación, sin contrato
+
+    await pool.query("UPDATE asignaciones_turno SET estado = 'completado' WHERE id = ?", [a.insertId]);
+    expect(await GruposTurnoModel.contarSinFirma(empresaA, g.id)).toBe(1);
+    await pool.query("INSERT INTO contratos_diarios (empresa_id, asignacion_id, fecha, firmado_trabajador) VALUES (?, ?, ?, 0)", [empresaA, a.insertId, sumarDias(-2)]);
+    expect(await GruposTurnoModel.contarSinFirma(empresaA, g.id)).toBe(1); // contrato creado pero sin firmar
+
+    await pool.query('UPDATE contratos_diarios SET firmado_trabajador = 1 WHERE asignacion_id = ?', [a.insertId]);
+    expect(await GruposTurnoModel.contarSinFirma(empresaA, g.id)).toBe(0);
+    expect(await GruposTurnoModel.contarSinFirma(empresaB, g.id)).toBe(0); // otra empresa no ve el grupo
+    expect((await Servicio.cerrar(empresaA, g.id)).estado).toBe('cerrado'); // todo firmado: cierra sin pedir confirmación
   });
 
   test('listar filtra por estado y obtener respeta la empresa', async () => {

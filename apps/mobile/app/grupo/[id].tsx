@@ -3,7 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ApiError } from '@api-client';
+import { ApiError, esAvisoCierre } from '@api-client';
 import type { TurnoDeGrupo } from '@api-client';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { Button } from '@/components/ui/Button';
@@ -71,6 +71,21 @@ export default function GrupoDetalleScreen() {
     try {
       await cambiarEstado.mutateAsync({ id: g.id, cerrar });
     } catch (err) {
+      // Turnos terminados sin contrato firmado: no es un error, es un aviso. Si el usuario insiste, se cierra igual.
+      if (cerrar && esAvisoCierre(err)) {
+        const seguir = await confirm({
+          title: 'Hay pagos frenados',
+          message: err.message,
+          confirmLabel: 'Cerrar de todos modos',
+        });
+        if (!seguir) return;
+        try {
+          await cambiarEstado.mutateAsync({ id: g.id, cerrar: true, confirmar: true });
+        } catch (err2) {
+          showAlert('No se pudo completar', err2 instanceof ApiError ? err2.message : 'Inténtalo de nuevo.');
+        }
+        return;
+      }
       // Un 409 trae el motivo ("tiene turnos sin terminar…"): se muestra tal cual.
       showAlert('No se pudo completar', err instanceof ApiError ? err.message : 'Inténtalo de nuevo.');
     }

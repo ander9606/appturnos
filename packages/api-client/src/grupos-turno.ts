@@ -1,5 +1,6 @@
 import { api } from './client';
 import type { EstadoOferta } from './turnos';
+import type { ApiErrorDetalle } from './types';
 
 export type EstadoGrupo = 'activo' | 'cerrado';
 
@@ -89,12 +90,22 @@ export const gruposTurnoApi = {
     return api.patch<GrupoTurno>(`/api/grupos-turno/${id}`, payload);
   },
 
-  /** 409 si tiene turnos sin terminar o con alguien trabajando. Un grupo se cierra, no se borra. */
-  cerrar(id: number): Promise<GrupoTurno> {
-    return api.post<GrupoTurno>(`/api/grupos-turno/${id}/cerrar`);
+  /**
+   * 409 si tiene turnos sin terminar o con alguien trabajando. Un grupo se cierra, no se borra. Si quedan turnos
+   * terminados sin contrato firmado el 409 es un aviso (`esAvisoCierre(err)`): se repite con `confirmar: true`
+   * después de preguntarle al usuario. Cerrar no cambia ningún pago.
+   */
+  cerrar(id: number, opciones?: { confirmar?: boolean }): Promise<GrupoTurno> {
+    return api.post<GrupoTurno>(`/api/grupos-turno/${id}/cerrar`, opciones?.confirmar ? { confirmar: true } : undefined);
   },
 
   reabrir(id: number): Promise<GrupoTurno> {
     return api.post<GrupoTurno>(`/api/grupos-turno/${id}/reabrir`);
   },
 };
+
+/** ¿Este error es el aviso "hay contratos sin firmar" de cerrar un grupo (se puede cerrar confirmando)? */
+export function esAvisoCierre(err: unknown): err is { message: string; detalles: ApiErrorDetalle[] } {
+  const detalles = (err as { detalles?: ApiErrorDetalle[] } | null)?.detalles;
+  return (err as { status?: number } | null)?.status === 409 && detalles?.[0]?.codigo === 'confirmar_cierre';
+}

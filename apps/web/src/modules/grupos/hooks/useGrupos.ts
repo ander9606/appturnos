@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { gruposApi } from '../api/gruposApi';
+import { avisoDeCierre } from '../grupoUtils';
 import type { EstadoGrupo } from '../types';
 
 /** Clave de las consultas de grupos: sirve de prefijo para invalidarlas todas. */
@@ -38,12 +39,14 @@ export function useGrupo(id: number | null) {
 export function useCambiarEstadoGrupo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, cerrar }: { id: number; cerrar: boolean }) => (cerrar ? gruposApi.cerrar(id) : gruposApi.reabrir(id)),
+    mutationFn: ({ id, cerrar, confirmar }: { id: number; cerrar: boolean; confirmar?: boolean }) =>
+      (cerrar ? gruposApi.cerrar(id, confirmar) : gruposApi.reabrir(id)),
     onSuccess: (_d, { cerrar }) => {
       qc.invalidateQueries({ queryKey: GRUPOS_KEY });
       toast.success(cerrar ? 'Grupo cerrado' : 'Grupo reabierto');
     },
     onError: (err) => {
+      if (avisoDeCierre(err)) return; // no es un fallo: la página pregunta si cerrar de todos modos
       toast.error(axios.isAxiosError(err) ? (err.response?.data?.message as string | undefined) ?? 'No se pudo completar.' : 'No se pudo completar.');
     },
   });

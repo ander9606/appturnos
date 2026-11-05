@@ -144,6 +144,34 @@ describe('detalle de un grupo', () => {
     expect(mockCambiar).toHaveBeenCalledWith({ id: 3, cerrar: true });
   });
 
+  const avisoCierre = () => {
+    const { ApiError } = jest.requireActual('@api-client');
+    return new ApiError('2 turnos terminados sin contrato firmado: su pago sigue frenado.', undefined, 409,
+      [{ codigo: 'confirmar_cierre', turnos_sin_firma: 2 }]);
+  };
+
+  test('contratos sin firmar: no es un error, pregunta; si confirma, cierra con confirmar=true', async () => {
+    detalle();
+    mockConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true); // 1.º "cerrar grupo", 2.º "cerrar de todos modos"
+    mockCambiar.mockRejectedValueOnce(avisoCierre()).mockResolvedValueOnce({});
+    render(<GrupoDetalleScreen />);
+    fireEvent.press(screen.getByText('Cerrar grupo'));
+    await waitFor(() => expect(mockCambiar).toHaveBeenCalledWith({ id: 3, cerrar: true, confirmar: true }));
+    expect(mockConfirm).toHaveBeenLastCalledWith(expect.objectContaining({ title: 'Hay pagos frenados', message: expect.stringContaining('sin contrato firmado') }));
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
+  test('contratos sin firmar: si no confirma, no cierra y no muestra error', async () => {
+    detalle();
+    mockConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    mockCambiar.mockRejectedValueOnce(avisoCierre());
+    render(<GrupoDetalleScreen />);
+    fireEvent.press(screen.getByText('Cerrar grupo'));
+    await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(2));
+    expect(mockCambiar).toHaveBeenCalledTimes(1);
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
   test('un grupo cerrado no deja agregar ni duplicar y ofrece reabrir sin confirmar', async () => {
     detalle({ estado: 'cerrado', fase: 'cerrado' });
     mockCambiar.mockResolvedValue({});

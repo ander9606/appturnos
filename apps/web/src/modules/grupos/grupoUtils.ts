@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { fmtPeriodo } from '@/shared/lib/format';
 import type { FaseGrupo, GrupoElegido, GrupoTurno, TurnoDeGrupo } from './types';
 
@@ -49,4 +50,14 @@ export function ultimoTurnoCopiable(turnos: TurnoDeGrupo[]): TurnoDeGrupo | null
   const vivos = turnos.filter(t => t.estado !== 'cancelada');
   if (!vivos.length) return null;
   return vivos.reduce((a, b) => (b.fecha > a.fecha || (b.fecha === a.fecha && b.hora_inicio > a.hora_inicio) ? b : a));
+}
+
+/**
+ * Si el error es el aviso de cerrar un grupo con turnos terminados sin contrato firmado (409 con código
+ * `confirmar_cierre`), devuelve el texto para preguntar al usuario; si es cualquier otro error, null.
+ */
+export function avisoDeCierre(err: unknown): string | null {
+  if (!axios.isAxiosError(err) || err.response?.status !== 409) return null;
+  const data = err.response.data as { message?: string; detalles?: { codigo?: string }[] } | undefined;
+  return data?.detalles?.[0]?.codigo === 'confirmar_cierre' ? (data.message ?? 'Hay contratos sin firmar.') : null;
 }

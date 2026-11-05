@@ -9,7 +9,7 @@ import { fmtDate } from '@/shared/lib/format';
 import { useCambiarEstadoGrupo, useGrupo } from '../hooks/useGrupos';
 import { FaseChip } from '../components/FaseChip';
 import { DuplicarTurnoModal } from '../components/DuplicarTurnoModal';
-import { subtituloGrupo, ultimoTurnoCopiable } from '../grupoUtils';
+import { avisoDeCierre, subtituloGrupo, ultimoTurnoCopiable } from '../grupoUtils';
 
 /** Detalle de un grupo: sus datos, sus turnos por fecha y las acciones rápidas (agregar, duplicar, cerrar). */
 export function GrupoDetailPage() {
@@ -20,6 +20,8 @@ export function GrupoDetailPage() {
   const cambiarEstado = useCambiarEstadoGrupo();
   const [duplicando, setDuplicando] = useState(false);
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
+  // Texto del aviso "hay contratos sin firmar": si el usuario insiste, se cierra igual.
+  const [avisoPagos, setAvisoPagos] = useState<string | null>(null);
 
   if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
@@ -103,7 +105,20 @@ export function GrupoDetailPage() {
           confirmLabel="Cerrar"
           pending={cambiarEstado.isPending}
           onCancel={() => setConfirmandoCierre(false)}
-          onConfirm={() => cambiarEstado.mutate({ id: g.id, cerrar: true }, { onSettled: () => setConfirmandoCierre(false) })}
+          onConfirm={() => cambiarEstado.mutate(
+            { id: g.id, cerrar: true },
+            { onError: (err) => setAvisoPagos(avisoDeCierre(err)), onSettled: () => setConfirmandoCierre(false) },
+          )}
+        />
+      )}
+      {avisoPagos && (
+        <ConfirmModal
+          title="Hay pagos frenados"
+          detail={avisoPagos}
+          confirmLabel="Cerrar de todos modos"
+          pending={cambiarEstado.isPending}
+          onCancel={() => setAvisoPagos(null)}
+          onConfirm={() => cambiarEstado.mutate({ id: g.id, cerrar: true, confirmar: true }, { onSettled: () => setAvisoPagos(null) })}
         />
       )}
     </div>

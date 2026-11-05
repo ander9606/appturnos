@@ -27,8 +27,8 @@ export function useGrupo(id: number) {
 export function useCambiarEstadoGrupo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, cerrar }: { id: number; cerrar: boolean }) =>
-      cerrar ? gruposTurnoApi.cerrar(id) : gruposTurnoApi.reabrir(id),
+    mutationFn: ({ id, cerrar, confirmar }: { id: number; cerrar: boolean; confirmar?: boolean }) =>
+      cerrar ? gruposTurnoApi.cerrar(id, { confirmar }) : gruposTurnoApi.reabrir(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: GRUPOS_KEY }); },
   });
 }
