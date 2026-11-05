@@ -74,7 +74,7 @@ export function ElegirGrupoModal({ etiqueta, seleccionadoId, onSelect, onCrear, 
           <ErrorState error={error} onRetry={refetch} />
         ) : filtrados.length === 0 ? (
           grupos.length === 0
-            ? <EmptyState title="Nada por aquí todavía" message="Crea el primero con «Crear»." />
+            ? <EmptyState title="Todavía no hay nada" message="Usa «Crear» para empezar." />
             : <EmptyState title="Sin resultados" variant="search" />
         ) : (
           filtrados.map(g => {

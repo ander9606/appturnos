@@ -303,7 +303,7 @@ function GestorOfertaItem({
             </Text>
             <View className="flex-row items-center gap-2">
               {esCancelada && <Badge label="Cancelada" variant="danger" size="sm" />}
-              {oferta.necesita_completar && <Badge label="Falta completar" variant="warning" size="sm" />}
+              {oferta.necesita_completar && <Badge label="Falta marcar completado" variant="warning" size="sm" />}
               {!esCancelada && !oferta.necesita_completar && esPasado && <Badge label="Finalizado" variant="default" size="sm" />}
               <Text className="text-lg text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
             </View>
@@ -332,12 +332,12 @@ function GestorOfertaItem({
             </Text>
             {!esPasado && !expanded && tienePendientes ? (
               <Badge
-                label={`${pendientes.length} pendiente${pendientes.length > 1 ? 's' : ''}`}
+                label={`${pendientes.length} postulante${pendientes.length > 1 ? 's' : ''} por revisar`}
                 variant="warning"
                 size="sm"
               />
             ) : !esPasado && !expanded && detalle ? (
-              <Badge label="Sin pendientes" variant="success" size="sm" />
+              <Badge label="Postulaciones al día" variant="success" size="sm" />
             ) : null}
           </View>
         </View>

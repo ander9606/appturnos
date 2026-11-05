@@ -66,10 +66,10 @@ export function OfertaCard({
             {item.titulo}
           </Text>
           {esPasado ? (
-            <Badge label="Pasado" variant="default" size="sm" />
+            <Badge label="Finalizado" variant="default" size="sm" />
           ) : plazasLibres > 0 ? (
             <Badge
-              label={`${plazasLibres} libre${plazasLibres > 1 ? 's' : ''}`}
+              label={`${plazasLibres} plaza${plazasLibres > 1 ? 's' : ''} libre${plazasLibres > 1 ? 's' : ''}`}
               variant={plazasLibres <= 2 ? 'warning' : 'info'}
               size="sm"
             />
@@ -130,9 +130,9 @@ export function OfertaCard({
             {hayVariasTarifas ? 'Desde ' : ''}${tarifaMin.toLocaleString('es-CO')} / turno
           </Text>
           {esPasado ? (
-            <Text className="text-xs text-muted-foreground">Evento finalizado</Text>
+            <Text className="text-xs text-muted-foreground">Este turno ya terminó</Text>
           ) : yaAplicado ? (
-            <Badge label="Ya postulado" variant="info" size="sm" />
+            <Badge label="Ya te postulaste" variant="info" size="sm" />
           ) : !firstAvailablePuesto ? (
             <Badge label="Sin plazas" variant="default" size="sm" />
           ) : hayVariosCargos ? (

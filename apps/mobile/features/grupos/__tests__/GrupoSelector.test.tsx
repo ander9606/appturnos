@@ -123,7 +123,7 @@ describe('elegir un grupo existente', () => {
     montar();
     await screen.findByText('Elegir…');
     await presionar('Elegir Evento');
-    expect(await screen.findByText('Nada por aquí todavía')).toBeTruthy();
+    expect(await screen.findByText('Todavía no hay nada')).toBeTruthy();
   });
 
   test('"Cambiar" abre la lista con el actual marcado', async () => {

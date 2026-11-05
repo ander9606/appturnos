@@ -80,7 +80,7 @@ export function ElegirGrupoModal({ visible, etiqueta, seleccionadoId, onSelect, 
               ItemSeparatorComponent={() => <View className="h-px bg-border" />}
               ListEmptyComponent={
                 grupos.length === 0 ? (
-                  <EmptyState compact title="Nada por aquí todavía" message="Crea el primero con «Crear»." />
+                  <EmptyState compact title="Todavía no hay nada" message="Usa «Crear» para empezar." />
                 ) : (
                   <EmptyState compact variant="search" title="Sin resultados" />
                 )

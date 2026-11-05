@@ -155,7 +155,7 @@ export function TurnosPage() {
                 <th className="text-left px-4 py-3 font-medium">Fecha</th>
                 <th className="text-left px-4 py-3 font-medium">Hora</th>
                 <th className="text-left px-4 py-3 font-medium">Lugar</th>
-                <th className="text-right px-4 py-3 font-medium">Puestos</th>
+                <th className="text-right px-4 py-3 font-medium" title="Plazas cubiertas / plazas totales">Plazas</th>
                 <th className="text-left px-4 py-3 font-medium">Estado</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -183,7 +183,7 @@ export function TurnosPage() {
                         </span>
                         {pendientes > 0 && (
                           <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">
-                            {pendientes} pendiente{pendientes !== 1 ? 's' : ''}
+                            {pendientes} postulante{pendientes !== 1 ? 's' : ''} por revisar
                           </span>
                         )}
                         {o.necesita_completar && (
@@ -191,7 +191,7 @@ export function TurnosPage() {
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning"
                             title="El turno ya terminó y todos quedaron resueltos, pero nadie lo marcó como completado"
                           >
-                            <AlertTriangle size={11} /> Falta completar
+                            <AlertTriangle size={11} /> Falta marcar completado
                           </span>
                         )}
                       </div>
