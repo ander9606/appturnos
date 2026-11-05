@@ -183,6 +183,8 @@ function FirmaUploader({ firmaB64, uploading, onUpload, onRemove }: { firmaB64: 
   );
 }
 
+const INPUT_CLS = 'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground';
+
 function EmpresaTab() {
   const isAdmin = useAuthStore(s => s.usuario?.rol) === 'admin_empresa';
   const { data, isLoading, isError, error, refetch } = useEmpresa();
@@ -212,15 +214,19 @@ function EmpresaTab() {
   base.tipo_contrato = empresa.tipo_contrato ?? 'laboral';
   base.sumar_nocturnas_festivo = (empresa.sumar_nocturnas_festivo ?? true) ? '1' : '0';
   base.regla_domingo_habitual = empresa.regla_domingo_habitual ?? 'ley';
+  base.usa_grupos_turno = empresa.usa_grupos_turno ? '1' : '0';
+  base.etiqueta_grupo = empresa.etiqueta_grupo ?? '';
   const val = editing ? form : base;
 
   const handleSave = async () => {
     if (!form) return;
-    await update.mutateAsync(form);
+    // Los campos de grupos solo se envían si se tocaron: guardar otros datos nunca pisa con valores
+    // viejos lo que otro admin cambió mientras tanto, y quien no usa grupos guarda lo de siempre.
+    const cambios = { ...form };
+    for (const k of ['usa_grupos_turno', 'etiqueta_grupo']) if (form[k] === base[k]) delete cambios[k];
+    await update.mutateAsync(cambios);
     setForm(null);
   };
-
-  const INPUT_CLS = 'w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:bg-muted disabled:text-muted-foreground';
 
   return (
     <div className="bg-card border border-border rounded-2xl p-6 max-w-2xl">
@@ -283,6 +289,7 @@ function EmpresaTab() {
         </div>
       </div>
       <RecargosSection editing={editing} val={val} setForm={setForm} />
+      <GruposTurnoSection editing={editing} val={val} setForm={setForm} />
       {isAdmin && (
         <FirmaUploader
           firmaB64={empresa.firma_representante_b64}
@@ -415,6 +422,55 @@ function RecargosSection({ editing, val, setForm }: {
           onConfirm={confirmState.onConfirm}
           onCancel={close}
         />
+      )}
+    </div>
+  );
+}
+
+/* ── Grupos de turnos: se guarda con el botón Guardar de los datos de la empresa ── */
+function GruposTurnoSection({ editing, val, setForm }: {
+  editing: boolean;
+  val: Record<string, string>;
+  setForm: Dispatch<SetStateAction<Record<string, string> | null>>;
+}) {
+  const usa = val.usa_grupos_turno === '1';
+  const elegir = (valor: boolean) => editing && setForm(f => ({ ...f!, usa_grupos_turno: valor ? '1' : '0' }));
+
+  return (
+    <div className="mt-6 pt-6 border-t border-border">
+      <h3 className="text-sm font-semibold text-foreground">Grupos de turnos</h3>
+      <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+        Une turnos de distintos días bajo un mismo nombre: una feria, una obra, un proyecto. {editing ? 'Se guarda con el botón Guardar.' : 'Edita los datos para cambiarlo.'}
+      </p>
+
+      <div role="radiogroup" aria-label="Grupos de turnos" className="grid grid-cols-2 gap-3">
+        <button type="button" role="radio" aria-checked={!usa} disabled={!editing} onClick={() => elegir(false)} className={BOTON_RECARGO(!usa)}>
+          <span className={`block text-sm font-semibold ${!usa ? 'text-primary' : 'text-foreground'}`}>No agrupar</span>
+          <span className="block text-xs text-muted-foreground mt-0.5">Los turnos se manejan como hasta ahora.</span>
+        </button>
+        <button type="button" role="radio" aria-checked={usa} disabled={!editing} onClick={() => elegir(true)} className={BOTON_RECARGO(usa)}>
+          <span className={`block text-sm font-semibold ${usa ? 'text-primary' : 'text-foreground'}`}>Agrupar turnos</span>
+          <span className="block text-xs text-muted-foreground mt-0.5">Podrás crear grupos y asociarles turnos de distintos días.</span>
+        </button>
+      </div>
+
+      {usa ? (
+        <div className="mt-4">
+          <label htmlFor="etiqueta_grupo" className="block text-xs font-medium text-muted-foreground uppercase mb-1">¿Cómo los llamas?</label>
+          <input
+            id="etiqueta_grupo"
+            type="text"
+            maxLength={40}
+            disabled={!editing}
+            placeholder="Grupo"
+            value={val.etiqueta_grupo ?? ''}
+            onChange={e => setForm(f => ({ ...f!, etiqueta_grupo: e.target.value }))}
+            className={INPUT_CLS}
+          />
+          <p className="text-xs text-muted-foreground mt-1">Por ejemplo: Evento, Obra o Proyecto. Si lo dejas vacío se llama «Grupo».</p>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground mt-3">Si ya tenías grupos, se conservan: al volver a activarlos todo sigue ahí.</p>
       )}
     </div>
   );

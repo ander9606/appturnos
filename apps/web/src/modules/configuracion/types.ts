@@ -19,6 +19,10 @@ export interface Empresa {
   sumar_nocturnas_festivo: boolean;
   /** 'ley' = habitual desde el 3.º domingo del mes; 'dos_meses' = domingos seguidos trabajados durante 2 meses. */
   regla_domingo_habitual: 'ley' | 'dos_meses';
+  /** Grupos de turnos encendidos para la empresa (0/1: así sale de la base). Los enciende su admin_empresa. */
+  usa_grupos_turno?: 0 | 1;
+  /** Cómo llama la empresa a un grupo ("Evento", "Obra"…). null = "Grupo". */
+  etiqueta_grupo?: string | null;
 }
 
 export type AlcancePunto = 'todos' | 'nomina';

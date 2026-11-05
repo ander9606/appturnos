@@ -251,11 +251,79 @@ describe('guardar', () => {
 
   test('el interruptor del directorio cambia acepta_postulaciones', async () => {
     await montarCargada();
-    const sw = screen.UNSAFE_getByType(require('react-native').Switch);
+    // Hay dos interruptores (directorio y agrupar turnos): el del directorio es el primero.
+    const sw = screen.UNSAFE_getAllByType(require('react-native').Switch)[0];
     expect(sw.props.value).toBe(true);
     fireEvent(sw, 'valueChange', false);
     await guardar();
     expect(mockActualizar.mock.calls[0][0]).toStrictEqual({ ...PAYLOAD_BASE, acepta_postulaciones: false });
+  });
+});
+
+describe('agrupar turnos (grupos de turnos)', () => {
+  const CON_GRUPOS = { ...EMPRESA, usa_grupos_turno: 1, etiqueta_grupo: 'Evento' };
+  const interruptor = () => screen.getByLabelText('Agrupar turnos');
+  const campo = () => screen.queryByPlaceholderText('Grupo');
+
+  test('sin la función: el interruptor está apagado, no hay campo de nombre y avisa que los grupos se conservan', async () => {
+    await montarCargada(); // EMPRESA no trae usa_grupos_turno
+    expect(screen.getByText('Agrupar turnos')).toBeTruthy();
+    expect(interruptor().props.value).toBe(false);
+    expect(campo()).toBeNull();
+    expect(screen.getByText(/Si ya tenías grupos, se conservan/)).toBeTruthy();
+  });
+
+  test('con la función: el interruptor está encendido y muestra cómo los llama la empresa', async () => {
+    await montarCargada(CON_GRUPOS);
+    expect(interruptor().props.value).toBe(true);
+    expect(screen.getByDisplayValue('Evento')).toBeTruthy();
+    expect(screen.getByText('¿Cómo los llamas?')).toBeTruthy();
+    expect(screen.queryByText(/Si ya tenías grupos, se conservan/)).toBeNull();
+  });
+
+  test('encender el interruptor muestra el campo y envía solo usa_grupos_turno', async () => {
+    await montarCargada();
+    fireEvent(interruptor(), 'valueChange', true);
+    expect(campo()).toBeTruthy();
+    await guardar();
+    expect(mockActualizar.mock.calls[0][0]).toStrictEqual({ ...PAYLOAD_BASE, usa_grupos_turno: true });
+  });
+
+  test('apagarlo envía usa_grupos_turno en false y no toca la etiqueta guardada', async () => {
+    await montarCargada(CON_GRUPOS);
+    fireEvent(interruptor(), 'valueChange', false);
+    await guardar();
+    expect(mockActualizar.mock.calls[0][0]).toStrictEqual({ ...PAYLOAD_BASE, usa_grupos_turno: false });
+  });
+
+  test('escribir cómo los llama envía la etiqueta; vaciarla vuelve al nombre por defecto (null)', async () => {
+    await montarCargada(CON_GRUPOS);
+    fireEvent.changeText(screen.getByDisplayValue('Evento'), 'Obra');
+    await guardar();
+    expect(mockActualizar.mock.calls[0][0]).toStrictEqual({ ...PAYLOAD_BASE, etiqueta_grupo: 'Obra' });
+
+    mockActualizar.mockClear();
+    fireEvent.changeText(screen.getByDisplayValue('Obra'), '');
+    await guardar();
+    expect(mockActualizar.mock.calls[0][0]).toStrictEqual({ ...PAYLOAD_BASE, etiqueta_grupo: null });
+  });
+
+  test('guardar otros datos sin tocar los grupos NO los envía (no pisa lo que otro admin cambió)', async () => {
+    await montarCargada(CON_GRUPOS);
+    fireEvent.changeText(screen.getByDisplayValue('Bogotá'), 'Medellín');
+    await guardar();
+    const enviado = mockActualizar.mock.calls[0][0];
+    expect(enviado).toStrictEqual({ ...PAYLOAD_BASE, ciudad: 'Medellín' });
+    expect('usa_grupos_turno' in enviado).toBe(false);
+    expect('etiqueta_grupo' in enviado).toBe(false);
+  });
+
+  test('el nombre no puede pasar de 40 caracteres: muestra el error y no guarda', async () => {
+    await montarCargada(CON_GRUPOS);
+    fireEvent.changeText(screen.getByDisplayValue('Evento'), 'x'.repeat(41));
+    await guardar();
+    expect(await screen.findByText('Máximo 40 caracteres')).toBeTruthy();
+    expect(mockActualizar).not.toHaveBeenCalled();
   });
 });
 
