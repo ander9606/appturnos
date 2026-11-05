@@ -18,6 +18,7 @@ import { bogotaToday } from '@/lib/formatters';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Oferta, AsignacionResumen, EstadoAsignacion } from '@api-client';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 import { apiErrorMessage } from '@/lib/apiErrorMessage';
 import { confirm } from '@/lib/confirmDialog';
 import { alertError } from '@/lib/alertDialog';
@@ -307,6 +308,7 @@ function GestorOfertaItem({
               <Text className="text-lg text-muted-foreground">{expanded ? '▲' : '▼'}</Text>
             </View>
           </View>
+          <GrupoBadge nombre={oferta.grupo_nombre} />
 
           {/* Date / time / location */}
           <View className="flex-row gap-3 flex-wrap">

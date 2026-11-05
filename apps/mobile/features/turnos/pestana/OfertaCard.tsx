@@ -7,6 +7,7 @@ import { View, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Asignacion, Oferta } from '@api-client';
+import { GrupoBadge } from '@/features/grupos/GrupoBadge';
 import { formatShortDate, fmtRangeSimple, turnosSolapan } from './turnosPestana';
 
 /** Tarjeta de una oferta disponible en la lista del trabajador (postular, elegir cargo o ver detalle). */
@@ -74,6 +75,7 @@ export function OfertaCard({
             />
           ) : null}
         </View>
+        <GrupoBadge nombre={item.grupo_nombre} />
 
         {hayVariosCargos ? (
           <View className="flex-row items-center gap-1 -mt-1">
