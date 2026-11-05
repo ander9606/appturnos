@@ -14,6 +14,9 @@ export interface CuentaCobroItem {
   bono_monto: number;
   bono_motivo: string | null;
   valor: number;
+  /** Grupo de turnos del turno cuando se generó la cuenta (queda fijo aunque luego renombren el grupo). Ausente si no tenía. */
+  grupo_id?: number | null;
+  grupo_nombre?: string | null;
 }
 
 export interface CuentaCobroResumen {
