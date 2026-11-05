@@ -46,6 +46,24 @@ function agruparItemsPorGrupo(items) {
 }
 
 /**
+ * Línea de desglose de un turno ("Base $ 80.000 + bono $ 15.000 - descuento $ 5.000 (motivo)"), o null si el
+ * turno no tiene recargo, bono ni descuento. Ojo: el PDF usa la fuente estándar Helvetica (WinAnsi), que no
+ * trae el signo de resta Unicode "−": salía como una comilla ("). Aquí va el guion normal.
+ */
+function textoDesglose(item) {
+  const extra = Number(item.pago_extra || 0);
+  const bono = Number(item.bono_monto || 0);
+  const descuento = Number(item.descuento_monto || 0);
+  if (!(extra > 0 || bono > 0 || descuento > 0)) return null;
+  const partes = [`Base $ ${Number(item.valor_base).toLocaleString('es-CO')}`];
+  if (extra > 0) partes.push(`recargo $ ${extra.toLocaleString('es-CO')}`);
+  if (bono > 0) partes.push(`bono $ ${bono.toLocaleString('es-CO')}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
+  let texto = partes.join(' + ');
+  if (descuento > 0) texto += ` - descuento $ ${descuento.toLocaleString('es-CO')}${item.descuento_motivo ? ` (${item.descuento_motivo})` : ''}`;
+  return texto;
+}
+
+/**
  * Genera el PDF de una cuenta de cobro (agregado de turnos de un período) y
  * lo escribe en `stream` (normalmente la respuesta HTTP). `cuenta` debe venir
  * con los datos de empresa, trabajador e `items` ya parseado (ver
@@ -131,10 +149,15 @@ async function generarCuentaCobroPdf(cuenta, stream) {
       doc.font('Helvetica').fontSize(9);
     }
     const y = doc.y;
+    const descripcion = item.descripcion || '—';
+    // Una descripción larga ocupa varias líneas. Se mide antes de dibujar: si no, doc.y queda al final de la última
+    // celda de la fila (una sola línea) y la línea de cargo/lugar de abajo se dibuja ENCIMA del resto del título.
+    const alturaDescripcion = doc.heightOfString(descripcion, { width: 240 });
     doc.text(item.fecha, col.fecha, y, { width: 70 });
-    doc.text(item.descripcion || '—', col.desc, y, { width: 240 });
+    doc.text(descripcion, col.desc, y, { width: 240 });
     doc.text(Number(item.horas).toFixed(1), col.horas, y, { width: 50, align: 'right' });
     doc.text(`$ ${Number(item.valor).toLocaleString('es-CO')}`, col.valor, y, { width: 100, align: 'right' });
+    doc.y = y + alturaDescripcion;
     doc.moveDown(0.3);
 
     const meta = [item.cargo, item.lugar].filter(Boolean).join(' · ');
@@ -144,15 +167,8 @@ async function generarCuentaCobroPdf(cuenta, stream) {
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
     }
 
-    const extra = Number(item.pago_extra || 0);
-    const bono = Number(item.bono_monto || 0);
-    const descuento = Number(item.descuento_monto || 0);
-    if (extra > 0 || bono > 0 || descuento > 0) {
-      const partes = [`Base $ ${Number(item.valor_base).toLocaleString('es-CO')}`];
-      if (extra > 0) partes.push(`recargo $ ${extra.toLocaleString('es-CO')}`);
-      if (bono > 0) partes.push(`bono $ ${bono.toLocaleString('es-CO')}${item.bono_motivo ? ` (${item.bono_motivo})` : ''}`);
-      let texto = partes.join(' + ');
-      if (descuento > 0) texto += ` − descuento $ ${descuento.toLocaleString('es-CO')}${item.descuento_motivo ? ` (${item.descuento_motivo})` : ''}`;
+    const texto = textoDesglose(item);
+    if (texto) {
       doc.font('Helvetica-Oblique').fontSize(8).fillColor('#B45309')
         .text(texto, col.desc, doc.y, { width: 240 });
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
@@ -231,4 +247,4 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   doc.end();
 }
 
-module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer, agruparItemsPorGrupo };
+module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer, agruparItemsPorGrupo, textoDesglose };

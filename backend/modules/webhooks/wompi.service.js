@@ -182,16 +182,22 @@ const WompiService = {
     const parsed = esActualizacion ? parsearReferencia(tx.reference) : null;
 
     // Persistir primero — si ya existe, ignorar (idempotencia)
-    const { nuevo, id: eventoId } = await WompiModel.insertarEvento({
+    const datosEvento = {
       transactionId,
       referencia: tx.reference ?? null,
       empresaId: parsed?.empresaId ?? null,
       plan: parsed?.plan ?? null,
       meses: parsed?.meses ?? null,
       payload,
-    });
+    };
+    let { nuevo, id: eventoId } = await WompiModel.insertarEvento(datosEvento);
 
-    if (!nuevo) return { ok: true, razon: 'duplicado' };
+    // La misma transacción puede avisar dos veces: primero en revisión (PENDING, queda 'ignorado')
+    // y luego aprobada. Ese segundo aviso no es un duplicado: reabre el evento y se procesa.
+    if (!nuevo) {
+      eventoId = await WompiModel.reabrirIgnorado(datosEvento);
+      if (!eventoId) return { ok: true, razon: 'duplicado' };
+    }
 
     if (esActualizacion && tx.status === 'APPROVED' && parsed) {
       try {
