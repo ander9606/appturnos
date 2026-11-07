@@ -22,7 +22,7 @@ export function GrupoDeLaOferta({ oferta, puedeGestionar }: { oferta: Oferta; pu
 }
 
 function GrupoEditable({ oferta }: { oferta: Oferta }) {
-  const { usa } = useOpcionesGrupos();
+  const { usa, etiqueta } = useOpcionesGrupos();
   const vincular = useVincularGrupo();
   if (!usa) return <GrupoBadge nombre={oferta.grupo_nombre} />;
 
@@ -33,7 +33,7 @@ function GrupoEditable({ oferta }: { oferta: Oferta }) {
   async function cambiar(nuevo: GrupoElegido | null) {
     try {
       await vincular.mutateAsync({ ofertaId: oferta.id, grupoId: nuevo?.id ?? null });
-      showToast(nuevo ? `Turno agregado a «${nuevo.nombre}».` : 'Turno quitado del grupo.');
+      showToast(nuevo ? `Turno agregado a «${nuevo.nombre}».` : `Turno sin ${etiqueta.toLowerCase()}.`);
     } catch (err) {
       // 409: el grupo está cerrado · 404: ya no existe. El servidor trae el motivo.
       showAlert('No se pudo cambiar', err instanceof ApiError ? err.message : 'Inténtalo de nuevo.');

@@ -4,6 +4,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { MisGruposView } from '../MisGruposView';
 
 const mockPush = jest.fn();
+let mockEtiqueta = 'Grupo';
+jest.mock('@/features/empresas/useOpcionesGrupos', () => ({ useOpcionesGrupos: () => ({ usa: true, etiqueta: mockEtiqueta, etiquetaPlural: `${mockEtiqueta}s`, isLoading: false }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('@expo/vector-icons', () => {
   const { Text } = require('react-native');
@@ -62,4 +64,12 @@ test('puede desplegar varios a la vez y distingue «Sin grupo»', () => {
 test('sin turnos muestra el vacío', () => {
   render(<MisGruposView asignaciones={[]} />);
   expect(screen.getByText('Sin turnos todavía')).toBeTruthy();
+});
+
+test('«Sin …» usa el nombre que la empresa le puso a los grupos', () => {
+  mockEtiqueta = 'Evento';
+  render(<MisGruposView asignaciones={[A({ id: 1, grupo_id: null, grupo_nombre: null })]} />);
+  expect(screen.getByText('Sin evento')).toBeTruthy();
+  expect(screen.queryByText('Sin grupo')).toBeNull();
+  mockEtiqueta = 'Grupo';
 });

@@ -43,8 +43,8 @@ export default function GrupoDetalleScreen() {
     const cerrar = !cerrado;
     if (cerrar) {
       const ok = await confirm({
-        title: 'Cerrar grupo',
-        message: `«${g.nombre}» saldrá de la lista de activos y ya no se podrán agregarle turnos. Puedes reabrirlo cuando quieras.`,
+        title: `Cerrar ${etiqueta.toLowerCase()}`,
+        message: `«${g.nombre}» saldrá de la lista de activos y ya no se podrán agregar turnos. Puedes reabrir cuando quieras.`,
         confirmLabel: 'Cerrar',
       });
       if (!ok) return;
@@ -74,10 +74,10 @@ export default function GrupoDetalleScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: g?.nombre ?? 'Grupo', headerTintColor: COLORS.primary }} />
+      <Stack.Screen options={{ title: g?.nombre ?? etiqueta, headerTintColor: COLORS.primary }} />
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {grupo.isLoading ? <SkeletonDetail style={{ padding: 16 }} /> : grupo.isError || !g ? (
-          <ErrorState error={grupo.error} onRetry={grupo.refetch} fallback="No se pudo cargar el grupo" />
+          <ErrorState error={grupo.error} onRetry={grupo.refetch} fallback="No se pudo cargar la información" />
         ) : (
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96, gap: 12 }}>
             <View className="bg-card border border-border rounded-2xl p-4 gap-2">
@@ -123,7 +123,7 @@ export default function GrupoDetalleScreen() {
             )}
 
             <Button
-              label={cerrado ? 'Reabrir grupo' : 'Cerrar grupo'}
+              label={`${cerrado ? 'Reabrir' : 'Cerrar'} ${etiqueta.toLowerCase()}`}
               variant={cerrado ? 'secondary' : 'ghost'}
               fullWidth
               onPress={alternarEstado}

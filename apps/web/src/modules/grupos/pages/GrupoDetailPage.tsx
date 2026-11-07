@@ -30,7 +30,7 @@ export function GrupoDetailPage() {
   if (isLoading) return <SkeletonDetail />;
   if (isError) return <ErrorState error={error} onRetry={refetch} />;
   const g = data?.data;
-  if (!g) return <p className="text-muted-foreground text-sm py-12 text-center">Grupo no encontrado</p>;
+  if (!g) return <p className="text-muted-foreground text-sm py-12 text-center">No se encontró</p>;
 
   const cerrado = g.estado === 'cerrado';
   const ultimo = ultimoTurnoCopiable(g.turnos);
@@ -87,15 +87,15 @@ export function GrupoDetailPage() {
         onClick={() => (cerrado ? cambiarEstado.mutate({ id: g.id, cerrar: false }) : setConfirmandoCierre(true))}
         className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border hover:bg-muted rounded-lg px-3 py-2 transition-colors disabled:opacity-50"
       >
-        {cerrado ? 'Reabrir grupo' : 'Cerrar grupo'}
+        {cerrado ? 'Reabrir' : 'Cerrar'} {etiqueta.toLowerCase()}
       </button>
 
       {editando && <EditarGrupoModal grupo={g} etiqueta={etiqueta} onClose={() => setEditando(false)} />}
       {duplicando && ultimo && <DuplicarTurnoModal turno={ultimo} onClose={() => setDuplicando(false)} />}
       {confirmandoCierre && (
         <ConfirmModal
-          title="Cerrar grupo"
-          detail={`«${g.nombre}» saldrá de la lista de activos y ya no se podrán agregarle turnos. Puedes reabrirlo cuando quieras.`}
+          title={`Cerrar ${etiqueta.toLowerCase()}`}
+          detail={`«${g.nombre}» saldrá de la lista de activos y ya no se podrán agregar turnos. Puedes reabrir cuando quieras.`}
           confirmLabel="Cerrar"
           pending={cambiarEstado.isPending}
           onCancel={() => setConfirmandoCierre(false)}

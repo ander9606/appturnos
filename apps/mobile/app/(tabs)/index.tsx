@@ -88,9 +88,9 @@ export default function DashboardScreen() {
 
   // Atajo a "Grupos de turnos": solo para quien gestiona turnos y solo si su empresa los activó.
   const gestionaTurnos = usuario?.rol === 'admin_empresa' || usuario?.rol === 'jefe_turnos';
-  const { usa: usaGrupos } = useOpcionesGrupos(gestionaTurnos);
+  const { usa: usaGrupos, etiquetaPlural } = useOpcionesGrupos(gestionaTurnos);
   const atajoGrupos: Action[] = gestionaTurnos && usaGrupos
-    ? [{ icon: 'albums-outline', label: 'Grupos', onPress: () => router.push('/grupos') }]
+    ? [{ icon: 'albums-outline', label: etiquetaPlural, onPress: () => router.push('/grupos') }]
     : [];
 
   const hour = new Date().getHours();

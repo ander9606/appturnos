@@ -21,7 +21,7 @@ export function GrupoDeLaOferta({ oferta, puedeGestionar }: Props) {
 }
 
 function GrupoEditable({ oferta }: Pick<Props, 'oferta'>) {
-  const { usa } = useOpcionesGrupos();
+  const { usa, etiqueta } = useOpcionesGrupos();
   const vincular = useVincularGrupo();
   if (!usa) return <GrupoBadge nombre={oferta.grupo_nombre} />;
 
@@ -32,7 +32,7 @@ function GrupoEditable({ oferta }: Pick<Props, 'oferta'>) {
   const cambiar = (nuevo: GrupoElegido | null) =>
     vincular.mutate(
       { ofertaId: oferta.id, grupoId: nuevo?.id ?? null },
-      { onSuccess: () => toast.success(nuevo ? `Turno agregado a «${nuevo.nombre}»` : 'Turno quitado del grupo') },
+      { onSuccess: () => toast.success(nuevo ? `Turno agregado a «${nuevo.nombre}»` : `Turno sin ${etiqueta.toLowerCase()}`) },
     );
 
   return <GrupoSelector grupo={actual} onChange={cambiar} />;

@@ -5,7 +5,7 @@
 import React from 'react';
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useOpcionesGrupos, ETIQUETA_GRUPO_DEFECTO } from '../useOpcionesGrupos';
+import { useOpcionesGrupos, ETIQUETA_GRUPO_DEFECTO, pluralizarEtiqueta } from '../useOpcionesGrupos';
 
 const mockObtener = jest.fn();
 jest.mock('@api-client', () => ({
@@ -26,14 +26,14 @@ afterEach(() => { qc.clear(); });
 test('mientras carga: apagado y con el nombre por defecto', () => {
   mockObtener.mockReturnValue(new Promise(() => {}));
   const { result } = renderHook(() => useOpcionesGrupos(), { wrapper });
-  expect(result.current).toEqual({ usa: false, etiqueta: ETIQUETA_GRUPO_DEFECTO, isLoading: true });
+  expect(result.current).toEqual({ usa: false, etiqueta: ETIQUETA_GRUPO_DEFECTO, etiquetaPlural: 'Grupos', isLoading: true });
 });
 
 test('empresa con grupos y nombre propio', async () => {
   mockObtener.mockResolvedValue({ usa_grupos_turno: true, etiqueta_grupo: 'Evento' });
   const { result } = renderHook(() => useOpcionesGrupos(), { wrapper });
   await waitFor(() => expect(result.current.isLoading).toBe(false));
-  expect(result.current).toEqual({ usa: true, etiqueta: 'Evento', isLoading: false });
+  expect(result.current).toEqual({ usa: true, etiqueta: 'Evento', etiquetaPlural: 'Eventos', isLoading: false });
 });
 
 test('sin nombre propio (null, vacío o solo espacios) usa "Grupo"; con espacios sobrantes los recorta', async () => {
@@ -57,7 +57,7 @@ test('si la consulta falla, queda apagado (lo nuevo no aparece sin saber que la 
   mockObtener.mockRejectedValue(new Error('red'));
   const { result } = renderHook(() => useOpcionesGrupos(), { wrapper });
   await waitFor(() => expect(result.current.isLoading).toBe(false));
-  expect(result.current).toEqual({ usa: false, etiqueta: ETIQUETA_GRUPO_DEFECTO, isLoading: false });
+  expect(result.current).toEqual({ usa: false, etiqueta: ETIQUETA_GRUPO_DEFECTO, etiquetaPlural: 'Grupos', isLoading: false });
 });
 
 test('cuando el admin cambia las opciones y se invalida la consulta, el hook se actualiza solo', async () => {
@@ -68,5 +68,29 @@ test('cuando el admin cambia las opciones y se invalida la consulta, el hook se 
 
   mockObtener.mockResolvedValue({ usa_grupos_turno: true, etiqueta_grupo: 'Evento' });
   await qc.invalidateQueries({ queryKey: ['opciones-grupos'] });
-  await waitFor(() => expect(result.current).toEqual({ usa: true, etiqueta: 'Evento', isLoading: false }));
+  await waitFor(() => expect(result.current).toEqual({ usa: true, etiqueta: 'Evento', etiquetaPlural: 'Eventos', isLoading: false }));
+});
+
+describe('pluralizarEtiqueta', () => {
+  test.each([
+    ['Evento', 'Eventos'], ['Obra', 'Obras'], ['Grupo', 'Grupos'], ['Proyecto', 'Proyectos'],
+    ['Lugar', 'Lugares'], ['Cruz', 'Cruces'], ['Servicio', 'Servicios'], ['Turno extra', 'Turno extras'],
+    ['Centro de costos', 'Centros de costos'], ['Obra del cliente', 'Obras del cliente'],
+    ['Cuadrillas', 'Cuadrillas'], ['  Feria  ', 'Ferias'],
+  ])('%s → %s', (singular, plural) => {
+    expect(pluralizarEtiqueta(singular)).toBe(plural);
+  });
+
+  test('el hook devuelve la etiqueta y su plural; por defecto «Grupo» / «Grupos»', async () => {
+    mockObtener.mockResolvedValue({ usa_grupos_turno: true, etiqueta_grupo: 'Evento' });
+    const { result } = renderHook(() => useOpcionesGrupos(), { wrapper });
+    await waitFor(() => expect(result.current.etiqueta).toBe('Evento'));
+    expect(result.current.etiquetaPlural).toBe('Eventos');
+  });
+
+  test('sin saber todavía: «Grupos»', () => {
+    mockObtener.mockReturnValue(new Promise(() => {}));
+    const { result } = renderHook(() => useOpcionesGrupos(), { wrapper });
+    expect(result.current.etiquetaPlural).toBe('Grupos');
+  });
 });

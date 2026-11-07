@@ -25,7 +25,7 @@ const PESTANAS: { key: Pestana; label: string }[] = [
 export default function GruposScreen() {
   const router = useRouter();
   const [pestana, setPestana] = useState<Pestana>('activo');
-  const { usa, etiqueta, isLoading: cargandoOpciones } = useOpcionesGrupos();
+  const { usa, etiqueta, etiquetaPlural, isLoading: cargandoOpciones } = useOpcionesGrupos();
   const [editando, setEditando] = useState<GrupoTurno | null>(null);
   // Grupos desplegados (se pueden ver varios a la vez).
   const [abiertos, setAbiertos] = useState<number[]>([]);
@@ -37,9 +37,9 @@ export default function GruposScreen() {
   const cuerpo = () => {
     if (cargandoOpciones || (usa && grupos.isLoading)) return <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />;
     if (!usa) {
-      return <EmptyState title="Los grupos están apagados" message="Actívalos en Mi empresa para agrupar turnos de distintos días." />;
+      return <EmptyState title={`«${etiquetaPlural}» está apagado`} message="Actívalo en Mi empresa para agrupar turnos de distintos días." />;
     }
-    if (grupos.isError) return <ErrorState error={grupos.error} onRetry={grupos.refetch} fallback="No se pudieron cargar los grupos" />;
+    if (grupos.isError) return <ErrorState error={grupos.error} onRetry={grupos.refetch} fallback={`No se pudo cargar la lista de ${etiquetaPlural.toLowerCase()}`} />;
     return (
       <FlatList
         data={grupos.data ?? []}
@@ -57,8 +57,8 @@ export default function GruposScreen() {
             variant={pestana === 'activo' ? 'empty' : 'done'}
             title={pestana === 'activo' ? 'Todavía no hay nada' : 'Nada cerrado'}
             message={pestana === 'activo'
-              ? 'Crea el grupo desde «Nuevo turno» y aparecerá aquí.'
-              : 'Los grupos que cierres quedarán guardados aquí.'}
+              ? `Se crean desde «Nuevo turno» y aparecerán aquí.`
+              : 'Lo que cierres quedará guardado aquí.'}
             action={pestana === 'activo' ? { label: 'Nuevo turno', onPress: () => router.push('/turno/nuevo') } : undefined}
           />
         }
@@ -68,7 +68,7 @@ export default function GruposScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Grupos de turnos', headerTintColor: COLORS.primary }} />
+      <Stack.Screen options={{ title: etiquetaPlural, headerTintColor: COLORS.primary }} />
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <View className="flex-row gap-2 px-4 pt-3">
           {PESTANAS.map((p) => (

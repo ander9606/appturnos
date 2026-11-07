@@ -8,8 +8,9 @@ import GruposScreen from '../../app/grupos';
 import GrupoDetalleScreen from '../../app/grupo/[id]';
 
 const mockPush = jest.fn();
+let mockTitulo: string | undefined;
 jest.mock('expo-router', () => ({
-  Stack: { Screen: () => null },
+  Stack: { Screen: (p: { options: { title?: string } }) => { mockTitulo = p.options.title; return null; } },
   useRouter: () => ({ push: mockPush }),
   useLocalSearchParams: () => ({ id: '3' }),
 }));
@@ -40,8 +41,9 @@ const mockConfirm = jest.fn();
 jest.mock('@/lib/confirmDialog', () => ({ confirm: (...a: unknown[]) => mockConfirm(...a) }));
 
 let mockUsa = true;
+let mockEtiqueta = 'Grupo';
 jest.mock('@/features/empresas/useOpcionesGrupos', () => ({
-  useOpcionesGrupos: () => ({ usa: mockUsa, etiqueta: 'Grupo', isLoading: false }),
+  useOpcionesGrupos: () => ({ usa: mockUsa, etiqueta: mockEtiqueta, etiquetaPlural: `${mockEtiqueta}s`, isLoading: false }),
 }));
 const mockUseGrupos = jest.fn();
 const mockUseGrupo = jest.fn();
@@ -65,6 +67,8 @@ const listado = (data: unknown[] | undefined, extra = {}) => ({ data, isLoading:
 beforeEach(() => {
   jest.clearAllMocks();
   mockUsa = true;
+  mockEtiqueta = 'Grupo';
+  mockTitulo = undefined;
 });
 
 describe('lista de grupos', () => {
@@ -144,7 +148,7 @@ describe('lista de grupos', () => {
       conTurnos([], { estado: 'cerrado', fase: 'cerrado' });
       render(<GruposScreen />);
       fireEvent.press(screen.getByLabelText('Ver 0 turnos de Feria del Libro'));
-      expect(screen.getByText('Todavía no hay turnos en este grupo.')).toBeTruthy();
+      expect(screen.getByText('Todavía no hay turnos aquí.')).toBeTruthy();
       expect(screen.queryByText('Agregar turno')).toBeNull();
       expect(screen.getByText('Abrir grupo')).toBeTruthy();
     });
@@ -172,11 +176,37 @@ describe('lista de grupos', () => {
     expect(screen.queryByText(/Quinta Paredes/)).toBeNull();
   });
 
+  test('todo usa el nombre que la empresa le puso a los grupos, no «grupo»', () => {
+    mockEtiqueta = 'Evento';
+    mockUseGrupos.mockReturnValue(listado([]));
+    render(<GruposScreen />);
+    expect(mockTitulo).toBe('Eventos');
+    expect(screen.getByText('Se crean desde «Nuevo turno» y aparecerán aquí.')).toBeTruthy();
+  });
+
+  test('apagado: el aviso nombra a la función con la etiqueta de la empresa', () => {
+    mockEtiqueta = 'Obra';
+    mockUsa = false;
+    mockUseGrupos.mockReturnValue(listado(undefined));
+    render(<GruposScreen />);
+    expect(screen.getByText('«Obras» está apagado')).toBeTruthy();
+  });
+
+  test('"Abrir" del turno desplegado usa la etiqueta de la empresa', () => {
+    mockEtiqueta = 'Evento';
+    mockUseGrupos.mockReturnValue(listado([grupo()]));
+    mockUseGrupo.mockReturnValue({ data: { ...grupo(), turnos: [turno(10, '2030-01-14')] }, isLoading: false, isError: false, refetch: jest.fn() });
+    render(<GruposScreen />);
+    fireEvent.press(screen.getByLabelText('Ver 2 turnos de Feria del Libro'));
+    expect(screen.getByText('Abrir evento')).toBeTruthy();
+    expect(screen.queryByText('Abrir grupo')).toBeNull();
+  });
+
   test('con la función apagada avisa y no pide los grupos', () => {
     mockUsa = false;
     mockUseGrupos.mockReturnValue(listado(undefined));
     render(<GruposScreen />);
-    expect(screen.getByText('Los grupos están apagados')).toBeTruthy();
+    expect(screen.getByText('«Grupos» está apagado')).toBeTruthy();
     expect(mockUseGrupos).toHaveBeenCalledWith('activo', false);
   });
 
@@ -213,6 +243,14 @@ describe('detalle de un grupo', () => {
     detalle({ estado: 'cerrado', fase: 'cerrado' });
     render(<GrupoDetalleScreen />);
     expect(screen.getByText('Editar')).toBeTruthy();
+  });
+
+  test('el detalle usa la etiqueta de la empresa: botón cerrar/reabrir y título sin nombre', () => {
+    mockEtiqueta = 'Evento';
+    detalle();
+    render(<GrupoDetalleScreen />);
+    expect(screen.getByText('Cerrar evento')).toBeTruthy();
+    expect(screen.queryByText('Cerrar grupo')).toBeNull();
   });
 
   test('"Agregar turno" abre el asistente con el grupo preseleccionado', () => {

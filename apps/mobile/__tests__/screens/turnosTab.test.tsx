@@ -120,6 +120,11 @@ jest.mock('@/features/nomina/useNomina', () => ({
   usePeriodos: (...a: unknown[]) => { mockPeriodosArgs = a; return mockPeriodos; },
 }));
 
+let mockEtiqueta = 'Grupo';
+jest.mock('@/features/empresas/useOpcionesGrupos', () => ({
+  useOpcionesGrupos: () => ({ usa: true, etiqueta: mockEtiqueta, etiquetaPlural: `${mockEtiqueta}s`, isLoading: false }),
+}));
+
 // ── Datos ────────────────────────────────────────────────────────────────────
 const q = (data: unknown, extra: Partial<Q> = {}): Q => ({ data, isLoading: false, isError: false, error: null, refetch: jest.fn(), isRefetching: false, ...extra });
 const PUESTO = (o: Record<string, unknown> = {}) => ({ id: 1, cargo_id: 1, cargo_nombre: 'Mesero', tarifa_dia: 80000, plazas: 3, plazas_cubiertas: 1, ...o });
@@ -138,6 +143,7 @@ function montar(rol: string | undefined) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockEtiqueta = 'Grupo';
   mockMis = q([]);
   mockOfertas = q({ data: [] });
   mockOfertasMes = q({ data: [] });
@@ -994,6 +1000,14 @@ describe('trabajador — Mis turnos por grupo', () => {
     expect(screen.getByText('shift:1:true')).toBeTruthy();
     fireEvent.press(screen.getByTestId('shift-2'));
     expect(mockRouter.push).toHaveBeenCalledWith('/turno/2');
+  });
+
+  it('el botón usa el nombre que la empresa le puso a los grupos', () => {
+    mockEtiqueta = 'Evento';
+    mockMis = q([G({ id: 1 })]);
+    montar('trabajador_turnos');
+    expect(screen.getByLabelText('Ver por evento')).toBeTruthy();
+    expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
   });
 
   it('«Ver por fecha» vuelve a la lista del día', () => {

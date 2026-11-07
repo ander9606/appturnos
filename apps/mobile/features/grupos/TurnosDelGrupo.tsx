@@ -6,16 +6,18 @@ import { Button } from '@/components/ui/Button';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
+import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { FilaTurno } from './FilaTurno';
 import { useGrupo } from './useGrupos';
 
 /**
  * Lo que se despliega dentro de la tarjeta de un grupo: sus turnos por fecha (tocar uno abre el turno) y, si el grupo
- * sigue activo, «Agregar turno»; y «Abrir grupo» para duplicar o cerrar. Los turnos se piden al desplegar (no con la
+ * sigue activo, «Agregar turno»; y «Abrir» (con el nombre de la empresa para sus grupos) para duplicar o cerrar. Los turnos se piden al desplegar (no con la
  * lista) y comparten caché con el detalle del grupo.
  */
 export function TurnosDelGrupo({ grupoId, estado }: { grupoId: number; estado: EstadoGrupo }) {
   const router = useRouter();
+  const { etiqueta } = useOpcionesGrupos();
   const { data, isLoading, isError, error, refetch } = useGrupo(grupoId);
 
   if (isLoading) {
@@ -34,7 +36,7 @@ export function TurnosDelGrupo({ grupoId, estado }: { grupoId: number; estado: E
   return (
     <View>
       {data.turnos.length === 0 ? (
-        <Text className="px-4 py-3 border-t border-border text-sm text-muted-foreground">Todavía no hay turnos en este grupo.</Text>
+        <Text className="px-4 py-3 border-t border-border text-sm text-muted-foreground">Todavía no hay turnos aquí.</Text>
       ) : (
         data.turnos.map((t) => <FilaTurno key={t.id} turno={t} compacta onPress={() => router.push(`/oferta/${t.id}`)} />)
       )}
@@ -48,7 +50,7 @@ export function TurnosDelGrupo({ grupoId, estado }: { grupoId: number; estado: E
             onPress={() => router.push({ pathname: '/turno/nuevo', params: { grupoId: String(grupoId) } })}
           />
         )}
-        <Button label="Abrir grupo" variant="ghost" size="sm" style={{ flex: 1 }} onPress={() => router.push(`/grupo/${grupoId}`)} />
+        <Button label={`Abrir ${etiqueta.toLowerCase()}`} variant="ghost" size="sm" style={{ flex: 1 }} onPress={() => router.push(`/grupo/${grupoId}`)} />
       </View>
     </View>
   );
