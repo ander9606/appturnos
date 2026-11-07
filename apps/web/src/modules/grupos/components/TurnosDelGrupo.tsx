@@ -1,16 +1,18 @@
 import { Link } from 'react-router';
 import { Plus } from 'lucide-react';
 import { Skeleton } from '@/shared/components/Skeleton';
+import { useOpcionesGrupos } from '@/modules/configuracion/hooks/useConfiguracion';
 import { useGrupo } from '../hooks/useGrupos';
 import { FilaTurno } from './FilaTurno';
 import type { EstadoGrupo } from '../types';
 
 /**
  * Lo que se despliega dentro de la tarjeta de un grupo: sus turnos por fecha (clic en uno abre el turno) y, si el
- * grupo sigue activo, «Agregar turno»; y «Abrir grupo» para duplicar o cerrar. Los turnos se piden al desplegar (no con
+ * grupo sigue activo, «Agregar turno»; y «Abrir» (con el nombre que la empresa da a sus grupos) para duplicar o cerrar. Los turnos se piden al desplegar (no con
  * la lista) y comparten caché con el detalle del grupo.
  */
 export function TurnosDelGrupo({ grupoId, estado }: { grupoId: number; estado: EstadoGrupo }) {
+  const { etiqueta } = useOpcionesGrupos();
   const { data, isLoading, isError, refetch } = useGrupo(grupoId);
 
   if (isLoading) {
@@ -33,7 +35,7 @@ export function TurnosDelGrupo({ grupoId, estado }: { grupoId: number; estado: E
   return (
     <div>
       {turnos.length === 0
-        ? <p className="px-4 py-3 border-t border-border text-sm text-muted-foreground">Todavía no hay turnos en este grupo.</p>
+        ? <p className="px-4 py-3 border-t border-border text-sm text-muted-foreground">Todavía no hay turnos aquí.</p>
         : turnos.map(t => <FilaTurno key={t.id} turno={t} compacta />)}
       <div className="flex flex-wrap gap-2 px-4 py-3 border-t border-border">
         {estado === 'activo' && (
@@ -42,7 +44,7 @@ export function TurnosDelGrupo({ grupoId, estado }: { grupoId: number; estado: E
           </Link>
         )}
         <Link to={`/grupos/${grupoId}`} className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border hover:bg-muted px-3 py-1.5 rounded-lg transition-colors">
-          Abrir grupo
+          Abrir {etiqueta.toLowerCase()}
         </Link>
       </div>
     </div>

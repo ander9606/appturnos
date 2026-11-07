@@ -60,7 +60,7 @@ test('turno con grupo: se puede quitar', async () => {
   render(<GrupoDeLaOferta oferta={con} puedeGestionar />);
   fireEvent.press(screen.getByLabelText('Quitar Evento'));
   await waitFor(() => expect(mockVincular).toHaveBeenCalledWith({ ofertaId: 5, grupoId: null }));
-  expect(mockToast).toHaveBeenCalledWith('Turno quitado del grupo.');
+  expect(mockToast).toHaveBeenCalledWith('Turno sin evento.');
 });
 
 test('si el servidor rechaza (grupo cerrado), muestra su motivo y no avisa de éxito', async () => {

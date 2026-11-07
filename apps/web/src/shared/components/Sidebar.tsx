@@ -68,9 +68,12 @@ const ROL_LABEL: Record<Rol, string> = {
 export function Sidebar() {
   const { usuario, clearAuth } = useAuthStore();
   const navigate = useNavigate();
-  const { usa: usaGrupos } = useOpcionesGrupos();
+  const { usa: usaGrupos, etiquetaPlural } = useOpcionesGrupos();
   // «Grupos» solo aparece si la empresa activó la función; para el resto de clientes el menú no cambia.
-  const items = (usuario ? (NAV_BY_ROL[usuario.rol] ?? []) : []).filter(item => !item.soloConGrupos || usaGrupos);
+  const items = (usuario ? (NAV_BY_ROL[usuario.rol] ?? []) : [])
+    .filter(item => !item.soloConGrupos || usaGrupos)
+    // …y se llama como la empresa llama a sus grupos («Eventos», «Obras»…).
+    .map(item => (item.soloConGrupos ? { ...item, label: etiquetaPlural } : item));
   const mainItems = items.filter(item => !item.bottom);
   const bottomItems = items.filter(item => item.bottom);
 

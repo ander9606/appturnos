@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/Text';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { COLORS } from '@/lib/designTokens';
 import { formatShortDate } from '@/lib/formatters';
+import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { ShiftCard } from '@/features/turnos/ShiftCard';
 import { agruparMisTurnos, avisoSinFirmar, resumenAvance, type GrupoDeMisTurnos } from './misGrupos';
 
@@ -27,6 +28,7 @@ function rango(g: GrupoDeMisTurnos): string {
  */
 export function MisGruposView({ asignaciones, refreshControl }: Props) {
   const router = useRouter();
+  const { etiqueta } = useOpcionesGrupos();
   const grupos = useMemo(() => agruparMisTurnos(asignaciones), [asignaciones]);
   const [abiertos, setAbiertos] = useState<string[]>([]);
   const alternar = useCallback((clave: string) => setAbiertos((l) => (l.includes(clave) ? l.filter((c) => c !== clave) : [...l, clave])), []);
@@ -41,7 +43,7 @@ export function MisGruposView({ asignaciones, refreshControl }: Props) {
       ListEmptyComponent={<EmptyState title="Sin turnos todavía" message="Cuando tengas turnos aparecerán aquí, agrupados." />}
       renderItem={({ item: g }) => {
         const abierto = abiertos.includes(g.clave);
-        const nombre = g.nombre ?? 'Sin grupo';
+        const nombre = g.nombre ?? `Sin ${etiqueta.toLowerCase()}`;
         const aviso = avisoSinFirmar(g.sinFirmar);
         return (
           <View className="bg-card border border-border rounded-2xl overflow-hidden">

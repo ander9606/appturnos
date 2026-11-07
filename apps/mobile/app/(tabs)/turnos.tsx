@@ -30,6 +30,7 @@ import { OfertaCard } from '@/features/turnos/pestana/OfertaCard';
 import { colorOferta } from '@/features/turnos/pestana/turnosPestana';
 import { MisGruposView } from '@/features/grupos/MisGruposView';
 import { tieneGrupos } from '@/features/grupos/misGrupos';
+import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { CalendarioMesGestor, CalendarioMesTrabajador } from '@/features/turnos/pestana/CalendarioMes';
 import {
   ResumenGestor, FabCrearTurno, BannerEventual, SelectorTabs, EncabezadoOfertas, EmptyMisTurnos, EmptyOfertas,
@@ -193,6 +194,7 @@ export default function TurnosScreen() {
       });
   }, [ofertas, searchOfertas, selectedDate]);
 
+  const { etiqueta: etiquetaGrupo } = useOpcionesGrupos(isWorker);
   const hayGrupos = useMemo(() => tieneGrupos(misTurnos ?? []), [misTurnos]);
   const enMisTurnos = isWorker && hayGrupos && activeTab === 'mis_turnos';
 
@@ -283,7 +285,7 @@ export default function TurnosScreen() {
             {isWorker && hayGrupos && viewMode === 'lista' && (
               <TouchableOpacity
                 onPress={() => setPorGrupos(v => !v)}
-                accessibilityLabel={porGrupos ? 'Ver por fecha' : 'Ver por grupo'}
+                accessibilityLabel={porGrupos ? 'Ver por fecha' : `Ver por ${etiquetaGrupo.toLowerCase()}`}
                 accessibilityState={{ selected: porGrupos }}
                 className="p-2 active:opacity-60"
               >

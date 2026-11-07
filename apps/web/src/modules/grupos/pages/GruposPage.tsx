@@ -21,7 +21,7 @@ const PESTANAS: { value: EstadoGrupo; label: string }[] = [
 export function GruposPage() {
   const navigate = useNavigate();
   const [estado, setEstado] = useState<EstadoGrupo>('activo');
-  const { usa, etiqueta, isLoading: cargandoOpciones } = useOpcionesGrupos();
+  const { usa, etiqueta, etiquetaPlural, isLoading: cargandoOpciones } = useOpcionesGrupos();
   const [editando, setEditando] = useState<GrupoTurno | null>(null);
   // Grupos desplegados (se pueden ver varios a la vez).
   const [abiertos, setAbiertos] = useState<number[]>([]);
@@ -32,13 +32,13 @@ export function GruposPage() {
   const cuerpo = () => {
     if (cargandoOpciones || (usa && isLoading)) return <SkeletonTable rows={4} cols={3} />;
     if (!usa) {
-      return <EmptyState title="Los grupos están apagados" message="Actívalos en Configuración para agrupar turnos de distintos días." />;
+      return <EmptyState title={`«${etiquetaPlural}» está apagado`} message="Actívalo en Configuración para agrupar turnos de distintos días." />;
     }
     if (isError) return <ErrorState error={error} onRetry={refetch} />;
     if (grupos.length === 0) {
       return estado === 'activo'
-        ? <EmptyState title="Todavía no hay nada" message="Crea el grupo desde «Nuevo turno» y aparecerá aquí." action={{ label: 'Nuevo turno', onClick: () => navigate('/turnos') }} />
-        : <EmptyState variant="done" title="Nada cerrado" message="Los grupos que cierres quedarán guardados aquí." />;
+        ? <EmptyState title="Todavía no hay nada" message="Se crean desde «Nuevo turno» y aparecerán aquí." action={{ label: 'Nuevo turno', onClick: () => navigate('/turnos') }} />
+        : <EmptyState variant="done" title="Nada cerrado" message="Lo que cierres quedará guardado aquí." />;
     }
     return (
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -91,7 +91,7 @@ export function GruposPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground mb-4">Grupos de turnos</h1>
+      <h1 className="text-2xl font-bold text-foreground mb-4">{etiquetaPlural}</h1>
       <div className="flex gap-2 mb-5" role="tablist">
         {PESTANAS.map(p => (
           <button
