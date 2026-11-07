@@ -2,7 +2,7 @@ import { PantallaPestana, EncabezadoPestana } from '@/components/ui/EncabezadoPe
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { COLORS } from '@/lib/designTokens';
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   FlatList,
@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes, useLiquidacionTurnos } from '@/features/turnos/useTurnos';
@@ -58,7 +58,10 @@ export default function TurnosScreen() {
   // Vista mensual (solo gestores) — alterna con la lista/WeekStrip por día.
   const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
   // Vista de «Mis turnos» agrupados por grupo (solo trabajadores, y solo si algún turno suyo tiene grupo).
-  const [porGrupos, setPorGrupos] = useState(false);
+  const { vista } = useLocalSearchParams<{ vista?: string }>();
+  const [porGrupos, setPorGrupos] = useState(vista === 'grupos');
+  // El acceso del Perfil abre esta pestaña ya agrupada (la pestaña puede estar montada: se reacciona al parámetro).
+  useEffect(() => { if (vista === 'grupos') setPorGrupos(true); }, [vista]);
   const [mesCursor, setMesCursor] = useState(() => {
     const [y, m] = today.split('-').map(Number);
     return { year: y, month: m };

@@ -7,6 +7,7 @@ import {
   ACCESO_AUSENCIAS, ACCESOS_CONTRATOS_TURNOS, ACCESOS_LEGAL,
 } from './accesos';
 import { CardRow, FilaAcceso, ROL_LABELS, SectionHeader } from './PerfilUi';
+import { FilaGrupos } from './FilaGrupos';
 
 function Filas({ accesos, primera = false }: { accesos: Acceso[]; primera?: boolean }) {
   return (
@@ -38,6 +39,7 @@ export function CuentaCard({ rol }: { rol: string | undefined }) {
         {isJefeTurnos && <Filas accesos={ACCESOS_JEFE_TURNOS} />}
         {isGestorNomina && <Filas accesos={ACCESOS_GESTOR_NOMINA} />}
         {isAdmin && <Filas accesos={ACCESOS_ADMIN} />}
+        <FilaGrupos rol={rol} />
       </View>
     </>
   );

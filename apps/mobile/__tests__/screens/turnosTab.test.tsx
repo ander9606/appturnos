@@ -11,7 +11,8 @@ import TurnosScreen from '../../app/(tabs)/turnos';
 
 // ── Bordes simulados ─────────────────────────────────────────────────────────
 const mockRouter = { push: jest.fn() };
-jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
+let mockParams: Record<string, string> = {};
+jest.mock('expo-router', () => ({ useRouter: () => mockRouter, useLocalSearchParams: () => mockParams }));
 jest.mock('@/lib/theme', () => ({ useTheme: () => ({ primary: '#111111' }) }));
 jest.mock('@/components/ui/Spinner', () => {
   const { View } = require('react-native');
@@ -144,6 +145,7 @@ function montar(rol: string | undefined) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockEtiqueta = 'Grupo';
+  mockParams = {};
   mockMis = q([]);
   mockOfertas = q({ data: [] });
   mockOfertasMes = q({ data: [] });
@@ -1008,6 +1010,30 @@ describe('trabajador — Mis turnos por grupo', () => {
     montar('trabajador_turnos');
     expect(screen.getByLabelText('Ver por evento')).toBeTruthy();
     expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
+  });
+
+  it('el acceso del Perfil (?vista=grupos) abre la pestaña ya agrupada', () => {
+    mockParams = { vista: 'grupos' };
+    mockMis = q([G({ id: 1 })]);
+    montar('trabajador_turnos');
+    expect(screen.queryByTestId('weekstrip')).toBeNull();
+    expect(screen.getByText('Feria del Libro')).toBeTruthy();
+  });
+
+  it('con la pestaña ya montada, el parámetro que llega después también la agrupa', () => {
+    mockMis = q([G({ id: 1 })]);
+    const { rerender } = montar('trabajador_turnos');
+    expect(screen.getByTestId('weekstrip')).toBeTruthy();
+    mockParams = { vista: 'grupos' };
+    rerender(<TurnosScreen />);
+    expect(screen.queryByTestId('weekstrip')).toBeNull();
+    expect(screen.getByText('Feria del Libro')).toBeTruthy();
+  });
+
+  it('sin ese parámetro empieza por fecha', () => {
+    mockMis = q([G({ id: 1 })]);
+    montar('trabajador_turnos');
+    expect(screen.getByTestId('weekstrip')).toBeTruthy();
   });
 
   it('«Ver por fecha» vuelve a la lista del día', () => {
