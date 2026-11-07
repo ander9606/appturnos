@@ -958,3 +958,66 @@ describe('casos extra (sobrevivientes de mutación)', () => {
     expect(mockWeekStrip.days).toHaveLength(getDateRange(7, 42).length);
   });
 });
+
+describe('trabajador — Mis turnos por grupo', () => {
+  const G = (o: Record<string, unknown> = {}) => ASIG({ empresa_id: 1, grupo_id: 3, grupo_nombre: 'Feria del Libro', ...o });
+
+  it('sin ningún turno con grupo no ofrece la vista por grupo', () => {
+    mockMis = q([ASIG({ id: 1 })]);
+    montar('trabajador_turnos');
+    expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
+  });
+
+  it('los gestores no la ofrecen (tienen la pantalla Grupos)', () => {
+    mockMis = q([G({ id: 1 })]);
+    montar('admin_empresa');
+    expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
+  });
+
+  it('con un turno con grupo la ofrece; al activarla muestra una tarjeta por grupo y oculta la tira de días', () => {
+    mockMis = q([G({ id: 1 }), G({ id: 2, oferta_fecha: '2026-06-20' }), ASIG({ id: 3, oferta_fecha: '2026-06-16' })]);
+    montar('trabajador_turnos');
+    expect(screen.getByTestId('weekstrip')).toBeTruthy();
+    fireEvent.press(screen.getByLabelText('Ver por grupo'));
+    expect(screen.queryByTestId('weekstrip')).toBeNull();
+    expect(screen.getByText('Feria del Libro')).toBeTruthy();
+    expect(screen.getByText('Sin grupo')).toBeTruthy();
+    expect(screen.getByLabelText('Ver por fecha')).toBeTruthy();
+  });
+
+  it('desplegar una tarjeta muestra sus turnos y tocar uno abre su detalle', () => {
+    mockMis = q([G({ id: 1 }), G({ id: 2, oferta_fecha: '2026-06-20' })]);
+    montar('trabajador_turnos');
+    fireEvent.press(screen.getByLabelText('Ver por grupo'));
+    expect(screen.queryByTestId('shift-1')).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: /Feria del Libro/ }));
+    expect(screen.getByText('shift:1:true')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('shift-2'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/turno/2');
+  });
+
+  it('«Ver por fecha» vuelve a la lista del día', () => {
+    mockMis = q([G({ id: 1 })]);
+    montar('trabajador_turnos');
+    fireEvent.press(screen.getByLabelText('Ver por grupo'));
+    fireEvent.press(screen.getByLabelText('Ver por fecha'));
+    expect(screen.getByTestId('weekstrip')).toBeTruthy();
+    expect(screen.getByTestId('shift-1')).toBeTruthy();
+  });
+
+  it('en la pestaña Disponibles la vista por grupo no afecta a las ofertas', () => {
+    mockMis = q([G({ id: 1 })]);
+    mockOfertas = q({ data: [OFERTA({ id: 7 })] });
+    montar('trabajador_turnos');
+    fireEvent.press(screen.getByLabelText('Ver por grupo'));
+    fireEvent.press(screen.getAllByRole('tab')[1]);
+    expect(screen.getByTestId('weekstrip')).toBeTruthy();
+  });
+
+  it('en la vista mes se esconde el botón de grupos', () => {
+    mockMis = q([G({ id: 1 })]);
+    montar('trabajador_turnos');
+    fireEvent.press(screen.getByLabelText('Ver mes'));
+    expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
+  });
+});
