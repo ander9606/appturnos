@@ -5,10 +5,10 @@ import { SkeletonDetail } from '@/shared/components/Skeleton';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
-import { fmtDate } from '@/shared/lib/format';
 import { useCambiarEstadoGrupo, useGrupo } from '../hooks/useGrupos';
 import { FaseChip } from '../components/FaseChip';
 import { DuplicarTurnoModal } from '../components/DuplicarTurnoModal';
+import { FilaTurno } from '../components/FilaTurno';
 import { EditarGrupoModal } from '../components/EditarGrupoModal';
 import { useOpcionesGrupos } from '@/modules/configuracion/hooks/useConfiguracion';
 import { avisoDeCierre, subtituloGrupo, ultimoTurnoCopiable } from '../grupoUtils';
@@ -77,21 +77,7 @@ export function GrupoDetailPage() {
         <EmptyState title="Todavía no hay turnos" message="Usa «Agregar turno» para crear el primero." />
       ) : (
         <ul className="flex flex-col gap-2 mb-6">
-          {g.turnos.map(t => {
-            const cancelado = t.estado === 'cancelada';
-            return (
-              <li key={t.id}>
-                <Link to={`/turnos/${t.id}`} className="block bg-card border border-border rounded-xl px-4 py-3 hover:border-primary/50 transition-colors">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">{fmtDate(t.fecha)}</p>
-                  <p className={`font-semibold ${cancelado ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{t.titulo}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t.hora_inicio.slice(0, 5)}{t.hora_fin_estimada ? ` – ${t.hora_fin_estimada.slice(0, 5)}` : ''}{t.fin_dia_siguiente ? ' (día sig.)' : ''}
-                    {cancelado ? ' · Cancelado' : ` · ${t.plazas_cubiertas} de ${t.plazas} plazas cubiertas`}
-                  </p>
-                </Link>
-              </li>
-            );
-          })}
+          {g.turnos.map(t => <li key={t.id}><FilaTurno turno={t} /></li>)}
         </ul>
       )}
 

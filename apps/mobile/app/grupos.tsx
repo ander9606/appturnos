@@ -11,6 +11,7 @@ import { COLORS } from '@/lib/designTokens';
 import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { EditarGrupoModal } from '@/features/grupos/EditarGrupoModal';
 import { GrupoCard } from '@/features/grupos/GrupoCard';
+import { TurnosDelGrupo } from '@/features/grupos/TurnosDelGrupo';
 import { useGrupos } from '@/features/grupos/useGrupos';
 import type { GrupoTurno } from '@api-client';
 
@@ -26,6 +27,9 @@ export default function GruposScreen() {
   const [pestana, setPestana] = useState<Pestana>('activo');
   const { usa, etiqueta, isLoading: cargandoOpciones } = useOpcionesGrupos();
   const [editando, setEditando] = useState<GrupoTurno | null>(null);
+  // Grupos desplegados (se pueden ver varios a la vez).
+  const [abiertos, setAbiertos] = useState<number[]>([]);
+  const alternar = (id: number) => setAbiertos((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]));
   const grupos = useGrupos(pestana, usa);
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
@@ -41,7 +45,11 @@ export default function GruposScreen() {
         data={grupos.data ?? []}
         keyExtractor={(g) => String(g.id)}
         contentContainerStyle={{ padding: 16, paddingBottom: 96, gap: 12 }}
-        renderItem={({ item }) => <GrupoCard grupo={item} onVer={() => router.push(`/grupo/${item.id}`)} onEditar={() => setEditando(item)} />}
+        renderItem={({ item }) => (
+          <GrupoCard grupo={item} expandido={abiertos.includes(item.id)} onToggle={() => alternar(item.id)} onEditar={() => setEditando(item)}>
+            <TurnosDelGrupo grupoId={item.id} estado={item.estado} />
+          </GrupoCard>
+        )}
         refreshing={grupos.isRefetching}
         onRefresh={() => grupos.refetch()}
         ListEmptyComponent={
