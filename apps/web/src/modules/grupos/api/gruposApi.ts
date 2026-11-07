@@ -1,10 +1,13 @@
 import { api } from '@/shared/api/axios';
-import type { CrearGrupoPayload, EstadoGrupo, GrupoTurno, GrupoTurnoDetalle } from '../types';
+import type { ActualizarGrupoPayload, CrearGrupoPayload, EstadoGrupo, GrupoTurno, GrupoTurnoDetalle } from '../types';
 
 export const gruposApi = {
   /** Por defecto solo los activos; los cerrados no reciben turnos nuevos. */
   listar: (estado: EstadoGrupo | 'todos' = 'activo') =>
     api.get<{ data: GrupoTurno[] }>(`/grupos-turno?estado=${estado}`).then(r => r.data),
+  /** Cambia nombre, descripción o lugar por defecto (los turnos que ya tiene no cambian). 409 si el nombre ya existe. */
+  actualizar: (id: number, data: ActualizarGrupoPayload) =>
+    api.patch<{ data: GrupoTurno }>(`/grupos-turno/${id}`, data).then(r => r.data),
   /** Resumen del grupo y sus turnos ordenados por fecha. */
   obtener: (id: number) => api.get<{ data: GrupoTurnoDetalle }>(`/grupos-turno/${id}`).then(r => r.data),
   /** 409 si tiene turnos sin terminar o con alguien trabajando: el mensaje del servidor dice cuál. */

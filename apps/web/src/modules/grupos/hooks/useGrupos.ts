@@ -3,7 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { gruposApi } from '../api/gruposApi';
 import { avisoDeCierre } from '../grupoUtils';
-import type { EstadoGrupo } from '../types';
+import type { ActualizarGrupoPayload, EstadoGrupo } from '../types';
 
 /** Clave de las consultas de grupos: sirve de prefijo para invalidarlas todas. */
 export const GRUPOS_KEY = ['grupos-turno'] as const;
@@ -49,5 +49,14 @@ export function useCambiarEstadoGrupo() {
       if (avisoDeCierre(err)) return; // no es un fallo: la página pregunta si cerrar de todos modos
       toast.error(axios.isAxiosError(err) ? (err.response?.data?.message as string | undefined) ?? 'No se pudo completar.' : 'No se pudo completar.');
     },
+  });
+}
+
+/** Guardar los cambios de un grupo. Sin toast de error propio: el formulario maneja el 409 de nombre repetido. */
+export function useActualizarGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: ActualizarGrupoPayload }) => gruposApi.actualizar(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: GRUPOS_KEY }); toast.success('Cambios guardados'); },
   });
 }

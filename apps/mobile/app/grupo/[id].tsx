@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiError, esAvisoCierre } from '@api-client';
-import type { TurnoDeGrupo } from '@api-client';
 import { useRoleGuard } from '@/components/RoleGuard';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -14,33 +13,13 @@ import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
 import { confirm } from '@/lib/confirmDialog';
 import { COLORS } from '@/lib/designTokens';
-import { formatTimeRange } from '@/lib/formatters';
-import { fmtDate } from '@/features/turnos/oferta/fechasOferta';
 import { DuplicarOfertaModal } from '@/features/turnos/oferta/DuplicarOfertaModal';
 import { FaseChip } from '@/features/grupos/FaseGrupo';
+import { FilaTurno } from '@/features/grupos/FilaTurno';
+import { EditarGrupoModal } from '@/features/grupos/EditarGrupoModal';
+import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { rangoDeFechas, subtituloGrupo, ultimoTurnoCopiable } from '@/features/grupos/grupoUtils';
 import { useCambiarEstadoGrupo, useGrupo } from '@/features/grupos/useGrupos';
-
-function FilaTurno({ turno, onPress }: { turno: TurnoDeGrupo; onPress: () => void }) {
-  const cancelado = turno.estado === 'cancelada';
-  const horario = turno.hora_fin_estimada ? formatTimeRange(turno.hora_inicio, turno.hora_fin_estimada) : turno.hora_inicio.slice(0, 5);
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      className="bg-card border border-border rounded-2xl p-4 gap-1 active:opacity-70"
-    >
-      <Text className="text-xs font-semibold text-muted-foreground uppercase">{fmtDate(turno.fecha)}</Text>
-      <Text className={`text-base font-bold ${cancelado ? 'text-muted-foreground line-through' : 'text-foreground'}`} numberOfLines={2}>
-        {turno.titulo}
-      </Text>
-      <Text className="text-sm text-muted-foreground">
-        {horario}{turno.fin_dia_siguiente ? ' (día sig.)' : ''}
-        {cancelado ? ' · Cancelado' : ` · ${turno.plazas_cubiertas} de ${turno.plazas} plazas cubiertas`}
-      </Text>
-    </Pressable>
-  );
-}
 
 /** Detalle de un grupo: sus datos, sus turnos por fecha y las acciones rápidas (agregar, duplicar, cerrar). */
 export default function GrupoDetalleScreen() {
@@ -50,6 +29,8 @@ export default function GrupoDetalleScreen() {
   const grupo = useGrupo(grupoId);
   const cambiarEstado = useCambiarEstadoGrupo();
   const [duplicando, setDuplicando] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const { etiqueta } = useOpcionesGrupos();
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
 
@@ -114,6 +95,10 @@ export default function GrupoDetalleScreen() {
               {g.descripcion ? <Text className="text-sm text-foreground">{g.descripcion}</Text> : null}
             </View>
 
+            <View className="gap-2">
+              <Button label="Editar" variant="ghost" fullWidth onPress={() => setEditando(true)} />
+            </View>
+
             {!cerrado && (
               <View className="gap-2">
                 <Button
@@ -145,6 +130,7 @@ export default function GrupoDetalleScreen() {
             />
           </ScrollView>
         )}
+        {g && <EditarGrupoModal visible={editando} grupo={g} etiqueta={etiqueta} onClose={() => setEditando(false)} />}
         {ultimo && (
           <DuplicarOfertaModal visible={duplicando} oferta={{ id: ultimo.id, hora_inicio: ultimo.hora_inicio }} onClose={() => setDuplicando(false)} />
         )}

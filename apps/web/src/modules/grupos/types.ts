@@ -52,3 +52,13 @@ export interface CrearGrupoPayload {
   latitud?: number;
   longitud?: number;
 }
+
+/** `null` quita el valor. Para quitar el lugar hay que mandar lugar, lugar_alias, latitud y longitud en null. */
+export interface ActualizarGrupoPayload {
+  nombre?: string;
+  descripcion?: string | null;
+  lugar?: string | null;
+  lugar_alias?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
+}
