@@ -8,13 +8,17 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { COLORS } from '@/lib/designTokens';
 import { useGrupos } from './useGrupos';
-import { subtituloGrupo } from './grupoUtils';
+import { usePeriodos } from '@/features/nomina/useNomina';
+import { coincideBusqueda, grupoEnPeriodo, periodoDeFecha, periodoQueContiene, subtituloGrupo } from './grupoUtils';
+import { bogotaToday, formatShortDate } from '@/lib/formatters';
 
 type Props = {
   visible: boolean;
   /** Cómo llama la empresa a un grupo ("Evento", "Obra"…): va de título, sin artículo, para que sirva con cualquier nombre. */
   etiqueta: string;
   seleccionadoId?: number;
+  /** Fecha del turno (YYYY-MM-DD): define el período de facturación que se muestra por defecto. Sin ella, hoy. */
+  fecha?: string;
   onSelect: (g: GrupoTurno) => void;
   onCrear: () => void;
   onClose: () => void;
@@ -24,15 +28,24 @@ type Props = {
 const MIN_PARA_BUSCAR = 6;
 
 /** Lista de grupos activos para vincular un turno. Los cerrados no aparecen: no reciben turnos nuevos. */
-export function ElegirGrupoModal({ visible, etiqueta, seleccionadoId, onSelect, onCrear, onClose }: Props) {
+export function ElegirGrupoModal({ visible, etiqueta, seleccionadoId, fecha, onSelect, onCrear, onClose }: Props) {
   const [busqueda, setBusqueda] = useState('');
+  const [verTodos, setVerTodos] = useState(false);
   const { data: grupos = [], isLoading, isError, error, refetch } = useGrupos('activo', visible);
 
-  const filtrados = useMemo(
-    () => grupos.filter((g) => g.nombre.toLowerCase().includes(busqueda.trim().toLowerCase())),
-    [grupos, busqueda],
-  );
-  const cerrar = () => { setBusqueda(''); onClose(); };
+  const dia = fecha ?? bogotaToday();
+  // El período real de la empresa (semanal, quincenal o mensual); si el servidor no lo trae, la quincena como aproximación.
+  const { data: periodos } = usePeriodos(undefined, visible, { fechaDesde: dia, fechaHasta: dia });
+  const periodo = useMemo(() => periodoQueContiene(periodos?.data, dia) ?? periodoDeFecha(dia), [periodos, dia]);
+  const buscando = busqueda.trim() !== '';
+  // Por defecto solo los grupos con turnos en el período: con cientos de grupos el resto es ruido. Buscar o «Ver todos» llega a cualquiera.
+  const filtrados = useMemo(() => {
+    if (buscando) return grupos.filter((g) => coincideBusqueda(g, busqueda));
+    if (verTodos) return grupos;
+    return grupos.filter((g) => grupoEnPeriodo(g, periodo) || g.id === seleccionadoId);
+  }, [grupos, busqueda, buscando, verTodos, periodo, seleccionadoId]);
+  const ocultos = grupos.length - filtrados.length;
+  const cerrar = () => { setBusqueda(''); setVerTodos(false); onClose(); };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={cerrar}>
@@ -55,7 +68,7 @@ export function ElegirGrupoModal({ visible, etiqueta, seleccionadoId, onSelect, 
             <Text className="text-sm font-semibold text-primary-600 flex-1">Crear</Text>
           </TouchableOpacity>
 
-          {grupos.length >= MIN_PARA_BUSCAR && (
+          {(grupos.length >= MIN_PARA_BUSCAR || ocultos > 0 || verTodos || buscando) && (
             <View className="mx-5 mb-3 flex-row items-center bg-muted rounded-2xl px-3 gap-2">
               <Ionicons name="search-outline" size={16} color={COLORS.mutedForeground} />
               <TextInput
@@ -66,6 +79,20 @@ export function ElegirGrupoModal({ visible, etiqueta, seleccionadoId, onSelect, 
                 onChangeText={setBusqueda}
               />
             </View>
+          )}
+
+          {!buscando && !isLoading && !isError && (ocultos > 0 || verTodos) && (
+            <TouchableOpacity
+              onPress={() => setVerTodos((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={verTodos ? 'Ver solo este período' : `Ver todos (${grupos.length})`}
+              className="mx-5 mb-2 flex-row items-center justify-between active:opacity-70"
+            >
+              <Text className="text-xs text-muted-foreground flex-1" numberOfLines={1}>
+                {verTodos ? 'Mostrando todos' : `Con turnos del ${formatShortDate(periodo.desde)} al ${formatShortDate(periodo.hasta)}`}
+              </Text>
+              <Text className="text-xs font-semibold text-primary-600">{verTodos ? 'Solo este período' : `Ver todos (${grupos.length})`}</Text>
+            </TouchableOpacity>
           )}
 
           {isLoading ? (
@@ -81,8 +108,10 @@ export function ElegirGrupoModal({ visible, etiqueta, seleccionadoId, onSelect, 
               ListEmptyComponent={
                 grupos.length === 0 ? (
                   <EmptyState compact title="Todavía no hay nada" message="Usa «Crear» para empezar." />
-                ) : (
+                ) : buscando ? (
                   <EmptyState compact variant="search" title="Sin resultados" />
+                ) : (
+                  <EmptyState compact title="Nada en este período" message="Usa «Ver todos» o el buscador para llegar a los demás." />
                 )
               }
               renderItem={({ item }) => {

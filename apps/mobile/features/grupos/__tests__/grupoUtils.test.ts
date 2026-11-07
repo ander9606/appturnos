@@ -122,3 +122,54 @@ describe('cambiosDeGrupo / formularioDeGrupo (editar un grupo)', () => {
       .toEqual({ nombre: 'Feria', descripcion: 'x', lugar: 'C', lugarAlias: 'A', latitud: 4.63, longitud: -74.09 });
   });
 });
+
+describe('período de facturación en el selector', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { periodoDeFecha, grupoEnPeriodo, coincideBusqueda } = require('../grupoUtils');
+
+  test('periodoDeFecha: quincenas, fin de mes y febrero bisiesto', () => {
+    expect(periodoDeFecha('2026-11-15')).toEqual({ desde: '2026-11-01', hasta: '2026-11-15' });
+    expect(periodoDeFecha('2026-11-16')).toEqual({ desde: '2026-11-16', hasta: '2026-11-30' });
+    expect(periodoDeFecha('2026-12-31')).toEqual({ desde: '2026-12-16', hasta: '2026-12-31' });
+    expect(periodoDeFecha('2028-02-20')).toEqual({ desde: '2028-02-16', hasta: '2028-02-29' });
+  });
+
+  test('grupoEnPeriodo: traslape en cualquier borde, y sin turnos siempre cuenta', () => {
+    const p = { desde: '2026-11-01', hasta: '2026-11-15' };
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-11-15', fecha_fin: '2026-11-20' }, p)).toBe(true); // empieza el último día
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-10-20', fecha_fin: '2026-11-01' }, p)).toBe(true); // termina el primer día
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-10-01', fecha_fin: '2026-12-01' }, p)).toBe(true); // lo cubre entero
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-11-16', fecha_fin: '2026-11-20' }, p)).toBe(false);
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-10-01', fecha_fin: '2026-10-31' }, p)).toBe(false);
+    expect(grupoEnPeriodo({ fecha_inicio: null, fecha_fin: null }, p)).toBe(true);
+  });
+
+  test('coincideBusqueda: nombre, alias o lugar; sin tildes ni mayúsculas; vacío coincide con todo', () => {
+    const g = { nombre: 'Feria del Libro', lugar: 'Corferias, Bogotá', lugar_alias: 'Ágora' };
+    expect(coincideBusqueda(g, 'LIBRO')).toBe(true);
+    expect(coincideBusqueda(g, 'bogota')).toBe(true);
+    expect(coincideBusqueda(g, 'agora')).toBe(true);
+    expect(coincideBusqueda(g, '   ')).toBe(true);
+    expect(coincideBusqueda(g, 'concierto')).toBe(false);
+    expect(coincideBusqueda({ nombre: 'X', lugar: null }, 'x')).toBe(true);
+  });
+});
+
+describe('periodoQueContiene (ciclo real de la empresa)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { periodoQueContiene } = require('../grupoUtils');
+  const semana = { fecha_inicio: '2026-11-09', fecha_fin: '2026-11-15' };
+  const mes = { fecha_inicio: '2026-11-01T00:00:00.000Z', fecha_fin: '2026-11-30T00:00:00.000Z' };
+
+  test('devuelve el período que cubre la fecha, bordes incluidos, y acepta fechas con hora', () => {
+    expect(periodoQueContiene([semana], '2026-11-09')).toEqual({ desde: '2026-11-09', hasta: '2026-11-15' });
+    expect(periodoQueContiene([semana], '2026-11-15')).toEqual({ desde: '2026-11-09', hasta: '2026-11-15' });
+    expect(periodoQueContiene([mes], '2026-11-30')).toEqual({ desde: '2026-11-01', hasta: '2026-11-30' });
+  });
+
+  test('null si ninguno la cubre o no hay lista (el selector cae a la quincena)', () => {
+    expect(periodoQueContiene([semana], '2026-11-16')).toBeNull();
+    expect(periodoQueContiene([], '2026-11-10')).toBeNull();
+    expect(periodoQueContiene(undefined, '2026-11-10')).toBeNull();
+  });
+});

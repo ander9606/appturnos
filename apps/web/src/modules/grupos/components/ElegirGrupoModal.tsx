@@ -5,13 +5,17 @@ import { EmptyState } from '@/shared/components/EmptyState';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { SkeletonList } from '@/shared/components/Skeleton';
 import { useGrupos } from '../hooks/useGrupos';
-import { subtituloGrupo } from '../grupoUtils';
+import { bogotaToday, fmtDate } from '@/shared/lib/format';
+import { usePeriodos } from '@/modules/nomina/hooks/useNomina';
+import { coincideBusqueda, grupoEnPeriodo, periodoDeFecha, periodoQueContiene, subtituloGrupo } from '../grupoUtils';
 import type { GrupoTurno } from '../types';
 
 interface Props {
   /** Cómo llama la empresa a un grupo ("Evento", "Obra"…): va de título, sin artículo, para que sirva con cualquier nombre. */
   etiqueta: string;
   seleccionadoId?: number;
+  /** Fecha del turno (YYYY-MM-DD): define el período de facturación que se muestra por defecto. Sin ella, hoy. */
+  fecha?: string;
   onSelect: (g: GrupoTurno) => void;
   onCrear: () => void;
   onClose: () => void;
@@ -21,14 +25,23 @@ interface Props {
 const MIN_PARA_BUSCAR = 6;
 
 /** Lista de grupos activos para vincular un turno. Los cerrados no aparecen: no reciben turnos nuevos. */
-export function ElegirGrupoModal({ etiqueta, seleccionadoId, onSelect, onCrear, onClose }: Props) {
+export function ElegirGrupoModal({ etiqueta, seleccionadoId, fecha, onSelect, onCrear, onClose }: Props) {
   const [busqueda, setBusqueda] = useState('');
+  const [verTodos, setVerTodos] = useState(false);
   const { data, isLoading, isError, error, refetch } = useGrupos('activo');
   const grupos = useMemo(() => data?.data ?? [], [data]);
+  const dia = fecha || bogotaToday();
+  // El período real de la empresa (semanal, quincenal o mensual); si el servidor no lo trae, la quincena como aproximación.
+  const { data: periodos } = usePeriodos(undefined, false, { fechaDesde: dia, fechaHasta: dia });
+  const periodo = useMemo(() => periodoQueContiene(periodos?.data, dia) ?? periodoDeFecha(dia), [periodos, dia]);
+  const buscando = busqueda.trim() !== '';
+  // Por defecto solo los grupos con turnos en el período: con cientos de grupos el resto es ruido. Buscar o «Ver todos» llega a cualquiera.
   const filtrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
-    return q ? grupos.filter(g => g.nombre.toLowerCase().includes(q)) : grupos;
-  }, [grupos, busqueda]);
+    if (buscando) return grupos.filter(g => coincideBusqueda(g, busqueda));
+    if (verTodos) return grupos;
+    return grupos.filter(g => grupoEnPeriodo(g, periodo) || g.id === seleccionadoId);
+  }, [grupos, busqueda, buscando, verTodos, periodo, seleccionadoId]);
+  const ocultos = grupos.length - filtrados.length;
 
   return (
     <Modal onClose={onClose} padded={false} className="flex flex-col max-h-[80vh]">
@@ -53,7 +66,7 @@ export function ElegirGrupoModal({ etiqueta, seleccionadoId, onSelect, onCrear, 
         <Plus size={16} /> Crear
       </button>
 
-      {grupos.length >= MIN_PARA_BUSCAR && (
+      {(grupos.length >= MIN_PARA_BUSCAR || ocultos > 0 || verTodos || buscando) && (
         <div className="mx-5 mb-3 flex items-center gap-2 border border-border rounded-lg px-3 py-2">
           <Search size={14} className="text-muted-foreground flex-shrink-0" />
           <input
@@ -67,6 +80,17 @@ export function ElegirGrupoModal({ etiqueta, seleccionadoId, onSelect, onCrear, 
         </div>
       )}
 
+      {!buscando && !isLoading && !isError && (ocultos > 0 || verTodos) && (
+        <div className="mx-5 mb-2 flex items-center justify-between gap-2 text-xs">
+          <span className="text-muted-foreground truncate">
+            {verTodos ? 'Mostrando todos' : `Con turnos del ${fmtDate(periodo.desde)} al ${fmtDate(periodo.hasta)}`}
+          </span>
+          <button type="button" onClick={() => setVerTodos(v => !v)} className="font-semibold text-primary-600 hover:underline flex-shrink-0">
+            {verTodos ? 'Solo este período' : `Ver todos (${grupos.length})`}
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto px-5 pb-5">
         {isLoading ? (
           <SkeletonList count={3} />
@@ -75,7 +99,9 @@ export function ElegirGrupoModal({ etiqueta, seleccionadoId, onSelect, onCrear, 
         ) : filtrados.length === 0 ? (
           grupos.length === 0
             ? <EmptyState title="Todavía no hay nada" message="Usa «Crear» para empezar." />
-            : <EmptyState title="Sin resultados" variant="search" />
+            : buscando
+              ? <EmptyState title="Sin resultados" variant="search" />
+              : <EmptyState title="Nada en este período" message="Usa «Ver todos» o el buscador para llegar a los demás." />
         ) : (
           filtrados.map(g => {
             const activo = g.id === seleccionadoId;

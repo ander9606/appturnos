@@ -9,6 +9,8 @@ import type { GrupoElegido } from '../types';
 interface Props {
   grupo: GrupoElegido | null;
   onChange: (g: GrupoElegido | null) => void;
+  /** Fecha del turno (YYYY-MM-DD): el selector muestra primero los grupos de su período de facturación. */
+  fecha?: string;
 }
 
 /**
@@ -16,7 +18,7 @@ interface Props {
  * de la empresa como título del campo ("Evento", "Obra"…) y textos sin artículo, para que funcione igual con
  * cualquier nombre (en español "un evento" pero "una obra").
  */
-export function GrupoSelector({ grupo, onChange }: Props) {
+export function GrupoSelector({ grupo, onChange, fecha }: Props) {
   const { usa, etiqueta } = useOpcionesGrupos();
   const [lista, setLista] = useState(false);
   const [crear, setCrear] = useState(false);
@@ -61,6 +63,7 @@ export function GrupoSelector({ grupo, onChange }: Props) {
         <ElegirGrupoModal
           etiqueta={etiqueta}
           seleccionadoId={grupo?.id}
+          fecha={fecha}
           onSelect={g => { onChange(aElegido(g)); setLista(false); }}
           onCrear={() => { setLista(false); setCrear(true); }}
           onClose={() => setLista(false)}

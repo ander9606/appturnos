@@ -101,3 +101,44 @@ export function formularioDeGrupo(g: Pick<GrupoTurno, 'nombre' | 'descripcion' |
     longitud: g.longitud == null ? null : Number(g.longitud),
   };
 }
+
+/**
+ * Aproximación del período de facturación para una fecha (YYYY-MM-DD): quincena 1–15 o 16–fin de mes.
+ * Solo se usa cuando el servidor no devuelve el período real (ver periodoQueContiene).
+ */
+export function periodoDeFecha(iso: string): { desde: string; hasta: string } {
+  const [y, m, d] = iso.split('-').map(Number);
+  const ultimo = new Date(y, m, 0).getDate();
+  const mm = String(m).padStart(2, '0');
+  return d <= 15
+    ? { desde: `${y}-${mm}-01`, hasta: `${y}-${mm}-15` }
+    : { desde: `${y}-${mm}-16`, hasta: `${y}-${mm}-${ultimo}` };
+}
+
+/**
+ * Período de facturación real de la empresa que contiene la fecha, entre los que devuelve el servidor; null si
+ * ninguno la cubre (p. ej. un período futuro que aún no se creó) y entonces se usa la quincena como aproximación.
+ */
+export function periodoQueContiene(periodos: { fecha_inicio: string; fecha_fin: string }[] | undefined, iso: string): { desde: string; hasta: string } | null {
+  for (const p of periodos ?? []) {
+    const desde = p.fecha_inicio.slice(0, 10);
+    const hasta = p.fecha_fin.slice(0, 10);
+    if (desde <= iso && iso <= hasta) return { desde, hasta };
+  }
+  return null;
+}
+
+/** ¿El grupo tiene turnos dentro del período? Uno recién creado (sin turnos) también cuenta: es el que se va a usar. */
+export function grupoEnPeriodo(g: Pick<GrupoTurno, 'fecha_inicio' | 'fecha_fin'>, p: { desde: string; hasta: string }): boolean {
+  if (!g.fecha_inicio || !g.fecha_fin) return true;
+  return g.fecha_inicio <= p.hasta && g.fecha_fin >= p.desde;
+}
+
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/** Búsqueda por nombre o lugar, sin distinguir mayúsculas ni tildes. */
+export function coincideBusqueda(g: Pick<GrupoTurno, 'nombre' | 'lugar' | 'lugar_alias'>, texto: string): boolean {
+  const q = sinTildes(texto.trim());
+  if (!q) return true;
+  return sinTildes(`${g.nombre} ${g.lugar_alias ?? ''} ${g.lugar ?? ''}`).includes(q);
+}
