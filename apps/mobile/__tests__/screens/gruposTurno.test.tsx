@@ -21,12 +21,18 @@ jest.mock('@/components/ui/PlanetIllustration', () => ({ PlanetIllustration: () 
 jest.mock('@/components/RoleGuard', () => ({ useRoleGuard: () => null }));
 jest.mock('@/components/ui/Skeleton', () => {
   const { View } = require('react-native');
-  return { SkeletonList: () => <View testID="skeleton" />, SkeletonDetail: () => <View testID="skeleton" /> };
+  return { SkeletonList: () => <View testID="skeleton" />, SkeletonDetail: () => <View testID="skeleton" />, Skeleton: () => <View testID="skeleton-linea" /> };
 });
 jest.mock('@/features/turnos/oferta/DuplicarOfertaModal', () => {
   const { Text } = require('react-native');
   return { DuplicarOfertaModal: ({ visible, oferta }: { visible: boolean; oferta: { id: number } }) =>
     (visible ? <Text testID="modal-duplicar">duplicar {oferta.id}</Text> : null) };
+});
+// El formulario de edición tiene su propia prueba (EditarGrupoModal.test.tsx): aquí solo importa cuándo se abre y con qué grupo.
+jest.mock('@/features/grupos/EditarGrupoModal', () => {
+  const { Text } = require('react-native');
+  return { EditarGrupoModal: ({ visible, grupo }: { visible: boolean; grupo: { nombre: string } }) =>
+    (visible ? <Text testID="modal-editar">{`editando ${grupo.nombre}`}</Text> : null) };
 });
 const mockAlert = jest.fn();
 jest.mock('@/lib/alertDialog', () => ({ showAlert: (...a: unknown[]) => mockAlert(...a) }));
@@ -62,12 +68,108 @@ beforeEach(() => {
 });
 
 describe('lista de grupos', () => {
-  test('dibuja una tarjeta por grupo y al tocarla abre su detalle', () => {
+  test('dibuja una tarjeta por grupo, todas plegadas al principio', () => {
     mockUseGrupos.mockReturnValue(listado([grupo(), grupo({ id: 4, nombre: 'Obra Norte' })]));
     render(<GruposScreen />);
+    expect(screen.getByText('Feria del Libro')).toBeTruthy();
     expect(screen.getByText('Obra Norte')).toBeTruthy();
-    fireEvent.press(screen.getByText('Feria del Libro'));
-    expect(mockPush).toHaveBeenCalledWith('/grupo/3');
+    expect(screen.queryByText('Ocultar turnos')).toBeNull();
+    expect(mockUseGrupo).not.toHaveBeenCalled(); // los turnos no se piden hasta desplegar
+  });
+
+  test('cada tarjeta muestra "Ver N turnos" y "Editar" (abre el formulario con ese grupo)', () => {
+    mockUseGrupos.mockReturnValue(listado([grupo(), grupo({ id: 4, nombre: 'Obra Norte', total_turnos: 1 })]));
+    render(<GruposScreen />);
+    expect(screen.getByText('Ver 2 turnos')).toBeTruthy();
+    expect(screen.getByText('Ver 1 turno')).toBeTruthy(); // singular
+    expect(screen.queryByTestId('modal-editar')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Editar Obra Norte'));
+    expect(screen.getByTestId('modal-editar').props.children).toBe('editando Obra Norte');
+    expect(mockPush).not.toHaveBeenCalled(); // editar no cambia de pantalla
+  });
+
+  describe('la tarjeta se despliega y muestra sus turnos ahí mismo', () => {
+    const conTurnos = (turnos: unknown[], extra = {}) =>
+      mockUseGrupo.mockReturnValue({ data: { ...grupo(extra), turnos }, isLoading: false, isError: false, refetch: jest.fn() });
+
+    test('al tocar "Ver 2 turnos" se despliegan sus turnos sin cambiar de pantalla; "Ocultar turnos" los pliega', () => {
+      mockUseGrupos.mockReturnValue(listado([grupo()]));
+      conTurnos([turno(10, '2030-01-14'), turno(11, '2030-01-15')]);
+      render(<GruposScreen />);
+      expect(screen.queryByText('Turno 10')).toBeNull(); // plegada: no se piden ni se ven
+      expect(mockUseGrupo).not.toHaveBeenCalled();
+      fireEvent.press(screen.getByLabelText('Ver 2 turnos de Feria del Libro'));
+      expect(screen.getByText('Turno 10')).toBeTruthy();
+      expect(screen.getByText('Turno 11')).toBeTruthy();
+      expect(mockUseGrupo).toHaveBeenCalledWith(3);
+      expect(mockPush).not.toHaveBeenCalled();
+      fireEvent.press(screen.getByLabelText('Ocultar turnos de Feria del Libro'));
+      expect(screen.queryByText('Turno 10')).toBeNull();
+      expect(screen.getByText('Ver 2 turnos')).toBeTruthy();
+    });
+
+    test('tocar el cuerpo de la tarjeta también la despliega', () => {
+      mockUseGrupos.mockReturnValue(listado([grupo()]));
+      conTurnos([turno(10, '2030-01-14')]);
+      render(<GruposScreen />);
+      fireEvent.press(screen.getByLabelText(/^Feria del Libro\./));
+      expect(screen.getByText('Turno 10')).toBeTruthy();
+    });
+
+    test('se pueden desplegar varios grupos a la vez', () => {
+      mockUseGrupos.mockReturnValue(listado([grupo(), grupo({ id: 4, nombre: 'Obra Norte' })]));
+      mockUseGrupo.mockImplementation((id: number) => ({ data: { ...grupo({ id }), turnos: [turno(id * 10, '2030-01-14')] }, isLoading: false, isError: false, refetch: jest.fn() }));
+      render(<GruposScreen />);
+      fireEvent.press(screen.getByLabelText('Ver 2 turnos de Feria del Libro'));
+      fireEvent.press(screen.getByLabelText('Ver 2 turnos de Obra Norte'));
+      expect(screen.getByText('Turno 30')).toBeTruthy();
+      expect(screen.getByText('Turno 40')).toBeTruthy();
+    });
+
+    test('tocar un turno abre ese turno; "Agregar turno" abre el asistente con el grupo; "Abrir grupo" abre el detalle', () => {
+      mockUseGrupos.mockReturnValue(listado([grupo()]));
+      conTurnos([turno(10, '2030-01-14')]);
+      render(<GruposScreen />);
+      fireEvent.press(screen.getByLabelText('Ver 2 turnos de Feria del Libro'));
+      fireEvent.press(screen.getByText('Turno 10'));
+      expect(mockPush).toHaveBeenLastCalledWith('/oferta/10');
+      fireEvent.press(screen.getByText('Agregar turno'));
+      expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/turno/nuevo', params: { grupoId: '3' } });
+      fireEvent.press(screen.getByText('Abrir grupo'));
+      expect(mockPush).toHaveBeenLastCalledWith('/grupo/3');
+    });
+
+    test('un grupo sin turnos lo dice; uno cerrado no ofrece "Agregar turno"', () => {
+      mockUseGrupos.mockReturnValue(listado([grupo({ estado: 'cerrado', fase: 'cerrado', total_turnos: 0 })]));
+      conTurnos([], { estado: 'cerrado', fase: 'cerrado' });
+      render(<GruposScreen />);
+      fireEvent.press(screen.getByLabelText('Ver 0 turnos de Feria del Libro'));
+      expect(screen.getByText('Todavía no hay turnos en este grupo.')).toBeTruthy();
+      expect(screen.queryByText('Agregar turno')).toBeNull();
+      expect(screen.getByText('Abrir grupo')).toBeTruthy();
+    });
+
+    test('mientras cargan los turnos muestra un esqueleto, y si falla ofrece reintentar', () => {
+      mockUseGrupos.mockReturnValue(listado([grupo()]));
+      mockUseGrupo.mockReturnValue({ data: undefined, isLoading: true, isError: false, refetch: jest.fn() });
+      const { unmount } = render(<GruposScreen />);
+      fireEvent.press(screen.getByLabelText('Ver 2 turnos de Feria del Libro'));
+      expect(screen.getByLabelText('Cargando turnos')).toBeTruthy();
+      unmount();
+      const refetch = jest.fn();
+      mockUseGrupo.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: new Error('x'), refetch });
+      render(<GruposScreen />);
+      fireEvent.press(screen.getByLabelText('Ver 2 turnos de Feria del Libro'));
+      fireEvent.press(screen.getByText('Reintentar'));
+      expect(refetch).toHaveBeenCalled();
+    });
+  });
+
+  test('en la tarjeta se muestra el nombre corto del lugar si lo tiene', () => {
+    mockUseGrupos.mockReturnValue(listado([grupo({ lugar: 'Corferias, Carrera 37, Quinta Paredes, Bogotá, Colombia', lugar_alias: 'Corferias' })]));
+    render(<GruposScreen />);
+    expect(screen.getByText('Corferias')).toBeTruthy();
+    expect(screen.queryByText(/Quinta Paredes/)).toBeNull();
   });
 
   test('con la función apagada avisa y no pide los grupos', () => {
@@ -100,6 +202,17 @@ describe('detalle de un grupo', () => {
     expect(screen.getByText('Turno 11')).toBeTruthy();
     fireEvent.press(screen.getByText('Turno 10'));
     expect(mockPush).toHaveBeenCalledWith('/oferta/10');
+  });
+
+  test('"Editar" abre el formulario con este grupo, también si el grupo está cerrado', () => {
+    detalle();
+    const { unmount } = render(<GrupoDetalleScreen />);
+    fireEvent.press(screen.getByText('Editar'));
+    expect(screen.getByTestId('modal-editar').props.children).toBe('editando Feria del Libro');
+    unmount();
+    detalle({ estado: 'cerrado', fase: 'cerrado' });
+    render(<GrupoDetalleScreen />);
+    expect(screen.getByText('Editar')).toBeTruthy();
   });
 
   test('"Agregar turno" abre el asistente con el grupo preseleccionado', () => {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { gruposTurnoApi } from '@api-client';
-import type { CrearGrupoPayload, EstadoGrupo } from '@api-client';
+import type { ActualizarGrupoPayload, CrearGrupoPayload, EstadoGrupo } from '@api-client';
 
 /** Clave de las consultas de grupos: sirve de prefijo para invalidarlas todas. */
 export const GRUPOS_KEY = ['grupos-turno'] as const;
@@ -37,6 +37,15 @@ export function useCrearGrupo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: CrearGrupoPayload) => gruposTurnoApi.crear(payload),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: GRUPOS_KEY }); },
+  });
+}
+
+/** Guardar los cambios de un grupo (nombre, descripción, lugar). Refresca la lista y el detalle (cuelgan de GRUPOS_KEY). */
+export function useActualizarGrupo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: ActualizarGrupoPayload }) => gruposTurnoApi.actualizar(id, payload),
     onSuccess: () => { qc.invalidateQueries({ queryKey: GRUPOS_KEY }); },
   });
 }

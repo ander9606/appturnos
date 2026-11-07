@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { ArrowLeft, MapPin, Plus, Copy } from 'lucide-react';
+import { ArrowLeft, MapPin, Plus, Copy, Pencil } from 'lucide-react';
 import { SkeletonDetail } from '@/shared/components/Skeleton';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
 import { ConfirmModal } from '@/shared/components/ConfirmModal';
-import { fmtDate } from '@/shared/lib/format';
 import { useCambiarEstadoGrupo, useGrupo } from '../hooks/useGrupos';
 import { FaseChip } from '../components/FaseChip';
 import { DuplicarTurnoModal } from '../components/DuplicarTurnoModal';
+import { FilaTurno } from '../components/FilaTurno';
+import { EditarGrupoModal } from '../components/EditarGrupoModal';
+import { useOpcionesGrupos } from '@/modules/configuracion/hooks/useConfiguracion';
 import { avisoDeCierre, subtituloGrupo, ultimoTurnoCopiable } from '../grupoUtils';
 
 /** Detalle de un grupo: sus datos, sus turnos por fecha y las acciones rápidas (agregar, duplicar, cerrar). */
@@ -19,6 +21,8 @@ export function GrupoDetailPage() {
   const { data, isLoading, isError, error, refetch } = useGrupo(grupoId);
   const cambiarEstado = useCambiarEstadoGrupo();
   const [duplicando, setDuplicando] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const { etiqueta } = useOpcionesGrupos();
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
   // Texto del aviso "hay contratos sin firmar": si el usuario insiste, se cierra igual.
   const [avisoPagos, setAvisoPagos] = useState<string | null>(null);
@@ -49,6 +53,9 @@ export function GrupoDetailPage() {
             {g.descripcion && <p className="text-sm text-foreground mt-2">{g.descripcion}</p>}
           </div>
           <div className="flex gap-2 flex-shrink-0">
+            <button type="button" onClick={() => setEditando(true)} className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+              <Pencil size={15} /> Editar
+            </button>
             {!cerrado && (
               <>
                 {ultimo && (
@@ -70,21 +77,7 @@ export function GrupoDetailPage() {
         <EmptyState title="Todavía no hay turnos" message="Usa «Agregar turno» para crear el primero." />
       ) : (
         <ul className="flex flex-col gap-2 mb-6">
-          {g.turnos.map(t => {
-            const cancelado = t.estado === 'cancelada';
-            return (
-              <li key={t.id}>
-                <Link to={`/turnos/${t.id}`} className="block bg-card border border-border rounded-xl px-4 py-3 hover:border-primary/50 transition-colors">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">{fmtDate(t.fecha)}</p>
-                  <p className={`font-semibold ${cancelado ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{t.titulo}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t.hora_inicio.slice(0, 5)}{t.hora_fin_estimada ? ` – ${t.hora_fin_estimada.slice(0, 5)}` : ''}{t.fin_dia_siguiente ? ' (día sig.)' : ''}
-                    {cancelado ? ' · Cancelado' : ` · ${t.plazas_cubiertas} de ${t.plazas} plazas cubiertas`}
-                  </p>
-                </Link>
-              </li>
-            );
-          })}
+          {g.turnos.map(t => <li key={t.id}><FilaTurno turno={t} /></li>)}
         </ul>
       )}
 
@@ -97,6 +90,7 @@ export function GrupoDetailPage() {
         {cerrado ? 'Reabrir grupo' : 'Cerrar grupo'}
       </button>
 
+      {editando && <EditarGrupoModal grupo={g} etiqueta={etiqueta} onClose={() => setEditando(false)} />}
       {duplicando && ultimo && <DuplicarTurnoModal turno={ultimo} onClose={() => setDuplicando(false)} />}
       {confirmandoCierre && (
         <ConfirmModal

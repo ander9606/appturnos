@@ -3,7 +3,7 @@
 // La cuenta de cobro agrupa los ítems por grupo de turnos, con un subtotal por grupo. Si ningún ítem tiene grupo
 // (empresas que no usan grupos) devuelve null y el PDF se dibuja como siempre.
 const { PassThrough } = require('stream');
-const { agruparItemsPorGrupo, generarCuentaCobroPdf } = require('../utils/cuentaCobroPdf');
+const { agruparItemsPorGrupo, avanceGrupo, generarCuentaCobroPdf } = require('../utils/cuentaCobroPdf');
 
 const item = (n, valor, extra = {}) => ({
   asignacion_id: n, fecha: `2030-01-0${n}`, descripcion: `Turno ${n}`, horas: 8, valor_base: valor,
@@ -71,5 +71,51 @@ describe('generarCuentaCobroPdf', () => {
       const pdf = await genera(cuenta(items));
       expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     }
+  });
+});
+
+describe('avanceGrupo (grupo partido entre dos cuentas)', () => {
+  test('sin datos de avance o con el grupo completo no dice nada (el PDF queda como siempre)', () => {
+    expect(avanceGrupo(null)).toBeNull();
+    expect(avanceGrupo({ total: 4, en_periodo: 4, despues: 0, proxima: null })).toBeNull();
+  });
+
+  test('3 de 4 con el último turno el 16: avisa que queda para la siguiente cuenta', () => {
+    const a = avanceGrupo({ total: 4, en_periodo: 3, despues: 1, proxima: '2030-01-16' });
+    expect(a.titulo).toBe('3 de 4 turnos');
+    expect(a.nota).toMatch(/^1 turno queda para la siguiente cuenta \(desde el 16/);
+  });
+
+  test('la cuenta siguiente (1 de 4) cuenta los turnos de cuentas anteriores', () => {
+    const a = avanceGrupo({ total: 4, en_periodo: 1, despues: 0, proxima: null });
+    expect(a.titulo).toBe('1 de 4 turnos');
+    expect(a.nota).toBe('3 turnos en cuentas anteriores');
+  });
+
+  test('grupo en el medio: anteriores y siguientes a la vez', () => {
+    const a = avanceGrupo({ total: 5, en_periodo: 2, despues: 2, proxima: '2030-02-01' });
+    expect(a.nota).toMatch(/^1 turno en cuentas anteriores · 2 turnos quedan para la siguiente cuenta/);
+  });
+
+  test('agruparItemsPorGrupo conserva el avance de cada grupo', () => {
+    const progreso = { total: 4, en_periodo: 3, despues: 1, proxima: '2030-01-16' };
+    const secciones = agruparItemsPorGrupo([item(1, 10, { grupo_id: 3, grupo_nombre: 'Feria', grupo_progreso: progreso })]);
+    expect(secciones[0].progreso).toEqual(progreso);
+  });
+
+  test('el PDF con un grupo partido se genera sin error', async () => {
+    const progreso = { total: 4, en_periodo: 3, despues: 1, proxima: '2030-01-16' };
+    const items = [1, 2, 3].map((n) => item(n, 50000, { grupo_id: 3, grupo_nombre: 'Feria', grupo_progreso: progreso }));
+    const chunks = [];
+    const out = new PassThrough();
+    out.on('data', (c) => chunks.push(c));
+    const fin = new Promise((r) => out.on('end', r));
+    await generarCuentaCobroPdf({
+      empresa_id: 1, empresa_nombre: 'Acme', trabajador_nombre: 'Ana', trabajador_apellido: 'Test', trabajador_cedula: '1',
+      fecha_inicio: '2030-01-01', fecha_fin: '2030-01-15', numero_cuenta: 'CC-1-2', secuencia: 1, firmado_trabajador: 0,
+      items, total_turnos: 3, total_horas: 24, valor_total: 150000,
+    }, out);
+    await fin;
+    expect(Buffer.concat(chunks).length).toBeGreaterThan(1000);
   });
 });

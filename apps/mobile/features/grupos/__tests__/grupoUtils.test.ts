@@ -87,6 +87,40 @@ describe('ultimoTurnoCopiable', () => {
   });
 });
 
+describe('cambiosDeGrupo / formularioDeGrupo (editar un grupo)', () => {
+  const { cambiosDeGrupo, formularioDeGrupo } = jest.requireActual('../grupoUtils');
+  const form = (extra = {}) => ({ nombre: 'Feria', descripcion: '', lugar: '', lugarAlias: '', latitud: null, longitud: null, ...extra });
+
+  test('sin nombre no se guarda', () => {
+    expect(cambiosDeGrupo(form({ nombre: '   ' }))).toEqual({ ok: false, campo: 'nombre', mensaje: 'Escribe un nombre.' });
+  });
+
+  test('sin lugar manda en null el lugar, el nombre corto y las coordenadas (así se quitan)', () => {
+    expect(cambiosDeGrupo(form({ nombre: ' Feria ', lugarAlias: 'Corferias' }))).toEqual({
+      ok: true,
+      payload: { nombre: 'Feria', descripcion: null, lugar: null, lugar_alias: null, latitud: null, longitud: null },
+    });
+  });
+
+  test('una dirección escrita a mano (sin coordenadas) no se guarda: hay que elegirla de la lista', () => {
+    expect(cambiosDeGrupo(form({ lugar: 'Calle 1', latitud: null, longitud: null }))).toMatchObject({ ok: false, campo: 'lugar' });
+    expect(cambiosDeGrupo(form({ lugar: 'Calle 1', latitud: 4.6, longitud: null }))).toMatchObject({ ok: false, campo: 'lugar' });
+  });
+
+  test('con lugar y coordenadas manda todo junto; el texto vacío de descripción y nombre corto se quita', () => {
+    expect(cambiosDeGrupo(form({ descripcion: '  Para la feria ', lugar: ' Corferias, Cra 37 ', lugarAlias: ' Corferias ', latitud: 4.63, longitud: -74.09 }))).toEqual({
+      ok: true,
+      payload: { nombre: 'Feria', descripcion: 'Para la feria', lugar: 'Corferias, Cra 37', lugar_alias: 'Corferias', latitud: 4.63, longitud: -74.09 },
+    });
+    expect(cambiosDeGrupo(form({ lugar: 'Corferias', lugarAlias: '  ', latitud: 4.63, longitud: -74.09 }))).toMatchObject({ ok: true, payload: { lugar_alias: null } });
+  });
+
+  test('formularioDeGrupo convierte lo guardado (nulls, y coordenadas que MySQL manda como texto)', () => {
+    expect(formularioDeGrupo({ nombre: 'Feria', descripcion: null, lugar: null, lugar_alias: null, latitud: null, longitud: null }))
+      .toEqual({ nombre: 'Feria', descripcion: '', lugar: '', lugarAlias: '', latitud: null, longitud: null });
+    expect(formularioDeGrupo({ nombre: 'Feria', descripcion: 'x', lugar: 'C', lugar_alias: 'A', latitud: '4.63' as never, longitud: '-74.09' as never }))
+      .toEqual({ nombre: 'Feria', descripcion: 'x', lugar: 'C', lugarAlias: 'A', latitud: 4.63, longitud: -74.09 });
+
 describe('período de facturación en el selector', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { periodoDeFecha, grupoEnPeriodo, coincideBusqueda } = require('../grupoUtils');

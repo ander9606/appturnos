@@ -49,7 +49,8 @@ const fechaCorta = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('es-C
  * las cuentas de empresas que no usan grupos quedan idénticas a las de antes.
  */
 function datosGrupo(t) {
-  return t.grupo_id ? { grupo_id: t.grupo_id, grupo_nombre: t.grupo_nombre ?? null } : {};
+  if (!t.grupo_id) return {};
+  return { grupo_id: t.grupo_id, grupo_nombre: t.grupo_nombre ?? null, ...(t.grupo_progreso ? { grupo_progreso: t.grupo_progreso } : {}) };
 }
 
 /** Línea completa de un turno que aún no estaba en ninguna cuenta firmada. */

@@ -3,6 +3,32 @@
 const { pool } = require('../../../config/database');
 
 /**
+ * Avance de cada grupo respecto al rango liquidado: cuántos turnos tiene en total (sin los cancelados), cuántos caen
+ * dentro del rango, cuántos quedan para después y la fecha del siguiente. Así la cuenta de cobro puede decir
+ * «3 de 4 turnos» cuando un grupo se parte entre dos períodos. Sin rango cerrado no hay nada que comparar (null).
+ */
+async function progresoDeGrupos(empresaId, filas, fechaInicio, fechaFin) {
+  const ids = [...new Set(filas.map((f) => f.grupo_id).filter(Boolean))];
+  const mapa = new Map();
+  if (!ids.length || !fechaInicio || !fechaFin) return mapa;
+  const [res] = await pool.query(
+    `SELECT grupo_id,
+            COUNT(*) AS total,
+            SUM(fecha BETWEEN ? AND ?) AS en_periodo,
+            SUM(fecha > ?) AS despues,
+            DATE_FORMAT(MIN(CASE WHEN fecha > ? THEN fecha END), '%Y-%m-%d') AS proxima
+       FROM ofertas_turno
+      WHERE empresa_id = ? AND grupo_id IN (?) AND estado <> 'cancelada'
+      GROUP BY grupo_id`,
+    [fechaInicio, fechaFin, fechaFin, fechaFin, empresaId, ids]
+  );
+  for (const r of res) {
+    mapa.set(r.grupo_id, { total: Number(r.total), en_periodo: Number(r.en_periodo), despues: Number(r.despues), proxima: r.proxima ?? null });
+  }
+  return mapa;
+}
+
+/**
  * Liquidación de turnos: agrupa asignaciones completadas por trabajador.
  * Ver asignaciones.model.js para el resto de AsignacionesModel.
  */
@@ -82,6 +108,8 @@ module.exports = {
       [...cuentaCobroParams, ...params]
     );
 
+    const progresoGrupos = await progresoDeGrupos(empresaId, filas, fechaInicio, fechaFin);
+
     const workers = new Map();
     for (const row of filas) {
       if (!workers.has(row.trabajador_id)) {
@@ -149,6 +177,7 @@ module.exports = {
         lugar_alias:     row.lugar_alias ?? null,
         grupo_id:        row.grupo_id ?? null,
         grupo_nombre:    row.grupo_nombre ?? null,
+        grupo_progreso:  progresoGrupos.get(row.grupo_id) ?? null,
         hora_ingreso_real: row.hora_ingreso_real,
         hora_egreso_real:  row.hora_egreso_real,
         horas_trabajadas:  horas,

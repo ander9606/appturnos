@@ -1,4 +1,4 @@
-import type { FaseGrupo, GrupoTurno, TurnoDeGrupo } from '@api-client';
+import type { ActualizarGrupoPayload, FaseGrupo, GrupoTurno, TurnoDeGrupo } from '@api-client';
 import { formatShortDate } from '@/lib/formatters';
 import type { GrupoElegido, WizardData } from '@/features/turnos/crear/types';
 
@@ -64,6 +64,51 @@ export function ultimoTurnoCopiable(turnos: TurnoDeGrupo[]): TurnoDeGrupo | null
   if (!vivos.length) return null;
   return vivos.reduce((a, b) => (b.fecha > a.fecha || (b.fecha === a.fecha && b.hora_inicio > a.hora_inicio) ? b : a));
 }
+
+export interface FormularioGrupo {
+  nombre: string;
+  descripcion: string;
+  lugar: string;
+  lugarAlias: string;
+  latitud: number | null;
+  longitud: number | null;
+}
+
+/**
+ * Lo que se envía al guardar los cambios de un grupo, o el campo que falla y por qué. El servidor pide el nombre, y el
+ * lugar con dirección y coordenadas juntas: escribir la dirección a mano borra las coordenadas, así que hay que elegirla
+ * de la lista. Vaciar un texto lo quita (null): sin lugar se mandan en null el lugar, el nombre corto y las coordenadas.
+ * Cambiar el lugar del grupo no mueve los turnos que ya lo copiaron: es solo el valor por defecto de los nuevos.
+ */
+export function cambiosDeGrupo(f: FormularioGrupo):
+  | { ok: true; payload: ActualizarGrupoPayload }
+  | { ok: false; campo: 'nombre' | 'lugar'; mensaje: string } {
+  const nombre = f.nombre.trim();
+  if (!nombre) return { ok: false, campo: 'nombre', mensaje: 'Escribe un nombre.' };
+  const descripcion = f.descripcion.trim() || null;
+  const lugar = f.lugar.trim();
+  if (!lugar) {
+    return { ok: true, payload: { nombre, descripcion, lugar: null, lugar_alias: null, latitud: null, longitud: null } };
+  }
+  if (f.latitud == null || f.longitud == null) {
+    return { ok: false, campo: 'lugar', mensaje: 'Elige una dirección de la lista, o deja el lugar vacío.' };
+  }
+  return {
+    ok: true,
+    payload: { nombre, descripcion, lugar, lugar_alias: f.lugarAlias.trim() || null, latitud: f.latitud, longitud: f.longitud },
+  };
+}
+
+/** Datos de un grupo ya existente como formulario de edición (la latitud y la longitud pueden llegar como texto de MySQL). */
+export function formularioDeGrupo(g: Pick<GrupoTurno, 'nombre' | 'descripcion' | 'lugar' | 'lugar_alias' | 'latitud' | 'longitud'>): FormularioGrupo {
+  return {
+    nombre: g.nombre,
+    descripcion: g.descripcion ?? '',
+    lugar: g.lugar ?? '',
+    lugarAlias: g.lugar_alias ?? '',
+    latitud: g.latitud == null ? null : Number(g.latitud),
+    longitud: g.longitud == null ? null : Number(g.longitud),
+  };
 
 /**
  * Período de facturación que contiene una fecha (YYYY-MM-DD): quincena 1–15 o 16–fin de mes.
