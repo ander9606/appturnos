@@ -151,3 +151,13 @@ export function coincideBusqueda(g: Pick<GrupoTurno, 'nombre' | 'lugar' | 'lugar
   if (!q) return true;
   return sinTildes(`${g.nombre} ${g.lugar_alias ?? ''} ${g.lugar ?? ''}`).includes(q);
 }
+
+/** Cuántos turnos activos tiene el grupo y cuántas de sus plazas ya están cubiertas (los cancelados no cuentan). */
+export function resumenPlazas(turnos: Pick<TurnoDeGrupo, 'estado' | 'plazas' | 'plazas_cubiertas'>[]): { turnos: number; plazas: number; cubiertas: number } {
+  const vivos = turnos.filter((t) => t.estado !== 'cancelada');
+  return {
+    turnos: vivos.length,
+    plazas: vivos.reduce((s, t) => s + (Number(t.plazas) || 0), 0),
+    cubiertas: vivos.reduce((s, t) => s + (Number(t.plazas_cubiertas) || 0), 0),
+  };
+}

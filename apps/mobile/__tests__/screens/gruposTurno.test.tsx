@@ -9,8 +9,10 @@ import GrupoDetalleScreen from '../../app/grupo/[id]';
 
 const mockPush = jest.fn();
 let mockTitulo: string | undefined;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockHeaderRight: (() => React.ReactElement) | undefined;
 jest.mock('expo-router', () => ({
-  Stack: { Screen: (p: { options: { title?: string } }) => { mockTitulo = p.options.title; return null; } },
+  Stack: { Screen: (p: { options: { title?: string; headerRight?: () => React.ReactElement } }) => { mockTitulo = p.options.title; mockHeaderRight = p.options.headerRight; return p.options.headerRight?.() ?? null; } },
   useRouter: () => ({ push: mockPush }),
   useLocalSearchParams: () => ({ id: '3' }),
 }));
@@ -35,6 +37,8 @@ jest.mock('@/features/grupos/EditarGrupoModal', () => {
   return { EditarGrupoModal: ({ visible, grupo }: { visible: boolean; grupo: { nombre: string } }) =>
     (visible ? <Text testID="modal-editar">{`editando ${grupo.nombre}`}</Text> : null) };
 });
+const mockSheet = jest.fn();
+jest.mock('@/lib/actionSheet', () => ({ actionSheet: (...a: unknown[]) => mockSheet(...a) }));
 const mockAlert = jest.fn();
 jest.mock('@/lib/alertDialog', () => ({ showAlert: (...a: unknown[]) => mockAlert(...a) }));
 const mockConfirm = jest.fn();
@@ -69,6 +73,7 @@ beforeEach(() => {
   mockUsa = true;
   mockEtiqueta = 'Grupo';
   mockTitulo = undefined;
+  mockHeaderRight = undefined;
 });
 
 describe('lista de grupos', () => {
@@ -225,61 +230,91 @@ describe('detalle de un grupo', () => {
   const detalle = (extra = {}, turnos = [turno(10, '2030-01-14'), turno(11, '2030-01-15')]) =>
     mockUseGrupo.mockReturnValue(listado(undefined, { data: { ...grupo(), turnos, ...extra } }));
 
+  /** Pulsa «⋯» del encabezado y elige esa opción del menú. */
+  const elegir = async (key: string | null) => {
+    mockSheet.mockResolvedValueOnce(key);
+    fireEvent.press(screen.getByLabelText('Más opciones'));
+    await waitFor(() => expect(mockSheet).toHaveBeenCalled());
+  };
+  const opciones = () => (mockSheet.mock.calls[0][0] as { items: { key: string; label: string }[] }).items;
+
   test('muestra el grupo, sus turnos y abre el turno tocado', () => {
     detalle();
     render(<GrupoDetalleScreen />);
-    expect(screen.getAllByText('Feria del Libro').length).toBeGreaterThan(0);
+    expect(mockTitulo).toBe('Feria del Libro'); // el nombre va en el encabezado, no se repite en el cuerpo
     expect(screen.getByText('Turno 11')).toBeTruthy();
     fireEvent.press(screen.getByText('Turno 10'));
     expect(mockPush).toHaveBeenCalledWith('/oferta/10');
   });
 
-  test('"Editar" abre el formulario con este grupo, también si el grupo está cerrado', () => {
+  test('«Editar» (en el menú «⋯») abre el formulario con este grupo, también si el grupo está cerrado', async () => {
     detalle();
     const { unmount } = render(<GrupoDetalleScreen />);
-    fireEvent.press(screen.getByText('Editar'));
+    await elegir('editar');
+    expect(await screen.findByTestId('modal-editar')).toBeTruthy();
     expect(screen.getByTestId('modal-editar').props.children).toBe('editando Feria del Libro');
     unmount();
+    mockSheet.mockClear();
     detalle({ estado: 'cerrado', fase: 'cerrado' });
     render(<GrupoDetalleScreen />);
-    expect(screen.getByText('Editar')).toBeTruthy();
+    await elegir('editar');
+    expect(opciones().map((o) => o.key)).toContain('editar');
   });
 
-  test('el detalle usa la etiqueta de la empresa: botón cerrar/reabrir y título sin nombre', () => {
+  test('las acciones secundarias están en un menú, no como botones apilados', () => {
+    detalle();
+    render(<GrupoDetalleScreen />);
+    expect(screen.queryByText('Editar')).toBeNull();
+    expect(screen.queryByText('Duplicar último turno')).toBeNull();
+    expect(screen.queryByText('Cerrar grupo')).toBeNull();
+    expect(mockHeaderRight).toBeDefined();
+  });
+
+  test('el detalle usa la etiqueta de la empresa en el menú (cerrar/reabrir)', async () => {
     mockEtiqueta = 'Evento';
     detalle();
     render(<GrupoDetalleScreen />);
-    expect(screen.getByText('Cerrar evento')).toBeTruthy();
-    expect(screen.queryByText('Cerrar grupo')).toBeNull();
+    await elegir(null);
+    expect(opciones().map((o) => o.label)).toContain('Cerrar evento');
+    expect(opciones().map((o) => o.label)).not.toContain('Cerrar grupo');
   });
 
   test('"Agregar turno" abre el asistente con el grupo preseleccionado', () => {
     detalle();
     render(<GrupoDetalleScreen />);
-    fireEvent.press(screen.getByText('Agregar turno'));
+    fireEvent.press(screen.getByLabelText('Agregar turno'));
     expect(mockPush).toHaveBeenCalledWith({ pathname: '/turno/nuevo', params: { grupoId: '3' } });
   });
 
-  test('"Duplicar último turno" copia el de fecha más reciente', async () => {
+  test('«Duplicar último turno» copia el de fecha más reciente', async () => {
     detalle();
     render(<GrupoDetalleScreen />);
     expect(screen.queryByTestId('modal-duplicar')).toBeNull();
-    fireEvent.press(screen.getByText('Duplicar último turno'));
+    await elegir('duplicar');
     expect(await screen.findByText('duplicar 11')).toBeTruthy();
   });
 
-  test('sin turnos no ofrece duplicar', () => {
+  test('sin turnos no ofrece duplicar', async () => {
     detalle({}, []);
     render(<GrupoDetalleScreen />);
-    expect(screen.queryByText('Duplicar último turno')).toBeNull();
+    await elegir(null);
+    expect(opciones().map((o) => o.key)).not.toContain('duplicar');
     expect(screen.getByText('Todavía no hay turnos')).toBeTruthy();
+  });
+
+  test('el resumen muestra turnos y plazas cubiertas sin contar los cancelados', () => {
+    detalle({}, [turno(10, '2030-01-14', { plazas: 6, plazas_cubiertas: 4 }), turno(11, '2030-01-15', { plazas: 5, plazas_cubiertas: 1 }), turno(12, '2030-01-16', { estado: 'cancelada', plazas: 9, plazas_cubiertas: 9 })]);
+    render(<GrupoDetalleScreen />);
+    expect(screen.getByText('plazas cubiertas')).toBeTruthy();
+    expect(screen.getByText(/5.*de 11/)).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
   });
 
   test('cerrar pide confirmación; si dice que no, no cierra', async () => {
     detalle();
     mockConfirm.mockResolvedValue(false);
     render(<GrupoDetalleScreen />);
-    fireEvent.press(screen.getByText('Cerrar grupo'));
+    await elegir('estado');
     await waitFor(() => expect(mockConfirm).toHaveBeenCalled());
     expect(mockCambiar).not.toHaveBeenCalled();
   });
@@ -290,7 +325,7 @@ describe('detalle de un grupo', () => {
     const { ApiError } = jest.requireActual('@api-client');
     mockCambiar.mockRejectedValue(new ApiError('Tiene turnos sin terminar.', 409));
     render(<GrupoDetalleScreen />);
-    fireEvent.press(screen.getByText('Cerrar grupo'));
+    await elegir('estado');
     await waitFor(() => expect(mockAlert).toHaveBeenCalledWith('No se pudo completar', 'Tiene turnos sin terminar.'));
     expect(mockCambiar).toHaveBeenCalledWith({ id: 3, cerrar: true });
   });
@@ -306,7 +341,7 @@ describe('detalle de un grupo', () => {
     mockConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(true); // 1.º "cerrar grupo", 2.º "cerrar de todos modos"
     mockCambiar.mockRejectedValueOnce(avisoCierre()).mockResolvedValueOnce({});
     render(<GrupoDetalleScreen />);
-    fireEvent.press(screen.getByText('Cerrar grupo'));
+    await elegir('estado');
     await waitFor(() => expect(mockCambiar).toHaveBeenCalledWith({ id: 3, cerrar: true, confirmar: true }));
     expect(mockConfirm).toHaveBeenLastCalledWith(expect.objectContaining({ title: 'Hay pagos frenados', message: expect.stringContaining('sin contrato firmado') }));
     expect(mockAlert).not.toHaveBeenCalled();
@@ -317,7 +352,7 @@ describe('detalle de un grupo', () => {
     mockConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     mockCambiar.mockRejectedValueOnce(avisoCierre());
     render(<GrupoDetalleScreen />);
-    fireEvent.press(screen.getByText('Cerrar grupo'));
+    await elegir('estado');
     await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(2));
     expect(mockCambiar).toHaveBeenCalledTimes(1);
     expect(mockAlert).not.toHaveBeenCalled();
@@ -327,9 +362,10 @@ describe('detalle de un grupo', () => {
     detalle({ estado: 'cerrado', fase: 'cerrado' });
     mockCambiar.mockResolvedValue({});
     render(<GrupoDetalleScreen />);
-    expect(screen.queryByText('Agregar turno')).toBeNull();
-    expect(screen.queryByText('Duplicar último turno')).toBeNull();
-    fireEvent.press(screen.getByText('Reabrir grupo'));
+    expect(screen.queryByLabelText('Agregar turno')).toBeNull();
+    await elegir('estado');
+    expect(opciones().map((o) => o.key)).not.toContain('duplicar');
+    expect(opciones().map((o) => o.label)).toContain('Reabrir grupo');
     await waitFor(() => expect(mockCambiar).toHaveBeenCalledWith({ id: 3, cerrar: false }));
     expect(mockConfirm).not.toHaveBeenCalled();
   });

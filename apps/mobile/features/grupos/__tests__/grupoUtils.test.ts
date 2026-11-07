@@ -173,3 +173,22 @@ describe('periodoQueContiene (ciclo real de la empresa)', () => {
     expect(periodoQueContiene(undefined, '2026-11-10')).toBeNull();
   });
 });
+
+describe('resumenPlazas', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { resumenPlazas } = require('../grupoUtils');
+  const t = (estado: string, plazas: number, plazas_cubiertas: number) => ({ estado, plazas, plazas_cubiertas });
+
+  test('suma turnos y plazas sin contar los cancelados', () => {
+    expect(resumenPlazas([t('abierta', 6, 4), t('abierta', 5, 1), t('cancelada', 9, 9)])).toEqual({ turnos: 2, plazas: 11, cubiertas: 5 });
+  });
+
+  test('sin turnos, o todo cancelado: ceros', () => {
+    expect(resumenPlazas([])).toEqual({ turnos: 0, plazas: 0, cubiertas: 0 });
+    expect(resumenPlazas([t('cancelada', 3, 3)])).toEqual({ turnos: 0, plazas: 0, cubiertas: 0 });
+  });
+
+  test('valores que llegan como texto o vacíos no rompen la suma', () => {
+    expect(resumenPlazas([{ estado: 'abierta', plazas: '4' as unknown as number, plazas_cubiertas: null as unknown as number }])).toEqual({ turnos: 1, plazas: 4, cubiertas: 0 });
+  });
+});
