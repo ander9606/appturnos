@@ -66,6 +66,17 @@ jest.mock('@/features/nomina/useNomina', () => ({
   useActualizarExtras: () => mockExtras,
 }));
 
+let mockGrupos = { usa: false, etiqueta: 'Evento', etiquetaPlural: 'Eventos' };
+let mockGruposArg: unknown;
+jest.mock('@/features/empresas/useOpcionesGrupos', () => ({
+  useOpcionesGrupos: (a: unknown) => { mockGruposArg = a; return { ...mockGrupos, isLoading: false }; },
+}));
+let mockMisTurnos: unknown[] = [];
+let mockMisTurnosArg: unknown;
+jest.mock('@/features/turnos/useTurnos', () => ({
+  useMisTurnos: (o: unknown) => { mockMisTurnosArg = o; return { data: mockMisTurnos }; },
+}));
+
 const mockElegirFoto = jest.fn();
 jest.mock('@/lib/pickImage', () => ({ elegirFotoConMenu: (...a: unknown[]) => mockElegirFoto(...a) }));
 const mockConfirm = jest.fn();
@@ -339,6 +350,51 @@ describe('accesos rápidos por rol', () => {
     expect(claseDeFila('Rol')).toMatch(/border-b/);
     await montar('admin_empresa');
     expect(claseDeFila('Rol')).toMatch(/border-b/);
+  });
+});
+
+describe('acceso a los grupos (con el nombre de la empresa)', () => {
+  beforeEach(() => { mockGrupos = { usa: true, etiqueta: 'Evento', etiquetaPlural: 'Eventos' }; mockMisTurnos = []; });
+  afterEach(() => { mockGrupos = { usa: false, etiqueta: 'Evento', etiquetaPlural: 'Eventos' }; mockMisTurnos = []; });
+
+  test.each(['admin_empresa', 'jefe_turnos'])('%s: fila «Eventos» que abre la pantalla de grupos', async (rol) => {
+    await montar(rol);
+    mockRouter.push.mockClear();
+    fireEvent.press(texto('Eventos'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/grupos');
+    expect(screen.queryByText('Grupos')).toBeNull();
+  });
+
+  test('si la empresa no usa grupos no aparece, ni para el admin ni para el trabajador', async () => {
+    mockGrupos = { usa: false, etiqueta: 'Evento', etiquetaPlural: 'Eventos' };
+    mockMisTurnos = [{ id: 1, grupo_id: 3 }];
+    await montar('admin_empresa');
+    expect(screen.queryByText('Eventos')).toBeNull();
+    await montar('trabajador_turnos');
+    expect(screen.queryByText('Mis turnos por evento')).toBeNull();
+  });
+
+  test('trabajador con algún turno con grupo: «Mis turnos por evento» abre Turnos ya agrupado', async () => {
+    mockMisTurnos = [{ id: 1, grupo_id: 3 }];
+    await montar('trabajador_turnos');
+    mockRouter.push.mockClear();
+    fireEvent.press(texto('Mis turnos por evento'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/turnos?vista=grupos');
+  });
+
+  test('trabajador sin ningún turno con grupo: no aparece', async () => {
+    mockMisTurnos = [{ id: 1, grupo_id: null }, { id: 2 }];
+    await montar('trabajador_turnos');
+    expect(screen.queryByText('Mis turnos por evento')).toBeNull();
+  });
+
+  test.each(['jefe_nomina', 'nomina', 'trabajador_nomina', 'super_admin'])('%s: no la ve y no consulta nada', async (rol) => {
+    mockMisTurnos = [{ id: 1, grupo_id: 3 }];
+    await montar(rol);
+    expect(screen.queryByText('Eventos')).toBeNull();
+    expect(screen.queryByText('Mis turnos por evento')).toBeNull();
+    expect(mockGruposArg).toBe(false);
+    expect(mockMisTurnosArg).toEqual({ enabled: false });
   });
 });
 
