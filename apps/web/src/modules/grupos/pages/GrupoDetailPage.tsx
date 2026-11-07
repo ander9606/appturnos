@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { ArrowLeft, MapPin, Plus, Copy } from 'lucide-react';
+import { ArrowLeft, MapPin, Plus, Copy, Pencil } from 'lucide-react';
 import { SkeletonDetail } from '@/shared/components/Skeleton';
 import { ErrorState } from '@/shared/components/ErrorState';
 import { EmptyState } from '@/shared/components/EmptyState';
@@ -9,6 +9,8 @@ import { fmtDate } from '@/shared/lib/format';
 import { useCambiarEstadoGrupo, useGrupo } from '../hooks/useGrupos';
 import { FaseChip } from '../components/FaseChip';
 import { DuplicarTurnoModal } from '../components/DuplicarTurnoModal';
+import { EditarGrupoModal } from '../components/EditarGrupoModal';
+import { useOpcionesGrupos } from '@/modules/configuracion/hooks/useConfiguracion';
 import { avisoDeCierre, subtituloGrupo, ultimoTurnoCopiable } from '../grupoUtils';
 
 /** Detalle de un grupo: sus datos, sus turnos por fecha y las acciones rápidas (agregar, duplicar, cerrar). */
@@ -19,6 +21,8 @@ export function GrupoDetailPage() {
   const { data, isLoading, isError, error, refetch } = useGrupo(grupoId);
   const cambiarEstado = useCambiarEstadoGrupo();
   const [duplicando, setDuplicando] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const { etiqueta } = useOpcionesGrupos();
   const [confirmandoCierre, setConfirmandoCierre] = useState(false);
   // Texto del aviso "hay contratos sin firmar": si el usuario insiste, se cierra igual.
   const [avisoPagos, setAvisoPagos] = useState<string | null>(null);
@@ -49,6 +53,9 @@ export function GrupoDetailPage() {
             {g.descripcion && <p className="text-sm text-foreground mt-2">{g.descripcion}</p>}
           </div>
           <div className="flex gap-2 flex-shrink-0">
+            <button type="button" onClick={() => setEditando(true)} className="flex items-center gap-1.5 border border-border hover:bg-muted text-sm font-medium px-3 py-2 rounded-lg transition-colors">
+              <Pencil size={15} /> Editar
+            </button>
             {!cerrado && (
               <>
                 {ultimo && (
@@ -97,6 +104,7 @@ export function GrupoDetailPage() {
         {cerrado ? 'Reabrir grupo' : 'Cerrar grupo'}
       </button>
 
+      {editando && <EditarGrupoModal grupo={g} etiqueta={etiqueta} onClose={() => setEditando(false)} />}
       {duplicando && ultimo && <DuplicarTurnoModal turno={ultimo} onClose={() => setDuplicando(false)} />}
       {confirmandoCierre && (
         <ConfirmModal

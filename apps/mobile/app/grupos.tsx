@@ -9,8 +9,10 @@ import { SkeletonList } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
+import { EditarGrupoModal } from '@/features/grupos/EditarGrupoModal';
 import { GrupoCard } from '@/features/grupos/GrupoCard';
 import { useGrupos } from '@/features/grupos/useGrupos';
+import type { GrupoTurno } from '@api-client';
 
 type Pestana = 'activo' | 'cerrado';
 const PESTANAS: { key: Pestana; label: string }[] = [
@@ -22,7 +24,8 @@ const PESTANAS: { key: Pestana; label: string }[] = [
 export default function GruposScreen() {
   const router = useRouter();
   const [pestana, setPestana] = useState<Pestana>('activo');
-  const { usa, isLoading: cargandoOpciones } = useOpcionesGrupos();
+  const { usa, etiqueta, isLoading: cargandoOpciones } = useOpcionesGrupos();
+  const [editando, setEditando] = useState<GrupoTurno | null>(null);
   const grupos = useGrupos(pestana, usa);
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
@@ -38,7 +41,7 @@ export default function GruposScreen() {
         data={grupos.data ?? []}
         keyExtractor={(g) => String(g.id)}
         contentContainerStyle={{ padding: 16, paddingBottom: 96, gap: 12 }}
-        renderItem={({ item }) => <GrupoCard grupo={item} onPress={() => router.push(`/grupo/${item.id}`)} />}
+        renderItem={({ item }) => <GrupoCard grupo={item} onVer={() => router.push(`/grupo/${item.id}`)} onEditar={() => setEditando(item)} />}
         refreshing={grupos.isRefetching}
         onRefresh={() => grupos.refetch()}
         ListEmptyComponent={
@@ -73,6 +76,7 @@ export default function GruposScreen() {
           ))}
         </View>
         {cuerpo()}
+        {editando && <EditarGrupoModal visible grupo={editando} etiqueta={etiqueta} onClose={() => setEditando(null)} />}
       </SafeAreaView>
     </>
   );

@@ -18,6 +18,8 @@ import { formatTimeRange } from '@/lib/formatters';
 import { fmtDate } from '@/features/turnos/oferta/fechasOferta';
 import { DuplicarOfertaModal } from '@/features/turnos/oferta/DuplicarOfertaModal';
 import { FaseChip } from '@/features/grupos/FaseGrupo';
+import { EditarGrupoModal } from '@/features/grupos/EditarGrupoModal';
+import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { rangoDeFechas, subtituloGrupo, ultimoTurnoCopiable } from '@/features/grupos/grupoUtils';
 import { useCambiarEstadoGrupo, useGrupo } from '@/features/grupos/useGrupos';
 
@@ -50,6 +52,8 @@ export default function GrupoDetalleScreen() {
   const grupo = useGrupo(grupoId);
   const cambiarEstado = useCambiarEstadoGrupo();
   const [duplicando, setDuplicando] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const { etiqueta } = useOpcionesGrupos();
   const denied = useRoleGuard(['admin_empresa', 'jefe_turnos']);
   if (denied) return denied;
 
@@ -114,6 +118,10 @@ export default function GrupoDetalleScreen() {
               {g.descripcion ? <Text className="text-sm text-foreground">{g.descripcion}</Text> : null}
             </View>
 
+            <View className="gap-2">
+              <Button label="Editar" variant="ghost" fullWidth onPress={() => setEditando(true)} />
+            </View>
+
             {!cerrado && (
               <View className="gap-2">
                 <Button
@@ -145,6 +153,7 @@ export default function GrupoDetalleScreen() {
             />
           </ScrollView>
         )}
+        {g && <EditarGrupoModal visible={editando} grupo={g} etiqueta={etiqueta} onClose={() => setEditando(false)} />}
         {ultimo && (
           <DuplicarOfertaModal visible={duplicando} oferta={{ id: ultimo.id, hora_inicio: ultimo.hora_inicio }} onClose={() => setDuplicando(false)} />
         )}

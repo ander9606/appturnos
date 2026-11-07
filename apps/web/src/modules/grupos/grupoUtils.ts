@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { fmtPeriodo } from '@/shared/lib/format';
-import type { FaseGrupo, GrupoElegido, GrupoTurno, TurnoDeGrupo } from './types';
+import type { ActualizarGrupoPayload, FaseGrupo, GrupoElegido, GrupoTurno, TurnoDeGrupo } from './types';
 
 /** Lo que el formulario guarda del grupo elegido. */
 export function aElegido(g: GrupoTurno): GrupoElegido {
@@ -60,4 +60,44 @@ export function avisoDeCierre(err: unknown): string | null {
   if (!axios.isAxiosError(err) || err.response?.status !== 409) return null;
   const data = err.response.data as { message?: string; detalles?: { codigo?: string }[] } | undefined;
   return data?.detalles?.[0]?.codigo === 'confirmar_cierre' ? (data.message ?? 'Hay contratos sin firmar.') : null;
+}
+
+export interface FormularioGrupo {
+  nombre: string;
+  descripcion: string;
+  lugar: string;
+  lugarAlias: string;
+  latitud: number | null;
+  longitud: number | null;
+}
+
+/**
+ * Lo que se envía al guardar los cambios de un grupo, o el campo que falla y por qué. El servidor pide el nombre, y el
+ * lugar con dirección y coordenadas juntas (escribir la dirección a mano borra las coordenadas: hay que elegirla de la
+ * lista). Vaciar un texto lo quita (null). Espejo de la lógica del móvil.
+ */
+export function cambiosDeGrupo(f: FormularioGrupo):
+  | { ok: true; data: ActualizarGrupoPayload }
+  | { ok: false; campo: 'nombre' | 'lugar'; mensaje: string } {
+  const nombre = f.nombre.trim();
+  if (!nombre) return { ok: false, campo: 'nombre', mensaje: 'Escribe un nombre.' };
+  const descripcion = f.descripcion.trim() || null;
+  const lugar = f.lugar.trim();
+  if (!lugar) return { ok: true, data: { nombre, descripcion, lugar: null, lugar_alias: null, latitud: null, longitud: null } };
+  if (f.latitud == null || f.longitud == null) {
+    return { ok: false, campo: 'lugar', mensaje: 'Elige una dirección de la lista, o deja el lugar vacío.' };
+  }
+  return { ok: true, data: { nombre, descripcion, lugar, lugar_alias: f.lugarAlias.trim() || null, latitud: f.latitud, longitud: f.longitud } };
+}
+
+/** Datos de un grupo ya existente como formulario de edición (MySQL manda las coordenadas como texto). */
+export function formularioDeGrupo(g: Pick<GrupoTurno, 'nombre' | 'descripcion' | 'lugar' | 'lugar_alias' | 'latitud' | 'longitud'>): FormularioGrupo {
+  return {
+    nombre: g.nombre,
+    descripcion: g.descripcion ?? '',
+    lugar: g.lugar ?? '',
+    lugarAlias: g.lugar_alias ?? '',
+    latitud: g.latitud == null ? null : Number(g.latitud),
+    longitud: g.longitud == null ? null : Number(g.longitud),
+  };
 }

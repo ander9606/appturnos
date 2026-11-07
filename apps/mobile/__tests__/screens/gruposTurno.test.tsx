@@ -28,6 +28,12 @@ jest.mock('@/features/turnos/oferta/DuplicarOfertaModal', () => {
   return { DuplicarOfertaModal: ({ visible, oferta }: { visible: boolean; oferta: { id: number } }) =>
     (visible ? <Text testID="modal-duplicar">duplicar {oferta.id}</Text> : null) };
 });
+// El formulario de edición tiene su propia prueba (EditarGrupoModal.test.tsx): aquí solo importa cuándo se abre y con qué grupo.
+jest.mock('@/features/grupos/EditarGrupoModal', () => {
+  const { Text } = require('react-native');
+  return { EditarGrupoModal: ({ visible, grupo }: { visible: boolean; grupo: { nombre: string } }) =>
+    (visible ? <Text testID="modal-editar">{`editando ${grupo.nombre}`}</Text> : null) };
+});
 const mockAlert = jest.fn();
 jest.mock('@/lib/alertDialog', () => ({ showAlert: (...a: unknown[]) => mockAlert(...a) }));
 const mockConfirm = jest.fn();
@@ -70,6 +76,25 @@ describe('lista de grupos', () => {
     expect(mockPush).toHaveBeenCalledWith('/grupo/3');
   });
 
+  test('cada tarjeta muestra "Ver N turnos" (abre el detalle) y "Editar" (abre el formulario con ese grupo)', () => {
+    mockUseGrupos.mockReturnValue(listado([grupo(), grupo({ id: 4, nombre: 'Obra Norte', total_turnos: 1 })]));
+    render(<GruposScreen />);
+    expect(screen.getByText('Ver 2 turnos')).toBeTruthy();
+    expect(screen.getByText('Ver 1 turno')).toBeTruthy(); // singular
+    fireEvent.press(screen.getByLabelText('Ver turnos de Obra Norte'));
+    expect(mockPush).toHaveBeenCalledWith('/grupo/4');
+    expect(screen.queryByTestId('modal-editar')).toBeNull();
+    fireEvent.press(screen.getByLabelText('Editar Obra Norte'));
+    expect(screen.getByTestId('modal-editar').props.children).toBe('editando Obra Norte');
+  });
+
+  test('en la tarjeta se muestra el nombre corto del lugar si lo tiene', () => {
+    mockUseGrupos.mockReturnValue(listado([grupo({ lugar: 'Corferias, Carrera 37, Quinta Paredes, Bogotá, Colombia', lugar_alias: 'Corferias' })]));
+    render(<GruposScreen />);
+    expect(screen.getByText('Corferias')).toBeTruthy();
+    expect(screen.queryByText(/Quinta Paredes/)).toBeNull();
+  });
+
   test('con la función apagada avisa y no pide los grupos', () => {
     mockUsa = false;
     mockUseGrupos.mockReturnValue(listado(undefined));
@@ -100,6 +125,17 @@ describe('detalle de un grupo', () => {
     expect(screen.getByText('Turno 11')).toBeTruthy();
     fireEvent.press(screen.getByText('Turno 10'));
     expect(mockPush).toHaveBeenCalledWith('/oferta/10');
+  });
+
+  test('"Editar" abre el formulario con este grupo, también si el grupo está cerrado', () => {
+    detalle();
+    const { unmount } = render(<GrupoDetalleScreen />);
+    fireEvent.press(screen.getByText('Editar'));
+    expect(screen.getByTestId('modal-editar').props.children).toBe('editando Feria del Libro');
+    unmount();
+    detalle({ estado: 'cerrado', fase: 'cerrado' });
+    render(<GrupoDetalleScreen />);
+    expect(screen.getByText('Editar')).toBeTruthy();
   });
 
   test('"Agregar turno" abre el asistente con el grupo preseleccionado', () => {
