@@ -6,7 +6,8 @@ import { ErrorState } from '@/shared/components/ErrorState';
 import { SkeletonList } from '@/shared/components/Skeleton';
 import { useGrupos } from '../hooks/useGrupos';
 import { bogotaToday, fmtDate } from '@/shared/lib/format';
-import { coincideBusqueda, grupoEnPeriodo, periodoDeFecha, subtituloGrupo } from '../grupoUtils';
+import { usePeriodos } from '@/modules/nomina/hooks/useNomina';
+import { coincideBusqueda, grupoEnPeriodo, periodoDeFecha, periodoQueContiene, subtituloGrupo } from '../grupoUtils';
 import type { GrupoTurno } from '../types';
 
 interface Props {
@@ -29,7 +30,10 @@ export function ElegirGrupoModal({ etiqueta, seleccionadoId, fecha, onSelect, on
   const [verTodos, setVerTodos] = useState(false);
   const { data, isLoading, isError, error, refetch } = useGrupos('activo');
   const grupos = useMemo(() => data?.data ?? [], [data]);
-  const periodo = useMemo(() => periodoDeFecha(fecha || bogotaToday()), [fecha]);
+  const dia = fecha || bogotaToday();
+  // El período real de la empresa (semanal, quincenal o mensual); si el servidor no lo trae, la quincena como aproximación.
+  const { data: periodos } = usePeriodos(undefined, false, { fechaDesde: dia, fechaHasta: dia });
+  const periodo = useMemo(() => periodoQueContiene(periodos?.data, dia) ?? periodoDeFecha(dia), [periodos, dia]);
   const buscando = busqueda.trim() !== '';
   // Por defecto solo los grupos con turnos en el período: con cientos de grupos el resto es ruido. Buscar o «Ver todos» llega a cualquiera.
   const filtrados = useMemo(() => {

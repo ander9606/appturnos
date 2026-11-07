@@ -154,3 +154,22 @@ describe('período de facturación en el selector', () => {
     expect(coincideBusqueda({ nombre: 'X', lugar: null }, 'x')).toBe(true);
   });
 });
+
+describe('periodoQueContiene (ciclo real de la empresa)', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { periodoQueContiene } = require('../grupoUtils');
+  const semana = { fecha_inicio: '2026-11-09', fecha_fin: '2026-11-15' };
+  const mes = { fecha_inicio: '2026-11-01T00:00:00.000Z', fecha_fin: '2026-11-30T00:00:00.000Z' };
+
+  test('devuelve el período que cubre la fecha, bordes incluidos, y acepta fechas con hora', () => {
+    expect(periodoQueContiene([semana], '2026-11-09')).toEqual({ desde: '2026-11-09', hasta: '2026-11-15' });
+    expect(periodoQueContiene([semana], '2026-11-15')).toEqual({ desde: '2026-11-09', hasta: '2026-11-15' });
+    expect(periodoQueContiene([mes], '2026-11-30')).toEqual({ desde: '2026-11-01', hasta: '2026-11-30' });
+  });
+
+  test('null si ninguno la cubre o no hay lista (el selector cae a la quincena)', () => {
+    expect(periodoQueContiene([semana], '2026-11-16')).toBeNull();
+    expect(periodoQueContiene([], '2026-11-10')).toBeNull();
+    expect(periodoQueContiene(undefined, '2026-11-10')).toBeNull();
+  });
+});

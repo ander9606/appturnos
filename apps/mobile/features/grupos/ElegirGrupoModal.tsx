@@ -8,7 +8,8 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { COLORS } from '@/lib/designTokens';
 import { useGrupos } from './useGrupos';
-import { coincideBusqueda, grupoEnPeriodo, periodoDeFecha, subtituloGrupo } from './grupoUtils';
+import { usePeriodos } from '@/features/nomina/useNomina';
+import { coincideBusqueda, grupoEnPeriodo, periodoDeFecha, periodoQueContiene, subtituloGrupo } from './grupoUtils';
 import { bogotaToday, formatShortDate } from '@/lib/formatters';
 
 type Props = {
@@ -32,7 +33,10 @@ export function ElegirGrupoModal({ visible, etiqueta, seleccionadoId, fecha, onS
   const [verTodos, setVerTodos] = useState(false);
   const { data: grupos = [], isLoading, isError, error, refetch } = useGrupos('activo', visible);
 
-  const periodo = useMemo(() => periodoDeFecha(fecha ?? bogotaToday()), [fecha]);
+  const dia = fecha ?? bogotaToday();
+  // El período real de la empresa (semanal, quincenal o mensual); si el servidor no lo trae, la quincena como aproximación.
+  const { data: periodos } = usePeriodos(undefined, visible, { fechaDesde: dia, fechaHasta: dia });
+  const periodo = useMemo(() => periodoQueContiene(periodos?.data, dia) ?? periodoDeFecha(dia), [periodos, dia]);
   const buscando = busqueda.trim() !== '';
   // Por defecto solo los grupos con turnos en el período: con cientos de grupos el resto es ruido. Buscar o «Ver todos» llega a cualquiera.
   const filtrados = useMemo(() => {

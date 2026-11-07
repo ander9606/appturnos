@@ -112,8 +112,8 @@ export function formularioDeGrupo(g: Pick<GrupoTurno, 'nombre' | 'descripcion' |
 }
 
 /**
- * Período de facturación que contiene una fecha (YYYY-MM-DD): quincena 1–15 o 16–fin de mes.
- * ponytail: asume ciclo quincenal, el más común — upgrade path: leer el período real de la empresa.
+ * Aproximación del período de facturación para una fecha (YYYY-MM-DD): quincena 1–15 o 16–fin de mes.
+ * Solo se usa cuando el servidor no devuelve el período real (ver periodoQueContiene).
  */
 export function periodoDeFecha(iso: string): { desde: string; hasta: string } {
   const [y, m, d] = iso.split('-').map(Number);
@@ -122,6 +122,19 @@ export function periodoDeFecha(iso: string): { desde: string; hasta: string } {
   return d <= 15
     ? { desde: `${y}-${mm}-01`, hasta: `${y}-${mm}-15` }
     : { desde: `${y}-${mm}-16`, hasta: `${y}-${mm}-${ultimo}` };
+}
+
+/**
+ * Período de facturación real de la empresa que contiene la fecha, entre los que devuelve el servidor; null si
+ * ninguno la cubre (p. ej. un período futuro que aún no se creó) y entonces se usa la quincena como aproximación.
+ */
+export function periodoQueContiene(periodos: { fecha_inicio: string; fecha_fin: string }[] | undefined, iso: string): { desde: string; hasta: string } | null {
+  for (const p of periodos ?? []) {
+    const desde = p.fecha_inicio.slice(0, 10);
+    const hasta = p.fecha_fin.slice(0, 10);
+    if (desde <= iso && iso <= hasta) return { desde, hasta };
+  }
+  return null;
 }
 
 /** ¿El grupo tiene turnos dentro del período? Uno recién creado (sin turnos) también cuenta: es el que se va a usar. */
