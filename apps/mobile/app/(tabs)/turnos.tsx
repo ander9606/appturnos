@@ -28,6 +28,8 @@ import { getMonthGrid, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { OfertaCard } from '@/features/turnos/pestana/OfertaCard';
 import { colorOferta } from '@/features/turnos/pestana/turnosPestana';
+import { MisGruposView } from '@/features/grupos/MisGruposView';
+import { tieneGrupos } from '@/features/grupos/misGrupos';
 import { CalendarioMesGestor, CalendarioMesTrabajador } from '@/features/turnos/pestana/CalendarioMes';
 import {
   ResumenGestor, FabCrearTurno, BannerEventual, SelectorTabs, EncabezadoOfertas, EmptyMisTurnos, EmptyOfertas,
@@ -54,6 +56,8 @@ export default function TurnosScreen() {
 
   // Vista mensual (solo gestores) — alterna con la lista/WeekStrip por día.
   const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
+  // Vista de «Mis turnos» agrupados por grupo (solo trabajadores, y solo si algún turno suyo tiene grupo).
+  const [porGrupos, setPorGrupos] = useState(false);
   const [mesCursor, setMesCursor] = useState(() => {
     const [y, m] = today.split('-').map(Number);
     return { year: y, month: m };
@@ -189,6 +193,9 @@ export default function TurnosScreen() {
       });
   }, [ofertas, searchOfertas, selectedDate]);
 
+  const hayGrupos = useMemo(() => tieneGrupos(misTurnos ?? []), [misTurnos]);
+  const enMisTurnos = isWorker && hayGrupos && activeTab === 'mis_turnos';
+
   const isRefreshing = refetchingMios || refetchingOfertas;
 
   const onRefresh = useCallback(() => {
@@ -272,13 +279,25 @@ export default function TurnosScreen() {
       <EncabezadoPestana
         titulo={isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         derecha={(isGestor || isWorker) ? (
-          <TouchableOpacity
-            onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
-            accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
-            className="p-2 -mr-2 active:opacity-60"
-          >
-            <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={22} color={COLORS.white} />
-          </TouchableOpacity>
+          <View className="flex-row items-center">
+            {isWorker && hayGrupos && viewMode === 'lista' && (
+              <TouchableOpacity
+                onPress={() => setPorGrupos(v => !v)}
+                accessibilityLabel={porGrupos ? 'Ver por fecha' : 'Ver por grupo'}
+                accessibilityState={{ selected: porGrupos }}
+                className="p-2 active:opacity-60"
+              >
+                <Ionicons name={porGrupos ? 'today-outline' : 'albums-outline'} size={22} color={COLORS.white} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => setViewMode(v => v === 'lista' ? 'mes' : 'lista')}
+              accessibilityLabel={viewMode === 'lista' ? 'Ver mes' : 'Ver lista'}
+              className="p-2 -mr-2 active:opacity-60"
+            >
+              <Ionicons name={viewMode === 'lista' ? 'calendar-outline' : 'list-outline'} size={22} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
         ) : undefined}
       >
         {/* Saldo a pagar del mes + postulantes pendientes — igual patrón que Nómina */}
@@ -286,7 +305,7 @@ export default function TurnosScreen() {
       </EncabezadoPestana>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
-      {viewMode === 'lista' && (
+      {viewMode === 'lista' && !(porGrupos && enMisTurnos) && (
         <WeekStrip
           days={allDays}
           selectedDate={selectedDate}
@@ -359,6 +378,8 @@ export default function TurnosScreen() {
               <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
             ) : errorMios ? (
               <ErrorState error={errMios} onRetry={refetchMios} fallback="Error al cargar turnos" />
+            ) : porGrupos && enMisTurnos ? (
+              <MisGruposView asignaciones={misTurnos ?? []} refreshControl={refreshControl} />
             ) : (
               <FlatList
                 data={turnosDelDia}
