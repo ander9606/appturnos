@@ -109,6 +109,7 @@ export function formularioDeGrupo(g: Pick<GrupoTurno, 'nombre' | 'descripcion' |
     latitud: g.latitud == null ? null : Number(g.latitud),
     longitud: g.longitud == null ? null : Number(g.longitud),
   };
+}
 
 /**
  * Período de facturación que contiene una fecha (YYYY-MM-DD): quincena 1–15 o 16–fin de mes.

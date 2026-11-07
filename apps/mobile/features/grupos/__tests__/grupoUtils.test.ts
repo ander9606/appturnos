@@ -120,6 +120,8 @@ describe('cambiosDeGrupo / formularioDeGrupo (editar un grupo)', () => {
       .toEqual({ nombre: 'Feria', descripcion: '', lugar: '', lugarAlias: '', latitud: null, longitud: null });
     expect(formularioDeGrupo({ nombre: 'Feria', descripcion: 'x', lugar: 'C', lugar_alias: 'A', latitud: '4.63' as never, longitud: '-74.09' as never }))
       .toEqual({ nombre: 'Feria', descripcion: 'x', lugar: 'C', lugarAlias: 'A', latitud: 4.63, longitud: -74.09 });
+  });
+});
 
 describe('período de facturación en el selector', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
