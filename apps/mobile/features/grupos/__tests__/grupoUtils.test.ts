@@ -86,3 +86,35 @@ describe('ultimoTurnoCopiable', () => {
     expect(ultimoTurnoCopiable([t(1, '2026-11-09', '08:00:00', 'cancelada')])).toBeNull();
   });
 });
+
+describe('período de facturación en el selector', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { periodoDeFecha, grupoEnPeriodo, coincideBusqueda } = require('../grupoUtils');
+
+  test('periodoDeFecha: quincenas, fin de mes y febrero bisiesto', () => {
+    expect(periodoDeFecha('2026-11-15')).toEqual({ desde: '2026-11-01', hasta: '2026-11-15' });
+    expect(periodoDeFecha('2026-11-16')).toEqual({ desde: '2026-11-16', hasta: '2026-11-30' });
+    expect(periodoDeFecha('2026-12-31')).toEqual({ desde: '2026-12-16', hasta: '2026-12-31' });
+    expect(periodoDeFecha('2028-02-20')).toEqual({ desde: '2028-02-16', hasta: '2028-02-29' });
+  });
+
+  test('grupoEnPeriodo: traslape en cualquier borde, y sin turnos siempre cuenta', () => {
+    const p = { desde: '2026-11-01', hasta: '2026-11-15' };
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-11-15', fecha_fin: '2026-11-20' }, p)).toBe(true); // empieza el último día
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-10-20', fecha_fin: '2026-11-01' }, p)).toBe(true); // termina el primer día
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-10-01', fecha_fin: '2026-12-01' }, p)).toBe(true); // lo cubre entero
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-11-16', fecha_fin: '2026-11-20' }, p)).toBe(false);
+    expect(grupoEnPeriodo({ fecha_inicio: '2026-10-01', fecha_fin: '2026-10-31' }, p)).toBe(false);
+    expect(grupoEnPeriodo({ fecha_inicio: null, fecha_fin: null }, p)).toBe(true);
+  });
+
+  test('coincideBusqueda: nombre, alias o lugar; sin tildes ni mayúsculas; vacío coincide con todo', () => {
+    const g = { nombre: 'Feria del Libro', lugar: 'Corferias, Bogotá', lugar_alias: 'Ágora' };
+    expect(coincideBusqueda(g, 'LIBRO')).toBe(true);
+    expect(coincideBusqueda(g, 'bogota')).toBe(true);
+    expect(coincideBusqueda(g, 'agora')).toBe(true);
+    expect(coincideBusqueda(g, '   ')).toBe(true);
+    expect(coincideBusqueda(g, 'concierto')).toBe(false);
+    expect(coincideBusqueda({ nombre: 'X', lugar: null }, 'x')).toBe(true);
+  });
+});

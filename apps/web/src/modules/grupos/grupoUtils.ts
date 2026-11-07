@@ -61,3 +61,31 @@ export function avisoDeCierre(err: unknown): string | null {
   const data = err.response.data as { message?: string; detalles?: { codigo?: string }[] } | undefined;
   return data?.detalles?.[0]?.codigo === 'confirmar_cierre' ? (data.message ?? 'Hay contratos sin firmar.') : null;
 }
+
+/**
+ * Período de facturación que contiene una fecha (YYYY-MM-DD): quincena 1–15 o 16–fin de mes.
+ * ponytail: asume ciclo quincenal, el más común — upgrade path: leer el período real de la empresa.
+ */
+export function periodoDeFecha(iso: string): { desde: string; hasta: string } {
+  const [y, m, d] = iso.split('-').map(Number);
+  const ultimo = new Date(y, m, 0).getDate();
+  const mm = String(m).padStart(2, '0');
+  return d <= 15
+    ? { desde: `${y}-${mm}-01`, hasta: `${y}-${mm}-15` }
+    : { desde: `${y}-${mm}-16`, hasta: `${y}-${mm}-${ultimo}` };
+}
+
+/** ¿El grupo tiene turnos dentro del período? Uno recién creado (sin turnos) también cuenta: es el que se va a usar. */
+export function grupoEnPeriodo(g: Pick<GrupoTurno, 'fecha_inicio' | 'fecha_fin'>, p: { desde: string; hasta: string }): boolean {
+  if (!g.fecha_inicio || !g.fecha_fin) return true;
+  return g.fecha_inicio <= p.hasta && g.fecha_fin >= p.desde;
+}
+
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+/** Búsqueda por nombre o lugar, sin distinguir mayúsculas ni tildes. */
+export function coincideBusqueda(g: Pick<GrupoTurno, 'nombre' | 'lugar' | 'lugar_alias'>, texto: string): boolean {
+  const q = sinTildes(texto.trim());
+  if (!q) return true;
+  return sinTildes(`${g.nombre} ${g.lugar_alias ?? ''} ${g.lugar ?? ''}`).includes(q);
+}

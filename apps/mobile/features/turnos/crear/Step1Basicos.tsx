@@ -71,7 +71,7 @@ export function Step1Basicos({ data, onChange, onNext }: Props) {
       </View>
 
       {/* Grupo de turnos (solo si la empresa los usa): al elegirlo, el lugar del turno (paso «Lugar») se prellena con el suyo */}
-      <GrupoSelector grupo={data.grupo} onChange={(g) => onChange(parcheAlElegirGrupo(data, g))} />
+      <GrupoSelector grupo={data.grupo} fecha={data.fecha ? toISODate(data.fecha) : undefined} onChange={(g) => onChange(parcheAlElegirGrupo(data, g))} />
 
       <View className="gap-1.5">
         <Text className="text-sm font-semibold text-foreground">Descripción</Text>

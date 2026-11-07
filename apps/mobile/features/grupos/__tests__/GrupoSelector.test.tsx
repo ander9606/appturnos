@@ -58,9 +58,9 @@ const OBRA = { ...FERIA, id: 4, nombre: 'Obra Norte', lugar: null, latitud: null
 const ELEGIDO_FERIA = { id: 3, nombre: 'Feria del Libro', lugar: 'Corferias', lugar_alias: null, latitud: 4.63, longitud: -74.09 };
 
 let qc: QueryClient;
-function montar(grupo: unknown = null, onChange = jest.fn()) {
+function montar(grupo: unknown = null, onChange = jest.fn(), fecha = '2026-11-10') {
   qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false, gcTime: 0 } } });
-  render(<QueryClientProvider client={qc}><GrupoSelector grupo={grupo as never} onChange={onChange} /></QueryClientProvider>);
+  render(<QueryClientProvider client={qc}><GrupoSelector grupo={grupo as never} onChange={onChange} fecha={fecha} /></QueryClientProvider>);
   return onChange;
 }
 const conGrupos = (etiqueta: string | null = 'Evento') => mockOpciones.mockResolvedValue({ usa_grupos_turno: true, etiqueta_grupo: etiqueta });
@@ -229,5 +229,70 @@ describe('crear un grupo', () => {
     await presionar('Crear Evento');
     expect(await screen.findByText('Crear y usar')).toBeTruthy();
     expect(screen.queryByText('Obra Norte')).toBeNull();
+  });
+});
+
+describe('por defecto solo los grupos con turnos del período de facturación', () => {
+  const ENERO = { ...FERIA, id: 5, nombre: 'Gala de enero', lugar: 'Teatro Mayor', fecha_inicio: '2027-01-20', fecha_fin: '2027-01-22' };
+  const NOV_TARDE = { ...FERIA, id: 6, nombre: 'Cierre de año', lugar: null, fecha_inicio: '2026-11-25', fecha_fin: '2026-11-26' };
+  beforeEach(() => mockListar.mockResolvedValue([FERIA, OBRA, ENERO, NOV_TARDE]));
+
+  const abrir = async (fecha?: string) => {
+    montar(null, jest.fn(), fecha);
+    await screen.findByText('Evento');
+    await presionar(/Elegir Evento/);
+    await screen.findByText('Obra Norte'); // sin turnos: está en cualquier período
+  };
+
+  test('muestra los del período (y los recién creados, sin turnos) y oculta los de otros períodos', async () => {
+    await abrir('2026-11-10');
+    expect(screen.getByText('Obra Norte')).toBeTruthy();
+    expect(screen.queryByText('Gala de enero')).toBeNull();
+    expect(screen.queryByText('Cierre de año')).toBeNull();
+    expect(screen.getByText('Ver todos (4)')).toBeTruthy();
+  });
+
+  test('el período sale de la fecha del turno: el 25 de noviembre es la segunda quincena', async () => {
+    await abrir('2026-11-25');
+    expect(await screen.findByText('Cierre de año')).toBeTruthy();
+    expect(screen.queryByText('Feria del Libro')).toBeNull();
+  });
+
+  test('«Ver todos» muestra todos y «Solo este período» vuelve al filtro', async () => {
+    await abrir('2026-11-10');
+    await presionar('Ver todos (4)');
+    expect(screen.getByText('Gala de enero')).toBeTruthy();
+    expect(screen.getByText('Cierre de año')).toBeTruthy();
+    await presionar('Ver solo este período');
+    expect(screen.queryByText('Gala de enero')).toBeNull();
+  });
+
+  test('buscar llega a cualquier grupo, también por lugar y sin tildes ni mayúsculas', async () => {
+    await abrir('2026-11-10');
+    fireEvent.changeText(screen.getByPlaceholderText('Buscar…'), 'TEATRO');
+    expect(await screen.findByText('Gala de enero')).toBeTruthy();
+    expect(screen.queryByText('Feria del Libro')).toBeNull();
+    fireEvent.changeText(screen.getByPlaceholderText('Buscar…'), 'cierre de ano');
+    expect(await screen.findByText('Cierre de año')).toBeTruthy();
+    fireEvent.changeText(screen.getByPlaceholderText('Buscar…'), 'zzz');
+    expect(await screen.findByText('Sin resultados')).toBeTruthy();
+  });
+
+  test('el grupo ya elegido sigue en la lista aunque sea de otro período', async () => {
+    montar({ id: 5, nombre: 'Gala de enero', lugar: null, lugar_alias: null, latitud: null, longitud: null }, jest.fn(), '2026-11-10');
+    await screen.findByText('Evento');
+    await presionar(/Cambiar Evento/);
+    expect(await screen.findByText('Feria del Libro')).toBeTruthy();
+    expect(screen.getAllByText('Gala de enero').length).toBeGreaterThan(1);
+  });
+
+  test('si nada cae en el período lo dice y ofrece «Ver todos»', async () => {
+    mockListar.mockResolvedValue([ENERO, NOV_TARDE, { ...ENERO, id: 7, nombre: 'Otra gala' }, { ...ENERO, id: 8, nombre: 'Más gala' }, { ...ENERO, id: 9, nombre: 'Gala 5' }, { ...ENERO, id: 10, nombre: 'Gala 6' }]);
+    montar(null, jest.fn(), '2026-12-05');
+    await screen.findByText('Evento');
+    await presionar(/Elegir Evento/);
+    expect(await screen.findByText('Nada en este período')).toBeTruthy();
+    await presionar(/Ver todos/);
+    expect(await screen.findByText('Gala de enero')).toBeTruthy();
   });
 });

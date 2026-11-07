@@ -341,7 +341,7 @@ function NuevaOfertaModal({ onClose, grupoInicial = null }: { onClose: () => voi
           <input required type="text" {...field('titulo')} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
         </div>
         {/* Grupo de turnos (solo si la empresa los usa): al elegirlo, el lugar del turno se prellena con el suyo */}
-        <GrupoSelector grupo={grupo} onChange={elegirGrupo} />
+        <GrupoSelector grupo={grupo} fecha={form.fecha || undefined} onChange={elegirGrupo} />
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">Fecha *</label>
