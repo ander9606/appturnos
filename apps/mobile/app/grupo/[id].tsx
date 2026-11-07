@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonDetail } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
 import { showAlert } from '@/lib/alertDialog';
+import { actionSheet } from '@/lib/actionSheet';
 import { confirm } from '@/lib/confirmDialog';
 import { COLORS } from '@/lib/designTokens';
 import { DuplicarOfertaModal } from '@/features/turnos/oferta/DuplicarOfertaModal';
@@ -18,7 +19,7 @@ import { FaseChip } from '@/features/grupos/FaseGrupo';
 import { FilaTurno } from '@/features/grupos/FilaTurno';
 import { EditarGrupoModal } from '@/features/grupos/EditarGrupoModal';
 import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
-import { rangoDeFechas, subtituloGrupo, ultimoTurnoCopiable } from '@/features/grupos/grupoUtils';
+import { rangoDeFechas, resumenPlazas, ultimoTurnoCopiable } from '@/features/grupos/grupoUtils';
 import { useCambiarEstadoGrupo, useGrupo } from '@/features/grupos/useGrupos';
 
 /** Detalle de un grupo: sus datos, sus turnos por fecha y las acciones rápidas (agregar, duplicar, cerrar). */
@@ -72,62 +73,89 @@ export default function GrupoDetalleScreen() {
     }
   }
 
+  async function abrirMenu() {
+    if (!g) return;
+    const nombre = etiqueta.toLowerCase();
+    const eleccion = await actionSheet({
+      title: g.nombre,
+      items: [
+        { key: 'editar', label: 'Editar', icon: 'create-outline' },
+        ...(!cerrado && ultimo ? [{ key: 'duplicar', label: 'Duplicar último turno', icon: 'copy-outline' as const }] : []),
+        { key: 'estado', label: `${cerrado ? 'Reabrir' : 'Cerrar'} ${nombre}`, icon: cerrado ? 'lock-open-outline' : 'lock-closed-outline' },
+      ],
+    });
+    if (eleccion === 'editar') setEditando(true);
+    else if (eleccion === 'duplicar') setDuplicando(true);
+    else if (eleccion === 'estado') await alternarEstado();
+  }
+
+  const plazas = g ? resumenPlazas(g.turnos) : null;
+
   return (
     <>
-      <Stack.Screen options={{ title: g?.nombre ?? etiqueta, headerTintColor: COLORS.primary }} />
+      <Stack.Screen
+        options={{
+          title: g?.nombre ?? etiqueta,
+          headerTintColor: COLORS.primary,
+          // Las acciones secundarias (editar, duplicar, cerrar) van en este menú; la principal, «Agregar turno», junto a la lista.
+          headerRight: g ? () => (
+            <TouchableOpacity onPress={abrirMenu} hitSlop={10} accessibilityRole="button" accessibilityLabel="Más opciones" style={{ marginRight: 4 }}>
+              <Ionicons name="ellipsis-horizontal-circle-outline" size={26} color={COLORS.primary} />
+            </TouchableOpacity>
+          ) : undefined,
+        }}
+      />
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         {grupo.isLoading ? <SkeletonDetail style={{ padding: 16 }} /> : grupo.isError || !g ? (
           <ErrorState error={grupo.error} onRetry={grupo.refetch} fallback="No se pudo cargar la información" />
         ) : (
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 96, gap: 12 }}>
-            <View className="bg-card border border-border rounded-2xl p-4 gap-2">
-              <View className="flex-row items-start justify-between gap-2">
-                <Text className="flex-1 text-lg font-bold text-foreground">{g.nombre}</Text>
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 16 }}>
+            <View className="bg-card border border-border rounded-2xl p-4 gap-3">
+              <View className="flex-row items-center justify-between gap-2">
                 <FaseChip fase={g.fase} />
+                <Text className="flex-1 text-right text-sm text-muted-foreground" numberOfLines={1}>
+                  {rangoDeFechas(g) ?? 'Sin turnos todavía'}
+                </Text>
               </View>
-              <Text className="text-sm text-muted-foreground">{rangoDeFechas(g) ? subtituloGrupo(g) : 'Sin turnos todavía'}</Text>
               {g.lugar ? (
-                <View className="flex-row items-center gap-1">
-                  <Ionicons name="location-outline" size={14} color={COLORS.mutedForeground} />
-                  <Text className="flex-1 text-sm text-muted-foreground">{g.lugar}</Text>
+                <View className="flex-row items-center gap-1.5">
+                  <Ionicons name="location-outline" size={15} color={COLORS.mutedForeground} />
+                  <Text className="flex-1 text-sm text-foreground">{g.lugar_alias || g.lugar}</Text>
                 </View>
               ) : null}
-              {g.descripcion ? <Text className="text-sm text-foreground">{g.descripcion}</Text> : null}
+              {g.descripcion ? <Text className="text-sm text-muted-foreground">{g.descripcion}</Text> : null}
+              {plazas && plazas.turnos > 0 ? (
+                <View className="flex-row border-t border-border pt-3">
+                  <View className="flex-1">
+                    <Text className="text-xl font-bold text-foreground">{plazas.turnos}</Text>
+                    <Text className="text-xs text-muted-foreground">{plazas.turnos === 1 ? 'turno' : 'turnos'}</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-xl font-bold text-foreground">{plazas.cubiertas}<Text className="text-sm font-medium text-muted-foreground"> de {plazas.plazas}</Text></Text>
+                    <Text className="text-xs text-muted-foreground">plazas cubiertas</Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
 
-            <View className="gap-2">
-              <Button label="Editar" variant="ghost" fullWidth onPress={() => setEditando(true)} />
-            </View>
-
-            {!cerrado && (
-              <View className="gap-2">
-                <Button
-                  label="Agregar turno"
-                  variant="secondary"
-                  fullWidth
-                  onPress={() => router.push({ pathname: '/turno/nuevo', params: { grupoId: String(g.id) } })}
-                />
-                {ultimo && (
-                  <Button label="Duplicar último turno" variant="ghost" fullWidth onPress={() => setDuplicando(true)} />
+            <View className="gap-3">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Turnos ({g.turnos.length})</Text>
+                {!cerrado && (
+                  <Button
+                    label="Agregar turno"
+                    size="sm"
+                    icon={<Ionicons name="add" size={18} color={COLORS.white} />}
+                    onPress={() => router.push({ pathname: '/turno/nuevo', params: { grupoId: String(g.id) } })}
+                  />
                 )}
               </View>
-            )}
-
-            <Text className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mt-2">
-              Turnos ({g.turnos.length})
-            </Text>
-            {g.turnos.length === 0 ? (
-              <EmptyState compact title="Todavía no hay turnos" message="Usa «Agregar turno» para crear el primero." />
-            ) : (
-              g.turnos.map((t) => <FilaTurno key={t.id} turno={t} onPress={() => router.push(`/oferta/${t.id}`)} />)
-            )}
-
-            <Button
-              label={`${cerrado ? 'Reabrir' : 'Cerrar'} ${etiqueta.toLowerCase()}`}
-              variant={cerrado ? 'secondary' : 'ghost'}
-              fullWidth
-              onPress={alternarEstado}
-            />
+              {g.turnos.length === 0 ? (
+                <EmptyState compact title="Todavía no hay turnos" message="Usa «Agregar turno» para crear el primero." />
+              ) : (
+                g.turnos.map((t) => <FilaTurno key={t.id} turno={t} onPress={() => router.push(`/oferta/${t.id}`)} />)
+              )}
+            </View>
           </ScrollView>
         )}
         {g && <EditarGrupoModal visible={editando} grupo={g} etiqueta={etiqueta} onClose={() => setEditando(false)} />}
