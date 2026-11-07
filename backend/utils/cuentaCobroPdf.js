@@ -37,13 +37,34 @@ function agruparItemsPorGrupo(items) {
   const secciones = new Map();
   for (const item of items) {
     const clave = item.grupo_id ?? null;
-    if (!secciones.has(clave)) secciones.set(clave, { grupo_id: clave, nombre: clave === null ? null : (item.grupo_nombre || 'Grupo'), items: [], subtotal: 0 });
+    if (!secciones.has(clave)) secciones.set(clave, { grupo_id: clave, nombre: clave === null ? null : (item.grupo_nombre || 'Grupo'), progreso: null, items: [], subtotal: 0 });
     const sec = secciones.get(clave);
+    if (item.grupo_progreso && !sec.progreso) sec.progreso = item.grupo_progreso;
     sec.items.push(item);
     sec.subtotal = redondear2(sec.subtotal + Number(item.valor));
   }
   const lista = [...secciones.values()];
   return [...lista.filter((s) => s.grupo_id !== null), ...lista.filter((s) => s.grupo_id === null)];
+}
+
+const fechaCorta = (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+/**
+ * Avance del grupo en esta cuenta cuando el grupo se parte entre varios períodos: «3 de 4 turnos» y una nota de lo
+ * que quedó en otras cuentas. Devuelve null si la cuenta tiene el grupo completo (o es una cuenta anterior a esta
+ * función, sin datos de avance): entonces el PDF queda igual que siempre.
+ */
+function avanceGrupo(progreso) {
+  if (!progreso || !(progreso.total > progreso.en_periodo)) return null;
+  const antes = progreso.total - progreso.en_periodo - progreso.despues;
+  const partes = [];
+  if (antes > 0) partes.push(`${plural(antes, 'turno', 'turnos')} en cuentas anteriores`);
+  if (progreso.despues > 0) {
+    const desde = progreso.proxima ? ` (desde el ${fechaCorta(progreso.proxima)})` : '';
+    partes.push(`${plural(progreso.despues, 'turno queda', 'turnos quedan')} para la siguiente cuenta${desde}`);
+  }
+  return { titulo: `${progreso.en_periodo} de ${progreso.total} turnos`, nota: partes.join(' · ') };
 }
 
 /**
@@ -188,8 +209,12 @@ async function generarCuentaCobroPdf(cuenta, stream) {
         doc.addPage();
         dibujarEncabezado();
       }
+      const avance = avanceGrupo(sec.progreso);
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#0F172A')
-        .text(sec.nombre ?? 'Sin grupo', col.fecha, doc.y, { width: 484 });
+        .text(`${sec.nombre ?? 'Sin grupo'}${avance ? ` · ${avance.titulo}` : ''}`, col.fecha, doc.y, { width: 484 });
+      if (avance?.nota) {
+        doc.font('Helvetica-Oblique').fontSize(8).fillColor('#475569').text(avance.nota, col.fecha, doc.y, { width: 484 });
+      }
       doc.moveDown(0.3);
       doc.font('Helvetica').fontSize(9).fillColor('#000000');
       sec.items.forEach(dibujarItem);
@@ -249,4 +274,4 @@ async function generarCuentaCobroPdf(cuenta, stream) {
   doc.end();
 }
 
-module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer, agruparItemsPorGrupo, textoDesglose };
+module.exports = { generarCuentaCobroPdf, obtenerLogoBuffer, agruparItemsPorGrupo, avanceGrupo, textoDesglose };
