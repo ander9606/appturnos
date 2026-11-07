@@ -2,7 +2,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { EstadoGrupo } from '@api-client';
+import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
+import { COLORS } from '@/lib/designTokens';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Text } from '@/components/ui/Text';
@@ -40,17 +42,16 @@ export function TurnosDelGrupo({ grupoId, estado }: { grupoId: number; estado: E
       ) : (
         data.turnos.map((t) => <FilaTurno key={t.id} turno={t} compacta onPress={() => router.push(`/oferta/${t.id}`)} />)
       )}
-      <View className="flex-row gap-2 px-4 py-3 border-t border-border">
+      <View className="flex-row items-center justify-between gap-2 px-4 py-3 border-t border-border">
+        <Button label={`Abrir ${etiqueta.toLowerCase()}`} variant="ghost" size="sm" onPress={() => router.push(`/grupo/${grupoId}`)} />
         {estado === 'activo' && (
           <Button
             label="Agregar turno"
-            variant="secondary"
             size="sm"
-            style={{ flex: 1 }}
+            icon={<Ionicons name="add" size={18} color={COLORS.white} />}
             onPress={() => router.push({ pathname: '/turno/nuevo', params: { grupoId: String(grupoId) } })}
           />
         )}
-        <Button label={`Abrir ${etiqueta.toLowerCase()}`} variant="ghost" size="sm" style={{ flex: 1 }} onPress={() => router.push(`/grupo/${grupoId}`)} />
       </View>
     </View>
   );

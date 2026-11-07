@@ -86,11 +86,12 @@ describe('lista de grupos', () => {
     expect(mockUseGrupo).not.toHaveBeenCalled(); // los turnos no se piden hasta desplegar
   });
 
-  test('cada tarjeta muestra "Ver N turnos" y "Editar" (abre el formulario con ese grupo)', () => {
+  test('cada tarjeta es un solo toque para abrirla (sin fila de botones) y un lápiz para editar el grupo', () => {
     mockUseGrupos.mockReturnValue(listado([grupo(), grupo({ id: 4, nombre: 'Obra Norte', total_turnos: 1 })]));
     render(<GruposScreen />);
-    expect(screen.getByText('Ver 2 turnos')).toBeTruthy();
-    expect(screen.getByText('Ver 1 turno')).toBeTruthy(); // singular
+    expect(screen.getByLabelText('Ver 2 turnos de Feria del Libro')).toBeTruthy();
+    expect(screen.getByLabelText('Ver 1 turno de Obra Norte')).toBeTruthy(); // singular
+    expect(screen.queryByText('Editar')).toBeNull(); // ya no hay botón de texto: es un ícono con su etiqueta accesible
     expect(screen.queryByTestId('modal-editar')).toBeNull();
     fireEvent.press(screen.getByLabelText('Editar Obra Norte'));
     expect(screen.getByTestId('modal-editar').props.children).toBe('editando Obra Norte');
@@ -114,15 +115,27 @@ describe('lista de grupos', () => {
       expect(mockPush).not.toHaveBeenCalled();
       fireEvent.press(screen.getByLabelText('Ocultar turnos de Feria del Libro'));
       expect(screen.queryByText('Turno 10')).toBeNull();
-      expect(screen.getByText('Ver 2 turnos')).toBeTruthy();
+      expect(screen.getByLabelText('Ver 2 turnos de Feria del Libro').props.accessibilityState.expanded).toBe(false);
+      expect(screen.getByTestId('icon-chevron-down')).toBeTruthy(); // el chevron indica que se puede abrir…
     });
 
-    test('tocar el cuerpo de la tarjeta también la despliega', () => {
+    test('el chevron apunta hacia arriba mientras está desplegada', () => {
       mockUseGrupos.mockReturnValue(listado([grupo()]));
       conTurnos([turno(10, '2030-01-14')]);
       render(<GruposScreen />);
-      fireEvent.press(screen.getByLabelText(/^Feria del Libro\./));
-      expect(screen.getByText('Turno 10')).toBeTruthy();
+      fireEvent.press(screen.getByLabelText('Ver 2 turnos de Feria del Libro'));
+      expect(screen.getByTestId('icon-chevron-up')).toBeTruthy();
+      expect(screen.queryByTestId('icon-chevron-down')).toBeNull();
+    });
+
+    test('tocar el lápiz edita sin desplegar la tarjeta', () => {
+      mockUseGrupos.mockReturnValue(listado([grupo()]));
+      conTurnos([turno(10, '2030-01-14')]);
+      render(<GruposScreen />);
+      fireEvent.press(screen.getByLabelText('Editar Feria del Libro'));
+      expect(screen.getByTestId('modal-editar')).toBeTruthy();
+      expect(screen.queryByText('Turno 10')).toBeNull();
+      expect(mockUseGrupo).not.toHaveBeenCalled();
     });
 
     test('se pueden desplegar varios grupos a la vez', () => {
