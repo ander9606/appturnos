@@ -49,35 +49,36 @@ export function GruposPage() {
             // Desplegada ocupa todo el ancho de la fila para que los turnos respiren.
             <li key={g.id} className={abierto ? 'sm:col-span-2 xl:col-span-3' : ''}>
               <div className="bg-card border border-border rounded-2xl overflow-hidden h-full flex flex-col hover:border-primary/50 transition-colors">
-                <button type="button" onClick={() => alternar(g.id)} aria-expanded={abierto} className="block w-full text-left p-4 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <h2 className="font-bold text-foreground">{g.nombre}</h2>
-                    <FaseChip fase={g.fase} />
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">{subtituloGrupo(g)}</p>
-                  {g.lugar && (
-                    <p className="flex items-center gap-1 text-xs text-muted-foreground mt-1.5 truncate">
-                      <MapPin size={12} className="flex-shrink-0" aria-hidden="true" /> {g.lugar_alias || g.lugar}
-                    </p>
-                  )}
-                </button>
-                <div className="flex border-t border-border">
+                {/* Un solo toque abre o cierra la tarjeta (el chevron lo indica); el lápiz edita sin abrirla. */}
+                <div className="relative flex-1">
                   <button
                     type="button"
                     onClick={() => alternar(g.id)}
                     aria-expanded={abierto}
                     aria-label={`${etiquetaVer} de ${g.nombre}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold text-primary-700 hover:bg-primary-50 transition-colors"
+                    className="block w-full text-left p-4 pr-20 h-full"
                   >
-                    {etiquetaVer} {abierto ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
+                    <h2 className="font-bold text-foreground">{g.nombre}</h2>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2">
+                      <FaseChip fase={g.fase} />
+                      <span className="text-sm text-muted-foreground">{subtituloGrupo(g)}</span>
+                    </div>
+                    {g.lugar && (
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground mt-2 truncate">
+                        <MapPin size={12} className="flex-shrink-0" aria-hidden="true" /> {g.lugar_alias || g.lugar}
+                      </p>
+                    )}
+                    <span className="absolute top-4 right-4 text-muted-foreground" aria-hidden="true">
+                      {abierto ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditando(g)}
                     aria-label={`Editar ${g.nombre}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold text-muted-foreground hover:bg-muted border-l border-border transition-colors"
+                    className="absolute top-3 right-11 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   >
-                    <Pencil size={14} aria-hidden="true" /> Editar
+                    <Pencil size={16} aria-hidden="true" />
                   </button>
                 </div>
                 {abierto && <TurnosDelGrupo grupoId={g.id} estado={g.estado} />}
