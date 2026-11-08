@@ -57,11 +57,15 @@ export interface Asignacion {
   /** Grupo del turno (etiqueta de la tarjeta). null o ausente = sin grupo. */
   grupo_id?: number | null;
   grupo_nombre?: string | null;
+  /** Cómo llama la empresa de este turno a sus grupos («Evento», «Obra»…); null = «Grupo». Un trabajador en dos empresas ve dos nombres. */
+  grupo_etiqueta?: string | null;
   estado: EstadoAsignacion;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;
   horas_trabajadas: number | null;
   pago_total: number | null;
+  /** Descuentos que el trabajador ya aceptó sobre este turno (MySQL lo manda como texto). Lo que cobra es `pago_total` menos esto. */
+  descuento_aceptado?: number | string | null;
   /** Bono extra (ej. propina) que el gestor asignó a este turno — ya sumado dentro de `pago_total`. */
   bono_monto?: number;
   bono_motivo?: string | null;

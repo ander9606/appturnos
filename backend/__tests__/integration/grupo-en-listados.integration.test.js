@@ -87,6 +87,32 @@ d('grupo en los listados de turnos (MySQL real)', () => {
     verifica(porUsuario);
   });
 
+  test('«mis turnos» trae cómo llama cada empresa a sus grupos (un trabajador en dos empresas ve dos nombres)', async () => {
+    // Sin nombre propio → NULL (la app dice «Grupo»); con nombre propio → el de la empresa del turno. Sin grupo → siempre NULL.
+    let porUsuario = await AsignacionesModel.listarPorUsuario(usuarioId);
+    expect(porTitulo(porUsuario, 'Con grupo').grupo_etiqueta).toBeNull();
+    await pool.query("UPDATE empresas SET etiqueta_grupo = 'Evento' WHERE id = ?", [empresaId]);
+    porUsuario = await AsignacionesModel.listarPorUsuario(usuarioId);
+    expect(porTitulo(porUsuario, 'Con grupo').grupo_etiqueta).toBe('Evento');
+    expect(porTitulo(porUsuario, 'Sin grupo').grupo_etiqueta).toBeNull();
+    const porTrabajador = await AsignacionesModel.listarPorTrabajador(empresaId, trabajadorId);
+    expect(porTitulo(porTrabajador, 'Con grupo').grupo_etiqueta).toBe('Evento');
+    await pool.query('UPDATE empresas SET etiqueta_grupo = NULL WHERE id = ?', [empresaId]);
+  });
+
+  test('«mis turnos» trae los descuentos aceptados del turno (solo esos) para calcular lo que cobra', async () => {
+    const desc = (monto, estado) => [empresaId, asigConGrupo, trabajadorId, monto, 'Motivo', estado, usuarioId];
+    await pool.query(
+      `INSERT INTO descuentos_turno (empresa_id, asignacion_id, trabajador_id, monto, motivo, estado, creado_por) VALUES (?,?,?,?,?,?,?), (?,?,?,?,?,?,?), (?,?,?,?,?,?,?)`,
+      [...desc(10000, 'aceptado'), ...desc(5000, 'pendiente'), ...desc(7000, 'rechazado')]);
+    const porUsuario = await AsignacionesModel.listarPorUsuario(usuarioId);
+    expect(Number(porTitulo(porUsuario, 'Con grupo').descuento_aceptado)).toBe(10000); // solo el aceptado
+    expect(Number(porTitulo(porUsuario, 'Sin grupo').descuento_aceptado)).toBe(0);
+    const porTrabajador = await AsignacionesModel.listarPorTrabajador(empresaId, trabajadorId);
+    expect(Number(porTitulo(porTrabajador, 'Con grupo').descuento_aceptado)).toBe(10000);
+    await pool.query('DELETE FROM descuentos_turno WHERE empresa_id = ?', [empresaId]);
+  });
+
   test('asignaciones: obtenerConDetalles (detalle de un turno)', async () => {
     expect(await AsignacionesModel.obtenerConDetalles(empresaId, asigConGrupo)).toMatchObject({ grupo_nombre: 'Feria del Libro' });
     expect(await AsignacionesModel.obtenerConDetalles(empresaId, asigSinGrupo)).toMatchObject({ grupo_nombre: null, grupo_id: null });

@@ -240,6 +240,7 @@ function RootLayout() {
             {/* Integración logiq360 — solo admin_empresa */}
             <Stack.Screen name="grupos" options={{ title: 'Grupos de turnos' }} />
             <Stack.Screen name="grupo/[id]" options={{ headerShown: true }} />
+            <Stack.Screen name="mis-grupos" options={{ headerShown: true }} />
 
             <Stack.Screen name="mi-plan" options={{ headerShown: true, title: 'Mi plan' }} />
             <Stack.Screen name="integracion/config" options={{ title: 'Integración logiq360' }} />

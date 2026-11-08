@@ -11,8 +11,7 @@ import TurnosScreen from '../../app/(tabs)/turnos';
 
 // ── Bordes simulados ─────────────────────────────────────────────────────────
 const mockRouter = { push: jest.fn() };
-let mockParams: Record<string, string> = {};
-jest.mock('expo-router', () => ({ useRouter: () => mockRouter, useLocalSearchParams: () => mockParams }));
+jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
 jest.mock('@/lib/theme', () => ({ useTheme: () => ({ primary: '#111111' }) }));
 jest.mock('@/components/ui/Spinner', () => {
   const { View } = require('react-native');
@@ -145,7 +144,6 @@ function montar(rol: string | undefined) {
 beforeEach(() => {
   jest.clearAllMocks();
   mockEtiqueta = 'Grupo';
-  mockParams = {};
   mockMis = q([]);
   mockOfertas = q({ data: [] });
   mockOfertasMes = q({ data: [] });
@@ -967,97 +965,47 @@ describe('casos extra (sobrevivientes de mutación)', () => {
   });
 });
 
-describe('trabajador — Mis turnos por grupo', () => {
-  const G = (o: Record<string, unknown> = {}) => ASIG({ empresa_id: 1, grupo_id: 3, grupo_nombre: 'Feria del Libro', ...o });
+describe('trabajador — acceso a «Mis eventos» (su pantalla de turnos agrupados)', () => {
+  const G = (o: Record<string, unknown> = {}) => ASIG({ empresa_id: 1, grupo_id: 3, grupo_nombre: 'Feria del Libro', grupo_etiqueta: null, ...o });
 
-  it('sin ningún turno con grupo no ofrece la vista por grupo', () => {
+  it('sin ningún turno con grupo no ofrece el acceso', () => {
     mockMis = q([ASIG({ id: 1 })]);
     montar('trabajador_turnos');
-    expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
+    expect(screen.queryByLabelText('Mis grupos')).toBeNull();
   });
 
-  it('los gestores no la ofrecen (tienen la pantalla Grupos)', () => {
+  it('los gestores no lo ofrecen (tienen la pantalla Grupos)', () => {
     mockMis = q([G({ id: 1 })]);
     montar('admin_empresa');
-    expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
+    expect(screen.queryByLabelText('Mis grupos')).toBeNull();
   });
 
-  it('con un turno con grupo la ofrece; al activarla muestra una tarjeta por grupo y oculta la tira de días', () => {
-    mockMis = q([G({ id: 1 }), G({ id: 2, oferta_fecha: '2026-06-20' }), ASIG({ id: 3, oferta_fecha: '2026-06-16' })]);
+  it('con un turno con grupo, el ícono lleva a su pantalla propia; la lista del día no cambia', () => {
+    mockMis = q([G({ id: 1 }), ASIG({ id: 3 })]);
     montar('trabajador_turnos');
-    expect(screen.getByTestId('weekstrip')).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('Ver por grupo'));
-    expect(screen.queryByTestId('weekstrip')).toBeNull();
-    expect(screen.getByText('Feria del Libro')).toBeTruthy();
-    expect(screen.getByText('Sin grupo')).toBeTruthy();
-    expect(screen.getByLabelText('Ver por fecha')).toBeTruthy();
-  });
-
-  it('desplegar una tarjeta muestra sus turnos y tocar uno abre su detalle', () => {
-    mockMis = q([G({ id: 1 }), G({ id: 2, oferta_fecha: '2026-06-20' })]);
-    montar('trabajador_turnos');
-    fireEvent.press(screen.getByLabelText('Ver por grupo'));
-    expect(screen.queryByTestId('shift-1')).toBeNull();
-    fireEvent.press(screen.getByRole('button', { name: /Feria del Libro/ }));
-    expect(screen.getByText('shift:1:true')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('shift-2'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/turno/2');
-  });
-
-  it('el botón usa el nombre que la empresa le puso a los grupos', () => {
-    mockEtiqueta = 'Evento';
-    mockMis = q([G({ id: 1 })]);
-    montar('trabajador_turnos');
-    expect(screen.getByLabelText('Ver por evento')).toBeTruthy();
-    expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
-  });
-
-  it('el acceso del Perfil (?vista=grupos) abre la pestaña ya agrupada', () => {
-    mockParams = { vista: 'grupos' };
-    mockMis = q([G({ id: 1 })]);
-    montar('trabajador_turnos');
-    expect(screen.queryByTestId('weekstrip')).toBeNull();
-    expect(screen.getByText('Feria del Libro')).toBeTruthy();
-  });
-
-  it('con la pestaña ya montada, el parámetro que llega después también la agrupa', () => {
-    mockMis = q([G({ id: 1 })]);
-    const { rerender } = montar('trabajador_turnos');
-    expect(screen.getByTestId('weekstrip')).toBeTruthy();
-    mockParams = { vista: 'grupos' };
-    rerender(<TurnosScreen />);
-    expect(screen.queryByTestId('weekstrip')).toBeNull();
-    expect(screen.getByText('Feria del Libro')).toBeTruthy();
-  });
-
-  it('sin ese parámetro empieza por fecha', () => {
-    mockMis = q([G({ id: 1 })]);
-    montar('trabajador_turnos');
-    expect(screen.getByTestId('weekstrip')).toBeTruthy();
-  });
-
-  it('«Ver por fecha» vuelve a la lista del día', () => {
-    mockMis = q([G({ id: 1 })]);
-    montar('trabajador_turnos');
-    fireEvent.press(screen.getByLabelText('Ver por grupo'));
-    fireEvent.press(screen.getByLabelText('Ver por fecha'));
+    fireEvent.press(screen.getByLabelText('Mis grupos'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/mis-grupos');
     expect(screen.getByTestId('weekstrip')).toBeTruthy();
     expect(screen.getByTestId('shift-1')).toBeTruthy();
   });
 
-  it('en la pestaña Disponibles la vista por grupo no afecta a las ofertas', () => {
-    mockMis = q([G({ id: 1 })]);
-    mockOfertas = q({ data: [OFERTA({ id: 7 })] });
+  it('usa el nombre que la empresa de sus turnos le puso a los grupos', () => {
+    mockMis = q([G({ id: 1, grupo_etiqueta: 'Evento' })]);
     montar('trabajador_turnos');
-    fireEvent.press(screen.getByLabelText('Ver por grupo'));
-    fireEvent.press(screen.getAllByRole('tab')[1]);
-    expect(screen.getByTestId('weekstrip')).toBeTruthy();
+    expect(screen.getByLabelText('Mis eventos')).toBeTruthy();
+    expect(screen.queryByLabelText('Mis grupos')).toBeNull();
   });
 
-  it('en la vista mes se esconde el botón de grupos', () => {
+  it('trabajando en dos empresas que los llaman distinto, el acceso los nombra a los dos', () => {
+    mockMis = q([G({ id: 1, grupo_etiqueta: 'Evento' }), G({ id: 2, grupo_id: 8, empresa_id: 2, grupo_etiqueta: 'Obra' })]);
+    montar('trabajador_turnos');
+    expect(screen.getByLabelText('Mis eventos y obras')).toBeTruthy();
+  });
+
+  it('también está disponible en la vista de mes', () => {
     mockMis = q([G({ id: 1 })]);
     montar('trabajador_turnos');
     fireEvent.press(screen.getByLabelText('Ver mes'));
-    expect(screen.queryByLabelText('Ver por grupo')).toBeNull();
+    expect(screen.getByLabelText('Mis grupos')).toBeTruthy();
   });
 });
