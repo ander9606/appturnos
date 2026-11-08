@@ -371,28 +371,28 @@ describe('acceso a los grupos (con el nombre de la empresa)', () => {
     await montar('admin_empresa');
     expect(screen.queryByText('Eventos')).toBeNull();
     await montar('trabajador_turnos');
-    expect(screen.queryByText('Mis turnos por evento')).toBeNull();
+    expect(screen.queryByText('Mis eventos')).toBeNull();
   });
 
-  test('trabajador con algún turno con grupo: «Mis turnos por evento» abre Turnos ya agrupado', async () => {
+  test('trabajador con algún turno con grupo: «Mis eventos» abre su pantalla propia', async () => {
     mockMisTurnos = [{ id: 1, grupo_id: 3 }];
     await montar('trabajador_turnos');
     mockRouter.push.mockClear();
-    fireEvent.press(texto('Mis turnos por evento'));
-    expect(mockRouter.push).toHaveBeenCalledWith('/(tabs)/turnos?vista=grupos');
+    fireEvent.press(texto('Mis eventos'));
+    expect(mockRouter.push).toHaveBeenCalledWith('/mis-grupos');
   });
 
   test('trabajador sin ningún turno con grupo: no aparece', async () => {
     mockMisTurnos = [{ id: 1, grupo_id: null }, { id: 2 }];
     await montar('trabajador_turnos');
-    expect(screen.queryByText('Mis turnos por evento')).toBeNull();
+    expect(screen.queryByText('Mis eventos')).toBeNull();
   });
 
   test.each(['jefe_nomina', 'nomina', 'trabajador_nomina', 'super_admin'])('%s: no la ve y no consulta nada', async (rol) => {
     mockMisTurnos = [{ id: 1, grupo_id: 3 }];
     await montar(rol);
     expect(screen.queryByText('Eventos')).toBeNull();
-    expect(screen.queryByText('Mis turnos por evento')).toBeNull();
+    expect(screen.queryByText('Mis eventos')).toBeNull();
     expect(mockGruposArg).toBe(false);
     expect(mockMisTurnosArg).toEqual({ enabled: false });
   });

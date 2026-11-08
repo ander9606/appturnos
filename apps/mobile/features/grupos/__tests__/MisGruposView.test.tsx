@@ -1,33 +1,35 @@
-/** «Mis turnos» por grupo: tarjeta con avance, aviso de contratos sin firmar y turnos que se despliegan. */
+/** Los eventos del trabajador: tarjeta con momento, avance, aviso de contratos sin firmar y turnos que se despliegan. */
 import React from 'react';
+import { Text } from '@/components/ui/Text';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { MisGruposView } from '../MisGruposView';
+import { agruparMisTurnos } from '../misGrupos';
 
 const mockPush = jest.fn();
-let mockEtiqueta = 'Grupo';
-jest.mock('@/features/empresas/useOpcionesGrupos', () => ({ useOpcionesGrupos: () => ({ usa: true, etiqueta: mockEtiqueta, etiquetaPlural: `${mockEtiqueta}s`, isLoading: false }) }));
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('@expo/vector-icons', () => {
-  const { Text } = require('react-native');
-  return new Proxy({}, { get: () => ({ name }: { name: string }) => <Text testID={`icon-${name}`} /> });
+  const { Text: T } = require('react-native');
+  return new Proxy({}, { get: () => ({ name }: { name: string }) => <T testID={`icon-${name}`} /> });
 });
-jest.mock('@/components/ui/PlanetIllustration', () => ({ PlanetIllustration: () => null }));
+jest.mock('@/lib/formatters', () => ({ ...jest.requireActual('@/lib/formatters'), bogotaToday: () => '2030-01-10' }));
 jest.mock('@/features/turnos/ShiftCard', () => {
-  const { Text, Pressable } = require('react-native');
-  return { ShiftCard: (p: { asignacion: { id: number }; onPress: () => void }) => <Pressable testID={`shift-${p.asignacion.id}`} onPress={p.onPress}><Text>{`turno ${p.asignacion.id}`}</Text></Pressable> };
+  const { Text: T, Pressable } = require('react-native');
+  return { ShiftCard: (p: { asignacion: { id: number }; onPress: () => void }) => <Pressable testID={`shift-${p.asignacion.id}`} onPress={p.onPress}><T>{`turno ${p.asignacion.id}`}</T></Pressable> };
 });
 
 let n = 0;
 const A = (o: Record<string, unknown> = {}) => ({
-  id: ++n, empresa_id: 1, oferta_id: n, estado: 'confirmado', oferta_fecha: '2030-01-10', hora_inicio: '08:00:00',
+  id: ++n, empresa_id: 1, oferta_id: n, estado: 'confirmado', oferta_fecha: '2030-01-20', hora_inicio: '08:00:00',
   grupo_id: 3, grupo_nombre: 'Feria del Libro', empresa_nombre: 'Acme', contrato_firmado: 1, ...o,
 }) as never;
+const montar = (asig: unknown[]) => render(<MisGruposView grupos={agruparMisTurnos(asig as never)} vacio={<Text>VACÍO</Text>} />);
 
-test('muestra avance y próximo turno, y los turnos solo al desplegar', () => {
-  const asig = [A({ id: 1, estado: 'completado', oferta_fecha: '2030-01-05' }), A({ id: 2, oferta_fecha: '2030-01-20' })];
-  render(<MisGruposView asignaciones={asig} />);
+test('muestra momento, fechas, avance y próximo turno, y los turnos solo al desplegar', () => {
+  montar([A({ id: 1, estado: 'completado', oferta_fecha: '2030-01-05' }), A({ id: 2, oferta_fecha: '2030-01-20' })]);
   expect(screen.getByText('Feria del Libro')).toBeTruthy();
+  expect(screen.getByText('En curso')).toBeTruthy(); // ya empezó (5 ene) y le falta uno
   expect(screen.getByText(/1 de 2 terminado · 1 por hacer/)).toBeTruthy();
+  expect(screen.getByLabelText('50% de tus turnos terminados')).toBeTruthy();
   expect(screen.getByText(/Próximo:/)).toBeTruthy();
   expect(screen.getByText('Acme')).toBeTruthy();
   expect(screen.queryByTestId('shift-1')).toBeNull();
@@ -35,41 +37,39 @@ test('muestra avance y próximo turno, y los turnos solo al desplegar', () => {
   const tarjeta = screen.getByRole('button', { name: /Feria del Libro/ });
   fireEvent.press(tarjeta);
   expect(tarjeta.props.accessibilityState.expanded).toBe(true);
+  expect(screen.getByTestId('icon-chevron-up')).toBeTruthy();
   fireEvent.press(screen.getByTestId('shift-2'));
   expect(mockPush).toHaveBeenCalledWith('/turno/2');
   fireEvent.press(screen.getByRole('button', { name: /Feria del Libro/ }));
   expect(screen.queryByTestId('shift-1')).toBeNull();
 });
 
-test('avisa de los contratos sin firmar, y no avisa si todo está firmado', () => {
-  const { rerender } = render(<MisGruposView asignaciones={[A({ estado: 'completado', contrato_firmado: 0 })]} />);
-  expect(screen.getByText(/Tienes 1 turno terminado sin firmar el contrato/)).toBeTruthy();
-  rerender(<MisGruposView asignaciones={[A({ estado: 'completado', contrato_firmado: 1 })]} />);
-  expect(screen.queryByText(/sin firmar el contrato/)).toBeNull();
-});
-
-test('un grupo ya terminado no muestra «Próximo»', () => {
-  render(<MisGruposView asignaciones={[A({ estado: 'completado' })]} />);
+test('un evento que aún no empieza es «Próximo» y uno sin nada por hacer es «Terminado» (sin «Próximo:»)', () => {
+  const { unmount } = montar([A({ oferta_fecha: '2030-02-01' })]);
+  expect(screen.getByText('Próximo', { exact: true })).toBeTruthy();
+  unmount();
+  montar([A({ estado: 'completado', oferta_fecha: '2030-01-05' })]);
+  expect(screen.getByText('Terminado')).toBeTruthy();
   expect(screen.queryByText(/Próximo:/)).toBeNull();
 });
 
-test('puede desplegar varios a la vez y distingue «Sin grupo»', () => {
-  render(<MisGruposView asignaciones={[A({ id: 1 }), A({ id: 2, grupo_id: null, grupo_nombre: null })]} />);
+test('avisa de los contratos sin firmar, y no avisa si todo está firmado', () => {
+  const { unmount } = montar([A({ estado: 'completado', contrato_firmado: 0, oferta_fecha: '2030-01-05' })]);
+  expect(screen.getByText(/Tienes 1 turno terminado sin firmar el contrato/)).toBeTruthy();
+  unmount();
+  montar([A({ estado: 'completado', contrato_firmado: 1, oferta_fecha: '2030-01-05' })]);
+  expect(screen.queryByText(/sin firmar el contrato/)).toBeNull();
+});
+
+test('puede desplegar varios eventos a la vez', () => {
+  montar([A({ id: 1 }), A({ id: 2, grupo_id: 4, grupo_nombre: 'Obra Norte' })]);
   fireEvent.press(screen.getByRole('button', { name: /Feria del Libro/ }));
-  fireEvent.press(screen.getByRole('button', { name: /Sin grupo/ }));
+  fireEvent.press(screen.getByRole('button', { name: /Obra Norte/ }));
   expect(screen.getByTestId('shift-1')).toBeTruthy();
   expect(screen.getByTestId('shift-2')).toBeTruthy();
 });
 
-test('sin turnos muestra el vacío', () => {
-  render(<MisGruposView asignaciones={[]} />);
-  expect(screen.getByText('Sin turnos todavía')).toBeTruthy();
-});
-
-test('«Sin …» usa el nombre que la empresa le puso a los grupos', () => {
-  mockEtiqueta = 'Evento';
-  render(<MisGruposView asignaciones={[A({ id: 1, grupo_id: null, grupo_nombre: null })]} />);
-  expect(screen.getByText('Sin evento')).toBeTruthy();
-  expect(screen.queryByText('Sin grupo')).toBeNull();
-  mockEtiqueta = 'Grupo';
+test('sin eventos muestra lo que le pasaron como vacío', () => {
+  montar([]);
+  expect(screen.getByText('VACÍO')).toBeTruthy();
 });

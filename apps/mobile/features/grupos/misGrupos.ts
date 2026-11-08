@@ -1,4 +1,4 @@
-import type { Asignacion } from '@api-client';
+import type { Asignacion, FaseGrupo } from '@api-client';
 
 /** Los turnos de un trabajador que pertenecen a un mismo grupo (o los que no tienen grupo). Solo cuenta lo suyo. */
 export interface GrupoDeMisTurnos {
@@ -82,3 +82,16 @@ export function resumenAvance(g: Pick<GrupoDeMisTurnos, 'total' | 'terminados' |
   if (g.porHacer > 0) partes.push(`${g.porHacer} por hacer`);
   return partes.join(' · ');
 }
+
+/** Solo los eventos (grupos): los turnos sueltos, sin grupo, se ven en la pestaña Turnos. */
+export const soloConGrupo = (lista: GrupoDeMisTurnos[]): GrupoDeMisTurnos[] => lista.filter((g) => g.grupoId !== null);
+
+/** Momento en que está el grupo para el trabajador: terminado si no le queda nada, en curso si ya empezó, o próximo. */
+export function faseDeMiGrupo(g: Pick<GrupoDeMisTurnos, 'porHacer' | 'fechaInicio'>, hoy: string): Extract<FaseGrupo, 'proximo' | 'en_curso' | 'terminado'> {
+  if (g.porHacer === 0) return 'terminado';
+  return g.fechaInicio <= hoy ? 'en_curso' : 'proximo';
+}
+
+/** Porcentaje (0–100) de turnos ya terminados, para la barra de avance. */
+export const porcentajeAvance = (g: Pick<GrupoDeMisTurnos, 'total' | 'terminados'>): number =>
+  g.total > 0 ? Math.round((g.terminados / g.total) * 100) : 0;

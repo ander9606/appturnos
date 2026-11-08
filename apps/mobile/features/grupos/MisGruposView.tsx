@@ -1,20 +1,20 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 import type { RefreshControlProps } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import type { Asignacion } from '@api-client';
 import { Text } from '@/components/ui/Text';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { COLORS } from '@/lib/designTokens';
-import { formatShortDate } from '@/lib/formatters';
-import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
+import { bogotaToday, formatShortDate } from '@/lib/formatters';
 import { ShiftCard } from '@/features/turnos/ShiftCard';
-import { agruparMisTurnos, avisoSinFirmar, resumenAvance, type GrupoDeMisTurnos } from './misGrupos';
+import { FaseChip } from './FaseGrupo';
+import { avisoSinFirmar, faseDeMiGrupo, porcentajeAvance, resumenAvance, type GrupoDeMisTurnos } from './misGrupos';
 
 type Props = {
-  asignaciones: Asignacion[];
-  /** Para refrescar tirando de la lista, igual que las demás listas de la pestaña. */
+  grupos: GrupoDeMisTurnos[];
+  /** Qué mostrar cuando la lista está vacía (cambia según la pestaña). */
+  vacio: React.ReactElement;
+  /** Para refrescar tirando de la lista. */
   refreshControl?: React.ReactElement<RefreshControlProps>;
 };
 
@@ -23,13 +23,13 @@ function rango(g: GrupoDeMisTurnos): string {
 }
 
 /**
- * «Mis turnos» agrupados: una tarjeta por grupo con sus fechas, cuántos turnos suyos lleva terminados y cuántos le
- * faltan, y el aviso si hay contratos sin firmar. Se despliega al tocarla y muestra solo los turnos del trabajador.
+ * Los eventos del trabajador: una tarjeta por grupo con su momento (próximo, en curso, terminado), una barra de avance
+ * con sus turnos terminados, lo que sigue y el aviso de contratos sin firmar. Se despliega al tocarla y muestra solo
+ * los turnos del trabajador en ese evento.
  */
-export function MisGruposView({ asignaciones, refreshControl }: Props) {
+export function MisGruposView({ grupos, vacio, refreshControl }: Props) {
   const router = useRouter();
-  const { etiqueta } = useOpcionesGrupos();
-  const grupos = useMemo(() => agruparMisTurnos(asignaciones), [asignaciones]);
+  const hoy = bogotaToday();
   const [abiertos, setAbiertos] = useState<string[]>([]);
   const alternar = useCallback((clave: string) => setAbiertos((l) => (l.includes(clave) ? l.filter((c) => c !== clave) : [...l, clave])), []);
 
@@ -37,14 +37,15 @@ export function MisGruposView({ asignaciones, refreshControl }: Props) {
     <FlatList
       data={grupos}
       keyExtractor={(g) => g.clave}
-      contentContainerClassName="px-5 py-4 gap-3"
+      contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 12 }}
       refreshControl={refreshControl}
       showsVerticalScrollIndicator={false}
-      ListEmptyComponent={<EmptyState title="Sin turnos todavía" message="Cuando tengas turnos aparecerán aquí, agrupados." />}
+      ListEmptyComponent={vacio}
       renderItem={({ item: g }) => {
         const abierto = abiertos.includes(g.clave);
-        const nombre = g.nombre ?? `Sin ${etiqueta.toLowerCase()}`;
+        const nombre = g.nombre ?? 'Sin nombre';
         const aviso = avisoSinFirmar(g.sinFirmar);
+        const pct = porcentajeAvance(g);
         return (
           <View className="bg-card border border-border rounded-2xl overflow-hidden">
             <Pressable
@@ -52,24 +53,35 @@ export function MisGruposView({ asignaciones, refreshControl }: Props) {
               accessibilityRole="button"
               accessibilityState={{ expanded: abierto }}
               accessibilityLabel={`${nombre}. ${resumenAvance(g)}`}
-              className="p-4 gap-1.5 active:opacity-70"
+              className="p-4 gap-2.5 active:opacity-70"
             >
-              <View className="flex-row items-start justify-between gap-2">
+              <View className="flex-row items-start gap-2">
                 <Text className="flex-1 text-base font-bold text-foreground" numberOfLines={2}>{nombre}</Text>
-                <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={18} color={COLORS.mutedForeground} />
+                <View className="p-1">
+                  <Ionicons name={abierto ? 'chevron-up' : 'chevron-down'} size={20} color={COLORS.mutedForeground} />
+                </View>
               </View>
-              <Text className="text-sm text-muted-foreground">{rango(g)} · {resumenAvance(g)}</Text>
+              <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
+                <FaseChip fase={faseDeMiGrupo(g, hoy)} />
+                <Text className="text-sm text-muted-foreground">{rango(g)}</Text>
+              </View>
               {g.empresaNombre ? <Text className="text-xs text-muted-foreground" numberOfLines={1}>{g.empresaNombre}</Text> : null}
+              <View className="gap-1.5">
+                <View className="h-1.5 rounded-full bg-muted overflow-hidden" accessibilityLabel={`${pct}% de tus turnos terminados`}>
+                  <View className="h-full rounded-full bg-primary-500" style={{ width: `${pct}%` }} />
+                </View>
+                <Text className="text-xs text-muted-foreground">{resumenAvance(g)}</Text>
+              </View>
               {g.proximo ? <Text className="text-xs font-semibold text-primary-700">Próximo: {formatShortDate(g.proximo)}</Text> : null}
               {aviso ? (
-                <View className="flex-row items-start gap-2 bg-warning/10 rounded-xl px-3 py-2 mt-1">
+                <View className="flex-row items-start gap-2 bg-warning/10 rounded-xl px-3 py-2">
                   <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
                   <Text className="flex-1 text-xs text-foreground">{aviso}</Text>
                 </View>
               ) : null}
             </Pressable>
             {abierto ? (
-              <View className="gap-2 px-3 pb-3 pt-1 border-t border-border">
+              <View className="gap-2 px-3 pb-3 pt-3 border-t border-border">
                 {g.turnos.map((a) => (
                   <ShiftCard key={a.id} asignacion={a} showDate onPress={() => router.push(`/turno/${a.id}`)} />
                 ))}

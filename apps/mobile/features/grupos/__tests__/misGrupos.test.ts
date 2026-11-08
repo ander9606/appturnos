@@ -69,3 +69,27 @@ describe('textos', () => {
     expect(resumenAvance({ total: 1, terminados: 1, porHacer: 0 })).toBe('1 de 1 terminado');
   });
 });
+
+describe('vista propia del trabajador', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { soloConGrupo, faseDeMiGrupo, porcentajeAvance } = require('../misGrupos');
+
+  test('soloConGrupo deja fuera los turnos sueltos', () => {
+    const lista = agruparMisTurnos([a({ grupo_id: null, grupo_nombre: null }), a()]);
+    expect(lista).toHaveLength(2);
+    expect(soloConGrupo(lista).map((g: { nombre: string }) => g.nombre)).toEqual(['Feria']);
+  });
+
+  test('faseDeMiGrupo: terminado, en curso (ya empezó) o próximo', () => {
+    expect(faseDeMiGrupo({ porHacer: 0, fechaInicio: '2030-01-01' }, '2030-01-10')).toBe('terminado');
+    expect(faseDeMiGrupo({ porHacer: 2, fechaInicio: '2030-01-10' }, '2030-01-10')).toBe('en_curso'); // empieza hoy
+    expect(faseDeMiGrupo({ porHacer: 2, fechaInicio: '2030-01-01' }, '2030-01-10')).toBe('en_curso');
+    expect(faseDeMiGrupo({ porHacer: 2, fechaInicio: '2030-01-11' }, '2030-01-10')).toBe('proximo');
+  });
+
+  test('porcentajeAvance se redondea y no divide por cero', () => {
+    expect(porcentajeAvance({ total: 3, terminados: 1 })).toBe(33);
+    expect(porcentajeAvance({ total: 4, terminados: 4 })).toBe(100);
+    expect(porcentajeAvance({ total: 0, terminados: 0 })).toBe(0);
+  });
+});

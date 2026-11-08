@@ -2,7 +2,7 @@ import { PantallaPestana, EncabezadoPestana } from '@/components/ui/EncabezadoPe
 import { ErrorState } from '@/components/ui/ErrorState';
 import { SkeletonList } from '@/components/ui/Skeleton';
 import { COLORS } from '@/lib/designTokens';
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -10,7 +10,7 @@ import {
   RefreshControl,
 } from 'react-native';
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import { useTheme }     from '@/lib/theme';
 import { useMisTurnos, useOfertas, useAplicar, usePostulacionesPendientes, useLiquidacionTurnos } from '@/features/turnos/useTurnos';
@@ -28,7 +28,6 @@ import { getMonthGrid, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { OfertaCard } from '@/features/turnos/pestana/OfertaCard';
 import { colorOferta } from '@/features/turnos/pestana/turnosPestana';
-import { MisGruposView } from '@/features/grupos/MisGruposView';
 import { tieneGrupos } from '@/features/grupos/misGrupos';
 import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { CalendarioMesGestor, CalendarioMesTrabajador } from '@/features/turnos/pestana/CalendarioMes';
@@ -57,11 +56,6 @@ export default function TurnosScreen() {
 
   // Vista mensual (solo gestores) — alterna con la lista/WeekStrip por día.
   const [viewMode, setViewMode] = useState<'lista' | 'mes'>('lista');
-  // Vista de «Mis turnos» agrupados por grupo (solo trabajadores, y solo si algún turno suyo tiene grupo).
-  const { vista } = useLocalSearchParams<{ vista?: string }>();
-  const [porGrupos, setPorGrupos] = useState(vista === 'grupos');
-  // El acceso del Perfil abre esta pestaña ya agrupada (la pestaña puede estar montada: se reacciona al parámetro).
-  useEffect(() => { if (vista === 'grupos') setPorGrupos(true); }, [vista]);
   const [mesCursor, setMesCursor] = useState(() => {
     const [y, m] = today.split('-').map(Number);
     return { year: y, month: m };
@@ -197,9 +191,9 @@ export default function TurnosScreen() {
       });
   }, [ofertas, searchOfertas, selectedDate]);
 
-  const { etiqueta: etiquetaGrupo } = useOpcionesGrupos(isWorker);
+  // «Mis eventos» (con el nombre de la empresa): la pantalla propia del trabajador con sus turnos agrupados.
+  const { etiquetaPlural } = useOpcionesGrupos(isWorker);
   const hayGrupos = useMemo(() => tieneGrupos(misTurnos ?? []), [misTurnos]);
-  const enMisTurnos = isWorker && hayGrupos && activeTab === 'mis_turnos';
 
   const isRefreshing = refetchingMios || refetchingOfertas;
 
@@ -285,14 +279,13 @@ export default function TurnosScreen() {
         titulo={isGestor ? 'Gestión de Turnos' : isNomina ? 'Turnos Extra' : 'Mis Turnos'}
         derecha={(isGestor || isWorker) ? (
           <View className="flex-row items-center">
-            {isWorker && hayGrupos && viewMode === 'lista' && (
+            {isWorker && hayGrupos && (
               <TouchableOpacity
-                onPress={() => setPorGrupos(v => !v)}
-                accessibilityLabel={porGrupos ? 'Ver por fecha' : `Ver por ${etiquetaGrupo.toLowerCase()}`}
-                accessibilityState={{ selected: porGrupos }}
+                onPress={() => router.push('/mis-grupos')}
+                accessibilityLabel={`Mis ${etiquetaPlural.toLowerCase()}`}
                 className="p-2 active:opacity-60"
               >
-                <Ionicons name={porGrupos ? 'today-outline' : 'albums-outline'} size={22} color={COLORS.white} />
+                <Ionicons name="albums-outline" size={22} color={COLORS.white} />
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -310,7 +303,7 @@ export default function TurnosScreen() {
       </EncabezadoPestana>
 
       {/* ── Week strip ─────────────────────────────────────────────── */}
-      {viewMode === 'lista' && !(porGrupos && enMisTurnos) && (
+      {viewMode === 'lista' && (
         <WeekStrip
           days={allDays}
           selectedDate={selectedDate}
@@ -383,8 +376,6 @@ export default function TurnosScreen() {
               <SkeletonList style={{ paddingHorizontal: 16, paddingTop: 12 }} />
             ) : errorMios ? (
               <ErrorState error={errMios} onRetry={refetchMios} fallback="Error al cargar turnos" />
-            ) : porGrupos && enMisTurnos ? (
-              <MisGruposView asignaciones={misTurnos ?? []} refreshControl={refreshControl} />
             ) : (
               <FlatList
                 data={turnosDelDia}
