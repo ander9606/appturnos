@@ -7,6 +7,11 @@ export function aElegido(g: GrupoTurno): GrupoElegido {
   return { id: g.id, nombre: g.nombre, lugar: g.lugar, lugar_alias: g.lugar_alias ?? null, latitud: g.latitud, longitud: g.longitud };
 }
 
+/** Fechas del grupo («6 nov – 9 nov»), o null si aún no tiene turnos. */
+export function rangoDeFechas(g: Pick<GrupoTurno, 'fecha_inicio' | 'fecha_fin'>): string | null {
+  return g.fecha_inicio && g.fecha_fin ? fmtPeriodo(g.fecha_inicio, g.fecha_fin) : null;
+}
+
 /** Línea de apoyo para elegir bien entre varios grupos: fechas y cuántos turnos tiene. */
 export function subtituloGrupo(g: Pick<GrupoTurno, 'fecha_inicio' | 'fecha_fin' | 'total_turnos'>): string {
   if (!g.fecha_inicio || !g.fecha_fin) return 'Sin turnos todavía';
@@ -141,4 +146,14 @@ export function coincideBusqueda(g: Pick<GrupoTurno, 'nombre' | 'lugar' | 'lugar
   const q = sinTildes(texto.trim());
   if (!q) return true;
   return sinTildes(`${g.nombre} ${g.lugar_alias ?? ''} ${g.lugar ?? ''}`).includes(q);
+}
+
+/** Cuántos turnos activos tiene el grupo y cuántas de sus plazas ya están cubiertas (los cancelados no cuentan). Espejo del móvil. */
+export function resumenPlazas(turnos: Pick<TurnoDeGrupo, 'estado' | 'plazas' | 'plazas_cubiertas'>[]): { turnos: number; plazas: number; cubiertas: number } {
+  const vivos = turnos.filter(t => t.estado !== 'cancelada');
+  return {
+    turnos: vivos.length,
+    plazas: vivos.reduce((s, t) => s + (Number(t.plazas) || 0), 0),
+    cubiertas: vivos.reduce((s, t) => s + (Number(t.plazas_cubiertas) || 0), 0),
+  };
 }

@@ -37,15 +37,15 @@ export function TurnosDelGrupo({ grupoId, estado }: { grupoId: number; estado: E
       {turnos.length === 0
         ? <p className="px-4 py-3 border-t border-border text-sm text-muted-foreground">Todavía no hay turnos aquí.</p>
         : turnos.map(t => <FilaTurno key={t.id} turno={t} compacta />)}
-      <div className="flex flex-wrap gap-2 px-4 py-3 border-t border-border">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border">
+        <Link to={`/grupos/${grupoId}`} className="text-sm font-medium text-primary-600 hover:underline px-1 py-1.5">
+          Abrir {etiqueta.toLowerCase()}
+        </Link>
         {estado === 'activo' && (
-          <Link to={`/turnos?grupo=${grupoId}`} className="flex items-center gap-1.5 border border-primary/30 bg-primary-50 text-primary-600 hover:bg-primary-100 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+          <Link to={`/turnos?grupo=${grupoId}`} className="flex items-center gap-1.5 bg-primary hover:bg-primary-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
             <Plus size={14} aria-hidden="true" /> Agregar turno
           </Link>
         )}
-        <Link to={`/grupos/${grupoId}`} className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border hover:bg-muted px-3 py-1.5 rounded-lg transition-colors">
-          Abrir {etiqueta.toLowerCase()}
-        </Link>
       </div>
     </div>
   );
