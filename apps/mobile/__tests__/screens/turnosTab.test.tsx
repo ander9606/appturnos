@@ -966,7 +966,7 @@ describe('casos extra (sobrevivientes de mutación)', () => {
 });
 
 describe('trabajador — acceso a «Mis eventos» (su pantalla de turnos agrupados)', () => {
-  const G = (o: Record<string, unknown> = {}) => ASIG({ empresa_id: 1, grupo_id: 3, grupo_nombre: 'Feria del Libro', ...o });
+  const G = (o: Record<string, unknown> = {}) => ASIG({ empresa_id: 1, grupo_id: 3, grupo_nombre: 'Feria del Libro', grupo_etiqueta: null, ...o });
 
   it('sin ningún turno con grupo no ofrece el acceso', () => {
     mockMis = q([ASIG({ id: 1 })]);
@@ -989,12 +989,17 @@ describe('trabajador — acceso a «Mis eventos» (su pantalla de turnos agrupad
     expect(screen.getByTestId('shift-1')).toBeTruthy();
   });
 
-  it('usa el nombre que la empresa le puso a los grupos', () => {
-    mockEtiqueta = 'Evento';
-    mockMis = q([G({ id: 1 })]);
+  it('usa el nombre que la empresa de sus turnos le puso a los grupos', () => {
+    mockMis = q([G({ id: 1, grupo_etiqueta: 'Evento' })]);
     montar('trabajador_turnos');
     expect(screen.getByLabelText('Mis eventos')).toBeTruthy();
     expect(screen.queryByLabelText('Mis grupos')).toBeNull();
+  });
+
+  it('trabajando en dos empresas que los llaman distinto, el acceso los nombra a los dos', () => {
+    mockMis = q([G({ id: 1, grupo_etiqueta: 'Evento' }), G({ id: 2, grupo_id: 8, empresa_id: 2, grupo_etiqueta: 'Obra' })]);
+    montar('trabajador_turnos');
+    expect(screen.getByLabelText('Mis eventos y obras')).toBeTruthy();
   });
 
   it('también está disponible en la vista de mes', () => {

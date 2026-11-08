@@ -57,6 +57,8 @@ export interface Asignacion {
   /** Grupo del turno (etiqueta de la tarjeta). null o ausente = sin grupo. */
   grupo_id?: number | null;
   grupo_nombre?: string | null;
+  /** Cómo llama la empresa de este turno a sus grupos («Evento», «Obra»…); null = «Grupo». Un trabajador en dos empresas ve dos nombres. */
+  grupo_etiqueta?: string | null;
   estado: EstadoAsignacion;
   hora_ingreso_real: string | null;
   hora_egreso_real: string | null;

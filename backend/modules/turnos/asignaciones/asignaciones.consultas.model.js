@@ -41,8 +41,10 @@ function construirGeofenceInfo(row) {
   };
 }
 
-// Grupo del turno (migración 120) para la etiqueta de las tarjetas: NULL si no tiene.
-const SELECT_GRUPO_COLS = `o.grupo_id, (SELECT g.nombre FROM grupos_turno g WHERE g.id = o.grupo_id) AS grupo_nombre,`;
+// Grupo del turno (migración 120) para la etiqueta de las tarjetas: NULL si no tiene. `grupo_etiqueta` es cómo llama
+// la empresa del turno a sus grupos («Evento», «Obra»…; NULL = «Grupo»): un trabajador en dos empresas puede ver dos nombres.
+const SELECT_GRUPO_COLS = `o.grupo_id, (SELECT g.nombre FROM grupos_turno g WHERE g.id = o.grupo_id) AS grupo_nombre,
+              (SELECT e.etiqueta_grupo FROM empresas e WHERE e.id = o.empresa_id AND o.grupo_id IS NOT NULL) AS grupo_etiqueta,`;
 const SELECT_GEOFENCE_COLS = `carg.tipo_geofence,
               pm.id   AS punto_id,      pm.nombre AS punto_nombre,
               pm.latitud AS punto_latitud, pm.longitud AS punto_longitud,

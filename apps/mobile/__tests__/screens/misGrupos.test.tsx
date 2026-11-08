@@ -28,10 +28,6 @@ jest.mock('@/features/turnos/ShiftCard', () => {
   return { ShiftCard: (p: { asignacion: { id: number } }) => <Text>{`turno ${p.asignacion.id}`}</Text> };
 });
 let mockDenied: React.ReactElement | null = null;
-let mockEtiqueta = 'Grupo';
-jest.mock('@/features/empresas/useOpcionesGrupos', () => ({
-  useOpcionesGrupos: () => ({ usa: true, etiqueta: mockEtiqueta, etiquetaPlural: `${mockEtiqueta}s`, isLoading: false }),
-}));
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockQuery: any;
 jest.mock('@/features/turnos/useTurnos', () => ({ useMisTurnos: () => mockQuery }));
@@ -39,11 +35,11 @@ jest.mock('@/features/turnos/useTurnos', () => ({ useMisTurnos: () => mockQuery 
 let n = 0;
 const A = (o: Record<string, unknown> = {}) => ({
   id: ++n, empresa_id: 1, oferta_id: n, estado: 'confirmado', oferta_fecha: '2030-01-20', hora_inicio: '08:00:00',
-  grupo_id: 3, grupo_nombre: 'Feria del Libro', contrato_firmado: 1, ...o,
+  grupo_id: 3, grupo_nombre: 'Feria del Libro', grupo_etiqueta: 'Evento', contrato_firmado: 1, ...o,
 });
 const ok = (data: unknown[]) => ({ data, isLoading: false, isError: false, error: null, refetch: jest.fn(), isRefetching: false });
 
-beforeEach(() => { mockDenied = null; mockEtiqueta = 'Grupo'; mockTitulo = undefined; mockQuery = ok([]); });
+beforeEach(() => { mockDenied = null; mockTitulo = undefined; mockQuery = ok([]); });
 
 test('muestra solo eventos, separados en «Por hacer» y «Terminados» con su cuenta', () => {
   mockQuery = ok([
@@ -62,17 +58,23 @@ test('muestra solo eventos, separados en «Por hacer» y «Terminados» con su c
   expect(screen.queryByText('Feria del Libro')).toBeNull();
 });
 
-test('el título usa el nombre que la empresa le puso a los grupos', () => {
-  mockEtiqueta = 'Evento';
+test('el título usa el nombre que la empresa de sus turnos le puso a los grupos', () => {
+  mockQuery = ok([A({ id: 1 })]);
   render(<MisGruposScreen />);
   expect(mockTitulo).toBe('Mis eventos');
 });
 
+test('en dos empresas que los llaman distinto, el título los nombra a los dos y cada tarjeta lleva el suyo', () => {
+  mockQuery = ok([A({ id: 1 }), A({ id: 2, empresa_id: 2, grupo_id: 9, grupo_nombre: 'Casa Norte', grupo_etiqueta: 'Obra', empresa_nombre: 'Constructora Sur' })]);
+  render(<MisGruposScreen />);
+  expect(mockTitulo).toBe('Mis eventos y obras');
+  expect(screen.getByText('Obra · Constructora Sur')).toBeTruthy();
+});
+
 test('sin ningún evento lo explica y manda a Turnos para el resto', () => {
-  mockEtiqueta = 'Evento';
   mockQuery = ok([A({ grupo_id: null, grupo_nombre: null })]);
   render(<MisGruposScreen />);
-  expect(screen.getByText('Todavía no tienes eventos')).toBeTruthy();
+  expect(screen.getByText('Todavía no tienes grupos')).toBeTruthy(); // sin grupos que nombrar, el nombre por defecto
   expect(screen.getByText(/pestaña Turnos/)).toBeTruthy();
 });
 

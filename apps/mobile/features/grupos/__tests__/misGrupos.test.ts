@@ -1,5 +1,5 @@
 import type { Asignacion } from '@api-client';
-import { agruparMisTurnos, avisoSinFirmar, resumenAvance, tieneGrupos } from '../misGrupos';
+import { agruparMisTurnos, avisoSinFirmar, nombresDeMisGrupos, resumenAvance, tieneGrupos } from '../misGrupos';
 
 let n = 0;
 const a = (o: Partial<Asignacion> & Record<string, unknown> = {}): Asignacion => ({
@@ -91,5 +91,31 @@ describe('vista propia del trabajador', () => {
     expect(porcentajeAvance({ total: 3, terminados: 1 })).toBe(33);
     expect(porcentajeAvance({ total: 4, terminados: 4 })).toBe(100);
     expect(porcentajeAvance({ total: 0, terminados: 0 })).toBe(0);
+  });
+});
+
+describe('el nombre de los grupos según la empresa de cada turno', () => {
+  test('cada evento lleva la etiqueta de su empresa; sin etiqueta propia es «Grupo»', () => {
+    const lista = agruparMisTurnos([
+      a({ empresa_id: 1, grupo_id: 3, grupo_etiqueta: 'Evento' }),
+      a({ empresa_id: 2, grupo_id: 5, grupo_etiqueta: 'Obra' }),
+      a({ empresa_id: 3, grupo_id: 7, grupo_etiqueta: null }),
+      a({ empresa_id: 4, grupo_id: 8, grupo_etiqueta: '   ' }),
+    ]);
+    expect(lista.map((g) => g.etiqueta).sort()).toEqual(['Evento', 'Grupo', 'Grupo', 'Obra']);
+  });
+
+  test('nombresDeMisGrupos: uno, dos, tres, ninguno, y sin repetir (ni por mayúsculas)', () => {
+    const t = (grupo_etiqueta: string | null, grupo_id: number | null = 1) => ({ grupo_id, grupo_etiqueta });
+    expect(nombresDeMisGrupos([t('Evento'), t('Evento'), t('evento')])).toBe('eventos');
+    expect(nombresDeMisGrupos([t('Evento'), t('Obra')])).toBe('eventos y obras');
+    expect(nombresDeMisGrupos([t('Evento'), t('Obra'), t('Proyecto')])).toBe('eventos, obras y proyectos');
+    expect(nombresDeMisGrupos([t(null)])).toBe('grupos');
+    expect(nombresDeMisGrupos([t('Lugar')])).toBe('lugares');
+    expect(nombresDeMisGrupos([])).toBe('grupos');
+  });
+
+  test('los turnos sin grupo no aportan nombre', () => {
+    expect(nombresDeMisGrupos([{ grupo_id: null, grupo_etiqueta: 'Evento' }, { grupo_id: 2, grupo_etiqueta: 'Obra' }])).toBe('obras');
   });
 });

@@ -10,9 +10,8 @@ import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
 import { bogotaToday } from '@/lib/formatters';
 import { useTheme } from '@/lib/theme';
-import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
 import { MisGruposView } from '@/features/grupos/MisGruposView';
-import { agruparMisTurnos, faseDeMiGrupo, soloConGrupo } from '@/features/grupos/misGrupos';
+import { agruparMisTurnos, faseDeMiGrupo, nombresDeMisGrupos, soloConGrupo } from '@/features/grupos/misGrupos';
 import { useMisTurnos } from '@/features/turnos/useTurnos';
 
 type Pestana = 'pendientes' | 'terminados';
@@ -23,7 +22,6 @@ type Pestana = 'pendientes' | 'terminados';
  */
 export default function MisGruposScreen() {
   const theme = useTheme();
-  const { etiqueta, etiquetaPlural } = useOpcionesGrupos();
   const turnos = useMisTurnos();
   const [pestana, setPestana] = useState<Pestana>('pendientes');
   const denied = useRoleGuard(['trabajador_turnos']);
@@ -38,7 +36,8 @@ export default function MisGruposScreen() {
   }, [turnos.data]);
   if (denied) return denied;
 
-  const plural = etiquetaPlural.toLowerCase();
+  // Cada empresa llama distinto a sus grupos: el título los nombra todos («Mis eventos y obras»).
+  const plural = nombresDeMisGrupos(turnos.data ?? []);
   const PESTANAS: { key: Pestana; label: string; n: number }[] = [
     { key: 'pendientes', label: 'Por hacer', n: pendientes.length },
     { key: 'terminados', label: 'Terminados', n: terminados.length },
@@ -54,7 +53,7 @@ export default function MisGruposScreen() {
         grupos={lista}
         refreshControl={<RefreshControl refreshing={turnos.isRefetching} onRefresh={() => turnos.refetch()} tintColor={theme.primary} colors={[theme.primary]} />}
         vacio={sinNada ? (
-          <EmptyState title={`Todavía no tienes ${plural}`} message={`Cuando te asignen un turno que pertenezca a un ${etiqueta.toLowerCase()}, lo verás aquí. Tus demás turnos están en la pestaña Turnos.`} />
+          <EmptyState title={`Todavía no tienes ${plural}`} message={`Cuando te asignen turnos dentro de ${plural}, los verás aquí. Tus demás turnos están en la pestaña Turnos.`} />
         ) : pestana === 'pendientes' ? (
           <EmptyState variant="done" title="Nada por hacer" message="Ya terminaste todos tus turnos de esta lista." />
         ) : (

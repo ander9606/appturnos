@@ -65,7 +65,7 @@ export function MisGruposView({ grupos, vacio, refreshControl }: Props) {
                 <FaseChip fase={faseDeMiGrupo(g, hoy)} />
                 <Text className="text-sm text-muted-foreground">{rango(g)}</Text>
               </View>
-              {g.empresaNombre ? <Text className="text-xs text-muted-foreground" numberOfLines={1}>{g.empresaNombre}</Text> : null}
+              <Text className="text-xs text-muted-foreground" numberOfLines={1}>{g.empresaNombre ? `${g.etiqueta} · ${g.empresaNombre}` : g.etiqueta}</Text>
               <View className="gap-1.5">
                 <View className="h-1.5 rounded-full bg-muted overflow-hidden" accessibilityLabel={`${pct}% de tus turnos terminados`}>
                   <View className="h-full rounded-full bg-primary-500" style={{ width: `${pct}%` }} />

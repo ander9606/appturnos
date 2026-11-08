@@ -87,6 +87,19 @@ d('grupo en los listados de turnos (MySQL real)', () => {
     verifica(porUsuario);
   });
 
+  test('«mis turnos» trae cómo llama cada empresa a sus grupos (un trabajador en dos empresas ve dos nombres)', async () => {
+    // Sin nombre propio → NULL (la app dice «Grupo»); con nombre propio → el de la empresa del turno. Sin grupo → siempre NULL.
+    let porUsuario = await AsignacionesModel.listarPorUsuario(usuarioId);
+    expect(porTitulo(porUsuario, 'Con grupo').grupo_etiqueta).toBeNull();
+    await pool.query("UPDATE empresas SET etiqueta_grupo = 'Evento' WHERE id = ?", [empresaId]);
+    porUsuario = await AsignacionesModel.listarPorUsuario(usuarioId);
+    expect(porTitulo(porUsuario, 'Con grupo').grupo_etiqueta).toBe('Evento');
+    expect(porTitulo(porUsuario, 'Sin grupo').grupo_etiqueta).toBeNull();
+    const porTrabajador = await AsignacionesModel.listarPorTrabajador(empresaId, trabajadorId);
+    expect(porTitulo(porTrabajador, 'Con grupo').grupo_etiqueta).toBe('Evento');
+    await pool.query('UPDATE empresas SET etiqueta_grupo = NULL WHERE id = ?', [empresaId]);
+  });
+
   test('asignaciones: obtenerConDetalles (detalle de un turno)', async () => {
     expect(await AsignacionesModel.obtenerConDetalles(empresaId, asigConGrupo)).toMatchObject({ grupo_nombre: 'Feria del Libro' });
     expect(await AsignacionesModel.obtenerConDetalles(empresaId, asigSinGrupo)).toMatchObject({ grupo_nombre: null, grupo_id: null });

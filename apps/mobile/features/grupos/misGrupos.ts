@@ -1,4 +1,5 @@
 import type { Asignacion, FaseGrupo } from '@api-client';
+import { ETIQUETA_GRUPO_DEFECTO, pluralizarEtiqueta } from '@/features/empresas/etiquetaGrupo';
 
 /** Los turnos de un trabajador que pertenecen a un mismo grupo (o los que no tienen grupo). Solo cuenta lo suyo. */
 export interface GrupoDeMisTurnos {
@@ -6,6 +7,8 @@ export interface GrupoDeMisTurnos {
   clave: string;
   grupoId: number | null;
   nombre: string | null;
+  /** Cómo llama la empresa de este evento a sus grupos («Evento», «Obra»…). Dos empresas pueden usar nombres distintos. */
+  etiqueta: string;
   empresaNombre: string | null;
   fechaInicio: string;
   fechaFin: string;
@@ -40,7 +43,8 @@ export function agruparMisTurnos(asignaciones: Asignacion[]): GrupoDeMisTurnos[]
     let g = mapa.get(clave);
     if (!g) {
       g = {
-        clave, grupoId, nombre: grupoId === null ? null : (a.grupo_nombre ?? 'Grupo'), empresaNombre: a.empresa_nombre ?? null,
+        clave, grupoId, nombre: grupoId === null ? null : (a.grupo_nombre ?? 'Grupo'), etiqueta: a.grupo_etiqueta?.trim() || ETIQUETA_GRUPO_DEFECTO,
+        empresaNombre: a.empresa_nombre ?? null,
         fechaInicio: a.oferta_fecha, fechaFin: a.oferta_fecha, total: 0, terminados: 0, porHacer: 0, sinFirmar: 0, proximo: null, turnos: [],
       };
       mapa.set(clave, g);
@@ -95,3 +99,20 @@ export function faseDeMiGrupo(g: Pick<GrupoDeMisTurnos, 'porHacer' | 'fechaInici
 /** Porcentaje (0–100) de turnos ya terminados, para la barra de avance. */
 export const porcentajeAvance = (g: Pick<GrupoDeMisTurnos, 'total' | 'terminados'>): number =>
   g.total > 0 ? Math.round((g.terminados / g.total) * 100) : 0;
+
+/**
+ * Cómo se llaman los grupos en los turnos del trabajador, en plural y en minúscula: «eventos», o «eventos y obras» si sus
+ * empresas los llaman distinto («eventos, obras y proyectos» con tres). Sin ningún grupo: «grupos».
+ */
+export function nombresDeMisGrupos(asignaciones: Pick<Asignacion, 'grupo_id' | 'grupo_etiqueta'>[]): string {
+  const vistos = new Map<string, string>();
+  for (const a of asignaciones) {
+    if (a.grupo_id == null) continue;
+    const e = a.grupo_etiqueta?.trim() || ETIQUETA_GRUPO_DEFECTO;
+    const plural = pluralizarEtiqueta(e).toLowerCase();
+    if (!vistos.has(plural)) vistos.set(plural, plural);
+  }
+  const lista = [...vistos.values()];
+  if (lista.length === 0) return pluralizarEtiqueta(ETIQUETA_GRUPO_DEFECTO).toLowerCase();
+  return lista.length === 1 ? lista[0] : `${lista.slice(0, -1).join(', ')} y ${lista[lista.length - 1]}`;
+}

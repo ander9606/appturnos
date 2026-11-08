@@ -365,21 +365,25 @@ describe('acceso a los grupos (con el nombre de la empresa)', () => {
     expect(screen.queryByText('Grupos')).toBeNull();
   });
 
-  test('si la empresa no usa grupos no aparece, ni para el admin ni para el trabajador', async () => {
+  test('si la empresa no usa grupos no aparece para el admin', async () => {
     mockGrupos = { usa: false, etiqueta: 'Evento', etiquetaPlural: 'Eventos' };
-    mockMisTurnos = [{ id: 1, grupo_id: 3 }];
     await montar('admin_empresa');
     expect(screen.queryByText('Eventos')).toBeNull();
-    await montar('trabajador_turnos');
-    expect(screen.queryByText('Mis eventos')).toBeNull();
   });
 
-  test('trabajador con algún turno con grupo: «Mis eventos» abre su pantalla propia', async () => {
-    mockMisTurnos = [{ id: 1, grupo_id: 3 }];
+  test('trabajador con algún turno con grupo: «Mis eventos» (el nombre sale de sus turnos) abre su pantalla propia', async () => {
+    mockMisTurnos = [{ id: 1, grupo_id: 3, grupo_etiqueta: 'Evento' }];
     await montar('trabajador_turnos');
     mockRouter.push.mockClear();
     fireEvent.press(texto('Mis eventos'));
     expect(mockRouter.push).toHaveBeenCalledWith('/mis-grupos');
+    expect(mockGruposArg).toBe(false); // el trabajador no consulta las opciones de una sola empresa
+  });
+
+  test('trabajador en dos empresas que llaman distinto a los grupos: «Mis eventos y obras»', async () => {
+    mockMisTurnos = [{ id: 1, grupo_id: 3, grupo_etiqueta: 'Evento' }, { id: 2, grupo_id: 9, grupo_etiqueta: 'Obra' }, { id: 3, grupo_id: 4, grupo_etiqueta: 'Evento' }];
+    await montar('trabajador_turnos');
+    expect(texto('Mis eventos y obras')).toBeTruthy();
   });
 
   test('trabajador sin ningún turno con grupo: no aparece', async () => {

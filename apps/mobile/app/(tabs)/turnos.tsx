@@ -28,8 +28,7 @@ import { getMonthGrid, mesDeHoy, type CalendarDay } from '@/lib/calendar';
 import type { Asignacion, Oferta } from '@api-client';
 import { OfertaCard } from '@/features/turnos/pestana/OfertaCard';
 import { colorOferta } from '@/features/turnos/pestana/turnosPestana';
-import { tieneGrupos } from '@/features/grupos/misGrupos';
-import { useOpcionesGrupos } from '@/features/empresas/useOpcionesGrupos';
+import { nombresDeMisGrupos, tieneGrupos } from '@/features/grupos/misGrupos';
 import { CalendarioMesGestor, CalendarioMesTrabajador } from '@/features/turnos/pestana/CalendarioMes';
 import {
   ResumenGestor, FabCrearTurno, BannerEventual, SelectorTabs, EncabezadoOfertas, EmptyMisTurnos, EmptyOfertas,
@@ -192,7 +191,6 @@ export default function TurnosScreen() {
   }, [ofertas, searchOfertas, selectedDate]);
 
   // «Mis eventos» (con el nombre de la empresa): la pantalla propia del trabajador con sus turnos agrupados.
-  const { etiquetaPlural } = useOpcionesGrupos(isWorker);
   const hayGrupos = useMemo(() => tieneGrupos(misTurnos ?? []), [misTurnos]);
 
   const isRefreshing = refetchingMios || refetchingOfertas;
@@ -282,7 +280,7 @@ export default function TurnosScreen() {
             {isWorker && hayGrupos && (
               <TouchableOpacity
                 onPress={() => router.push('/mis-grupos')}
-                accessibilityLabel={`Mis ${etiquetaPlural.toLowerCase()}`}
+                accessibilityLabel={`Mis ${nombresDeMisGrupos(misTurnos ?? [])}`}
                 className="p-2 active:opacity-60"
               >
                 <Ionicons name="albums-outline" size={22} color={COLORS.white} />
