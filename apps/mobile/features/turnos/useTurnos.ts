@@ -311,6 +311,20 @@ export function useLiquidacionTurnos(
   });
 }
 
+/** Solo el total a pagar del rango: liviano, para tableros que no necesitan el detalle. */
+export function useLiquidacionTurnosTotal(
+  params?: { fecha_inicio?: string; fecha_fin?: string },
+  opts: { enabled?: boolean } = {},
+) {
+  return useQuery<number>({
+    // Empieza por 'liquidacion-turnos' para que las mutaciones que invalidan la liquidación lo refresquen también.
+    queryKey: ['liquidacion-turnos', 'total', params] as const,
+    queryFn:  () => turnosApi.liquidacionTotal(params),
+    staleTime: 60_000,
+    enabled:  opts.enabled ?? true,
+  });
+}
+
 /**
  * Calificar una asignación completada (gestores/admin).
  * Invalida el detalle de la asignación y el perfil del trabajador (ranking).

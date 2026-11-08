@@ -48,6 +48,15 @@ export function useLiquidacionTurnos(params: { fecha_inicio: string; fecha_fin: 
   });
 }
 
+/** Solo el total a pagar del rango; la clave cuelga de ['turnos','liquidacion'] para refrescarse con las mutaciones. */
+export function useLiquidacionTurnosTotal(params: { fecha_inicio: string; fecha_fin: string }) {
+  return useQuery({
+    queryKey: ['turnos', 'liquidacion', 'total', params] as const,
+    queryFn: () => turnosApi.liquidacionTotal(params),
+    staleTime: 30_000,
+  });
+}
+
 /** Período activo (segmentos nómina/turnos) según el ciclo de liquidación de la empresa. */
 export function usePeriodoActivoTurnos() {
   return useQuery({

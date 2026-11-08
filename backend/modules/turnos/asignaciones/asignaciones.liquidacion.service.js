@@ -13,4 +13,11 @@ module.exports = {
       fechaFin:    fecha_fin,
     });
   },
+
+  async totalLiquidacion(empresaId, { fecha_inicio, fecha_fin }) {
+    return AsignacionesModel.totalLiquidacion(empresaId, {
+      fechaInicio: fecha_inicio,
+      fechaFin:    fecha_fin,
+    });
+  },
 };

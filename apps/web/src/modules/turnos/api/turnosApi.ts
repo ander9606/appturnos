@@ -103,6 +103,10 @@ export const turnosApi = {
   liquidacion: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
     api.get('/turnos/asignaciones/liquidacion', { params }).then(r => r.data),
 
+  /** Solo el total a pagar del rango (sin el detalle por trabajador). */
+  liquidacionTotal: (params?: { fecha_inicio?: string; fecha_fin?: string }) =>
+    api.get('/turnos/asignaciones/liquidacion/total', { params }).then(r => r.data),
+
   /** Período activo de liquidación (segmentos nómina/turnos) — /turnos/eventual vive en otro módulo del backend. */
   periodoActivoEventual: () =>
     api.get('/turnos/eventual/periodo-activo').then(r => r.data),

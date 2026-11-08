@@ -730,6 +730,16 @@ export const turnosApi = {
     return api.get<LiquidacionTurnosTrabajador[]>(`/api/turnos/asignaciones/liquidacion${query}`);
   },
 
+  /** Solo el total a pagar del rango (misma regla que liquidacion(), sin el detalle por trabajador). */
+  async liquidacionTotal(params?: { fecha_inicio?: string; fecha_fin?: string }): Promise<number> {
+    const qs = new URLSearchParams();
+    if (params?.fecha_inicio) qs.set('fecha_inicio', params.fecha_inicio);
+    if (params?.fecha_fin)    qs.set('fecha_fin',    params.fecha_fin);
+    const query = qs.toString() ? `?${qs}` : '';
+    const r = await api.get<{ total: number }>(`/api/turnos/asignaciones/liquidacion/total${query}`);
+    return r.total;
+  },
+
   /**
    * Marca al trabajador como no presentado. Automáticamente registra 0 estrellas
    * y recalcula su ranking. Solo gestores/admin.
