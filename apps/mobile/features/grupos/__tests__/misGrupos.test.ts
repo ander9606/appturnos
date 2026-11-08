@@ -1,5 +1,6 @@
 import type { Asignacion } from '@api-client';
-import { agruparMisTurnos, avisoSinFirmar, nombresDeMisGrupos, resumenAvance, tieneGrupos } from '../misGrupos';
+import { agruparMisTurnos, avisoSinFirmar, cobroDelTurno, nombresDeMisGrupos, resumenAvance, tieneGrupos } from '../misGrupos';
+import { formatCOP } from '@/lib/formatters';
 
 let n = 0;
 const a = (o: Partial<Asignacion> & Record<string, unknown> = {}): Asignacion => ({
@@ -117,5 +118,41 @@ describe('el nombre de los grupos según la empresa de cada turno', () => {
 
   test('los turnos sin grupo no aportan nombre', () => {
     expect(nombresDeMisGrupos([{ grupo_id: null, grupo_etiqueta: 'Evento' }, { grupo_id: 2, grupo_etiqueta: 'Obra' }])).toBe('obras');
+  });
+});
+
+describe('acumulado por evento', () => {
+  const p = (pago_total: unknown, o: Record<string, unknown> = {}) => a({ estado: 'completado', pago_total, ...o } as never);
+
+  test('cobroDelTurno: bruto menos descuentos aceptados, nunca negativo, y acepta los números que MySQL manda como texto', () => {
+    expect(cobroDelTurno({ pago_total: 100000, descuento_aceptado: 10000 })).toBe(90000);
+    expect(cobroDelTurno({ pago_total: '100000.00' as never, descuento_aceptado: '2500.50' as never })).toBe(97499.5);
+    expect(cobroDelTurno({ pago_total: 5000, descuento_aceptado: 9000 })).toBe(0);
+    expect(cobroDelTurno({ pago_total: null, descuento_aceptado: null })).toBe(0);
+    expect(cobroDelTurno({ pago_total: 40000 })).toBe(40000);
+  });
+
+  test('el acumulado suma lo terminado y firmado con sus descuentos; lo no firmado va aparte y no suma', () => {
+    const [g] = agruparMisTurnos([
+      p(100000, { descuento_aceptado: 10000, oferta_fecha: '2030-01-01' }),                       // 90.000 firmado
+      p(50000, { oferta_fecha: '2030-01-02' }),                                                    // 50.000 firmado
+      p(80000, { contrato_firmado: 0, oferta_fecha: '2030-01-03' }),                               // 80.000 por firmar
+      a({ estado: 'fallido', pago_total: 30000, contrato_firmado: 0, oferta_fecha: '2030-01-04' }), // compensación: se paga sin firma
+      a({ estado: 'confirmado', pago_total: 999999, oferta_fecha: '2030-01-30' }),                 // aún no se hace: no cuenta
+    ] as never);
+    expect(g.acumulado).toBe(90000 + 50000 + 30000);
+    expect(g.porFirmar).toBe(80000);
+    expect(g.sinFirmar).toBe(1);
+  });
+
+  test('un evento sin nada terminado acumula cero', () => {
+    const [g] = agruparMisTurnos([a({ estado: 'confirmado', pago_total: 70000 })]);
+    expect(g).toMatchObject({ acumulado: 0, porFirmar: 0 });
+  });
+
+  test('el aviso de contratos sin firmar dice cuánto está esperando la firma', () => {
+    expect(avisoSinFirmar(1, 80000)).toContain(`(${formatCOP(80000)})`);
+    expect(avisoSinFirmar(2, 0)).not.toContain('$');
+    expect(avisoSinFirmar(0, 80000)).toBeNull();
   });
 });

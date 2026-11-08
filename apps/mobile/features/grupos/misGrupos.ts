@@ -1,4 +1,5 @@
 import type { Asignacion, FaseGrupo } from '@api-client';
+import { formatCOP } from '@/lib/formatters';
 import { ETIQUETA_GRUPO_DEFECTO, pluralizarEtiqueta } from '@/features/empresas/etiquetaGrupo';
 
 /** Los turnos de un trabajador que pertenecen a un mismo grupo (o los que no tienen grupo). Solo cuenta lo suyo. */
@@ -20,9 +21,18 @@ export interface GrupoDeMisTurnos {
   porHacer: number;
   /** Terminados cuyo contrato diario aún no firma: no entran en su cuenta de cobro hasta que lo firme. */
   sinFirmar: number;
+  /** Lo que lleva ganado en el evento: turnos terminados y firmados (y los fallidos, que también se pagan), ya sin los descuentos aceptados. */
+  acumulado: number;
+  /** Lo que ganaría con los terminados que aún no firma (no suma al acumulado hasta que firme). */
+  porFirmar: number;
   /** Primera fecha de lo que le falta por hacer; null si ya no le queda nada. */
   proximo: string | null;
   turnos: Asignacion[];
+}
+
+/** Lo que cobra por un turno: el pago (bruto, con su bono) menos los descuentos que ya aceptó; nunca negativo. */
+export function cobroDelTurno(a: Pick<Asignacion, 'pago_total' | 'descuento_aceptado'>): number {
+  return Math.max(0, (Number(a.pago_total) || 0) - (Number(a.descuento_aceptado) || 0));
 }
 
 const NO_CUENTAN = new Set(['cancelado', 'no_presentado']);
@@ -45,7 +55,7 @@ export function agruparMisTurnos(asignaciones: Asignacion[]): GrupoDeMisTurnos[]
       g = {
         clave, grupoId, nombre: grupoId === null ? null : (a.grupo_nombre ?? 'Grupo'), etiqueta: a.grupo_etiqueta?.trim() || ETIQUETA_GRUPO_DEFECTO,
         empresaNombre: a.empresa_nombre ?? null,
-        fechaInicio: a.oferta_fecha, fechaFin: a.oferta_fecha, total: 0, terminados: 0, porHacer: 0, sinFirmar: 0, proximo: null, turnos: [],
+        fechaInicio: a.oferta_fecha, fechaFin: a.oferta_fecha, total: 0, terminados: 0, porHacer: 0, sinFirmar: 0, acumulado: 0, porFirmar: 0, proximo: null, turnos: [],
       };
       mapa.set(clave, g);
     }
@@ -54,7 +64,12 @@ export function agruparMisTurnos(asignaciones: Asignacion[]): GrupoDeMisTurnos[]
     g.fechaFin = a.oferta_fecha;
     if (TERMINADOS.has(a.estado)) {
       g.terminados++;
-      if (a.estado === 'completado' && a.contrato_firmado === 0) g.sinFirmar++;
+      if (a.estado === 'completado' && a.contrato_firmado === 0) {
+        g.sinFirmar++;
+        g.porFirmar += cobroDelTurno(a);
+      } else {
+        g.acumulado += cobroDelTurno(a);
+      }
     } else {
       g.porHacer++;
       g.proximo ??= a.oferta_fecha;
@@ -73,11 +88,12 @@ export function agruparMisTurnos(asignaciones: Asignacion[]): GrupoDeMisTurnos[]
 export const tieneGrupos = (asignaciones: Asignacion[]): boolean => asignaciones.some((a) => a.grupo_id != null);
 
 /** Aviso cuando hay turnos terminados con el contrato sin firmar; null si no hay ninguno. */
-export function avisoSinFirmar(sinFirmar: number): string | null {
+export function avisoSinFirmar(sinFirmar: number, montoPorFirmar = 0): string | null {
   if (sinFirmar <= 0) return null;
+  const monto = montoPorFirmar > 0 ? ` (${formatCOP(montoPorFirmar)})` : '';
   return sinFirmar === 1
-    ? 'Tienes 1 turno terminado sin firmar el contrato. No entra en tu cuenta de cobro hasta que lo firmes.'
-    : `Tienes ${sinFirmar} turnos terminados sin firmar el contrato. No entran en tu cuenta de cobro hasta que los firmes.`;
+    ? `Tienes 1 turno terminado sin firmar el contrato${monto}. No entra en tu cuenta de cobro hasta que lo firmes.`
+    : `Tienes ${sinFirmar} turnos terminados sin firmar el contrato${monto}. No entran en tu cuenta de cobro hasta que los firmes.`;
 }
 
 /** «2 de 4 terminados · 2 por hacer». */

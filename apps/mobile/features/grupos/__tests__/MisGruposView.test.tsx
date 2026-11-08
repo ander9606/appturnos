@@ -4,6 +4,7 @@ import { Text } from '@/components/ui/Text';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { MisGruposView } from '../MisGruposView';
 import { agruparMisTurnos } from '../misGrupos';
+import { formatCOP } from '@/lib/formatters';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
@@ -78,4 +79,18 @@ test('dos empresas que llaman distinto a sus grupos: cada tarjeta lleva el suyo'
   montar([A({ id: 1 }), A({ id: 2, empresa_id: 2, grupo_id: 9, grupo_nombre: 'Casa Norte', grupo_etiqueta: 'Obra', empresa_nombre: 'Constructora Sur' })]);
   expect(screen.getByText('Evento · Acme')).toBeTruthy();
   expect(screen.getByText('Obra · Constructora Sur')).toBeTruthy();
+});
+
+test('muestra lo acumulado en el evento (neto de descuentos) y cuánto espera la firma; sin terminados no muestra nada', () => {
+  const { unmount } = montar([
+    A({ id: 1, estado: 'completado', oferta_fecha: '2030-01-05', pago_total: 100000, descuento_aceptado: 10000 }),
+    A({ id: 2, estado: 'completado', oferta_fecha: '2030-01-06', pago_total: 60000, contrato_firmado: 0 }),
+    A({ id: 3, oferta_fecha: '2030-01-20' }),
+  ]);
+  expect(screen.getByText('Acumulado')).toBeTruthy();
+  expect(screen.getByLabelText(`Acumulado ${formatCOP(90000)}`)).toBeTruthy(); // 100.000 − 10.000; los 60.000 sin firmar no suman
+  expect(screen.getByText(new RegExp(`\\(${formatCOP(60000).replace('$', '\\$')}\\)`))).toBeTruthy();
+  unmount();
+  montar([A({ id: 4, oferta_fecha: '2030-01-20' })]);
+  expect(screen.queryByText('Acumulado')).toBeNull();
 });

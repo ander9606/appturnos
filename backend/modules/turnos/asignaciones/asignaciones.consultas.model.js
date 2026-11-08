@@ -45,6 +45,10 @@ function construirGeofenceInfo(row) {
 // la empresa del turno a sus grupos («Evento», «Obra»…; NULL = «Grupo»): un trabajador en dos empresas puede ver dos nombres.
 const SELECT_GRUPO_COLS = `o.grupo_id, (SELECT g.nombre FROM grupos_turno g WHERE g.id = o.grupo_id) AS grupo_nombre,
               (SELECT e.etiqueta_grupo FROM empresas e WHERE e.id = o.empresa_id AND o.grupo_id IS NOT NULL) AS grupo_etiqueta,`;
+// Descuentos que el trabajador ya aceptó sobre el turno (los mismos que resta la liquidación): con ellos, `pago_total`
+// (bruto) pasa a lo que realmente cobra. Los pendientes o rechazados no cuentan.
+const SELECT_DESCUENTO_COL = `COALESCE((SELECT SUM(d.monto) FROM descuentos_turno d
+                WHERE d.asignacion_id = a.id AND d.estado = 'aceptado'), 0) AS descuento_aceptado,`;
 const SELECT_GEOFENCE_COLS = `carg.tipo_geofence,
               pm.id   AS punto_id,      pm.nombre AS punto_nombre,
               pm.latitud AS punto_latitud, pm.longitud AS punto_longitud,
@@ -224,6 +228,7 @@ module.exports = {
     const [filas] = await pool.query(
       `SELECT a.*, o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               ${SELECT_GRUPO_COLS}
+              ${SELECT_DESCUENTO_COL}
               o.fecha AS oferta_fecha, o.hora_inicio,
               t.nombre AS trabajador_nombre, t.apellido AS trabajador_apellido,
               carg.codigo AS cargo_codigo, carg.nombre AS cargo_nombre
@@ -260,6 +265,7 @@ module.exports = {
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               ${SELECT_GRUPO_COLS}
+              ${SELECT_DESCUENTO_COL}
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
               o.lugar, o.lugar_alias, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
@@ -303,6 +309,7 @@ module.exports = {
               a.rechazado_por, a.rechazado_at,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               ${SELECT_GRUPO_COLS}
+              ${SELECT_DESCUENTO_COL}
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,
               o.lugar, o.lugar_alias, o.latitud, o.longitud, o.ubicacion_libre,
               ${SELECT_DETALLE_OFERTA_COLS}
@@ -339,6 +346,7 @@ module.exports = {
       `SELECT a.*,
               o.titulo AS oferta_titulo, o.descripcion AS oferta_descripcion,
               ${SELECT_GRUPO_COLS}
+              ${SELECT_DESCUENTO_COL}
               o.notas_adicionales AS oferta_notas_adicionales,
               o.externo_notas AS oferta_externo_notas,
               o.fecha AS oferta_fecha, o.hora_inicio, o.hora_fin_estimada, o.fin_dia_siguiente,

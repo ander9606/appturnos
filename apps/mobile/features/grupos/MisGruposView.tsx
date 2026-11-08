@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ui/Text';
 import { COLORS } from '@/lib/designTokens';
-import { bogotaToday, formatShortDate } from '@/lib/formatters';
+import { bogotaToday, formatCOP, formatShortDate } from '@/lib/formatters';
 import { ShiftCard } from '@/features/turnos/ShiftCard';
 import { FaseChip } from './FaseGrupo';
 import { avisoSinFirmar, faseDeMiGrupo, porcentajeAvance, resumenAvance, type GrupoDeMisTurnos } from './misGrupos';
@@ -44,7 +44,7 @@ export function MisGruposView({ grupos, vacio, refreshControl }: Props) {
       renderItem={({ item: g }) => {
         const abierto = abiertos.includes(g.clave);
         const nombre = g.nombre ?? 'Sin nombre';
-        const aviso = avisoSinFirmar(g.sinFirmar);
+        const aviso = avisoSinFirmar(g.sinFirmar, g.porFirmar);
         const pct = porcentajeAvance(g);
         return (
           <View className="bg-card border border-border rounded-2xl overflow-hidden">
@@ -72,6 +72,12 @@ export function MisGruposView({ grupos, vacio, refreshControl }: Props) {
                 </View>
                 <Text className="text-xs text-muted-foreground">{resumenAvance(g)}</Text>
               </View>
+              {g.terminados > 0 ? (
+                <View className="flex-row items-baseline justify-between border-t border-border pt-2.5">
+                  <Text className="text-xs text-muted-foreground">Acumulado</Text>
+                  <Text className="text-base font-bold text-foreground" accessibilityLabel={`Acumulado ${formatCOP(g.acumulado)}`}>{formatCOP(g.acumulado)}</Text>
+                </View>
+              ) : null}
               {g.proximo ? <Text className="text-xs font-semibold text-primary-700">Próximo: {formatShortDate(g.proximo)}</Text> : null}
               {aviso ? (
                 <View className="flex-row items-start gap-2 bg-warning/10 rounded-xl px-3 py-2">
