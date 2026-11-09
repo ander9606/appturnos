@@ -98,6 +98,14 @@ function itemDiferencia(t, diferencia) {
   };
 }
 
+/**
+ * Ajuste a la baja de un turno que ya se cobró en una cuenta firmada y después se dio por fallido con una compensación
+ * menor: valor negativo por lo cobrado de más. El trabajador firma esta cuenta de ajuste igual que una complementaria.
+ */
+function itemAjusteFallido(t, diferencia) {
+  return { ...itemDiferencia(t, diferencia), descripcion: `${t.oferta_titulo} (ajuste por turno fallido)` };
+}
+
 const CuentasCobroService = {
   /**
    * Genera (o refresca) las cuentas de cobro de los trabajadores con turnos
@@ -112,7 +120,8 @@ const CuentasCobroService = {
    *  - Una cuenta firmada es lo ya cobrado y no se reescribe. Si después un turno
    *    cambia (p. ej. un bono y el trabajador vuelve a firmar el contrato) o aparece
    *    un turno firmado tarde, se genera otra cuenta COMPLEMENTARIA (secuencia 2, 3…)
-   *    solo por la diferencia. Diferencias negativas o cero no generan nada.
+   *    solo por la diferencia. Diferencias negativas o cero no generan nada, salvo un turno que se
+   *    dio por fallido con una compensación menor a lo ya cobrado: ahí sale una cuenta de ajuste (valor negativo).
    *  - Mientras la última cuenta siga sin firmar se refresca en el lugar.
    *
    * trabajadorId: limita a ese trabajador (p. ej. al aceptar un descuento).
@@ -160,6 +169,8 @@ const CuentasCobroService = {
         } else {
           const diferencia = redondear(t.pago_total - previo);
           if (diferencia > 0) items.push(itemDiferencia(t, diferencia));
+          // Solo el fallido se ajusta a la baja: ya estaba cobrado y su compensación es menor.
+          else if (diferencia < 0 && t.estado === 'fallido') items.push(itemAjusteFallido(t, diferencia));
         }
       }
       if (items.length === 0) {
@@ -200,7 +211,9 @@ const CuentasCobroService = {
           titulo: secuencia === 1 ? 'Tu cuenta de cobro está lista' : 'Tienes una cuenta de cobro complementaria',
           mensaje: secuencia === 1
             ? `Firma tu cuenta de cobro del período ${rango} para completar tu pago.`
-            : `Se generó una cuenta de cobro por la diferencia de $${valorTotal.toLocaleString('es-CO')} en tus turnos del período ${rango}. Fírmala para completar tu pago.`,
+            : valorTotal < 0
+              ? `Un turno del período ${rango} se dio por fallido y su compensación es menor a lo ya cobrado. Se generó una cuenta de ajuste por -$${Math.abs(valorTotal).toLocaleString('es-CO')}. Revísala y fírmala.`
+              : `Se generó una cuenta de cobro por la diferencia de $${valorTotal.toLocaleString('es-CO')} en tus turnos del período ${rango}. Fírmala para completar tu pago.`,
           data: { cuenta_cobro_id: id, periodo_id: periodoId },
         }).catch(() => {});
       }

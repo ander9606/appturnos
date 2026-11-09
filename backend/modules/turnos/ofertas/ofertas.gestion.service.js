@@ -12,6 +12,8 @@ const NotificacionesService = require('../../notificaciones/notificaciones.servi
 const NotificacionesModel = require('../../notificaciones/notificaciones.model');
 const CostoLaborService = require('../../integracion/costo-labor.service');
 const PeriodosTurnosService = require('../periodos/periodos-turnos.service');
+const ContratosModel = require('../../contratos/contratos.model');
+const CuentasCobroService = require('../../cuentas-cobro/cuentas-cobro.service');
 const GeocodingService = require('../../geocoding/geocoding.service');
 const AppError = require('../../../utils/AppError');
 const {
@@ -535,6 +537,21 @@ module.exports = {
         mensaje: `El turno "${oferta.titulo}" del ${oferta.fecha} fue cancelado.`,
         data: { oferta_id: id },
       });
+    }
+
+    // Quien ya había cerrado su turno (completado) tenía contrato y quizá cuenta de cobro con el valor
+    // anterior: se anula la firma del contrato (ese valor ya no rige) y, si el período está cerrado,
+    // se genera la cuenta complementaria o de ajuste con la compensación (ver CuentasCobroService).
+    // Best-effort: un fallo aquí no debe deshacer el turno fallido ya guardado.
+    const veniaCompletado = activas.filter((a) => a.estado === 'completado' && idsActualizados.has(a.id));
+    for (const a of veniaCompletado) {
+      try {
+        const contrato = await ContratosModel.obtenerPorAsignacion(empresaId, a.id);
+        if (contrato?.firmado_trabajador) await ContratosModel.resetearFirma(empresaId, contrato.id);
+        await CuentasCobroService.actualizarPorTurnoFirmado(empresaId, a.id, a.trabajador_id);
+      } catch (err) {
+        logger.warn(`[ofertas] no se pudo ajustar contrato/cuenta de cobro de la asignación ${a.id} tras marcar fallida: ${err.message}`);
+      }
     }
 
     // Igual que al cerrar un turno normal: la compensación es un costo de

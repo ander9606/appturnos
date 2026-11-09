@@ -20,10 +20,16 @@ jest.mock('../modules/integracion/costo-labor.service', () => ({
 jest.mock('../modules/turnos/periodos/periodos-turnos.service', () => ({
   autoCrear: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('../modules/contratos/contratos.model');
+jest.mock('../modules/cuentas-cobro/cuentas-cobro.service', () => ({
+  actualizarPorTurnoFirmado: jest.fn().mockResolvedValue(null),
+}));
 
 const OfertasModel = require('../modules/turnos/ofertas/ofertas.model');
 const AsignacionesModel = require('../modules/turnos/asignaciones/asignaciones.model');
 const NotificacionesService = require('../modules/notificaciones/notificaciones.service');
+const ContratosModel = require('../modules/contratos/contratos.model');
+const CuentasCobroService = require('../modules/cuentas-cobro/cuentas-cobro.service');
 const OfertasService = require('../modules/turnos/ofertas/ofertas.service');
 
 afterEach(() => jest.clearAllMocks());
@@ -135,5 +141,54 @@ describe('OfertasService.marcarFallida — quien ya marcó salida', () => {
     expect(OfertasModel.marcarFallida).toHaveBeenCalledWith(
       7, 1, [{ asignacionId: 100, monto: 120000 }], 'Fuerza mayor', 999
     );
+  });
+});
+
+describe('OfertasService.marcarFallida — quien ya tenía contrato y cuenta de cobro', () => {
+  const completado = { id: 100, estado: 'completado', trabajador_id: 1, usuario_id: 10, trabajador_nombre: 'Ana', trabajador_apellido: 'Ruiz', tarifa_dia: '120000' };
+
+  test('anula la firma del contrato firmado y pide ajustar la cuenta de cobro', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([completado]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+    ContratosModel.obtenerPorAsignacion.mockResolvedValue({ id: 77, firmado_trabajador: 1 });
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(ContratosModel.resetearFirma).toHaveBeenCalledWith(7, 77);
+    expect(CuentasCobroService.actualizarPorTurnoFirmado).toHaveBeenCalledWith(7, 100, 1);
+  });
+
+  test('contrato sin firmar: no toca la firma, pero igual actualiza la cuenta de cobro', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([completado]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+    ContratosModel.obtenerPorAsignacion.mockResolvedValue({ id: 77, firmado_trabajador: 0 });
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(ContratosModel.resetearFirma).not.toHaveBeenCalled();
+    expect(CuentasCobroService.actualizarPorTurnoFirmado).toHaveBeenCalledWith(7, 100, 1);
+  });
+
+  test('quien estaba en curso (nunca tuvo contrato) no dispara nada de esto', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([{ ...completado, estado: 'en_progreso' }]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+
+    await OfertasService.marcarFallida(7, 999, 1);
+
+    expect(ContratosModel.obtenerPorAsignacion).not.toHaveBeenCalled();
+    expect(CuentasCobroService.actualizarPorTurnoFirmado).not.toHaveBeenCalled();
+  });
+
+  test('si falla el ajuste de contrato/cuenta, el turno fallido igual queda guardado', async () => {
+    OfertasModel.obtenerPorId.mockResolvedValue(OFERTA);
+    AsignacionesModel.listarActivasConTarifa.mockResolvedValue([completado]);
+    OfertasModel.marcarFallida.mockResolvedValue([100]);
+    ContratosModel.obtenerPorAsignacion.mockRejectedValue(new Error('boom'));
+
+    await expect(OfertasService.marcarFallida(7, 999, 1)).resolves.toBeUndefined();
+    expect(OfertasModel.marcarFallida).toHaveBeenCalled();
   });
 });
